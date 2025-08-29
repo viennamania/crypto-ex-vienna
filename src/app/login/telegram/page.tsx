@@ -120,6 +120,7 @@ function TelegramLoginContent() {
         enabled: !!params.signature && !!params.message,
     });
 
+    //console.log('Query result:', queryResult);
     return (
         <div className="w-screen h-screen flex flex-col gap-2 items-center justify-center
         bg-black text-white">
@@ -142,6 +143,7 @@ function TelegramLoginContent() {
         </div>
     );
 }
+
 
 export default function TelegramLogin() {
     return (
