@@ -50,7 +50,7 @@ import {
 
 
 
-import { client } from "../client";
+import { client } from "../../../client";
 
 
 import {
@@ -164,52 +164,46 @@ function ProfilePage() {
   
   
     // test address
-    //const address = "0x542197103Ca1398db86026Be0a85bc8DcE83e440";
-    
-    //const address = "0xe38A3D8786924E2c1C427a4CA5269e6C9D37BC9C";
-  
+    ///const address = "0xc7184E0Df0E6a7A57FCEC93CF47e3f4EeE76Ec2A";
+
 
 
 
     const [balance, setBalance] = useState(0);
     useEffect(() => {
-  
-      // get the balance
-      const getBalance = async () => {
 
-        if (!address) {
-            return;
-        }
-  
+        // get the balance
+        const getBalance = async () => {
+
         ///console.log('getBalance address', address);
-  
+
         
         const result = await balanceOf({
-          contract,
-          address: address,
+            contract,
+            address: address || "",
         });
-  
+
     
-        //console.log(result);
-  
-        if (!result) return;
-    
-        setBalance( Number(result) / 10 ** 6 );
-  
-      };
-  
-      if (address) getBalance();
-  
-      const interval = setInterval(() => {
+        if (chain === 'bsc') {
+            setBalance( Number(result) / 10 ** 18 );
+        } else {
+            setBalance( Number(result) / 10 ** 6 );
+        }
+
+
+        };
+
+
         if (address) getBalance();
-      } , 1000);
-  
-      return () => clearInterval(interval);
-  
+
+        const interval = setInterval(() => {
+        if (address) getBalance();
+        } , 5000);
+
+        return () => clearInterval(interval);
+
     } , [address, contract]);
 
-
-    ///console.log("balance", balance);
 
 
 
@@ -632,13 +626,7 @@ function ProfilePage() {
     return (
 
         <main
-            className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-lg mx-auto"
-            style={{
-                backgroundImage: "url('/mobile-background-profile.jpg')",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundRepeat: "no-repeat",
-              }}
+            className="pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-lg mx-auto"
         >
 
             <AutoConnect
@@ -651,15 +639,23 @@ function ProfilePage() {
             <div className="py-0 w-full">
 
                 {/* sticky header */}
-                <div className="sticky top-0 z-50
-                    bg-zinc-800 bg-opacity-90
+                <div className="sticky top-0 z-100
+                    bg-zinc-100/70
                     backdrop-blur-md
                     p-4 rounded-lg
                     w-full flex flex-row items-center justify-between">
 
                     {/* title */}
-                    <div className="text-2xl font-semibold text-zinc-100">
-                        나의 프로필
+                    <div className="flex flex-row gap-2 items-center">
+                        <Image
+                            src="/icon-user.png"
+                            alt="User Icon"
+                            width={24}
+                            height={24}
+                        />
+                        <span className="text-lg xl:text-xl font-semibold text-black">
+                            나의 프로필
+                        </span>
                     </div>
                 </div>
 
@@ -670,33 +666,33 @@ function ProfilePage() {
 
                     <div className="w-full flex justify-center mt-5">
                         {address ? (
-                            <div className="w-full flex flex-row gap-2 items-center justify-between">
+                            <div className="w-full flex flex-row gap-2 items-center justify-center">
 
-                                <div className="flex flex-col xl:flex-row items-center justify-start gap-5
-                                bg-white bg-opacity-90
-                                rounded-lg">
-                                    <Image
-                                    src="/icon-wallet-live.gif"
-                                    alt="Wallet"
-                                    width={50}
-                                    height={25}
-                                    className="rounded"
-                                    />
-                                </div>
-
-                                
                                 <button
                                     onClick={() => (window as any).Telegram.WebApp.openLink(`https://polygonscan.com/address/${address}`)}
-                                    className="inline-flex items-center gap-2 rounded-md bg-gray-700 py-1.5 px-3 text-sm/6 font-semibold text-white shadow-inner shadow-white/10 focus:outline-none data-[hover]:bg-gray-600 data-[open]:bg-gray-700 data-[focus]:outline-1 data-[focus]:outline-white"
+                                    className="flex flex-row gap-2 items-center"
                                 >
-                                    내 지갑주소: {shortenAddress(address)}
+                                    <Image
+                                        src="/icon-shield.png"
+                                        alt="Wallet"
+                                        width={18}
+                                        height={18}
+                                        className="rounded"
+                                    />
+                                    <span className="text-sm font-semibold text-gray-500
+                                        underline
+                                        hover:text-gray-300
+                                    ">
+                                        {shortenAddress(address)}
+                                    </span>
                                 </button>
+
                                 <button
                                     onClick={() => {
                                         navigator.clipboard.writeText(address);
                                         alert('지갑주소가 복사되었습니다.');
                                     }}
-                                    className="inline-flex items-center gap-2 rounded-md bg-gray-700 py-1.5 px-3 text-sm/6 font-semibold text-white shadow-inner shadow-white/10 focus:outline-none data-[hover]:bg-gray-600 data-[open]:bg-gray-700 data-[focus]:outline-1 data-[focus]:outline-white"
+                                    className="p-2 bg-blue-500 text-zinc-100 rounded"
                                 >
                                     복사
                                 </button>
@@ -784,6 +780,7 @@ function ProfilePage() {
 
 
                     {/* 회원아이디을 저장하면 나의 소속 센터 봇가 설정됩니다 */}
+                    {/*
                     {address && !userCenter && (
                         <div className='w-full flex flex-col gap-2 items-start justify-between border border-gray-300 p-4 rounded-lg'>
                             <div className="bg-green-500 text-sm text-zinc-100 p-2 rounded">
@@ -793,7 +790,6 @@ function ProfilePage() {
                                 회원아이디는 영문 소문자와 숫자로 5자 이상 10자 이하로 입력해주세요.
                             </span>
 
-                            {/* center */}
                             <div className="flex flex-row gap-2 items-center justify-between">
                                 <span className='text-sm font-semibold text-gray-500'>
                                     나의 소속 센터 봇:
@@ -805,6 +801,7 @@ function ProfilePage() {
 
                         </div>
                     )}
+                    */}
 
                     
 
@@ -817,7 +814,7 @@ function ProfilePage() {
 
                                 <div className='w-full flex flex-row gap-2 items-center justify-between'>
 
-                                    <div className="flex flex-row gap-2 items-center justify-between">
+                                    <div className="flex flex-row gap-2 items-center justify-start">
                                         {/* dot */}
                                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                                         <span className='text-sm font-semibold text-gray-500'>
@@ -825,7 +822,7 @@ function ProfilePage() {
                                         </span>
                                     </div>
 
-                                    <div className="p-2 bg-zinc-800 rounded text-zinc-100 text-xl font-semibold">
+                                    <div className="p-2 text-zinc-800 font-semibold text-xl">
                                         {nickname}
                                     </div>
                                 
@@ -841,8 +838,7 @@ function ProfilePage() {
                                         복사
                                     </button>
 
-                                    
-
+                        
 
                                     <Image
                                         src="/verified.png"
@@ -866,10 +862,6 @@ function ProfilePage() {
                                         {nicknameEdit ? "취소" : "수정"}
                                     </button>
                                 </div>
-
-
-
-
                                 
 
                             </div>
@@ -878,7 +870,7 @@ function ProfilePage() {
 
 
                         { (address && (nicknameEdit || !userCode)) && (
-                            <div className=' flex flex-col xl:flex-row gap-2 items-start justify-between border border-gray-300 p-4 rounded-lg'>
+                            <div className=' flex flex-col gap-2 items-start justify-between border border-gray-300 p-4 rounded-lg'>
 
                                 <div className="flex flex-row gap-2 items-center justify-start">
                                     {/* dot */}
@@ -896,7 +888,10 @@ function ProfilePage() {
                                 <div className='flex flex-col gap-2 items-start justify-between'>
                                     <input
                                         disabled={!address}
-                                        className="p-2 w-64 text-zinc-100 bg-zinc-800 rounded text-2xl font-semibold"
+                                        className="p-2 w-64 text-zinc-800 rounded-lg border border-gray-300
+                                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                                            disabled:bg-gray-200 disabled:text-gray-400
+                                        "
                                         placeholder="회원아이디"
                                         
                                         //value={nickname}

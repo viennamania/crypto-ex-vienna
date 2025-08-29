@@ -2652,7 +2652,7 @@ const fetchBuyOrders = async () => {
                 // button color is dark skyblue convert (49, 103, 180) to hex
                 connectButton={{
                   style: {
-                    backgroundColor: "#3167b4", // dark skyblue
+                    backgroundColor: "#bfa34a", // dark yellow
 
                     color: "#f3f4f6", // gray-300 
                     padding: "2px 2px",
@@ -2661,7 +2661,7 @@ const fetchBuyOrders = async () => {
                     //width: "40px",
                     height: "38px",
                   },
-                  label: "원클릭 로그인",
+                  label: "웹3 로그인",
                 }}
 
                 connectModal={{

@@ -967,7 +967,7 @@ export default function SettingsPage({ params }: any) {
                         // button color is dark skyblue convert (49, 103, 180) to hex
                         connectButton={{
                             style: {
-                                backgroundColor: "#3167b4", // dark skyblue
+                                backgroundColor: "#bfa34a", // dark yellow
                                 color: "#f3f4f6", // gray-300
                                 padding: "2px 10px",
                                 borderRadius: "10px",
@@ -975,7 +975,7 @@ export default function SettingsPage({ params }: any) {
                                 width: "60x",
                                 height: "38px",
                             },
-                            label: "원클릭 로그인",
+                            label: "웹3 로그인",
                         }}
 
                         connectModal={{
@@ -1256,7 +1256,7 @@ export default function SettingsPage({ params }: any) {
                         // button color is dark skyblue convert (49, 103, 180) to hex
                         connectButton={{
                             style: {
-                                backgroundColor: "#3167b4", // dark skyblue
+                                backgroundColor: "#bfa34a", // dark yellow
                                 color: "#f3f4f6", // gray-300
                                 padding: "2px 10px",
                                 borderRadius: "10px",
@@ -1264,7 +1264,7 @@ export default function SettingsPage({ params }: any) {
                                 width: "60x",
                                 height: "38px",
                             },
-                            label: "원클릭 로그인",
+                            label: "웹3 로그인",
                         }}
 
                         connectModal={{
