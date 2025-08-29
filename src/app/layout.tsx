@@ -5,6 +5,12 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThirdwebProvider } from "thirdweb/react";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+
+
+
+
 import { Toaster } from "react-hot-toast";
 
 import { useState, useEffect } from "react";
@@ -76,7 +82,7 @@ export const metadata: Metadata = {
 
 
 
-
+const queryClient = new QueryClient();
 
 
 
@@ -351,8 +357,12 @@ export default function RootLayout({
               </div>
 
             </div>
+
+
+            <QueryClientProvider client={queryClient}>
+              {children}
+            </QueryClientProvider>
             
-          {children}
 
           </div>
 
