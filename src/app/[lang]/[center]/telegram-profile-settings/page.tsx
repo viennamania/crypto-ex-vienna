@@ -640,7 +640,7 @@ function ProfilePage() {
 
 
                 {/* title */}
-                <div className="flex flex-row gap-2 items-center">
+                <div className="flex flex-row gap-2 items-center justify-start p-4">
                     <Image
                         src="/icon-user.png"
                         alt="User Icon"
