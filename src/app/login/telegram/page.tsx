@@ -77,6 +77,13 @@ function TelegramLoginContent() {
     }, [searchParams]);
  
 
+    console.log('params.signature=', params.signature);
+    console.log('params.message=', params.message);
+    console.log('params.center=', params.center);
+    console.log('params.referralCode=', params.referralCode);
+    console.log('params.path=', params.path);
+
+
 
 
 
@@ -112,6 +119,10 @@ function TelegramLoginContent() {
 
                 const { username } = JSON.parse(params.message);
 
+                console.log('Telegram username:', username);
+
+
+
                 //router.replace("/?center=" + params.center + "&telegramId=" + username);
 
                 router.replace(params.path + "?center=" + params.center + "&telegramId=" + username + "&referralCode=" + params.referralCode);
@@ -125,6 +136,8 @@ function TelegramLoginContent() {
         },
         enabled: !!params.signature && !!params.message,
     });
+
+
 
     //console.log('Query result:', queryResult);
     return (
@@ -151,9 +164,11 @@ function TelegramLoginContent() {
 }
 
 
+
+
 export default function TelegramLogin() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<div>Loading............</div>}>
             <TelegramLoginContent />
         </Suspense>
     );
