@@ -639,7 +639,7 @@ function ProfilePage() {
             <div className="py-0 w-full">
 
                 {/* sticky header */}
-                <div className="sticky top-0 z-100
+                <div className="sticky top-0 z-40
                     bg-zinc-100/70
                     backdrop-blur-md
                     p-4 rounded-lg
