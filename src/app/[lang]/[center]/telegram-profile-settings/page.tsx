@@ -666,8 +666,8 @@ function ProfilePage() {
                                     <Image
                                         src="/icon-shield.png"
                                         alt="Wallet"
-                                        width={18}
-                                        height={18}
+                                        width={24}
+                                        height={24}
                                         className="rounded"
                                     />
                                     <span className="text-sm font-semibold text-gray-500
