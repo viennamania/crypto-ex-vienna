@@ -638,29 +638,20 @@ function ProfilePage() {
 
             <div className="py-0 w-full">
 
-                {/* sticky header */}
-                <div className="sticky top-0 z-40
-                    bg-zinc-100/70
-                    backdrop-blur-md
-                    p-4 rounded-lg
-                    w-full flex flex-row items-center justify-between">
 
-                    {/* title */}
-                    <div className="flex flex-row gap-2 items-center">
-                        <Image
-                            src="/icon-user.png"
-                            alt="User Icon"
-                            width={24}
-                            height={24}
-                        />
-                        <span className="text-lg xl:text-xl font-semibold text-black">
-                            나의 프로필
-                        </span>
-                    </div>
+                {/* title */}
+                <div className="flex flex-row gap-2 items-center">
+                    <Image
+                        src="/icon-user.png"
+                        alt="User Icon"
+                        width={24}
+                        height={24}
+                    />
+                    <span className="text-lg xl:text-xl font-semibold text-black">
+                        나의 프로필
+                    </span>
                 </div>
 
-        
- 
 
                 <div className="flex flex-col items-start justify-center space-y-4">
 

@@ -183,14 +183,14 @@ export default function RootLayout({
                 <div className="flex flex-row items-center justify-center gap-2">
 
                   <Image
-                    src={`/icon-system-stability.gif`}
+                    src={`/icon-dot-green.png`}
                     alt={`System Stability`}
-                    width={50}
-                    height={50}
+                    width={16}
+                    height={16}
                   />
 
-                  <span className="text-sm text-white">
-                    {showChain ? 'Hide Chain' : 'Show Chain'}
+                  <span className="w-20 text-sm text-white">
+                    {showChain ? '내지갑 닫기' : '내지갑 열기'}
                   </span>
 
                 </div>
@@ -227,14 +227,6 @@ export default function RootLayout({
                       {clientId}
                     </span>
                   </div>
-
-
-                  {/* Stablecoins deliver multiple valuable advantages to people who wish to maintain control over their cryptocurrencies */}
-                  <span className="text-sm text-gray-600
-                    w-64 xl:w-72 flex flex-col items-center justify-center mt-2
-                    ">
-                    Stablecoins deliver multiple valuable advantages to people who wish to maintain control over their cryptocurrencies
-                  </span>
 
                 </div>
 
