@@ -62,6 +62,9 @@ import {
 } from "@/app/config/contractAddresses";
 
 
+import { useRouter }from "next//navigation";
+
+
 
 const pretendard = localFont({
   src: "../static/fonts/PretendardVariable.woff2",
@@ -93,6 +96,7 @@ export default function RootLayout({
 }>) {
 
 
+  const router = useRouter();
 
   /*
   useEffect(() => {
@@ -337,10 +341,23 @@ export default function RootLayout({
 
 
                 {/* my wallet */}
-                <div className="mt-1 flex flex-col items-center justify-center">
-                  <h2 className="text-sm font-semibold text-gray-800">
-                    My Wallet
-                  </h2>
+                <div className="flex flex-col items-start justify-center">
+
+                  <div className="flex flex-row items-center gap-2 mb-2">
+                    <h2 className="text-sm font-semibold text-gray-800">
+                      My Wallet
+                    </h2>
+
+                    {/* button for router to /ko/admin/withdraw-usdt */}
+
+                    <button
+                      className="bg-blue-500 text-white rounded-md px-2 py-1 text-xs hover:bg-blue-600 transition-colors duration-200"
+                      onClick={() => router.push("/ko/admin/withdraw-usdt")}
+                    >
+                      Withdraw USDT
+                    </button>
+
+                  </div>
 
                   <StabilityConsole />
 
