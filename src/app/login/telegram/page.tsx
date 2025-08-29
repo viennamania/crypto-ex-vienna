@@ -29,6 +29,12 @@ import {
 
 import {
   chain,
+  ethereumContractAddressUSDT,
+  polygonContractAddressUSDT,
+  arbitrumContractAddressUSDT,
+  bscContractAddressUSDT,
+
+  bscContractAddressMKRW,
 } from "@/app/config/contractAddresses";
 
 
