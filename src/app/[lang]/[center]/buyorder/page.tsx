@@ -7107,14 +7107,13 @@ const fetchBuyOrders = async () => {
 
                                           <div className="flex flex-row gap-2 items-center justify-center">
                                             <Image
-                                              src="/icon-settlement.png"
-                                              alt="Settlement"
-                                              width={20}
-                                              height={20}
-                                              className="animate-spin"
+                                              src="/icon-payment.gif"
+                                              alt="Payment Processing"
+                                              width={30}
+                                              height={30}
                                             />
                                             <span className="text-sm font-semibold text-zinc-500">
-                                              회원({item.nickname})이 구매한 테더(USDT)를 가맹점 결제하는 중
+                                              회원({item.nickname})이 구매한 테더(USDT)를 결제하는 중
                                             </span>
                                           </div>
 
