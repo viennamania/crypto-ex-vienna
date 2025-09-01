@@ -3157,7 +3157,7 @@ const fetchBuyOrders = async () => {
                           height={20}
                           className="rounded-lg w-5 h-5"
                         />
-                        <span className="text-sm text-yellow-500">
+                        <span className="text-sm text-[#f3f4f6]">
                           에이전트
                         </span>
                       </div>

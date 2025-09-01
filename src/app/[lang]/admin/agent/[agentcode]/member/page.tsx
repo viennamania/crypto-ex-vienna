@@ -1527,7 +1527,7 @@ export default function Index({ params }: any) {
                         height={20}
                         className="rounded-lg w-5 h-5"
                       />
-                      <span className="text-sm text-yellow-500">
+                      <span className="text-sm text-[#f3f4f6]">
                         에이전트 관리자
                       </span>
                     </div>
@@ -2208,7 +2208,7 @@ export default function Index({ params }: any) {
                               <span className="text-sm text-zinc-500">
                                 {
                                 item?.buyOrderStatus === 'ordered' ? (
-                                  <span className="text-sm text-yellow-500">
+                                  <span className="text-sm text-[#f3f4f6]">
                                     구매주문
                                   </span>
                                 ) : item?.buyOrderStatus === 'accepted' ? (

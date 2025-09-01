@@ -1809,7 +1809,7 @@ export default function Index({ params }: any) {
                                 height={20}
                                 className="rounded-lg w-5 h-5"
                               />
-                              <span className="text-sm text-yellow-500">
+                              <span className="text-sm text-[#f3f4f6]">
                                 가맹점 관리자
                               </span>
                             </div>

@@ -2054,7 +2054,7 @@ export default function Index({ params }: any) {
                               <span className="text-sm text-zinc-500">
                                 {
                                 item?.buyOrderStatus === 'ordered' ? (
-                                  <span className="text-sm text-yellow-500">
+                                  <span className="text-sm text-[#f3f4f6]">
                                     구매주문
                                   </span>
                                 ) : item?.buyOrderStatus === 'accepted' ? (
