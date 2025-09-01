@@ -352,8 +352,13 @@ export default function RootLayout({
 
                     <button
                       className="bg-blue-500 text-white rounded-md px-2 py-1 text-xs hover:bg-blue-600 transition-colors duration-200"
-                      onClick={() => router.push("/ko/admin/withdraw-usdt")}
-                    >
+                      
+                      //onClick={() => router.push("/ko/admin/withdraw-usdt")}
+                      /* router and hide button for withdraw USDT */
+                      onClick={() => {
+                        router.push("/ko/admin/withdraw-usdt");
+                        setShowChain(false);
+                      }}>
                       Withdraw USDT
                     </button>
 
