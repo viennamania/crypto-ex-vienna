@@ -2056,7 +2056,7 @@ export default function Index({ params }: any) {
                         onClick={() => {
                           router.push('/' + params.lang + '/home/profile-settings');
                         }}
-                        className="flex bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
+                        className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                       >
                         <div className="flex flex-row items-center justify-center gap-2">
 
@@ -2085,7 +2085,7 @@ export default function Index({ params }: any) {
                           } }
 
                           className="flex items-center justify-center gap-2
-                            bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
+                            bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                       >
                         <Image
                           src="/icon-logout.webp"

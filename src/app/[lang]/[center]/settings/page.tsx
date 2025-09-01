@@ -1221,7 +1221,7 @@ export default function SettingsPage({ params }: any) {
                                             nicknameEdit ? setNicknameEdit(false) : setNicknameEdit(true);
 
                                         } }
-                                        className="bg-[#bfa34a] text-zinc-100 rounded-lg p-2"
+                                        className="bg-[#0047ab] text-zinc-100 rounded-lg p-2"
                                         disabled={!address}
                                     >
                                         {nicknameEdit ? Cancel : Edit}
@@ -1290,7 +1290,7 @@ export default function SettingsPage({ params }: any) {
 
                                             <button
                                                 disabled={!address || !editedNickname}
-                                                className={`bg-[#bfa34a] text-zinc-100 rounded-lg p-2 ${!editedNickname ? "opacity-50" : ""}`}
+                                                className={`bg-[#0047ab] text-zinc-100 rounded-lg p-2 ${!editedNickname ? "opacity-50" : ""}`}
                                                 onClick={() => {
                                                     if (!editedNickname) {
                                                         toast.error("가맹점 이름을 입력하세요");
@@ -1337,7 +1337,7 @@ export default function SettingsPage({ params }: any) {
                                     />
                                     <button
                                         disabled={!address || !storeDescription}
-                                        className={`bg-[#bfa34a] text-zinc-100 rounded-lg p-2 ${!storeDescription ? "opacity-50" : ""}`}
+                                        className={`bg-[#0047ab] text-zinc-100 rounded-lg p-2 ${!storeDescription ? "opacity-50" : ""}`}
                                         onClick={() => {
                                             if (!storeDescription) {
                                                 toast.error("가맹점 설명을 입력하세요");
@@ -1474,7 +1474,7 @@ export default function SettingsPage({ params }: any) {
                                         `정말 ${selectedAdminWalletAddress}로 가맹점 관리자를 변경하시겠습니까?`
                                         ) && updateAdminWalletAddress();
                                     }}
-                                    className={`bg-[#bfa34a] text-sm text-white px-4 py-2 rounded-lg
+                                    className={`bg-[#0047ab] text-sm text-white px-4 py-2 rounded-lg
                                         ${updatingAdminWalletAddress ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                     {updatingAdminWalletAddress ? '변경 중...' : '변경'}
@@ -1507,7 +1507,7 @@ export default function SettingsPage({ params }: any) {
                                                     '_blank'
                                                 );
                                             }}
-                                            className="bg-[#bfa34a] text-sm text-white px-4 py-2 rounded-lg"
+                                            className="bg-[#0047ab] text-sm text-white px-4 py-2 rounded-lg"
                                         >
                                             가맹점 관리자 홈페이지 열기
                                         </button>
@@ -1612,7 +1612,7 @@ export default function SettingsPage({ params }: any) {
                                         `정말 ${selectedSettlementWalletAddress}로 가맹점 자동결제용 USDT지갑을 변경하시겠습니까?`
                                         ) && updateSettlementWalletAddress();
                                     }}
-                                    className={`bg-[#bfa34a] text-sm text-white px-4 py-2 rounded-lg
+                                    className={`bg-[#0047ab] text-sm text-white px-4 py-2 rounded-lg
                                         ${updatingSettlementWalletAddress ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                     {updatingSettlementWalletAddress ? '변경 중...' : '변경'}
@@ -1731,7 +1731,7 @@ export default function SettingsPage({ params }: any) {
                                             `정말 ${selectedSettlementFeeWalletAddress}로 가맹점 수수료 USDT지갑을 변경하시겠습니까?`
                                             ) && updateSettlementFeeWalletAddress();
                                         }}
-                                        className={`bg-[#bfa34a] text-sm text-white px-4 py-2 rounded-lg
+                                        className={`bg-[#0047ab] text-sm text-white px-4 py-2 rounded-lg
                                             ${updatingSettlementFeeWalletAddress ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                         {updatingSettlementFeeWalletAddress ? '변경 중...' : '변경'}
@@ -1820,7 +1820,7 @@ export default function SettingsPage({ params }: any) {
                                         disabled={!address || !settlementFeePercent
                                             || settlementFeePercent < 0.01 || settlementFeePercent > 5.00
                                             || updatingSettlementFeePercent}
-                                        className={`bg-[#bfa34a] text-zinc-100 rounded-lg p-2 ${!settlementFeePercent ? "opacity-50" : ""}`}
+                                        className={`bg-[#0047ab] text-zinc-100 rounded-lg p-2 ${!settlementFeePercent ? "opacity-50" : ""}`}
                                         onClick={() => {
                                             if (!settlementFeePercent) {
                                                 toast.error("가맹점 수수료율을 입력하세요");
@@ -1961,7 +1961,7 @@ export default function SettingsPage({ params }: any) {
                                         `정말 ${selectedSellerWalletAddress}로 가맹점 판매자 USDT지갑을 변경하시겠습니까?`
                                         ) && updateSellerWalletAddress();
                                     }}
-                                    className={`bg-[#bfa34a] text-sm text-white px-4 py-2 rounded-lg
+                                    className={`bg-[#0047ab] text-sm text-white px-4 py-2 rounded-lg
                                         ${updatingSellerWalletAddress ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                     {updatingSellerWalletAddress ? '변경 중...' : '변경'}
@@ -2020,7 +2020,7 @@ export default function SettingsPage({ params }: any) {
                                         `정말 ${selectedSellerWalletAddress}로 가맹점 판매자 USDT지갑을 변경하시겠습니까?`
                                         ) && updateSellerWalletAddress();
                                     }}
-                                    className={`bg-[#bfa34a] text-sm text-white px-4 py-2 rounded-lg
+                                    className={`bg-[#0047ab] text-sm text-white px-4 py-2 rounded-lg
                                         ${updatingSellerWalletAddress ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                     {updatingSellerWalletAddress ? '변경 중...' : '변경'}
@@ -2127,7 +2127,7 @@ export default function SettingsPage({ params }: any) {
                                         disabled={!address || !bankName || !accountNumber || !accountHolder
                                             || writingStoreBankInfo
                                         }
-                                        className={`bg-[#bfa34a] text-zinc-100 rounded-lg p-2 ${!bankName || !accountNumber || !accountHolder ? "opacity-50" : ""}`}
+                                        className={`bg-[#0047ab] text-zinc-100 rounded-lg p-2 ${!bankName || !accountNumber || !accountHolder ? "opacity-50" : ""}`}
                                         onClick={() => {
                                             if (!bankName || !accountNumber || !accountHolder) {
                                                 toast.error("은행명, 계좌번호, 예금주를 입력하세요");

@@ -793,7 +793,7 @@ export default function Index({ params }: any) {
                 onClick={() => {
                   router.push('/' + params.lang + '/' + params.center + '/center');
                 }}
-                className="flex bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
+                className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
               >
 
                 <div className="flex flex-row items-center gap-2">
@@ -924,7 +924,7 @@ export default function Index({ params }: any) {
                         }}
                         className="
                         w-32 h-10 items-center justify-center
-                        flex bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
+                        flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                       >
                         {user?.nickname || "프로필"}
                       </button>
@@ -947,7 +947,7 @@ export default function Index({ params }: any) {
                           className="
                             w-32
                             flex items-center justify-center gap-2
-                            bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
+                            bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                       >
                         <Image
                           src="/icon-logout.webp"
@@ -1105,7 +1105,7 @@ export default function Index({ params }: any) {
 
               <div className="w-full flex flex-row gap-2 items-center justify-start
                 rounded-t-lg
-                bg-[#bfa34a]
+                bg-[#0047ab]
                 p-2
               ">
                   <Image
@@ -1249,7 +1249,7 @@ export default function Index({ params }: any) {
                       );
 
                     }}
-                    className=" w-full flex bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                    className=" w-full flex bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                   >
                     <Image
                       src="/icon-mobile-money-transfer.png"
@@ -1289,7 +1289,7 @@ export default function Index({ params }: any) {
 
 
                     }}
-                    className=" w-full flex bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                    className=" w-full flex bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                   >
                     {Pay_USDT}
                   </button>
@@ -1326,7 +1326,7 @@ export default function Index({ params }: any) {
 
               <div className="w-full flex flex-row gap-2 items-center justify-start
                   rounded-t-lg
-                  bg-[#bfa34a]
+                  bg-[#0047ab]
                   p-2
                 ">
                     <Image
@@ -1510,7 +1510,7 @@ export default function Index({ params }: any) {
                           );
 
                         }}
-                        className="w-full flex items-center justify-start bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                        className="w-full flex items-center justify-start bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                       >
                         <Image
                           src="/icon-buy-label-color.png"
@@ -1553,7 +1553,7 @@ export default function Index({ params }: any) {
                           );
 
                         }}
-                        className="w-full flex items-center justify-start bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                        className="w-full flex items-center justify-start bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                       >
                         <Image
                           src="/icon-sell-label-color.png"
@@ -1584,7 +1584,7 @@ export default function Index({ params }: any) {
                           router.push('/' + params.lang + '/' + params.center + '/store');
 
                         }}
-                        className=" w-full flex bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                        className=" w-full flex bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                       >
                         가맹점관리
                       </button>
@@ -1598,7 +1598,7 @@ export default function Index({ params }: any) {
                           //router.push('/' + params.lang + '/' + params.center + '/sell-usdt');
 
                         }}
-                        className=" w-full flex bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                        className=" w-full flex bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                       >
                         판매자 관리
                       </button>
@@ -1613,7 +1613,7 @@ export default function Index({ params }: any) {
                           //router.push('/' + params.lang + '/' + params.center + '/buyorder');
 
                         }}
-                        className=" w-full flex bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                        className=" w-full flex bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                       >
                         구매자 관리
                       </button>
@@ -1629,7 +1629,7 @@ export default function Index({ params }: any) {
                           router.push('/' + params.lang + '/' + params.center + '/dashboard/trade-history');
 
                         }}
-                        className=" w-full flex bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                        className=" w-full flex bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                       >
                         거래 관리
                       </button>
@@ -1658,7 +1658,7 @@ export default function Index({ params }: any) {
                           router.push('/' + params.lang + '/' + params.center + '/admin/store');
 
                         }}
-                        className=" w-full flex bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                        className=" w-full flex bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                       >
                         가맹점관리
                       </button>
@@ -1672,7 +1672,7 @@ export default function Index({ params }: any) {
                           //router.push('/' + params.lang + '/' + params.center + '/sell-usdt');
 
                         }}
-                        className=" w-full flex bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                        className=" w-full flex bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                       >
                         판매자 관리
                       </button>
@@ -1686,7 +1686,7 @@ export default function Index({ params }: any) {
                           //router.push('/' + params.lang + '/' + params.center + '/sell-usdt');
 
                         }}
-                        className=" w-full flex bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                        className=" w-full flex bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                       >
                         구매자 관리
                       </button>
@@ -1700,7 +1700,7 @@ export default function Index({ params }: any) {
                           router.push('/' + params.lang + '/' + params.center + '/trade-history');
 
                         }}
-                        className=" w-full flex bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                        className=" w-full flex bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                       >
                         거래 관리
                       </button>

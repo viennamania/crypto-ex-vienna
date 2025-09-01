@@ -1247,7 +1247,7 @@ export default function SettingsPage({ params }: any) {
                                             nicknameEdit ? setNicknameEdit(false) : setNicknameEdit(true);
 
                                         } }
-                                        className="bg-[#bfa34a] text-zinc-100 rounded-lg p-2"
+                                        className="bg-[#0047ab] text-zinc-100 rounded-lg p-2"
                                         disabled={!address}
                                     >
                                         {nicknameEdit ? Cancel : Edit}
@@ -1317,7 +1317,7 @@ export default function SettingsPage({ params }: any) {
 
                                             <button
                                                 disabled={!address || !editedNickname}
-                                                className={`bg-[#bfa34a] text-zinc-100 rounded-lg p-2 w-full ${!editedNickname ? "opacity-50" : ""}`}
+                                                className={`bg-[#0047ab] text-zinc-100 rounded-lg p-2 w-full ${!editedNickname ? "opacity-50" : ""}`}
                                                 onClick={() => {
                                                     if (!editedNickname) {
                                                         toast.error("에이전트 이름을 입력하세요");
@@ -1376,7 +1376,7 @@ export default function SettingsPage({ params }: any) {
                                     />
                                     <button
                                         disabled={!address || !agentDescription}
-                                        className={`bg-[#bfa34a] text-zinc-100 rounded-lg p-2 w-full ${!agentDescription ? "opacity-50" : ""}`}
+                                        className={`bg-[#0047ab] text-zinc-100 rounded-lg p-2 w-full ${!agentDescription ? "opacity-50" : ""}`}
                                         onClick={() => {
                                             if (!agentDescription) {
                                                 toast.error("에이전트 설명을 입력하세요");
@@ -1546,7 +1546,7 @@ export default function SettingsPage({ params }: any) {
                                         </select>
                                         <button
                                             disabled={!address || !selectedAgentFeeWalletAddress || updatingAgentWFeeWalletAddress}
-                                            className={`bg-[#bfa34a] text-zinc-100 text-sm rounded-lg p-2 px-4 py-2
+                                            className={`bg-[#0047ab] text-zinc-100 text-sm rounded-lg p-2 px-4 py-2
                                                 ${!selectedAgentFeeWalletAddress || updatingAgentWFeeWalletAddress ? "opacity-50" : ""}`}
                                             onClick={() => {
                                                 confirm(
@@ -1619,7 +1619,7 @@ export default function SettingsPage({ params }: any) {
                                     />
                                     <button
                                         disabled={!address || !usdtKRWRate || updatingUsdtKRWRate}
-                                        className={`bg-[#bfa34a] text-zinc-100 rounded-lg p-2
+                                        className={`bg-[#0047ab] text-zinc-100 rounded-lg p-2
                                             ${!usdtKRWRate || updatingUsdtKRWRate ? "opacity-50" : ""}`}
                                         onClick={() => {
                                             confirm(
@@ -1664,7 +1664,7 @@ export default function SettingsPage({ params }: any) {
                                 />
                                 <button
                                     disabled={!address || !agentFeePercent || updatingAgentFeePercent}
-                                    className={`bg-[#bfa34a] text-zinc-100 rounded-lg p-2
+                                    className={`bg-[#0047ab] text-zinc-100 rounded-lg p-2
                                         ${!agentFeePercent || updatingAgentFeePercent ? "opacity-50" : ""}`}
                                     onClick={() => {
                                         confirm(
