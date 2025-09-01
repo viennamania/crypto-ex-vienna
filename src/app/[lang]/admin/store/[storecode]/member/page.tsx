@@ -1653,7 +1653,7 @@ export default function Index({ params }: any) {
                           `정말 ${selectedAdminWalletAddress}로 가맹점 관리자를 변경하시겠습니까?`
                         ) && updateAdminWalletAddress();
                       }}
-                      className={`bg-[#3167b4] text-sm text-white px-4 py-2 rounded-lg
+                      className={`bg-[#bfa34a] text-sm text-white px-4 py-2 rounded-lg
                         ${updatingAdminWalletAddress ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {updatingAdminWalletAddress ? '변경 중...' : '변경'}
@@ -1830,7 +1830,7 @@ export default function Index({ params }: any) {
                       ) && insertBuyer();
 
                     }}
-                    className={`bg-[#3167b4] text-sm text-white px-4 py-2 rounded-lg w-full
+                    className={`bg-[#bfa34a] text-sm text-white px-4 py-2 rounded-lg w-full
                       ${insertingUserCode ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {insertingUserCode ? '회원추가 중...' : '회원추가'}
@@ -1859,7 +1859,7 @@ export default function Index({ params }: any) {
                       //fetchAllStore();
                       fetchAllBuyer();
                     }}
-                    className="bg-[#3167b4] text-sm text-white px-4 py-2 rounded-lg w-full"
+                    className="bg-[#bfa34a] text-sm text-white px-4 py-2 rounded-lg w-full"
 
                     disabled={fetchingAllBuyer}
                   >
@@ -2005,8 +2005,8 @@ export default function Index({ params }: any) {
                                   );
                                   toast.success('회원 홈페이지를 새창으로 열었습니다.');
                                 }}
-                                className="bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#3167b4]/80"
+                                className="bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                  hover:bg-[#bfa34a]/80"
                               >
                                 보기
                               </button>
@@ -2018,8 +2018,8 @@ export default function Index({ params }: any) {
                                   openModal();
                                   setSelectedItem(item);
                                 }}
-                                className="bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#3167b4]/80"
+                                className="bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                  hover:bg-[#bfa34a]/80"
                               >
                                 보기
                               </button>
@@ -2037,8 +2037,8 @@ export default function Index({ params }: any) {
                                   );
                                   toast.success('회원 결제페이지 링크가 복사되었습니다.');
                                 }}
-                                className="bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#3167b4]/80"
+                                className="bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                  hover:bg-[#bfa34a]/80"
                               >
                                 복사
                               </button>
@@ -2244,7 +2244,7 @@ const UserPaymentPage = (
 
       <button
         onClick={closeModal}
-        className="bg-[#3167b4] text-white px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+        className="bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
       >
         닫기
       </button>

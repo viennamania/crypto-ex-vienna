@@ -1325,7 +1325,7 @@ export default function Index({ params }: any) {
                   } }
 
                   className="flex items-center justify-center gap-2
-                    bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                    bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
               >
                 <Image
                   src="/icon-logout.webp"
@@ -1390,7 +1390,7 @@ export default function Index({ params }: any) {
                 onClick={() => {
                   router.push('/' + params.lang + '/admin/profile-settings');
                 }}
-                className="flex bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                className="flex bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
               >
                 <div className="flex flex-row items-center justify-center gap-2">
                   {isAdmin && (
@@ -1430,7 +1430,7 @@ export default function Index({ params }: any) {
                   } }
 
                   className="flex items-center justify-center gap-2
-                    bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                    bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
               >
                 <Image
                   src="/icon-logout.webp"
@@ -1540,8 +1540,8 @@ export default function Index({ params }: any) {
 
               <button
                   onClick={() => router.push('/' + params.lang + '/admin/store')}
-                  className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#3167b4]/80
+                  className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                  hover:bg-[#bfa34a]/80
                   hover:cursor-pointer
                   hover:scale-105
                   transition-transform duration-200 ease-in-out
@@ -1565,8 +1565,8 @@ export default function Index({ params }: any) {
 
               <button
                   onClick={() => router.push('/' + params.lang + '/admin/member')}
-                  className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#3167b4]/80
+                  className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                  hover:bg-[#bfa34a]/80
                   hover:cursor-pointer
                   hover:scale-105
                   transition-transform duration-200 ease-in-out
@@ -1576,8 +1576,8 @@ export default function Index({ params }: any) {
 
               <button
                   onClick={() => router.push('/' + params.lang + '/admin/buyorder')}
-                  className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#3167b4]/80
+                  className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                  hover:bg-[#bfa34a]/80
                   hover:cursor-pointer
                   hover:scale-105
                   transition-transform duration-200 ease-in-out
@@ -1587,8 +1587,8 @@ export default function Index({ params }: any) {
 
               <button
                   onClick={() => router.push('/' + params.lang + '/admin/trade-history')}
-                  className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#3167b4]/80
+                  className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                  hover:bg-[#bfa34a]/80
                   hover:cursor-pointer
                   hover:scale-105
                   transition-transform duration-200 ease-in-out
@@ -1599,8 +1599,8 @@ export default function Index({ params }: any) {
               {version !== 'bangbang' && (
               <button
                   onClick={() => router.push('/' + params.lang + '/admin/clearance-history')}
-                  className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#3167b4]/80
+                  className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                  hover:bg-[#bfa34a]/80
                   hover:cursor-pointer
                   hover:scale-105
                   transition-transform duration-200 ease-in-out
@@ -1611,8 +1611,8 @@ export default function Index({ params }: any) {
 
               <button
                   onClick={() => router.push('/' + params.lang + '/admin/trade-history-daily')}
-                  className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#3167b4]/80
+                  className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                  hover:bg-[#bfa34a]/80
                   hover:cursor-pointer
                   hover:scale-105
                   transition-transform duration-200 ease-in-out
@@ -1622,8 +1622,8 @@ export default function Index({ params }: any) {
 
               <button
                   onClick={() => router.push('/' + params.lang + '/admin/trade-history-daily-agent')}
-                  className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#3167b4]/80
+                  className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                  hover:bg-[#bfa34a]/80
                   hover:cursor-pointer
                   hover:scale-105
                   transition-transform duration-200 ease-in-out
@@ -1634,8 +1634,8 @@ export default function Index({ params }: any) {
               {version !== 'bangbang' && (
               <button
                   onClick={() => router.push('/' + params.lang + '/admin/escrow-history')}
-                  className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#3167b4]/80
+                  className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                  hover:bg-[#bfa34a]/80
                   hover:cursor-pointer
                   hover:scale-105
                   transition-transform duration-200 ease-in-out
@@ -1750,7 +1750,7 @@ export default function Index({ params }: any) {
 
                       insertAgent();
                     }}
-                    className={`bg-[#3167b4] text-white px-4 py-2 rounded-lg w-full
+                    className={`bg-[#bfa34a] text-white px-4 py-2 rounded-lg w-full
                       ${!isAdmin || insertingAgent ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {insertingAgent ? '에이전트 추가 중...' : '에이전트 추가'}
@@ -1774,10 +1774,10 @@ export default function Index({ params }: any) {
                       setPageValue(1);
                       fetchAllAgent();
                     }}
-                    //className="bg-[#3167b4] text-white px-4 py-2 rounded-lg w-full"
+                    //className="bg-[#bfa34a] text-white px-4 py-2 rounded-lg w-full"
                     className={`
                       w-32
-                      bg-[#3167b4] text-white px-4 py-2 rounded-lg
+                      bg-[#bfa34a] text-white px-4 py-2 rounded-lg
                       ${!isAdmin || fetchingAllAgent ? 'opacity-50 cursor-not-allowed' : ''}
                     `}
                     
@@ -1839,7 +1839,7 @@ export default function Index({ params }: any) {
                           router.push('/' + params.lang + '/admin/buyorder');
                         }}
                         className="flex items-center justify-center gap-2
-                        bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                        bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
                       >
                         <span className="text-sm">
                           구매주문관리
@@ -1897,7 +1897,7 @@ export default function Index({ params }: any) {
                           router.push('/' + params.lang + '/admin/clearance-history');
                         }}
                         className="flex items-center justify-center gap-2
-                        bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                        bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
                       >
                         <span className="text-sm">
                           청산관리
@@ -2024,13 +2024,13 @@ export default function Index({ params }: any) {
                                   }}
                                   className={`${
                                     !isAdmin ? 'opacity-50 cursor-not-allowed' : ''
-                                  } bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#3167b4]/80
+                                  } bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                  hover:bg-[#bfa34a]/80
                                   w-full
                                   `}
                                     
-                                  //className="w-full bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                  //hover:bg-[#3167b4]/80"
+                                  //className="w-full bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                  //hover:bg-[#bfa34a]/80"
                                 >
                                   설정하기
                                 </button>
@@ -2102,8 +2102,8 @@ export default function Index({ params }: any) {
                                       "_blank"
                                     );
                                   }}
-                                  className="bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#3167b4]/80"
+                                  className="bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                  hover:bg-[#bfa34a]/80"
                                 >
                                   홈페이지 열기
                                 </button>
@@ -2124,8 +2124,8 @@ export default function Index({ params }: any) {
                                     '/' + params.lang + '/admin/store?agentcode=' + item.agentcode
                                   );
                                 }}
-                                className="bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                hover:bg-[#3167b4]/80"
+                                className="bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                hover:bg-[#bfa34a]/80"
                               >
                                 가맹점 관리
                               </button>
@@ -2146,8 +2146,8 @@ export default function Index({ params }: any) {
                                     '/' + params.lang + '/admin/agent/' + item.agentcode + '/bank'
                                   );
                                 }}
-                                className="bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                hover:bg-[#3167b4]/80"
+                                className="bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                hover:bg-[#bfa34a]/80"
                               >
                                 통장관리
                               </button>
@@ -2200,8 +2200,8 @@ export default function Index({ params }: any) {
                                       '/' + params.lang + '/admin/agent/' + item.agentcode + '/trade'
                                     );
                                   }}
-                                  className="bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#3167b4]/80"
+                                  className="bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                  hover:bg-[#bfa34a]/80"
                                 >
                                   구매주문관리
                                 </button>
@@ -2211,8 +2211,8 @@ export default function Index({ params }: any) {
                                       '/' + params.lang + '/admin/agent/' + item.agentcode + '/trade-history'
                                     );
                                   }}
-                                  className="bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#3167b4]/80"
+                                  className="bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                  hover:bg-[#bfa34a]/80"
                                 >
                                   거래내역
                                 </button>
@@ -2312,10 +2312,10 @@ export default function Index({ params }: any) {
                                   }}
                                   className={`${
                                     !isAdmin ? 'opacity-50 cursor-not-allowed' : ''
-                                  } bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#3167b4]/80`}
-                                  //className="bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                  //hover:bg-[#3167b4]/80"  
+                                  } bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                  hover:bg-[#bfa34a]/80`}
+                                  //className="bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                  //hover:bg-[#bfa34a]/80"  
                                 >
                                   청산관리
                                 </button>

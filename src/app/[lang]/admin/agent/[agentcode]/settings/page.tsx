@@ -1247,7 +1247,7 @@ export default function SettingsPage({ params }: any) {
                                             nicknameEdit ? setNicknameEdit(false) : setNicknameEdit(true);
 
                                         } }
-                                        className="bg-[#3167b4] text-zinc-100 rounded-lg p-2"
+                                        className="bg-[#bfa34a] text-zinc-100 rounded-lg p-2"
                                         disabled={!address}
                                     >
                                         {nicknameEdit ? Cancel : Edit}
@@ -1317,7 +1317,7 @@ export default function SettingsPage({ params }: any) {
 
                                             <button
                                                 disabled={!address || !editedNickname}
-                                                className={`bg-[#3167b4] text-zinc-100 rounded-lg p-2 w-full ${!editedNickname ? "opacity-50" : ""}`}
+                                                className={`bg-[#bfa34a] text-zinc-100 rounded-lg p-2 w-full ${!editedNickname ? "opacity-50" : ""}`}
                                                 onClick={() => {
                                                     if (!editedNickname) {
                                                         toast.error("에이전트 이름을 입력하세요");
@@ -1376,7 +1376,7 @@ export default function SettingsPage({ params }: any) {
                                     />
                                     <button
                                         disabled={!address || !agentDescription}
-                                        className={`bg-[#3167b4] text-zinc-100 rounded-lg p-2 w-full ${!agentDescription ? "opacity-50" : ""}`}
+                                        className={`bg-[#bfa34a] text-zinc-100 rounded-lg p-2 w-full ${!agentDescription ? "opacity-50" : ""}`}
                                         onClick={() => {
                                             if (!agentDescription) {
                                                 toast.error("에이전트 설명을 입력하세요");
@@ -1461,7 +1461,7 @@ export default function SettingsPage({ params }: any) {
                                                 '_blank'
                                             );
                                         }}
-                                        className="bg-[#3167b4] text-sm text-white px-4 py-2 rounded-lg"
+                                        className="bg-[#bfa34a] text-sm text-white px-4 py-2 rounded-lg"
                                     >
                                         에이전트 관리자 홈페이지 열기
                                     </button>   
@@ -1559,7 +1559,7 @@ export default function SettingsPage({ params }: any) {
                                                 `정말 ${selectedAdminWalletAddress}로 에이전트 관리자를 변경하시겠습니까?`
                                                 ) && updateAdminWalletAddress();
                                             }}
-                                            className={`bg-[#3167b4] text-sm text-white px-4 py-2 rounded-lg
+                                            className={`bg-[#bfa34a] text-sm text-white px-4 py-2 rounded-lg
                                                 ${
                                                 !selectedAdminWalletAddress ||
                                                 updatingAdminWalletAddress ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -1641,7 +1641,7 @@ export default function SettingsPage({ params }: any) {
                                         </select>
                                         <button
                                             disabled={!address || !selectedAgentFeeWalletAddress || updatingAgentWFeeWalletAddress}
-                                            className={`bg-[#3167b4] text-zinc-100 text-sm rounded-lg p-2 px-4 py-2
+                                            className={`bg-[#bfa34a] text-zinc-100 text-sm rounded-lg p-2 px-4 py-2
                                                 ${!selectedAgentFeeWalletAddress || updatingAgentWFeeWalletAddress ? "opacity-50" : ""}`}
                                             onClick={() => {
                                                 confirm(
@@ -1713,7 +1713,7 @@ export default function SettingsPage({ params }: any) {
                                     />
                                     <button
                                         disabled={!address || !usdtKRWRate || updatingUsdtKRWRate}
-                                        className={`bg-[#3167b4] text-zinc-100 rounded-lg p-2
+                                        className={`bg-[#bfa34a] text-zinc-100 rounded-lg p-2
                                             ${!usdtKRWRate || updatingUsdtKRWRate ? "opacity-50" : ""}`}
                                         onClick={() => {
                                             confirm(
@@ -1757,7 +1757,7 @@ export default function SettingsPage({ params }: any) {
                                 />
                                 <button
                                     disabled={!address || !agentFeePercent || updatingAgentFeePercent}
-                                    className={`bg-[#3167b4] text-zinc-100 rounded-lg p-2
+                                    className={`bg-[#bfa34a] text-zinc-100 rounded-lg p-2
                                         ${!agentFeePercent || updatingAgentFeePercent ? "opacity-50" : ""}`}
                                     onClick={() => {
                                         confirm(

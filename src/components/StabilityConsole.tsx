@@ -379,7 +379,7 @@ const StabilityConsole = () => {
 
                 }}
                 className="w-full flex items-center justify-center
-                bg-[#3167b4]
+                bg-[#bfa34a]
                 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
               >
                 <span className="text-sm text-gray-100">

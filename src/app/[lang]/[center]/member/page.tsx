@@ -1709,7 +1709,7 @@ export default function Index({ params }: any) {
                     onClick={() => {
                       router.push('/' + params.lang + '/' + params.center + '/profile-settings');
                     }}
-                    className="flex bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                    className="flex bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
                   >
                     {user?.nickname || "프로필"}
                   </button>
@@ -1730,7 +1730,7 @@ export default function Index({ params }: any) {
                       } }
 
                       className="flex items-center justify-center gap-2
-                        bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                        bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
                   >
                     <Image
                       src="/icon-logout.webp"
@@ -1915,7 +1915,7 @@ export default function Index({ params }: any) {
             onClick={() => {
               router.push('/' + params.lang + '/' + params.center + '/profile-settings');
             }}
-            className="flex bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+            className="flex bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
           >
             회원가입하러 가기
           </button>
@@ -1936,7 +1936,7 @@ export default function Index({ params }: any) {
           } }
 
           className="flex items-center justify-center gap-2
-            bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+            bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
         >
           <Image
             src="/icon-logout.webp"
@@ -1986,7 +1986,7 @@ export default function Index({ params }: any) {
                 onClick={() => {
                   router.push('/' + params.lang + '/' + params.center + '/center');
                 }}
-                className="flex bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                className="flex bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
               >
 
                 <div className="flex flex-row items-center gap-2">
@@ -2063,7 +2063,7 @@ export default function Index({ params }: any) {
                         }}
                         className="
                         items-center justify-center
-                        bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                        bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
                       >
                         <div className="
                           w-40 xl:w-48
@@ -2105,7 +2105,7 @@ export default function Index({ params }: any) {
                           className="
                             w-32
                             flex items-center justify-center gap-2
-                            bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                            bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
                       >
                         <Image
                           src="/icon-logout.webp"
@@ -2234,7 +2234,7 @@ export default function Index({ params }: any) {
                   onClick={() => {
                     router.push('/' + params.lang + '/' + params.center + '/escrow-history');
                   }}
-                  className="bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80
+                  className="bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80
                   flex items-center justify-center gap-2
                   border border-zinc-300 hover:border-[#3167b4]"
                 >
@@ -2414,8 +2414,8 @@ export default function Index({ params }: any) {
 
                   <button
                       onClick={() => router.push('/' + params.lang + '/' + params.center + '/buyorder')}
-                      className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                      hover:bg-[#3167b4]/80
+                      className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                      hover:bg-[#bfa34a]/80
                       hover:cursor-pointer
                       hover:scale-105
                       transition-transform duration-200 ease-in-out
@@ -2425,8 +2425,8 @@ export default function Index({ params }: any) {
 
                   <button
                       onClick={() => router.push('/' + params.lang + '/' + params.center + '/trade-history')}
-                      className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                      hover:bg-[#3167b4]/80
+                      className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                      hover:bg-[#bfa34a]/80
                       hover:cursor-pointer
                       hover:scale-105
                       transition-transform duration-200 ease-in-out
@@ -2437,8 +2437,8 @@ export default function Index({ params }: any) {
                   {version !== 'bangbang' && (
                   <button
                       onClick={() => router.push('/' + params.lang + '/' + params.center + '/clearance-history')}
-                      className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                      hover:bg-[#3167b4]/80
+                      className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                      hover:bg-[#bfa34a]/80
                       hover:cursor-pointer
                       hover:scale-105
                       transition-transform duration-200 ease-in-out
@@ -2450,8 +2450,8 @@ export default function Index({ params }: any) {
                   {version !== 'bangbang' && (
                   <button
                     onClick={() => router.push('/' + params.lang + '/' + params.center + '/clearance-request')}
-                    className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                    hover:bg-[#3167b4]/80
+                    className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                    hover:bg-[#bfa34a]/80
                     hover:cursor-pointer
                     hover:scale-105
                     transition-transform duration-200 ease-in-out
@@ -2462,8 +2462,8 @@ export default function Index({ params }: any) {
 
                   <button
                     onClick={() => router.push('/' + params.lang + '/' + params.center + '/daily-close')}
-                    className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                    hover:bg-[#3167b4]/80
+                    className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                    hover:bg-[#bfa34a]/80
                     hover:cursor-pointer
                     hover:scale-105
                     transition-transform duration-200 ease-in-out
@@ -2528,7 +2528,7 @@ export default function Index({ params }: any) {
                       navigator.clipboard.writeText(`${paymentUrl}/${params.lang}/${clientId}/${store?.storecode}/center`);
                       toast.success('가맹점 홈페이지 링크가 복사되었습니다.');
                     }}
-                    className="bg-[#3167b4] text-sm text-[#f3f4f6] px-2 py-1 rounded-lg hover:bg-[#3167b4]/80"
+                    className="bg-[#bfa34a] text-sm text-[#f3f4f6] px-2 py-1 rounded-lg hover:bg-[#bfa34a]/80"
                   >
                     복사
                   </button>
@@ -2765,7 +2765,7 @@ export default function Index({ params }: any) {
                       ) && insertBuyer();
 
                     }}
-                    className={`bg-[#3167b4] text-sm text-white px-4 py-2 rounded-lg w-full
+                    className={`bg-[#bfa34a] text-sm text-white px-4 py-2 rounded-lg w-full
                       ${insertingUserCode ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {insertingUserCode ? '회원추가 중...' : '회원추가'}
@@ -2815,7 +2815,7 @@ export default function Index({ params }: any) {
                         setPageValue(1);
                         fetchAllBuyer();
                       }}
-                      className="bg-[#3167b4] text-white px-4 py-2 rounded-lg w-full"
+                      className="bg-[#bfa34a] text-white px-4 py-2 rounded-lg w-full"
                       disabled={fetchingAllBuyer}
                     >
                       <div className="flex flex-row items-center justify-between gap-2">
@@ -2998,8 +2998,8 @@ export default function Index({ params }: any) {
                                     });
                                     openModal();
                                   }}
-                                  className="w-full bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                    hover:bg-[#3167b4]/80"
+                                  className="w-full bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                    hover:bg-[#bfa34a]/80"
                                 >
                                   보기
                                 </button>
@@ -3019,8 +3019,8 @@ export default function Index({ params }: any) {
                                     );
                                     toast.success('회원 결제페이지 링크가 복사되었습니다.');
                                   }}
-                                  className="w-full bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                    hover:bg-[#3167b4]/80"
+                                  className="w-full bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                    hover:bg-[#bfa34a]/80"
                                 >
                                   링크 복사
                                 </button>
@@ -3038,8 +3038,8 @@ export default function Index({ params }: any) {
                                     );
                                     toast.success('회원 결제페이지 스크립트가 복사되었습니다.');
                                   }}
-                                  className="w-full bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                    hover:bg-[#3167b4]/80"
+                                  className="w-full bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                    hover:bg-[#bfa34a]/80"
                                 >
                                   스크립트 복사
                                 </button>
@@ -3061,8 +3061,8 @@ export default function Index({ params }: any) {
                                     );
                                     toast.success('회원 홈페이지를 새창으로 열었습니다.');
                                   }}
-                                  className="w-full bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                    hover:bg-[#3167b4]/80"
+                                  className="w-full bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                    hover:bg-[#bfa34a]/80"
                                 >
                                   새창열기
                                 </button>
@@ -3163,8 +3163,8 @@ export default function Index({ params }: any) {
                                 }}
                                 className={`
                                   w-full mb-2
-                                  bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#3167b4]/80
+                                  bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                  hover:bg-[#bfa34a]/80
                                 `}
                               >
                                 잔액 확인하기
@@ -3179,8 +3179,8 @@ export default function Index({ params }: any) {
                                 }}
                                 className={`
                                   w-full mb-2
-                                  bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#3167b4]/80
+                                  bg-[#bfa34a] text-sm text-white px-2 py-1 rounded-lg
+                                  hover:bg-[#bfa34a]/80
                                 `}
                               >
                                 잔액 회수하기
@@ -3364,7 +3364,7 @@ const UserHomePage = (
 
       <button
         onClick={closeModal}
-        className="bg-[#3167b4] text-white px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+        className="bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
       >
         닫기
       </button>

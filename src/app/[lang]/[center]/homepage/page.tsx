@@ -2580,7 +2580,7 @@ const fetchBuyOrders = async () => {
                         }}
                         className="
                         w-32 h-10 items-center justify-center
-                        flex bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                        flex bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
                       >
                         {user?.nickname || "프로필"}
                       </button>
@@ -2603,7 +2603,7 @@ const fetchBuyOrders = async () => {
                           className="
                             w-32
                             flex items-center justify-center gap-2
-                            bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                            bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
                       >
                         <Image
                           src="/icon-logout.webp"
@@ -3356,7 +3356,7 @@ const fetchBuyOrders = async () => {
                       onClick={() => {
                         router.push('/' + params.lang + '/' + params.center + '/seller-settings');
                       }}
-                      className="bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                      className="bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
                     >
                       <div className="flex flex-row items-center justify-center gap-2">
                         <Image
@@ -6339,7 +6339,7 @@ const UserPaymentPage = (
 
       <button
         onClick={closeModal}
-        className="bg-[#3167b4] text-white px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+        className="bg-[#bfa34a] text-white px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
       >
         닫기
       </button>

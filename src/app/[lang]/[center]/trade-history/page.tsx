@@ -2584,7 +2584,7 @@ const fetchBuyOrders = async () => {
                     onClick={() => {
                       router.push('/' + params.lang + '/' + params.center + '/profile-settings');
                     }}
-                    className="flex bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                    className="flex bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
                   >
                     {user?.nickname || "프로필"}
                   </button>
@@ -2605,7 +2605,7 @@ const fetchBuyOrders = async () => {
                       } }
 
                       className="flex items-center justify-center gap-2
-                        bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                        bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
                   >
                     <Image
                       src="/icon-logout.webp"
@@ -2793,7 +2793,7 @@ const fetchBuyOrders = async () => {
             onClick={() => {
               router.push('/' + params.lang + '/' + params.center + '/profile-settings');
             }}
-            className="flex bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+            className="flex bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
           >
             회원가입하러 가기
           </button>
@@ -2814,7 +2814,7 @@ const fetchBuyOrders = async () => {
           } }
 
           className="flex items-center justify-center gap-2
-            bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+            bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
         >
           <Image
             src="/icon-logout.webp"
@@ -2860,7 +2860,7 @@ const fetchBuyOrders = async () => {
                 onClick={() => {
                   router.push('/' + params.lang + '/' + params.center + '/center');
                 }}
-                className="flex bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                className="flex bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
               >
 
                 <div className="flex flex-row items-center gap-2">
@@ -2937,7 +2937,7 @@ const fetchBuyOrders = async () => {
                         }}
                         className="
                         items-center justify-center
-                        bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                        bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
                       >
                         <div className="
                           w-40 xl:w-48
@@ -2979,7 +2979,7 @@ const fetchBuyOrders = async () => {
                           className="
                             w-32
                             flex items-center justify-center gap-2
-                            bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                            bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80"
                       >
                         <Image
                           src="/icon-logout.webp"
@@ -3108,7 +3108,7 @@ const fetchBuyOrders = async () => {
                   onClick={() => {
                     router.push('/' + params.lang + '/' + params.center + '/escrow-history');
                   }}
-                  className="bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80
+                  className="bg-[#bfa34a] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#bfa34a]/80
                   flex items-center justify-center gap-2
                   border border-zinc-300 hover:border-[#3167b4]"
                 >
@@ -3273,8 +3273,8 @@ const fetchBuyOrders = async () => {
 
                 <button
                     onClick={() => router.push('/' + params.lang + '/' + params.center + '/member')}
-                    className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                    hover:bg-[#3167b4]/80
+                    className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                    hover:bg-[#bfa34a]/80
                     hover:cursor-pointer
                     hover:scale-105
                     transition-transform duration-200 ease-in-out
@@ -3284,8 +3284,8 @@ const fetchBuyOrders = async () => {
 
                 <button
                     onClick={() => router.push('/' + params.lang + '/' + params.center + '/buyorder')}
-                    className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                    hover:bg-[#3167b4]/80
+                    className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                    hover:bg-[#bfa34a]/80
                     hover:cursor-pointer
                     hover:scale-105
                     transition-transform duration-200 ease-in-out
@@ -3311,8 +3311,8 @@ const fetchBuyOrders = async () => {
                 {version !== 'bangbang' && (
                 <button
                     onClick={() => router.push('/' + params.lang + '/' + params.center + '/clearance-history')}
-                    className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                    hover:bg-[#3167b4]/80
+                    className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                    hover:bg-[#bfa34a]/80
                     hover:cursor-pointer
                     hover:scale-105
                     transition-transform duration-200 ease-in-out
@@ -3324,8 +3324,8 @@ const fetchBuyOrders = async () => {
                 {version !== 'bangbang' && (
                 <button
                   onClick={() => router.push('/' + params.lang + '/' + params.center + '/clearance-request')}
-                  className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#3167b4]/80
+                  className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                  hover:bg-[#bfa34a]/80
                   hover:cursor-pointer
                   hover:scale-105
                   transition-transform duration-200 ease-in-out
@@ -3336,8 +3336,8 @@ const fetchBuyOrders = async () => {
 
                 <button
                   onClick={() => router.push('/' + params.lang + '/' + params.center + '/daily-close')}
-                  className="flex w-32 bg-[#3167b4] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#3167b4]/80
+                  className="flex w-32 bg-[#bfa34a] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                  hover:bg-[#bfa34a]/80
                   hover:cursor-pointer
                   hover:scale-105
                   transition-transform duration-200 ease-in-out
@@ -3491,12 +3491,12 @@ const fetchBuyOrders = async () => {
 
                         getTradeSummary();
                       }}
-                      //className="bg-[#3167b4] text-white px-4 py-2 rounded-lg w-full"
+                      //className="bg-[#bfa34a] text-white px-4 py-2 rounded-lg w-full"
                       className={`${
-                        fetchingBuyOrders ? 'bg-gray-400' : 'bg-[#3167b4]'
+                        fetchingBuyOrders ? 'bg-gray-400' : 'bg-[#bfa34a]'
                       }
                       text-white px-4 py-2 rounded-lg w-full
-                      hover:bg-[#3167b4]/80
+                      hover:bg-[#bfa34a]/80
                       hover:cursor-pointer
                       hover:scale-105
                       transition-transform duration-200 ease-in-out`}

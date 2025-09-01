@@ -1472,7 +1472,7 @@ export default function Index({ params }: any) {
                           `정말 ${selectedAdminWalletAddress}로 관리자 지갑을 변경하시겠습니까?`
                         ) && updateAdminWalletAddress();
                       }}
-                      className={`bg-[#3167b4] text-white px-4 py-2 rounded-lg w-full
+                      className={`bg-[#bfa34a] text-white px-4 py-2 rounded-lg w-full
                         ${updatingAdminWalletAddress ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {updatingAdminWalletAddress ? '변경 중...' : '변경'}
@@ -1578,7 +1578,7 @@ export default function Index({ params }: any) {
                       //fetchAllStore();
                       fetchAllBuyer();
                     }}
-                    className="bg-[#3167b4] text-white px-4 py-2 rounded-lg w-full"
+                    className="bg-[#bfa34a] text-white px-4 py-2 rounded-lg w-full"
 
                     disabled={fetchingAllBuyer}
                   >
@@ -1691,7 +1691,7 @@ export default function Index({ params }: any) {
 
                     insertBuyer();
                   }}
-                  className={`bg-[#3167b4] text-white px-4 py-2 rounded-lg w-full
+                  className={`bg-[#bfa34a] text-white px-4 py-2 rounded-lg w-full
                     ${insertingUserCode ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {insertingUserCode ? '회원추가 중...' : '회원추가'}
