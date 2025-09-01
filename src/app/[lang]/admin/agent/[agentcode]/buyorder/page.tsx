@@ -2946,7 +2946,7 @@ const fetchBuyOrders = async () => {
           data-transparent="true"
           data-locale="ko"
           data-fiat="KRW"
-          //data-powered-by="Powered by OneClick USDT"
+          //data-powered-by="Powered by Vienna Mania"
           //data-disclaimer="Disclaimer"
         ></div>
         */}
@@ -3273,7 +3273,7 @@ const fetchBuyOrders = async () => {
                 data-transparent="true"
                 data-locale="ko"
                 data-fiat="KRW"
-                //data-powered-by="Powered by OneClick USDT"
+                //data-powered-by="Powered by Vienna Mania"
                 //data-disclaimer="Disclaimer"
               ></div>
               */}

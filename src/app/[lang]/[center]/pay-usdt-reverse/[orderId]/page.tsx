@@ -1726,7 +1726,7 @@ export default function Index({ params }: any) {
         data-transparent="true"
         data-locale="ko"
         data-fiat="KRW"
-        //data-powered-by="Powered by OneClick USDT"
+        //data-powered-by="Powered by Vienna Mania"
         //data-disclaimer="Disclaimer"
       ></div>
       */}
