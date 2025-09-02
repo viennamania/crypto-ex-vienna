@@ -3066,7 +3066,7 @@ const [tradeSummary, setTradeSummary] = useState({
               // button color is dark skyblue convert (49, 103, 180) to hex
               connectButton={{
                   style: {
-                      backgroundColor: "#bfa34a", // dark yellow
+                      backgroundColor: "#0047ab", // cobalt blue
                       color: "#f3f4f6", // gray-300
                       padding: "2px 10px",
                       borderRadius: "10px",
@@ -3322,7 +3322,7 @@ const [tradeSummary, setTradeSummary] = useState({
                       // button color is dark skyblue convert (49, 103, 180) to hex
                       connectButton={{
                           style: {
-                              backgroundColor: "#bfa34a", // dark yellow
+                              backgroundColor: "#0047ab", // cobalt blue
                               color: "#f3f4f6", // gray-300
                               padding: "2px 10px",
                               borderRadius: "10px",
