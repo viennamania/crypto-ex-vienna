@@ -194,7 +194,7 @@ export default function RootLayout({
                   />
 
                   <span className="w-20 text-sm text-white">
-                    {showChain ? '내지갑 닫기' : '내지갑 열기'}
+                    {showChain ? '내 지갑 닫기' : '내 지갑 열기'}
                   </span>
 
                 </div>

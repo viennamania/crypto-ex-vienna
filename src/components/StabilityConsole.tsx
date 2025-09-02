@@ -102,6 +102,7 @@ import {
 import { add } from "thirdweb/extensions/farcaster/keyGateway";
 
 
+import { useQRCode } from 'next-qrcode';
 
 
 const wallets = [
@@ -135,6 +136,8 @@ const wallets = [
 
 
 const StabilityConsole = () => {
+
+  const { Canvas } = useQRCode();
 
   const router = useRouter();
 
@@ -311,7 +314,7 @@ const StabilityConsole = () => {
         {address ? (
 
           <>
-            <div className="flex flex-row gap-2 justify-center items-center">
+            <div className="flex flex-col gap-2 justify-center items-center">
 
 
               <div className="flex flex-row gap-2 justify-center items-center">
@@ -322,21 +325,45 @@ const StabilityConsole = () => {
                 </span>
               </div>
 
-              <Image
-                src="/icon-shield.png"
-                alt="Shield"
-                width={25}
-                height={25}
-              />
-              <button
-                className="text-lg text-zinc-800 underline"
-                onClick={() => {
-                  navigator.clipboard.writeText(address);
-                  //toast.success(Copied_Wallet_Address);
-                } }
-              >
-                {address.substring(0, 6)}...{address.substring(address.length - 4)}
-              </button>
+              <div className="flex flex-row gap-2 justify-center items-center">
+                <Image
+                  src="/icon-shield.png"
+                  alt="Shield"
+                  width={25}
+                  height={25}
+                />
+                <button
+                  className="text-lg text-zinc-800 underline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(address);
+                    //toast.success(Copied_Wallet_Address);
+                    alert("지갑주소가 복사되었습니다.");
+                  } }
+                >
+                  {address.substring(0, 6)}...{address.substring(address.length - 4)}
+                </button>
+
+                <Canvas
+                  text={address}
+                    options={{
+                      //level: 'M',
+                      margin: 2,
+                      scale: 4,
+                      ///width: 200,
+                      // width 100%
+                      width: 150,
+                      color: {
+                          dark: '#000000FF',
+                          light: '#FFFFFFFF',
+                      },
+        
+                    }}
+                />
+
+
+
+
+              </div>
 
 
             </div>
