@@ -206,6 +206,7 @@ export default function RootLayout({
               `}>
 
                 {/* Display client ID */}
+                {/*
                 <div className="flex flex-col items-center justify-center border-b border-gray-200 pb-4 mb-4">
 
                   <div className="flex flex-col items-center gap-2">
@@ -233,11 +234,7 @@ export default function RootLayout({
                   </div>
 
                 </div>
-
-                {/* horizontally listing all chain */}
-                {/* Ethereum, Polygon, BSC, Arbitrum */}
-                {/* and delected chain is current chaing */}
-
+                */}
 
                 <div className="flex flex-col items-center justify-center gap-4 border-b border-gray-200 pb-4 mb-4">
 
