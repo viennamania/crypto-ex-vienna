@@ -3360,9 +3360,9 @@ const fetchBuyOrders = async () => {
 
                 <thead
                   className="bg-zinc-800 text-white text-sm"
-                  style={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                  }}
+                  //style={{
+                  //  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  //}}
                 >
                   <tr>
 

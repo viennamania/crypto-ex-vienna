@@ -4334,9 +4334,9 @@ const [tradeSummary, setTradeSummary] = useState({
 
                       <thead
                         className="bg-zinc-800 text-white text-sm font-semibold"
-                        style={{
-                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        }}
+                        //style={{
+                        //  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        //}}
                       >
                         <tr>
                           <th className="p-2">
