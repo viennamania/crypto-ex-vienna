@@ -3015,6 +3015,7 @@ const [tradeSummary, setTradeSummary] = useState({
 
 
               {/* logout button */}
+              {/*
               <button
                   onClick={() => {
                       confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
@@ -3042,6 +3043,7 @@ const [tradeSummary, setTradeSummary] = useState({
                   로그아웃
                 </span>
               </button>
+              */}
 
             </div>
 
@@ -3220,6 +3222,7 @@ const [tradeSummary, setTradeSummary] = useState({
         </div>
 
         {/* 로그아웃 버튼 */}
+        {/*
         <button
           onClick={() => {
             confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
@@ -3247,6 +3250,7 @@ const [tradeSummary, setTradeSummary] = useState({
             로그아웃
           </span>
         </button>
+        */}
 
       </div>
     );
@@ -3382,6 +3386,7 @@ const [tradeSummary, setTradeSummary] = useState({
                       </button>
 
                       {/* logout button */}
+                      {/*
                       <button
                           onClick={() => {
                               confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
@@ -3411,6 +3416,7 @@ const [tradeSummary, setTradeSummary] = useState({
                           로그아웃
                         </span>
                       </button>
+                      */}
 
                   </div>
                 )}

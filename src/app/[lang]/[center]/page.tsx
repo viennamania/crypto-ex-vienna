@@ -917,7 +917,7 @@ export default function Index({ params }: any) {
                           <span className="text-sm">USDT</span>
                       </div>
 
-
+                      
                       <button
                         onClick={() => {
                           router.push('/' + params.lang + '/' + params.center + '/profile-settings');
@@ -931,6 +931,7 @@ export default function Index({ params }: any) {
 
 
                       {/* logout button */}
+                      {/*
                       <button
                           onClick={() => {
                               confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
@@ -960,6 +961,7 @@ export default function Index({ params }: any) {
                           로그아웃
                         </span>
                       </button>
+                      */}
 
                   </div>
                 )}

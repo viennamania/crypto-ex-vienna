@@ -3262,6 +3262,7 @@ const fetchBuyOrders = async () => {
         </div>
 
         {/* 로그아웃 버튼 */}
+        {/*
         <button
           onClick={() => {
             confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
@@ -3289,6 +3290,7 @@ const fetchBuyOrders = async () => {
             로그아웃
           </span>
         </button>
+        */}
 
 
 
@@ -3425,6 +3427,7 @@ const fetchBuyOrders = async () => {
                       </button>
 
                       {/* logout button */}
+                      {/*
                       <button
                           onClick={() => {
                               confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
@@ -3454,6 +3457,7 @@ const fetchBuyOrders = async () => {
                           로그아웃
                         </span>
                       </button>
+                      */}
 
                   </div>
                 )}
