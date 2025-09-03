@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
 
   const {
     telegramId,
+    storecode,
   } = body;
 
 
@@ -20,6 +21,7 @@ export async function POST(request: NextRequest) {
 
   const result = await getOneByTelegramId(
     telegramId,
+    storecode,
   );
 
 
