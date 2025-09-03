@@ -1670,7 +1670,7 @@ export default function Index({ params }: any) {
 
             <div className="w-full overflow-x-auto mt-4">
 
-                <table className=" w-full table-auto border-collapse border border-zinc-800 rounded-md">
+                <table className="bg-[#0047ab] text-white text-sm font-semibold">
 
                   <thead className="bg-zinc-200">
                     <tr>

@@ -2292,7 +2292,7 @@ export default function Index({ params }: any) {
 
 
            
-                <table className=" w-full table-auto border-collapse border border-zinc-800 rounded-md">
+                <table className="bg-[#0047ab] text-white text-sm font-semibold">
 
                   <thead>
                       <tr
