@@ -1169,6 +1169,7 @@ export default function Index({ params }: any) {
                       </button>
 
                       {/* logout button */}
+                      {/*
                       <button
                           onClick={() => {
                               confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
@@ -1198,6 +1199,7 @@ export default function Index({ params }: any) {
                           로그아웃
                         </span>
                       </button>
+                      */}
 
                   </div>
                 )}
