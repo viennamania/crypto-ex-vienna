@@ -2518,6 +2518,7 @@ export default function Index({ params }: any) {
                   </span>
                 </div>
                 <div className="flex flex-row items-center justify-start gap-2">
+                  {/*
                   <button
                     onClick={() => {
                       window.open(`${paymentUrl}/${params.lang}/${clientId}/${store?.storecode}/paymaster`, '_blank');
@@ -2526,16 +2527,27 @@ export default function Index({ params }: any) {
                   >
                     {paymentUrl + '/' + params.lang + '/' + clientId + '/' + store?.storecode + '/paymaster'}
                   </button>
+                  */}
 
                   {/* 복사 버튼 */}
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(`${paymentUrl}/${params.lang}/${clientId}/${store?.storecode}/center`);
+                      navigator.clipboard.writeText(`${paymentUrl}/${params.lang}/${clientId}/${store?.storecode}/paymaster`);
                       toast.success('가맹점 홈페이지 링크가 복사되었습니다.');
                     }}
                     className="bg-[#0047ab] text-sm text-[#f3f4f6] px-2 py-1 rounded-lg hover:bg-[#0047ab]/80"
                   >
-                    복사
+                    복사하기
+                  </button>
+
+                  {/* 새창열기 */}
+                  <button
+                    onClick={() => {
+                      window.open(`${paymentUrl}/${params.lang}/${clientId}/${store?.storecode}/paymaster`, '_blank');
+                    }}
+                    className="bg-[#0047ab] text-sm text-[#f3f4f6] px-2 py-1 rounded-lg hover:bg-[#0047ab]/80"
+                  >
+                    새창열기
                   </button>
                 </div>
 
