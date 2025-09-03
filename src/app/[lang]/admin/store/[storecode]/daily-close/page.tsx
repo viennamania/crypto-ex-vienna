@@ -1524,7 +1524,7 @@ const fetchBuyOrders = async () => {
                 에스크로 출금처리
               </h2>
 
-                <table className="bg-[#0047ab] text-white text-sm font-semibold">
+                <table className="w-full table-auto border-collapse border border-zinc-800 rounded-md">
 
                   <thead className="bg-zinc-200">
                     <tr>
