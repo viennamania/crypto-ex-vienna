@@ -1780,8 +1780,9 @@ export default function Index({ params }: any) {
   if (
     (address
     && agent
-    //&&  address !== agent.adminWalletAddress)
-    && !isAdmin)
+    &&  address !== agent.adminWalletAddress)
+   // && !isAdmin)
+   
     
 
   ) {
