@@ -44,7 +44,7 @@ import {
 } from "thirdweb";
 
 import {
-  ConnectButton,
+  //ConnectButton,
   useActiveAccount,
   useActiveWallet,
   useWalletBalance,
@@ -53,6 +53,7 @@ import {
 
   useConnectedWallets,
 
+  AutoConnect,
 
 } from "thirdweb/react";
 
@@ -115,6 +116,14 @@ const wallets = [
     },
   }),
 ];
+
+
+const wallet = inAppWallet({
+  smartAccount: {
+    sponsorGas: false,
+    chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
+  }
+});  
 
 
 
@@ -246,8 +255,13 @@ const StabilityConsole = () => {
 
     <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg shadow-md mb-4">
 
+      <AutoConnect
+          client={client}
+          wallets={[wallet]}
+          timeout={15000}
+      />
 
-
+      {/*
       {!address && (
 
         <ConnectButton
@@ -287,7 +301,7 @@ const StabilityConsole = () => {
         />
 
       )}  
-
+      */}
 
 
 
