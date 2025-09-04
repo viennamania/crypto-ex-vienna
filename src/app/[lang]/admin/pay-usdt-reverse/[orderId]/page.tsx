@@ -2481,7 +2481,7 @@ export default function Index({ params }: any) {
                                 {/* new order icon */}
                                 {/* loading icon */}
                                 <Image
-                                  src="/icon-matching.png"
+                                  src="/icon-couple.png"
                                   alt="Loading"
                                   width={32}
                                   height={32}

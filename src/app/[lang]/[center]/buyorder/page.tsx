@@ -4783,7 +4783,7 @@ const fetchBuyOrders = async () => {
                           <div className="flex flex-row items-center justify-center gap-2">
                             <span>자동매칭</span>
                             <Image
-                              src="/icon-matching.png"
+                              src="/icon-couple.png"
                               alt="Auto Matching"
                               width={20}
                               height={20}
@@ -5362,7 +5362,7 @@ const fetchBuyOrders = async () => {
 
                                 <div className="flex flex-row items-center justify-center gap-2">
                                   <Image
-                                    src="/icon-matching.png"
+                                    src="/icon-couple.png"
                                     alt="Auto Matching"
                                     width={20}
                                     height={20}
@@ -5463,7 +5463,7 @@ const fetchBuyOrders = async () => {
 
                                 <div className="flex flex-row items-center justify-center gap-2">
                                   <Image
-                                    src="/icon-matching-completed.png"
+                                    src="/icon-couple.png"
                                     alt="Matching Completed"
                                     width={20}
                                     height={20}
