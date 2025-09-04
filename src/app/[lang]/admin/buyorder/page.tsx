@@ -7140,13 +7140,13 @@ const fetchBuyOrders = async () => {
                                   disabled={item.settlement.txid === "0x" || !item.settlement.txid}
 
                                   className={`
-                                    ${item.settlement.txid === "0x" || !item.settlement.txid ? "bg-gray-500 cursor-not-allowed" : "bg-purple-500 hover:bg-purple-600"}
+                                    ${item.settlement.txid === "0x" || !item.settlement.txid ? "bg-gray-500 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 cursor-pointer hover:shadow-lg hover:shadow-blue-500/50"}
                                     text-sm
                                     text-white px-2 py-1 rounded-md
                                     transition duration-300 ease-in-out
                                     transform hover:scale-105
                                     hover:shadow-lg
-                                    hover:shadow-purple-500/50
+                                    hover:shadow-blue-500/50
                                     hover:cursor-pointer
                                     hover:transition-transform
                                     hover:duration-300

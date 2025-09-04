@@ -6959,7 +6959,10 @@ const fetchBuyOrders = async () => {
                                       className="
                                       w-32
                                       flex flex-col gap-2 items-center justify-center
-                                      bg-purple-500 text-white px-2 py-1 rounded-md hover:bg-purple-600
+                                      
+
+                                      bg-blue-100 text-blue-600 font-semibold
+
                                       text-sm
                                       transition duration-300 ease-in-out
                                       transform hover:scale-105
