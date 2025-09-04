@@ -1657,6 +1657,8 @@ export default function Index({ params }: any) {
           />
           <div className="text-lg text-gray-500">로그인이 필요합니다.</div>
           <div className="text-sm text-gray-400">로그인 후 가맹점 정보를 확인하세요.</div>
+          
+          {/*
           <ConnectButton
             client={client}
             wallets={wallets}
@@ -1682,6 +1684,8 @@ export default function Index({ params }: any) {
             locale={"ko_KR"}
             //locale={"en_US"}
           />
+          */}
+
         </div>
       ) : (
         <div className="w-full flex flex-col items-start justify-start gap-4">
@@ -1740,19 +1744,12 @@ export default function Index({ params }: any) {
 
               <div className="flex flex-row items-center gap-2">
                 
-
+                {/*}
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   {!address && (
                     <ConnectButton
                       client={client}
                       wallets={wallets}
-
-                      /*
-                      accountAbstraction={{
-                        chain: arbitrum,
-                        sponsorGas: true
-                      }}
-                      */
                       
                       theme={"light"}
 
@@ -1782,6 +1779,7 @@ export default function Index({ params }: any) {
                     />
                   )}
                 </div>
+                */}
 
             
                 {address && !loadingUser && (
