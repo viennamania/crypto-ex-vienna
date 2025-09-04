@@ -2315,20 +2315,6 @@ export default function SettingsPage({ params }: any) {
                                 </span>
                             </div>
 
-                            {/* new window button for store admin page */}
-                            <button
-                                onClick={() => {
-                                    window.open(
-                                        `/${params.lang}/${params.storecode}/center`,
-                                        '_blank'
-                                    );
-                                }}
-                                className="bg-[#0047ab] text-sm text-white px-4 py-2 rounded-lg"
-                            >
-                                가맹점 관리자 홈페이지 열기
-                            </button>
-
-
 
                             <div className="w-full flex flex-col items-center justify-center gap-2">
                     

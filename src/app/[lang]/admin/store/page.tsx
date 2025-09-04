@@ -2982,30 +2982,6 @@ export default function Index({ params }: any) {
                                 >
                                   회원용 홈페이지
                                 </a>
-                                {/*
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(
-                                      '/' + params.lang + '/' + item.storecode + '/center'
-                                    );
-                                    toast.success('복사되었습니다');
-                                  }
-                                }
-                                className="text-sm text-blue-500 hover:underline"
-                                >
-                                  관리자 복사
-                                </button>
-                                */}
-                                <a
-                                  href={
-                                    '/' + params.lang + '/' + item.storecode + '/center'
-                                  }
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-sm text-blue-500 hover:underline"
-                                >
-                                  관리자용 홈페이지
-                                </a>
 
                               </div>
 

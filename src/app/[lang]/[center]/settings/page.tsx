@@ -1495,22 +1495,9 @@ export default function SettingsPage({ params }: any) {
                                             <span className="text-sm text-red-500">
                                             {store && store.storeName}의 회원이 없습니다.
                                             <br />
-                                            가맹점 홈페이지에서 회원가입 후 가맹점 관리자를 설정하세요.
+                                            가맹점 텔레봇에서 회원가입 후 가맹점 관리자를 설정하세요.
                                             </span>
                                         </div>
-
-                                        {/* new window button for store admin page */}
-                                        <button
-                                            onClick={() => {
-                                                window.open(
-                                                    `/${params.lang}/${params.storecode}/center`,
-                                                    '_blank'
-                                                );
-                                            }}
-                                            className="bg-[#0047ab] text-sm text-white px-4 py-2 rounded-lg"
-                                        >
-                                            가맹점 관리자 홈페이지 열기
-                                        </button>
 
                                     </div>
 
