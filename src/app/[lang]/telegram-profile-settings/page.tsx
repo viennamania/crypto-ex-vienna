@@ -50,7 +50,7 @@ import {
 
 
 
-import { client } from "../../../client";
+import { client } from "../../client";
 
 
 import {
@@ -105,12 +105,13 @@ function ProfilePage() {
 
     const center = searchParams.get("center");
     
-    //const telegramId = searchParams.get("telegramId");
+    const telegramId = searchParams.get("telegramId");
 
+    /*
     const [telegramId, setTelegramId] = useState(
         searchParams.get("telegramId") || ""
     );
-
+    */
 
     const account = useActiveAccount();
 
@@ -284,12 +285,12 @@ function ProfilePage() {
                 }
             
                 ///setTelegramId(data.result.telegramId);
-
+                /*
                 if (data.result.telegramId) {
                     setTelegramId(data.result.telegramId);
                     setIsValideTelegramId(true);
                 }
-
+                */
 
 
             } else {
@@ -655,7 +656,15 @@ function ProfilePage() {
 
                 <div className="flex flex-col items-start justify-center space-y-4">
 
+                    
+                    {/* telegramId */}
+                    <span className='text-sm font-semibold text-gray-500'>
+                        텔레그램 ID: {telegramId}
+                    </span>
+
+                    {/*
                     <div className="w-full flex justify-center mt-5">
+                        
                         {address ? (
                             <div className="w-full flex flex-row gap-2 items-center justify-center">
 
@@ -694,7 +703,6 @@ function ProfilePage() {
                                 <p className="text-sm text-zinc-400">
                                     연결된 지갑이 없습니다. 지갑을 연결해 주세요.
                                 </p>
-                                {/* telegramId */}
 
                                 <span className='text-sm font-semibold text-gray-500'>
                                     텔레그램 ID: {telegramId}
@@ -708,7 +716,7 @@ function ProfilePage() {
 
                     {userCode && isValideTelegramId && (
                         <div className='w-full flex flex-row gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
-                            {/* dot */}
+  
                             <div className="flex flex-row gap-2 items-center justify-between">
                                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                                 <span className='text-sm font-semibold text-gray-500'>
@@ -721,7 +729,7 @@ function ProfilePage() {
                                 </div>
                             </div>
 
-                            {/* 복사 버튼 */}
+
                             <button
                                 onClick={() => {
                                     navigator.clipboard.writeText(telegramId as string);
@@ -767,7 +775,7 @@ function ProfilePage() {
     
                         </div>
                     )}
-
+                    */}
 
 
                     {/* 회원아이디을 저장하면 나의 소속 센터 봇가 설정됩니다 */}
