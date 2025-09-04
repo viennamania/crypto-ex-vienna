@@ -188,6 +188,9 @@ export async function getStoreByStorecode(
         agentcode: 1,
         agentName: { $ifNull: ['$agentInfo.agentName', null] },
         agentLogo: { $ifNull: ['$agentInfo.agentLogo', null] },
+
+        telegramBot: 1,
+
       },
     },
   ]).toArray();
@@ -689,6 +692,8 @@ export async function getAllStores(
           agentFeeWalletAddress: { $ifNull: ['$agentInfo.agentFeeWalletAddress', null] },
 
           escrowAmountUSDT: 1,
+
+          telegramBot: 1,
        
         },
       },

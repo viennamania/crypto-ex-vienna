@@ -204,6 +204,7 @@ export default function SettingsPage({ params }: any) {
         Escrow_Wallet_Address_has_been_created: "",
         Failed_to_create_Escrow_Wallet_Address: "",
   
+
     
     } );
     
@@ -1868,18 +1869,18 @@ export default function SettingsPage({ params }: any) {
             
                             
                             <div className='w-full flex flex-row items-center justify-start gap-2
-                                    border-b border-gray-300 pb-2'>
-                                    <Image
-                                        src="/icon-store.png"
-                                        alt="Manager"
-                                        width={20}
-                                        height={20}
-                                        className="w-6 h-6"
-                                    />
-                                    <span className="text-lg text-zinc-500">
-                                        가맹점 기본정보 설정
-                                    </span>
-                                </div>
+                                border-b border-gray-300 pb-2'>
+                                <Image
+                                    src="/icon-store.png"
+                                    alt="Manager"
+                                    width={20}
+                                    height={20}
+                                    className="w-6 h-6"
+                                />
+                                <span className="text-lg text-zinc-500">
+                                    가맹점 기본정보 설정
+                                </span>
+                            </div>
 
 
 
@@ -2012,15 +2013,43 @@ export default function SettingsPage({ params }: any) {
 
 
 
-
-
-
-
+                            {/* telegramBot */}
+                            {/* store.telegramBot */}
+                            <div className='mt-2
+                            w-full flex flex-col items-start justify-center gap-2'>
+                                <div className='flex flex-row items-center justify-center gap-2'>
+                                    {/* dot */}
+                                    <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                    <span className="text-lg">
+                                        텔레그램 봇
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        window.open(
+                                            'https://t.me/' + store?.telegramBot,
+                                            '_blank'
+                                        );
+                                    }}
+                                    className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
+                                    hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
+                                >
+                                    <Image
+                                        src="/icon-telegram.png"
+                                        alt="Telegram"
+                                        width={20}
+                                        height={20}
+                                        className="w-4 h-4"
+                                    />
+                                    {' '}{store?.telegramBot ? '텔레그램 봇 열기' : '없음'}
+                                </button>
+                            </div>
 
                             {/* store backgroundColor */}
 
 
-                            <div className='w-full flex flex-col items-start gap-2  
+                            <div className='mt-2
+                            w-full flex flex-col items-start gap-2  
                             
                             '>
                                 <div className='flex flex-row items-center justify-center gap-2'>

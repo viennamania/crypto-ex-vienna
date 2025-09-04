@@ -123,6 +123,8 @@ interface BuyOrder {
   agentcode: string;
   agentName: string;
   agentLogo: string;
+
+  telegramBot: string;
 }
 
 
@@ -2954,7 +2956,7 @@ export default function Index({ params }: any) {
                           <td className="p-2">
 
                             <div className="h-56
-                              w-16 
+                              w-28
                               flex flex-col items-between justify-between gap-2">
 
                               <div className="flex flex-col items-center gap-2">
@@ -2982,6 +2984,28 @@ export default function Index({ params }: any) {
                                 >
                                   회원용 홈페이지
                                 </a>
+
+                                <button
+                                    onClick={() => {
+                                        window.open(
+                                            'https://t.me/' + item?.telegramBot,
+                                            '_blank'
+                                        );
+                                    }}
+                                    className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
+                                    hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
+                                >
+                                    <Image
+                                        src="/icon-telegram.png"
+                                        alt="Telegram"
+                                        width={20}
+                                        height={20}
+                                        className="w-4 h-4"
+                                    />
+                                    {' '}{item?.telegramBot ? '관리자 텔레그램 봇 열기' : '없음'}
+                                </button>
+
+
 
                               </div>
 
