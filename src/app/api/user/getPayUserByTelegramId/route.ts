@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     telegramId,
   );
 
-  console.log("getUserByTelegramId result", result);
+  //console.log("getPayUserByTelegramId result", result);
 
  
   return NextResponse.json({

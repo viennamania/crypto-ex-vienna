@@ -114,6 +114,7 @@ export async function insertOne(data: any) {
       $or: [
         { walletAddress: data.walletAddress },
         { nickname: data.nickname },
+        { telegramId: data.telegramId },
 
       ]
     },
@@ -185,7 +186,9 @@ export async function insertOne(data: any) {
         depositBankAccountNumber: depositBankAccountNumber,
         depositBankName: depositBankName,
         depositName: depositName,
-      }
+      },
+
+      telegramId: data.telegramId,
     }
   );
 

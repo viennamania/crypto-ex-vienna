@@ -54,6 +54,8 @@ export async function POST(request: NextRequest) {
     userBankName,
     userBankAccountNumber,
     ///userType,
+
+    telegramId,
   } = body;
 
   //const { storecode, nickname, mobile, password } = body;
@@ -218,6 +220,8 @@ export async function POST(request: NextRequest) {
       mobile: mobile,
       password: password,
       buyer: buyer,
+      
+      telegramId: telegramId,
     });
 
     

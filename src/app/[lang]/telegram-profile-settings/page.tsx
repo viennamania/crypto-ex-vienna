@@ -106,9 +106,9 @@ function ProfilePage() {
     const center = searchParams.get("center");
     
     
-    //const telegramId = searchParams.get("telegramId");
+    const telegramId = searchParams.get("telegramId");
 
-    const telegramId = '441516803'; // test
+    //const telegramId = '441516803'; // test
 
 
     /*
@@ -250,9 +250,14 @@ function ProfilePage() {
 
     ///const [telegramId, setTelegramId] = useState("");
 
+    const [store, setStore] = useState(null) as any;
 
+
+    const [loadingGetUser, setLoadingGetUser] = useState(true);
     useEffect(() => {
         const fetchData = async () => {
+
+            setLoadingGetUser(true);
             const response = await fetch("/api/user/getPayUserByTelegramId", {
                 method: "POST",
                 headers: {
@@ -265,9 +270,67 @@ function ProfilePage() {
 
             const data = await response.json();
 
-            ///console.log("data", data);
+            //console.log("data", data);
+
 
             if (data.result) {
+
+                /*
+                  store: {
+                    _id: new ObjectId('68a96c452abf570c337e4edf'),
+                    agentcode: 'natggzca',
+                    storecode: 'deslbddt',
+                    storeName: 'ChatGPT',
+                    storeType: 'test',
+                    storeUrl: 'https://test.com',
+                    storeDescription: '설명입니다.',
+                    storeLogo: 'https://t0gqytzvlsa2lapo.public.blob.vercel-storage.com/PRzu522-wjyF9MJYWAGKibxHwqqlUk77VtqG06.png',
+                    storeBanner: 'https://cryptoss.beauty/logo.png',
+                    createdAt: '2025-08-23T07:22:45.112Z',
+                    backgroundColor: 'purple-500',
+                    totalBuyerCount: 7,
+                    adminWalletAddress: '0x8527dDa689a7b5484de68ed525723e48d4f68a14',
+                    settlementWalletAddress: '0x8527dDa689a7b5484de68ed525723e48d4f68a14',
+                    settlementFeeWalletAddress: '0x3f62cf1DC5277308eB5Bbc54f6ae7E9E3372695e',
+                    settlementFeePercent: 0.2,
+                    sellerWalletAddress: '0x8527dDa689a7b5484de68ed525723e48d4f68a14',
+                    bankInfo: {
+                    bankName: '신한은행',
+                    accountNumber: '982374928794',
+                    accountHolder: '이한성'
+                    },
+                    agentFeePercent: 0.1,
+                    totalKrwAmount: 752000,
+                    totalKrwAmountClearance: 0,
+                    totalPaymentConfirmedClearanceCount: 0,
+                    totalPaymentConfirmedCount: 42,
+                    totalUsdtAmount: 541.41,
+                    totalUsdtAmountClearance: 0,
+                    totalAgentFeeAmount: 0.535,
+                    totalAgentFeeAmountKRW: 742,
+                    totalFeeAmount: 1.083,
+                    totalFeeAmountKRW: 1497,
+                    totalSettlementAmount: 0,
+                    totalSettlementAmountKRW: 749732,
+                    totalSettlementCount: 42,
+                    telegramBot: 'crypto_goodag_bot'
+                },
+                    */
+
+                setStore(data.result.store);
+
+                /*
+                  buyer: {
+                    depositBankAccountNumber: '82347923',
+                    depositBankName: '토스뱅크',
+                    depositName: '주하영'
+                },
+                */
+
+                setUserName(data.result.buyer?.depositName || "");
+                setUserBankName(data.result.buyer?.depositBankName || "");
+                setUserBankAccountNumber(data.result.buyer?.depositBankAccountNumber || "");
+
                 setNickname(data.result.nickname);
                 
                 data.result.avatar && setAvatar(data.result.avatar);
@@ -284,6 +347,8 @@ function ProfilePage() {
 
                 setUserStorecode(data.result.storecode);
 
+                setWalletAddress(data.result.walletAddress);
+
                 //if (data.result?.centerOwner) {
                 //    setIsCenterOwner(true);
                 //}
@@ -298,6 +363,8 @@ function ProfilePage() {
 
 
             }
+
+            setLoadingGetUser(false);
 
         };
 
@@ -381,6 +448,8 @@ function ProfilePage() {
                 userName: userName,
                 userBankName: userBankName,
                 userBankAccountNumber: userBankAccountNumber,
+
+                telegramId: telegramId,
             }),
         });
 
@@ -717,48 +786,89 @@ function ProfilePage() {
                     <div className='w-full  flex flex-col gap-5 '>
 
 
-                        {address && userCode && (
+                        {loadingGetUser && (
+                            <div className='w-full flex flex-col gap-2 items-center justify-center border border-gray-300 p-4 rounded-lg'>
+                                <span className='text-sm font-semibold text-gray-500'>
+                                    사용자 정보를 불러오는 중...
+                                </span>
+                                <div className="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6"></div>
+                            </div>
+                        )}
+
+
+
+                        {
+                        !loadingGetUser &&
+                        telegramId && walletAddress && (
 
                             <div className="w-full flex flex-col gap-5 items-start justify-between border border-gray-300 p-4 rounded-lg">
 
-                                <div className='w-full flex flex-row gap-2 items-center justify-between'>
-
+                                {/* storecode, storeName, storeLogo */}
+                                <div className='w-full flex flex-col gap-2 items-start justify-between'>
                                     <div className="flex flex-row gap-2 items-center justify-start">
-                                        {/* dot */}
+                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        <span className='text-sm font-semibold text-gray-500'>
+                                            가맹점 정보
+                                        </span>
+                                    </div>
+                                    <div className='flex flex-col gap-2 items-start justify-between'>
+
+                                        {store ? (
+                                            <div className='flex flex-row gap-2 items-center justify-start'>
+                                                {store.storeLogo && (
+                                                    <Image
+                                                        src={store.storeLogo}
+                                                        alt="Store Logo"
+                                                        width={48}
+                                                        height={48}
+                                                        className="rounded"
+                                                    />
+                                                )}
+                                                <div className="p-2 text-zinc-800 font-semibold text-xl">
+                                                    {store.storeName} ({store.storecode})
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="p-2 text-zinc-800 font-semibold text-xl">
+                                                가맹점 정보 없음
+                                            </div>
+                                        )}
+                                        
+                                    </div>
+                                </div>
+                                
+                                
+                                <div className='w-full flex flex-col gap-2 items-start justify-between'>
+                                    <div className="flex flex-row gap-2 items-center justify-start">
                                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                                         <span className='text-sm font-semibold text-gray-500'>
                                             회원아이디
                                         </span>
                                     </div>
 
-                                    <div className="p-2 text-zinc-800 font-semibold text-xl">
-                                        {nickname}
+                                    <div className='flex flex-row gap-2 items-center justify-start'>
+                                        <div className="p-2 text-zinc-800 font-semibold text-xl">
+                                            {nickname}
+                                        </div>
                                     </div>
-                                
-
-                                    {/* 복사 버튼 */}
-                                    <button
-                                        onClick={() => {
-                                            navigator.clipboard.writeText(nickname);
-                                            alert('회원아이디가 복사되었습니다.');
-                                        }}
-                                        className="p-2 bg-blue-500 text-zinc-100 rounded"
-                                    >
-                                        복사
-                                    </button>
-
-                        
-
-                                    <Image
-                                        src="/verified.png"
-                                        alt="Verified"
-                                        width={20}
-                                        height={20}
-                                        className="rounded-lg"
-                                    />
-
                                 </div>
 
+                                {/* userName, userBankName, userBankAccountNumber */}
+                                <div className='w-full flex flex-col gap-2 items-start justify-between'>
+                                    <div className="flex flex-row gap-2 items-center justify-start">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        <span className='text-sm font-semibold text-gray-500'>
+                                            예금주명, 은행명, 계좌번호
+                                        </span>
+                                    </div>
+                                    <div className='flex flex-col gap-2 items-start justify-between'>
+                                        <div className="p-2 text-zinc-800 font-semibold text-xl">
+                                            {userName} / {userBankName} / {userBankAccountNumber}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/*
                                 <div className='w-full flex flex-row gap-2 items-center justify-end'>
                                     <button
                                         onClick={() => {
@@ -771,6 +881,7 @@ function ProfilePage() {
                                         {nicknameEdit ? "취소" : "수정"}
                                     </button>
                                 </div>
+                                */}
                                 
 
                             </div>
@@ -778,7 +889,9 @@ function ProfilePage() {
                         )}
 
 
-                        { (telegramId && (nicknameEdit || !walletAddress)) && (
+                        {
+                        !loadingGetUser &&
+                        telegramId && (nicknameEdit || !walletAddress) && (
                             <div className=' flex flex-col gap-2 items-start justify-between border border-gray-300 p-4 rounded-lg'>
 
                                 
@@ -902,8 +1015,12 @@ function ProfilePage() {
                                     </div>
 
                                     <div className='flex flex-row gap-2 items-center justify-start'>
-                                        {/* dot */}
-                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        <Image
+                                            src="/icon-info.png"
+                                            alt="Info Icon"
+                                            width={16}
+                                            height={16}
+                                        />
                                         <span className='text-sm font-semibold text-gray-500'>
                                             회원아이디는 5자 이상 10자 이하로 입력해주세요
                                         </span>
@@ -963,6 +1080,9 @@ function ProfilePage() {
                                         !telegramId
                                         || userStorecode.length < 3
                                         || userCode.length < 5
+                                        || !userName
+                                        || !userBankName
+                                        || !userBankAccountNumber
                                         || isNicknameDuplicate
                                         || loadingSetBuyerData
                                     }
@@ -971,6 +1091,9 @@ function ProfilePage() {
                                         ${!telegramId
                                         || userStorecode.length < 3
                                         || userCode.length < 5
+                                        || !userName
+                                        || !userBankName
+                                        || !userBankAccountNumber
                                         || isNicknameDuplicate
                                         || loadingSetUserData
                                         ? 'bg-gray-300 text-gray-400'
