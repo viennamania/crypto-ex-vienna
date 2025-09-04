@@ -1600,7 +1600,7 @@ export default function SettingsPage({ params }: any) {
                                     <span className="text-lg text-red-500">
                                     {store && store.storeName}의 회원이 없습니다.
                                     <br />
-                                    가맹점 홈페이지에서 회원가입 후 가맹점 자동결제용 USDT지갑을 설정하세요.
+                                   가맹점 텔레그램 봇에서 회원가입 후 가맹점 자동결제용 USDT지갑을 설정하세요.
                                     </span>
                                 </div>
                                 )}
@@ -1719,7 +1719,7 @@ export default function SettingsPage({ params }: any) {
                                         <span className="text-sm text-red-500">
                                         {store && store.storeName}의 회원이 없습니다.
                                         <br />
-                                        가맹점 홈페이지에서 회원가입 후 가맹점 수수료 USDT지갑을 설정하세요.
+                                       가맹점 텔레그램 봇에서 회원가입 후 가맹점 수수료 USDT지갑을 설정하세요.
                                         </span>
                                     </div>
                                     )}

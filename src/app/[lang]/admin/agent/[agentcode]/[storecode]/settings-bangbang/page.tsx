@@ -1980,6 +1980,60 @@ export default function SettingsPage({ params }: any) {
 
 
 
+                            {/* telegramBot */}
+                            {/* store.telegramBot */}
+                            <div className='mt-2
+                            w-full flex flex-col items-start justify-center gap-2'>
+                                <div className='flex flex-row items-center justify-center gap-2'>
+                                    {/* dot */}
+                                    <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                    <span className="text-lg">
+                                        관리자 텔레그램 봇
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        window.open(
+                                            'https://t.me/' + store?.telegramBot,
+                                            '_blank'
+                                        );
+                                    }}
+                                    className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
+                                    hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
+                                >
+                                    <Image
+                                        src="/icon-telegram.png"
+                                        alt="Telegram"
+                                        width={20}
+                                        height={20}
+                                        className="w-4 h-4"
+                                    />
+                                    {' '}{store?.telegramBot ? '가맹점 텔레그램 봇 열기' : '없음'}
+                                </button>
+
+                                {/* 가맹점 텔레그램 봇 링크 복사 button */}
+                                <button
+                                    onClick={() => {
+                                        if (store?.telegramBot) {
+                                            navigator.clipboard.writeText('https://t.me/' + store.telegramBot);
+                                        }
+                                    }}
+                                    className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
+                                    hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
+                                >
+                                    <Image
+                                        src="/icon-copy.png"
+                                        alt="Copy"
+                                        width={20}
+                                        height={20}
+                                        className="w-4 h-4"
+                                    />
+                                    {' '}가맹점 텔레그램 봇 링크 복사
+                                </button>
+
+                            </div>
+
+
 
 
                             {/* store backgroundColor */}
@@ -2391,7 +2445,7 @@ export default function SettingsPage({ params }: any) {
                                             <span className="text-sm text-red-500">
                                             {store && store.storeName}의 회원이 없습니다.
                                             <br />
-                                            가맹점 홈페이지에서 회원가입 후 가맹점 관리자를 설정하세요.
+                                           가맹점 텔레그램 봇에서 회원가입 후 가맹점 관리자를 설정하세요.
                                             </span>
                                         </div>
 
@@ -2516,7 +2570,7 @@ export default function SettingsPage({ params }: any) {
                                     <span className="text-sm text-red-500">
                                     {store && store.storeName}의 회원이 없습니다.
                                     <br />
-                                    가맹점 홈페이지에서 회원가입 후 가맹점 자동결제용 USDT지갑을 설정하세요.
+                                   가맹점 텔레그램 봇에서 회원가입 후 가맹점 자동결제용 USDT지갑을 설정하세요.
                                     </span>
                                 </div>
                                 )}
@@ -2652,7 +2706,7 @@ export default function SettingsPage({ params }: any) {
                                     <span className="text-sm text-red-500">
                                     {store && store.storeName}의 회원이 없습니다.
                                     <br />
-                                    가맹점 홈페이지에서 회원가입 후 가맹점 판매용 USDT지갑을 설정하세요.
+                                   가맹점 텔레그램 봇에서 회원가입 후 가맹점 판매용 USDT지갑을 설정하세요.
                                     </span>
                                 </div>
                                 )}
