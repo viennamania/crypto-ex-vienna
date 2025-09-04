@@ -2473,6 +2473,7 @@ export default function SettingsPage({ params }: any) {
                                         자동결제용 USDT지갑
                                     </span>
                                 </div>
+                                
 
                                 {/* 설명:
                                 구매자가 구매한 테더를 결제를 위해서 자동 또는 수동으로 해당 지갑으로 전송합니다.

@@ -2450,6 +2450,13 @@ export default function SettingsPage({ params }: any) {
                                     </span>
                                 </div>
 
+                                {/* 설명:
+                                구매자가 구매한 테더를 결제를 위해서 자동 또는 수동으로 해당 지갑으로 전송합니다.
+                                */}
+                                <span className="w-full flex flex-row items-center justify-start gap-2 text-sm text-zinc-500">
+                                    구매자가 구매한 테더를 가맹점 결제를 위해서 자동 또는 수동으로 해당 지갑으로 전송합니다.
+                                </span>
+
 
                                 {!fetchingStore && store && store.settlementWalletAddress ? (
                                 <button
