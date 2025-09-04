@@ -9,7 +9,7 @@ import { client } from '../../../client';
 
 import {
     //ThirdwebProvider,
-    //ConnectButton,
+    ConnectButton,
   
     useConnect,
   
@@ -708,51 +708,7 @@ export default function SendUsdt({ params }: any) {
             </div>
 
             
-            {/*
-            {!address && (
-            */}
 
-
-                {/*
-                <ConnectButton
-                  client={client}
-                  wallets={wallets}
-                  chain={chain === "ethereum" ? ethereum :
-                          chain === "polygon" ? polygon :
-                          chain === "arbitrum" ? arbitrum :
-                          chain === "bsc" ? bsc : arbitrum}
-
-                  theme={"light"}
-
-                  // button color is dark skyblue convert (49, 103, 180) to hex
-                  connectButton={{
-                      style: {
-                          backgroundColor: "#0047ab", // cobalt blue
-                          color: "#f3f4f6", // gray-300
-                          padding: "2px 10px",
-                          borderRadius: "10px",
-                          fontSize: "14px",
-                          width: "60x",
-                          height: "38px",
-                      },
-                      label: "웹3 로그인",
-                  }}
-
-                  connectModal={{
-                      size: "wide", 
-                      //size: "compact",
-                      titleIcon: "https://www.stable.makeup/logo.png",                           
-                      showThirdwebBranding: false,
-                  }}
-
-                  locale={"ko_KR"}
-                  //locale={"en_US"}
-                />
-                */}
-
-            {/*
-            )}
-            */}
 
 
 
@@ -1155,6 +1111,51 @@ export default function SendUsdt({ params }: any) {
 
 
         </div>
+
+
+
+
+
+            {address && (
+              <ConnectButton
+                client={client}
+                wallets={wallets}
+                chain={chain === "ethereum" ? ethereum :
+                        chain === "polygon" ? polygon :
+                        chain === "arbitrum" ? arbitrum :
+                        chain === "bsc" ? bsc : arbitrum}
+
+                theme={"light"}
+
+                // button color is dark skyblue convert (49, 103, 180) to hex
+                connectButton={{
+                    style: {
+                        backgroundColor: "#0047ab", // cobalt blue
+                        color: "#f3f4f6", // gray-300
+                        padding: "2px 10px",
+                        borderRadius: "10px",
+                        fontSize: "14px",
+                        width: "60x",
+                        height: "38px",
+                    },
+                    label: "웹3 로그인",
+                }}
+
+                connectModal={{
+                    size: "wide", 
+                    //size: "compact",
+                    titleIcon: "https://www.stable.makeup/logo.png",                           
+                    showThirdwebBranding: false,
+                }}
+
+                locale={"ko_KR"}
+                //locale={"en_US"}
+              />
+            )}
+    
+
+
+
 
        </div>
 
