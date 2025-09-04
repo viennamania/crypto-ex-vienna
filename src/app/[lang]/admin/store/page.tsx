@@ -2974,16 +2974,25 @@ export default function Index({ params }: any) {
                                   회원 복사
                                 </button>
                                 */}
-                                <a
-                                  href={
-                                    '/' + params.lang + '/' + item.storecode + '/paymaster'
-                                  }
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-sm text-blue-500 hover:underline"
+                                <button
+                                    onClick={() => {
+                                        window.open(
+                                            'https://t.me/crypto_ex_vienna_bot',
+                                            '_blank'
+                                        );
+                                    }}
+                                    className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
+                                    hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
                                 >
-                                  회원용 홈페이지
-                                </a>
+                                    <Image
+                                        src="/icon-telegram.png"
+                                        alt="Telegram"
+                                        width={20}
+                                        height={20}
+                                        className="w-4 h-4"
+                                    />
+                                    {' '}회원 텔레그램 봇 열기
+                                </button>
 
                                 <button
                                     onClick={() => {
