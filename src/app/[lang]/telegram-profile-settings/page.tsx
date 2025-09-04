@@ -105,7 +105,11 @@ function ProfilePage() {
 
     const center = searchParams.get("center");
     
-    const telegramId = searchParams.get("telegramId");
+    
+    //const telegramId = searchParams.get("telegramId");
+
+    const telegramId = '441516803'; // test
+
 
     /*
     const [telegramId, setTelegramId] = useState(
@@ -165,7 +169,7 @@ function ProfilePage() {
   
   
     // test address
-    ///const address = "0xc7184E0Df0E6a7A57FCEC93CF47e3f4EeE76Ec2A";
+    //const address = "0xc7184E0Df0E6a7A57FCEC93CF47e3f4EeE76Ec2A";
 
 
 
@@ -238,7 +242,7 @@ function ProfilePage() {
 
     const [erc721ContractAddress, setErc721ContractAddress] = useState("");
 
-    const [userCenter, setUserCenter] = useState("");
+    const [userStorecode, setUserStorecode] = useState("");
 
     const [isCenterOwner, setIsCenterOwner] = useState(false);
 
@@ -249,13 +253,13 @@ function ProfilePage() {
 
     useEffect(() => {
         const fetchData = async () => {
-            const response = await fetch("/api/user/getUser", {
+            const response = await fetch("/api/user/getPayUserByTelegramId", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    walletAddress: address,
+                    telegramId: telegramId,
                 }),
             });
 
@@ -271,18 +275,18 @@ function ProfilePage() {
 
                 setUserCode(data.result.id);
 
-                setSeller(data.result.seller);
+                //setSeller(data.result.seller);
 
-                setIsAgent(data.result.agent);
+                //setIsAgent(data.result.agent);
 
                 ///setReferralCode(data.result.erc721ContractAddress);
-                setErc721ContractAddress(data.result.erc721ContractAddress);
+                //setErc721ContractAddress(data.result.erc721ContractAddress);
 
-                setUserCenter(data.result.center);
+                setUserStorecode(data.result.storecode);
 
-                if (data.result?.centerOwner) {
-                    setIsCenterOwner(true);
-                }
+                //if (data.result?.centerOwner) {
+                //    setIsCenterOwner(true);
+                //}
             
                 ///setTelegramId(data.result.telegramId);
                 /*
@@ -293,34 +297,14 @@ function ProfilePage() {
                 */
 
 
-            } else {
-                setNickname('');
-                setAvatar('/profile-default.png');
-                setUserCode('');
-                setSeller(null);
-                setEditedNickname('');
-                
-                //setAccountHolder('');
-
-                //setAccountNumber('');
-                //setBankName('');
-
-                setIsAgent(false);
-
-                setReferralCode('');
-
-                setErc721ContractAddress('');
-
-                setUserCenter('');
             }
 
         };
 
-        address && center &&
+        telegramId &&
         fetchData();
 
-    }, [address, center]);
-    
+    }, [telegramId]);
 
 
 
@@ -355,6 +339,73 @@ function ProfilePage() {
         }
 
     }
+
+
+
+    /*
+
+    const response = await fetch('/api/user/setBuyerWithoutWalletAddressByStorecode', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        storecode,
+        userCode,
+        userName,
+        userBankName,
+        userBankAccountNumber,
+      }),
+    });
+    */
+
+    const [walletAddress, setWalletAddress] = useState("");
+
+    const [userName, setUserName] = useState("");
+    const [userBankName, setUserBankName] = useState("");
+    const [userBankAccountNumber, setUserBankAccountNumber] = useState("");
+
+    const [loadingSetBuyerData, setLoadingSetBuyerData] = useState(false);
+
+    const setBuyerData = async () => {
+        setLoadingSetBuyerData(true);
+
+        const response = await fetch('/api/user/setBuyerWithoutWalletAddressByStorecode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                storecode: userStorecode,
+                userCode: userCode,
+                userName: userName,
+                userBankName: userBankName,
+                userBankAccountNumber: userBankAccountNumber,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (data.result) {
+            // Handle success
+
+            setWalletAddress(data.result.walletAddress);
+
+            alert('구매자 정보가 저장되었습니다.');
+
+        } else {
+            // Handle error
+            alert('구매자 정보 저장에 실패했습니다. 다시 시도해주세요.');
+        }
+
+        setLoadingSetBuyerData(false);
+    };
+
+
+
+
+
+
 
 
 
@@ -466,147 +517,7 @@ function ProfilePage() {
     }
 
 
-    // update User telegramId
-    const [loadingSetUserTelegramId, setLoadingSetUserTelegramId] = useState(false);
-    const setUserTelegramId = async () => {
-        
-        setLoadingSetUserTelegramId(true);
 
-        const response = await fetch("/api/user/updateUserTelegramId", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                walletAddress: address,
-                telegramId: telegramId,
-            }),
-        });
-
-        const data = await response.json();
-
-        //console.log("data", data);
-
-        if (data.result) {
-            setIsValideTelegramId(true);
-            //toast.success('Telegram ID saved');
-        } else {
-            //toast.error('Error saving Telegram ID');
-        }
-
-        setLoadingSetUserTelegramId(false);
-
-    }
-
-
-    const [loadingDeployErc721Contract, setLoadingDeployErc721Contract] = useState(false);
-    const deployErc721Contract = async () => {
-
-        console.log("deployErc721Contract=====================");
-
-        console.log("address", address);
-        console.log("userCode", userCode);
-        console.log("loadingDeployErc721Contract", loadingDeployErc721Contract);
-        console.log("balance", balance);
-
-  
-        if (!address) {
-            //toast.error('지갑을 먼저 연결해주세요');
-            return;
-        }
-
-        if (!userCode) {
-            //console.log("userCode=====", userCode);
-            //toast.error('회원아이디을 먼저 설정해주세요');
-            return;
-        }
-
-        if (loadingDeployErc721Contract) {
-            //toast.error('이미 실행중입니다');
-            return;
-        }
-        
-        //if (confirm("Are you sure you want to deploy ERC721 contract?")) {
-        // chinese confirm
-        if (confirm("AI 에이전트 계약주소를 생성하시겠습니까?")) {
-
-            setLoadingDeployErc721Contract(true);
-
-
-            try {
-
-
-                const erc721ContractAddress = await deployERC721Contract({
-                    chain: polygon,
-                    client: client,
-                    account: account as any,
-            
-                    /*  type ERC721ContractType =
-                    | "DropERC721"
-                    | "TokenERC721"
-                    | "OpenEditionERC721";
-                    */
-            
-                    ///type: "DropERC721",
-            
-                    type: "TokenERC721",
-                    
-                    
-                    params: {
-                        name: "AI Agent",
-                        description: "This is AI Agent",
-                        symbol: "AGENT",
-                    },
-            
-                });
-
-                console.log("erc721ContractAddress", erc721ContractAddress);
-
-                // save the contract address to the database
-                // /api/user/updateUser
-                // walletAddress, erc721ContractAddress
-
-                if (!erc721ContractAddress) {
-                    throw new Error('Failed to deploy ERC721 contract');
-                }
-
-
-                const response = await fetch('/api/user/updateUserErc721Contract', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        walletAddress: address,
-                        erc721ContractAddress: erc721ContractAddress,
-                        center: center,
-                    }),
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to save ERC721 contract address');
-                }
-
-                ///const data = await response.json();
-
-                ///console.log("data", data);
-
-
-                //setReferralCode(erc721ContractAddress);
-
-                setErc721ContractAddress(erc721ContractAddress);
-                
-                ///toast.success('AI 에이전트 계약주소 생성 완료');
-
-            } catch (error) {
-                console.error("deployErc721Contract error", error);
-            }
-
-            setLoadingDeployErc721Contract(false);
-
-        }
-  
-    };
 
 
 
@@ -654,7 +565,7 @@ function ProfilePage() {
                 </div>
 
 
-                <div className="flex flex-col items-start justify-center space-y-4">
+                <div className="flex flex-col items-start justify-center gap-5 p-4">
 
                     
                     {/* telegramId */}
@@ -868,117 +779,199 @@ function ProfilePage() {
                         )}
 
 
-                        { (address && (nicknameEdit || !userCode)) && (
+                        { (telegramId && (nicknameEdit || !walletAddress)) && (
                             <div className=' flex flex-col gap-2 items-start justify-between border border-gray-300 p-4 rounded-lg'>
 
-                                <div className="flex flex-row gap-2 items-center justify-start">
-                                    {/* dot */}
-                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                    <span className='text-sm font-semibold text-gray-500'>
-                                    
-                                        {!userCode ? "회원아이디 설정" :
-                                            nicknameEdit ? "수정할 내 회원아이디" : "새로운 회원아이디"
-                                        }
-                                    </span>
-                                </div>
-
-
-
-                                <div className='flex flex-col gap-2 items-start justify-between'>
-                                    <input
-                                        disabled={!address}
-                                        className="p-2 w-64 text-zinc-800 rounded-lg border border-gray-300
-                                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                                            disabled:bg-gray-200 disabled:text-gray-400
-                                        "
-                                        placeholder="회원아이디"
-                                        
-                                        //value={nickname}
-                                        value={editedNickname}
-
-                                        type='text'
-                                        onChange={(e) => {
-                                            // check if the value is a number
-                                            // check if the value is alphanumeric and lowercase
-
-                                            if (!/^[a-z0-9]*$/.test(e.target.value)) {
-                                                //toast.error('회원아이디는 영문 소문자와 숫자만 입력해주세요');
-                                                return;
-                                            }
-                                            if ( e.target.value.length > 10) {
-                                                //toast.error('회원아이디는 10자 이하로 입력해주세요');
-                                                return;
-                                            }
-
-                                            //setNickname(e.target.value);
-
-                                            setEditedNickname(e.target.value);
-
-                                            checkNicknameIsDuplicate(e.target.value);
-
-                                        } }
-                                    />
-
-                                    {/* 3 / 10 */}
-                                    <div className='flex flex-row gap-2 items-center justify-start'>
-                                        
-                                        {editedNickname.length < 5 ? (
-                                            <span className='text-sm font-semibold text-red-500'>
-                                                {editedNickname.length} / 10
-                                            </span>
-                                        ) : (
-                                            <span className='text-sm font-semibold text-green-500'>
-                                                {editedNickname.length} / 10
-                                            </span>
-                                        )}
-                                        
+                                
+                                {/* 가맹점 코드 */}
+                                <div className='w-full flex flex-col gap-2 items-start justify-between'>
+                                    <div className="flex flex-row gap-2 items-center justify-start">
+                                        {/* dot */}
+                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        <span className='text-sm font-semibold text-gray-500'>
+                                            가맹점 코드
+                                        </span>
                                     </div>
 
-                                    {editedNickname && isNicknameDuplicate && (
-                                        <div className='flex flex-row gap-2 items-center justify-start'>
-                                            {/* dot */}
-                                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                                            <span className='text-sm font-semibold text-red-500'>
-                                                이미 사용중인 회원아이디입니다.
-                                            </span>
-                                        </div>
-                                    )}
+                                    <div className='flex flex-col gap-2 items-start justify-between'>
+                                        
+                                        <input
+                                            className="p-2 w-64 text-zinc-800 rounded-lg border border-gray-300
+                                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                                            "
+                                            placeholder="가맹점 코드"
+                                            value={userStorecode}
+                                            type='text'
+                                            onChange={(e) => {
+                                                setUserStorecode(e.target.value);
+                                            } }
+                                        />
 
-                                    {editedNickname
-                                    && !isNicknameDuplicate
-                                    && editedNickname.length >= 5
-                                    && (
+                                    </div>
+                                </div>
+
+                                {/* 회원아이디 */}
+                                <div className='w-full flex flex-col gap-2 items-start justify-between'>
+                                    <div className="flex flex-row gap-2 items-center justify-start">
+                                        {/* dot */}
+                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        <span className='text-sm font-semibold text-gray-500'>
+                                        
+                                            {!userCode ? "회원아이디" :
+                                                nicknameEdit ? "수정할 내 회원아이디" : "새로운 회원아이디"
+                                            }
+                                        </span>
+                                    </div>
+
+                                    <div className='flex flex-col gap-2 items-start justify-between'>
+                                        
+                                        <input
+                                            //disabled={!address}
+                                            className="p-2 w-64 text-zinc-800 rounded-lg border border-gray-300
+                                                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                                                disabled:bg-gray-200 disabled:text-gray-400
+                                            "
+                                            placeholder="회원아이디"
+                                            
+                                            //value={nickname}
+                                            //value={editedNickname}
+                                            value={userCode}
+
+                                            type='text'
+                                            onChange={(e) => {
+                                                // check if the value is a number
+                                                // check if the value is alphanumeric and lowercase
+
+                                                if (!/^[a-z0-9]*$/.test(e.target.value)) {
+                                                    //toast.error('회원아이디는 영문 소문자와 숫자만 입력해주세요');
+                                                    return;
+                                                }
+                                                if ( e.target.value.length > 10) {
+                                                    //toast.error('회원아이디는 10자 이하로 입력해주세요');
+                                                    return;
+                                                }
+                                                
+                                                setUserCode(e.target.value);
+
+
+                                                //setNickname(e.target.value);
+
+                                                //setEditedNickname(e.target.value);
+
+                                                //checkNicknameIsDuplicate(e.target.value);
+
+                                            } }
+                                        />
+
+                                        {/* 3 / 10 */}
                                         <div className='flex flex-row gap-2 items-center justify-start'>
-                                            {/* dot */}
-                                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                            <span className='text-sm font-semibold text-green-500'>
-                                                사용가능한 회원아이디입니다.
-                                            </span>
+                                            
+                                            {userCode.length < 5 ? (
+                                                <span className='text-sm font-semibold text-red-500'>
+                                                    {userCode.length} / 10
+                                                </span>
+                                            ) : (
+                                                <span className='text-sm font-semibold text-green-500'>
+                                                    {userCode.length} / 10
+                                                </span>
+                                            )}
+                                            
                                         </div>
-                                    )}
+
+                                        {userCode && isNicknameDuplicate && (
+                                            <div className='flex flex-row gap-2 items-center justify-start'>
+                                                {/* dot */}
+                                                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                                <span className='text-sm font-semibold text-red-500'>
+                                                    이미 사용중인 회원아이디입니다.
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {userCode
+                                        && !isNicknameDuplicate
+                                        && userCode.length >= 5
+                                        && (
+                                            <div className='flex flex-row gap-2 items-center justify-start'>
+                                                {/* dot */}
+                                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                <span className='text-sm font-semibold text-green-500'>
+                                                    사용가능한 회원아이디입니다.
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className='flex flex-row gap-2 items-center justify-start'>
+                                        {/* dot */}
+                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        <span className='text-sm font-semibold text-gray-500'>
+                                            회원아이디는 5자 이상 10자 이하로 입력해주세요
+                                        </span>
+                                    </div>
                                 </div>
 
 
-                                <div className='flex flex-row gap-2 items-center justify-start'>
-                                    {/* dot */}
-                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                    <span className='text-sm font-semibold text-gray-500'>
-                                        회원아이디는 5자 이상 10자 이하로 입력해주세요
-                                    </span>
+                                {/* userName, userBankName, userBankAccountNumber */}
+                                <div className='w-full flex flex-col gap-2 items-start justify-between'>
+
+                                    <div className="flex flex-row gap-2 items-center justify-start">
+                                        {/* dot */}
+                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        <span className='text-sm font-semibold text-gray-500'>
+                                            예금주명, 은행명, 계좌번호
+                                        </span>
+                                    </div>
+
+                                    <input
+                                        className="p-2 w-64 text-zinc-800 rounded-lg border border-gray-300
+                                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                                        "
+                                        placeholder="예금주명"
+                                        value={userName}
+                                        type='text'
+                                        onChange={(e) => {
+                                            setUserName(e.target.value);
+                                        } }
+                                    />
+                                    <input
+                                        className="p-2 w-64 text-zinc-800 rounded-lg border border-gray-300
+                                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                                        "
+                                        placeholder="은행명"
+                                        value={userBankName}
+                                        type='text'
+                                        onChange={(e) => {
+                                            setUserBankName(e.target.value);
+                                        } }
+                                    />
+                                    <input
+                                        className="p-2 w-64 text-zinc-800 rounded-lg border border-gray-300
+                                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                                        "
+                                        placeholder="계좌번호"
+                                        value={userBankAccountNumber}
+                                        type='text'
+                                        onChange={(e) => {
+                                            setUserBankAccountNumber(e.target.value);
+                                        } }
+                                    />
                                 </div>
+
+
                                 <button
                                     disabled={
-                                        !address
-                                        || !editedNickname
-                                        || editedNickname.length < 5
+                                        !telegramId
+                                        || userStorecode.length < 3
+                                        || userCode.length < 5
                                         || isNicknameDuplicate
-                                        || loadingSetUserData
+                                        || loadingSetBuyerData
                                     }
                                     className={`
                                         w-full
-                                        ${!address
-                                        || !editedNickname
-                                        || editedNickname.length < 5
+                                        ${!telegramId
+                                        || userStorecode.length < 3
+                                        || userCode.length < 5
                                         || isNicknameDuplicate
                                         || loadingSetUserData
                                         ? 'bg-gray-300 text-gray-400'
@@ -988,11 +981,12 @@ function ProfilePage() {
                                         w-64 mt-5
                                     `}
                                     onClick={() => {
-                                        setUserData();
+                                        setBuyerData();
+                                        
                                     }}
                                 >
-                                    {loadingSetUserData ? "저장중..." : "저장"}
-                                    
+                                    {loadingSetBuyerData ? "지갑주소 생성중..." : "지갑주소 생성하기"}
+
                                 </button>
 
                                 

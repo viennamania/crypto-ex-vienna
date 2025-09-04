@@ -48,12 +48,12 @@ export async function POST(request: NextRequest) {
 
   const {
     storecode,
-    walletAddress,
+    ///walletAddress,
     userCode,
     userName,
     userBankName,
     userBankAccountNumber,
-    userType,
+    ///userType,
   } = body;
 
   //const { storecode, nickname, mobile, password } = body;
@@ -121,6 +121,9 @@ export async function POST(request: NextRequest) {
     ///console.log("user", user);
 
     if (user) {
+
+      console.log("User already exists");
+
       return NextResponse.json({
         result: "User already exists",
         walletAddress: user.walletAddress,
@@ -139,6 +142,9 @@ export async function POST(request: NextRequest) {
     //console.log("escrowWalletPrivateKey", escrowWalletPrivateKey);
 
     if (!userWalletPrivateKey) {
+
+      console.log("No userWalletPrivateKey");
+
       return NextResponse.json({
         result: null,
       });
@@ -151,6 +157,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (!client) {
+
+      console.log("No client");
+
       return NextResponse.json({
         result: null,
       });
@@ -210,6 +219,8 @@ export async function POST(request: NextRequest) {
       password: password,
       buyer: buyer,
     });
+
+    
 
     // return wallet address to user
 

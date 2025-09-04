@@ -31,7 +31,7 @@ import {
 
 
 import {
-  ConnectButton,
+  //ConnectButton,
   useActiveAccount,
   useActiveWallet,
   useWalletBalance,
@@ -39,6 +39,8 @@ import {
   useSetActiveWallet,
 
   useConnectedWallets,
+
+  AutoConnect,
 
 
 } from "thirdweb/react";
@@ -168,6 +170,15 @@ const wallets = [
   ];
 */
   
+
+
+
+const wallet = inAppWallet({
+	smartAccount: {
+		sponsorGas: false,
+		chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
+	}
+});
 
 
 // get escrow wallet address
@@ -1563,6 +1574,13 @@ export default function Index({ params }: any) {
   return (
 
     <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto">
+
+
+      <AutoConnect
+          client={client}
+          wallets={[wallet]}
+          timeout={15000}
+      />
 
 
       <div className="w-full flex flex-col items-center justify-center gap-4">

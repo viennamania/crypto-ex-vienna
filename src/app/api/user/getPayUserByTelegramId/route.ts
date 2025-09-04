@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
-	getOneByTelegramId,
+	getPayUserByTelegramId,
 } from '@lib/api/user';
 
 
@@ -12,18 +12,17 @@ export async function POST(request: NextRequest) {
 
   const {
     telegramId,
-    storecode,
   } = body;
 
 
   //console.log("walletAddress", walletAddress);
 
 
-  const result = await getOneByTelegramId(
+  const result = await getPayUserByTelegramId(
     telegramId,
-    storecode,
   );
 
+  console.log("getUserByTelegramId result", result);
 
  
   return NextResponse.json({
