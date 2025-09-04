@@ -2631,7 +2631,7 @@ export default function Index({ params }: any) {
                         <th className="p-2">
                           <div className="flex flex-col items-center justify-center gap-2">
                             <span className="text-center">
-                              홈페이지
+                              텔레그램 봇
                             </span>
                           </div>
                         </th>
@@ -2997,7 +2997,26 @@ export default function Index({ params }: any) {
                                     {' '}{item?.telegramBot ? '관리자 텔레그램 봇 열기' : '없음'}
                                 </button>
 
-
+                                {/* 텔레그램봇 링크 복사하기 */}
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(
+                                      item?.telegramBot ? 'https://t.me/' + item?.telegramBot : ''
+                                    );
+                                    toast.success('복사되었습니다');
+                                  }}
+                                  className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
+                                  hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
+                                >
+                                  <Image
+                                    src="/icon-telegram.png"
+                                    alt="Telegram"
+                                    width={20}
+                                    height={20}
+                                    className="w-4 h-4"
+                                  />
+                                  {' '}{item?.telegramBot ? '관리자 텔레그램 링크 복사' : '없음'}
+                                </button>
 
                               </div>
 
