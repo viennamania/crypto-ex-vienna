@@ -2183,7 +2183,7 @@ export default function Index({ params }: any) {
       <div className="w-full h-screen flex items-center justify-center">
         <div className="flex flex-col items-center justify-center gap-2">
           <Image
-            src="/banner-404.gif"
+            src="/banner-warning.webp"
             alt="Error"
             width={200}
             height={200}

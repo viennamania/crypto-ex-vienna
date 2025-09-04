@@ -1421,7 +1421,7 @@ export default function Index({ params }: any) {
           
           <div className="flex flex-col items-center justify-center gap-4">
             <Image
-              src="/banner-404.gif"
+              src="/banner-warning.webp"
               alt="Error"
               width={100}
               height={100}
@@ -1845,7 +1845,7 @@ export default function Index({ params }: any) {
           {/* 에이전트 관리자가 아닙니다. 회원가입한후 센터에 문의하세요. */}
           <div className="w-full flex flex-col items-center justify-center gap-4 mt-8">
             <Image
-              src="/banner-404.gif"
+              src="/banner-warning.webp"
               alt="Error"
               width={100}
               height={100}

@@ -2897,7 +2897,7 @@ const [tradeSummary, setTradeSummary] = useState({
       <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto">
         <div className="py-0 w-full flex flex-col items-center justify-center gap-4">
           <Image
-            src="/banner-404.gif"
+            src="/banner-warning.webp"
             alt="Error"
             width={200}
             height={200}

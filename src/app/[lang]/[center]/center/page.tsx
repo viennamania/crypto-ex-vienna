@@ -1580,7 +1580,7 @@ export default function Index({ params }: any) {
       ) : !store ? (
         <div className="py-0 w-full flex flex-col items-center justify-center gap-4">
           <Image
-            src="/banner-404.gif"
+            src="/banner-warning.webp"
             alt="Error"
             width={200}
             height={200}
