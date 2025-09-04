@@ -1367,7 +1367,7 @@ export default function Index({ params }: any) {
                         height={20}
                         className="w-5 h-5"
                       />
-                      <span className="text-lg text-green-600 font-semibold"
+                      <span className="text-lg text-[#409192] font-semibold"
                         style={{ fontFamily: 'monospace' }}
                       >
                         {
@@ -1446,7 +1446,7 @@ export default function Index({ params }: any) {
                     height={20}
                     className="w-5 h-5"
                   />
-                  <span className="text-lg text-green-600 font-semibold"
+                  <span className="text-lg text-[#409192] font-semibold"
                     style={{ fontFamily: 'monospace' }}
                   >
                     {
@@ -1497,7 +1497,7 @@ export default function Index({ params }: any) {
                     height={20}
                     className="w-5 h-5"
                   />
-                  <span className="text-lg text-green-600 font-semibold"
+                  <span className="text-lg text-[#409192] font-semibold"
                     style={{ fontFamily: 'monospace' }}
                   >
                     {
@@ -1547,7 +1547,7 @@ export default function Index({ params }: any) {
                     height={20}
                     className="w-5 h-5"
                   />
-                  <span className="text-lg text-green-600 font-semibold"
+                  <span className="text-lg text-[#409192] font-semibold"
                     style={{ fontFamily: 'monospace' }}
                   >
                     {
@@ -1622,7 +1622,7 @@ export default function Index({ params }: any) {
                       <td className="px-4 py-2 text-sm text-zinc-700">
                         {new Date(escrow.date).toLocaleDateString('ko-KR')}
                       </td>
-                      <td className="px-4 py-2 text-sm text-green-600 font-semibold text-right"
+                      <td className="px-4 py-2 text-sm text-[#409192] font-semibold text-right"
                         style={{ fontFamily: 'monospace' }}
                       >
                         {
@@ -1631,7 +1631,7 @@ export default function Index({ params }: any) {
                           : 0
                         }
                       </td>
-                      <td className="px-4 py-2 text-sm text-green-600 font-semibold text-right"
+                      <td className="px-4 py-2 text-sm text-[#409192] font-semibold text-right"
                         style={{ fontFamily: 'monospace' }}
                       >
                         {
@@ -1640,7 +1640,7 @@ export default function Index({ params }: any) {
                           : 0
                         }
                       </td>
-                      <td className="px-4 py-2 text-sm text-green-600 font-semibold text-right"
+                      <td className="px-4 py-2 text-sm text-[#409192] font-semibold text-right"
                         style={{ fontFamily: 'monospace' }}
                       >
                         {
@@ -1649,7 +1649,7 @@ export default function Index({ params }: any) {
                           : 0
                         }
                       </td>
-                      <td className="px-4 py-2 text-sm text-green-600 font-semibold text-right"
+                      <td className="px-4 py-2 text-sm text-[#409192] font-semibold text-right"
                         style={{ fontFamily: 'monospace' }}
                       >
                         {
@@ -1719,7 +1719,7 @@ export default function Index({ params }: any) {
                           </td>
 
 
-                          <td className="px-4 py-2 text-sm text-green-600 font-semibold text-right"
+                          <td className="px-4 py-2 text-sm text-[#409192] font-semibold text-right"
                             style={{ fontFamily: 'monospace' }}
                           >
                             {Number(order.totalUsdtAmount).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
@@ -1738,7 +1738,7 @@ export default function Index({ params }: any) {
                           </td>
                           */}
 
-                          <td className="px-4 py-2 text-sm text-green-600 font-semibold text-right"
+                          <td className="px-4 py-2 text-sm text-[#409192] font-semibold text-right"
                             style={{ fontFamily: 'monospace' }}
                           >
                             {Number(order.totalAgentFeeAmount
@@ -1753,7 +1753,7 @@ export default function Index({ params }: any) {
                             ).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                           </td>
 
-                          <td className="px-4 py-2 text-sm text-green-600 font-semibold text-right"
+                          <td className="px-4 py-2 text-sm text-[#409192] font-semibold text-right"
                             style={{ fontFamily: 'monospace' }}
                           >
                             {Number(order.totalSettlementAmount).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
@@ -1767,7 +1767,7 @@ export default function Index({ params }: any) {
 
                           <td className="px-4 py-2 text-sm text-blue-600 font-semibold text-right">
                             {order.totalEscrowCount && order.totalEscrowCount > 0 ? (
-                              <span className="text-green-600"
+                              <span className="text-[#409192]"
                                 style={{ fontFamily: 'monospace' }}
                               >
                                 {Number(order.totalEscrowWithdrawAmount).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} USDT

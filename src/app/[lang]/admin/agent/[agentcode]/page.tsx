@@ -3082,7 +3082,7 @@ export default function Index({ params }: any) {
 
                     <div className="
                     w-40 flex flex-col items-end justify-center
-                    text-4xl font-semibold text-green-600"
+                    text-4xl font-semibold text-[#409192]"
                     style={{ fontFamily: "monospace" }}
                     >
                       {Number(balance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}

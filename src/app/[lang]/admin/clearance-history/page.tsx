@@ -3131,7 +3131,7 @@ const fetchBuyOrders = async () => {
                     height={20}
                     className="w-5 h-5"
                   />
-                  <div className="text-xl font-semibold text-green-600"
+                  <div className="text-xl font-semibold text-[#409192]"
                     style={{ fontFamily: 'monospace' }}
                   >
                     {tradeSummary.totalClearanceAmountUSDT?.toLocaleString()}
@@ -3480,7 +3480,7 @@ const fetchBuyOrders = async () => {
                                     height={20}
                                     className="w-5 h-5"
                                   />
-                                  <span className="text-lg text-green-600 font-semibold"
+                                  <span className="text-lg text-[#409192] font-semibold"
                                     style={{
                                       fontFamily: 'monospace',
                                       }}
@@ -4244,7 +4244,7 @@ const fetchBuyOrders = async () => {
 
                                 </div>
                               ) : (
-                                <span className="text-sm text-green-600
+                                <span className="text-sm text-[#409192]
                                   border border-green-600
                                   rounded-md px-2 py-1">
                                   출금완료

@@ -388,7 +388,7 @@ const StabilityConsole = () => {
 
               <div className="
               w-40 flex flex-col items-end justify-center
-              text-xl font-semibold text-green-600"
+              text-xl font-semibold text-[#409192]"
               style={{ fontFamily: "monospace" }}
               >
                 {Number(balance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}

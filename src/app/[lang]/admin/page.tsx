@@ -1410,7 +1410,7 @@ export default function Index({ params }: any) {
                                   width={16}
                                   height={16}
                                 />
-                                <span className="text-lg text-green-600 font-semibold"
+                                <span className="text-lg text-[#409192] font-semibold"
                                   style={{ fontFamily: "monospace" }}
                                 >
                                   {
@@ -1722,7 +1722,7 @@ export default function Index({ params }: any) {
                         height={20}
                         className="w-5 h-5"
                       />
-                      <span className="text-lg text-green-600 font-semibold"
+                      <span className="text-lg text-[#409192] font-semibold"
                         style={{ fontFamily: "monospace" }}
                       >
                         {Number(totalSummary.totalUsdtAmount).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -1756,7 +1756,7 @@ export default function Index({ params }: any) {
                         height={20}
                         className="w-5 h-5"
                       />
-                      <span className="text-lg text-green-600 font-semibold"
+                      <span className="text-lg text-[#409192] font-semibold"
                         style={{ fontFamily: "monospace" }}
                       >
                         {
@@ -1877,7 +1877,7 @@ export default function Index({ params }: any) {
                                   width={16}
                                   height={16}
                                 />
-                                <span className="text-lg text-green-600 font-semibold"
+                                <span className="text-lg text-[#409192] font-semibold"
                                 style={{ fontFamily: "monospace" }}
                                 >
                                   {Number(trade.usdtAmount).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -1910,7 +1910,7 @@ export default function Index({ params }: any) {
                                   width={16}
                                   height={16}
                                 />
-                                <span className="text-lg text-green-600 font-semibold"
+                                <span className="text-lg text-[#409192] font-semibold"
                                   style={{ fontFamily: "monospace" }}
                                 >
                                   {Number(trade.settlement?.settlementAmount).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -2511,7 +2511,7 @@ export default function Index({ params }: any) {
 
                     <div className="
                     w-40 flex flex-col items-end justify-center
-                    text-4xl font-semibold text-green-600"
+                    text-4xl font-semibold text-[#409192]"
                     style={{ fontFamily: "monospace" }}
                     >
                       {Number(balance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
