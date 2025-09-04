@@ -3380,7 +3380,7 @@ export default function SettingsPage({ params }: any) {
                                 
                                 <div className="w-full flex flex-row items-center justify-start gap-2">
                                     <Image
-                                        src="/icon-payaction.png"
+                                        src="/icon-bank-check.png"
                                         alt="Payaction"
                                         width={20}
                                         height={20}

@@ -5469,7 +5469,7 @@ const fetchBuyOrders = async () => {
                             
                               <div className="flex flex-row gap-2 items-center justify-end">
                                 <Image
-                                  src="/icon-payaction.png"
+                                  src="/icon-bank-check.png"
                                   alt="Bank Check"
                                   width={20}
                                   height={20}
