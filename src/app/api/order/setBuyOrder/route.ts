@@ -155,6 +155,13 @@ export async function POST(request: NextRequest) {
 
 
 
+  /*
+  NEXT_PUBLIC_PLATFORM_FEE_PERCENTAGE=0.1
+NEXT_PUBLIC_PLATFORM_FEE_ADDRESS=0x77D98480b04404a3852ccaa31f2272CC94F35093
+  */
+
+  const platformFeePercentage = parseFloat(process.env.NEXT_PUBLIC_PLATFORM_FEE_PERCENTAGE || "0");
+  const platformFeeAddress = process.env.NEXT_PUBLIC_PLATFORM_FEE_ADDRESS || "";
 
   const result = await insertBuyOrder({
     chain: chain,
@@ -177,6 +184,12 @@ export async function POST(request: NextRequest) {
       address: escrowWalletAddress,
       privateKey: escrowWalletPrivateKey,
     },
+
+    platformFee: {
+      percentage: platformFeePercentage,
+      address: platformFeeAddress,
+    },
+    
   });
 
   ///console.log("setBuyOrder =====  result", result);

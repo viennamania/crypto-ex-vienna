@@ -1671,6 +1671,11 @@ export async function insertBuyOrder(data: any) {
       escrowWallet: data.escrowWallet || '', // optional, can be empty
 
       audioOn: true, // default true
+
+
+      platformFee: data.platformFee,
+
+
     }
   );
 
