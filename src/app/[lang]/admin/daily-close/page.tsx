@@ -1386,7 +1386,7 @@ const fetchBuyOrders = async () => {
                         className="rounded-lg w-5 h-5"
                       />
                       <span className="text-sm text-[#f3f4f6]">
-                        전체 관리자
+                        센터 관리자
                       </span>
                     </div>
                   )}
