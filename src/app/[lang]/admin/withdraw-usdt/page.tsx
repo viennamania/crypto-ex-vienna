@@ -9,7 +9,7 @@ import { client } from '../../../client';
 
 import {
     //ThirdwebProvider,
-    ConnectButton,
+    //ConnectButton,
   
     useConnect,
   
@@ -23,6 +23,8 @@ import {
     useConnectedWallets,
 
     useSetActiveWallet,
+
+    AutoConnect,
     
 } from "thirdweb/react";
 
@@ -81,6 +83,12 @@ const wallets = [
 ];
 
 
+const wallet = inAppWallet({
+  smartAccount: {
+    sponsorGas: false,
+    chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
+  }
+});  
 
 
 const contractAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"; // USDT on Polygon
@@ -126,7 +134,7 @@ export default function SendUsdt({ params }: any) {
 
   const searchParams = useSearchParams();
  
-  const wallet = searchParams.get('wallet');
+  ///const wallet = searchParams.get('wallet');
   
   
   const contract = getContract({
@@ -660,6 +668,13 @@ export default function SendUsdt({ params }: any) {
 
     <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto">
 
+
+      <AutoConnect
+          client={client}
+          wallets={[wallet]}
+      />
+
+
       <div className="py-0 w-full ">
 
   
@@ -698,7 +713,7 @@ export default function SendUsdt({ params }: any) {
             */}
 
 
-
+                {/*
                 <ConnectButton
                   client={client}
                   wallets={wallets}
@@ -733,6 +748,7 @@ export default function SendUsdt({ params }: any) {
                   locale={"ko_KR"}
                   //locale={"en_US"}
                 />
+                */}
 
             {/*
             )}

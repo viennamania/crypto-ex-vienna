@@ -1579,7 +1579,6 @@ export default function Index({ params }: any) {
       <AutoConnect
           client={client}
           wallets={[wallet]}
-          timeout={15000}
       />
 
 

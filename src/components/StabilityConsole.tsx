@@ -258,7 +258,6 @@ const StabilityConsole = () => {
       <AutoConnect
           client={client}
           wallets={[wallet]}
-          timeout={15000}
       />
 
       {/*
