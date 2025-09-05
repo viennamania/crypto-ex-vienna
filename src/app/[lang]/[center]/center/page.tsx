@@ -2481,7 +2481,7 @@ export default function Index({ params }: any) {
                       height={35}
                       className="w-6 h-6"
                     />
-                    <h2 className="text-lg font-semibold">최근 거래내역(회원)</h2>
+                    <h2 className="text-lg font-semibold">최근 P2P 거래내역(회원)</h2>
                     {fetchingStoreSummary && (
                       <Image
                         src="/loading.png"
@@ -2498,7 +2498,7 @@ export default function Index({ params }: any) {
                     }}
                     className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                   >
-                    거래내역
+                    P2P 거래내역
                   </button>
 
                 </div>
@@ -2511,13 +2511,13 @@ export default function Index({ params }: any) {
 
                   <div className="w-full flex flex-row items-center justify-center gap-2">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <h2 className="text-lg font-semibold">총 거래수</h2>
+                      <h2 className="text-lg font-semibold">총 P2P 거래수</h2>
                       <p className="text-lg text-zinc-500">
                         {storeSummary.totalNumberOfTrades}
                       </p>
                     </div>
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <h2 className="text-lg font-semibold">총 거래금액(원)</h2>
+                      <h2 className="text-lg font-semibold">총 P2P 거래금액(원)</h2>
                       <div className="flex flex-row items-center justify-end gap-2">
                         <p className="text-lg text-yellow-600"
                           style={{ fontFamily: 'monospace' }}>
@@ -2526,7 +2526,7 @@ export default function Index({ params }: any) {
                       </div>
                     </div>
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <h2 className="text-lg font-semibold">총 거래량(USDT)</h2>
+                      <h2 className="text-lg font-semibold">총 P2P 거래량(USDT)</h2>
 
                       <div className="flex flex-row items-center justify-center gap-2">
                         <Image
@@ -2595,8 +2595,9 @@ export default function Index({ params }: any) {
                         <tr className="bg-gray-100">
                           <th className="
                           hidden xl:table-cell
-                          px-4 py-2 text-left">거래번호</th>
+                          px-4 py-2 text-left">P2P 거래번호</th>
                           <th className="px-4 py-2 text-left">구매자</th>
+                          <th className="px-4 py-2 text-left">판매자</th>
                           <th className="px-4 py-2 text-right">거래금액(원)</th>
                           <th className="px-4 py-2 text-right">거래량(USDT)</th>
                           <th className="
@@ -2617,6 +2618,11 @@ export default function Index({ params }: any) {
                               <br />
                               <span className="text-sm text-zinc-400">
                                 {trade.buyer?.depositName || '입금자명 없음'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2">
+                              <span className="text-sm text-zinc-500">
+                                {trade?.seller?.nickname || '익명'}
                               </span>
                             </td>
                             <td className="px-4 py-2">
