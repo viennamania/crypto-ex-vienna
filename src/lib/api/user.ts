@@ -104,6 +104,21 @@ export async function insertOne(data: any) {
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
 
+
+  // if telegramId is exist, check same telegramId
+  if (data.telegramId) {
+    const checkTelegramId = await collection.findOne<UserProps>(
+      { telegramId: data.telegramId }
+    );
+    if (checkTelegramId) {
+      console.log('insertOne telegramId exists: ' + JSON.stringify(checkTelegramId));
+      return {
+        error: 'telegramId exists',
+      }
+    }
+  }
+  
+
   // check same walletAddress or smae nickname
 
   const checkUser = await collection.findOne<UserProps>(
@@ -114,8 +129,6 @@ export async function insertOne(data: any) {
       $or: [
         { walletAddress: data.walletAddress },
         { nickname: data.nickname },
-        { telegramId: data.telegramId },
-
       ]
     },
     { projection: { _id: 0, emailVerified: 0 } }

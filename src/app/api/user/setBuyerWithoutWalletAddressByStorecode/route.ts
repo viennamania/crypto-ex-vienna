@@ -182,8 +182,7 @@ export async function POST(request: NextRequest) {
 
     const wallet = smartWallet({
       chain:  polygon ,
-      ///factoryAddress: "0x9Bb60d360932171292Ad2b80839080fb6F5aBD97", // your own deployed account factory address
-      sponsorGas: false,
+      sponsorGas: true,
     });
 
 
@@ -194,6 +193,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (!account) {
+
+      console.log("No account");
       return NextResponse.json({
         result: null,
       });
@@ -203,11 +204,18 @@ export async function POST(request: NextRequest) {
 
     const userWalletAddress = account.address;
 
-    
+    console.log("userWalletAddress", userWalletAddress);
 
 
 
+    if (!userWalletAddress) {
 
+      console.log("No userWalletAddress");
+
+      return NextResponse.json({
+        result: null,
+      });
+    }
 
 
 
