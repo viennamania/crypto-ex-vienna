@@ -6858,6 +6858,13 @@ const fetchBuyOrders = async () => {
 
                             <div className="w-full flex flex-row gap-2 items-center justify-start">
                               <Image
+                                src="/icon-payment.png"
+                                alt="Payment Icon"
+                                width={30}
+                                height={30}
+                                className="w-6 h-6 rounded-lg object-cover"
+                              />
+                              <Image
                                 src={item?.store?.storeLogo || '/icon-store.png'}
                                 alt="Store Logo"
                                 width={30}

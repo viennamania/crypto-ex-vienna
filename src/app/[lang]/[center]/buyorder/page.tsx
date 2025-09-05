@@ -810,6 +810,18 @@ export default function Index({ params }: any) {
     
   const [buyOrders, setBuyOrders] = useState<BuyOrder[]>([]);
 
+    const [buyOrderStats, setBuyOrderStats] = useState({
+    totalCount: 0,
+    totalKrwAmount: 0,
+    totalUsdtAmount: 0,
+    totalSettlementCount: 0,
+    totalSettlementAmount: 0,
+    totalSettlementAmountKRW: 0,
+    totalFeeAmount: 0,
+    totalFeeAmountKRW: 0,
+    totalAgentFeeAmount: 0,
+    totalAgentFeeAmountKRW: 0,
+  });
 
   ///console.log('buyOrders', buyOrders);
 
@@ -972,6 +984,20 @@ export default function Index({ params }: any) {
                 setBuyOrders(data.result.orders);
 
                 setTotalCount(data.result.totalCount);
+
+                setBuyOrderStats({
+                  totalCount: data.result.totalCount,
+                  totalKrwAmount: data.result.totalKrwAmount,
+                  totalUsdtAmount: data.result.totalUsdtAmount,
+                  totalSettlementCount: data.result.totalSettlementCount,
+                  totalSettlementAmount: data.result.totalSettlementAmount,
+                  totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
+                  totalFeeAmount: data.result.totalFeeAmount,
+                  totalFeeAmountKRW: data.result.totalFeeAmountKRW,
+                  totalAgentFeeAmount: data.result.totalAgentFeeAmount,
+                  totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+                });
+
             })
 
 
@@ -1114,6 +1140,20 @@ export default function Index({ params }: any) {
             setBuyOrders(data.result.orders);
 
             setTotalCount(data.result.totalCount);
+
+            setBuyOrderStats({
+              totalCount: data.result.totalCount,
+              totalKrwAmount: data.result.totalKrwAmount,
+              totalUsdtAmount: data.result.totalUsdtAmount,
+              totalSettlementCount: data.result.totalSettlementCount,
+              totalSettlementAmount: data.result.totalSettlementAmount,
+              totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
+              totalFeeAmount: data.result.totalFeeAmount,
+              totalFeeAmountKRW: data.result.totalFeeAmountKRW,
+              totalAgentFeeAmount: data.result.totalAgentFeeAmount,
+              totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+            });
+
           }
         });
 
@@ -1391,6 +1431,20 @@ export default function Index({ params }: any) {
                 setBuyOrders(data.result.orders);
     
                 setTotalCount(data.result.totalCount);
+
+                setBuyOrderStats({
+                  totalCount: data.result.totalCount,
+                  totalKrwAmount: data.result.totalKrwAmount,
+                  totalUsdtAmount: data.result.totalUsdtAmount,
+                  totalSettlementCount: data.result.totalSettlementCount,
+                  totalSettlementAmount: data.result.totalSettlementAmount,
+                  totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
+                  totalFeeAmount: data.result.totalFeeAmount,
+                  totalFeeAmountKRW: data.result.totalFeeAmountKRW,
+                  totalAgentFeeAmount: data.result.totalAgentFeeAmount,
+                  totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+                });
+
               }
             });
 
@@ -1515,6 +1569,20 @@ export default function Index({ params }: any) {
               setBuyOrders(data.result.orders);
   
               setTotalCount(data.result.totalCount);
+
+              setBuyOrderStats({
+                totalCount: data.result.totalCount,
+                totalKrwAmount: data.result.totalKrwAmount,
+                totalUsdtAmount: data.result.totalUsdtAmount,
+                totalSettlementCount: data.result.totalSettlementCount,
+                totalSettlementAmount: data.result.totalSettlementAmount,
+                totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
+                totalFeeAmount: data.result.totalFeeAmount,
+                totalFeeAmountKRW: data.result.totalFeeAmountKRW,
+                totalAgentFeeAmount: data.result.totalAgentFeeAmount,
+                totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+              });
+
             }
           });
 
@@ -1787,6 +1855,20 @@ export default function Index({ params }: any) {
                   setBuyOrders(data.result.orders);
 
                   setTotalCount(data.result.totalCount);
+
+                  setBuyOrderStats({
+                    totalCount: data.result.totalCount,
+                    totalKrwAmount: data.result.totalKrwAmount,
+                    totalUsdtAmount: data.result.totalUsdtAmount,
+                    totalSettlementCount: data.result.totalSettlementCount,
+                    totalSettlementAmount: data.result.totalSettlementAmount,
+                    totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
+                    totalFeeAmount: data.result.totalFeeAmount,
+                    totalFeeAmountKRW: data.result.totalFeeAmountKRW,
+                    totalAgentFeeAmount: data.result.totalAgentFeeAmount,
+                    totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+                  });
+
               })
 
               toast.success(Payment_has_been_confirmed);
@@ -1952,6 +2034,20 @@ export default function Index({ params }: any) {
                 setBuyOrders(data.result.orders);
 
                 setTotalCount(data.result.totalCount);
+
+                setBuyOrderStats({
+                  totalCount: data.result.totalCount,
+                  totalKrwAmount: data.result.totalKrwAmount,
+                  totalUsdtAmount: data.result.totalUsdtAmount,
+                  totalSettlementCount: data.result.totalSettlementCount,
+                  totalSettlementAmount: data.result.totalSettlementAmount,
+                  totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
+                  totalFeeAmount: data.result.totalFeeAmount,
+                  totalFeeAmountKRW: data.result.totalFeeAmountKRW,
+                  totalAgentFeeAmount: data.result.totalAgentFeeAmount,
+                  totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+                });
+
             })
 
           toast.success(Payment_has_been_confirmed);
@@ -2128,6 +2224,20 @@ export default function Index({ params }: any) {
             setBuyOrders(data.result.orders);
 
             setTotalCount(data.result.totalCount);
+
+            setBuyOrderStats({
+              totalCount: data.result.totalCount,
+              totalKrwAmount: data.result.totalKrwAmount,
+              totalUsdtAmount: data.result.totalUsdtAmount,
+              totalSettlementCount: data.result.totalSettlementCount,
+              totalSettlementAmount: data.result.totalSettlementAmount,
+              totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
+              totalFeeAmount: data.result.totalFeeAmount,
+              totalFeeAmountKRW: data.result.totalFeeAmountKRW,
+              totalAgentFeeAmount: data.result.totalAgentFeeAmount,
+              totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+            });
+
         })
 
       }
@@ -2288,7 +2398,18 @@ export default function Index({ params }: any) {
 
       setTotalCount(data.result.totalCount);
       
-
+      setBuyOrderStats({
+        totalCount: data.result.totalCount,
+        totalKrwAmount: data.result.totalKrwAmount,
+        totalUsdtAmount: data.result.totalUsdtAmount,
+        totalSettlementCount: data.result.totalSettlementCount,
+        totalSettlementAmount: data.result.totalSettlementAmount,
+        totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
+        totalFeeAmount: data.result.totalFeeAmount,
+        totalFeeAmountKRW: data.result.totalFeeAmountKRW,
+        totalAgentFeeAmount: data.result.totalAgentFeeAmount,
+        totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+      });
 
     }
 
@@ -2403,6 +2524,21 @@ const fetchBuyOrders = async () => {
 
   setBuyOrders(data.result.orders);
   setTotalCount(data.result.totalCount);
+
+  setBuyOrderStats({
+    totalCount: data.result.totalCount,
+    totalKrwAmount: data.result.totalKrwAmount,
+    totalUsdtAmount: data.result.totalUsdtAmount,
+    totalSettlementCount: data.result.totalSettlementCount,
+    totalSettlementAmount: data.result.totalSettlementAmount,
+    totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
+    totalFeeAmount: data.result.totalFeeAmount,
+    totalFeeAmountKRW: data.result.totalFeeAmountKRW,
+    totalAgentFeeAmount: data.result.totalAgentFeeAmount,
+    totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+  });
+
+
   setFetchingBuyOrders(false);
 
   return data.result.orders;
@@ -2670,7 +2806,7 @@ const fetchBuyOrders = async () => {
     */
 
 
-
+  /*
   const [tradeSummary, setTradeSummary] = useState({
     totalCount: 0,
     totalKrwAmount: 0,
@@ -2753,7 +2889,7 @@ const fetchBuyOrders = async () => {
     searchFromDate, searchToDate,
     searchBuyer, searchDepositName, searchStoreBankAccountNumber,
     params.center]);
-
+  */
 
 
 
@@ -4419,7 +4555,7 @@ const fetchBuyOrders = async () => {
                 <div className="flex flex-col gap-2 items-center">
                   <div className="text-sm">P2P 거래수(건)</div>
                   <div className="text-4xl font-semibold text-zinc-500">
-                    {tradeSummary.totalCount?.toLocaleString()}
+                    {buyOrderStats.totalCount?.toLocaleString()}
                   </div>
                 </div>
 
@@ -4436,8 +4572,8 @@ const fetchBuyOrders = async () => {
                     <span className="text-xl font-semibold text-[#409192]"
                       style={{ fontFamily: 'monospace' }}
                     >
-                      {tradeSummary.totalUsdtAmount
-                      && tradeSummary.totalUsdtAmount.toFixed(3)
+                      {buyOrderStats.totalUsdtAmount
+                      && buyOrderStats.totalUsdtAmount.toFixed(3)
                       .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                     </span>
                   </div>
@@ -4451,7 +4587,7 @@ const fetchBuyOrders = async () => {
                       style={{ fontFamily: 'monospace' }}
                     >
                       {
-                      Number(tradeSummary.totalKrwAmount)
+                      Number(buyOrderStats.totalKrwAmount)
                       .toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                       }
                     </span>
@@ -4479,7 +4615,7 @@ const fetchBuyOrders = async () => {
                 <div className="flex flex-col gap-2 items-center">
                   <div className="text-sm">가맹점 결제수(건)</div>
                   <div className="text-4xl font-semibold text-zinc-500">
-                    {tradeSummary.totalSettlementCount?.toLocaleString()}
+                    {buyOrderStats.totalSettlementCount?.toLocaleString()}
                   </div>
                 </div>
 
@@ -4496,8 +4632,8 @@ const fetchBuyOrders = async () => {
                     <span className="text-xl font-semibold text-[#409192]"
                       style={{ fontFamily: 'monospace' }}
                     >
-                      {tradeSummary.totalSettlementAmount
-                      && tradeSummary.totalSettlementAmount.toFixed(3)
+                      {buyOrderStats.totalSettlementAmount
+                      && buyOrderStats.totalSettlementAmount.toFixed(3)
                       .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                     </span>
                   </div>
@@ -4510,7 +4646,7 @@ const fetchBuyOrders = async () => {
                       style={{ fontFamily: 'monospace' }}
                     >
                       {
-                      Number(tradeSummary.totalSettlementAmountKRW)
+                      Number(buyOrderStats.totalSettlementAmountKRW)
                       .toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                       }
                     </span>
@@ -4532,7 +4668,7 @@ const fetchBuyOrders = async () => {
                       style={{ fontFamily: 'monospace' }}
                     >
                       {
-                        (tradeSummary.totalFeeAmount + tradeSummary.totalAgentFeeAmount)
+                        (buyOrderStats.totalFeeAmount + buyOrderStats.totalAgentFeeAmount)
                         .toFixed(3)
                         .replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                       }
@@ -4547,7 +4683,7 @@ const fetchBuyOrders = async () => {
                       style={{ fontFamily: 'monospace' }}
                     >
                       {
-                        Number(tradeSummary.totalFeeAmountKRW + tradeSummary.totalAgentFeeAmountKRW)
+                        Number(buyOrderStats.totalFeeAmountKRW + buyOrderStats.totalAgentFeeAmountKRW)
                         .toFixed(0)
                         .replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                       }
