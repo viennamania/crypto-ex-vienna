@@ -4406,7 +4406,7 @@ const fetchBuyOrders = async () => {
               p-4 rounded-lg shadow-md
               ">
 
-              <div className="w-full xl:w-1/3 flex flex-col xl:flex-row items-center justify-between gap-2 pl-4 pr-4">
+              <div className="w-full xl:w-1/3 flex flex-col xl:flex-row items-start justify-start gap-2 pl-4 pr-4">
                 
                 <Image
                   src="/icon-trade.png"
@@ -4466,7 +4466,7 @@ const fetchBuyOrders = async () => {
               <div className="xl:hidden w-full h-0.5 bg-zinc-300"></div>
 
               <div className="w-full xl:w-1/2
-                flex flex-col xl:flex-row items-center justify-between gap-2 pl-4 pr-4">
+                flex flex-col xl:flex-row items-start justify-start gap-2 pl-4 pr-4">
                 
                 <Image
                   src="/icon-payment.png"
