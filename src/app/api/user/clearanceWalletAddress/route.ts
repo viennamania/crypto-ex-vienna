@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
                chain === 'bsc' ? bsc : arbitrum,
 
         ///factoryAddress: "0x655934C0B4bD79f52A2f7e6E60714175D5dd319b", // your own deployed account factory address
-        sponsorGas: true,
+        sponsorGas: false,
     });
     // Connect the smart wallet
     const account = await wallet.connect({

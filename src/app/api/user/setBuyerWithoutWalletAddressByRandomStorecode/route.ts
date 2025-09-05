@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
     const wallet = smartWallet({
       chain:  polygon ,
       ///factoryAddress: "0x9Bb60d360932171292Ad2b80839080fb6F5aBD97", // your own deployed account factory address
-      sponsorGas: true,
+      sponsorGas: false,
     });
 
 

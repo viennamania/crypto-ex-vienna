@@ -1396,7 +1396,7 @@ export default function Index({ params }: any) {
               /*
               accountAbstraction={{
                 chain: arbitrum,
-                sponsorGas: true
+                sponsorGas: false
               }}
               */
               

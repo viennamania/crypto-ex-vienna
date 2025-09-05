@@ -88,7 +88,7 @@ import {
 
 const wallet = inAppWallet({
 	smartAccount: {
-		sponsorGas: true,
+		sponsorGas: false,
 		chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
 	}
 });

@@ -3059,7 +3059,7 @@ const [tradeSummary, setTradeSummary] = useState({
               /*
               accountAbstraction={{
                 chain: arbitrum,
-                sponsorGas: true
+                sponsorGas: false
               }}
               */
               
@@ -3317,7 +3317,7 @@ const [tradeSummary, setTradeSummary] = useState({
                       /*
                       accountAbstraction={{
                         chain: arbitrum,
-                        sponsorGas: true
+                        sponsorGas: false
                       }}
                       */
                       

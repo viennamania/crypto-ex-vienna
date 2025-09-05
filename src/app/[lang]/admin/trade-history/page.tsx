@@ -2594,7 +2594,7 @@ const fetchBuyOrders = async () => {
               /*
               accountAbstraction={{
                 chain: arbitrum,
-                sponsorGas: true
+                sponsorGas: false
               }}
               */
               

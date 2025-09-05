@@ -1063,7 +1063,7 @@ export default function SettingsPage({ params }: any) {
                         /*
                         accountAbstraction={{
                             chain: arbitrum,
-                            sponsorGas: true
+                            sponsorGas: false
                         }}
                         */
                         

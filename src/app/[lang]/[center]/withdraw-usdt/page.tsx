@@ -746,7 +746,7 @@ export default function SendUsdt({ params }: any) {
                 /*
                 accountAbstraction={{
                     chain: arbitrum,
-                    sponsorGas: true
+                    sponsorGas: false
                 }}
                 */
                 
