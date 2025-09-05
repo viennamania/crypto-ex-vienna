@@ -37,7 +37,8 @@ import {
 
 
 import {
-  ConnectButton,
+  //ConnectButton,
+
   useActiveAccount,
   useActiveWallet,
   useWalletBalance,
@@ -46,6 +47,7 @@ import {
 
   useConnectedWallets,
 
+  AutoConnect,
 
 } from "thirdweb/react";
 
@@ -189,12 +191,20 @@ const wallets = [
 
 
 
+const wallet = inAppWallet({
+  smartAccount: {
+    sponsorGas: false,
+    chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
+  }
+});  
+
+
 
 export default function Index({ params }: any) {
 
   const searchParams = useSearchParams();
  
-  const wallet = searchParams.get('wallet');
+  ////////const wallet = searchParams.get('wallet');
 
 
   // limit, page number params
@@ -3347,9 +3357,24 @@ const fetchBuyOrders = async () => {
     return (
       <div className="flex flex-col items-center justify-center">
 
+        <AutoConnect
+            client={client}
+            wallets={[wallet]}
+        />
+
+
+        {/*
         <h1 className="text-2xl font-bold">로그인</h1>
 
           <ConnectButton
+            accountAbstraction={{
+              chain: chain === "ethereum" ? ethereum :
+                      chain === "polygon" ? polygon :
+                      chain === "arbitrum" ? arbitrum :
+                      chain === "bsc" ? bsc : arbitrum,
+              sponsorGas: false
+            }}
+
             client={client}
             wallets={wallets}
             chain={chain === "ethereum" ? ethereum :
@@ -3384,6 +3409,7 @@ const fetchBuyOrders = async () => {
             locale={"ko_KR"}
             //locale={"en_US"}
           />
+        */}
 
       </div>
     );
@@ -3461,6 +3487,11 @@ const fetchBuyOrders = async () => {
   return (
 
     <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto">
+
+      <AutoConnect
+          client={client}
+          wallets={[wallet]}
+      />
 
 
       <div className="py-0 w-full">
@@ -3558,8 +3589,17 @@ const fetchBuyOrders = async () => {
           )}
 
 
-          {!address && (
+          {/*!address && (
             <ConnectButton
+
+              accountAbstraction={{
+                chain: chain === "ethereum" ? ethereum :
+                        chain === "polygon" ? polygon :
+                        chain === "arbitrum" ? arbitrum :
+                        chain === "bsc" ? bsc : arbitrum,
+                sponsorGas: false
+              }}
+
               client={client}
               wallets={wallets}
 
@@ -3567,13 +3607,6 @@ const fetchBuyOrders = async () => {
                       chain === "polygon" ? polygon :
                       chain === "arbitrum" ? arbitrum :
                       chain === "bsc" ? bsc : arbitrum}
-
-              /*
-              accountAbstraction={{
-                chain: arbitrum,
-                sponsorGas: false
-              }}
-              */
               
               theme={"light"}
 
@@ -3603,7 +3636,7 @@ const fetchBuyOrders = async () => {
               //locale={"en_US"}
             />
 
-          )}
+          )*/}
 
 
 
@@ -4052,14 +4085,22 @@ const fetchBuyOrders = async () => {
 
           {/* trade summary */}
 
-          <div className="flex flex-col xl:flex-row items-center justify-between gap-2
+          <div className="flex flex-col xl:flex-row items-start justify-between gap-2
             w-full
             bg-zinc-100/50
             p-4 rounded-lg shadow-md
             ">
 
             <div className="xl:w-1/3 w-full
-              flex flex-col xl:flex-row items-start justify-start gap-2">
+              flex flex-col xl:flex-row items-start justify-start gap-4">
+
+              <Image
+                src="/icon-trade.png"
+                alt="Trade"
+                width={50}
+                height={50}
+                className="w-16 h-16 rounded-lg object-cover"
+              />
 
               <div className="flex flex-col gap-2 items-center">
                 <div className="text-sm">P2P 거래수(건)</div>
@@ -4105,11 +4146,19 @@ const fetchBuyOrders = async () => {
             </div>
 
             {/* divider */}
-            <div className="hidden xl:block w-0.5 h-10 bg-zinc-300"></div>
+            <div className="hidden xl:block w-0.5 h-20 bg-zinc-300"></div>
             <div className="xl:hidden w-full h-0.5 bg-zinc-300"></div>
 
             <div className="xl:w-2/3 w-full
-              flex flex-col xl:flex-row items-center justify-end gap-4">
+              flex flex-col xl:flex-row items-start justify-start gap-4">
+
+              <Image
+                src="/icon-payment.png"
+                alt="Payment"
+                width={50}
+                height={50}
+                className="w-16 h-16 rounded-lg object-cover"
+              />
 
               <div className="flex flex-col xl:flex-row items-start justify-start gap-2">
 

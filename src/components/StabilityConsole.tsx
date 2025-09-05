@@ -44,7 +44,7 @@ import {
 } from "thirdweb";
 
 import {
-  //ConnectButton,
+  ConnectButton,
   useActiveAccount,
   useActiveWallet,
   useWalletBalance,
@@ -104,6 +104,7 @@ import { add } from "thirdweb/extensions/farcaster/keyGateway";
 
 
 import { useQRCode } from 'next-qrcode';
+import { Connect } from "twilio/lib/twiml/VoiceResponse";
 
 
 const wallets = [
@@ -458,13 +459,48 @@ const StabilityConsole = () => {
 
         ) : (
 
-          <div className="mt-5 flex flex-row gap-2 justify-center items-center">
+          <div className="mt-5 flex flex-col gap-2 justify-center items-center">
             {/* 로그인하고 나의 자산을 확인하세요 */}
             <span className="text-sm text-zinc-600">
               로그인하고 나의 지갑주소에서 자산을 확인하세요
             </span>
 
 
+            <ConnectButton
+              client={client}
+              wallets={wallets}
+              chain={chain === "ethereum" ? ethereum :
+                      chain === "polygon" ? polygon :
+                      chain === "arbitrum" ? arbitrum :
+                      chain === "bsc" ? bsc : arbitrum}
+              
+              theme={"light"}
+
+              // button color is dark skyblue convert (49, 103, 180) to hex
+              connectButton={{
+                style: {
+                  backgroundColor: "#0047ab", // cobalt blue
+
+                  color: "#f3f4f6", // gray-300 
+                  padding: "2px 2px",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  //width: "40px",
+                  height: "38px",
+                },
+                label: "웹3 로그인",
+              }}
+
+              connectModal={{
+                size: "wide", 
+                //size: "compact",
+                titleIcon: "https://www.stable.makeup/logo.png",                           
+                showThirdwebBranding: false,
+              }}
+
+              locale={"ko_KR"}
+              //locale={"en_US"}
+            />
 
 
 
