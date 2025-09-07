@@ -5743,7 +5743,7 @@ const fetchBuyOrders = async () => {
                   value={limit}
                   onChange={(e) =>
                     
-                    router.push(`/${params.lang}/${params.center}/trade-history?limit=${Number(e.target.value)}&page=${page}&wallet=${wallet}&searchMyOrders=${searchMyOrders}`)
+                    router.push(`/${params.lang}/${params.center}/trade-history?limit=${Number(e.target.value)}&page=${page}&searchMyOrders=${searchMyOrders}`)
 
                   }
 

@@ -6903,21 +6903,7 @@ const fetchBuyOrders = async () => {
                                   </span>
                                 </div>
 
-                                <div className="w-full flex flex-row gap-2 items-center justify-center">
-                                  <span className="
-                                  w-14
-                                  text-xs text-zinc-500">
-                                    AG 수수료
-                                  </span>
-                                  <span className="
-                                  w-12 text-end
-                                  text-sm text-zinc-500"
-                                    style={{
-                                      fontFamily: 'monospace',
-                                    }}>
-                                    {Number(item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0).toFixed(2)}%
-                                  </span>
-                                </div>
+
 
                                 <div className="w-full flex flex-row gap-2 items-center justify-center">
                                   <span className="
@@ -6934,6 +6920,23 @@ const fetchBuyOrders = async () => {
                                     {Number(item.store.settlementFeePercent ? item.store.settlementFeePercent : 0.3).toFixed(2)}%
                                   </span>
                                 </div>
+
+                                <div className="w-full flex flex-row gap-2 items-center justify-center">
+                                  <span className="
+                                  w-14
+                                  text-xs text-zinc-500">
+                                    AG 수수료
+                                  </span>
+                                  <span className="
+                                  w-12 text-end
+                                  text-sm text-zinc-500"
+                                    style={{
+                                      fontFamily: 'monospace',
+                                    }}>
+                                    {Number(item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0).toFixed(2)}%
+                                  </span>
+                                </div>
+
 
                               </div>
                             )}
@@ -7227,6 +7230,15 @@ const fetchBuyOrders = async () => {
                                         item?.settlement?.settlementWalletAddress &&
                                       item?.settlement?.settlementWalletAddress?.slice(0, 5) + '...'}
                                     </span>
+
+                                    <span>
+                                      {item?.settlement?.feeAmount?.toLocaleString()}
+                                      {' '}
+                                      {
+                                        item?.settlement?.feeWalletAddress &&
+                                      item?.settlement?.feeWalletAddress?.slice(0, 5) + '...'}
+                                    </span>
+                                    
                                     <span>
                                       {
                                         item?.settlement?.agentFeeAmount ?
@@ -7238,13 +7250,7 @@ const fetchBuyOrders = async () => {
                                         item?.settlement?.agentFeeWalletAddress &&
                                       item?.settlement?.agentFeeWalletAddress?.slice(0, 5) + '...'}
                                     </span>
-                                    <span>
-                                      {item?.settlement?.feeAmount?.toLocaleString()}
-                                      {' '}
-                                      {
-                                        item?.settlement?.feeWalletAddress &&
-                                      item?.settlement?.feeWalletAddress?.slice(0, 5) + '...'}
-                                    </span>
+
 
                                   </div>
 
