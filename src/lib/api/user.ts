@@ -304,7 +304,23 @@ export async function insertOneVerified(data: any) {
 
   const collection = client.db(dbName).collection('users');
 
+
+  // if telegramId is exist, check same telegramId
+  if (data.telegramId) {
+    const checkTelegramId = await collection.findOne<UserProps>(
+      {
+        storecode: data.storecode,
+        telegramId: data.telegramId,
+      },
+    );
   
+    if (checkTelegramId) {
+      console.log('insertOneVerified telegramId exists: ' + JSON.stringify(checkTelegramId));
+      return null;
+    }
+  }
+
+
   // check same nickname and storecode
   const checkNickname = await collection.findOne<UserProps>(
     {

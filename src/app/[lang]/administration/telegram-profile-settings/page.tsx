@@ -423,19 +423,27 @@ function ProfilePage() {
 
         } else {
 
+            /*
+                          storecode: params.center,
+              walletAddress: address,
+              nickname: email,
+              mobile: '+82',
+              email: email,
+              */
+
             const response = await fetch("/api/user/setUserVerified", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
+                    storecode: 'admin',
                     walletAddress: address,                    
                     //nickname: nickname,
                     nickname: editedNickname,
                     userType: "",
-                    mobile: "",
+                    mobile: '+82',
                     telegramId: telegramId,
-                    center: center,
                 }),
             });
 
@@ -675,38 +683,13 @@ function ProfilePage() {
 
                 <div className="flex flex-col items-start justify-center space-y-4">
 
+
+
+
                     <div className="w-full flex justify-center mt-5">
                         {address ? (
                             <div className="w-full flex flex-row gap-2 items-center justify-center">
 
-                                <button
-                                    onClick={() => (window as any).Telegram.WebApp.openLink(`https://polygonscan.com/address/${address}`)}
-                                    className="flex flex-row gap-2 items-center"
-                                >
-                                    <Image
-                                        src="/icon-shield.png"
-                                        alt="Wallet"
-                                        width={18}
-                                        height={18}
-                                        className="rounded"
-                                    />
-                                    <span className="text-sm font-semibold text-gray-500
-                                        underline
-                                        hover:text-gray-300
-                                    ">
-                                        {shortenAddress(address)}
-                                    </span>
-                                </button>
-
-                                <button
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(address);
-                                        alert('지갑주소가 복사되었습니다.');
-                                    }}
-                                    className="p-2 bg-blue-500 text-zinc-100 rounded"
-                                >
-                                    복사
-                                </button>
 
                             </div>
                         ) : (
@@ -716,17 +699,23 @@ function ProfilePage() {
                                 </p>
                                 {/* telegramId */}
 
-                                <span className='text-sm font-semibold text-gray-500'>
-                                    텔레그램 ID: {telegramId}
-                                </span>
+
 
                             </div>
                         )}      
                     </div>
 
 
+                    {!userCode && (
+                        <div className="flex flex-col gap-2 items-start justify-between border border-gray-300 p-4 rounded-lg">
+                            <span className='text-lg font-semibold text-gray-500'>
+                                텔레그램 ID: {telegramId}
+                            </span>
+                        </div>
+                    )}
 
-                    {userCode && isValideTelegramId && (
+
+                    {userCode && (
                         <div className='w-full flex flex-row gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
                             {/* dot */}
                             <div className="flex flex-row gap-2 items-center justify-between">
@@ -745,7 +734,7 @@ function ProfilePage() {
                             <button
                                 onClick={() => {
                                     navigator.clipboard.writeText(telegramId as string);
-                                    alert('매직아이디가 복사되었습니다.');
+                                    alert('텔레그램ID가 복사되었습니다.');
                                 }}
                                 className="p-2 bg-blue-500 text-zinc-100 rounded"
                             >
@@ -760,11 +749,12 @@ function ProfilePage() {
                         </div>
                     )}
 
-                    {userCode && !isValideTelegramId && (
+
+                    {/*userCode && !isValideTelegramId && (
                         <div className='w-full flex flex-col gap-2 items-start justify-between border border-gray-300 p-4 rounded-lg'>
                             <div className="flex flex-row gap-2 items-center justify-between">
                                 <span className='text-sm font-semibold text-gray-500'>
-                                    매직아이디(MID)
+                                    텔레그램ID(MID)
                                 </span>
                                 <span className='text-lg font-semibold text-blue-500'>
                                     {telegramId}
@@ -786,7 +776,7 @@ function ProfilePage() {
                             </button>
     
                         </div>
-                    )}
+                    )*/}
 
 
 

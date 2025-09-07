@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
 
-  const { storecode, walletAddress, nickname, mobile, email } = body;
+  const { storecode, walletAddress, nickname, mobile, email, telegramId } = body;
 
   
 
@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
     nickname: nickname,
     mobile: mobile,
     email: email,
+    telegramId: telegramId,
   });
 
 
