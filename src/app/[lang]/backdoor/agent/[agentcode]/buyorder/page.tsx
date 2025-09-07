@@ -2760,7 +2760,7 @@ const fetchBuyOrders = async () => {
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/administration/profile-settings');
+                      router.push('/' + params.lang + '/administration/telegram-profile-settings');
                     }}
                     className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                   >
@@ -2768,34 +2768,6 @@ const fetchBuyOrders = async () => {
                   </button>
 
 
-                  {/* logout button */}
-                  <button
-                      onClick={() => {
-                          confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
-                          .then(() => {
-
-                              toast.success('로그아웃 되었습니다');
-
-                              //router.push(
-                              //    "/administration/" + params.agentcode
-                              //);
-                          });
-                      } }
-
-                      className="flex items-center justify-center gap-2
-                        bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
-                  >
-                    <Image
-                      src="/icon-logout.webp"
-                      alt="Logout"
-                      width={20}
-                      height={20}
-                      className="rounded-lg w-5 h-5"
-                    />
-                    <span className="text-sm">
-                      로그아웃
-                    </span>
-                  </button>
 
                 </div>
 
@@ -3152,35 +3124,6 @@ const fetchBuyOrders = async () => {
                   </div>
                 </button>
 
-
-                {/* logout button */}
-                <button
-                    onClick={() => {
-                        confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
-                        .then(() => {
-
-                            toast.success('로그아웃 되었습니다');
-
-                            //router.push(
-                            //    "/administration/" + params.center
-                            //);
-                        });
-                    } }
-
-                    className="flex items-center justify-center gap-2
-                      bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
-                >
-                  <Image
-                    src="/icon-logout.webp"
-                    alt="Logout"
-                    width={20}
-                    height={20}
-                    className="rounded-lg w-5 h-5"
-                  />
-                  <span className="text-sm">
-                    로그아웃
-                  </span>
-                </button>
                 
               </div>
 

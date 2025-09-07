@@ -3092,7 +3092,7 @@ export default function Index({ params }: any) {
 
                                     // redirect to settings page
                                     router.push(
-                                      "/" + params.lang + "/administration/profile-settings"
+                                      "/" + params.lang + "/administration/telegram-profile-settings"
                                     );
 
 

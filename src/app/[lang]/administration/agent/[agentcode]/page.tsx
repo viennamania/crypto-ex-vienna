@@ -29,7 +29,10 @@ import {
 
 
 import {
-  ConnectButton,
+  //ConnectButton,
+
+  AutoConnect,
+
   useActiveAccount,
   useActiveWallet,
   useWalletBalance,
@@ -147,11 +150,12 @@ const wallets = [
 ];
   
 
-
-// get escrow wallet address
-
-//const escrowWalletAddress = "0x2111b6A49CbFf1C8Cc39d13250eF6bd4e1B59cF6";
-
+const wallet = inAppWallet({
+  smartAccount: {
+    sponsorGas: false,
+    chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
+  }
+});
 
 
 
@@ -163,7 +167,7 @@ export default function Index({ params }: any) {
 
   const searchParams = useSearchParams();
  
-  const wallet = searchParams.get('wallet');
+  ///const wallet = searchParams.get('wallet');
 
 
   // limit, page number params
@@ -1489,7 +1493,7 @@ export default function Index({ params }: any) {
                 </tbody>
               </table>
             </div>
-            <div className="mt-4 flex flex-row items-center justify-between mt-4">
+            <div className="mt-4 flex flex-row items-center justify-between">
               <Image
                 src="/icon-info.png"
                 alt="Info Icon"
@@ -1519,6 +1523,11 @@ export default function Index({ params }: any) {
   if (!address) {
     return (
    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto">
+
+      <AutoConnect
+          client={client}
+          wallets={[wallet]}
+      />
 
 
       <div className="py-0 w-full">
@@ -1571,7 +1580,7 @@ export default function Index({ params }: any) {
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/administration/profile-settings');
+                      router.push('/' + params.lang + '/administration/telegram-profile-settings');
                     }}
                     className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                   >
@@ -1579,81 +1588,10 @@ export default function Index({ params }: any) {
                   </button>
 
 
-                  {/* logout button */}
-                  <button
-                      onClick={() => {
-                          confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
-                          .then(() => {
-
-                              toast.success('로그아웃 되었습니다');
-
-                              //router.push(
-                              //    "/administration/" + params.agentcode
-                              //);
-                          });
-                      } }
-
-                      className="flex items-center justify-center gap-2
-                        bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
-                  >
-                    <Image
-                      src="/icon-logout.webp"
-                      alt="Logout"
-                      width={20}
-                      height={20}
-                      className="rounded-lg w-5 h-5"
-                    />
-                    <span className="text-sm">
-                      로그아웃
-                    </span>
-                  </button>
-
                 </div>
 
 
               )}
-
-
-              {!address && (
-                <ConnectButton
-                  client={client}
-                  wallets={wallets}
-
-                  /*
-                  accountAbstraction={{
-                    chain: arbitrum,
-                    sponsorGas: false
-                  }}
-                  */
-                  
-                  theme={"light"}
-
-                  // button color is dark skyblue convert (49, 103, 180) to hex
-                  connectButton={{
-                      style: {
-                          backgroundColor: "#0047ab", // cobalt blue
-                          color: "#f3f4f6", // gray-300
-                          padding: "2px 10px",
-                          borderRadius: "10px",
-                          fontSize: "14px",
-                          width: "60x",
-                          height: "38px",
-                      },
-                      label: "웹3 로그인",
-                  }}
-
-                  connectModal={{
-                    size: "wide", 
-                    //size: "compact",
-                    titleIcon: "https://www.stable.makeup/logo.png",                           
-                    showThirdwebBranding: false,
-                  }}
-
-                  locale={"ko_KR"}
-                  //locale={"en_US"}
-                />
-              )}
-
 
 
 
@@ -2005,35 +1943,6 @@ export default function Index({ params }: any) {
                 </button>
 
 
-
-                {/* logout button */}
-                <button
-                    onClick={() => {
-                        confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
-                        .then(() => {
-
-                            toast.success('로그아웃 되었습니다');
-
-                            //router.push(
-                            //    "/administration/" + params.agentcode
-                            //);
-                        });
-                    } }
-
-                    className="flex items-center justify-center gap-2
-                      bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
-                >
-                  <Image
-                    src="/icon-logout.webp"
-                    alt="Logout"
-                    width={20}
-                    height={20}
-                    className="rounded-lg w-5 h-5"
-                  />
-                  <span className="text-sm">
-                    로그아웃
-                  </span>
-                </button>
 
               </div>
 
