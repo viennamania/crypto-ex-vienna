@@ -2006,7 +2006,7 @@ export default function Index({ params }: any) {
                                 <button
                                     onClick={() => {
                                         window.open(
-                                            'https://t.me/' + item?.telegramBot,
+                                            'https://t.me/crypto_goodtether_bot?start=' + item.storecode,
                                             '_blank'
                                         );
                                     }}
@@ -2020,16 +2020,17 @@ export default function Index({ params }: any) {
                                         height={20}
                                         className="w-4 h-4"
                                     />
-                                    {' '}{item?.telegramBot ? '관리자 텔레그램 봇 열기' : '없음'}
+                                    {' '}관리자 텔레그램 봇 열기
                                 </button>
 
                                 {/* 텔레그램봇 링크 복사하기 */}
                                 <button
                                   onClick={() => {
                                     navigator.clipboard.writeText(
-                                      item?.telegramBot ? 'https://t.me/' + item?.telegramBot : ''
+                                      'https://t.me/crypto_goodtether_bot?start=' + item.storecode
                                     );
-                                    toast.success('복사되었습니다');
+                                    //toast.success('복사되었습니다');
+                                    alert('복사되었습니다:\n' + 'https://t.me/crypto_goodtether_bot?start=' + item.storecode);
                                   }}
                                   className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
                                   hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
@@ -2041,7 +2042,7 @@ export default function Index({ params }: any) {
                                     height={20}
                                     className="w-4 h-4"
                                   />
-                                  {' '}{item?.telegramBot ? '관리자 텔레그램 링크 복사' : '없음'}
+                                  {' '}관리자 텔레그램 링크 복사
                                 </button>
 
                             </div>
