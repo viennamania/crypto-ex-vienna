@@ -174,6 +174,12 @@ interface BuyOrder {
     balance: number;
     transactionHash: string;
   };
+
+  platformFee: {
+    percentage: number;
+    address: string;
+  };
+
 }
 
 
@@ -4150,7 +4156,7 @@ const fetchBuyOrders = async () => {
             <div className="xl:hidden w-full h-0.5 bg-zinc-300"></div>
 
             <div className="xl:w-2/3 w-full
-              flex flex-col xl:flex-row items-start justify-start gap-4">
+              flex flex-col xl:flex-row items-start justify-end gap-4">
 
               <Image
                 src="/icon-payment.png"
@@ -6897,7 +6903,9 @@ const fetchBuyOrders = async () => {
                                       fontFamily: 'monospace',
                                     }}>
                                     {Number(
-                                      100 - (item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0) - (item.store.settlementFeePercent ? item.store.settlementFeePercent : 0.3)
+                                      100 - (item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0)
+                                      - (item.store.settlementFeePercent ? item.store.settlementFeePercent : 0.3)
+                                      - (item?.platformFee?.percentage ? item?.platformFee?.percentage : 0.0)
                                     ).toFixed(2)
                                     }%
                                   </span>
@@ -6934,6 +6942,22 @@ const fetchBuyOrders = async () => {
                                       fontFamily: 'monospace',
                                     }}>
                                     {Number(item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0).toFixed(2)}%
+                                  </span>
+                                </div>
+
+                                <div className="w-full flex flex-row gap-2 items-center justify-center">
+                                  <span className="
+                                  w-14
+                                  text-xs text-zinc-500">
+                                    센터 수수료
+                                  </span>
+                                  <span className="
+                                  w-12 text-end
+                                  text-sm text-zinc-500"
+                                    style={{
+                                      fontFamily: 'monospace',
+                                    }}>
+                                    {Number(item?.platformFee?.percentage ? item?.platformFee?.percentage : 0.0).toFixed(2)}%
                                   </span>
                                 </div>
 
@@ -7238,7 +7262,7 @@ const fetchBuyOrders = async () => {
                                         item?.settlement?.feeWalletAddress &&
                                       item?.settlement?.feeWalletAddress?.slice(0, 5) + '...'}
                                     </span>
-                                    
+
                                     <span>
                                       {
                                         item?.settlement?.agentFeeAmount ?
@@ -7249,6 +7273,18 @@ const fetchBuyOrders = async () => {
                                       {
                                         item?.settlement?.agentFeeWalletAddress &&
                                       item?.settlement?.agentFeeWalletAddress?.slice(0, 5) + '...'}
+                                    </span>
+
+                                    <span>
+                                      {
+                                        item?.settlement?.platformFeeAmount ?
+                                        item?.settlement?.platformFeeAmount?.toLocaleString()
+                                        : '0'
+                                      }
+                                      {' '}
+                                      {
+                                        item?.settlement?.platformFeeWalletAddress &&
+                                      item?.settlement?.platformFeeWalletAddress?.slice(0, 5) + '...'}
                                     </span>
 
 
