@@ -2980,7 +2980,7 @@ export default function Index({ params }: any) {
                                 <button
                                     onClick={() => {
                                         window.open(
-                                            'https://t.me/crypto_goodtether_bot?start=' + storeCode,
+                                            'https://t.me/crypto_goodtether_bot?start=' + item.storecode,
                                             '_blank'
                                         );
                                     }}
@@ -3001,7 +3001,7 @@ export default function Index({ params }: any) {
                                 <button
                                   onClick={() => {
                                     navigator.clipboard.writeText(
-                                      'https://t.me/crypto_goodtether_bot?start=' + storeCode
+                                      'https://t.me/crypto_goodtether_bot?start=' + item.storecode
                                     );
                                     toast.success('복사되었습니다');
                                   }}
