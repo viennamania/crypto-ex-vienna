@@ -923,7 +923,7 @@ export default function Index({ params }: any) {
                                   toast.success('로그아웃 되었습니다');
 
                                   //router.push(
-                                  //    "/admin/" + params.center
+                                  //    "/administration/" + params.center
                                   //);
                               });
                           } }
@@ -1640,7 +1640,7 @@ export default function Index({ params }: any) {
 
                           //toast.success(Coming_Soon);
 
-                          router.push('/' + params.lang + '/' + params.center + '/admin/store');
+                          router.push('/' + params.lang + '/' + params.center + '/administration/store');
 
                         }}
                         className=" w-full flex bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-blue-600"

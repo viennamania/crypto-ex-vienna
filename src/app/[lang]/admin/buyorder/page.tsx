@@ -3461,7 +3461,7 @@ const fetchBuyOrders = async () => {
                           toast.success('로그아웃 되었습니다');
 
                           //router.push(
-                          //    "/admin/" + params.center
+                          //    "/administration/" + params.center
                           //);
                       });
                   } }
@@ -3533,7 +3533,7 @@ const fetchBuyOrders = async () => {
             <div className="w-full flex flex-row items-center justify-end gap-2">
               <button
                 onClick={() => {
-                  router.push('/' + params.lang + '/admin/profile-settings');
+                  router.push('/' + params.lang + '/administration/profile-settings');
                 }}
                 className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
               >
@@ -3569,7 +3569,7 @@ const fetchBuyOrders = async () => {
                           toast.success('로그아웃 되었습니다');
 
                           //router.push(
-                          //    "/admin/" + params.center
+                          //    "/administration/" + params.center
                           //);
                       });
                   } }
@@ -3682,7 +3682,7 @@ const fetchBuyOrders = async () => {
 
 
               <button
-                  onClick={() => router.push('/' + params.lang + '/admin/store')}
+                  onClick={() => router.push('/' + params.lang + '/administration/store')}
                   className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                   hover:bg-[#0047ab]/80
                   hover:cursor-pointer
@@ -3693,7 +3693,7 @@ const fetchBuyOrders = async () => {
               </button>
 
               <button
-                  onClick={() => router.push('/' + params.lang + '/admin/agent')}
+                  onClick={() => router.push('/' + params.lang + '/administration/agent')}
                   className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                   hover:bg-[#0047ab]/80
                   hover:cursor-pointer
@@ -3705,7 +3705,7 @@ const fetchBuyOrders = async () => {
 
 
               <button
-                  onClick={() => router.push('/' + params.lang + '/admin/member')}
+                  onClick={() => router.push('/' + params.lang + '/administration/member')}
                   className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                   hover:bg-[#0047ab]/80
                   hover:cursor-pointer
@@ -3730,7 +3730,7 @@ const fetchBuyOrders = async () => {
               </div>
 
               <button
-                  onClick={() => router.push('/' + params.lang + '/admin/trade-history')}
+                  onClick={() => router.push('/' + params.lang + '/administration/trade-history')}
                   className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                   hover:bg-[#0047ab]/80
                   hover:cursor-pointer
@@ -3742,7 +3742,7 @@ const fetchBuyOrders = async () => {
 
               {version !== 'bangbang' && (
                 <button
-                  onClick={() => router.push('/' + params.lang + '/admin/clearance-history')}
+                  onClick={() => router.push('/' + params.lang + '/administration/clearance-history')}
                   className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                   hover:bg-[#0047ab]/80
                   hover:cursor-pointer
@@ -3754,7 +3754,7 @@ const fetchBuyOrders = async () => {
               )}
 
               <button
-                  onClick={() => router.push('/' + params.lang + '/admin/trade-history-daily')}
+                  onClick={() => router.push('/' + params.lang + '/administration/trade-history-daily')}
                   className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                   hover:bg-[#0047ab]/80
                   hover:cursor-pointer
@@ -3765,7 +3765,7 @@ const fetchBuyOrders = async () => {
               </button>
 
               <button
-                  onClick={() => router.push('/' + params.lang + '/admin/trade-history-daily-agent')}
+                  onClick={() => router.push('/' + params.lang + '/administration/trade-history-daily-agent')}
                   className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                   hover:bg-[#0047ab]/80
                   hover:cursor-pointer
@@ -3777,7 +3777,7 @@ const fetchBuyOrders = async () => {
 
               {version !== 'bangbang' && (
                 <button
-                    onClick={() => router.push('/' + params.lang + '/admin/escrow-history')}
+                    onClick={() => router.push('/' + params.lang + '/administration/escrow-history')}
                     className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                     hover:bg-[#0047ab]/80
                     hover:cursor-pointer
@@ -3899,7 +3899,7 @@ const fetchBuyOrders = async () => {
 
                       // storecode parameter is passed to fetchBuyOrders
                       onChange={(e) => {
-                        router.push('/' + params.lang + '/admin/buyorder?storecode=' + e.target.value);
+                        router.push('/' + params.lang + '/administration/buyorder?storecode=' + e.target.value);
                       }}
 
 
@@ -4413,7 +4413,7 @@ const fetchBuyOrders = async () => {
                   />
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/admin/clearance-history');
+                      router.push('/' + params.lang + '/administration/clearance-history');
                     }}
                     className="flex items-center justify-center gap-2
                     bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
@@ -8493,7 +8493,7 @@ const fetchBuyOrders = async () => {
             <select
               value={limitValue}
               onChange={(e) =>
-                router.push(`/${params.lang}/admin/buyorder?storecode=${searchStorecode}&limit=${Number(e.target.value)}&page=${pageValue}`)
+                router.push(`/${params.lang}/administration/buyorder?storecode=${searchStorecode}&limit=${Number(e.target.value)}&page=${pageValue}`)
               }
 
               className="text-sm bg-zinc-800 text-zinc-200 px-2 py-1 rounded-md"
@@ -8510,7 +8510,7 @@ const fetchBuyOrders = async () => {
             disabled={Number(pageValue) <= 1}
             className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) <= 1 ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
             onClick={() => {
-              router.push(`/${params.lang}/admin/buyorder?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=1`)
+              router.push(`/${params.lang}/administration/buyorder?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=1`)
             }}
           >
             처음으로
@@ -8522,7 +8522,7 @@ const fetchBuyOrders = async () => {
             className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) <= 1 ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
             onClick={() => {
 
-              router.push(`/${params.lang}/admin/buyorder?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Number(pageValue) - 1}`)
+              router.push(`/${params.lang}/administration/buyorder?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Number(pageValue) - 1}`)
 
 
             }}
@@ -8541,7 +8541,7 @@ const fetchBuyOrders = async () => {
             className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) >= Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue)) ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
             onClick={() => {
 
-              router.push(`/${params.lang}/admin/buyorder?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Number(pageValue) + 1}`)
+              router.push(`/${params.lang}/administration/buyorder?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Number(pageValue) + 1}`)
 
             }}
           >
@@ -8554,7 +8554,7 @@ const fetchBuyOrders = async () => {
             className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) >= Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue)) ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
             onClick={() => {
 
-              router.push(`/${params.lang}/admin/buyorder?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue))}`)
+              router.push(`/${params.lang}/administration/buyorder?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue))}`)
 
             }}
           >

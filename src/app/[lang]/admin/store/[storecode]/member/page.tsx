@@ -2110,7 +2110,7 @@ export default function Index({ params }: any) {
                   value={limit}
                   onChange={(e) =>
                     
-                    router.push(`/${params.lang}/admin/store/${params.storecode}?limit=${Number(e.target.value)}&page=${page}`)
+                    router.push(`/${params.lang}/administration/store/${params.storecode}?limit=${Number(e.target.value)}&page=${page}`)
 
                   }
 
@@ -2129,7 +2129,7 @@ export default function Index({ params }: any) {
               className={`text-sm text-white px-4 py-2 rounded-md ${Number(page) <= 1 ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
               onClick={() => {
                 
-                router.push(`/${params.lang}/admin/store/${params.storecode}?limit=${Number(limit)}&page=${Number(page) - 1}`);
+                router.push(`/${params.lang}/administration/store/${params.storecode}?limit=${Number(limit)}&page=${Number(page) - 1}`);
 
               }}
             >
@@ -2147,7 +2147,7 @@ export default function Index({ params }: any) {
               className={`text-sm text-white px-4 py-2 rounded-md ${Number(page) >= Math.ceil(Number(totalCount) / Number(limit)) ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
               onClick={() => {
                 
-                router.push(`/${params.lang}/admin/store/${params.storecode}?limit=${Number(limit)}&page=${Number(page) + 1}`);
+                router.push(`/${params.lang}/administration/store/${params.storecode}?limit=${Number(limit)}&page=${Number(page) + 1}`);
 
               }}
             >

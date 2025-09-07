@@ -2578,7 +2578,7 @@ const fetchBuyOrders = async () => {
                                   toast.success('로그아웃 되었습니다');
 
                                   //router.push(
-                                  //    "/admin/" + params.center
+                                  //    "/administration/" + params.center
                                   //);
                               });
                           } }
@@ -3043,7 +3043,7 @@ const fetchBuyOrders = async () => {
 
                         // storecode parameter is passed to fetchBuyOrders
                         onChange={(e) => {
-                          router.push('/' + params.lang + '/admin/trade-history?storecode=' + e.target.value);
+                          router.push('/' + params.lang + '/administration/trade-history?storecode=' + e.target.value);
                         }}
 
 

@@ -2780,7 +2780,7 @@ const fetchBuyOrders = async () => {
                     {/* 출금하기 버튼 */}
                     <button
                       onClick={() => {
-                        router.push('/' + params.lang + '/admin/withdraw-usdt');
+                        router.push('/' + params.lang + '/administration/withdraw-usdt');
                         //window.open(
                         //  '/'+ params.lang + '/home/withdraw',
                         //  '_blank'
@@ -2926,7 +2926,7 @@ const fetchBuyOrders = async () => {
 
                         // storecode parameter is passed to fetchBuyOrders
                         onChange={(e) => {
-                          router.push('/' + params.lang + '/admin/trade-history?storecode=' + e.target.value);
+                          router.push('/' + params.lang + '/administration/trade-history?storecode=' + e.target.value);
                         }}
 
 

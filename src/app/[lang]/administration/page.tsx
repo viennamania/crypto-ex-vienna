@@ -1059,7 +1059,7 @@ export default function Index({ params }: any) {
 
               <button
                 onClick={() => {
-                  router.push('/' + params.lang + '/admin/profile-settings');
+                  router.push('/' + params.lang + '/administration/profile-settings');
                 }}
                 className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
               >
@@ -1095,7 +1095,7 @@ export default function Index({ params }: any) {
                           toast.success('로그아웃 되었습니다');
 
                           //router.push(
-                          //    "/admin/" + params.center
+                          //    "/administration/" + params.center
                           //);
                       });
                   } }
@@ -1291,7 +1291,7 @@ export default function Index({ params }: any) {
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/admin/buyorder');
+                      router.push('/' + params.lang + '/administration/buyorder');
                     }}
                     className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                   >
@@ -1504,7 +1504,7 @@ export default function Index({ params }: any) {
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/admin/clearance-history');
+                      router.push('/' + params.lang + '/administration/clearance-history');
                     }}
                     className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                   >
@@ -1658,7 +1658,7 @@ export default function Index({ params }: any) {
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/admin/trade-history');
+                      router.push('/' + params.lang + '/administration/trade-history');
                     }}
                     className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                   >
@@ -1917,7 +1917,7 @@ export default function Index({ params }: any) {
 
                 <button
                   onClick={() => {
-                    router.push('/' + params.lang + '/admin/trade-history');
+                    router.push('/' + params.lang + '/administration/trade-history');
                   }}
                   className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                 >
@@ -1952,7 +1952,7 @@ export default function Index({ params }: any) {
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/admin/clearance-history');
+                      router.push('/' + params.lang + '/administration/clearance-history');
                     }}
                     className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                   >
@@ -2113,7 +2113,7 @@ export default function Index({ params }: any) {
 
                 <button
                   onClick={() => {
-                    router.push('/' + params.lang + '/admin/trade-history');
+                    router.push('/' + params.lang + '/administration/trade-history');
                   }}
                   className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                 >
@@ -2150,7 +2150,7 @@ export default function Index({ params }: any) {
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/admin/store');
+                      router.push('/' + params.lang + '/administration/store');
                     }}
                     className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                   >
@@ -2232,7 +2232,7 @@ export default function Index({ params }: any) {
                               <div className="flex flex-col items-start justify-start">
                                 <button
                                   onClick={() => {
-                                    router.push('/' + params.lang + '/admin/store/' + store.storecode + '/settings');
+                                    router.push('/' + params.lang + '/administration/store/' + store.storecode + '/settings');
                                   }}
                                   className="text-blue-500 hover:underline"
                                 >
@@ -2297,7 +2297,7 @@ export default function Index({ params }: any) {
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/admin/member');
+                      router.push('/' + params.lang + '/administration/member');
                     }}
                     className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                   >
@@ -2581,7 +2581,7 @@ export default function Index({ params }: any) {
 
                                 // redirect to settings page
                                 router.push(
-                                  "/" + params.lang + "/admin/profile-settings"
+                                  "/" + params.lang + "/administration/profile-settings"
                                 );
 
 
@@ -2604,7 +2604,7 @@ export default function Index({ params }: any) {
 
                                 // redirect to settings page
                                 router.push(
-                                  "/" + params.lang + "/admin/seller-settings"
+                                  "/" + params.lang + "/administration/seller-settings"
                                 );
 
 
@@ -2691,7 +2691,7 @@ export default function Index({ params }: any) {
                           //</div>"/" + params.lang + "/" + storecode + "/accept-buyorder-usdt?wallet=smart"
                           //:
 
-                          "/" + params.lang + "/admin/trade"
+                          "/" + params.lang + "/administration/trade"
 
                         );
 

@@ -1774,7 +1774,7 @@ export default function SettingsPage({ params }: any) {
                                 <button
                                     onClick={() => {
                                     router.push(
-                                        '/' + params.lang + '/admin/store/' + params.storecode + '/memo'
+                                        '/' + params.lang + '/administration/store/' + params.storecode + '/memo'
                                     );
                                     }}
                                     className="bg-[#0047ab] text-sm text-white px-2 py-1 rounded-lg
@@ -1799,7 +1799,7 @@ export default function SettingsPage({ params }: any) {
                                 <button
                                     onClick={() => {
                                     router.push(
-                                        '/' + params.lang + '/admin/store/' + params.storecode + '/clearance'
+                                        '/' + params.lang + '/administration/store/' + params.storecode + '/clearance'
                                     );
                                     }
                                     }

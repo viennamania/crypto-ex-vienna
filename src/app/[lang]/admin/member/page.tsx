@@ -1882,7 +1882,7 @@ export default function Index({ params }: any) {
                           toast.success('로그아웃 되었습니다');
 
                           //router.push(
-                          //    "/admin/" + params.center
+                          //    "/administration/" + params.center
                           //);
                       });
                   } }
@@ -1948,7 +1948,7 @@ export default function Index({ params }: any) {
             <div className="w-full flex flex-row items-center justify-end gap-2">
               <button
                 onClick={() => {
-                  router.push('/' + params.lang + '/admin/profile-settings');
+                  router.push('/' + params.lang + '/administration/profile-settings');
                 }}
                 className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
               >
@@ -1984,7 +1984,7 @@ export default function Index({ params }: any) {
                           toast.success('로그아웃 되었습니다');
 
                           //router.push(
-                          //    "/admin/" + params.center
+                          //    "/administration/" + params.center
                           //);
                       });
                   } }
@@ -2096,7 +2096,7 @@ export default function Index({ params }: any) {
 
 
               <button
-                  onClick={() => router.push('/' + params.lang + '/admin/store')}
+                  onClick={() => router.push('/' + params.lang + '/administration/store')}
                   className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                   hover:bg-[#0047ab]/80
                   hover:cursor-pointer
@@ -2107,7 +2107,7 @@ export default function Index({ params }: any) {
               </button>
 
               <button
-                onClick={() => router.push('/' + params.lang + '/admin/agent')}
+                onClick={() => router.push('/' + params.lang + '/administration/agent')}
                 className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                 hover:bg-[#0047ab]/80
                 hover:cursor-pointer
@@ -2132,7 +2132,7 @@ export default function Index({ params }: any) {
             </div>
 
               <button
-                  onClick={() => router.push('/' + params.lang + '/admin/buyorder')}
+                  onClick={() => router.push('/' + params.lang + '/administration/buyorder')}
                   className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                   hover:bg-[#0047ab]/80
                   hover:cursor-pointer
@@ -2143,7 +2143,7 @@ export default function Index({ params }: any) {
               </button>
 
               <button
-                  onClick={() => router.push('/' + params.lang + '/admin/trade-history')}
+                  onClick={() => router.push('/' + params.lang + '/administration/trade-history')}
                   className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                   hover:bg-[#0047ab]/80
                   hover:cursor-pointer
@@ -2155,7 +2155,7 @@ export default function Index({ params }: any) {
 
               {version !== 'bangbang' && (
                 <button
-                    onClick={() => router.push('/' + params.lang + '/admin/clearance-history')}
+                    onClick={() => router.push('/' + params.lang + '/administration/clearance-history')}
                     className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                     hover:bg-[#0047ab]/80
                     hover:cursor-pointer
@@ -2167,7 +2167,7 @@ export default function Index({ params }: any) {
               )}
 
               <button
-                  onClick={() => router.push('/' + params.lang + '/admin/trade-history-daily')}
+                  onClick={() => router.push('/' + params.lang + '/administration/trade-history-daily')}
                   className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                   hover:bg-[#0047ab]/80
                   hover:cursor-pointer
@@ -2178,7 +2178,7 @@ export default function Index({ params }: any) {
               </button>
 
               <button
-                  onClick={() => router.push('/' + params.lang + '/admin/trade-history-daily-agent')}
+                  onClick={() => router.push('/' + params.lang + '/administration/trade-history-daily-agent')}
                   className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                   hover:bg-[#0047ab]/80
                   hover:cursor-pointer
@@ -2190,7 +2190,7 @@ export default function Index({ params }: any) {
 
               { version !== 'bangbang' && (
                 <button
-                    onClick={() => router.push('/' + params.lang + '/admin/escrow-history')}
+                    onClick={() => router.push('/' + params.lang + '/administration/escrow-history')}
                     className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                     hover:bg-[#0047ab]/80
                     hover:cursor-pointer
@@ -2509,7 +2509,7 @@ export default function Index({ params }: any) {
 
                     onChange={(e) => {
                       router.push(
-                        `/${params.lang}/admin/member?storecode=${e.target.value}`
+                        `/${params.lang}/administration/member?storecode=${e.target.value}`
                       );
 
                     }}
@@ -2644,7 +2644,7 @@ export default function Index({ params }: any) {
                     />
                     <button
                       onClick={() => {
-                        router.push('/' + params.lang + '/admin/buyorder');
+                        router.push('/' + params.lang + '/administration/buyorder');
                       }}
                       className="flex items-center justify-center gap-2
                       bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
@@ -2702,7 +2702,7 @@ export default function Index({ params }: any) {
                     />
                     <button
                       onClick={() => {
-                        router.push('/' + params.lang + '/admin/clearance-history');
+                        router.push('/' + params.lang + '/administration/clearance-history');
                       }}
                       className="flex items-center justify-center gap-2
                       bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
@@ -3137,7 +3137,7 @@ export default function Index({ params }: any) {
                 value={limit}
                 onChange={(e) =>
                   
-                  router.push(`/${params.lang}/admin/member?limit=${Number(e.target.value)}&page=${page}`)
+                  router.push(`/${params.lang}/administration/member?limit=${Number(e.target.value)}&page=${page}`)
 
                 }
 
@@ -3156,7 +3156,7 @@ export default function Index({ params }: any) {
               className={`text-sm text-white px-4 py-2 rounded-md ${Number(page) <= 1 ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
               onClick={() => {
                 
-                router.push(`/${params.lang}/admin/member?limit=${Number(limit)}&page=1&storecode=${searchParamsStorecode}`);
+                router.push(`/${params.lang}/administration/member?limit=${Number(limit)}&page=1&storecode=${searchParamsStorecode}`);
 
               }}
             >
@@ -3169,7 +3169,7 @@ export default function Index({ params }: any) {
               className={`text-sm text-white px-4 py-2 rounded-md ${Number(page) <= 1 ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
               onClick={() => {
                 
-                router.push(`/${params.lang}/admin/member?limit=${Number(limit)}&page=${Number(page) - 1}&storecode=${searchParamsStorecode}`);
+                router.push(`/${params.lang}/administration/member?limit=${Number(limit)}&page=${Number(page) - 1}&storecode=${searchParamsStorecode}`);
 
               }}
             >
@@ -3187,7 +3187,7 @@ export default function Index({ params }: any) {
               className={`text-sm text-white px-4 py-2 rounded-md ${Number(page) >= Math.ceil(Number(totalCount) / Number(limit)) ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
               onClick={() => {
                 
-                router.push(`/${params.lang}/admin/member?limit=${Number(limit)}&page=${Number(page) + 1}&storecode=${searchParamsStorecode}`);
+                router.push(`/${params.lang}/administration/member?limit=${Number(limit)}&page=${Number(page) + 1}&storecode=${searchParamsStorecode}`);
 
               }}
             >
@@ -3199,7 +3199,7 @@ export default function Index({ params }: any) {
               className={`text-sm text-white px-4 py-2 rounded-md ${Number(page) >= Math.ceil(Number(totalCount) / Number(limit)) ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
               onClick={() => {
                 
-                router.push(`/${params.lang}/admin/member?limit=${Number(limit)}&page=${Math.ceil(Number(totalCount) / Number(limit))}&storecode=${searchParamsStorecode}`);
+                router.push(`/${params.lang}/administration/member?limit=${Number(limit)}&page=${Math.ceil(Number(totalCount) / Number(limit))}&storecode=${searchParamsStorecode}`);
 
               }}
             >

@@ -3977,7 +3977,7 @@ export default function Index({ params }: any) {
                 value={limitValue}
                 onChange={(e) =>
 
-                  router.push(`/${params.lang}/admin/store/${params.storecode}/clearance?limit=${e.target.value}&page=1`)
+                  router.push(`/${params.lang}/administration/store/${params.storecode}/clearance?limit=${e.target.value}&page=1`)
 
                 }
 
@@ -3996,7 +3996,7 @@ export default function Index({ params }: any) {
               className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) <= 1 ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
               onClick={() => {
 
-                router.push(`/${params.lang}/admin/store/${params.storecode}/clearance?limit=${limitValue}&page=1`);
+                router.push(`/${params.lang}/administration/store/${params.storecode}/clearance?limit=${limitValue}&page=1`);
 
               }}
             >
@@ -4009,7 +4009,7 @@ export default function Index({ params }: any) {
               className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) <= 1 ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
               onClick={() => {
 
-                router.push(`/${params.lang}/admin/store/${params.storecode}/clearance?limit=${limitValue}&page=${Number(pageValue) - 1}`);
+                router.push(`/${params.lang}/administration/store/${params.storecode}/clearance?limit=${limitValue}&page=${Number(pageValue) - 1}`);
 
               }}
             >
@@ -4027,7 +4027,7 @@ export default function Index({ params }: any) {
               className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) >= Math.ceil(Number(totalCount) / Number(limitValue)) ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
               onClick={() => {
 
-                router.push(`/${params.lang}/admin/store/${params.storecode}/clearance?limit=${limitValue}&page=${Number(pageValue) + 1}`);
+                router.push(`/${params.lang}/administration/store/${params.storecode}/clearance?limit=${limitValue}&page=${Number(pageValue) + 1}`);
 
               }}
             >
@@ -4040,7 +4040,7 @@ export default function Index({ params }: any) {
               className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) >= Math.ceil(Number(totalCount) / Number(limitValue)) ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
               onClick={() => {
 
-                router.push(`/${params.lang}/admin/store/${params.storecode}/clearance?limit=${limitValue}&page=${Math.ceil(Number(totalCount) / Number(limitValue))}`);
+                router.push(`/${params.lang}/administration/store/${params.storecode}/clearance?limit=${limitValue}&page=${Math.ceil(Number(totalCount) / Number(limitValue))}`);
 
               }}
             >

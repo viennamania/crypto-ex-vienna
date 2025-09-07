@@ -3024,7 +3024,7 @@ const [tradeSummary, setTradeSummary] = useState({
                           toast.success('로그아웃 되었습니다');
 
                           //router.push(
-                          //    "/admin/" + params.center
+                          //    "/administration/" + params.center
                           //);
                       });
                   } }
@@ -3231,7 +3231,7 @@ const [tradeSummary, setTradeSummary] = useState({
                 toast.success('로그아웃 되었습니다');
 
                 //router.push(
-                //    "/admin/" + params.center
+                //    "/administration/" + params.center
                 //);
             });
           } }
@@ -3395,7 +3395,7 @@ const [tradeSummary, setTradeSummary] = useState({
                                   toast.success('로그아웃 되었습니다');
 
                                   //router.push(
-                                  //    "/admin/" + params.center
+                                  //    "/administration/" + params.center
                                   //);
                               });
                           } }

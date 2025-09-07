@@ -1478,7 +1478,7 @@ export default function Index({ params }: any) {
                       <td className="px-4 py-2 border">{agent.agentType}</td>
                       <td className="px-4 py-2 border">
                         <a
-                          href={`/${params.lang}/admin/agent/${agent.agentcode}`}
+                          href={`/${params.lang}/administration/agent/${agent.agentcode}`}
                           className="text-blue-500 hover:underline"
                         >
                           이동하기
@@ -1571,7 +1571,7 @@ export default function Index({ params }: any) {
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/admin/profile-settings');
+                      router.push('/' + params.lang + '/administration/profile-settings');
                     }}
                     className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                   >
@@ -1588,7 +1588,7 @@ export default function Index({ params }: any) {
                               toast.success('로그아웃 되었습니다');
 
                               //router.push(
-                              //    "/admin/" + params.agentcode
+                              //    "/administration/" + params.agentcode
                               //);
                           });
                       } }
@@ -1814,7 +1814,7 @@ export default function Index({ params }: any) {
                       toast.success('로그아웃 되었습니다');
 
                       //router.push(
-                      //    "/admin/" + params.agentcode
+                      //    "/administration/" + params.agentcode
                       //);
                   });
                 } }
@@ -1860,7 +1860,7 @@ export default function Index({ params }: any) {
             <div className="flex flex-row items-center justify-center gap-2">
               <button
                 onClick={() => {
-                  router.push('/' + params.lang + '/admin/agent/' + params.agentcode + '/profile-settings');
+                  router.push('/' + params.lang + '/administration/agent/' + params.agentcode + '/profile-settings');
                   //router.push('/' + params.lang + '/' + params.agentcode + '/profile-settings');
                 }}
                 className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
@@ -1958,7 +1958,7 @@ export default function Index({ params }: any) {
                   flex flex-row items-center gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/admin/agent/' + params.agentcode + '/my-settings');
+                      router.push('/' + params.lang + '/administration/agent/' + params.agentcode + '/my-settings');
                     }}
                     className="
                       items-center justify-center
@@ -1978,7 +1978,7 @@ export default function Index({ params }: any) {
 
                 <button
                   onClick={() => {
-                    router.push('/' + params.lang + '/admin/agent/' + params.agentcode + '/profile-settings');
+                    router.push('/' + params.lang + '/administration/agent/' + params.agentcode + '/profile-settings');
                   }}
                   className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                 >
@@ -2015,7 +2015,7 @@ export default function Index({ params }: any) {
                             toast.success('로그아웃 되었습니다');
 
                             //router.push(
-                            //    "/admin/" + params.agentcode
+                            //    "/administration/" + params.agentcode
                             //);
                         });
                     } }
@@ -2175,7 +2175,7 @@ export default function Index({ params }: any) {
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/admin/agent/' + params.agentcode + '/store');
+                      router.push('/' + params.lang + '/administration/agent/' + params.agentcode + '/store');
                     }}
                     className="
                       w-full
@@ -2278,7 +2278,7 @@ export default function Index({ params }: any) {
                               />
                               <button
                                 onClick={() => {
-                                  router.push('/' + params.lang + '/admin/agent/' + params.agentcode + '/store/')
+                                  router.push('/' + params.lang + '/administration/agent/' + params.agentcode + '/store/')
                                 }}
                                 className="text-blue-500 hover:underline"
                               >
@@ -2366,7 +2366,7 @@ export default function Index({ params }: any) {
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/admin/agent/' + params.agentcode + '/member');
+                      router.push('/' + params.lang + '/administration/agent/' + params.agentcode + '/member');
                     }}
                     className="
                       w-full
@@ -2509,7 +2509,7 @@ export default function Index({ params }: any) {
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/admin/agent/' + params.agentcode + '/trade-history');
+                      router.push('/' + params.lang + '/administration/agent/' + params.agentcode + '/trade-history');
                     }}
                     className="
                       w-full
@@ -2735,7 +2735,7 @@ export default function Index({ params }: any) {
 
                 <button
                   onClick={() => {
-                    router.push('/' + params.lang + '/admin/trade-history');
+                    router.push('/' + params.lang + '/administration/trade-history');
                   }}
                   className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                 >
@@ -2779,7 +2779,7 @@ export default function Index({ params }: any) {
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/admin/agent/' + params.agentcode + '/buyorder');
+                      router.push('/' + params.lang + '/administration/agent/' + params.agentcode + '/buyorder');
                     }}
                     className="
                       w-full
@@ -2969,7 +2969,7 @@ export default function Index({ params }: any) {
 
                 <button
                   onClick={() => {
-                    router.push('/' + params.lang + '/admin/trade-history');
+                    router.push('/' + params.lang + '/administration/trade-history');
                   }}
                   className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                 >
@@ -3077,7 +3077,7 @@ export default function Index({ params }: any) {
                       onClick={() => {
                         // redirect to send USDT page
                         router.push(
-                          "/" + params.lang + "/admin/withdraw-usdt"
+                          "/" + params.lang + "/administration/withdraw-usdt"
                         );
 
                       }}
@@ -3132,7 +3132,7 @@ export default function Index({ params }: any) {
                         onClick={() => {
                           // redirect to send USDT page
                           router.push(
-                            "/" + params.lang + "/admin/withdraw-mkrw"
+                            "/" + params.lang + "/administration/withdraw-mkrw"
                           );
 
                         }}
@@ -3160,7 +3160,7 @@ export default function Index({ params }: any) {
                         onClick={() => {
                           // redirect to send USDT page
                           router.push(
-                            "/" + params.lang + "/admin/burn-mkrw"
+                            "/" + params.lang + "/administration/burn-mkrw"
                           );
 
                         }}
@@ -3386,7 +3386,7 @@ export default function Index({ params }: any) {
 
                                 // redirect to settings page
                                 router.push(
-                                  "/" + params.lang + "/admin/agent/" + params.agentcode + "/profile-settings"
+                                  "/" + params.lang + "/administration/agent/" + params.agentcode + "/profile-settings"
                                 );
 
 
@@ -3474,7 +3474,7 @@ export default function Index({ params }: any) {
                           //</div>"/" + params.lang + "/" + storecode + "/accept-buyorder-usdt?wallet=smart"
                           //:
 
-                          "/" + params.lang + "/admin/trade"
+                          "/" + params.lang + "/administration/trade"
 
                         );
 

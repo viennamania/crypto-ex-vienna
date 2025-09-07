@@ -321,15 +321,15 @@ export default function RootLayout({
                       My Wallet
                     </h2>
 
-                    {/* button for router to /ko/admin/withdraw-usdt */}
+                    {/* button for router to /ko/administration/withdraw-usdt */}
 
                     <button
                       className="bg-blue-500 text-white rounded-md px-2 py-1 text-xs hover:bg-blue-600 transition-colors duration-200"
                       
-                      //onClick={() => router.push("/ko/admin/withdraw-usdt")}
+                      //onClick={() => router.push("/ko/administration/withdraw-usdt")}
                       /* router and hide button for withdraw USDT */
                       onClick={() => {
-                        router.push("/ko/admin/withdraw-usdt");
+                        router.push("/ko/administration/withdraw-usdt");
                         setShowChain(false);
                       }}>
                       Withdraw USDT

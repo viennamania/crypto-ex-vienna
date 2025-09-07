@@ -36,7 +36,7 @@ const nextConfig = {
     return [
       {
         source: '/',
-        destination: '/ko/admin/homepage',
+        destination: '/ko/administration/homepage',
         permanent: true,
       },
     ]

@@ -1744,7 +1744,7 @@ export default function Index({ params }: any) {
                               toast.success('로그아웃 되었습니다');
 
                               //router.push(
-                              //    "/admin/" + params.center
+                              //    "/administration/" + params.center
                               //);
                           });
                       } }
@@ -1945,7 +1945,7 @@ export default function Index({ params }: any) {
                 toast.success('로그아웃 되었습니다');
 
                 //router.push(
-                //    "/admin/" + params.center
+                //    "/administration/" + params.center
                 //);
             });
           } }
@@ -2114,7 +2114,7 @@ export default function Index({ params }: any) {
                                   toast.success('로그아웃 되었습니다');
 
                                   //router.push(
-                                  //    "/admin/" + params.center
+                                  //    "/administration/" + params.center
                                   //);
                               });
                           } }

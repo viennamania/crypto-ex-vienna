@@ -1795,7 +1795,7 @@ export default function SettingsPage({ params }: any) {
                                 <button
                                     onClick={() => {
                                     router.push(
-                                        '/' + params.lang + '/admin/store/' + params.storecode + '/memo'
+                                        '/' + params.lang + '/administration/store/' + params.storecode + '/memo'
                                     );
                                     }}
                                     className="bg-[#0047ab] text-sm text-white px-2 py-1 rounded-lg
@@ -1820,7 +1820,7 @@ export default function SettingsPage({ params }: any) {
                                 <button
                                     onClick={() => {
                                     router.push(
-                                        '/' + params.lang + '/admin/store/' + params.storecode + '/clearance'
+                                        '/' + params.lang + '/administration/store/' + params.storecode + '/clearance'
                                     );
                                     }
                                     }
@@ -3014,7 +3014,7 @@ export default function SettingsPage({ params }: any) {
 
                                     {/* route to daily-close page */}
                                     <button
-                                        onClick={() => router.push(`/${params.lang}/admin/store/${params.storecode}/daily-close`)}
+                                        onClick={() => router.push(`/${params.lang}/administration/store/${params.storecode}/daily-close`)}
                                         className="bg-[#0047ab] text-zinc-100 rounded-lg p-2 text-sm"
                                         disabled={!address}
                                     >

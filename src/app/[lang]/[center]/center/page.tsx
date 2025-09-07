@@ -1825,7 +1825,7 @@ export default function Index({ params }: any) {
                                   toast.success('로그아웃 되었습니다');
 
                                   //router.push(
-                                  //    "/admin/" + params.center
+                                  //    "/administration/" + params.center
                                   //);
                               });
                           } }
@@ -3092,7 +3092,7 @@ export default function Index({ params }: any) {
 
                                     // redirect to settings page
                                     router.push(
-                                      "/" + params.lang + "/admin/profile-settings"
+                                      "/" + params.lang + "/administration/profile-settings"
                                     );
 
 
@@ -3116,7 +3116,7 @@ export default function Index({ params }: any) {
 
                                     // redirect to settings page
                                     router.push(
-                                      "/" + params.lang + "/admin/seller-settings"
+                                      "/" + params.lang + "/administration/seller-settings"
                                     );
 
 

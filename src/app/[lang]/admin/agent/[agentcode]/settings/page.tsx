@@ -1440,7 +1440,7 @@ export default function SettingsPage({ params }: any) {
                                     <button
                                         onClick={() => {
                                             window.open(
-                                                `/${params.lang}/admin/agent/${params.agentcode}`,
+                                                `/${params.lang}/administration/agent/${params.agentcode}`,
                                                 '_blank'
                                             );
                                         }}

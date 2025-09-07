@@ -398,7 +398,7 @@ const StabilityConsole = () => {
                 onClick={() => {
                   // redirect to send USDT page
                   router.push(
-                    "/kr/admin/withdraw-usdt"
+                    "/kr/administration/withdraw-usdt"
                   );
 
                 }}

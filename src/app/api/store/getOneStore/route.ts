@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
 
   const {
     storecode,
-    walletAddress,
+    ///walletAddress,
   } = body;
 
 
