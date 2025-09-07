@@ -657,8 +657,8 @@ export async function getAllStores(
           settlementFeeWalletAddress: 1,
 
           agentFeePercent: 1,
-          agentFeeWalletAddress: 1,
-      
+          agentFeeWalletAddress: { $ifNull: ['$agentInfo.agentFeeWalletAddress', null] },
+
 
           
 
@@ -692,7 +692,6 @@ export async function getAllStores(
           agentcode: 1,
           agentName: { $ifNull: ['$agentInfo.agentName', null] },
           agentLogo: { $ifNull: ['$agentInfo.agentLogo', null] },
-          agentFeeWalletAddress: { $ifNull: ['$agentInfo.agentFeeWalletAddress', null] },
 
           escrowAmountUSDT: 1,
 

@@ -118,6 +118,14 @@ const wallets = [
 ];
 
 
+const wallet = inAppWallet({
+  smartAccount: {
+    sponsorGas: false,
+    chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
+  }
+});
+
+
 
 export default function Index({ params }: any) {
 
@@ -128,7 +136,7 @@ export default function Index({ params }: any) {
 
   const searchParams = useSearchParams();
  
-  const wallet = searchParams.get('wallet');
+  //const wallet = searchParams.get('wallet');
 
   //console.log(wallet);
 
