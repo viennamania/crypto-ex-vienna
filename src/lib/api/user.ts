@@ -813,6 +813,7 @@ export async function getPayUserByWalletAddress(
 
 // getPayUserByTelegramId
 export async function getPayUserByTelegramId(
+  storecode: string,
   telegramId: string,
 ): Promise<UserProps | null> {
 
@@ -825,11 +826,14 @@ export async function getPayUserByTelegramId(
 
   const results = await collection.findOne<UserProps>(
     {
+      storecode: storecode,
       telegramId: telegramId,
+      /*
       $or: [
         { verified: { $exists: false } },
         { verified: false },
       ],
+      */
     },
   );
 

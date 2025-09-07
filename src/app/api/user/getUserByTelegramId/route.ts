@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
 
   const {
+    storecode,
     telegramId,
   } = body;
 
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest) {
 
 
   const result = await getPayUserByTelegramId(
+    storecode,
     telegramId,
   );
 
