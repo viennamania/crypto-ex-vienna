@@ -129,7 +129,6 @@ const wallet = inAppWallet({
 
 export default function Index({ params }: any) {
 
-  const telegramId = params.telegramId;
 
 
   //console.log("params", params);
@@ -137,6 +136,8 @@ export default function Index({ params }: any) {
   // get params from the URL
 
   const searchParams = useSearchParams();
+
+  const telegramId = searchParams.get('telegramId') || '';
  
   //const wallet = searchParams.get('wallet');
 
@@ -998,18 +999,21 @@ export default function Index({ params }: any) {
         <p className="text-lg">이 페이지에 접근할 권한이 없습니다.</p>
        
 
-            {/* 회원가입한후 가맹점 관리자 등록신청을 하세요 */}
-            {/* 회원가입하러 가기 */}
-            <div className="flex flex-row items-center justify-center gap-2">
-              <button
-                onClick={() => {
-                  router.push('/' + params.lang + '/administration/telegram-profile-settings?telegramId=' + telegramId);
-                }}
-                className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
-              >
-                회원가입하러 가기
-              </button>
-            </div>
+          {/* telegram id */}
+          <p className="text-sm">텔레그램 ID: {telegramId}</p>
+
+          {/* 회원가입한후 가맹점 관리자 등록신청을 하세요 */}
+          {/* 회원가입하러 가기 */}
+          <div className="flex flex-row items-center justify-center gap-2">
+            <button
+              onClick={() => {
+                router.push('/' + params.lang + '/administration/telegram-profile-settings?telegramId=' + telegramId);
+              }}
+              className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+            >
+              회원가입하러 가기
+            </button>
+          </div>
 
 
 
