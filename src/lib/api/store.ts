@@ -648,13 +648,16 @@ export async function getAllStores(
           backgroundColor: 1,
    
 
-          settlementFeePercent: 1,
-          settlementFeeWalletAddress: 1,
           sellerWalletAddress: 1,
           adminWalletAddress: 1,
           settlementWalletAddress: 1,
 
+
+          settlementFeePercent: 1,
+          settlementFeeWalletAddress: 1,
+
           agentFeePercent: 1,
+          agentFeeWalletAddress: 1,
       
 
           

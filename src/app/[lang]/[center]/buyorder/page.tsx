@@ -77,7 +77,11 @@ import useSound from 'use-sound';
 import { useSearchParams } from 'next/navigation';
 
 
-import { paymentUrl } from "../../../config/payment";
+import {
+  paymentUrl,
+  platformFeePercentage,
+  platformFeeWalletAddress
+} from "../../../config/payment";
 
 import { version } from "../../../config/version";
 
@@ -182,7 +186,7 @@ export default function Index({ params }: any) {
 
   const searchParams = useSearchParams();
  
-  const wallet = searchParams.get('wallet');
+  ///const wallet = searchParams.get('wallet');
 
 
   // limit, page number params
@@ -222,7 +226,7 @@ export default function Index({ params }: any) {
 
 
  
-  const activeWallet = useActiveWallet();
+  //const activeWallet = useActiveWallet();
 
 
 
@@ -486,7 +490,13 @@ export default function Index({ params }: any) {
 
   const activeAccount = useActiveAccount();
 
-  const address = activeAccount?.address;
+  
+  //const address = activeAccount?.address;
+
+  // for test with wallet address
+  // 0x8527dDa689a7b5484de68ed525723e48d4f68a14
+  const address = '0x8527dDa689a7b5484de68ed525723e48d4f68a14';
+
 
 
 
@@ -4601,9 +4611,9 @@ const fetchBuyOrders = async () => {
               <div className="hidden xl:block w-0.5 h-10 bg-zinc-300"></div>
               <div className="xl:hidden w-full h-0.5 bg-zinc-300"></div>
 
-              <div className="w-full xl:w-1/2
-                flex flex-col xl:flex-row items-start justify-start gap-2 pl-4 pr-4">
-                
+              <div className="w-full xl:w-2/3
+                flex flex-col xl:flex-row items-start justify-end gap-2 pl-4 pr-4">
+
                 <Image
                   src="/icon-payment.png"
                   alt="Payment"
@@ -4611,6 +4621,18 @@ const fetchBuyOrders = async () => {
                   height={50}
                   className="w-16 h-16 rounded-lg object-cover"
                 />
+
+
+                {/* store.settlementFeePercent + store.agentFeePercent */}
+                {/* 결제 수수료율(%) */}
+                <div className="flex flex-col gap-2 items-center">
+                  <div className="text-sm">가램점 결제 수수료율(%)</div>
+                  <div className="text-4xl font-semibold text-zinc-500">
+                    {(store?.settlementFeePercent + store?.agentFeePercent + platformFeePercentage).toFixed(2)}
+                  </div>
+                </div>
+                
+
 
                 <div className="flex flex-col gap-2 items-center">
                   <div className="text-sm">가맹점 결제수(건)</div>
@@ -4620,7 +4642,7 @@ const fetchBuyOrders = async () => {
                 </div>
 
                 <div className="flex flex-col gap-2 items-center">
-                  <div className="text-sm">가맹점결제량(USDT)</div>
+                  <div className="text-sm">가맹점 결제량(USDT)</div>
                   <div className="flex flex-row items-center gap-1">
                     <Image
                       src="/icon-tether.png"
@@ -6768,71 +6790,82 @@ const fetchBuyOrders = async () => {
 
                           {
                           (item?.transactionHash && item?.transactionHash !== '0x') && (
-                            <button
-                              className="
-                                flex flex-row gap-2 items-center justify-between
-                                text-sm text-blue-600 font-semibold
-                                border border-blue-600 rounded-lg p-2
-                                bg-blue-100
-                                w-full text-center
-                                hover:bg-blue-200
-                                cursor-pointer
-                                transition-all duration-200 ease-in-out
-                                hover:scale-105
-                                hover:shadow-lg
-                                hover:shadow-blue-500/50
-                              "
-                              onClick={() => {
-                                let url = '';
-                                if (chain === "ethereum") {
-                                  url = `https://etherscan.io/tx/${item.transactionHash}`;
-                                } else if (chain === "polygon") {
-                                  url = `https://polygonscan.com/tx/${item.transactionHash}`;
-                                } else if (chain === "arbitrum") {
-                                  url = `https://arbiscan.io/tx/${item.transactionHash}`;
-                                } else if (chain === "bsc") {
-                                  url = `https://bscscan.com/tx/${item.transactionHash}`;
-                                } else {
-                                  url = `https://arbiscan.io/tx/${item.transactionHash}`;
-                                }
-                                window.open(url, '_blank');
+                            <div className="w-full flex flex-col gap-2 items-center justify-center">
 
-                              }}
-                            >
-                              <div className="flex flex-col gap-2 items-start justify-start ml-2">
-                                <div className="flex flex-col gap-1 items-start justify-start">
-                                  <span className="text-sm">
-                                    구매자에게 전송한 테더(USDT)
-                                  </span>
-                                  <div className="flex flex-row gap-1 items-center justify-start">
-                                    <Image
-                                      src={`/token-usdt-icon.png`}
-                                      alt="USDT Logo"
-                                      width={20}
-                                      height={20}
-                                      className="w-5 h-5"
-                                    />
-                                    <span className="text-sm text-[#409192] font-semibold"
-                                      style={{
-                                        fontFamily: 'monospace',
-                                      }}>
-                                      {item?.usdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                                    </span>
-                                  </div>
-                                  <span className="text-sm text-zinc-500">
-                                    스캔에서 전송내역 확인하기
-                                  </span>
-                                </div>
+                              <div className="flex flex-row gap-2 items-center justify-center">
+                                <Image
+                                  src="/icon-trade.png"
+                                  alt="Trade Completed"
+                                  width={30}
+                                  height={30}
+                                  className="w-6 h-6 rounded-lg"
+                                />
+                                <span className="text-sm">
+                                  P2P 거래를 완료했습니다.
+                                </span>
                               </div>
-                              {/* chain logo */}
-                              <Image
-                                src={`/logo-chain-${chain}.png`}
-                                alt={`${chain} Logo`}
-                                width={20}
-                                height={20}
-                                className="w-5 h-5"
-                              />
-                            </button>
+
+                              <button
+                                className="
+                                  flex flex-row gap-2 items-center justify-between
+                                  text-sm text-blue-600 font-semibold
+                                  border border-blue-600 rounded-lg p-2
+                                  bg-blue-100
+                                  w-full text-center
+                                  hover:bg-blue-200
+                                  cursor-pointer
+                                  transition-all duration-200 ease-in-out
+                                  hover:scale-105
+                                  hover:shadow-lg
+                                  hover:shadow-blue-500/50
+                                "
+                                onClick={() => {
+                                  let url = '';
+                                  if (chain === "ethereum") {
+                                    url = `https://etherscan.io/tx/${item.transactionHash}`;
+                                  } else if (chain === "polygon") {
+                                    url = `https://polygonscan.com/tx/${item.transactionHash}`;
+                                  } else if (chain === "arbitrum") {
+                                    url = `https://arbiscan.io/tx/${item.transactionHash}`;
+                                  } else if (chain === "bsc") {
+                                    url = `https://bscscan.com/tx/${item.transactionHash}`;
+                                  } else {
+                                    url = `https://arbiscan.io/tx/${item.transactionHash}`;
+                                  }
+                                  window.open(url, '_blank');
+
+                                }}
+                              >
+                                <div className="flex flex-col gap-2 items-start justify-start ml-2">
+                                  <div className="flex flex-col gap-1 items-start justify-start">
+
+                                    <div className="flex flex-row gap-1 items-center justify-start">
+                                      <Image
+                                        src={`/token-usdt-icon.png`}
+                                        alt="USDT Logo"
+                                        width={20}
+                                        height={20}
+                                        className="w-5 h-5"
+                                      />
+                                      <span className="text-lg text-[#409192] font-semibold"
+                                        style={{
+                                          fontFamily: 'monospace',
+                                        }}>
+                                        {item?.usdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                {/* chain logo */}
+                                <Image
+                                  src={`/logo-chain-${chain}.png`}
+                                  alt={`${chain} Logo`}
+                                  width={20}
+                                  height={20}
+                                  className="w-5 h-5"
+                                />
+                              </button>
+                            </div>
                           )}
 
 
@@ -7010,17 +7043,20 @@ const fetchBuyOrders = async () => {
 
                               <div className="w-full flex flex-row gap-2 items-center justify-start">
                                 <Image
-                                  src={item?.store?.storeLogo || '/icon-store.png'}
-                                  alt="Store Logo"
+                                  src='/icon-payment.png'
+                                  alt="Payment Completed"
                                   width={30}
                                   height={30}
-                                  className="w-6 h-6 rounded-lg"
+                                  className="w-10 h-10 rounded-lg"
                                 />
+                                <span className="text-sm font-semibold text-zinc-500">
+                                  회원이
+                                </span>
                                 <span className="text-sm font-semibold text-zinc-500">
                                   {item?.store?.storeName}
                                 </span>
                                 <span className="text-sm font-semibold text-zinc-500">
-                                  가맹점 결제 및 정산완료
+                                  가맹점 결제를 완료했습니다.
                                 </span>
 
                               </div>
@@ -7095,7 +7131,10 @@ const fetchBuyOrders = async () => {
                                     <button
                                       className="
                                       w-32
-                                      flex flex-col gap-2 items-center justify-center
+                                      flex flex-col gap-2 items-center justify-center px-4 py-2
+                                      rounded-lg
+                                      border border-blue-600
+                                      hover:border-blue-700
                                       
 
                                       bg-blue-100 text-blue-600 font-semibold
@@ -7143,6 +7182,18 @@ const fetchBuyOrders = async () => {
                                           <span>
                                             {Number(item?.settlement?.settlementAmount).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                                           </span>
+
+
+                                          {/* chain logo */}
+                                          <Image
+                                            src={`/logo-chain-${chain}.png`}
+                                            alt={`${chain} Logo`}
+                                            width={20}
+                                            height={20}
+                                            className="w-5 h-5"
+                                          />
+
+
                                         </div>
                                         {/*
                                         <span>
@@ -7164,6 +7215,8 @@ const fetchBuyOrders = async () => {
                                           item?.settlement?.feeWalletAddress?.slice(0, 5) + '...'}
                                         </span>
                                         */}
+
+
 
                                       </div>
 
