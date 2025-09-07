@@ -6798,7 +6798,7 @@ const fetchBuyOrders = async () => {
                                   alt="Trade Completed"
                                   width={30}
                                   height={30}
-                                  className="w-6 h-6 rounded-lg"
+                                  className="w-10 h-10 rounded-lg"
                                 />
                                 <span className="text-sm">
                                   P2P 거래를 완료했습니다.
