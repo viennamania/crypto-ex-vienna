@@ -29,11 +29,6 @@ import {
 
 
 import {
-  polygon,
-  arbitrum,
-} from "thirdweb/chains";
-
-import {
   ConnectButton,
   useActiveAccount,
   useActiveWallet,
@@ -83,6 +78,24 @@ import DatePicker from "react-datepicker";
 
 import { version } from "../../../config/version";
 
+
+
+import {
+  ethereum,
+  polygon,
+  arbitrum,
+  bsc,
+} from "thirdweb/chains";
+
+import {
+  chain,
+  ethereumContractAddressUSDT,
+  polygonContractAddressUSDT,
+  arbitrumContractAddressUSDT,
+  bscContractAddressUSDT,
+
+  bscContractAddressMKRW,
+} from "@/app/config/contractAddresses";
 
 
 interface BuyOrder {
@@ -146,14 +159,6 @@ const wallets = [
 ];
 
 
-// get escrow wallet address
-
-//const escrowWalletAddress = "0x2111b6A49CbFf1C8Cc39d13250eF6bd4e1B59cF6";
-
-
-
-const contractAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"; // USDT on Polygon
-const contractAddressArbitrum = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"; // USDT on Arbitrum
 
 
 
@@ -162,7 +167,7 @@ export default function Index({ params }: any) {
 
   const searchParams = useSearchParams();
  
-  const wallet = searchParams.get('wallet');
+  ///const wallet = searchParams.get('wallet');
 
 
   // limit, page number params
@@ -180,14 +185,21 @@ export default function Index({ params }: any) {
     // the chain the contract is deployed on
     
     
-    chain: arbitrum,
+    //chain: arbitrum,
+    chain:  chain === "ethereum" ? ethereum :
+            chain === "polygon" ? polygon :
+            chain === "arbitrum" ? arbitrum :
+            chain === "bsc" ? bsc : arbitrum,
   
   
   
     // the contract's address
     ///address: contractAddressArbitrum,
 
-    address: contractAddressArbitrum,
+    address: chain === "ethereum" ? ethereumContractAddressUSDT :
+            chain === "polygon" ? polygonContractAddressUSDT :
+            chain === "arbitrum" ? arbitrumContractAddressUSDT :
+            chain === "bsc" ? bscContractAddressUSDT : arbitrumContractAddressUSDT,
 
 
     // OPTIONAL: the contract's abi
@@ -499,46 +511,30 @@ export default function Index({ params }: any) {
   
 
 
-  const [nativeBalance, setNativeBalance] = useState(0);
+
   const [balance, setBalance] = useState(0);
   useEffect(() => {
 
     // get the balance
     const getBalance = async () => {
 
-      ///console.log('getBalance address', address);
+      if (!address) {
+        setBalance(0);
+        return;
+      }
 
       
       const result = await balanceOf({
         contract,
-        address: address || "",
+        address: address,
       });
 
   
-      //console.log(result);
-  
-      setBalance( Number(result) / 10 ** 6 );
-
-
-      /*
-      await fetch('/api/user/getBalanceByWalletAddress', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chain: params.center,
-          walletAddress: address,
-        }),
-      })
-
-      .then(response => response.json())
-
-      .then(data => {
-          setNativeBalance(data.result?.displayValue);
-      });
-      */
-
+      if (chain === 'bsc') {
+        setBalance( Number(result) / 10 ** 18 );
+      } else {
+        setBalance( Number(result) / 10 ** 6 );
+      }
 
 
     };
@@ -546,13 +542,15 @@ export default function Index({ params }: any) {
 
     if (address) getBalance();
 
+    
     const interval = setInterval(() => {
       if (address) getBalance();
     } , 5000);
 
     return () => clearInterval(interval);
+    
 
-  } , [address, contract, params.center]);
+  } , [address, contract]);
 
 
 
@@ -3708,7 +3706,7 @@ const fetchBuyOrders = async () => {
                         <td className="p-2">
 
                           <div className="
-                            w-36 
+                            w-52
                             flex flex-col gap-2 items-center justify-center">
 
                             <div className="flex flex-row items-center gap-2">
@@ -3920,38 +3918,71 @@ const fetchBuyOrders = async () => {
                             {item?.transactionHash
                             && item?.transactionHash !== '0x'
                             && (
-                              <button
-                                className="text-sm text-blue-600 font-semibold
-                                  border border-blue-600 rounded-lg p-2
-                                  bg-blue-100
-                                  w-full text-center
-                                  hover:bg-blue-200
-                                  cursor-pointer
-                                  transition-all duration-200 ease-in-out
-                                  hover:scale-105
-                                  hover:shadow-lg
-                                  hover:shadow-blue-500/50
-                                "
-                                onClick={() => {
-                                  window.open(
-                                    `https://arbiscan.io/tx/${item.transactionHash}`,
-                                    '_blank'
-                                  );
-                                }}
-                              >
-                                <div className="flex flex-row gap-2 items-center justify-center">
-                                  <Image
-                                    src="/logo-arbitrum.png"
-                                    alt="Polygon"
-                                    width={20}
-                                    height={20}
-                                    className="w-5 h-5"
-                                  />
-                                  <span className="text-sm">
-                                    USDT 전송내역
-                                  </span>
-                                </div>
-                              </button>
+                                <button
+                                  className="
+                                    flex flex-row gap-2 items-center justify-between
+                                    text-sm text-[#409192] font-semibold
+                                    border border-[#409192] rounded-lg p-2
+                                    bg-blue-100
+                                    text-center
+                                    hover:bg-blue-200
+                                    cursor-pointer
+                                    transition-all duration-200 ease-in-out
+                                    hover:scale-105
+                                    hover:shadow-lg
+                                    hover:shadow-blue-500/50
+                                  "
+                                  onClick={() => {
+                                    let url = '';
+                                    if (chain === "ethereum") {
+                                      url = `https://etherscan.io/tx/${item.transactionHash}`;
+                                    } else if (chain === "polygon") {
+                                      url = `https://polygonscan.com/tx/${item.transactionHash}`;
+                                    } else if (chain === "arbitrum") {
+                                      url = `https://arbiscan.io/tx/${item.transactionHash}`;
+                                    } else if (chain === "bsc") {
+                                      url = `https://bscscan.com/tx/${item.transactionHash}`;
+                                    } else {
+                                      url = `https://arbiscan.io/tx/${item.transactionHash}`;
+                                    }
+                                    window.open(url, '_blank');
+
+                                  }}
+                                >
+                                    <div className="flex flex-col gap-2 items-start justify-start ml-2">
+                                      <div className="flex flex-col gap-1 items-start justify-start">
+                                        <span className="text-sm">
+                                          회원지갑으로 전송한 테더
+                                        </span>
+                                        <div className="flex flex-row gap-1 items-center justify-start">
+                                          <Image
+                                            src={`/icon-tether.png`}
+                                            alt="USDT Logo"
+                                            width={20}
+                                            height={20}
+                                            className="w-5 h-5"
+                                          />
+                                          <span className="text-lg text-[#409192] font-semibold"
+                                            style={{
+                                              fontFamily: 'monospace',
+                                            }}>
+                                            {item?.usdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                          </span>
+                                        </div>
+                                        <span className="text-sm text-zinc-500">
+                                          테더(USDT) 전송내역
+                                        </span>
+                                      </div>
+                                    </div>
+                                    {/* chain logo */}
+                                    <Image
+                                      src={`/logo-chain-${chain}.png`}
+                                      alt={`${chain} Logo`}
+                                      width={20}
+                                      height={20}
+                                      className="w-5 h-5"
+                                    />
+                                </button>
                             )}
 
 
@@ -4245,7 +4276,7 @@ const fetchBuyOrders = async () => {
 
                             <button
                               className="
-                              w-48
+                              w-full
                               flex flex-col gap-2 items-center justify-center
                               bg-purple-500 text-white px-2 py-1 rounded-md hover:bg-purple-600
                               text-sm
@@ -4261,10 +4292,21 @@ const fetchBuyOrders = async () => {
                               "
 
                               onClick={() => {
-                                window.open(
-                                  `https://arbiscan.io/tx/${item.settlement.txid}`,
-                                  '_blank'
-                                );
+                                if (item.settlement.txid === "0x" || !item.settlement.txid) {
+                                  alert("트랙젝션 해시가 없습니다.");
+                                  return;
+                                } else {
+                                  window.open(
+                                    
+                                    chain === 'ethereum' ? `https://etherscan.io/tx/${item.settlement.txid}`
+                                    : chain === 'polygon' ? `https://polygonscan.com/tx/${item.settlement.txid}`
+                                    : chain === 'arbitrum' ? `https://arbiscan.io/tx/${item.settlement.txid}`
+                                    : chain === 'bsc' ? `https://bscscan.com/tx/${item.settlement.txid}`
+                                    : `https://arbiscan.io/tx/${item.settlement.txid}`,
+
+                                    '_blank'
+                                  );
+                                }
                               }}
                             >
 
