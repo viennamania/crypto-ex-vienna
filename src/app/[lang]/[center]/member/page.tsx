@@ -3034,7 +3034,60 @@ export default function Index({ params }: any) {
                                   새창열기
                                 </button>
 
+
                               </div>
+
+
+
+                              <div className="w-full flex flex-row items-center justify-between gap-2">
+
+
+                                <button
+                                    onClick={() => {
+                                        window.open(
+                                            'https://t.me/goodtether_user_bot?start=' + item.storecode + '_' + item.nickname,
+                                            '_blank'
+                                        );
+                                    }}
+                                    className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
+                                    hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
+                                >
+                                    <Image
+                                        src="/icon-telegram.png"
+                                        alt="Telegram"
+                                        width={20}
+                                        height={20}
+                                        className="w-4 h-4"
+                                    />
+                                    {' '}사용자 텔레그램 봇 열기
+                                </button>
+
+                                {/* 텔레그램봇 링크 복사하기 */}
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(
+                                      'https://t.me/goodtether_user_bot?start=' + item.storecode + '_' + item.nickname
+                                    );
+                                    //toast.success('복사되었습니다');
+                                    alert('복사되었습니다:\n' + 'https://t.me/goodtether_user_bot?start=' + item.storecode + '_' + item.nickname);
+                                  }}
+                                  className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
+                                  hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
+                                >
+                                  <Image
+                                    src="/icon-telegram.png"
+                                    alt="Telegram"
+                                    width={20}
+                                    height={20}
+                                    className="w-4 h-4"
+                                  />
+                                  {' '}사용자 텔레그램 링크 복사
+                                </button>
+
+
+                              </div>
+
+
 
 
                             </div>
