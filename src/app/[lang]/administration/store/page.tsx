@@ -2939,7 +2939,7 @@ export default function Index({ params }: any) {
                           <td className="p-2">
 
                             <div className="h-56
-                              w-28
+                              w-48
                               flex flex-col items-between justify-between gap-2">
 
                               <div className="flex flex-col items-center gap-2">
