@@ -1427,33 +1427,6 @@ export default function SettingsPage({ params }: any) {
                                 <div className='w-full flex flex-col items-center justify-between gap-2
                                     border-t border-gray-300 pt-4'>
 
-                                    {/* agent admin page */}
-
-                                    <div className='w-full flex flex-row items-center justify-start gap-2'>
-                                        <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                                        <span className="text-lg">
-                                            에이전트 관리자 홈페이지
-                                        </span>
-                                    </div>
-
-                                    {/* new window button for agnet admin page */}
-                                    <button
-                                        onClick={() => {
-                                            window.open(
-                                                `/${params.lang}/administration/agent/${params.agentcode}`,
-                                                '_blank'
-                                            );
-                                        }}
-                                        className="bg-[#0047ab] text-sm text-white px-4 py-2 rounded-lg"
-                                    >
-                                        에이전트 관리자 홈페이지 열기
-                                    </button>   
-                                </div> 
-
-
-                                <div className='w-full flex flex-col items-center justify-between gap-2
-                                    border-t border-gray-300 pt-4'>
-
                                     {/* agent adminWalletAddress */}
 
                     
