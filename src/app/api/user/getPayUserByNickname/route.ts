@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   const {
     storecode,
-    telegramId,
+    nickname,
   } = body;
 
 
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
   const result = await getUserByNickname(
     storecode,
-    telegramId,
+    nickname,
   );
 
   //console.log("getUserByNickname result", result);
