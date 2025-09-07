@@ -491,11 +491,11 @@ export default function Index({ params }: any) {
   const activeAccount = useActiveAccount();
 
   
-  //const address = activeAccount?.address;
+  const address = activeAccount?.address;
 
   // for test with wallet address
   // 0x8527dDa689a7b5484de68ed525723e48d4f68a14
-  const address = '0x8527dDa689a7b5484de68ed525723e48d4f68a14';
+  ///const address = '0x8527dDa689a7b5484de68ed525723e48d4f68a14';
 
 
 
