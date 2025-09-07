@@ -7041,7 +7041,9 @@ const fetchBuyOrders = async () => {
                                         fontFamily: 'monospace',
                                       }}>
                                       {Number(
-                                        100 - (item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0) - (item.store.settlementFeePercent ? item.store.settlementFeePercent : 0.3)
+                                        100 - (item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0)
+                                         - (item.store.settlementFeePercent ? item.store.settlementFeePercent : 0.3)
+                                         - (item?.settlement?.platformFeePercent ? item?.settlement?.platformFeePercent : 0.0)
                                       ).toFixed(2)
                                       }%
                                     </span>
