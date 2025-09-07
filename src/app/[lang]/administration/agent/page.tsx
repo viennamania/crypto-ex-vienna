@@ -1920,7 +1920,7 @@ export default function Index({ params }: any) {
                           수수료 수납용 USDT지갑 주소
                         </th>
                         
-                        <th className="p-2">관리자 홈페이지</th>
+                        <th className="p-2">텔레그램 봇</th>
                         
                         {/* 가맹점수 */}
                         <th className="p-2">
@@ -2077,19 +2077,49 @@ export default function Index({ params }: any) {
                           <td className="p-2">
                             <div className="flex flex-col items-center justify-center gap-2">
                               <div className="flex flex-col items-center justify-center gap-2">
+                                
+                                <button
+                                    onClick={() => {
+                                        window.open(
+                                            'https://t.me/goodtether_agent_bot?start=' + item.agentcode,
+                                            '_blank'
+                                        );
+                                    }}
+                                    className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
+                                    hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
+                                >
+                                    <Image
+                                        src="/icon-telegram.png"
+                                        alt="Telegram"
+                                        width={20}
+                                        height={20}
+                                        className="w-4 h-4"
+                                    />
+                                    {' '}관리자 텔레그램 봇 열기
+                                </button>
+
+                                {/* 텔레그램봇 링크 복사하기 */}
                                 <button
                                   onClick={() => {
-
-                                    window.open(
-                                      `/${params.lang}/administration/agent/${item.agentcode}`,
-                                      "_blank"
+                                    navigator.clipboard.writeText(
+                                      'https://t.me/goodtether_agent_bot?start=' + item.agentcode
                                     );
+                                    //toast.success('복사되었습니다');
+                                    alert('복사되었습니다:\n' + 'https://t.me/goodtether_agent_bot?start=' + item.agentcode);
                                   }}
-                                  className="bg-[#0047ab] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#0047ab]/80"
+                                  className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
+                                  hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
                                 >
-                                  홈페이지 열기
+                                  <Image
+                                    src="/icon-telegram.png"
+                                    alt="Telegram"
+                                    width={20}
+                                    height={20}
+                                    className="w-4 h-4"
+                                  />
+                                  {' '}관리자 텔레그램 링크 복사
                                 </button>
+
                               </div>
                             </div>
                           </td>
