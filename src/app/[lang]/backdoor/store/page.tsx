@@ -2610,7 +2610,7 @@ export default function Index({ params }: any) {
                         <th className="p-2">
                           <div className="flex flex-col items-center justify-center gap-2">
                             <span className="text-center">
-                              PG 수수료율(%)
+                              센터 수수료율(%)
                             </span>
 
                             <span className="text-center">

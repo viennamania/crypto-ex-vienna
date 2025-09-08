@@ -2628,7 +2628,7 @@ export default function SettingsPage({ params }: any) {
                                         className="w-5 h-5"
                                     />
                                     <span className="text-lg text-zinc-500">
-                                        가맹점 PG 수수료 설정
+                                        가맹점 센터 수수료 설정
                                     </span>
                                 </div>
 
@@ -2638,7 +2638,7 @@ export default function SettingsPage({ params }: any) {
                                         {/* dot */}
                                         <div className='w-2 h-2 bg-green-500 rounded-full'></div>
                                         <span className="text-lg">
-                                            PG 수수료 수납용 USDT지갑
+                                            센터 수수료 수납용 USDT지갑
                                         </span>
                                     </div>
 
@@ -2675,7 +2675,7 @@ export default function SettingsPage({ params }: any) {
                                             className="w-5 h-5"
                                             />
                                             <span className="text-sm text-red-500">
-                                            {store && store.storeName}의 가맹점 PG 수수료 수납용 USDT지갑이 설정되지 않았습니다.
+                                            {store && store.storeName}의 가맹점 센터 수수료 수납용 USDT지갑이 설정되지 않았습니다.
                                             </span>
                                         </div>
                                     )}
@@ -2702,7 +2702,7 @@ export default function SettingsPage({ params }: any) {
                                                 bg-white text-zinc-500 text-sm"
                                             disabled={updatingSettlementFeeWalletAddress}
                                             >
-                                            <option value="">가맹점 PG 수수료 수납용 USDT지갑 변경</option>
+                                            <option value="">가맹점 센터 수수료 수납용 USDT지갑 변경</option>
                                             {allAdminSellers.map((user) => (
                                                 <option key={user._id} value={user.walletAddress}>
                                                 {user.nickname}
@@ -2714,15 +2714,15 @@ export default function SettingsPage({ params }: any) {
                                             <button
                                             onClick={() => {
                                                 if (!selectedSettlementFeeWalletAddress) {
-                                                toast.error('가맹점 PG 수수료 수납용 USDT지갑을 선택하세요.');
+                                                toast.error('가맹점 센터 수수료 수납용 USDT지갑을 선택하세요.');
                                                 return;
                                                 }
                                                 if (selectedSettlementFeeWalletAddress === store?.settlementFeeWalletAddress) {
-                                                toast.error('현재 가맹점 PG 수수료 수납용 USDT지갑과 동일합니다.');
+                                                toast.error('현재 가맹점 센터 수수료 수납용 USDT지갑과 동일합니다.');
                                                 return;
                                                 }
                                                 confirm(
-                                                `정말 ${selectedSettlementFeeWalletAddress}로 가맹점 PG 수수료 수납용 USDT지갑을 변경하시겠습니까?`
+                                                `정말 ${selectedSettlementFeeWalletAddress}로 가맹점 센터 수수료 수납용 USDT지갑을 변경하시겠습니까?`
                                                 ) && updateSettlementFeeWalletAddress();
                                             }}
                                             className={`bg-[#0047ab] text-sm text-white px-4 py-2 rounded-lg
@@ -2743,7 +2743,7 @@ export default function SettingsPage({ params }: any) {
                                             <span className="text-sm text-red-500">
                                             {store && store.storeName}의 회원이 없습니다.
                                             <br />
-                                           가맹점 텔레그램 봇에서 회원가입 후 가맹점 PG 수수료 수납용 USDT지갑을 설정하세요.
+                                           가맹점 텔레그램 봇에서 회원가입 후 가맹점 센터 수수료 수납용 USDT지갑을 설정하세요.
                                             </span>
                                         </div>
 
@@ -2764,7 +2764,7 @@ export default function SettingsPage({ params }: any) {
                                         {/* dot */}
                                         <div className='w-2 h-2 bg-green-500 rounded-full'></div>
                                         <span className="text-lg">
-                                            가맹점 PG 수수료율(%)
+                                            가맹점 센터 수수료율(%)
                                         </span>
                                     </div>
                                     <div className='w-full flex flex-row items-center justify-center gap-2'>
@@ -2823,7 +2823,7 @@ export default function SettingsPage({ params }: any) {
                                         className="w-5 h-5"
                                     />
                                     <span className='text-sm font-semibold'>
-                                        가맹점 PG 수수료율은 0.01 ~ 5.00%로 설정하세요
+                                        가맹점 센터 수수료율은 0.01 ~ 5.00%로 설정하세요
                                     </span>
                                 </div>
 

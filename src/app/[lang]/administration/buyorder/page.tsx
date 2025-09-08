@@ -4159,7 +4159,7 @@ const fetchBuyOrders = async () => {
                   border-b border-zinc-300 pb-2">
 
                   <div className="flex flex-col gap-2 items-center">
-                    <div className="text-sm">PG 수수료량(USDT)</div>
+                    <div className="text-sm">센터 수수료량(USDT)</div>
                     <div className="w-full flex flex-row items-center justify-end gap-1">
                       <Image
                         src="/icon-tether.png"
@@ -4178,7 +4178,7 @@ const fetchBuyOrders = async () => {
                   </div>
                   
                   <div className="flex flex-col gap-2 items-center">
-                    <div className="text-sm">PG 수수료금액(원)</div>
+                    <div className="text-sm">센터 수수료금액(원)</div>
                     <div className="w-full flex flex-row items-center justify-end gap-1">
                       <span className="text-xl font-semibold text-yellow-600"
                         style={{ fontFamily: 'monospace' }}>
@@ -6727,7 +6727,7 @@ const fetchBuyOrders = async () => {
                             <span className="
                             w-16
                             text-sm text-zinc-500">
-                              PG 수수료
+                              센터 수수료
                             </span>
                             <span className="
                             w-14  text-end
@@ -6860,7 +6860,7 @@ const fetchBuyOrders = async () => {
                                   <span className="
                                   w-14
                                   text-xs text-zinc-500">
-                                    PG 수수료
+                                    센터 수수료
                                   </span>
                                   <span className="
                                   w-12  text-end

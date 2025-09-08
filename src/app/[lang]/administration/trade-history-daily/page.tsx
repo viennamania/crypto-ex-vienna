@@ -1738,7 +1738,7 @@ const fetchBuyOrders = async () => {
                           AG 수수료율: {store.agentFeePercent ? store.agentFeePercent + '%' : '없음'}
                         </span>
                         <span className="text-sm font-semibold">
-                          PG 수수료율: {store.settlementFeePercent ? store.settlementFeePercent + '%' : '없음'}
+                          센터 수수료율: {store.settlementFeePercent ? store.settlementFeePercent + '%' : '없음'}
                         </span>
                       </div>
                     ) : (
@@ -1986,7 +1986,7 @@ const fetchBuyOrders = async () => {
                 <div className="flex flex-row gap-2 items-center">
 
                   <div className="flex flex-col gap-2 items-center">
-                    <div className="text-sm">총 PG 수수료량(USDT)</div>
+                    <div className="text-sm">총 센터 수수료량(USDT)</div>
                     <div className="w-full flex flex-row items-center justify-end gap-1">
                       <Image
                         src="/icon-tether.png"
@@ -2006,7 +2006,7 @@ const fetchBuyOrders = async () => {
                   </div>
 
                   <div className="flex flex-col gap-2 items-center">
-                    <div className="text-sm">총 PG 수수료금액(원)</div>
+                    <div className="text-sm">총 센터 수수료금액(원)</div>
                     <div className="w-full flex flex-row items-center justify-end gap-1">
                       <span className="text-xl font-semibold text-yellow-600"
                         style={{ fontFamily: 'monospace' }}
@@ -2240,8 +2240,8 @@ const fetchBuyOrders = async () => {
                       <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">AG 수수료량(USDT)</th>
                       <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">AG 수수료금액(원)</th>
 
-                      <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">PG 수수료량(USDT)</th>
-                      <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">PG 수수료금액(원)</th>
+                      <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">센터 수수료량(USDT)</th>
+                      <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">센터 수수료금액(원)</th>
 
 
 

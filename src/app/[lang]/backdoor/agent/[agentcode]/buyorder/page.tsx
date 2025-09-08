@@ -5508,7 +5508,7 @@ const fetchBuyOrders = async () => {
                                     <span className="
                                     w-16
                                     text-sm text-zinc-500">
-                                      PG 수수료
+                                      센터 수수료
                                     </span>
                                     <span className="
                                     w-14  text-end
