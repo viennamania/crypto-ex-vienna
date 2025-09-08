@@ -739,8 +739,8 @@ export default function Index({ params }: any) {
     "storeType": "test",
     "storeUrl": "https://test.com",
     "storeDescription": "설명입니다.",
-    "storeLogo": "https://www.stable.makeup/logo.png",
-    "storeBanner": "https://www.stable.makeup/logo.png",
+    "storeLogo": "https://crypto-ex-vienna.vercel.app/logo.png",
+    "storeBanner": "https://crypto-ex-vienna.vercel.app/logo.png",
     "createdAt": "2025-05-07T10:58:28.019Z"
     }
     */
@@ -2253,7 +2253,7 @@ export default function Index({ params }: any) {
                           connectModal={{
                             size: "wide", 
                             //size: "compact",
-                            titleIcon: "https://www.stable.makeup/logo.png",                           
+                            titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
                             showThirdwebBranding: false,
                           }}
 

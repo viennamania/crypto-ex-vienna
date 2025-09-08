@@ -1272,7 +1272,7 @@ export default function Index({ params }: any) {
             connectModal={{
               size: "wide", 
               //size: "compact",
-              titleIcon: "https://www.stable.makeup/logo.png",                           
+              titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
               showThirdwebBranding: false,
             }}
 
@@ -1408,7 +1408,7 @@ export default function Index({ params }: any) {
               connectModal={{
                 size: "wide", 
                 //size: "compact",
-                titleIcon: "https://www.stable.makeup/logo.png",                           
+                titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
                 showThirdwebBranding: false,
               }}
 
