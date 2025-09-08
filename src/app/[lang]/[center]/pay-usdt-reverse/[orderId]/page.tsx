@@ -3448,7 +3448,7 @@ export default function Index({ params }: any) {
                 </a>
               </div>
               <div className="text-sm text-zinc-500 mt-2">
-                © 2023 Iskan9. All rights reserved.
+                © 2025 GoodTether. All rights reserved.
               </div>
 
             </div>
