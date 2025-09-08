@@ -3045,12 +3045,15 @@ export default function Index({ params }: any) {
                               <div className="w-full flex flex-row items-center justify-between gap-2">
 
 
+                                {/* encodeURI */}
                                 <button
                                     onClick={() => {
-                                        window.open(
+                                        window.open( 
                                             'https://t.me/goodtether_user_bot?start='
-                                            + item.storecode + '_' + item.nickname
-                                            + '_' + item.buyer?.depositBankName + '_' + item.buyer?.depositBankAccountNumber + '_' + item.buyer?.depositName
+                                            + item.storecode + '_' + encodeURI(item.nickname)
+                                            + '_' + encodeURI(item.buyer?.depositBankName)
+                                            + '_' + item.buyer?.depositBankAccountNumber
+                                            + '_' + encodeURI(item.buyer?.depositName)
                                             + '_' + depositAmountKrw[index],
                                             '_blank'
                                         );
@@ -3072,8 +3075,11 @@ export default function Index({ params }: any) {
                                 <button
                                   onClick={() => {
                                     navigator.clipboard.writeText(
-                                      'https://t.me/goodtether_user_bot?start=' + item.storecode + '_' + item.nickname
-                                      + '_' + item.buyer?.depositBankName + '_' + item.buyer?.depositBankAccountNumber + '_' + item.buyer?.depositName
+                                      'https://t.me/goodtether_user_bot?start='
+                                      + item.storecode + '_' + encodeURI(item.nickname)
+                                      + '_' + encodeURI(item.buyer?.depositBankName)
+                                      + '_' + encodeURI(item.buyer?.depositBankAccountNumber)
+                                      + '_' + encodeURI(item.buyer?.depositName)
                                       + '_' + depositAmountKrw[index]
                                     );
                                     //toast.success('복사되었습니다');
