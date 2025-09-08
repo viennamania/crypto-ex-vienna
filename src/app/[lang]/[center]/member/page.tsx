@@ -3048,7 +3048,10 @@ export default function Index({ params }: any) {
                                 <button
                                     onClick={() => {
                                         window.open(
-                                            'https://t.me/goodtether_user_bot?start=' + item.storecode + '_' + item.nickname,
+                                            'https://t.me/goodtether_user_bot?start='
+                                            + item.storecode + '_' + item.nickname
+                                            + '_' + item.buyer?.depositBankName + '_' + item.buyer?.depositBankAccountNumber + '_' + item.buyer?.depositName
+                                            + '_' + depositAmountKrw[index],
                                             '_blank'
                                         );
                                     }}
@@ -3070,9 +3073,11 @@ export default function Index({ params }: any) {
                                   onClick={() => {
                                     navigator.clipboard.writeText(
                                       'https://t.me/goodtether_user_bot?start=' + item.storecode + '_' + item.nickname
+                                      + '_' + item.buyer?.depositBankName + '_' + item.buyer?.depositBankAccountNumber + '_' + item.buyer?.depositName
+                                      + '_' + depositAmountKrw[index]
                                     );
                                     //toast.success('복사되었습니다');
-                                    alert('복사되었습니다:\n' + 'https://t.me/goodtether_user_bot?start=' + item.storecode + '_' + item.nickname);
+                                    alert('복사되었습니다');
                                   }}
                                   className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
                                   hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
