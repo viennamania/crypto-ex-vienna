@@ -1786,7 +1786,7 @@ export default function Index({ params }: any) {
 
                       <button
                         onClick={() => {
-                          router.push('/' + params.lang + '/' + params.center + '/profile-settings');
+                          router.push('/' + params.lang + '/administration/profile-settings');
                         }}
                         className="
                         items-center justify-center
