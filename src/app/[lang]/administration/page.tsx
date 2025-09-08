@@ -1314,7 +1314,7 @@ export default function Index({ params }: any) {
                         <th className="px-4 py-2 text-center">
                           상태
                         </th>
-                        <th className="px-4 py-2 text-left">
+                        <th className="hidden xl:table-cell px-4 py-2 text-left">
                           판매자
                           <br/>
                           결제방법
@@ -1424,7 +1424,9 @@ export default function Index({ params }: any) {
                           
                           </td>
 
-                          <td className="px-4 py-2">
+                          <td className="
+                            hidden xl:table-cell
+                            px-4 py-2">
                             {trade?.seller?.nickname.length > 10 ? trade?.seller?.nickname.slice(0, 10) + "..." : trade?.seller?.nickname}
                             <br/>
                             {trade?.store?.bankInfo?.bankName}
