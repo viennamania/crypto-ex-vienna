@@ -817,7 +817,7 @@ export default function SettingsPage({ params }: any) {
             body: JSON.stringify(
                 {
                     storecode: "agent",
-                    limit: 10,
+                    limit: 100,
                     page: 1,
                 }
             ),
