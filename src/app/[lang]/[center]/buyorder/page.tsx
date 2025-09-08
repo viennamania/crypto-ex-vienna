@@ -6249,7 +6249,8 @@ const fetchBuyOrders = async () => {
                                     flex flex-col gap-2 items-center justify-center">
 
                                     {item.store?.bankInfo ? (
-                                      <div className="flex flex-row gap-2">
+
+                                      <div className="flex flex-row items-center gap-2">
 
                                         <input
                                           disabled={escrowing[index] || requestingPayment[index]}
@@ -6314,6 +6315,7 @@ const fetchBuyOrders = async () => {
                                         </button>
 
                                       </div>
+
                                     ) : (
                                       <div className="flex flex-row gap-2 items-center justify-center">
                                         <Image
