@@ -1928,7 +1928,8 @@ export default function Index({ params }: any) {
                                   <button
                                     onClick={() => {
                                       navigator.clipboard.writeText(item.agentcode);
-                                      toast.success('에이전트 코드가 복사되었습니다.');
+                                      ///toast.success('에이전트 코드가 복사되었습니다.');
+                                      alert('에이전트 코드가 복사되었습니다:\n' + item.agentcode);
                                     }}
                                     className="text-sm text-gray-500 hover:text-blue-500
                                     hover:underline"
@@ -1978,7 +1979,8 @@ export default function Index({ params }: any) {
                                   <button
                                     onClick={() => {
                                       navigator.clipboard.writeText(item.adminWalletAddress || '');
-                                      toast.success('관리자 지갑주소가 복사되었습니다.');
+                                      ///toast.success('관리자 지갑주소가 복사되었습니다.');
+                                      alert('관리자 지갑주소가 복사되었습니다:\n' + item.adminWalletAddress);
                                     }}
                                     className="text-sm text-gray-500 hover:text-blue-500
                                     hover:underline"

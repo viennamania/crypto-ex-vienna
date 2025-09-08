@@ -3761,7 +3761,8 @@ const fetchBuyOrders = async () => {
                                 onClick={() => {
                                   // copy tradeId to clipboard
                                   navigator.clipboard.writeText(item.tradeId);
-                                  toast.success('거래번호가 복사되었습니다.');
+                                  ///toast.success('거래번호가 복사되었습니다.');
+                                  alert('거래번호가 복사되었습니다: ' + item.tradeId);
                                 }}
                                 className="text-sm text-zinc-500 font-semibold
                                   hover:text-blue-600 cursor-pointer
@@ -3805,7 +3806,8 @@ const fetchBuyOrders = async () => {
                                 <button
                                   onClick={() => {
                                     navigator.clipboard.writeText(item?.store?.storecode);
-                                    toast.success('가맹점코드가 복사되었습니다.');
+                                    ///toast.success('가맹점코드가 복사되었습니다.');
+                                    alert('가맹점코드가 복사되었습니다: ' + item?.store?.storecode);
                                   }}
                                   className="text-sm text-zinc-500 font-semibold
                                   hover:text-blue-600 cursor-pointer
@@ -3835,7 +3837,8 @@ const fetchBuyOrders = async () => {
                                 <button
                                   onClick={() => {
                                     navigator.clipboard.writeText(item.walletAddress);
-                                    toast.success('지갑주소가 복사되었습니다.');
+                                    ///toast.success('지갑주소가 복사되었습니다.');
+                                    alert('지갑주소가 복사되었습니다: ' + item.walletAddress);
                                   }}
                                   className="text-sm text-zinc-500 font-semibold
                                   hover:text-blue-600 cursor-pointer
@@ -3950,7 +3953,8 @@ const fetchBuyOrders = async () => {
                                   // copy to clipboard
                                   navigator.clipboard.writeText(item.seller?.walletAddress || '');
 
-                                  toast.success('지갑주소가 복사되었습니다.');
+                                  ///toast.success('지갑주소가 복사되었습니다.');
+                                  alert('지갑주소가 복사되었습니다: ' + item.seller?.walletAddress);
                                 }}
                               >
                                 {item.seller?.walletAddress &&
@@ -3973,7 +3977,8 @@ const fetchBuyOrders = async () => {
                               <button
                                 onClick={() => {
                                   navigator.clipboard.writeText(item?.store?.bankInfo?.accountNumber);
-                                  toast.success('입금통장번호가 복사되었습니다.');
+                                  ///toast.success('입금통장번호가 복사되었습니다.');
+                                  alert('입금통장번호가 복사되었습니다: ' + item?.store?.bankInfo?.accountNumber);
                                 }}
                                 className="text-sm text-zinc-500 font-semibold
                                   hover:text-blue-600 cursor-pointer

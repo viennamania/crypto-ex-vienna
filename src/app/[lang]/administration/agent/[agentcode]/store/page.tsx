@@ -1922,7 +1922,8 @@ export default function Index({ params }: any) {
                                     <button
                                       onClick={() => {
                                         navigator.clipboard.writeText(item.storecode);
-                                        toast.success('가맹점 코드가 복사되었습니다.');
+                                        ///toast.success('가맹점 코드가 복사되었습니다.');
+                                        alert('가맹점 코드가 복사되었습니다:\n' + item.storecode);
                                       }}
                                       className="text-sm text-gray-500 hover:text-blue-500
                                       hover:underline"

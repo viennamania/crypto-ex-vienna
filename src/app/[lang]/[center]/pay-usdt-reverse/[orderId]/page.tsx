@@ -1671,7 +1671,8 @@ export default function Index({ params }: any) {
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(address);
-                      toast.success("USDT지갑주소가 복사되었습니다.");
+                      //toast.success("USDT지갑주소가 복사되었습니다.");
+                      alert("USDT지갑주소가 복사되었습니다.");
                     }}
                     className="text-sm underline text-zinc-100 hover:text-zinc-200"
                   >
@@ -3223,7 +3224,8 @@ export default function Index({ params }: any) {
                                           <button
                                             onClick={() => {
                                                 navigator.clipboard.writeText(item.seller?.bankInfo.accountNumber);
-                                                toast.success("계좌번호가 복사되었습니다.");
+                                                //toast.success("계좌번호가 복사되었습니다.");
+                                                alert("계좌번호가 복사되었습니다: " + item.store?.bankInfo?.accountNumber);
                                             } }
                                             className='text-lg font-semibold'
                                           >
@@ -3237,7 +3239,8 @@ export default function Index({ params }: any) {
                                                   //item.seller?.bankInfo.accountNumber
                                                   item.store?.bankInfo?.accountNumber
                                                 );
-                                                toast.success("계좌번호가 복사되었습니다.");
+                                                //toast.success("계좌번호가 복사되었습니다.");
+                                                alert("계좌번호가 복사되었습니다: " + item.store?.bankInfo?.accountNumber);
                                             } }
                                             className="text-sm xl:text-lg text-zinc-500 bg-zinc-200 px-2 py-1 rounded-md
                                             hover:bg-zinc-300 transition duration-200 ease-in-out"
@@ -3259,7 +3262,8 @@ export default function Index({ params }: any) {
                                             <button
                                               onClick={() => {
                                                   navigator.clipboard.writeText(item.buyer?.depositName ? item.buyer?.depositName : item.tradeId);
-                                                  toast.success("입금자명이 복사되었습니다.");
+                                                  //toast.success("입금자명이 복사되었습니다.");
+                                                  alert("입금자명이 복사되었습니다: " + (item.buyer?.depositName ? item.buyer?.depositName : item.tradeId) );
                                               } }
                                               className="text-lg font-semibold"
                                             >
@@ -3269,7 +3273,8 @@ export default function Index({ params }: any) {
                                             <button
                                               onClick={() => {
                                                   navigator.clipboard.writeText(item.buyer?.depositName ? item.buyer?.depositName : item.tradeId);
-                                                  toast.success("입금자명이 복사되었습니다.");
+                                                  //toast.success("입금자명이 복사되었습니다.");
+                                                  alert("입금자명이 복사되었습니다: " + (item.buyer?.depositName ? item.buyer?.depositName : item.tradeId) );
                                               } }
                                               className="hidden text-xs bg-green-500 text-zinc-500 px-2 py-1 rounded-md"
                                             >
@@ -3287,7 +3292,8 @@ export default function Index({ params }: any) {
                                             <button
                                               onClick={() => {
                                                   navigator.clipboard.writeText(item.krwAmount.toString());
-                                                  toast.success("입금액이 복사되었습니다.");
+                                                  //toast.success("입금액이 복사되었습니다.");
+                                                  alert("입금액이 복사되었습니다: " + item.krwAmount.toString());
                                               } }
                                               className="text-lg font-semibold"
                                             >
@@ -3301,7 +3307,8 @@ export default function Index({ params }: any) {
                                             <button
                                               onClick={() => {
                                                   navigator.clipboard.writeText(item.krwAmount.toString());
-                                                  toast.success("입금액이 복사되었습니다.");
+                                                  //toast.success("입금액이 복사되었습니다.");
+                                                  alert("입금액이 복사되었습니다: " + item.krwAmount.toString());
                                               } }
                                               className="hidden text-xs bg-green-500 text-zinc-500 px-2 py-1 rounded-md"
                                             >

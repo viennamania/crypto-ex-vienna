@@ -3845,8 +3845,8 @@ const fetchBuyOrders = async () => {
 
                               // copy traideId to clipboard
                               navigator.clipboard.writeText(item.tradeId);
-                              toast.success("거래번호가 복사되었습니다.");
-
+                              ///toast.success("거래번호가 복사되었습니다.");
+                              alert("거래번호가 복사되었습니다: " + item.tradeId);
 
 
                             }}

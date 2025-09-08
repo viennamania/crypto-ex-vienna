@@ -2483,7 +2483,8 @@ export default function Index({ params }: any) {
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(`${paymentUrl}/${params.lang}/${clientId}/${store?.storecode}/paymaster`);
-                      toast.success('가맹점 홈페이지 링크가 복사되었습니다.');
+                      //toast.success('가맹점 홈페이지 링크가 복사되었습니다.');
+                      alert('가맹점 홈페이지 링크가 복사되었습니다.');
                     }}
                     className="bg-[#0047ab] text-sm text-[#f3f4f6] px-2 py-1 rounded-lg hover:bg-[#0047ab]/80"
                   >
@@ -2984,7 +2985,8 @@ export default function Index({ params }: any) {
                                       + '&depositName=' + item?.buyer?.depositName
                                       + '&depositAmountKrw=' + depositAmountKrw[index]
                                     );
-                                    toast.success('회원 결제페이지 링크가 복사되었습니다.');
+                                    //toast.success('회원 결제페이지 링크가 복사되었습니다.');
+                                    alert('회원 결제페이지 링크가 복사되었습니다.');
                                   }}
                                   className="w-full bg-[#0047ab] text-sm text-white px-2 py-1 rounded-lg
                                     hover:bg-[#0047ab]/80"
@@ -3003,7 +3005,8 @@ export default function Index({ params }: any) {
                                     navigator.clipboard.writeText(
                                       `<script src="${paymentUrl}/${params.lang}/${clientId}/${item.storecode}/payment?storeUser=${item.nickname}&depositBankName=${item?.buyer?.depositBankName}&depositBankAccountNumber=${item?.buyer?.depositBankAccountNumber}&depositName=${item?.buyer?.depositName}&depositAmountKrw=${depositAmountKrw[index]}">결제하기</script>`
                                     );
-                                    toast.success('회원 결제페이지 스크립트가 복사되었습니다.');
+                                    //toast.success('회원 결제페이지 스크립트가 복사되었습니다.');
+                                    alert('회원 결제페이지 스크립트가 복사되었습니다.');
                                   }}
                                   className="w-full bg-[#0047ab] text-sm text-white px-2 py-1 rounded-lg
                                     hover:bg-[#0047ab]/80"

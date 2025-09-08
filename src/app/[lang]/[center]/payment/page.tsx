@@ -2291,7 +2291,8 @@ export default function Index({ params }: any) {
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(address);
-                      toast.success("USDT지갑주소가 복사되었습니다.");
+                      ///toast.success("USDT지갑주소가 복사되었습니다.");
+                      alert("USDT지갑주소가 복사되었습니다: " + address);
                     }}
                     className="text-sm underline text-zinc-100 hover:text-zinc-200"
                   >

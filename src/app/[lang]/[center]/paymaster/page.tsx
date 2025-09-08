@@ -1907,7 +1907,8 @@ export default function Index({ params }: any) {
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(address);
-                      toast.success("USDT지갑주소가 복사되었습니다.");
+                      //toast.success("USDT지갑주소가 복사되었습니다.");
+                      alert("USDT지갑주소가 복사되었습니다: " + address);
                     }}
                     className="text-sm underline text-zinc-100 hover:text-zinc-200"
                   >
@@ -3259,7 +3260,8 @@ export default function Index({ params }: any) {
                                         <button
                                             onClick={() => {
                                                 navigator.clipboard.writeText(address);
-                                                toast.success('USDT지갑주소가 복사되었습니다.');
+                                                //toast.success('USDT지갑주소가 복사되었습니다.');
+                                                alert("USDT지갑주소가 복사되었습니다: " + address);
                                             }}
                                           className="text-xs bg-green-500 text-zinc-500 px-2 py-1 rounded-md">
                                           복사
@@ -3490,7 +3492,8 @@ export default function Index({ params }: any) {
                                         <button
                                           onClick={() => {
                                               navigator.clipboard.writeText(item.seller?.bankInfo.accountNumber);
-                                              toast.success("계좌번호가 복사되었습니다.");
+                                              //toast.success("계좌번호가 복사되었습니다.");
+                                              alert("계좌번호가 복사되었습니다: " + item.seller?.bankInfo.accountNumber);
                                           } }
                                           className='text-lg font-semibold'
                                         >
@@ -3500,7 +3503,8 @@ export default function Index({ params }: any) {
                                         <button
                                           onClick={() => {
                                               navigator.clipboard.writeText(item.seller?.bankInfo.accountNumber);
-                                              toast.success("계좌번호가 복사되었습니다.");
+                                              //toast.success("계좌번호가 복사되었습니다.");
+                                              alert("계좌번호가 복사되었습니다: " + item.seller?.bankInfo.accountNumber);
                                           } }
                                           className="text-xs bg-green-500 text-zinc-500 px-2 py-1 rounded-md"
                                         >
