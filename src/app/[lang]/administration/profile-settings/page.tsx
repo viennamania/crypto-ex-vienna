@@ -318,62 +318,6 @@ export default function SettingsPage({ params }: any) {
 
 
 
-    const [nativeBalance, setNativeBalance] = useState(0);
-    const [balance, setBalance] = useState(0);
-    useEffect(() => {
-  
-      // get the balance
-      const getBalance = async () => {
-  
-        ///console.log('getBalance address', address);
-  
-        
-        const result = await balanceOf({
-          contract,
-          address: address || "",
-        });
-  
-    
-        //console.log(result);
-    
-        setBalance( Number(result) / 10 ** 6 );
-  
-  
-        await fetch('/api/user/getBalanceByWalletAddress', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            chain: storecode,
-            walletAddress: address,
-          }),
-        })
-  
-        .then(response => response.json())
-  
-        .then(data => {
-            setNativeBalance(data.result?.displayValue);
-        });
-  
-  
-  
-      };
-  
-      if (address) getBalance();
-  
-      const interval = setInterval(() => {
-        if (address) getBalance();
-      } , 5000);
-  
-      return () => clearInterval(interval);
-  
-    } , [address, contract, storecode]);
-  
-
-
-
-
     const [editUsdtPrice, setEditUsdtPrice] = useState(0);
     const [usdtPriceEdit, setUsdtPriceEdit] = useState(false);
     const [editingUsdtPrice, setEditingUsdtPrice] = useState(false);
@@ -691,209 +635,7 @@ export default function SettingsPage({ params }: any) {
 
 
 
-
-
-
     const [escrowWalletAddress, setEscrowWalletAddress] = useState('');
-    const [makeingEscrowWallet, setMakeingEscrowWallet] = useState(false);
-
-    const makeEscrowWallet = async () => {
-        
-        if (!address) {
-            toast.error('Please connect your wallet');
-            return;
-        }
-
-
-        setMakeingEscrowWallet(true);
-
-        fetch('/api/order/getEscrowWalletAddress', {
-            method: 'POST',
-            headers: {
-            'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-            lang: params.lang,
-            storecode: storecode,
-            walletAddress: address,
-            //isSmartAccount: activeWallet === inAppConnectWallet ? false : true,
-            isSmartAccount: false,
-            }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            
-            //console.log('getEscrowWalletAddress data.result', data.result);
-
-
-            if (data.result) {
-                setEscrowWalletAddress(data.result.escrowWalletAddress);
-                toast.success(Escrow_Wallet_Address_has_been_created);
-            } else {
-                toast.error(Failed_to_create_Escrow_Wallet_Address);
-            }
-        })
-        .finally(() => {
-            setMakeingEscrowWallet(false);
-        });
-
-    }
-
-    //console.log("escrowWalletAddress", escrowWalletAddress);
-
-
-
-
-    // get escrow wallet address and balance
-    
-    const [escrowBalance, setEscrowBalance] = useState(0);
-    const [escrowNativeBalance, setEscrowNativeBalance] = useState(0);
-
-    
-    useEffect(() => {
-
-    const getEscrowBalance = async () => {
-
-        if (!address) {
-        setEscrowBalance(0);
-        return;
-        }
-
-        if (!escrowWalletAddress || escrowWalletAddress === '') return;
-
-
-        
-        const result = await balanceOf({
-        contract,
-        address: escrowWalletAddress,
-        });
-
-        //console.log('escrowWalletAddress balance', result);
-
-    
-        setEscrowBalance( Number(result) / 10 ** 6 );
-            
-
-
-        /*
-        await fetch('/api/user/getUSDTBalanceByWalletAddress', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            chain: storecode,
-            walletAddress: escrowWalletAddress,
-        }),
-        })
-        .then(response => response?.json())
-        .then(data => {
-
-        console.log('getUSDTBalanceByWalletAddress data.result.displayValue', data.result?.displayValue);
-
-        setEscrowBalance(data.result?.displayValue);
-
-        } );
-        */
-
-
-
-
-        await fetch('/api/user/getBalanceByWalletAddress', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            storecode: storecode,
-            walletAddress: escrowWalletAddress,
-        }),
-        })
-        .then(response => response?.json())
-        .then(data => {
-
-
-        ///console.log('getBalanceByWalletAddress data', data);
-
-
-            setEscrowNativeBalance(data.result?.displayValue);
-
-        });
-        
-
-
-
-    };
-
-    getEscrowBalance();
-
-    const interval = setInterval(() => {
-        getEscrowBalance();
-    } , 5000);
-
-    return () => clearInterval(interval);
-
-    } , [address, escrowWalletAddress, contract, storecode]);
-
-
-
-
-    // transfer escrow balance to seller wallet address
-
-    const [amountOfEscrowBalance, setAmountOfEscrowBalance] = useState("");
-
-    const [transferingEscrowBalance, setTransferingEscrowBalance] = useState(false);
-
-
-    const transferEscrowBalance = async () => {
-
-        if (transferingEscrowBalance) {
-        return;
-        }
-
-        setTransferingEscrowBalance(true);
-
-        try {
-
-        const response = await fetch('/api/order/transferEscrowBalanceToSeller', {
-            method: 'POST',
-            headers: {
-            'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-            lang: params.lang,
-            storecode: storecode,
-            walletAddress: address,
-            amount: amountOfEscrowBalance,
-            ///escrowWalletAddress: escrowWalletAddress,
-            //isSmartAccount: activeWallet === inAppConnectWallet ? false : true,
-            isSmartAccount: false,
-            })
-        });
-
-        const data = await response.json();
-
-        //console.log('data', data);
-
-        if (data.result) {
-
-            setAmountOfEscrowBalance("");
-
-            toast.success('Escrow balance has been transfered to seller wallet address');
-
-        }
-
-        } catch (error) {
-        console.error('Error:', error);
-        toast.error('Transfer escrow balance has been failed');
-        }
-
-        setTransferingEscrowBalance(false);
-
-    }
-
-
-
 
     return (
 
@@ -930,76 +672,6 @@ export default function SettingsPage({ params }: any) {
                             돌아가기
                         </span>
                     </div>
-
-                    {/*
-                    {!address && (
-
-                        <ConnectButton
-                        client={client}
-                        wallets={wallets}
-
-                        
-                        //accountAbstraction={{
-                        //    chain: arbitrum,
-                        //    sponsorGas: false
-                        //}}
-                        
-                        
-                        theme={"light"}
-
-                        // button color is dark skyblue convert (49, 103, 180) to hex
-                        connectButton={{
-                            style: {
-                                backgroundColor: "#0047ab", // cobalt blue
-                                color: "#f3f4f6", // gray-300
-                                padding: "2px 10px",
-                                borderRadius: "10px",
-                                fontSize: "14px",
-                                width: "60x",
-                                height: "38px",
-                            },
-                            label: "웹3 로그인",
-                        }}
-
-                        connectModal={{
-                            size: "wide", 
-                            //size: "compact",
-                            titleIcon: "https://www.stable.makeup/logo.png",                           
-                            showThirdwebBranding: false,
-                        }}
-
-                        locale={"ko_KR"}
-                        //locale={"en_US"}
-                        />
-                    )}
-                    */}
-
-                    {address && (
-                        <div className="flex flex-row items-center justify-center gap-2">
-                            <Image
-                                src="/icon-shield.png"
-                                alt="Check"
-                                width={20}
-                                height={20}
-                                className="rounded-full"
-                            />
-                            <button
-                                onClick={() => {
-                                    navigator.clipboard.writeText(address as string);
-                                    toast.success(Copied_Wallet_Address);
-                                }}
-                                className="
-                                text-sm text-gray-500 font-semibold
-                                hover:text-gray-700 transition duration-200
-                                underline underline-offset-4"
-                            >
-                                <span className="text-lg text-gray-500 font-semibold">
-                                    {address.slice(0, 6)}...{address.slice(-4)}
-                                </span>
-                            </button>
-
-                        </div>
-                    )}
 
 
                 </div>
@@ -1049,7 +721,7 @@ export default function SettingsPage({ params }: any) {
                                     navigator.clipboard.writeText(userCode);
                                     toast.success('회원코드가 복사되었습니다');
                                 }}
-                                className="p-2 bg-green-500 text-zinc-100 rounded-lg"
+                                className="bg-[#0047ab] text-zinc-100 rounded-lg p-2"
                             >
                                 복사
                             </button>
@@ -1087,7 +759,7 @@ export default function SettingsPage({ params }: any) {
                                         nicknameEdit ? setNicknameEdit(false) : setNicknameEdit(true);
 
                                     } }
-                                    className="p-2 bg-green-500 text-zinc-100 rounded-lg"
+                                    className="p-2 bg-[#0047ab] text-zinc-100 rounded-lg"
                                 >
                                     {nicknameEdit ? Cancel : Edit}
                                 </button>
@@ -1158,7 +830,7 @@ export default function SettingsPage({ params }: any) {
                                 </div>
                                 <button
                                     disabled={!address}
-                                    className="p-2 bg-green-500 text-zinc-100 rounded-lg"
+                                    className="p-2 bg-[#0047ab] text-zinc-100 rounded-lg"
                                     onClick={() => {
                                         setUserData();
                                     }}
@@ -1189,77 +861,6 @@ export default function SettingsPage({ params }: any) {
                             </div>
                         )}
 
-
-                    </div>
-
-
-                </div>
-
-
-
-                <div className='hidden w-full flex-col gap-5 mt-4'>
-                    <div className='w-full flex flex-row items-center justify-start gap-2'>
-                        <Image
-                            src={"/icon-gear.png"}
-                            alt="Settings"
-                            width={20}
-                            height={20}
-                            className="rounded-full"
-                        />
-                        <span className='text-xl font-semibold text-zinc-500'>
-                            지갑 관리
-                        </span>
-                    </div>
-
-                    <div className='w-full flex flex-col gap-2
-                    border border-gray-300 p-4 rounded-lg'>
-
-                        <div className='flex flex-row items-center justify-start gap-2 mb-2'>
-                            {/* dot */}
-                            <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                            <span className='text-lg'>
-                                {Wallet_Settings}
-                            </span>
-                        </div>
-
-
-                        <ConnectButton
-                        client={client}
-                        wallets={wallets}
-
-                        
-                        //accountAbstraction={{
-                        //    chain: arbitrum,
-                        //    sponsorGas: false
-                        //}}
-                        
-                        
-                        theme={"light"}
-
-                        // button color is dark skyblue convert (49, 103, 180) to hex
-                        connectButton={{
-                            style: {
-                                backgroundColor: "#0047ab", // cobalt blue
-                                color: "#f3f4f6", // gray-300
-                                padding: "2px 10px",
-                                borderRadius: "10px",
-                                fontSize: "14px",
-                                width: "60x",
-                                height: "38px",
-                            },
-                            label: "웹3 로그인",
-                        }}
-
-                        connectModal={{
-                            size: "wide", 
-                            //size: "compact",
-                            titleIcon: "https://www.stable.makeup/logo.png",                           
-                            showThirdwebBranding: false,
-                        }}
-
-                        locale={"ko_KR"}
-                        //locale={"en_US"}
-                        />
 
                     </div>
 
