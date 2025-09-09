@@ -2140,20 +2140,48 @@ export default function Index({ params }: any) {
 
   if (orderId === '0' && !paramDepositName) {
     return (
-      <div>
+      <div className='flex flex-col items-center justify-center gap-2 p-4'>
+        <span className='text-lg font-semibold'>
         Deposit name is invalid
+        </span>
+        <span className='text-sm text-zinc-500'>
+        storeUser: {storeUser}  storecode: {storecode} paramDepositName: {paramDepositName} paramDepositBankName: {paramDepositBankName} paramDepositBankAccountNumber: {paramDepositBankAccountNumber} paramDepositAmountKrw: {paramDepositAmountKrw}
+        </span>
+
       </div>
     );
   }
 
   if (orderId === '0' && !paramDepositBankName) {
     return (
-      <div>
+      <div className='flex flex-col items-center justify-center gap-2 p-4'>
+        <span className='text-lg font-semibold'>
         Deposit bank name is invalid
+        </span>
+        <span className='text-sm text-zinc-500'>
+        storeUser: {storeUser}  storecode: {storecode} paramDepositName: {paramDepositName} paramDepositBankName: {paramDepositBankName} paramDepositBankAccountNumber: {paramDepositBankAccountNumber} paramDepositAmountKrw: {paramDepositAmountKrw}
+        </span>
+
       </div>
     );
   }
 
+  if (orderId === '0' && !paramDepositBankAccountNumber) {
+    return (
+      <div className='flex flex-col items-center justify-center gap-2 p-4'>
+        <span className='text-lg font-semibold'>
+        Deposit bank account number is invalid
+        </span>
+        <span className='text-sm text-zinc-500'>
+        storeUser: {storeUser}  storecode: {storecode} paramDepositName: {paramDepositName} paramDepositBankName: {paramDepositBankName} paramDepositBankAccountNumber: {paramDepositBankAccountNumber} paramDepositAmountKrw: {paramDepositAmountKrw}
+        </span>
+
+      </div>
+    );
+  }
+
+
+  
 
 
   // check storeInfo
