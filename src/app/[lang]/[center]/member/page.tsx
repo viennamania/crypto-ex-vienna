@@ -3052,7 +3052,7 @@ export default function Index({ params }: any) {
                                             'https://t.me/goodtether_user_bot?start='
                                             + item.storecode + '_' + encodeURI(encodeURIComponent(item.nickname))
                                             + '_' + encodeURI(encodeURIComponent(item.buyer?.depositBankName))
-                                            + '_' + encodeURIComponent(item.buyer?.depositBankAccountNumber)
+                                            + '_' + encodeURI(encodeURIComponent(item.buyer?.depositBankAccountNumber))
                                             + '_' + encodeURI(encodeURIComponent(item.buyer?.depositName))
                                             + '_' + depositAmountKrw[index],
                                             '_blank'
