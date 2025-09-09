@@ -681,7 +681,17 @@ export async function cancelTradeByAdmin() {
   // acceptedAt is more than 3 minutes ago
 
   const result = await collection.updateMany(
-    { status: 'accepted', acceptedAt: { $lt: new Date(Date.now() - 3 * 60 * 1000).toISOString() } },
+    
+    /*
+    { status: 'accepted',
+      acceptedAt: { $lt: new Date(Date.now() - 3 * 60 * 1000).toISOString() }
+    },
+    */
+    // status is 'accepted' or 'paymentRequested'
+    { status: { $in: ['accepted', 'paymentRequested'] },
+      acceptedAt: { $lt: new Date(Date.now() - 3 * 60 * 1000).toISOString() }
+    },
+
     { $set: {
       status: 'cancelled',
       cancelledAt: new Date().toISOString(),
