@@ -3050,10 +3050,10 @@ export default function Index({ params }: any) {
                                     onClick={() => {
                                         window.open( 
                                             'https://t.me/goodtether_user_bot?start='
-                                            + item.storecode + '_' + encodeURI(item.nickname)
-                                            + '_' + encodeURI(item.buyer?.depositBankName)
+                                            + item.storecode + '_' + encodeURIComponent(item.nickname)
+                                            + '_' + encodeURIComponent(item.buyer?.depositBankName)
                                             + '_' + item.buyer?.depositBankAccountNumber
-                                            + '_' + encodeURI(item.buyer?.depositName)
+                                            + '_' + encodeURIComponent(item.buyer?.depositName)
                                             + '_' + depositAmountKrw[index],
                                             '_blank'
                                         );
@@ -3076,10 +3076,10 @@ export default function Index({ params }: any) {
                                   onClick={() => {
                                     navigator.clipboard.writeText(
                                       'https://t.me/goodtether_user_bot?start='
-                                      + item.storecode + '_' + encodeURI(item.nickname)
-                                      + '_' + encodeURI(item.buyer?.depositBankName)
-                                      + '_' + encodeURI(item.buyer?.depositBankAccountNumber)
-                                      + '_' + encodeURI(item.buyer?.depositName)
+                                      + item.storecode + '_' + encodeURIComponent(item.nickname)
+                                      + '_' + encodeURIComponent(item.buyer?.depositBankName)
+                                      + '_' + encodeURIComponent(item.buyer?.depositBankAccountNumber)
+                                      + '_' + encodeURIComponent(item.buyer?.depositName)
                                       + '_' + depositAmountKrw[index]
                                     );
                                     //toast.success('복사되었습니다');
