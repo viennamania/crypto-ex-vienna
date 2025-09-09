@@ -1151,7 +1151,7 @@ export default function Index({ params }: any) {
             ></div>
             */}
  
-            {/* 홈 / 가맹점관리 / 회원관리 / 구매주문관리 */}
+            {/* 홈 / 가맹점관리 / 회원관리 / P2P구매관리 */}
             {/* memnu buttons same width left side */}
             <div className="w-full flex flex-row itmes-start justify-start gap-2 mb-4">
               <div className="grid grid-cols-3 xl:grid-cols-4 gap-2 mb-4">
@@ -1187,7 +1187,7 @@ export default function Index({ params }: any) {
                     hover:scale-105
                     transition-transform duration-200 ease-in-out
                     ">
-                    구매주문관리
+                    P2P구매관리
                 </button>
 
                 <button

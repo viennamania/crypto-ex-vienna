@@ -1350,7 +1350,7 @@ export default function Index({ params }: any) {
                   hover:scale-105
                   transition-transform duration-200 ease-in-out
                   ">
-                  구매주문관리
+                  P2P구매관리
               </button>
 
                 <button
@@ -1664,7 +1664,7 @@ export default function Index({ params }: any) {
                     bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                   >
                     <span className="text-sm">
-                      구매주문관리
+                      P2P구매관리
                     </span>
                   </button>
                 </div>

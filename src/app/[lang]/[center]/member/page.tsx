@@ -2375,7 +2375,7 @@ export default function Index({ params }: any) {
                       hover:scale-105
                       transition-transform duration-200 ease-in-out
                       ">
-                      구매주문관리
+                      P2P구매관리
                   </button>
 
                   <button
@@ -3134,7 +3134,7 @@ export default function Index({ params }: any) {
                                 {
                                 item?.buyOrderStatus === 'ordered' ? (
                                   <span className="text-lg text-yellow-500 font-semibold">
-                                    구매주문
+                                    P2P구매
                                   </span>
                                 ) : item?.buyOrderStatus === 'accepted' ? (
                                   <span className="text-lg text-green-500 font-semibold">

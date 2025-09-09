@@ -3664,7 +3664,7 @@ const fetchBuyOrders = async () => {
                   className="w-4 h-4"
                 />
                 <div className="text-sm font-semibold">
-                  구매주문관리
+                  P2P구매관리
                 </div>
               </div>
 
@@ -3745,7 +3745,7 @@ const fetchBuyOrders = async () => {
               />
 
               <div className="text-xl font-semibold">
-                구매주문관리
+                P2P구매관리
               </div>
 
           </div>

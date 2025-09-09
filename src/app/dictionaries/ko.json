@@ -294,14 +294,14 @@
 
 
     "Buy_Order": "구매신청",
-    "Private_Buy_Order": "비공개 구매주문",
-    "Public_Buy_Orer": "공개 구매주문",
+    "Private_Buy_Order": "비공개 P2P구매",
+    "Public_Buy_Orer": "공개 P2P구매",
 
-    "Buy_Order_USDT": "USDT 구매주문",
+    "Buy_Order_USDT": "USDT P2P구매",
 
     "Buy_Order_SMS_will_be_sent_to_your_mobile_number": "판매자가 주문을 수락하면 SMS가 귀하의 휴대폰 번호로 전송됩니다.",
 
-    "Buy_Orders": "구매주문",
+    "Buy_Orders": "P2P구매",
 
     "Buy_Order_Opened": "구매신청",
 

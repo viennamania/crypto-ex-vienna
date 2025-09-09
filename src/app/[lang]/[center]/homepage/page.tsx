@@ -2673,7 +2673,7 @@ const fetchBuyOrders = async () => {
 
 
 
-            {/* 홈 / 가맹점관리 / 회원관리 / 구매주문관리 */}
+            {/* 홈 / 가맹점관리 / 회원관리 / P2P구매관리 */}
             {/* memnu buttons same width left side */}
             <div className="w-full flex justify-start items-center gap-2">
 
@@ -2780,7 +2780,7 @@ const fetchBuyOrders = async () => {
 
 
                   <div className="flex flex-row items-center justify-center gap-2">
-                    {/* 구매주문하기 버튼 */}
+                    {/* P2P구매하기 버튼 */}
                     {/* new window */}
 
                     <button
@@ -2802,7 +2802,7 @@ const fetchBuyOrders = async () => {
                           className="w-5 h-5"
                         />
                         <span className="text-sm">
-                          구매주문하기
+                          P2P구매하기
                         </span>
                       </div>
                     </button>
@@ -2921,7 +2921,7 @@ const fetchBuyOrders = async () => {
                     />
 
                     <div className="text-2xl font-semibold">
-                      구매주문내역
+                      P2P구매내역
                     </div>
                 </div>
 

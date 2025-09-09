@@ -2067,7 +2067,7 @@ export default function SettingsPage({ params }: any) {
                                 {/* 설명:판매용 USDT지갑 주소입니다. */}
                                 <div className='w-full flex flex-col items-start justify-center gap-2'>
                                     <span className="text-sm text-zinc-500">
-                                        구매자의 구매주문을 우선적으로 매칭하는 판매용 USDT지갑 주소입니다.
+                                        구매자의 P2P구매을 우선적으로 매칭하는 판매용 USDT지갑 주소입니다.
                                     </span>
                                 </div>
 

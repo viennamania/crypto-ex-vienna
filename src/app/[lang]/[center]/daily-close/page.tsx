@@ -1258,7 +1258,7 @@ export default function Index({ params }: any) {
                     hover:scale-105
                     transition-transform duration-200 ease-in-out
                     ">
-                    구매주문관리
+                    P2P구매관리
                 </button>
 
                 <button

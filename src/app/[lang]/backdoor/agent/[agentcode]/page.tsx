@@ -2665,7 +2665,7 @@ export default function Index({ params }: any) {
                     height={35}
                     className="w-6 h-6"
                   />
-                  <h2 className="text-lg font-semibold">총 구매주문수</h2>
+                  <h2 className="text-lg font-semibold">총 P2P구매수</h2>
                   <p className="text-lg text-zinc-500">
                     {totalSummary.totalNumberOfBuyOrders}
                   </p>
@@ -2713,7 +2713,7 @@ export default function Index({ params }: any) {
                         {agent?.agentName}
                       </span>
                       <span className="text-sm">
-                        구매주문관리
+                        P2P구매관리
                       </span>
                     </div>
 
@@ -2730,7 +2730,7 @@ export default function Index({ params }: any) {
                   <div className="flex flex-row items-center justify-start gap-2">
                     {/* dot */}
                     <div className="w-2 h-2 bg-[#0047ab] rounded-full"></div>
-                    <h2 className="text-lg font-semibold">최근 구매주문</h2>
+                    <h2 className="text-lg font-semibold">최근 P2P구매</h2>
                   </div>
 
                   <table className="min-w-full
@@ -2813,7 +2813,7 @@ export default function Index({ params }: any) {
 
                               {trade.status === "ordered" ? (
                                 <span className="text-white font-semibold">
-                                  구매주문
+                                  P2P구매
                                 </span>
                               ) : trade.status === "accepted" ? (
                                 <span className="text-white font-semibold">
@@ -2837,7 +2837,7 @@ export default function Index({ params }: any) {
                                   bg-red-100/50
                                   px-2 py-1 rounded-lg
                                 ">
-                                  구매주문
+                                  P2P구매
                                 </span>
                               ) : trade.status === "accepted" ? (
                               <span className="text-green-500 font-semibold

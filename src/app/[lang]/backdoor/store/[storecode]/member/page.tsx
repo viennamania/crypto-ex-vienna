@@ -2038,7 +2038,7 @@ export default function Index({ params }: any) {
                                 {
                                 item?.buyOrderStatus === 'ordered' ? (
                                   <span className="text-sm text-[#f3f4f6]">
-                                    구매주문
+                                    P2P구매
                                   </span>
                                 ) : item?.buyOrderStatus === 'accepted' ? (
                                   <span className="text-sm text-green-500">

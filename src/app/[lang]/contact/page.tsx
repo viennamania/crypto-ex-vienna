@@ -2665,7 +2665,7 @@ const fetchBuyOrders = async () => {
 
 
 
-            {/* 홈 / 가맹점관리 / 회원관리 / 구매주문관리 */}
+            {/* 홈 / 가맹점관리 / 회원관리 / P2P구매관리 */}
             {/* memnu buttons same width left side */}
             <div className="w-full flex justify-start items-center gap-2">
 

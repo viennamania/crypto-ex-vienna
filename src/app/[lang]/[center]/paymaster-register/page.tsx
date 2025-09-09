@@ -2427,7 +2427,7 @@ export default function Index({ params }: any) {
                           <div className="flex flex-row items-center justify-center gap-2">
                             {acceptingSellOrderRandom ? (
                               <span className="text-sm text-zinc-500">
-                                구매주문 중입니다.
+                                P2P구매 중입니다.
                               </span>
                             ) : (
                               <span className="text-sm text-zinc-500

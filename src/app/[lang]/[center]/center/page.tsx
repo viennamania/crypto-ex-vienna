@@ -2322,7 +2322,7 @@ export default function Index({ params }: any) {
                       height={35}
                       className="w-6 h-6"
                     />
-                    <h2 className="text-lg font-semibold">최근 구매주문</h2>
+                    <h2 className="text-lg font-semibold">최근 P2P구매</h2>
                     {fetchingStoreSummary && (
                       <Image
                         src="/icon-loading.png"
@@ -2340,7 +2340,7 @@ export default function Index({ params }: any) {
                     }}
                     className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                   >
-                    구매주문관리
+                    P2P구매관리
                   </button>
 
                 </div>
@@ -2351,7 +2351,7 @@ export default function Index({ params }: any) {
 
 
                   <div className="flex flex-col items-center justify-center gap-2">
-                    <h2 className="text-lg font-semibold">총 구매주문수</h2>
+                    <h2 className="text-lg font-semibold">총 P2P구매수</h2>
                     <p className="text-lg text-zinc-500">
                       {storeSummary.totalNumberOfOrders}
                     </p>

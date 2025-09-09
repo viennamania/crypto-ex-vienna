@@ -2124,7 +2124,7 @@ const fetchBuyOrders = async () => {
               <div className="text-xl font-semibold">
                 가맹점{' '}{
                   store && store.storeName + " (" + store.storecode + ")"
-                }{' '}구매주문관리
+                }{' '}P2P구매관리
               </div>
             </div>
 

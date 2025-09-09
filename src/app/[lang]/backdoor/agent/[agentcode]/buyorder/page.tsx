@@ -3172,7 +3172,7 @@ const fetchBuyOrders = async () => {
 
 
 
-            {/* 홈 / 가맹점관리 / 회원관리 / 구매주문관리 */}
+            {/* 홈 / 가맹점관리 / 회원관리 / P2P구매관리 */}
             {/* memnu buttons same width left side */}
             <div className="w-full flex flex-row itmes-start justify-start gap-2 mb-4">
               <div className="grid grid-cols-3 xl:grid-cols-4 gap-2 mb-4">
@@ -3210,7 +3210,7 @@ const fetchBuyOrders = async () => {
                     className="w-4 h-4"
                   />
                   <div className="text-sm font-semibold">
-                    구매주문관리
+                    P2P구매관리
                   </div>
                 </div>
 
@@ -3252,7 +3252,7 @@ const fetchBuyOrders = async () => {
                 />
 
                 <div className="text-xl font-semibold">
-                  구매주문관리
+                  P2P구매관리
                 </div>
 
             </div>
