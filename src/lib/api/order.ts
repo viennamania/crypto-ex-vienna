@@ -670,7 +670,7 @@ export async function cancelTradeByBuyer(
 // cancelTradeByAdmin
 // update order status to cancelled
 // where status is 'accepted'
-// and acceptedAt is more than 1 hour ago
+// and acceptedAt is more than 3 minutes ago
 
 export async function cancelTradeByAdmin() {
 
@@ -678,10 +678,10 @@ export async function cancelTradeByAdmin() {
   const collection = client.db(dbName).collection('orders');
 
   // status is 'accepted'
-  // acceptedAt is more than 1 hour ago
+  // acceptedAt is more than 3 minutes ago
 
   const result = await collection.updateMany(
-    { status: 'accepted', acceptedAt: { $lt: new Date(Date.now() - 60 * 60 * 1000).toISOString() } },
+    { status: 'accepted', acceptedAt: { $lt: new Date(Date.now() - 3 * 60 * 1000).toISOString() } },
     { $set: {
       status: 'cancelled',
       cancelledAt: new Date().toISOString(),
