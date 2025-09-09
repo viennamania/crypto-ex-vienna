@@ -2246,12 +2246,8 @@ export default function Index({ params }: any) {
 
         w-full flex flex-col gap-2 justify-center items-center
         p-4
-        bg-gradient-to-r from-[#f9a8d4] to-[#f472b6]
-        rounded-b-2xl
-        shadow-lg
-        shadow-[#f472b6]
-        border-b-2 border-[#f472b6]
-        border-opacity-50
+        bg-zinc-900
+        text-zinc-100
         ">
 
         {loadingStoreInfo ? (
