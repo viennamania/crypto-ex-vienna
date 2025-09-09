@@ -4369,7 +4369,7 @@ const [tradeSummary, setTradeSummary] = useState({
 
                           <th className="p-2">거래소전송</th>
 
-                          <th className="p-2">거래취소</th>
+                          <th className="p-2">판매취소</th>
                           <th className="p-2">USDT 전송</th>
                           <th className="p-2">출금상태</th>
                         </tr>

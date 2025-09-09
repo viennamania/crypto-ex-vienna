@@ -2912,7 +2912,7 @@ export default function Index({ params }: any) {
                                         height={24}
                                       />
                                       <p className="text-sm text-zinc-500">
-                                        거래완료: {new Date(item.paymentConfirmedAt).toLocaleDateString() + ' ' + new Date(item.paymentConfirmedAt).toLocaleTimeString()}
+                                        판매완료: {new Date(item.paymentConfirmedAt).toLocaleDateString() + ' ' + new Date(item.paymentConfirmedAt).toLocaleTimeString()}
                                       </p>
                                     </div>
 

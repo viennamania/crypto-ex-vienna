@@ -3150,7 +3150,7 @@ export default function Index({ params }: any) {
                                   </span>
                                 ) : item?.buyOrderStatus === 'cancelled' ? (
                                   <span className="text-lg text-red-500 font-semibold">
-                                    거래취소
+                                    판매취소
                                   </span>
                                 ) : ''
                                 }

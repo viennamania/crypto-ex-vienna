@@ -3801,8 +3801,8 @@ const [tradeSummary, setTradeSummary] = useState({
                         */}
 
                         <th className="p-2">{Seller} / {Status}</th>
-                        <th className="p-2">거래취소</th>
-                        <th className="p-2">거래완료</th>
+                        <th className="p-2">판매취소</th>
+                        <th className="p-2">판매완료</th>
                         <th className="p-2">출금상태</th>
                       </tr>
                     </thead>
@@ -4518,7 +4518,7 @@ const [tradeSummary, setTradeSummary] = useState({
                                         />
                                       )}
                                       <span className="text-sm">
-                                        거래완료
+                                        판매완료
                                         <br />
                                         USDT 전송
                                       </span>

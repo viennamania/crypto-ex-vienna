@@ -1073,7 +1073,7 @@ export default function Index({ params }: any) {
       });
 
       if (!response.ok) {
-        toast.error('거래취소에 실패했습니다.');
+        toast.error('판매취소에 실패했습니다.');
         setCancellings(
           cancellings.map((item, i) => i === index ? false : item)
         );
@@ -1121,7 +1121,7 @@ export default function Index({ params }: any) {
         });
 
       } else {
-        toast.error('거래취소에 실패했습니다.');
+        toast.error('판매취소에 실패했습니다.');
       }
 
 
@@ -3570,8 +3570,8 @@ const fetchBuyOrders = async () => {
 
                 <div className="flex flex-row items-center gap-2">
                   {/* checkbox for searchOrderStatus is 'cancelled' */}
-                  {/* 거래취소 */}
-                  {/* 거래완료 */}
+                  {/* 판매취소 */}
+                  {/* 판매완료 */}
                   {/* only one checkbox can be checked */}
                   <div className="flex flex-row items-center gap-2">
                     <input
@@ -3584,7 +3584,7 @@ const fetchBuyOrders = async () => {
                       }}
                       className="w-5 h-5"
                     />
-                    <label className="text-sm text-zinc-500">거래취소</label>
+                    <label className="text-sm text-zinc-500">판매취소</label>
                   </div>
                   <div className="flex flex-row items-center gap-2">
                     <input
@@ -3597,7 +3597,7 @@ const fetchBuyOrders = async () => {
                       }}
                       className="w-5 h-5"
                     />
-                    <label className="text-sm text-zinc-500">거래완료</label>
+                    <label className="text-sm text-zinc-500">판매완료</label>
                   </div>
                 </div>
 
@@ -3759,10 +3759,10 @@ const fetchBuyOrders = async () => {
                       <th className="p-2">
                         <div className="flex flex-col xl:flex-row items-center justify-center gap-2">
                           <span>
-                            거래취소
+                            판매취소
                           </span>
                           <span>
-                            거래완료
+                            판매완료
                           </span>
                         </div>
                       </th>
@@ -4724,7 +4724,7 @@ const fetchBuyOrders = async () => {
                               {item.status === 'cancelled' && (
                                 <div className="text-sm text-red-600">
                                   {item.cancelTradeReason ? item.cancelTradeReason :
-                                    "거래취소사유 없음"
+                                    "판매취소사유 없음"
                                   }
                                   
                                 </div>
@@ -4820,7 +4820,7 @@ const fetchBuyOrders = async () => {
                                           cancelTradeReason.map((item, idx) => idx === index ? e.target.value : item)
                                         );
                                       }}
-                                      placeholder="거래취소사유"
+                                      placeholder="판매취소사유"
                                       className="w-full h-8
                                       text-center rounded-md text-sm text-zinc-500 font-semibold bg-zinc-100 border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
@@ -4834,7 +4834,7 @@ const fetchBuyOrders = async () => {
                                 {item.status === 'cancelled' && (
                                   <div className="text-sm text-red-600">
                                     {item.cancelTradeReason ? item.cancelTradeReason :
-                                      "거래취소사유 없음"
+                                      "판매취소사유 없음"
                                     }
                                     
                                   </div>
@@ -5089,7 +5089,7 @@ const fetchBuyOrders = async () => {
                                               />
                                           )}
                                           <span className="text-sm">
-                                            거래완료
+                                            판매완료
                                           </span>
                                         </div>
 
@@ -5427,7 +5427,7 @@ const fetchBuyOrders = async () => {
                                   </span>
                                 </div>
 
-                                {/* info P2P 거래완료후 자동으로 결제와 정산을 진행합니다. */}
+                                {/* info P2P 판매완료후 자동으로 결제와 정산을 진행합니다. */}
                                 <div className="flex flex-row gap-1 items-center">
                                   <Image
                                     src="/icon-info.png"
@@ -5437,7 +5437,7 @@ const fetchBuyOrders = async () => {
                                     className="w-4 h-4 rounded-lg object-cover"
                                   />
                                   <span className="text-sm font-semibold text-zinc-500">
-                                    P2P 거래완료후 자동으로 결제와 정산을 진행합니다.
+                                    P2P 판매완료후 자동으로 결제와 정산을 진행합니다.
                                   </span>
                                 </div>
 

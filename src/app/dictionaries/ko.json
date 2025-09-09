@@ -38,8 +38,8 @@
     "Total": "합계",
     "Orders": "판매주문",
     "Trades": "거래",
-    "Completed": "거래완료",
-    "Cancelled": "거래취소",
+    "Completed": "판매완료",
+    "Cancelled": "판매취소",
 
     "Search_my_trades": "내 거래 검색",
 
@@ -94,12 +94,12 @@
     "Payment_Amount": "결제금액",
 
     "I_agree_to_the_terms_of_trade": "거래조건에 동의합니다.",
-    "I_agree_to_cancel_the_trade": "거래취소에 동의합니다.",
+    "I_agree_to_cancel_the_trade": "판매취소에 동의합니다.",
 
     "Opened_at": "주문시작",
     "Started_at": "거래시작",
-    "Cancelled_at": "거래취소",
-    "Completed_at": "거래완료",
+    "Cancelled_at": "판매취소",
+    "Completed_at": "판매완료",
     "Payment_Requested_at": "결제요청:",
 
     "TID": "거래번호",
@@ -113,7 +113,7 @@
     "If_the_seller_does_not_deposit_the_USDT_to_escrow": "판매자가 USDT를 에스크로 보관소에 보내지 않으면",
     "this_trade_will_be_cancelled_in": "이 거래는 다음 시간이 지나면 취소됩니다:",
 
-    "Cancel_My_Trade": "거래취소",
+    "Cancel_My_Trade": "판매취소",
 
     "Order_accepted_successfully": "주문이 성공적으로 수락되었습니다.",
     "Order_has_been_cancelled": "주문이 취소되었습니다.",
