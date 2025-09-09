@@ -1500,7 +1500,7 @@ export default function SettingsPage({ params }: any) {
 
                                         {fetchingAgent && (
                                         <Image
-                                            src="/loading.png"
+                                            src="/icon-loading.png"
                                             alt="Loading"
                                             width={20}
                                             height={20}

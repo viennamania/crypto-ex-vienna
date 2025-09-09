@@ -1736,7 +1736,7 @@ export default function Index({ params }: any) {
                       {
                         fetchingAllBuyer ? (
                           <Image
-                            src="/loading.png"
+                            src="/icon-loading.png"
                             alt="Loading"
                             width={20}
                             height={20}
@@ -1766,7 +1766,7 @@ export default function Index({ params }: any) {
                 <div className="flex flex-row items-center gap-2">
                   {fetchingAllStores ? (
                     <Image
-                      src="/loading.png"
+                      src="/icon-loading.png"
                       alt="Loading"
                       width={20}
                       height={20}

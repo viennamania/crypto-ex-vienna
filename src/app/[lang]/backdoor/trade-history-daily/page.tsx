@@ -1643,7 +1643,7 @@ const fetchBuyOrders = async () => {
 
                   
                   <Image
-                    src="/loading.png"
+                    src="/icon-loading.png"
                     alt="Loading"
                     width={35}
                     height={35}
@@ -2104,7 +2104,7 @@ const fetchBuyOrders = async () => {
               ">
                 {loadingTotalNumberOfBuyOrders ? (
                   <Image
-                    src="/loading.png"
+                    src="/icon-loading.png"
                     alt="Loading"
                     width={20}
                     height={20}
@@ -2163,7 +2163,7 @@ const fetchBuyOrders = async () => {
 
                 {loadingTotalNumberOfClearanceOrders ? (
                   <Image
-                    src="/loading.png"
+                    src="/icon-loading.png"
                     alt="Loading"
                     width={20}
                     height={20}

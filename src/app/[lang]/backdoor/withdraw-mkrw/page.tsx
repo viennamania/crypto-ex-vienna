@@ -1215,7 +1215,7 @@ export default function SendUsdt({ params }: any) {
                     animate-spin
                   ">
                     <Image
-                      src="/loading.png"
+                      src="/icon-loading.png"
                       alt="loading"
                       width={24}
                       height={24}
@@ -1249,7 +1249,7 @@ export default function SendUsdt({ params }: any) {
                         {loadingTransferListMKRW && (
                           <div className="flex items-center justify-center">
                             <Image
-                              src="/loading.png"
+                              src="/icon-loading.png"
                               alt="loading"
                               width={20}
                               height={20}

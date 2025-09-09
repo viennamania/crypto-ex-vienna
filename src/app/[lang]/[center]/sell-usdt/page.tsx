@@ -2180,7 +2180,7 @@ export default function Index({ params }: any) {
                                   animate-spin
                                 ">
                                   <Image
-                                    src="/loading.png"
+                                    src="/icon-loading.png"
                                     alt="loading"
                                     width={24}
                                     height={24}
@@ -2369,7 +2369,7 @@ export default function Index({ params }: any) {
                                       animate-spin
                                     ">
                                       <Image
-                                        src="/loading.png"
+                                        src="/icon-loading.png"
                                         alt="loading"
                                         width={24}
                                         height={24}
@@ -2510,7 +2510,7 @@ export default function Index({ params }: any) {
                       onClick={fetchSellOrders}
                     >
                       <Image
-                        src="/loading.png"
+                        src="/icon-loading.png"
                         alt="loading"
                         width={16}
                         height={16}
@@ -2702,7 +2702,7 @@ export default function Index({ params }: any) {
                                     onClick={() => cancelSellOrder(item._id, index)}
                                   >
                                     <Image
-                                      src="/loading.png"
+                                      src="/icon-loading.png"
                                       alt="loading"
                                       width={16}
                                       height={16}
@@ -2768,7 +2768,7 @@ export default function Index({ params }: any) {
                                       }}
                                     >
                                       <Image
-                                        src="/loading.png"
+                                        src="/icon-loading.png"
                                         alt="loading"
                                         width={16}
                                         height={16}
@@ -2819,7 +2819,7 @@ export default function Index({ params }: any) {
                                       >
 
                                         <Image
-                                          src="/loading.png"
+                                          src="/icon-loading.png"
                                           alt="loading"
                                           width={16}
                                           height={16}
@@ -2864,7 +2864,7 @@ export default function Index({ params }: any) {
                                       >
                                           
                                           <Image
-                                            src="/loading.png"
+                                            src="/icon-loading.png"
                                             alt="loading"
                                             width={16}
                                             height={16}
@@ -3248,7 +3248,7 @@ export default function Index({ params }: any) {
                                             animate-spin
                                           ">
                                             <Image
-                                              src="/loading.png"
+                                              src="/icon-loading.png"
                                               alt="loading"
                                               width={12}
                                               height={12}
@@ -3387,7 +3387,7 @@ export default function Index({ params }: any) {
                             {item.status === 'accepted' && (
                                 <div className="mt-4 flex flex-row gap-2 items-center justify-start">
                                   <Image
-                                    src="/loading.png"
+                                    src="/icon-loading.png"
                                     alt="Escrow"
                                     width={32}
                                     height={32}
@@ -3467,7 +3467,7 @@ export default function Index({ params }: any) {
                                     {/* rotate loading icon */}
                                   
                                     <Image
-                                      src="/loading.png"
+                                      src="/icon-loading.png"
                                       alt="Escrow"
                                       width={32}
                                       height={32}

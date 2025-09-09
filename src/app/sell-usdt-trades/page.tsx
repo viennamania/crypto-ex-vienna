@@ -1036,7 +1036,7 @@ const P2PTable = () => {
                                         
                                         <div className="flex flex-row items-center gap-2">
                                           <Image
-                                              src='/loading.png'
+                                              src='/icon-loading.png'
                                               alt='loading'
                                               width={50}
                                               height={50}
@@ -1069,7 +1069,7 @@ const P2PTable = () => {
                                           
                                           <div className="flex flex-row items-center gap-2">
                                             <Image
-                                                src='/loading.png'
+                                                src='/icon-loading.png'
                                                 alt='loading'
                                                 width={50}
                                                 height={50}
@@ -1288,7 +1288,7 @@ const P2PTable = () => {
                                       
                                       <div className="flex flex-row items-center gap-2">
                                         <Image
-                                            src='/loading.png'
+                                            src='/icon-loading.png'
                                             alt='loading'
                                             width={32}
                                             height={32}
@@ -1361,7 +1361,7 @@ const P2PTable = () => {
                                   <div className="p-2 flex flex-row items-center gap-2">
 
                                     <Image
-                                        src='/loading.png'
+                                        src='/icon-loading.png'
                                         alt='loading'
                                         width={32}
                                         height={32}

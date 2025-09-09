@@ -1458,7 +1458,7 @@ export default function Index({ params }: any) {
 
                   
                   <Image
-                    src="/loading.png"
+                    src="/icon-loading.png"
                     alt="Loading"
                     width={35}
                     height={35}
@@ -1871,7 +1871,7 @@ export default function Index({ params }: any) {
               ">
                 {loadingTotalNumberOfBuyOrders ? (
                   <Image
-                    src="/loading.png"
+                    src="/icon-loading.png"
                     alt="Loading"
                     width={20}
                     height={20}
@@ -1930,7 +1930,7 @@ export default function Index({ params }: any) {
 
                 {loadingTotalNumberOfClearanceOrders ? (
                   <Image
-                    src="/loading.png"
+                    src="/icon-loading.png"
                     alt="Loading"
                     width={20}
                     height={20}

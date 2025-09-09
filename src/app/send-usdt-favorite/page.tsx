@@ -818,7 +818,7 @@ export default function SendUsdt() {
                     animate-spin
                   ">
                     <Image
-                      src="/loading.png"
+                      src="/icon-loading.png"
                       alt="loading"
                       width={24}
                       height={24}

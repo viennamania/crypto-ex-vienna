@@ -946,7 +946,7 @@ const P2PTable = () => {
                                   animate-spin
                                 ">
                                   <Image
-                                    src="/loading.png"
+                                    src="/icon-loading.png"
                                     alt="loading"
                                     width={24}
                                     height={24}
@@ -1385,7 +1385,7 @@ const P2PTable = () => {
                                             animate-spin
                                           ">
                                             <Image
-                                              src="/loading.png"
+                                              src="/icon-loading.png"
                                               alt="loading"
                                               width={12}
                                               height={12}
@@ -1498,7 +1498,7 @@ const P2PTable = () => {
                             {item.status === 'accepted' && (
                                 <div className="mt-4 flex flex-row gap-2 items-center justify-start">
                                   <Image
-                                    src="/loading.png"
+                                    src="/icon-loading.png"
                                     alt="Escrow"
                                     width={32}
                                     height={32}
@@ -1559,7 +1559,7 @@ const P2PTable = () => {
                                     {/* rotate loading icon */}
                                   
                                     <Image
-                                      src="/loading.png"
+                                      src="/icon-loading.png"
                                       alt="Escrow"
                                       width={32}
                                       height={32}

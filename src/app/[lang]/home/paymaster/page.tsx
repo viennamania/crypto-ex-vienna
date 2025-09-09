@@ -1954,7 +1954,7 @@ export default function Index({ params }: any) {
         {loadingStoreInfo ? (
           <div className="w-full flex flex-row items-center justify-start gap-2">
             <Image
-              src="/loading.png"
+              src="/icon-loading.png"
               alt="Loading"
               width={24}
               height={24}
@@ -2008,7 +2008,7 @@ export default function Index({ params }: any) {
             {loadingUser && (
               <div className="flex flex-row items-center justify-center gap-2">
                 <Image
-                  src="/loading.png"
+                  src="/icon-loading.png"
                   alt="Loading"
                   width={24}
                   height={24}
@@ -2560,7 +2560,7 @@ export default function Index({ params }: any) {
                           {/* loaaing icon */}
                           {acceptingSellOrderRandom ? (
                             <Image
-                              src="/loading.png"
+                              src="/icon-loading.png"
                               alt="Loading"
                               width={24}
                               height={24}
@@ -3189,7 +3189,7 @@ export default function Index({ params }: any) {
                                     {/* rotate loading icon */}
                                   
                                     <Image
-                                      src="/loading.png"
+                                      src="/icon-loading.png"
                                       alt="Escrow"
                                       width={32}
                                       height={32}
@@ -3225,7 +3225,7 @@ export default function Index({ params }: any) {
                                     
                                     <div className="flex flex-row items-center gap-2">
                                       <Image
-                                          src='/loading.png'
+                                          src='/icon-loading.png'
                                           alt='loading'
                                           width={32}
                                           height={32}
@@ -3254,7 +3254,7 @@ export default function Index({ params }: any) {
                                     
                                     <div className="flex flex-row items-center gap-2">
                                       <Image
-                                          src='/loading.png'
+                                          src='/icon-loading.png'
                                           alt='loading'
                                           width={50}
                                           height={50}
@@ -3426,7 +3426,7 @@ export default function Index({ params }: any) {
 
                                         {requestingPayment[index] || escrowing[index] ? (
                                           <Image
-                                            src='/loading.png'
+                                            src='/icon-loading.png'
                                             alt='loading'
                                             width={32}
                                             height={32}
@@ -3465,7 +3465,7 @@ export default function Index({ params }: any) {
 
                                   <div className="flex flex-row items-center gap-2">
                                     <Image
-                                      src='/loading.png'
+                                      src='/icon-loading.png'
                                       alt='loading'
                                       width={38}
                                       height={38}
@@ -3747,7 +3747,7 @@ export default function Index({ params }: any) {
                                       {/* rotate loading icon */}
                                     
                                       <Image
-                                        src="/loading.png"
+                                        src="/icon-loading.png"
                                         alt="Escrow"
                                         width={32}
                                         height={32}
@@ -3828,7 +3828,7 @@ export default function Index({ params }: any) {
                                       
                                       <div className="flex flex-row items-center gap-2">
                                         <Image
-                                            src='/loading.png'
+                                            src='/icon-loading.png'
                                             alt='loading'
                                             width={32}
                                             height={32}
@@ -3911,7 +3911,7 @@ export default function Index({ params }: any) {
                                   <div className="p-2 flex flex-row items-center gap-2">
 
                                     <Image
-                                        src='/loading.png'
+                                        src='/icon-loading.png'
                                         alt='loading'
                                         width={32}
                                         height={32}

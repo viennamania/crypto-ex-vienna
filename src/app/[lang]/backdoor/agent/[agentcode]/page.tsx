@@ -2067,7 +2067,7 @@ export default function Index({ params }: any) {
                   </p>
                   {loadingSummary && (
                     <Image
-                      src="/loading.png"
+                      src="/icon-loading.png"
                       alt="Loading"
                       width={20}
                       height={20}
@@ -2258,7 +2258,7 @@ export default function Index({ params }: any) {
                   </p>
                   {loadingSummary && (
                     <Image
-                      src="/loading.png"
+                      src="/icon-loading.png"
                       alt="Loading"
                       width={20}
                       height={20}
@@ -2401,7 +2401,7 @@ export default function Index({ params }: any) {
                   </p>
                   {loadingSummary && (
                     <Image
-                      src="/loading.png"
+                      src="/icon-loading.png"
                       alt="Loading"
                       width={20}
                       height={20}
@@ -2671,7 +2671,7 @@ export default function Index({ params }: any) {
                   </p>
                   {loadingSummary && (
                     <Image
-                      src="/loading.png"
+                      src="/icon-loading.png"
                       alt="Loading"
                       width={20}
                       height={20}
@@ -3200,7 +3200,7 @@ export default function Index({ params }: any) {
 
                     <div className="flex flex-row justify-center items-center">
                       <Image
-                        src="/loading.png"
+                        src="/icon-loading.png"
                         alt="Loading"
                         width={35}
                         height={35}

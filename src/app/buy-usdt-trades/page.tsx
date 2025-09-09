@@ -696,7 +696,7 @@ const P2PTable = () => {
                                   {/* rotate loading icon */}
                                 
                                   <Image
-                                    src="/loading.png"
+                                    src="/icon-loading.png"
                                     alt="Escrow"
                                     width={32}
                                     height={32}

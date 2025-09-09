@@ -2846,7 +2846,7 @@ const fetchBuyOrders = async () => {
             <div className="flex flex-row items-center gap-2">
               {fetchingAllStores ? (
                 <Image
-                  src="/loading.png"
+                  src="/icon-loading.png"
                   alt="Loading"
                   width={20}
                   height={20}
@@ -3093,7 +3093,7 @@ const fetchBuyOrders = async () => {
                 ">
                   {loadingTotalNumberOfBuyOrders ? (
                     <Image
-                      src="/loading.png"
+                      src="/icon-loading.png"
                       alt="Loading"
                       width={20}
                       height={20}
@@ -3152,7 +3152,7 @@ const fetchBuyOrders = async () => {
 
                   {loadingTotalNumberOfClearanceOrders ? (
                     <Image
-                      src="/loading.png"
+                      src="/icon-loading.png"
                       alt="Loading"
                       width={20}
                       height={20}
@@ -3811,7 +3811,7 @@ const fetchBuyOrders = async () => {
                                   >
                                     {cancellings[index] && (
                                       <Image
-                                        src="/loading.png"
+                                        src="/icon-loading.png"
                                         alt="Loading"
                                         width={20}
                                         height={20}
@@ -3856,7 +3856,7 @@ const fetchBuyOrders = async () => {
                                   >
                                     {acceptingBuyOrder[index] && (
                                       <Image
-                                        src="/loading.png"
+                                        src="/icon-loading.png"
                                         alt="Loading"
                                         width={20}
                                         height={20}
@@ -3912,7 +3912,7 @@ const fetchBuyOrders = async () => {
                                     }}
                                   >
                                     <Image
-                                      src="/loading.png"
+                                      src="/icon-loading.png"
                                       alt="loading"
                                       width={16}
                                       height={16}
@@ -3969,7 +3969,7 @@ const fetchBuyOrders = async () => {
                                     >
 
                                       <Image
-                                        src="/loading.png"
+                                        src="/icon-loading.png"
                                         alt="loading"
                                         width={16}
                                         height={16}
@@ -4018,7 +4018,7 @@ const fetchBuyOrders = async () => {
                                     >
                                         
                                         <Image
-                                          src="/loading.png"
+                                          src="/icon-loading.png"
                                           alt="loading"
                                           width={16}
                                           height={16}
@@ -4158,7 +4158,7 @@ const fetchBuyOrders = async () => {
                                   >
                                     {loadingDeposit[index] && (
                                       <Image
-                                        src="/loading.png"
+                                        src="/icon-loading.png"
                                         alt="Loading"
                                         width={20}
                                         height={20}
@@ -4714,7 +4714,7 @@ const fetchBuyOrders = async () => {
                                   
                                 <div className="mt-4 flex flex-row gap-2 items-center justify-start">
                                   <Image
-                                    src="/loading.png"
+                                    src="/icon-loading.png"
                                     alt="Escrow"
                                     width={32}
                                     height={32}
@@ -4795,7 +4795,7 @@ const fetchBuyOrders = async () => {
                                               animate-spin
                                             ">
                                               <Image
-                                                src="/loading.png"
+                                                src="/icon-loading.png"
                                                 alt="loading"
                                                 width={16}
                                                 height={16}
@@ -4875,7 +4875,7 @@ const fetchBuyOrders = async () => {
                                   }}
                                 >
                                   <Image
-                                    src="/loading.png"
+                                    src="/icon-loading.png"
                                     alt="loading"
                                     width={16}
                                     height={16}
@@ -4927,7 +4927,7 @@ const fetchBuyOrders = async () => {
                                     {/* rotate loading icon */}
                                   
                                     <Image
-                                      src="/loading.png"
+                                      src="/icon-loading.png"
                                       alt="Escrow"
                                       width={32}
                                       height={32}
@@ -4962,7 +4962,7 @@ const fetchBuyOrders = async () => {
 
                                 <div className="flex flex-row items-center gap-2">
                                   <Image
-                                    src='/loading.png'
+                                    src='/icon-loading.png'
                                     alt='loading'
                                     width={35}
                                     height={35}

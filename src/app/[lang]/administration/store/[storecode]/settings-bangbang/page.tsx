@@ -2341,7 +2341,7 @@ export default function SettingsPage({ params }: any) {
 
                                 {fetchingStore && (
                                 <Image
-                                    src="/loading.png"
+                                    src="/icon-loading.png"
                                     alt="Loading"
                                     width={20}
                                     height={20}
@@ -2473,7 +2473,7 @@ export default function SettingsPage({ params }: any) {
 
                                 {fetchingAllStoreSellers && (
                                 <Image
-                                    src="/loading.png"
+                                    src="/icon-loading.png"
                                     alt="Loading"
                                     width={20}
                                     height={20}
@@ -2619,7 +2619,7 @@ export default function SettingsPage({ params }: any) {
 
                                     {fetchingAllAdminSellers && (
                                         <Image
-                                            src="/loading.png"
+                                            src="/icon-loading.png"
                                             alt="Loading"
                                             width={20}
                                             height={20}
@@ -2842,7 +2842,7 @@ export default function SettingsPage({ params }: any) {
 
                                 {fetchingStore && (
                                 <Image
-                                    src="/loading.png"
+                                    src="/icon-loading.png"
                                     alt="Loading"
                                     width={20}
                                     height={20}

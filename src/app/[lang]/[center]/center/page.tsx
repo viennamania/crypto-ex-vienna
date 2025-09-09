@@ -2252,7 +2252,7 @@ export default function Index({ params }: any) {
                     <h2 className="text-lg font-semibold">최근 구매회원</h2>
                     {fetchingStoreSummary && (
                       <Image
-                        src="/loading.png"
+                        src="/icon-loading.png"
                         alt="Loading"
                         width={20}
                         height={20}
@@ -2325,7 +2325,7 @@ export default function Index({ params }: any) {
                     <h2 className="text-lg font-semibold">최근 구매주문</h2>
                     {fetchingStoreSummary && (
                       <Image
-                        src="/loading.png"
+                        src="/icon-loading.png"
                         alt="Loading"
                         width={20}
                         height={20}
@@ -2484,7 +2484,7 @@ export default function Index({ params }: any) {
                     <h2 className="text-lg font-semibold">최근 P2P 거래내역(회원)</h2>
                     {fetchingStoreSummary && (
                       <Image
-                        src="/loading.png"
+                        src="/icon-loading.png"
                         alt="Loading"
                         width={20}
                         height={20}
@@ -2694,7 +2694,7 @@ export default function Index({ params }: any) {
                     <h2 className="text-lg font-semibold">최근 판매내역(거래소)</h2>
                     {fetchingStoreSummary && (
                       <Image
-                        src="/loading.png"
+                        src="/icon-loading.png"
                         alt="Loading"
                         width={20}
                         height={20}
