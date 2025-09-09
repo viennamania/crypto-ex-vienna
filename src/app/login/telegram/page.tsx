@@ -63,17 +63,55 @@ function TelegramLoginContent() {
     const { connect } = useConnect();
     const router = useRouter();
 
-    
-    const [params, setParams] = useState({ signature: '', message: '', center: '', referralCode: '', path: '' });
 
-    
+    //const [params, setParams] = useState({ signature: '', message: '', center: '', referralCode: '', path: '' });
+
+
+
+    /*
+      const urlPayment = `${process.env.FRONTEND_APP_ORIGIN}/login/telegram?signature=${authCode}&message=${encodeURI(message)}`
+  + `&storecode=${storecode}&storeUser=${encodeURI(userNickname)}&depositName=${encodeURI(depositName)}&depositBankName=${encodeURI(depositBankName)}&depositBankAccountNumber=${depositBankAccountNumber}&depositAmountKrw=${depositAmountKrw}`
+  + `&telegramId=${telegramId}&path=${path}`;
+    */
+
+    const [params, setParams] = useState({
+        signature: '',
+        message: '',
+        storecode: '',
+        storeUser: '',
+        depositName: '',
+        depositBankName: '',
+        depositBankAccountNumber: '',
+        depositAmountKrw: '',
+        center: '',
+        referralCode: '',
+        path: ''
+    });
+
+
+
     useEffect(() => {
+        /*
         const signature = searchParams.get('signature') || '';
         const message = searchParams.get('message') || '';
         const center = searchParams.get('center') || '';
         const path = searchParams.get('path') || '';
         const referralCode = searchParams.get('referralCode') || '';
         setParams({ signature, message, center, referralCode, path });
+        */
+
+        const signature = searchParams.get('signature') || '';
+        const message = searchParams.get('message') || '';
+        const storecode = searchParams.get('storecode') || '';
+        const storeUser = searchParams.get('storeUser') || '';
+        const depositName = searchParams.get('depositName') || '';
+        const depositBankName = searchParams.get('depositBankName') || '';
+        const depositBankAccountNumber = searchParams.get('depositBankAccountNumber') || '';
+        const depositAmountKrw = searchParams.get('depositAmountKrw') || '';
+        const center = searchParams.get('center') || '';
+        const referralCode = searchParams.get('referralCode') || '';
+        const path = searchParams.get('path') || '/';
+        setParams({ signature, message, storecode, storeUser, depositName, depositBankName, depositBankAccountNumber, depositAmountKrw, center, referralCode, path });
 
         //console.log('SearchParams:', { signature, message, center });
 
@@ -82,6 +120,12 @@ function TelegramLoginContent() {
 
     console.log('params.signature=', params.signature);
     console.log('params.message=', params.message);
+    console.log('params.storecode=', params.storecode);
+    console.log('params.storeUser=', params.storeUser);
+    console.log('params.depositName=', params.depositName);
+    console.log('params.depositBankName=', params.depositBankName);
+    console.log('params.depositBankAccountNumber=', params.depositBankAccountNumber);
+    console.log('params.depositAmountKrw=', params.depositAmountKrw);
     console.log('params.center=', params.center);
     console.log('params.referralCode=', params.referralCode);
     console.log('params.path=', params.path);
@@ -128,7 +172,14 @@ function TelegramLoginContent() {
 
                 //router.replace("/?center=" + params.center + "&telegramId=" + username);
 
-                router.replace(params.path + "?center=" + params.center + "&telegramId=" + username + "&referralCode=" + params.referralCode);
+                //router.replace(params.path + "?center=" + params.center + "&telegramId=" + username + "&referralCode=" + params.referralCode);
+
+                router.replace(params.path +
+                    `?center=${params.center}&telegramId=${username}&referralCode=${params.referralCode}`
+                    +
+                    `&storecode=${params.storecode}&storeUser=${encodeURIComponent(params.storeUser)}&depositName=${encodeURIComponent(params.depositName)}&depositBankName=${encodeURIComponent(params.depositBankName)}&depositBankAccountNumber=${params.depositBankAccountNumber}&depositAmountKrw=${params.depositAmountKrw}`
+                );
+
 
                 return true;
 
