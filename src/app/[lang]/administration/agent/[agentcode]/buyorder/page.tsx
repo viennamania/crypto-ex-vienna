@@ -5488,40 +5488,6 @@ const fetchBuyOrders = async () => {
                                     </span>
                                   </div>
 
-                                  {/*
-                                  <div className="w-full flex flex-row gap-2 items-center justify-center">
-                                    <span className="
-                                    w-16
-                                    text-sm text-zinc-500">
-                                      AG 수수료
-                                    </span>
-                                    <span className="
-                                    w-14 text-end
-                                    text-sm text-zinc-500"
-                                      style={{
-                                        fontFamily: 'monospace',
-                                      }}>
-                                      {Number(item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0).toFixed(3)}%
-                                    </span>
-                                  </div>
-
-                                  <div className="w-full flex flex-row gap-2 items-center justify-center">
-                                    <span className="
-                                    w-16
-                                    text-sm text-zinc-500">
-                                      센터 수수료
-                                    </span>
-                                    <span className="
-                                    w-14  text-end
-                                    text-sm text-zinc-500"
-                                      style={{
-                                        fontFamily: 'monospace',
-                                      }}>
-                                      {Number(item.store.settlementFeePercent ? item.store.settlementFeePercent : 0.3).toFixed(3)}%
-                                    </span>
-                                  </div>
-                                  */}
-
                                 </div>
                               )}
 

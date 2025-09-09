@@ -6678,72 +6678,6 @@ const fetchBuyOrders = async () => {
                       </td>
 
 
-
-                      
-
-
-
-                      {/*
-                      <td className="
-                        p-2">
-                        <div className="flex flex-col gap-2 items-end justify-center">
-
-                          <div className="w-full flex flex-row gap-2 items-center justify-center">
-                            <span className="
-                            w-16
-                            text-sm text-zinc-500">
-                              가맹점
-                            </span>
-                            <span className="
-                            w-14 text-end
-                            text-sm text-zinc-500"
-                              style={{
-                                fontFamily: 'monospace',
-                              }}>
-                              {Number(
-                                100 - (item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0) - (item.store.settlementFeePercent ? item.store.settlementFeePercent : 0.3)
-                              ).toFixed(2)
-                              }%
-                            </span>
-                          </div>
-
-                          <div className="w-full flex flex-row gap-2 items-center justify-center">
-                            <span className="
-                            w-16
-                            text-sm text-zinc-500">
-                              AG 수수료
-                            </span>
-                            <span className="
-                            w-14 text-end
-                            text-sm text-zinc-500"
-                              style={{
-                                fontFamily: 'monospace',
-                              }}>
-                              {Number(item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0).toFixed(2)}%
-                            </span>
-                          </div>
-
-                          <div className="w-full flex flex-row gap-2 items-center justify-center">
-                            <span className="
-                            w-16
-                            text-sm text-zinc-500">
-                              센터 수수료
-                            </span>
-                            <span className="
-                            w-14  text-end
-                            text-sm text-zinc-500"
-                              style={{
-                                fontFamily: 'monospace',
-                              }}>
-                              {Number(item.store.settlementFeePercent ? item.store.settlementFeePercent : 0.3).toFixed(2)}%
-                            </span>
-                          </div>
-
-                        </div>
-                      </td>
-                      */}
-
-
                       <td className="p-2">
                         <div className="w-full
                           flex flex-col gap-2 items-center justify-center
@@ -6892,7 +6826,7 @@ const fetchBuyOrders = async () => {
                                   <span className="
                                   w-14
                                   text-xs text-zinc-500">
-                                    센터 수수료
+                                    PG 수수료
                                   </span>
                                   <span className="
                                   w-12 text-end
