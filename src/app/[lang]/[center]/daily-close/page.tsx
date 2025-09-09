@@ -1813,7 +1813,7 @@ export default function Index({ params }: any) {
             
             <div className="w-full flex flex-col items-center justify-center gap-4 p-4 bg-white shadow-md rounded-lg mt-5">
               <div className="text-sm text-zinc-600">
-                © 2024 Good Tether All rights reserved.
+                © 2024 GoodTether All rights reserved.
               </div>
               <div className="text-sm text-zinc-600">
                 <a href={`/${params.lang}/terms-of-service`} className="text-blue-500 hover:underline">
