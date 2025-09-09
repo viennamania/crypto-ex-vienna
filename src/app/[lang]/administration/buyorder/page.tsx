@@ -6788,7 +6788,21 @@ const fetchBuyOrders = async () => {
                                   </span>
                                 </div>
 
-
+                                <div className="w-full flex flex-row gap-2 items-center justify-center">
+                                  <span className="
+                                  w-14
+                                  text-xs text-zinc-500">
+                                    PG 수수료
+                                  </span>
+                                  <span className="
+                                  w-12 text-end
+                                  text-sm text-zinc-500"
+                                    style={{
+                                      fontFamily: 'monospace',
+                                    }}>
+                                    {Number(item?.platformFee?.percentage ? item?.platformFee?.percentage : 0.0).toFixed(2)}%
+                                  </span>
+                                </div>
 
                                 <div className="w-full flex flex-row gap-2 items-center justify-center">
                                   <span className="
@@ -6821,23 +6835,6 @@ const fetchBuyOrders = async () => {
                                     {Number(item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0).toFixed(2)}%
                                   </span>
                                 </div>
-
-                                <div className="w-full flex flex-row gap-2 items-center justify-center">
-                                  <span className="
-                                  w-14
-                                  text-xs text-zinc-500">
-                                    PG 수수료
-                                  </span>
-                                  <span className="
-                                  w-12 text-end
-                                  text-sm text-zinc-500"
-                                    style={{
-                                      fontFamily: 'monospace',
-                                    }}>
-                                    {Number(item?.platformFee?.percentage ? item?.platformFee?.percentage : 0.0).toFixed(2)}%
-                                  </span>
-                                </div>
-
 
                               </div>
                             )}
@@ -7133,6 +7130,18 @@ const fetchBuyOrders = async () => {
                                     </span>
 
                                     <span>
+                                      {
+                                        item?.settlement?.platformFeeAmount ?
+                                        item?.settlement?.platformFeeAmount?.toLocaleString()
+                                        : '0'
+                                      }
+                                      {' '}
+                                      {
+                                        item?.settlement?.platformFeeWalletAddress &&
+                                      item?.settlement?.platformFeeWalletAddress?.slice(0, 5) + '...'}
+                                    </span>
+
+                                    <span>
                                       {item?.settlement?.feeAmount?.toLocaleString()}
                                       {' '}
                                       {
@@ -7152,17 +7161,7 @@ const fetchBuyOrders = async () => {
                                       item?.settlement?.agentFeeWalletAddress?.slice(0, 5) + '...'}
                                     </span>
 
-                                    <span>
-                                      {
-                                        item?.settlement?.platformFeeAmount ?
-                                        item?.settlement?.platformFeeAmount?.toLocaleString()
-                                        : '0'
-                                      }
-                                      {' '}
-                                      {
-                                        item?.settlement?.platformFeeWalletAddress &&
-                                      item?.settlement?.platformFeeWalletAddress?.slice(0, 5) + '...'}
-                                    </span>
+
 
 
                                   </div>
