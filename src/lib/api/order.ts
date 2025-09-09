@@ -679,6 +679,17 @@ export async function cancelTradeByAdmin() {
 
   // status is 'accepted'
   // acceptedAt is more than 3 minutes ago
+  // acceptedAt is korean time is UTC+9
+
+
+  const resultArray = await collection.find<UserProps>(
+    { status: 'accepted', acceptedAt: {
+      $lt: new Date(new Date().getTime() - 3 * 60 * 1000).toISOString()
+    } }
+  ).toArray();
+
+  console.log('cancelTradeByAdmin resultArray: ' + JSON.stringify(resultArray));
+
 
   const result = await collection.updateMany(
     
@@ -689,7 +700,11 @@ export async function cancelTradeByAdmin() {
     */
     // status is 'accepted' or 'paymentRequested'
     { status: { $in: ['accepted', 'paymentRequested'] },
-      acceptedAt: { $lt: new Date(Date.now() - 3 * 60 * 1000).toISOString() }
+      
+    /////////acceptedAt: { $lt: new Date(Date.now() - 3 * 60 * 1000).toISOString() }
+
+    acceptedAt: { $lt: new Date(new Date().getTime() - 3 * 60 * 1000).toISOString() }
+
     },
 
     { $set: {
@@ -698,6 +713,11 @@ export async function cancelTradeByAdmin() {
       canceller: 'admin',
     } }
   );
+
+  console.log('cancelTradeByAdmin result: ' + JSON.stringify(result));
+
+
+
 
   return result;
 
