@@ -679,7 +679,7 @@ export async function cancelTradeByAdmin() {
 
   // status is 'accepted'
   // acceptedAt is more than 3 minutes ago
-  // acceptedAt is korean time is UTC+9
+  // acceptedAt is mongodb now
 
 
   const resultArray = await collection.find<UserProps>(
