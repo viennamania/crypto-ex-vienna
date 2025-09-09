@@ -260,10 +260,10 @@ export default function Index({ params }: any) {
 
   
 
-    const paramDepositName = searchParams.get('depositName');
-    const paramDepositBankName = searchParams.get('depositBankName');
+    const paramDepositName = decodeURIComponent(searchParams.get('depositName') || '');
+    const paramDepositBankName = decodeURIComponent(searchParams.get('depositBankName') || '');
     const paramDepositBankAccountNumber = searchParams.get('depositBankAccountNumber');
-    
+
 
     const paramDepositAmountKrw = searchParams.get('depositAmountKrw');
 
@@ -2181,7 +2181,7 @@ export default function Index({ params }: any) {
   }
 
 
-  
+
 
 
   // check storeInfo
