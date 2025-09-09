@@ -2899,6 +2899,7 @@ export default function Index({ params }: any) {
                                   회원 복사
                                 </button>
                                 */}
+                                {/*
                                 <button
                                     onClick={() => {
                                         window.open(
@@ -2918,6 +2919,7 @@ export default function Index({ params }: any) {
                                     />
                                     {' '}회원 텔레그램 봇 열기
                                 </button>
+                                */}
 
                                 <button
                                     onClick={() => {
