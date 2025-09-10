@@ -3847,14 +3847,14 @@ const fetchBuyOrders = async () => {
                 </div>
               </div>
 
-              {/* 판매용 USDT지갑 */}
+              {/* 판매용 USDT 출금지갑 */}
               {/* storeInfo.walletAddress */}
               <div className="flex flex-col xl:flex-row items-start xl:items-end gap-1">
                 <div className="flex flex-row gap-2 items-center">
                   {/* dot */}
                   <div className="w-1 h-1 rounded-full bg-zinc-500" /> 
                   <span className="text-sm text-zinc-500">
-                    가맹점 판매용 USDT지갑
+                    가맹점 판매용 USDT 출금지갑
                   </span>
                 </div>
                 <div className="flex flex-row items-center justify-center gap-2">
@@ -3874,14 +3874,14 @@ const fetchBuyOrders = async () => {
                 </div>
               </div>
 
-              {/* 자동결제용 USDT지갑 */}
+              {/* 결제용 USDT 입금지갑 */}
               {/* store.settlementWalletAddress */}
               <div className="flex flex-col xl:flex-row items-start xl:items-end gap-1">
                 <div className="flex flex-row gap-2 items-center">
                   {/* dot */}
                   <div className="w-1 h-1 rounded-full bg-zinc-500" />
                   <span className="text-sm text-zinc-500">
-                    가맹점 자동결제용 USDT지갑
+                    가맹점 결제용 USDT 입금지갑
                   </span>
                 </div>
                 <div className="flex flex-row items-center justify-center gap-2">
