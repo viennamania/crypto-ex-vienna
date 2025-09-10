@@ -2735,7 +2735,7 @@ export default function SettingsPage({ params }: any) {
                                     className="w-5 h-5"
                                 />
                                 <span className="text-lg text-zinc-500">
-                                    가맹점 에스크로 설정
+                                    가맹점 판매자 설정
                                 </span>
                             </div>
 
@@ -2802,9 +2802,9 @@ export default function SettingsPage({ params }: any) {
 
 
 
-                                
-                                {!fetchingAllAdminSellers && allAdminSellers && allAdminSellers.length > 0 ? (
-                                
+
+                                {!fetchingAllStoreSellers && allStoreSellers && allStoreSellers.length > 0 ? (
+
                                 <div className="w-full flex flex-row items-center justify-center gap-2">
                                     <select
                                     value={selectedSellerWalletAddress}
