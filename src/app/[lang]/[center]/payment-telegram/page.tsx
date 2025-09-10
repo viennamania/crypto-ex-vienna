@@ -757,6 +757,50 @@ export default function Index({ params }: any) {
     const [user, setUser] = useState<any>(null);
 
 
+
+
+
+    // set user payment info
+    // /api/user/setUserPaymentInfoByStorecode
+
+    useEffect(() => {
+      const setUserPaymentInfo = async () => {
+        const response = await fetch('/api/payment/setUserPaymentInfoByStorecode', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            storecode: storecode,
+            nickname: nickname,
+            paymentInfo: {
+              depositName: depositName,
+              depositBankName: depositBankName,
+              depositBankAccountNumber: depositBankAccountNumber,
+              depositAmountKrw: depositAmountKrw,
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          console.error('Failed to set user payment info');
+          return;
+        }
+
+        const data = await response.json();
+        console.log('User payment info set successfully:', data);
+      };
+
+      setUserPaymentInfo();
+    }, [storecode, nickname, depositName, depositBankName, depositBankAccountNumber, depositAmountKrw]);
+
+
+
+
+
+
+
+
    /*
     const fetchWalletAddress = async (
       paramNickname: string

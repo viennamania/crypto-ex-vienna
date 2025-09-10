@@ -50,6 +50,8 @@ export interface UserProps {
 
   buyOrderStatus: string,
 
+  paymentInfo: any,
+
 }
 
 export interface ResultProps {
@@ -2026,3 +2028,54 @@ export async function getAllAdmin(
 
 
 
+
+// updateUserPaymentInfoByStorecode
+export async function updateUserPaymentInfoByStorecode({
+  storecode,
+  nickname,
+  paymentInfo,
+}: {
+  storecode: string;
+  nickname: string;
+  paymentInfo: any;
+}) {
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  return await collection.updateMany(
+    { storecode, nickname },
+    {
+      $set: {
+        paymentInfo,
+      }
+    }
+  );
+  
+}
+
+// getUserPaymentInfoByStorecode
+export async function getUserPaymentInfoByStorecode({
+  storecode,
+  nickname,
+}: {
+  storecode: string;
+  nickname: string;
+}): Promise<any | null> {
+
+  console.log('getUserPaymentInfoByStorecode storecode: ' + storecode + ' nickname: ' + nickname);
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  const results = await collection.findOne<UserProps>(
+    { storecode, nickname },
+    { projection: { _id: 0, emailVerified: 0 } }
+  ) as any;
+
+  if (results) {
+    return results.paymentInfo;
+  } else {
+    return null;
+  }
+
+}
