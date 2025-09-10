@@ -2327,8 +2327,9 @@ export default function Index({ params }: any) {
         <button
           onClick={() => {
             window.open('https://t.me/goodtether_user_bot'
-              + '?start=' + storecode + '_' + storeUser + '_' + paramDepositName + '_' + paramDepositBankName + '_' + paramDepositBankAccountNumber + '_' + paramDepositAmountKrw, '_blank');
-          }}
+              //+ '?start=' + storecode + '_' + storeUser + '_' + paramDepositName + '_' + paramDepositBankName + '_' + paramDepositBankAccountNumber + '_' + paramDepositAmountKrw, '_blank');
+              + '?start=' + storecode + '_' + storeUser);
+            }}
           className="
             w-full
             bg-telegram

@@ -3092,7 +3092,7 @@ export default function Index({ params }: any) {
                                       //+ '_' + item.buyer?.depositName
                                       //+ '_' + depositAmountKrw[index]
 
-                                      '/' + params.lang + '/' + params.center + '/payment-telegram?storeUser=' + item.nickname
+                                      'https://crypto-ex-vienna.vercel.app/' + params.lang + '/' + params.center + '/payment-telegram?storeUser=' + item.nickname
                                       + '&depositBankName=' + item?.buyer?.depositBankName
                                       + '&depositBankAccountNumber=' + item?.buyer?.depositBankAccountNumber
                                       + '&depositName=' + item?.buyer?.depositName
