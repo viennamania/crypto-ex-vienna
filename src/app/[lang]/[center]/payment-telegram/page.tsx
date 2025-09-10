@@ -789,6 +789,12 @@ export default function Index({ params }: any) {
 
         const data = await response.json();
         console.log('User payment info set successfully:', data);
+
+
+        // router to
+        // 'https://t.me/goodtether_user_bot' + '?start=' + storecode + '_' + storeUser
+        router.push('https://t.me/goodtether_user_bot' + '?start=' + storecode + '_' + storeUser);
+        
       };
 
       setUserPaymentInfo();
@@ -2320,15 +2326,10 @@ export default function Index({ params }: any) {
         border-opacity-50
         ">
 
- 
-        {/* goto button for telegram */}
-        {/* https://t.me/goodtether_user_bot?start=deslbddt_musim_ShinhanBank_293749237923_musim_0 */}
 
         <button
           onClick={() => {
-            window.open('https://t.me/goodtether_user_bot'
-              //+ '?start=' + storecode + '_' + storeUser + '_' + paramDepositName + '_' + paramDepositBankName + '_' + paramDepositBankAccountNumber + '_' + paramDepositAmountKrw, '_blank');
-              + '?start=' + storecode + '_' + storeUser);
+            window.open('https://t.me/goodtether_user_bot' + '?start=' + storecode + '_' + storeUser);
             }}
           className="
             w-full
