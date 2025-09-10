@@ -3045,19 +3045,25 @@ export default function Index({ params }: any) {
                               <div className="w-full flex flex-row items-center justify-between gap-2">
 
 
-                                {/* encodeURI */}
+                                {/* https://crypto-ex-vienna.vercel.app/ko/hmclvhyf/payment-telegram?storeUser=bbb001&depositBankName=%EC%BC%80%EC%9D%B4%EB%B1%85%ED%81%AC&depositBankAccountNumber=9283749823&depositName=%EC%9E%A5%EA%B5%AD%EC%A7%84&depositAmountKrw=1000 */}
+
                                 <button
                                     onClick={() => {
                                         window.open( 
-                                            'https://t.me/goodtether_user_bot?start='
-                                            + item.storecode + '_' + item.nickname
+                                            //'https://t.me/goodtether_user_bot?start='
+                                            //+ item.storecode + '_' + item.nickname
 
                                             //+ '_' + item.buyer?.depositBankName
                                             //+ '_' + item.buyer?.depositBankAccountNumber
                                             //+ '_' + item.buyer?.depositName
                                             //+ '_' + depositAmountKrw[index]
 
-                                            ,
+                                          '/' + params.lang + '/' + item.storecode + '/payment-telegram?storeUser=' + item.nickname
+                                          + '&depositBankName=' + item?.buyer?.depositBankName
+                                          + '&depositBankAccountNumber=' + item?.buyer?.depositBankAccountNumber
+                                          + '&depositName=' + item?.buyer?.depositName
+                                          + '&depositAmountKrw=' + depositAmountKrw[index]
+                                          ,
                                             '_blank'
                                         );
                                     }}
@@ -3078,13 +3084,20 @@ export default function Index({ params }: any) {
                                 <button
                                   onClick={() => {
                                     navigator.clipboard.writeText(
-                                      'https://t.me/goodtether_user_bot?start='
-                                      + item.storecode + '_' + item.nickname
+                                      //'https://t.me/goodtether_user_bot?start='
+                                      //+ item.storecode + '_' + item.nickname
                                       
                                       //+ '_' + item.buyer?.depositBankName
                                       //+ '_' + item.buyer?.depositBankAccountNumber
                                       //+ '_' + item.buyer?.depositName
                                       //+ '_' + depositAmountKrw[index]
+
+                                      '/' + params.lang + '/' + item.storecode + '/payment-telegram?storeUser=' + item.nickname
+                                      + '&depositBankName=' + item?.buyer?.depositBankName
+                                      + '&depositBankAccountNumber=' + item?.buyer?.depositBankAccountNumber
+                                      + '&depositName=' + item?.buyer?.depositName
+                                      + '&depositAmountKrw=' + depositAmountKrw[index]
+
 
                                     );
                                     //toast.success('복사되었습니다');
