@@ -3077,7 +3077,9 @@ export default function Index({ params }: any) {
                                         height={20}
                                         className="w-4 h-4"
                                     />
-                                    {' '}사용자 텔레그램 봇 열기
+                                    <span className="text-sm text-blue-500 underline">
+                                      사용자 텔레그램 바로가기
+                                    </span>
                                 </button>
 
                                 {/* 텔레그램봇 링크 복사하기 */}
