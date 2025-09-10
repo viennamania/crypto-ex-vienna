@@ -3051,10 +3051,13 @@ export default function Index({ params }: any) {
                                         window.open( 
                                             'https://t.me/goodtether_user_bot?start='
                                             + item.storecode + '_' + item.nickname
-                                            + '_' + item.buyer?.depositBankName
-                                            + '_' + item.buyer?.depositBankAccountNumber
-                                            + '_' + item.buyer?.depositName
-                                            + '_' + depositAmountKrw[index],
+
+                                            //+ '_' + item.buyer?.depositBankName
+                                            //+ '_' + item.buyer?.depositBankAccountNumber
+                                            //+ '_' + item.buyer?.depositName
+                                            //+ '_' + depositAmountKrw[index]
+
+                                            ,
                                             '_blank'
                                         );
                                     }}
@@ -3076,12 +3079,13 @@ export default function Index({ params }: any) {
                                   onClick={() => {
                                     navigator.clipboard.writeText(
                                       'https://t.me/goodtether_user_bot?start='
-                                      + item.storecode
-                                      + '_' + item.nickname
-                                      + '_' + item.buyer?.depositBankName
-                                      + '_' + item.buyer?.depositBankAccountNumber
-                                      + '_' + item.buyer?.depositName
-                                      + '_' + depositAmountKrw[index]
+                                      + item.storecode + '_' + item.nickname
+                                      
+                                      //+ '_' + item.buyer?.depositBankName
+                                      //+ '_' + item.buyer?.depositBankAccountNumber
+                                      //+ '_' + item.buyer?.depositName
+                                      //+ '_' + depositAmountKrw[index]
+
                                     );
                                     //toast.success('복사되었습니다');
                                     alert('복사되었습니다');
