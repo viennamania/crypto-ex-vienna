@@ -2873,28 +2873,7 @@ export default function Index({ params }: any) {
           bg-white shadow-lg rounded-lg p-6
           border border-gray-200
           ">
-          <div className="flex flex-row items-center justify-center gap-2">
-            <a
-              href="#"
-              className="text-sm text-zinc-500 hover:text-blue-500"
-            >
-              이용약관
-            </a>
-            <span className="text-sm text-zinc-500">|</span>
-            <a
-              href="#"
-              className="text-sm text-zinc-500 hover:text-blue-500"
-            >
-              개인정보처리방침
-            </a>
-            <span className="text-sm text-zinc-500">|</span>
-            <a
-              href="#"
-              className="text-sm text-zinc-500 hover:text-blue-500"
-            >
-              고객센터
-            </a>
-          </div>
+
           <div className="text-sm text-zinc-500 mt-2">
             © 2025 GoodTether. All rights reserved.
           </div>
