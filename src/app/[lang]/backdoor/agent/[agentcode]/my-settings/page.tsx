@@ -1434,7 +1434,7 @@ export default function SettingsPage({ params }: any) {
                                     <div className='w-full flex flex-row items-center justify-start gap-2'>
                                         <div className='w-2 h-2 bg-green-500 rounded-full'></div>
                                         <span className="text-lg">
-                                            에이전트 관리자 지갑주소(EOA)
+                                            에이전트 관리자용 지갑주소 (권한 설정)
                                         </span>
                                     </div>
                         
