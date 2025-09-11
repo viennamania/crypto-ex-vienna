@@ -6558,6 +6558,10 @@ const fetchBuyOrders = async () => {
                                     </div>
 
 
+                                    {/* 입금확인후 판매완료 버튼을 누르세요. */}
+                                    <div className="text-sm text-red-500">
+                                      입금확인후 판매완료 버튼을 눌러 P2P 거래를 완료하세요.
+                                    </div>
 
 
 
