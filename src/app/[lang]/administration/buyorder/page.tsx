@@ -6084,6 +6084,7 @@ const fetchBuyOrders = async () => {
                                   {item.store?.bankInfo ? (
                                     <div className="flex flex-row items-center gap-2">
 
+                                      {/*
                                       <input
                                         disabled={escrowing[index] || requestingPayment[index]}
                                         type="checkbox"
@@ -6145,6 +6146,7 @@ const fetchBuyOrders = async () => {
                                         </div>
                                       
                                       </button>
+                                      */}
 
                                     </div>
                                   ) : (
