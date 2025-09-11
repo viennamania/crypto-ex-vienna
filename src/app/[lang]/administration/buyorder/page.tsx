@@ -5632,6 +5632,7 @@ const fetchBuyOrders = async () => {
 
                                       <div className="flex flex-row gap-2">
                                         
+                                        {/*}
                                         <button
 
                                           disabled={confirmingPayment[index]}
@@ -5682,6 +5683,7 @@ const fetchBuyOrders = async () => {
                                           </div>
 
                                         </button>
+                                        */}
 
 
                                       </div>
@@ -5940,7 +5942,8 @@ const fetchBuyOrders = async () => {
                               && item.seller && item.seller.walletAddress === address && (
                                 
                                 <div className="flex flex-col items-center gap-2">
-                                
+
+                                  {/*
                                   <div className="flex flex-row items-center gap-2">
                                     <input
                                       type="checkbox"
@@ -5998,12 +6001,10 @@ const fetchBuyOrders = async () => {
                                     className="w-full h-8
                                     text-center rounded-md text-sm text-zinc-500 font-semibold bg-zinc-100 border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                   />
-                                  {/* warning message */}
-                                  {/* 취소사유가 없을 경우 판매자 평가에 영향을 미칠 수 있습니다. */}
                                   <div className="text-xs text-red-500">
                                     취소사유가 없을 경우 판매자 평가에 영향을 미칠 수 있습니다.
                                   </div>
-
+                                  */}
 
 
                                 </div>
