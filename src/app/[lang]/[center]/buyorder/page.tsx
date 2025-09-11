@@ -5908,11 +5908,11 @@ const fetchBuyOrders = async () => {
                                     {item.store?.bankInfo?.bankName}
                                   </div>
                                 </div>
-                                {/*
+                                
                                 <div className="text-sm text-zinc-500">
-                                  {item.store?.bankInfo?.accountNumber}
+                                  {item.store?.bankInfo?.accountNumber.slice(0, 3) + '****' + item.store?.bankInfo?.accountNumber.slice(item.store?.bankInfo?.accountNumber.length - 3)}
                                 </div>
-                                */}
+                                
 
                               </div>
 
