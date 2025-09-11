@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
   });
 
 
-  if (payactionKeys.payactionApiKey && payactionKeys.payactionShopId) {
+  if (payactionKeys?.payactionApiKey && payactionKeys?.payactionShopId) {
 
 
     if (!payactionKeys) {

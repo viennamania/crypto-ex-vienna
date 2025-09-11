@@ -1500,17 +1500,10 @@ export default function Index({ params }: any) {
 
         const transactionHash = '0x';
 
-
         setRequestingPayment(
           requestingPayment.map((item, idx) => idx === index ? true : item)
         );
-        
-        
-        
-
-
-
-
+      
       
         const response = await fetch('/api/order/buyOrderRequestPayment', {
           method: 'POST',
