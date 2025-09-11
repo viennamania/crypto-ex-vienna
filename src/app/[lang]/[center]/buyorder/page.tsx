@@ -6344,7 +6344,7 @@ const fetchBuyOrders = async () => {
                                             {item.store?.bankInfo?.bankName}
                                           </span>
                                         </div>
-
+                                        {/*
                                         <span className="text-sm text-zinc-500">
                                           {
                                             item.store?.bankInfo?.accountNumber &&
@@ -6352,6 +6352,7 @@ const fetchBuyOrders = async () => {
                                             item.store?.bankInfo?.accountNumber.substring(0, 5) + '...'
                                           }
                                         </span>
+                                        */}
 
                                         {/* 결제요청을 하면 회원에게 입금 안내가 전송됩니다. */}
                                         <div className="text-xs text-red-500">
