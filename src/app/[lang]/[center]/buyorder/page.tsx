@@ -6353,6 +6353,11 @@ const fetchBuyOrders = async () => {
                                           }
                                         </span>
 
+                                        {/* 결제요청을 하면 회원에게 입금 안내가 전송됩니다. */}
+                                        <div className="text-xs text-red-500">
+                                          결제요청을 하면 회원에게 입금 안내가 전송됩니다.
+                                        </div>
+
                                       </div>
 
                                     )}
