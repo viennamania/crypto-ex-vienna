@@ -675,20 +675,22 @@ export async function cancelTradeByBuyer(
 export async function cancelTradeByAdmin() {
 
   const client = await clientPromise;
-  const collection = client.db(dbName).collection('orders');
+  const collection = client.db(dbName).collection('buyorders');
 
   // status is 'accepted'
   // acceptedAt is more than 3 minutes ago
   // acceptedAt is mongodb now
 
+  // acceptedAt: 2025-09-11T02:01:51.453Z
+ 
 
   const resultArray = await collection.find<UserProps>(
-    { status: 'accepted', acceptedAt: {
-      $lt: new Date(new Date().getTime() - 3 * 60 * 1000).toISOString()
-    } }
+    { status: { $in: ['accepted', 'paymentRequested'] },
+      acceptedAt: { $lt: new Date(Date.now() - 3 * 60 * 1000).toISOString() }
+    }
   ).toArray();
 
-  console.log('cancelTradeByAdmin resultArray: ' + JSON.stringify(resultArray));
+  //console.log('cancelTradeByAdmin resultArray: ' + JSON.stringify(resultArray));
 
 
   const result = await collection.updateMany(
@@ -710,6 +712,7 @@ export async function cancelTradeByAdmin() {
     { $set: {
       status: 'cancelled',
       cancelledAt: new Date().toISOString(),
+      cancelTradeReason: '자동취소',
       canceller: 'admin',
     } }
   );
