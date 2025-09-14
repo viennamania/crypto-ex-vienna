@@ -81,19 +81,6 @@ export async function POST(request: NextRequest) {
 
 
 
-
-  //const chainId = arbitrum.id;
-
-  const chainId = chain === 'ethereum' ? ethereum.id :
-                  chain === 'polygon' ? polygon.id :
-                  chain === 'arbitrum' ? arbitrum.id :
-                  chain === 'bsc' ? bsc.id : arbitrum.id;
-
-  //const contractAddressPolygon = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"; // USDT on Polygon
-
-  //const contractAddressArbitrum = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"; // USDT on Arbitrum
-
-
   try {
 
 
@@ -168,7 +155,7 @@ export async function POST(request: NextRequest) {
                chain === 'bsc' ? bsc : arbitrum,
 
         ///factoryAddress: "0x655934C0B4bD79f52A2f7e6E60714175D5dd319b", // your own deployed account factory address
-        sponsorGas: false,
+        sponsorGas: true,
     });
     // Connect the smart wallet
     const account = await wallet.connect({
