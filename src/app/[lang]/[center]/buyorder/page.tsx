@@ -1947,7 +1947,12 @@ export default function Index({ params }: any) {
     const storecode = "admin";
 
 
-    if (confirmingPayment[index]) {
+    //if (confirmingPayment[index]) {
+    //  return;
+    //}
+    // check all confirmingPayment is false
+    if (confirmingPayment.some((item) => item === true)) {
+      alert('진행중인 결제확인이 있습니다. 잠시후 다시 시도해주세요.');
       return;
     }
 
