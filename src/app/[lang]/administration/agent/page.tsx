@@ -15,8 +15,6 @@ import { useRouter }from "next//navigation";
 
 import { toast } from 'react-hot-toast';
 
-import { client } from "../../../client";
-
 
 
 import {
@@ -161,6 +159,11 @@ const contractAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"; // USDT on
 const contractAddressArbitrum = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"; // USDT on Arbitrum
 
 
+
+import {
+  clientId,
+  client
+} from "../../../client";
 
 
 export default function Index({ params }: any) {
@@ -2027,7 +2030,16 @@ export default function Index({ params }: any) {
                                 <button
                                     onClick={() => {
                                         window.open(
-                                            'https://t.me/goodtether_agent_bot?start=' + item.agentcode,
+                                            
+                                          //'https://t.me/goodtether_agent_bot?start=' + item.agentcode,
+
+                                          clientId === '213e1813510d42bf66a4136dcc90b032'
+                                          ? 'https://t.me/goodtether_agent_bot?start=' + item.agentcode
+                                          : clientId === '95034cfeb204ef7777ecfe26c110a6ca'
+                                            ? 'https://t.me/goodtether_golden_agent_bot?start=' + item.agentcode
+                                            : 'https://t.me/goodtether_agent_bot?start=' + item.agentcode,
+
+
                                             '_blank'
                                         );
                                     }}
@@ -2048,7 +2060,14 @@ export default function Index({ params }: any) {
                                 <button
                                   onClick={() => {
                                     navigator.clipboard.writeText(
-                                      'https://t.me/goodtether_agent_bot?start=' + item.agentcode
+                                      //'https://t.me/goodtether_agent_bot?start=' + item.agentcode
+
+                                      clientId === '213e1813510d42bf66a4136dcc90b032'
+                                      ? 'https://t.me/goodtether_agent_bot?start=' + item.agentcode
+                                      : clientId === '95034cfeb204ef7777ecfe26c110a6ca'
+                                        ? 'https://t.me/goodtether_golden_agent_bot?start=' + item.agentcode
+                                        : 'https://t.me/goodtether_agent_bot?start=' + item.agentcode
+
                                     );
                                     //toast.success('복사되었습니다');
                                     alert('복사되었습니다:\n' + 'https://t.me/goodtether_agent_bot?start=' + item.agentcode);
