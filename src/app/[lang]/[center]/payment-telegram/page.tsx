@@ -68,7 +68,7 @@ import { parse } from 'path';
 
 
 
-
+import { clientId } from "../../../client";
 
 
 
@@ -793,7 +793,15 @@ export default function Index({ params }: any) {
 
         // router to
         // 'https://t.me/goodtether_user_bot' + '?start=' + storecode + '_' + storeUser
-        router.push('https://t.me/goodtether_user_bot' + '?start=' + storecode + '_' + storeUser);
+        
+        //router.push('https://t.me/goodtether_user_bot' + '?start=' + storecode + '_' + storeUser);
+
+        if (clientId === '213e1813510d42bf66a4136dcc90b032') {
+          router.push('https://t.me/goodtether_user_bot' + '?start=' + storecode + '_' + storeUser);
+        } else if (clientId === '95034cfeb204ef7777ecfe26c110a6ca') {
+          router.push('https://t.me/goodtether_golden_user_bot' + '?start=' + storecode + '_' + storeUser);
+        }
+
         
       };
 
