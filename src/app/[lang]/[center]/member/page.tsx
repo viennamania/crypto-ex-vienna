@@ -2955,9 +2955,9 @@ export default function Index({ params }: any) {
                               w-64
                               flex flex-col items-center justify-center gap-2">
 
+                              {/*
                               <div className="w-full flex flex-row items-center justify-between gap-2">
 
-                                {/* Modal open */}
                                 <button
                                   onClick={() => {
                                     setSelectedItem({
@@ -2972,9 +2972,6 @@ export default function Index({ params }: any) {
                                   보기
                                 </button>
 
-
-
-                                {/* 복사 버튼 */}
                                 <button
                                   onClick={() => {
                                     navigator.clipboard.writeText(
@@ -2995,11 +2992,12 @@ export default function Index({ params }: any) {
                                 </button>
 
                               </div>
+                              */}
 
+                              {/*
                               <div className="w-full flex flex-row items-center justify-between gap-2">
 
 
-                                {/* copy javascript code */}
                                 <button
                                   onClick={() => {
                                     navigator.clipboard.writeText(
@@ -3014,9 +3012,6 @@ export default function Index({ params }: any) {
                                   스크립트 복사
                                 </button>
                                       
-
-
-                                {/* 새창 열기 버튼 */}
                                 <button
                                   onClick={() => {
                                     window.open(
@@ -3039,13 +3034,11 @@ export default function Index({ params }: any) {
 
 
                               </div>
+                              */}
 
 
 
                               <div className="w-full flex flex-row items-center justify-between gap-2">
-
-
-                                {/* https://crypto-ex-vienna.vercel.app/ko/hmclvhyf/payment-telegram?storeUser=bbb001&depositBankName=%EC%BC%80%EC%9D%B4%EB%B1%85%ED%81%AC&depositBankAccountNumber=9283749823&depositName=%EC%9E%A5%EA%B5%AD%EC%A7%84&depositAmountKrw=1000 */}
 
                                 <button
                                     onClick={() => {
