@@ -2955,7 +2955,7 @@ export default function Index({ params }: any) {
                               w-64
                               flex flex-col items-center justify-center gap-2">
 
-                              {/*
+                              
                               <div className="w-full flex flex-row items-center justify-between gap-2">
 
                                 <button
@@ -2992,9 +2992,9 @@ export default function Index({ params }: any) {
                                 </button>
 
                               </div>
-                              */}
+                              
 
-                              {/*
+                              
                               <div className="w-full flex flex-row items-center justify-between gap-2">
 
 
@@ -3032,11 +3032,8 @@ export default function Index({ params }: any) {
                                   새창열기
                                 </button>
 
-
                               </div>
-                              */}
-
-
+                              
 
                               <div className="w-full flex flex-row items-center justify-between gap-2">
 
