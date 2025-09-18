@@ -5033,7 +5033,7 @@ const fetchBuyOrders = async () => {
                                     w-full
                                     flex flex-col gap-2 items-end justify-center">
                                     
-                                    <div className="flex flex-row gap-2">
+                                    <div className="flex flex-row items-center justify-center gap-2">
 
                                       <input
                                         disabled={confirmingPayment[index]}
