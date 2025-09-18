@@ -2933,6 +2933,7 @@ export default function Index({ params }: any) {
                                         window.open(
                                             
                                           //'https://t.me/crypto_goodtether_bot?start=' + item.storecode,
+
                                           clientId === '213e1813510d42bf66a4136dcc90b032'
                                           ? 'https://t.me/crypto_goodtether_bot?start=' + item.storecode
                                           : clientId === '95034cfeb204ef7777ecfe26c110a6ca'
@@ -2964,6 +2965,7 @@ export default function Index({ params }: any) {
                                     navigator.clipboard.writeText(
 
                                       //'https://t.me/crypto_goodtether_bot?start=' + item.storecode
+                                      
                                       clientId === '213e1813510d42bf66a4136dcc90b032'
                                       ? 'https://t.me/crypto_goodtether_bot?start=' + item.storecode
                                       : clientId === '95034cfeb204ef7777ecfe26c110a6ca'

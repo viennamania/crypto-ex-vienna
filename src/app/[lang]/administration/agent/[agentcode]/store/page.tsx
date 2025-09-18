@@ -15,8 +15,6 @@ import { useRouter }from "next//navigation";
 
 import { toast } from 'react-hot-toast';
 
-import { client } from "../../../../../client";
-
 
 
 import {
@@ -85,6 +83,11 @@ import { paymentUrl } from "../../../../../config/payment";
 
 import { version } from "../../../../../config/version";
 
+
+import {
+  clientId,
+  client
+} from "../../../../../client";
 
 
 
@@ -2007,7 +2010,14 @@ export default function Index({ params }: any) {
                                 <button
                                     onClick={() => {
                                         window.open(
-                                            'https://t.me/crypto_goodtether_bot?start=' + item.storecode,
+                                            //'https://t.me/crypto_goodtether_bot?start=' + item.storecode,
+
+                                          clientId === '213e1813510d42bf66a4136dcc90b032'
+                                          ? 'https://t.me/crypto_goodtether_bot?start=' + item.storecode
+                                          : clientId === '95034cfeb204ef7777ecfe26c110a6ca'
+                                          ? 'https://t.me/goodtether_golden_store_bot?start=' + item.storecode
+                                          : 'https://t.me/goodtether_golden_store_bot?start=' + item.storecode,
+
                                             '_blank'
                                         );
                                     }}
@@ -2028,10 +2038,18 @@ export default function Index({ params }: any) {
                                 <button
                                   onClick={() => {
                                     navigator.clipboard.writeText(
-                                      'https://t.me/crypto_goodtether_bot?start=' + item.storecode
+
+                                      ///'https://t.me/crypto_goodtether_bot?start=' + item.storecode
+
+                                      clientId === '213e1813510d42bf66a4136dcc90b032'
+                                      ? 'https://t.me/crypto_goodtether_bot?start=' + item.storecode
+                                      : clientId === '95034cfeb204ef7777ecfe26c110a6ca'
+                                      ? 'https://t.me/goodtether_golden_store_bot?start=' + item.storecode
+                                      : 'https://t.me/goodtether_golden_store_bot?start=' + item.storecode
+
                                     );
                                     //toast.success('복사되었습니다');
-                                    alert('복사되었습니다:\n' + 'https://t.me/crypto_goodtether_bot?start=' + item.storecode);
+                                    alert('복사되었습니다.');
                                   }}
                                   className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
                                   hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
