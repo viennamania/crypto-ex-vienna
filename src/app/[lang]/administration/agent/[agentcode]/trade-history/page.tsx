@@ -3750,7 +3750,7 @@ const fetchBuyOrders = async () => {
 
                                   onClick={() => {
                                     window.open(
-                                      `https://arbiscan.io/tx/${item.settlement.txid}`,
+                                      `https://bscscan.com/tx/${item.settlement.txid}`,
                                       '_blank'
                                     );
                                   }}
@@ -3772,6 +3772,8 @@ const fetchBuyOrders = async () => {
                                         item?.settlement?.settlementWalletAddress &&
                                       item?.settlement?.settlementWalletAddress?.slice(0, 5) + '...'}
                                     </span>
+
+                                    {/*
                                     <span>
                                       {
                                         item?.settlement?.agentFeeAmount ?
@@ -3790,6 +3792,7 @@ const fetchBuyOrders = async () => {
                                         item?.settlement?.feeWalletAddress &&
                                       item?.settlement?.feeWalletAddress?.slice(0, 5) + '...'}
                                     </span>
+                                    */}
 
                                   </div>
 
