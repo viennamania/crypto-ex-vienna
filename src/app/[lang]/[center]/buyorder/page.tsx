@@ -491,11 +491,14 @@ export default function Index({ params }: any) {
   const activeAccount = useActiveAccount();
 
   
+  
   const address = activeAccount?.address;
 
+
+
   // for test with wallet address
-  // 0x8527dDa689a7b5484de68ed525723e48d4f68a14
-  ///const address = '0x8527dDa689a7b5484de68ed525723e48d4f68a14';
+  // 0x715BA71c3ae52aF26EaFe6cDbEdda3d1EFb5cD37
+  /////const address = '0x715BA71c3ae52aF26EaFe6cDbEdda3d1EFb5cD37';
 
 
 
@@ -2680,7 +2683,8 @@ const fetchBuyOrders = async () => {
   
           const data = await response.json();
   
-          //console.log("data", data);
+          //console.log("getOneStore data", data);
+
   
           if (data.result) {
   
@@ -4564,11 +4568,13 @@ const fetchBuyOrders = async () => {
                 <div className="flex flex-col gap-2 items-center">
                   <div className="text-sm">가맹점 결제 수수료율(%)</div>
                   <div className="text-4xl font-semibold text-zinc-500">
-                    
-                    {(store?.settlementFeePercent ? store.settlementFeePercent : 0
-                       + store?.agentFeePercent ? store.agentFeePercent : 0
-                       + platformFeePercentage ? platformFeePercentage : 0
-                       ).toFixed(2)}
+
+                    {
+                      Number(parseFloat(store?.settlementFeePercent ? store.settlementFeePercent : 0.0)
+                       + parseFloat(store?.agentFeePercent ? store.agentFeePercent : 0.0)
+                       + parseFloat(Number(platformFeePercentage).toFixed(2))
+                       ).toFixed(2)
+                    }
 
 
                   </div>
@@ -7034,8 +7040,8 @@ const fetchBuyOrders = async () => {
                                         fontFamily: 'monospace',
                                       }}>
                                       {Number(
-                                        100 - (item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0)
-                                         - (item.store.settlementFeePercent ? item.store.settlementFeePercent : 0.3)
+                                        100.0 - (item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0)
+                                         - (item.store.settlementFeePercent ? item.store.settlementFeePercent : 0.0)
                                          - (item?.settlement?.platformFeePercent ? item?.settlement?.platformFeePercent : 0.0)
                                       ).toFixed(2)
                                       }%
