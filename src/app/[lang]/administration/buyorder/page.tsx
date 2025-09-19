@@ -6793,6 +6793,7 @@ const fetchBuyOrders = async () => {
                                   </span>
                                 </div>
 
+                                {/*
                                 <div className="w-full flex flex-row gap-2 items-center justify-center">
                                   <span className="
                                   w-14
@@ -6840,6 +6841,7 @@ const fetchBuyOrders = async () => {
                                     {Number(item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0).toFixed(2)}%
                                   </span>
                                 </div>
+                                */}
 
                               </div>
                             )}
@@ -7134,6 +7136,7 @@ const fetchBuyOrders = async () => {
                                       item?.settlement?.settlementWalletAddress?.slice(0, 5) + '...'}
                                     </span>
 
+                                    {/*
                                     <span>
                                       {
                                         item?.settlement?.platformFeeAmount ?
@@ -7165,7 +7168,7 @@ const fetchBuyOrders = async () => {
                                         item?.settlement?.agentFeeWalletAddress &&
                                       item?.settlement?.agentFeeWalletAddress?.slice(0, 5) + '...'}
                                     </span>
-
+                                    */}
 
 
 

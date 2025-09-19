@@ -4618,6 +4618,7 @@ const fetchBuyOrders = async () => {
                   </div>
                 </div>
 
+                {/*
                 <div className="flex flex-col gap-2 items-center">
                   <div className="text-sm">결제 수수료량(USDT)</div>
                   <div className="flex flex-row items-center gap-1">
@@ -4655,6 +4656,7 @@ const fetchBuyOrders = async () => {
                     
                   </div>
                 </div>
+                */}
 
               </div>
 
