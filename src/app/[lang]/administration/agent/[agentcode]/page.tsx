@@ -2128,9 +2128,11 @@ export default function Index({ params }: any) {
                       <th className="px-4 py-2 text-right">
                         결제량(USDT)<br/>결제금액(원)
                       </th>
+                      {/*
                       <th className="px-4 py-2 text-right">
                         수수료수량(USDT)<br/>수수료금액(원)
                       </th>
+                      */}
 
                       {/*
                       <th className="px-4 py-2 text-left">가입일</th>
@@ -2189,13 +2191,15 @@ export default function Index({ params }: any) {
                           <br/>
                           {store.totalSettlementAmountKRW > 0 ? Number(store.totalSettlementAmountKRW)?.toLocaleString() : 0}
                         </td>
+                        {/*
                         <td className="px-4 py-2
-                        text-right
+                          text-right
                         ">
                           {store.totalAgentFeeAmount > 0 ? Number(store.totalAgentFeeAmount)?.toLocaleString() : 0}
                           <br/>
                           {store.totalAgentFeeAmountKRW > 0 ? Number(store.totalAgentFeeAmountKRW)?.toLocaleString() : 0}
                         </td>
+                        */}
                         {/*
                         <td className="px-4 py-2">{new Date(store.createdAt).toLocaleDateString()}</td>
                         */}

@@ -2636,13 +2636,15 @@ export default function Index({ params }: any) {
                             <div className="flex flex-row items-center justify-center gap-2">
 
                               <div className="flex flex-col items-center justify-center gap-2">
-                                <span>금액(원)</span>
-                                <span>수량(USDT)</span>
+                                <span>결제금액(원)</span>
+                                <span>결제량(USDT)</span>
                               </div>
+                              {/*
                               <div className="flex flex-col items-center justify-center gap-2">
                                 <span>수수료금액(원)</span>
                                 <span>수수료수량(USDT)</span>
                               </div>
+                              */}
 
                             </div>
                             
@@ -2664,8 +2666,8 @@ export default function Index({ params }: any) {
                             <div className="flex flex-row items-center justify-center gap-2">
                               
                               <div className="flex flex-col items-center justify-center gap-2">
-                                <span>금액(원)</span>
-                                <span>수량(USDT)</span>
+                                <span>청산금액(원)</span>
+                                <span>청산량(USDT)</span>
                               </div>
 
                             </div>

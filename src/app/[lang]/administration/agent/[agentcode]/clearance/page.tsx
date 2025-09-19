@@ -1761,6 +1761,7 @@ export default function Index({ params }: any) {
                   </div>
                 </div>
 
+                {/*
                 <div className="flex flex-col gap-2 items-center">
                   <div className="text-sm">총 수수료금액(원)</div>
                   <div className="text-xl font-semibold text-zinc-500">
@@ -1773,6 +1774,7 @@ export default function Index({ params }: any) {
                     {tradeSummary.totalFeeAmount?.toLocaleString()}
                   </div>
                 </div>
+                */}
               </div>
 
 
