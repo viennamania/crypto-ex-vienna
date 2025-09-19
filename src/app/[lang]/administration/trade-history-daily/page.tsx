@@ -1981,6 +1981,7 @@ const fetchBuyOrders = async () => {
                 </div>
               </div>
 
+              {/*
               <div className="flex flex-col gap-2 items-center">
 
                 <div className="flex flex-row gap-2 items-center">
@@ -2061,6 +2062,7 @@ const fetchBuyOrders = async () => {
                 </div>
 
               </div>
+              */}
 
             </div>
 
@@ -2236,13 +2238,13 @@ const fetchBuyOrders = async () => {
                       <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">결제량(USDT)</th>
                       <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">결제금액(원)</th>
 
-                      
+                      {/*
                       <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">AG 수수료량(USDT)</th>
                       <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">AG 수수료금액(원)</th>
 
                       <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">센터 수수료량(USDT)</th>
                       <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">센터 수수료금액(원)</th>
-
+                      */}
 
 
                     </tr>
@@ -2291,6 +2293,7 @@ const fetchBuyOrders = async () => {
                         </td>
 
 
+                        {/*
                         <td className="px-4 py-2 text-sm text-[#409192] font-semibold text-right"
                           style={{ fontFamily: 'monospace' }}
                         >
@@ -2312,6 +2315,7 @@ const fetchBuyOrders = async () => {
                         >
                           {Number(order.totalFeeAmountKRW).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                         </td>
+                        */}
 
 
 

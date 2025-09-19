@@ -1452,8 +1452,10 @@ export default function Index({ params }: any) {
                       <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">결제수(건)/미결제수(건)</th>
                       */}
                       
+                      {/*
                       <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">AG 수수료량(USDT)</th>
                       <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">AG 수수료금액(원)</th>
+                      */}
 
                       {/*
                       <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">센터 수수료량(USDT)</th>
@@ -1497,6 +1499,7 @@ export default function Index({ params }: any) {
                         </td>
                         */}
 
+                        {/*
                         <td className="px-4 py-2 text-sm text-[#409192] font-semibold text-right"
                           style={{ fontFamily: 'monospace' }}
                         >
@@ -1507,6 +1510,7 @@ export default function Index({ params }: any) {
                         >
                           {Number(order.totalAgentFeeAmountKRW).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                         </td>
+                        */}
 
 
 
