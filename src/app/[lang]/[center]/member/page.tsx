@@ -3015,9 +3015,30 @@ export default function Index({ params }: any) {
                                       //+ '_' + item.buyer?.depositName
                                       //+ '_' + depositAmountKrw[index]
 
-                                    
+                                    // if (clientId === '213e1813510d42bf66a4136dcc90b032') 'https://crypto-ex-vienna.vercel.app'
+                                    // if (clientId === '95034cfeb204ef7777ecfe26c110a6ca') 'https://crypto-ex-vienna-golden.vercel.app'
+                                    // if (clientId === '5940b4b6011fd9f3302f40912883c1fc') 'https://crypto-ex-vienna-maga.vercel.app'
 
-                                      paymentUrl + '/' + params.lang + '/' + params.center + '/payment-telegram?storeUser=' + item.nickname
+                                    clientId === '213e1813510d42bf66a4136dcc90b032' ?
+                                      'https://crypto-ex-vienna.vercel.app' + '/' + params.lang + '/' + params.center + '/payment-telegram?storeUser=' + item.nickname
+                                      + '&depositBankName=' + item?.buyer?.depositBankName
+                                      + '&depositBankAccountNumber=' + item?.buyer?.depositBankAccountNumber
+                                      + '&depositName=' + item?.buyer?.depositName
+                                      + '&depositAmountKrw=' + depositAmountKrw[index]
+                                    : clientId === '95034cfeb204ef7777ecfe26c110a6ca' ?
+                                      'https://crypto-ex-vienna-golden.vercel.app' + '/' + params.lang + '/' + params.center + '/payment-telegram?storeUser=' + item.nickname
+                                      + '&depositBankName=' + item?.buyer?.depositBankName
+                                      + '&depositBankAccountNumber=' + item?.buyer?.depositBankAccountNumber
+                                      + '&depositName=' + item?.buyer?.depositName
+                                      + '&depositAmountKrw=' + depositAmountKrw[index]
+                                    : clientId === '5940b4b6011fd9f3302f40912883c1fc' ?
+                                      'https://crypto-ex-vienna-maga.vercel.app' + '/' + params.lang + '/' + params.center + '/payment-telegram?storeUser=' + item.nickname
+                                      + '&depositBankName=' + item?.buyer?.depositBankName
+                                      + '&depositBankAccountNumber=' + item?.buyer?.depositBankAccountNumber
+                                      + '&depositName=' + item?.buyer?.depositName
+                                      + '&depositAmountKrw=' + depositAmountKrw[index]
+                                    :
+                                      'https://crypto-ex-vienna.vercel.app' + '/' + params.lang + '/' + params.center + '/payment-telegram?storeUser=' + item.nickname
                                       + '&depositBankName=' + item?.buyer?.depositBankName
                                       + '&depositBankAccountNumber=' + item?.buyer?.depositBankAccountNumber
                                       + '&depositName=' + item?.buyer?.depositName
