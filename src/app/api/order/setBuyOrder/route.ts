@@ -119,6 +119,7 @@ export async function POST(request: NextRequest) {
   const sellerWalletAddress = store.sellerWalletAddress || null;
   const settlementWalletAddress = store.settlementWalletAddress || null;
   const settlementFeeWalletAddress = store.settlementFeeWalletAddress || null;
+  const bankInfo = store.bankInfo || null;
 
   if (!sellerWalletAddress || !settlementWalletAddress || !settlementFeeWalletAddress) {
     return NextResponse.json({
@@ -164,6 +165,16 @@ export async function POST(request: NextRequest) {
       error: "Invalid USDT amount",
     }, { status: 400 });
   }
+
+  // check bankInfo is exists
+  if (!bankInfo) {
+    return NextResponse.json({
+      result: null,
+      error: "Bank information not configured for the store",
+    }, { status: 500 });
+  }
+
+
 
   // check krwAmount is valid
   if (typeof krwAmount !== "number" || krwAmount <= 0) {
