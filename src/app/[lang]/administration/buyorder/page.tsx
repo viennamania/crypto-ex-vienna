@@ -6171,7 +6171,7 @@ const fetchBuyOrders = async () => {
 
                                   {item?.paymentMethod === 'bank' && (
 
-                                    <div className="flex flex-col gap-2 items-center justify-center">
+                                    <div className="w-36 flex flex-col gap-2 items-center justify-center">
                                       <div className="flex flex-row gap-2 items-center justify-center">
                                         <span className="text-sm text-zinc-500">
                                           {item.store?.bankInfo?.accountHolder}
