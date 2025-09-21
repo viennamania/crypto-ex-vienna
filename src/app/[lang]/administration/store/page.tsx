@@ -2940,6 +2940,8 @@ export default function Index({ params }: any) {
                                           ? 'https://t.me/crypto_goodtether_bot?start=' + item.storecode
                                           : clientId === '95034cfeb204ef7777ecfe26c110a6ca'
                                           ? 'https://t.me/goodtether_golden_store_bot?start=' + item.storecode
+                                          : clientId === '5940b4b6011fd9f3302f40912883c1fc'
+                                          ? 'https://t.me/goodtether_maga_store_bot?start=' + item.storecode
                                           : 'https://t.me/goodtether_golden_store_bot?start=' + item.storecode,
 
                                             '_blank'
@@ -2972,6 +2974,8 @@ export default function Index({ params }: any) {
                                       ? 'https://t.me/crypto_goodtether_bot?start=' + item.storecode
                                       : clientId === '95034cfeb204ef7777ecfe26c110a6ca'
                                       ? 'https://t.me/goodtether_golden_store_bot?start=' + item.storecode
+                                      : clientId === '5940b4b6011fd9f3302f40912883c1fc'
+                                      ? 'https://t.me/goodtether_maga_store_bot?start=' + item.storecode
                                       : 'https://t.me/goodtether_golden_store_bot?start=' + item.storecode
 
                                     );

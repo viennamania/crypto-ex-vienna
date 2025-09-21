@@ -2036,8 +2036,10 @@ export default function Index({ params }: any) {
                                           clientId === '213e1813510d42bf66a4136dcc90b032'
                                           ? 'https://t.me/goodtether_agent_bot?start=' + item.agentcode
                                           : clientId === '95034cfeb204ef7777ecfe26c110a6ca'
-                                            ? 'https://t.me/goodtether_golden_agent_bot?start=' + item.agentcode
-                                            : 'https://t.me/goodtether_agent_bot?start=' + item.agentcode,
+                                          ? 'https://t.me/goodtether_golden_agent_bot?start=' + item.agentcode
+                                          : clientId === '5940b4b6011fd9f3302f40912883c1fc'
+                                          ? 'https://t.me/goodtether_maga_agent_bot?start=' + item.agentcode
+                                          : 'https://t.me/goodtether_agent_bot?start=' + item.agentcode,
 
 
                                             '_blank'
@@ -2060,17 +2062,18 @@ export default function Index({ params }: any) {
                                 <button
                                   onClick={() => {
                                     navigator.clipboard.writeText(
-                                      //'https://t.me/goodtether_agent_bot?start=' + item.agentcode
 
                                       clientId === '213e1813510d42bf66a4136dcc90b032'
                                       ? 'https://t.me/goodtether_agent_bot?start=' + item.agentcode
                                       : clientId === '95034cfeb204ef7777ecfe26c110a6ca'
-                                        ? 'https://t.me/goodtether_golden_agent_bot?start=' + item.agentcode
-                                        : 'https://t.me/goodtether_agent_bot?start=' + item.agentcode
+                                      ? 'https://t.me/goodtether_golden_agent_bot?start=' + item.agentcode
+                                      : clientId === '5940b4b6011fd9f3302f40912883c1fc'
+                                      ? 'https://t.me/goodtether_maga_agent_bot?start=' + item.agentcode
+                                      : 'https://t.me/goodtether_agent_bot?start=' + item.agentcode
 
                                     );
                                     //toast.success('복사되었습니다');
-                                    alert('복사되었습니다:\n' + 'https://t.me/goodtether_agent_bot?start=' + item.agentcode);
+                                    alert('복사되었습니다.');
                                   }}
                                   className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
                                   hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"

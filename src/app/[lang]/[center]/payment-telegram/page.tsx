@@ -800,9 +800,10 @@ export default function Index({ params }: any) {
           router.push('https://t.me/goodtether_user_bot' + '?start=' + storecode + '_' + storeUser);
         } else if (clientId === '95034cfeb204ef7777ecfe26c110a6ca') {
           router.push('https://t.me/goodtether_golden_user_bot' + '?start=' + storecode + '_' + storeUser);
+        } else if (clientId === '5940b4b6011fd9f3302f40912883c1fc') {
+          router.push('https://t.me/goodtether_maga_user_bot' + '?start=' + storecode + '_' + storeUser);
         }
 
-        
       };
 
       setUserPaymentInfo();
