@@ -3354,45 +3354,6 @@ const fetchBuyOrders = async () => {
 
 
 
-
-            {address && (
-                <div className="w-full flex flex-col xl:flex-row items-center justify-end gap-2">
-
-
-                    <div className="flex flex-row items-center justify-center gap-2">
-                        <span className="text-sm text-zinc-500">
-                          나의 USDT지갑
-                        </span>
-
-                        <Image
-                            src="/icon-shield.png"
-                            alt="Wallet"
-                            width={100}
-                            height={100}
-                            className="w-6 h-6"
-                        />
-                        <button
-                            className="text-lg text-zinc-600 underline"
-                            onClick={() => {
-                                navigator.clipboard.writeText(address);
-                                toast.success(Copied_Wallet_Address);
-                            } }
-                        >
-                            {address.substring(0, 6)}...{address.substring(address.length - 4)}
-                        </button>
-
-                    </div>
-
-                    <div className="flex flex-row items-center justify-center  gap-2">
-                        <span className="text-2xl xl:text-4xl font-semibold text-[#409192]">
-                            {Number(balance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                        </span>
-                    </div>
-
-                </div>
-            )}
-
-
             <div className="w-full flex flex-row items-center justify-end gap-2">
 
               {/*
