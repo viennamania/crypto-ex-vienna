@@ -99,6 +99,9 @@ import {
 
 
 
+
+
+
 interface BuyOrder {
   _id: string;
   createdAt: string;
@@ -186,16 +189,6 @@ const wallet = inAppWallet({
 });  
 
 
-// get escrow wallet address
-
-//const escrowWalletAddress = "0x2111b6A49CbFf1C8Cc39d13250eF6bd4e1B59cF6";
-
-
-
-const contractAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"; // USDT on Polygon
-const contractAddressArbitrum = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"; // USDT on Arbitrum
-
-
 
 
 export default function Index({ params }: any) {
@@ -215,7 +208,7 @@ export default function Index({ params }: any) {
 
 
 
-    const activeWallet = useActiveWallet();
+  const activeWallet = useActiveWallet();
     
 
   const contract = getContract({
@@ -224,14 +217,21 @@ export default function Index({ params }: any) {
     // the chain the contract is deployed on
     
     
-    chain: arbitrum,
+    //chain: arbitrum,
+    chain:  chain === "ethereum" ? ethereum :
+            chain === "polygon" ? polygon :
+            chain === "arbitrum" ? arbitrum :
+            chain === "bsc" ? bsc : arbitrum,
   
   
   
     // the contract's address
     ///address: contractAddressArbitrum,
 
-    address: contractAddressArbitrum,
+    address: chain === "ethereum" ? ethereumContractAddressUSDT :
+            chain === "polygon" ? polygonContractAddressUSDT :
+            chain === "arbitrum" ? arbitrumContractAddressUSDT :
+            chain === "bsc" ? bscContractAddressUSDT : arbitrumContractAddressUSDT,
 
 
     // OPTIONAL: the contract's abi
@@ -534,39 +534,23 @@ export default function Index({ params }: any) {
     // get the balance
     const getBalance = async () => {
 
-      ///console.log('getBalance address', address);
+      if (!address) {
+        setBalance(0);
+        return;
+      }
 
       
       const result = await balanceOf({
         contract,
-        address: address || "",
+        address: address,
       });
 
   
-      //console.log(result);
-  
-      setBalance( Number(result) / 10 ** 6 );
-
-
-      /*
-      await fetch('/api/user/getBalanceByWalletAddress', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chain: params.center,
-          walletAddress: address,
-        }),
-      })
-
-      .then(response => response.json())
-
-      .then(data => {
-          setNativeBalance(data.result?.displayValue);
-      });
-      */
-
+      if (chain === 'bsc') {
+        setBalance( Number(result) / 10 ** 18 );
+      } else {
+        setBalance( Number(result) / 10 ** 6 );
+      }
 
 
     };
@@ -574,70 +558,19 @@ export default function Index({ params }: any) {
 
     if (address) getBalance();
 
+    
     const interval = setInterval(() => {
       if (address) getBalance();
     } , 5000);
 
     return () => clearInterval(interval);
+    
 
-  } , [address, contract, params.center]);
-
-
-
+  } , [address, contract]);
 
 
 
 
-
-
-
-
-  const [escrowWalletAddress, setEscrowWalletAddress] = useState('');
-  const [makeingEscrowWallet, setMakeingEscrowWallet] = useState(false);
-
-  const makeEscrowWallet = async () => {
-      
-    if (!address) {
-      toast.error('Please connect your wallet');
-      return;
-    }
-
-
-    setMakeingEscrowWallet(true);
-
-    fetch('/api/order/getEscrowWalletAddress', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        lang: params.lang,
-        storecode: params.center,
-        walletAddress: address,
-        //isSmartAccount: activeWallet === inAppConnectWallet ? false : true,
-        isSmartAccount: false,
-      }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        
-        //console.log('getEscrowWalletAddress data.result', data.result);
-
-
-        if (data.result) {
-          setEscrowWalletAddress(data.result.escrowWalletAddress);
-          toast.success(Escrow_Wallet_Address_has_been_created);
-        } else {
-          toast.error(Failed_to_create_Escrow_Wallet_Address);
-        }
-    })
-    .finally(() => {
-      setMakeingEscrowWallet(false);
-    });
-
-  }
-
-  //console.log("escrowWalletAddress", escrowWalletAddress);
 
 
 
@@ -748,26 +681,20 @@ export default function Index({ params }: any) {
     .then(data => {
         
         //console.log('data.result', data.result);
-
-
         setUser(data.result);
-
-        setEscrowWalletAddress(data.result.escrowWalletAddress);
-
         setIsAdmin(data.result?.role === "admin");
 
     })
     .catch((error) => {
         console.error('Error:', error);
         setUser(null);
-        setEscrowWalletAddress('');
         setIsAdmin(false);
     });
 
     setLoadingUser(false);
 
 
-  } , [address]);
+  } , [address, params.center]);
 
 
 
@@ -1391,14 +1318,18 @@ export default function Index({ params }: any) {
   const getBalanceOfWalletAddress = async (walletAddress: string) => {
   
 
-    const balance = await balanceOf({
+    const result = await balanceOf({
       contract,
       address: walletAddress,
     });
     
-    console.log('getBalanceOfWalletAddress', walletAddress, 'balance', balance);
+    //console.log('getBalanceOfWalletAddress', walletAddress, 'balance', balance);
 
-    toast.success(`잔액이 업데이트되었습니다. 잔액: ${(Number(balance) / 10 ** 6).toFixed(3)} USDT`);
+
+    const balance = chain === 'bsc' ? Number(result) / 10 ** 18 : Number(result) / 10 ** 6;
+
+    alert(`잔액이 업데이트되었습니다. 잔액: ${balance.toFixed(3)} USDT`);
+
 
     /*
     setAllUsers((prev) => {
@@ -1418,7 +1349,7 @@ export default function Index({ params }: any) {
       const newUsdtBalance = [...prev];
       const index = allUsers.findIndex(u => u.walletAddress === walletAddress);
       if (index !== -1) {
-        newUsdtBalance[index] = Number(balance) / 10 ** 6; // Convert to USDT
+        newUsdtBalance[index] = balance;
       }
       return newUsdtBalance;
     });
@@ -1426,7 +1357,7 @@ export default function Index({ params }: any) {
 
 
 
-    return Number(balance) / 10 ** 6; // Convert to USDT
+    return balance;
 
   };
 
