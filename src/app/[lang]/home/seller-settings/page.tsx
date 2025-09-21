@@ -524,7 +524,7 @@ export default function SettingsPage({ params }: any) {
         
         ///if (!/^[a-z0-9]*$/.test(nickname)) {
         if (!/^[a-z0-9]*$/.test(editedNickname)) {
-            toast.error(Nickname_should_be_alphanumeric_lowercase);
+            alert(Nickname_should_be_alphanumeric_lowercase);
             return;
         }
 

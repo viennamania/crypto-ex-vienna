@@ -504,7 +504,7 @@ export default function SettingsPage({ params }: any) {
         
         ///if (!/^[a-z0-9]*$/.test(nickname)) {
         if (!/^[a-z0-9]*$/.test(editedNickname)) {
-            toast.error(Nickname_should_be_alphanumeric_lowercase);
+            alert(Nickname_should_be_alphanumeric_lowercase);
             return;
         }
 
@@ -1226,7 +1226,7 @@ export default function SettingsPage({ params }: any) {
                                             // check if the value is alphanumeric and lowercase
 
                                             if (!/^[a-z0-9]*$/.test(e.target.value)) {
-                                                toast.error(Nickname_should_be_alphanumeric_lowercase);
+                                                alert(Nickname_should_be_alphanumeric_lowercase);
                                                 return;
                                             }
                                             if ( e.target.value.length > 10) {
