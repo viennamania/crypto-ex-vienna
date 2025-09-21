@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
+  getStoreByStorecode,
+} from '@lib/api/store';
+
+import {
 	insertBuyOrder,
 } from '@lib/api/order';
 
@@ -69,7 +73,7 @@ export async function POST(request: NextRequest) {
     paymentMethod
   } = body;
 
-  console.log("setBuyOrder =====  body", body);
+  ////console.log("setBuyOrder =====  body", body);
 
   /*
   {
@@ -95,6 +99,81 @@ export async function POST(request: NextRequest) {
 
   const agentcode = agent?.agentcode || null;
   */
+
+
+
+
+  // check storecode exists and valid
+  const store = await getStoreByStorecode({
+    storecode: storecode,
+  });
+
+  if (!store) {
+    return NextResponse.json({
+      result: null,
+      error: "Invalid storecode",
+    }, { status: 400 });
+  }
+
+  // sellerWalletAddress, settlementWalletAddress
+  const sellerWalletAddress = store.sellerWalletAddress || null;
+  const settlementWalletAddress = store.settlementWalletAddress || null;
+
+  if (!sellerWalletAddress || !settlementWalletAddress) {
+    return NextResponse.json({
+      result: null,
+      error: "Store wallet addresses not configured",
+    }, { status: 500 });
+  }
+
+  // check walletAddress is valid, sellerWalletAddress, settlementWalletAddress is valid
+  if (!ethers.utils.isAddress(walletAddress)) {
+    return NextResponse.json({
+      result: null,
+      error: "Invalid wallet address",
+    }, { status: 400 });
+  }
+
+  if (!ethers.utils.isAddress(sellerWalletAddress)) {
+    return NextResponse.json({
+      result: null,
+      error: "Invalid seller wallet address",
+    }, { status: 500 });
+  }
+
+  if (!ethers.utils.isAddress(settlementWalletAddress)) {
+    return NextResponse.json({
+      result: null,
+      error: "Invalid settlement wallet address",
+    }, { status: 500 });
+  }
+
+
+  // check usdtAmount is valid
+  if (typeof usdtAmount !== "number" || usdtAmount <= 0) {
+    return NextResponse.json({
+      result: null,
+      error: "Invalid USDT amount",
+    }, { status: 400 });
+  }
+
+  // check krwAmount is valid
+  if (typeof krwAmount !== "number" || krwAmount <= 0) {
+    return NextResponse.json({
+      result: null,
+      error: "Invalid KRW amount",
+    }, { status: 400 });
+  }
+
+  // check rate is valid
+  if (typeof rate !== "number" || rate <= 0) {
+    return NextResponse.json({
+      result: null,
+      error: "Invalid rate",
+    }, { status: 400 });
+  }
+
+
   
 
   // generate escrow wallet
