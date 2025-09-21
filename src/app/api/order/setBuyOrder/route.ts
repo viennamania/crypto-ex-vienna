@@ -115,11 +115,12 @@ export async function POST(request: NextRequest) {
     }, { status: 400 });
   }
 
-  // sellerWalletAddress, settlementWalletAddress
+  // sellerWalletAddress, settlementWalletAddress, settlementFeeWalletAddress
   const sellerWalletAddress = store.sellerWalletAddress || null;
   const settlementWalletAddress = store.settlementWalletAddress || null;
+  const settlementFeeWalletAddress = store.settlementFeeWalletAddress || null;
 
-  if (!sellerWalletAddress || !settlementWalletAddress) {
+  if (!sellerWalletAddress || !settlementWalletAddress || !settlementFeeWalletAddress) {
     return NextResponse.json({
       result: null,
       error: "Store wallet addresses not configured",
@@ -145,6 +146,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       result: null,
       error: "Invalid settlement wallet address",
+    }, { status: 500 });
+  }
+
+  if (!ethers.utils.isAddress(settlementFeeWalletAddress)) {
+    return NextResponse.json({
+      result: null,
+      error: "Invalid settlement fee wallet address",
     }, { status: 500 });
   }
 
