@@ -3500,6 +3500,7 @@ export default function Index({ params }: any) {
                                 </span>
 
                                 {/* USDT 잔액 표시 */}
+                                {/*
                                 <div className="w-full flex flex-row items-center justify-center gap-1">
                                   <Image
                                     src="/icon-tether.png"
@@ -3520,11 +3521,12 @@ export default function Index({ params }: any) {
                                 >
                                   {item?.nativeBalance ? item?.nativeBalance.toFixed(3).toLocaleString('us-US') : 0}{' '}ETH
                                 </span>
+                                */}
                               
                               </div>
 
 
-                              {/* button to getBalance of USDT */}
+                              {/*
                               <button
                                 //disabled={!isAdmin || insertingStore}
                                 onClick={() => {
@@ -3545,6 +3547,7 @@ export default function Index({ params }: any) {
                               >
                                 잔액 확인하기
                               </button>
+                              */}
 
                             </div>
                           </td>

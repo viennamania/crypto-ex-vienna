@@ -3150,7 +3150,8 @@ export default function Index({ params }: any) {
                               <button
                                 onClick={() => {
                                   clearanceWalletAddress(item.walletAddress);
-                                  toast.success('잔액을 회수했습니다.');
+                                  ///toast.success('잔액을 회수했습니다.');
+                                  alert('잔액을 회수했습니다.');
                                 }}
                                 className={`
                                   w-full mb-2

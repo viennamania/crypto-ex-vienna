@@ -1514,21 +1514,15 @@ export default function Index({ params }: any) {
   const getBalanceOfWalletAddress = async (walletAddress: string) => {
   
 
-    const balance = await balanceOf({
+    const result = await balanceOf({
       contract,
       address: walletAddress,
     });
     
-    console.log('getBalanceOfWalletAddress', walletAddress, 'balance', balance);
+   const balance = chain === 'bsc' ? Number(result) / 10 ** 18 : Number(result) / 10 ** 6;
 
-    //toast.success(`잔액이 업데이트되었습니다. 잔액: ${(Number(balance) / 10 ** 6).toFixed(3)} USDT`);
+    alert(`잔액이 업데이트되었습니다. 잔액: ${balance.toFixed(3)} USDT`);
 
-    // if chain is bsc, then 10 ** 18
-    if (chain === 'bsc') {
-      toast.success(`잔액이 업데이트되었습니다. 잔액: ${(Number(balance) / 10 ** 18).toFixed(3)} USDT`);
-    } else {
-      toast.success(`잔액이 업데이트되었습니다. 잔액: ${(Number(balance) / 10 ** 6).toFixed(3)} USDT`);
-    }
 
     /*
     setAllUsers((prev) => {
@@ -1551,7 +1545,7 @@ export default function Index({ params }: any) {
       const newUsdtBalance = [...prev];
       const index = allBuyer.findIndex(u => u.walletAddress === walletAddress);
       if (index !== -1) {
-        newUsdtBalance[index] = Number(balance) / 10 ** 6; // Convert to USDT
+        newUsdtBalance[index] = balance;
       }
       return newUsdtBalance;
     });
@@ -3013,7 +3007,7 @@ export default function Index({ params }: any) {
                                <button
                                  onClick={() => {
                                    clearanceWalletAddress(item.walletAddress);
-                                   toast.success('잔액을 회수했습니다.');
+                                   alert('잔액을 회수했습니다.');
                                  }}
                                  className={`
                                    w-full mb-2
