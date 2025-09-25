@@ -1091,7 +1091,7 @@ export default function Index({ params }: any) {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    router.push('/' + params.lang + '/admin/client-settings');
+                    router.push('/' + params.lang + '/administration/client-settings');
                   }}
                 >
                   <Image
