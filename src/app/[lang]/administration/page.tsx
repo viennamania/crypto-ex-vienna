@@ -1087,6 +1087,24 @@ export default function Index({ params }: any) {
 
 
 
+              {isAdmin && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push('/' + params.lang + '/admin/client-settings');
+                  }}
+                >
+                  <Image
+                    src="/icon-gear.png"
+                    alt="Settings"
+                    width={20}
+                    height={20}
+                    className="rounded-lg w-7 h-7 hover:opacity-70"
+                  />
+                </button>
+              )}
+
+
             </div>
 
 
