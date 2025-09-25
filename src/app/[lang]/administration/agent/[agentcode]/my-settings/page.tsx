@@ -1547,9 +1547,9 @@ export default function SettingsPage({ params }: any) {
 
 
                             {/* agent usdtKRWRate */}
+                            {/*
                             <div className="w-full flex flex-col gap-5 items-center justify-between border border-gray-300 p-4 rounded-lg">
-                                
-
+                            
                                 <div className='w-full flex flex-row items-center justify-start gap-2'>
                                     <Image
                                         src="/icon-exchange-rate.png"
@@ -1564,7 +1564,6 @@ export default function SettingsPage({ params }: any) {
                                 </div>
 
                                 <div className='w-full flex flex-row items-center justify-start gap-2'>
-                                    {/* dot */}
                                     <div className='w-2 h-2 bg-green-500 rounded-full'></div>
                                     <span className="text-lg text-zinc-500 font-semibold">
                                         USDT-KRW 환율(원)
@@ -1577,11 +1576,6 @@ export default function SettingsPage({ params }: any) {
                                         }
                                     </span>
                                 </div>
-
-                                {/* updateUsdtKRWRate */}
-                                {/* 1300 - 1500 */}
-                                {/* step 1 */}
-                                {/*
                                 <div className='w-full flex flex-row items-center justify-start gap-2'>
                                     <input
                                         disabled={!address || updatingUsdtKRWRate}
@@ -1613,9 +1607,9 @@ export default function SettingsPage({ params }: any) {
                                         {updatingUsdtKRWRate ? "수정 중..." : "수정"}
                                     </button>
                                 </div>
-                                */}
 
                             </div>
+                            */}
 
                         {/*
                         <div className="w-full flex flex-col gap-5 items-center justify-between border border-gray-300 p-4 rounded-lg">
