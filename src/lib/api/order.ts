@@ -705,7 +705,13 @@ export async function cancelTradeByAdmin() {
       
     /////////acceptedAt: { $lt: new Date(Date.now() - 3 * 60 * 1000).toISOString() }
 
-    acceptedAt: { $lt: new Date(new Date().getTime() - 3 * 60 * 1000).toISOString() }
+    //////acceptedAt: { $lt: new Date(new Date().getTime() - 3 * 60 * 1000).toISOString() }
+
+
+    acceptedAt: { $lt: new Date(new Date().getTime() - 30 * 60 * 1000).toISOString() }
+
+
+
 
     },
 
