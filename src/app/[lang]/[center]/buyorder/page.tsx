@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, act } from "react";
+import { useState, useEffect, use, act, useRef } from "react";
 
 import Image from "next/image";
 
@@ -510,7 +510,7 @@ export default function Index({ params }: any) {
   
 
 
-
+  /*
   const [balance, setBalance] = useState(0);
   useEffect(() => {
 
@@ -545,64 +545,7 @@ export default function Index({ params }: any) {
     return () => clearInterval(interval);
 
   } , [address, contract]);
-
-
-
-
-
-
-
-
-
-
-
-  const [escrowWalletAddress, setEscrowWalletAddress] = useState('');
-  const [makeingEscrowWallet, setMakeingEscrowWallet] = useState(false);
-
-  const makeEscrowWallet = async () => {
-      
-    if (!address) {
-      toast.error('Please connect your wallet');
-      return;
-    }
-
-
-    setMakeingEscrowWallet(true);
-
-    fetch('/api/order/getEscrowWalletAddress', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        lang: params.lang,
-        storecode: params.center,
-        walletAddress: address,
-        //isSmartAccount: activeWallet === inAppConnectWallet ? false : true,
-        isSmartAccount: false,
-      }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        
-        //console.log('getEscrowWalletAddress data.result', data.result);
-
-
-        if (data.result) {
-          setEscrowWalletAddress(data.result.escrowWalletAddress);
-          toast.success(Escrow_Wallet_Address_has_been_created);
-        } else {
-          toast.error(Failed_to_create_Escrow_Wallet_Address);
-        }
-    })
-    .finally(() => {
-      setMakeingEscrowWallet(false);
-    });
-
-  }
-
-  //console.log("escrowWalletAddress", escrowWalletAddress);
-
+  */
 
 
 
@@ -719,16 +662,12 @@ export default function Index({ params }: any) {
 
 
         setUser(data.result);
-
-        setEscrowWalletAddress(data.result.escrowWalletAddress);
-
         setIsAdmin(data.result?.role === "admin");
 
     })
     .catch((error) => {
         console.error('Error:', error);
         setUser(null);
-        setEscrowWalletAddress('');
         setIsAdmin(false);
     });
 
@@ -1192,66 +1131,42 @@ export default function Index({ params }: any) {
 
 
 
-    // request payment check box
-    const [requestPaymentCheck, setRequestPaymentCheck] = useState([] as boolean[]);
-    for (let i = 0; i < 100; i++) {
-      requestPaymentCheck.push(false);
+  // request payment check box
+  const [requestPaymentCheck, setRequestPaymentCheck] = useState([] as boolean[]);
+  useEffect(() => {
+    setRequestPaymentCheck([]);
+    const newArray: boolean[] = [];
+    for (let i = 0; i < buyOrders.length; i++) {
+      newArray.push(false);
     }
-
-    /*
-    useEffect(() => {
-        
-        setRequestPaymentCheck(
-          new Array(buyOrders.length).fill(false)
-        );
-  
-    } , [buyOrders]);
-     */
-    
+    setRequestPaymentCheck(newArray);
+  } , [buyOrders.length]);
 
 
-
-
-    // array of escrowing
-    const [escrowing, setEscrowing] = useState([] as boolean[]);
-    for (let i = 0; i < 100; i++) {
-      escrowing.push(false);
+  // array of escrowing
+  const [escrowing, setEscrowing] = useState([] as boolean[]);
+  useEffect(() => {
+    setEscrowing([]);
+    const newArray: boolean[] = [];
+    for (let i = 0; i < buyOrders.length; i++) {
+      newArray.push(false);
     }
+    setEscrowing(newArray);
+  } , [buyOrders.length]);
 
-    /*
-    useEffect(() => {
-        
-        setEscrowing(
-          new Array(buyOrders.length).fill(false)
-        );
-  
-    } , [buyOrders]);
-     */
 
-    // array of requestingPayment
-    const [requestingPayment, setRequestingPayment] = useState([] as boolean[]);
-    for (let i = 0; i < 100; i++) {
-      requestingPayment.push(false);
+  // array of requestingPayment
+  const [requestingPayment, setRequestingPayment] = useState([] as boolean[]);
+  useEffect(() => {
+    setRequestingPayment([]);
+    const newArray: boolean[] = [];
+    for (let i = 0; i < buyOrders.length; i++) {
+      newArray.push(false);
     }
+    setRequestingPayment(newArray);
+  } , [buyOrders.length]);
 
 
-    /*
-    useEffect(() => {
-
-      setRequestingPayment(
-
-        new Array(buyOrders.length).fill(false)
-
-      );
-
-    } , [buyOrders]);
-      */
-
-
-
-
-  // without escrow
-  const [isWithoutEscrow, setIsWithoutEscrow] = useState(true);
 
 
   const requestPayment = async (
@@ -1266,357 +1181,162 @@ export default function Index({ params }: any) {
   ) => {
 
 
-    // check escrowWalletAddress
+   
+    let balance = 0;
+    const result = await balanceOf({
+      contract,
+      address: address || "",
+    });
 
-    if (!isWithoutEscrow && escrowWalletAddress === '') {
-      toast.error('Recipient wallet address is empty');
-      return;
+      if (chain === 'bsc') {
+      balance = Number(result) / 10 ** 18;
+    } else {
+      balance = Number(result) / 10 ** 6;
     }
 
-    // check balance
-    // send payment request
+
 
     if (balance < amount) {
-      toast.error(Insufficient_balance);
+      
+      //toast.error(Insufficient_balance);
+      alert(Insufficient_balance);
+
       return;
     }
-
-
-    // check all escrowing is false
-    if (!isWithoutEscrow && escrowing.some((item) => item === true)) {
-      toast.error('Escrowing');
-      return;
-    }
-
 
 
 
     // check all requestingPayment is false
     if (requestingPayment.some((item) => item === true)) {
-      toast.error('Requesting Payment');
+      //toast.error('결제요청중입니다.');
+      alert('결제요청중입니다.');
       return;
     }
 
 
-    if (!isWithoutEscrow) {
 
+    try {
 
-      setEscrowing(
-        escrowing.map((item, idx) =>  idx === index ? true : item) 
+      const transactionHash = '0x';
+
+      setRequestingPayment(
+        requestingPayment.map((item, idx) => idx === index ? true : item)
       );
-  
-
-  
-
-
-      // send USDT
-      // Call the extension function to prepare the transaction
-      const transaction = transfer({
-        contract,
-        to: escrowWalletAddress,
-        amount: amount,
-      });
-      
-
-
-      try {
-
-
-        /*
-        const transactionResult = await sendAndConfirmTransaction({
-            account: smartAccount as any,
-            transaction: transaction,
-        });
-
-        //console.log("transactionResult===", transactionResult);
-        */
-
-        const { transactionHash } = await sendTransaction({
-          
-          account: activeAccount as any,
-
-          transaction,
-        });
-
-        ///console.log("transactionHash===", transactionHash);
-
-
-        /*
-        const transactionResult = await waitForReceipt({
-          client,
-          chain: arbitrum ,
-          maxBlocksWaitTime: 1,
-          transactionHash: transactionHash,
-        });
-
-
-        console.log("transactionResult===", transactionResult);
-        */
-  
-
-        // send payment request
-
-        //if (transactionResult) {
-        if (transactionHash) {
-
-          
-          setRequestingPayment(
-            requestingPayment.map((item, idx) => idx === index ? true : item)
-          );
-          
-          
-          
-
-
-        
-          const response = await fetch('/api/order/buyOrderRequestPayment', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              //lang: params.lang,
-              //storecode: storecode,
-              orderId: orderId,
-              //transactionHash: transactionResult.transactionHash,
-              transactionHash: transactionHash,
-            })
-          });
-
-          const data = await response.json();
-
-          //console.log('/api/order/buyOrderRequestPayment data====', data);
-
-
-          /*
-          setRequestingPayment(
-            requestingPayment.map((item, idx) => {
-              if (idx === index) {
-                return false;
-              }
-              return item;
-            })
-          );
-          */
-          
-
-
-          if (data.result) {
-
-            toast.success(Payment_request_has_been_sent);
-
-            //toast.success('Payment request has been sent');
-
-            playSong();
-            
-
-            
-            await fetch('/api/order/getAllBuyOrders', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(
-                {
-                  storecode: searchStorecode,
-                  limit: Number(limitValue),
-                  page: Number(pageValue),
-                  walletAddress: address,
-                  searchMyOrders: searchMyOrders,
-
-                  searchOrderStatusCancelled: searchOrderStatusCancelled,
-                  searchOrderStatusCompleted: searchOrderStatusCompleted,
-
-                  searchBuyer: searchBuyer,
-                  searchDepositName: searchDepositName,
-
-                  searchStoreBankAccountNumber: searchStoreBankAccountNumber,
-
-
-                  fromDate: searchFromDate,
-                  toDate: searchToDate,
-                }
-              )
-            }).then(async (response) => {
-              const data = await response.json();
-              //console.log('data', data);
-              if (data.result) {
-                setBuyOrders(data.result.orders);
     
-                setTotalCount(data.result.totalCount);
+    
+      const response = await fetch('/api/order/buyOrderRequestPayment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          //lang: params.lang,
+          //storecode: storecode,
+          orderId: orderId,
+          //transactionHash: transactionResult.transactionHash,
+          transactionHash: transactionHash,
 
-                setBuyOrderStats({
-                  totalCount: data.result.totalCount,
-                  totalKrwAmount: data.result.totalKrwAmount,
-                  totalUsdtAmount: data.result.totalUsdtAmount,
-                  totalSettlementCount: data.result.totalSettlementCount,
-                  totalSettlementAmount: data.result.totalSettlementAmount,
-                  totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-                  totalFeeAmount: data.result.totalFeeAmount,
-                  totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-                  totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-                  totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
-                });
-
-              }
-            });
+          // payment bank information
 
 
-            // refresh balance
-
-            const result = await balanceOf({
-              contract,
-              address: address || "",
-            });
-
-            //console.log(result);
-
-            setBalance( Number(result) / 10 ** 6 );
-
-
-          
-
-          } else {
-            toast.error('Payment request has been failed');
-          }
-
-        }
-
-
-      } catch (error) {
-        console.error('Error:', error);
-
-        toast.error('Payment request has been failed');
-      }
-
-      setEscrowing(
-        escrowing.map((item, idx) =>  idx === index ? false : item)
-      );
+          paymentBankInfo: bankInfo,
 
 
 
-    } else {
-      // without escrow
+
+        })
+      });
+
+      const data = await response.json();
 
 
-      try {
+      if (data.result) {
 
-        const transactionHash = '0x';
+        toast.success(Payment_request_has_been_sent);
 
-        setRequestingPayment(
-          requestingPayment.map((item, idx) => idx === index ? true : item)
-        );
-      
-      
-        const response = await fetch('/api/order/buyOrderRequestPayment', {
+        //toast.success('Payment request has been sent');
+
+        /*
+        playSong();
+        
+        await fetch('/api/order/getAllBuyOrders', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            //lang: params.lang,
-            //storecode: storecode,
-            orderId: orderId,
-            //transactionHash: transactionResult.transactionHash,
-            transactionHash: transactionHash,
+          body: JSON.stringify(
+            {
+              storecode: searchStorecode,
+              limit: Number(limitValue),
+              page: Number(pageValue),
+              walletAddress: address,
+              searchMyOrders: searchMyOrders,
 
-            // payment bank information
+              searchOrderStatusCancelled: searchOrderStatusCancelled,
+              searchOrderStatusCompleted: searchOrderStatusCompleted,
 
+              searchBuyer: searchBuyer,
+              searchDepositName: searchDepositName,
 
-            paymentBankInfo: bankInfo,
-
-
-
-
-          })
-        });
-
-        const data = await response.json();
+              searchStoreBankAccountNumber: searchStoreBankAccountNumber,
 
 
-        if (data.result) {
-
-          toast.success(Payment_request_has_been_sent);
-
-          //toast.success('Payment request has been sent');
-
-          playSong();
-          
-          await fetch('/api/order/getAllBuyOrders', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(
-              {
-                storecode: searchStorecode,
-                limit: Number(limitValue),
-                page: Number(pageValue),
-                walletAddress: address,
-                searchMyOrders: searchMyOrders,
-
-                searchOrderStatusCancelled: searchOrderStatusCancelled,
-                searchOrderStatusCompleted: searchOrderStatusCompleted,
-
-                searchBuyer: searchBuyer,
-                searchDepositName: searchDepositName,
-
-                searchStoreBankAccountNumber: searchStoreBankAccountNumber,
-
-
-                fromDate: searchFromDate,
-                toDate: searchToDate,
-              }
-            )
-          }).then(async (response) => {
-            const data = await response.json();
-            //console.log('data', data);
-            if (data.result) {
-              setBuyOrders(data.result.orders);
-  
-              setTotalCount(data.result.totalCount);
-
-              setBuyOrderStats({
-                totalCount: data.result.totalCount,
-                totalKrwAmount: data.result.totalKrwAmount,
-                totalUsdtAmount: data.result.totalUsdtAmount,
-                totalSettlementCount: data.result.totalSettlementCount,
-                totalSettlementAmount: data.result.totalSettlementAmount,
-                totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-                totalFeeAmount: data.result.totalFeeAmount,
-                totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-                totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-                totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
-              });
-
+              fromDate: searchFromDate,
+              toDate: searchToDate,
             }
-          });
+          )
+        }).then(async (response) => {
+          const data = await response.json();
+          //console.log('data', data);
+          if (data.result) {
+            setBuyOrders(data.result.orders);
+
+            setTotalCount(data.result.totalCount);
+
+            setBuyOrderStats({
+              totalCount: data.result.totalCount,
+              totalKrwAmount: data.result.totalKrwAmount,
+              totalUsdtAmount: data.result.totalUsdtAmount,
+              totalSettlementCount: data.result.totalSettlementCount,
+              totalSettlementAmount: data.result.totalSettlementAmount,
+              totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
+              totalFeeAmount: data.result.totalFeeAmount,
+              totalFeeAmountKRW: data.result.totalFeeAmountKRW,
+              totalAgentFeeAmount: data.result.totalAgentFeeAmount,
+              totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+            });
+
+          }
+        });
+        */
+
+        setBuyOrders(
+          buyOrders.map((item, idx) => {
+            if (idx === index) {
+              return {
+                ...item,
+                status: 'paymentRequested',
+              };
+            }
+            return item;
+          })
+        );
 
 
-          // refresh balance
-
-          const result = await balanceOf({
-            contract,
-            address: address || "",
-          });
-
-          //console.log(result);
-
-          setBalance( Number(result) / 10 ** 6 );
 
 
-        } else {
-          toast.error('결제요청이 실패했습니다.');
-        }
-
-      } catch (error) {
-        console.error('Error:', error);
-
-        toast.error('결제요청이 실패했습니다.');
+      } else {
+        //toast.error('결제요청이 실패했습니다.');
+        alert('결제요청이 실패했습니다.');
       }
 
-      
-    } // end of without escrow
+    } catch (error) {
+      console.error('Error:', error);
+
+      //toast.error('결제요청이 실패했습니다.');
+      alert('결제요청이 실패했습니다.');
+    }
+
 
 
     setRequestingPayment(
