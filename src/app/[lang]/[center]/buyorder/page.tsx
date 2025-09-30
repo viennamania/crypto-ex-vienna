@@ -1491,7 +1491,7 @@ export default function Index({ params }: any) {
             transaction,
           });
 
-          console.log("transactionHash===", transactionHash);
+          ///console.log("transactionHash===", transactionHash);
 
 
 
@@ -1662,10 +1662,21 @@ export default function Index({ params }: any) {
 
     // check balance
     // if balance is less than paymentAmount, then return
+    let balance = 0;
+    const result = await balanceOf({
+      contract,
+      address: address || "",
+    });
+      if (chain === 'bsc') {
+      balance = Number(result) / 10 ** 18;
+    } else {
+      balance = Number(result) / 10 ** 6;
+    }
     if (balance < usdtAmount) {
-      toast.error(Insufficient_balance);
+      alert(Insufficient_balance);
       return;
     }
+
 
     const storecode = "admin";
 
@@ -6199,58 +6210,6 @@ const fetchBuyOrders = async () => {
                                       </button>
 
                                     </div>
-
-
-                                    {!isWithoutEscrow && (
-                                      <div className="flex flex-row gap-2">
-
-                                        <input
-                                          disabled={rollbackingPayment[index]}
-                                          type="checkbox"
-                                          checked={rollbackPaymentCheck[index]}
-                                          onChange={(e) => {
-                                            setRollbackPaymentCheck(
-                                              rollbackPaymentCheck.map((item, idx) => {
-                                                if (idx === index) {
-                                                  return e.target.checked;
-                                                }
-                                                return item;
-                                              })
-                                            );
-                                          }}
-                                        />
-
-                                        <button
-                                          disabled={rollbackingPayment[index] || !rollbackPaymentCheck[index]}
-                                          className={`flex flex-row gap-1 text-sm text-white px-2 py-1 rounded-md ${rollbackingPayment[index] || !rollbackPaymentCheck[index] ? 'bg-gray-500' : 'bg-red-500'}`}
-                                          onClick={() => {
-                                            rollbackPayment(
-                                              index,
-                                              item._id,
-                                              paymentAmounts[index],
-                                              paymentAmountsUsdt[index]
-                                            );
-                                          }}
-
-                                        >
-                                          <div className="flex flex-row gap-2 items-center justify-center">
-                                            <Image
-                                              src="/icon-loading.png"
-                                              alt="loading"
-                                              width={16}
-                                              height={16}
-                                              className={rollbackingPayment[index] ? 'animate-spin' : 'hidden'}
-                                            />
-                                            <span className="text-sm">
-                                              에스크로 취소
-                                            </span>
-                                          </div>
-
-                                        </button>
-
-                                      </div>
-                                    )}
-
 
 
 
