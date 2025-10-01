@@ -1128,6 +1128,7 @@ export default function Index({ params }: any) {
 
 
   // request payment check box
+  /*
   const [requestPaymentCheck, setRequestPaymentCheck] = useState([] as boolean[]);
   useEffect(() => {
     setRequestPaymentCheck([]);
@@ -1137,7 +1138,9 @@ export default function Index({ params }: any) {
     }
     setRequestPaymentCheck(newArray);
   } , [buyOrders.length]);
+  */
 
+  
 
   // array of escrowing
   const [escrowing, setEscrowing] = useState([] as boolean[]);
@@ -5812,6 +5815,7 @@ const fetchBuyOrders = async () => {
 
                                       <div className="flex flex-row items-center gap-2">
 
+                                        {/*
                                         <input
                                           disabled={escrowing[index] || requestingPayment[index]}
                                           type="checkbox"
@@ -5827,9 +5831,10 @@ const fetchBuyOrders = async () => {
                                             );
                                           }}
                                         />
+                                        */}
 
                                         <button
-                                          disabled={escrowing[index] || requestingPayment[index] || !requestPaymentCheck[index]}
+                                          disabled={escrowing[index] || requestingPayment[index] }
                                           
                                           className="text-sm text-yellow-600 font-semibold
                                             border border-yellow-600 rounded-lg p-2
@@ -7518,6 +7523,7 @@ const fetchBuyOrders = async () => {
                             <div className="flex flex-row gap-1">
 
                               {/* check box for agreement */}
+                              {/*
                               <input
                                 disabled={escrowing[index] || requestingPayment[index]}
                                 type="checkbox"
@@ -7533,11 +7539,12 @@ const fetchBuyOrders = async () => {
                                   );
                                 }}
                               />
+                              */}
 
                               <button
-                                disabled={escrowing[index] || requestingPayment[index] || !requestPaymentCheck[index]}
+                                disabled={escrowing[index] || requestingPayment[index]}
                                 
-                                className={`flex flex-row gap-1 text-sm text-white px-2 py-1 rounded-md ${escrowing[index] || requestingPayment[index] || !requestPaymentCheck[index] ? 'bg-gray-500' : 'bg-green-500'}`}
+                                className={`flex flex-row gap-1 text-sm text-white px-2 py-1 rounded-md ${escrowing[index] || requestingPayment[index] ? 'bg-gray-500' : 'bg-green-500'}`}
                                 onClick={() => {
 
                                   requestPayment(
