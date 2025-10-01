@@ -1351,13 +1351,8 @@ export default function Index({ params }: any) {
 
 
   // array of confirmingPayment
-
   const [confirmingPayment, setConfirmingPayment] = useState([] as boolean[]);
-  for (let i = 0; i < 100; i++) {
-    confirmingPayment.push(false);
-  }
 
-  /*
   useEffect(() => {
       
       setConfirmingPayment(
@@ -1365,16 +1360,11 @@ export default function Index({ params }: any) {
       );
 
   } , [buyOrders]);
-   */
 
-
-  // confirm payment check box
-  const [confirmPaymentCheck, setConfirmPaymentCheck] = useState([] as boolean[]);
-  for (let i = 0; i < 100; i++) {
-    confirmPaymentCheck.push(false);
-  }
 
   /*
+  // confirm payment check box
+  const [confirmPaymentCheck, setConfirmPaymentCheck] = useState([] as boolean[]);
   useEffect(() => {
       
       setConfirmPaymentCheck(
@@ -1382,7 +1372,7 @@ export default function Index({ params }: any) {
       );
 
   } , [buyOrders]);
-    */
+  */
 
 
 
@@ -1412,6 +1402,29 @@ export default function Index({ params }: any) {
 
 
 
+  const [sendingTransaction, setSendingTransaction] = useState([] as boolean[]);
+  useEffect(() => {
+    setSendingTransaction([]);
+    const newArray: boolean[] = [];
+    for (let i = 0; i < buyOrders.length; i++) {
+      newArray.push(false);
+    }
+    setSendingTransaction(newArray);
+  } , [buyOrders.length]);
+
+
+  ///console.log('sendingTransaction', sendingTransaction);
+
+
+
+
+  // avoid double click event
+
+  const isProcessingSendTransaction = useRef(false);
+
+
+
+
   const confirmPayment = async (
 
     index: number,
@@ -1427,8 +1440,16 @@ export default function Index({ params }: any) {
 
   ) => {
 
+    if (isProcessingSendTransaction.current) {
+      alert('USDT 전송이 처리중입니다. 잠시후 다시 시도해주세요.');
+      return;
+    }
+    isProcessingSendTransaction.current = true;
+
 
     if (confirmingPayment[index]) {
+      isProcessingSendTransaction.current = false;
+      alert('결제확인중입니다. 잠시후 다시 시도해주세요.');
       return;
     }
 
@@ -1438,8 +1459,6 @@ export default function Index({ params }: any) {
 
 
     try {
-
-      
 
 
 
@@ -1520,7 +1539,7 @@ export default function Index({ params }: any) {
 
               
               ///fetchBuyOrders();
-
+              
               // fetch Buy Orders
               await fetch('/api/order/getAllBuyOrders', {
                 method: 'POST',
@@ -1571,18 +1590,20 @@ export default function Index({ params }: any) {
 
               })
 
-              toast.success(Payment_has_been_confirmed);
-              playSong();
+              //toast.success(Payment_has_been_confirmed);
+              alert(Payment_has_been_confirmed);
+              ///playSong();
 
 
 
           } else {
-            toast.error('결제확인이 실패했습니다.');
+            //toast.error('결제확인이 실패했습니다.');
+            alert('결제확인이 실패했습니다.');
           }
 
         } catch (error) {
           console.error('Error:', error);
-          toast.error('결제확인이 실패했습니다.');
+          alert('결제확인이 실패했습니다.');
         }
 
 
@@ -1591,18 +1612,21 @@ export default function Index({ params }: any) {
 
     } catch (error) {
       console.error('Error:', error);
-      toast.error('결제확인이 실패했습니다.');
+      alert('결제확인이 실패했습니다.');
     }
 
+
+    isProcessingSendTransaction.current = false;
 
     setConfirmingPayment(
       confirmingPayment.map((item, idx) => idx === index ? false : item)
     );
 
+    /*
     setConfirmPaymentCheck(
       confirmPaymentCheck.map((item, idx) => idx === index ? false : item)
     );
-  
+    */
 
   }
 
@@ -1610,25 +1634,6 @@ export default function Index({ params }: any) {
 
 
 
-  const [sendingTransaction, setSendingTransaction] = useState([] as boolean[]);
-  useEffect(() => {
-    setSendingTransaction([]);
-    const newArray: boolean[] = [];
-    for (let i = 0; i < buyOrders.length; i++) {
-      newArray.push(false);
-    }
-    setSendingTransaction(newArray);
-  } , [buyOrders.length]);
-
-
-  ///console.log('sendingTransaction', sendingTransaction);
-
-
-
-
-  // avoid double click event
-
-  const isProcessingSendTransaction = useRef(false);
 
 
 
@@ -1848,7 +1853,7 @@ export default function Index({ params }: any) {
         agreementForTrade.some((item) => item === true)
         || acceptingBuyOrder.some((item) => item === true)
         || agreementForCancelTrade.some((item) => item === true)
-        || confirmPaymentCheck.some((item) => item === true)
+        ////////|| confirmPaymentCheck.some((item) => item === true)
         ///|| rollbackPaymentCheck.some((item) => item === true)
         || acceptingBuyOrder.some((item) => item === true)
         || escrowing.some((item) => item === true)
@@ -1997,7 +2002,8 @@ export default function Index({ params }: any) {
     confirmingPayment,
     //rollbackingPayment,
     agreementForCancelTrade,
-    confirmPaymentCheck,
+
+    /////confirmPaymentCheck,
     //rollbackPaymentCheck,
 
     latestBuyOrder,
@@ -5937,6 +5943,7 @@ const fetchBuyOrders = async () => {
                                     
                                     <div className="flex flex-row items-center gap-2">
 
+                                      {/*
                                       <input
                                         disabled={confirmingPayment[index]}
                                         type="checkbox"
@@ -5952,21 +5959,22 @@ const fetchBuyOrders = async () => {
                                           );
                                         }}
                                       />
+                                      */}
 
                                       <button
-                                        disabled={confirmingPayment[index] || !confirmPaymentCheck[index]}
+                                        disabled={confirmingPayment[index] || isProcessingSendTransaction.current }
                                         
-                                        className="text-sm text-[#409192] font-semibold
-                                          border border-green-600 rounded-lg p-2
-                                          bg-green-100
-                                          w-full text-center
-                                          hover:bg-green-200
-                                          cursor-pointer
-                                          transition-all duration-200 ease-in-out
-                                          hover:scale-105
+                                        className={`
+                                          w-full  
+                                          flex flex-row gap-1 text-sm text-white px-2 py-1 rounded-md
+                                          border border-green-600
+                                          hover:border-green-700
                                           hover:shadow-lg
                                           hover:shadow-green-500/50
-                                        "
+                                          transition-all duration-200 ease-in-out
+
+                                          ${confirmingPayment[index] ? 'bg-red-500' : 'bg-green-500'}
+                                        `}
 
                                         /*
                                           confirmPayment(
@@ -6014,7 +6022,7 @@ const fetchBuyOrders = async () => {
                                               />
                                           )}
                                           <span className="text-sm">
-                                            판매완료
+                                            {confirmingPayment[index] ? '처리중...' : '판매완료'}
                                           </span>
                                         </div>
 
