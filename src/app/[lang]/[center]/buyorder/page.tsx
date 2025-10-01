@@ -1357,12 +1357,15 @@ export default function Index({ params }: any) {
   const [confirmingPayment, setConfirmingPayment] = useState([] as boolean[]);
 
   useEffect(() => {
-      
-      setConfirmingPayment(
-        new Array(buyOrders.length).fill(false)
-      );
+    setConfirmingPayment([]);
+    const newArray: boolean[] = [];
+    for (let i = 0; i < buyOrders.length; i++) {
+      newArray.push(false);
+    }
+    setConfirmingPayment(newArray);
+  } , [buyOrders.length]);
 
-  } , [buyOrders]);
+
 
 
   /*
