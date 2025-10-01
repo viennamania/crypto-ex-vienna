@@ -1140,7 +1140,7 @@ export default function Index({ params }: any) {
   } , [buyOrders.length]);
   */
 
-  
+
 
   // array of escrowing
   const [escrowing, setEscrowing] = useState([] as boolean[]);
@@ -1598,32 +1598,58 @@ export default function Index({ params }: any) {
               ///playSong();
 
 
+              isProcessingSendTransaction.current = false;
+
+              setConfirmingPayment(
+                confirmingPayment.map((item, idx) => idx === index ? false : item)
+              );
+
 
           } else {
             //toast.error('결제확인이 실패했습니다.');
             alert('결제확인이 실패했습니다.');
+
+            isProcessingSendTransaction.current = false;
+
+            setConfirmingPayment(
+              confirmingPayment.map((item, idx) => idx === index ? false : item)
+            );
+
           }
 
         } catch (error) {
           console.error('Error:', error);
           alert('결제확인이 실패했습니다.');
+
+          isProcessingSendTransaction.current = false;
+
+          setConfirmingPayment(
+            confirmingPayment.map((item, idx) => idx === index ? false : item)
+          );
+
         }
-
-
-
 
 
     } catch (error) {
       console.error('Error:', error);
       alert('결제확인이 실패했습니다.');
+
+      isProcessingSendTransaction.current = false;
+
+      setConfirmingPayment(
+        confirmingPayment.map((item, idx) => idx === index ? false : item)
+      );
+
     }
 
-
+    /*
     isProcessingSendTransaction.current = false;
 
     setConfirmingPayment(
       confirmingPayment.map((item, idx) => idx === index ? false : item)
     );
+    */
+
 
     /*
     setConfirmPaymentCheck(
@@ -5967,7 +5993,7 @@ const fetchBuyOrders = async () => {
                                       */}
 
                                       <button
-                                        disabled={confirmingPayment[index] || isProcessingSendTransaction.current }
+                                        disabled={isProcessingSendTransaction.current || confirmingPayment[index] }
                                         
                                         className={`
                                           w-full  
