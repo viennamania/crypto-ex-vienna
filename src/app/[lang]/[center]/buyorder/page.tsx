@@ -1430,7 +1430,7 @@ export default function Index({ params }: any) {
 
 
 
-
+  /*
   const confirmPayment = async (
 
     index: number,
@@ -1629,14 +1629,240 @@ export default function Index({ params }: any) {
     );
     
 
+  }
+  */
 
+
+
+
+
+
+  // confirm payment
+  const confirmPayment = async (
+
+    index: number,
+    orderId: string,
+    //paymentAmount: number,
+    krwAmount: number,
+    //paymentAmountUsdt: number,
+    usdtAmount: number,
+
+    buyerWalletAddress: string,
+
+    paymentMethod: string, // 'bank' or 'mkrw' or 'usdt'
+
+  ) => {
+    // confirm payment
+    // send usdt to buyer wallet address
+
+
+    // if escrowWalletAddress balance is less than paymentAmount, then return
+
+    //console.log('escrowBalance', escrowBalance);
+    //console.log('paymentAmountUsdt', paymentAmountUsdt);
+    
+
+    // check balance
+    // if balance is less than paymentAmount, then return
     /*
-    setConfirmPaymentCheck(
-      confirmPaymentCheck.map((item, idx) => idx === index ? false : item)
+    if (balance < usdtAmount) {
+      toast.error(Insufficient_balance);
+      return;
+    }
+      */
+
+    ///const storecode = "admin";
+
+
+    if (confirmingPayment[index]) {
+      return;
+    }
+
+    setConfirmingPayment(
+      confirmingPayment.map((item, idx) =>  idx === index ? true : item)
     );
-    */
+
+
+
+
+        // transfer my wallet to buyer wallet address
+
+        //const buyerWalletAddress = buyOrders[index].walletAddress;
+
+      try {
+
+
+        /*
+        const transaction = transfer({
+          contract,
+          to: buyerWalletAddress,
+          amount: usdtAmount,
+        });
+
+
+        //const { transactionHash } = await sendAndConfirmTransaction({
+
+        const { transactionHash } = await sendTransaction({
+          transaction: transaction,
+          account: activeAccount as any,
+        });
+        */
+
+        const transactionHash = '0x';
+
+        console.log("transactionHash===", transactionHash);
+
+
+
+        if (transactionHash) {
+
+
+          if (paymentMethod === 'mkrw') {
+
+            const response = await fetch('/api/order/buyOrderConfirmPaymentWithEscrow', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                lang: params.lang,
+                storecode: params.center,
+                orderId: orderId,
+                paymentAmount: krwAmount,
+                transactionHash: transactionHash,
+                ///isSmartAccount: activeWallet === inAppConnectWallet ? false : true,
+                isSmartAccount: false,
+              })
+            });
+
+            const data = await response.json();
+
+
+
+          } else {
+
+            const response = await fetch('/api/order/buyOrderConfirmPaymentWithoutEscrow', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                lang: params.lang,
+                storecode: params.center,
+                orderId: orderId,
+                paymentAmount: krwAmount,
+                transactionHash: transactionHash,
+                ///isSmartAccount: activeWallet === inAppConnectWallet ? false : true,
+                isSmartAccount: false,
+              })
+            });
+
+            const data = await response.json();
+
+            //console.log('data', data);
+
+          }
+
+
+
+
+          /*
+          await fetch('/api/order/getAllBuyOrders', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(
+              {
+                storecode: searchStorecode,
+                limit: Number(limitValue),
+                page: Number(pageValue),
+                walletAddress: address,
+                searchMyOrders: searchMyOrders,
+                searchOrderStatusCancelled: searchOrderStatusCancelled,
+                searchOrderStatusCompleted: searchOrderStatusCompleted,
+
+                searchStoreName: searchStoreName,
+
+                fromDate: searchFromDate,
+                toDate: searchToDate,
+              }
+            )
+          }).then(async (response) => {
+            const data = await response.json();
+            //console.log('data', data);
+            if (data.result) {
+              setBuyOrders(data.result.orders);
+  
+              //setTotalCount(data.result.totalCount);
+
+              setBuyOrderStats({
+                totalCount: data.result.totalCount,
+                totalKrwAmount: data.result.totalKrwAmount,
+                totalUsdtAmount: data.result.totalUsdtAmount,
+                totalSettlementCount: data.result.totalSettlementCount,
+                totalSettlementAmount: data.result.totalSettlementAmount,
+                totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
+                totalFeeAmount: data.result.totalFeeAmount,
+                totalFeeAmountKRW: data.result.totalFeeAmountKRW,
+                totalAgentFeeAmount: data.result.totalAgentFeeAmount,
+                totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+              });
+
+
+            }
+          });
+          */
+
+          setBuyOrders(
+            buyOrders.map((item, idx) => {
+              if (idx === index) {
+                return {
+                  ...item,
+                  status: 'paymentConfirmed',
+                  transactionHash: transactionHash,
+                };
+              }
+              return item;
+            })
+          );
+
+          //toast.success(Payment_has_been_confirmed);
+          alert(Payment_has_been_confirmed);
+          //////playSong();
+
+
+
+
+
+
+        } else {
+          //toast.error('결제확인이 실패했습니다.');
+          alert('결제확인이 실패했습니다.');
+
+        }
+
+    } catch (error) {
+      console.error('Error:', error);
+      //toast.error('결제확인이 실패했습니다.');
+      alert('결제확인이 실패했습니다.');
+    }
+
+
+
+    setConfirmingPayment(
+      confirmingPayment.map((item, idx) => idx === index ? false : item)
+    );
 
   }
+
+
+
+
+
+
+
+
 
 
 
@@ -5478,40 +5704,109 @@ const fetchBuyOrders = async () => {
                                   </div>
                                 </div>
                                 
+                                {/*
                                 <div className="text-sm text-zinc-500">
                                   {item.store?.bankInfo?.accountNumber.slice(0, 3) + '****' + item.store?.bankInfo?.accountNumber.slice(item.store?.bankInfo?.accountNumber.length - 3)}
                                 </div>
+                                */}
                                 
-
                               </div>
 
+                              <span className="text-sm text-purple-600 font-semibold">
+                                {params.lang === 'ko' ? (
+                                  <p>{
+                                    new Date().getTime() - new Date(item.paymentRequestedAt).getTime() < 1000 * 60 ? (
+                                      ' ' + Math.floor((new Date().getTime() - new Date(item.paymentRequestedAt).getTime()) / 1000) + ' ' + '초 경과'
+                                    ) :
+                                    new Date().getTime() - new Date(item.paymentRequestedAt).getTime() < 1000 * 60 * 60 ? (
+                                    ' ' + Math.floor((new Date().getTime() - new Date(item.paymentRequestedAt).getTime()) / 1000 / 60) + ' ' + '분 경과'
+                                    ) : (
+                                      ' ' + Math.floor((new Date().getTime() - new Date(item.paymentRequestedAt).getTime()) / 1000 / 60 / 60) + ' ' + '시간 경과'
+                                    )
+                                  }</p>
+                                ) : (
+                                  <p>{
+                                    new Date().getTime() - new Date(item.paymentRequestedAt).getTime() < 1000 * 60 ? (
+                                      ' ' + Math.floor((new Date().getTime() - new Date(item.paymentRequestedAt).getTime()) / 1000) + ' ' + '초 경과'
+                                    ) :
+                                    new Date().getTime() - new Date(item.paymentRequestedAt).getTime() < 1000 * 60 * 60 ? (
+                                    ' ' + Math.floor((new Date().getTime() - new Date(item.paymentRequestedAt).getTime()) / 1000 / 60) + ' ' + '분 경과'
+                                    ) : (
+                                      ' ' + Math.floor((new Date().getTime() - new Date(item.paymentRequestedAt).getTime()) / 1000 / 60 / 60) + ' ' + '시간 경과'
+                                    )
+                                  }</p>
+                                )}
+                              </span>
 
 
-                                <span className="text-sm text-purple-600 font-semibold">
-                                  {params.lang === 'ko' ? (
-                                    <p>{
-                                      new Date().getTime() - new Date(item.paymentRequestedAt).getTime() < 1000 * 60 ? (
-                                        ' ' + Math.floor((new Date().getTime() - new Date(item.paymentRequestedAt).getTime()) / 1000) + ' ' + '초 경과'
-                                      ) :
-                                      new Date().getTime() - new Date(item.paymentRequestedAt).getTime() < 1000 * 60 * 60 ? (
-                                      ' ' + Math.floor((new Date().getTime() - new Date(item.paymentRequestedAt).getTime()) / 1000 / 60) + ' ' + '분 경과'
-                                      ) : (
-                                        ' ' + Math.floor((new Date().getTime() - new Date(item.paymentRequestedAt).getTime()) / 1000 / 60 / 60) + ' ' + '시간 경과'
-                                      )
-                                    }</p>
-                                  ) : (
-                                    <p>{
-                                      new Date().getTime() - new Date(item.paymentRequestedAt).getTime() < 1000 * 60 ? (
-                                        ' ' + Math.floor((new Date().getTime() - new Date(item.paymentRequestedAt).getTime()) / 1000) + ' ' + '초 경과'
-                                      ) :
-                                      new Date().getTime() - new Date(item.paymentRequestedAt).getTime() < 1000 * 60 * 60 ? (
-                                      ' ' + Math.floor((new Date().getTime() - new Date(item.paymentRequestedAt).getTime()) / 1000 / 60) + ' ' + '분 경과'
-                                      ) : (
-                                        ' ' + Math.floor((new Date().getTime() - new Date(item.paymentRequestedAt).getTime()) / 1000 / 60 / 60) + ' ' + '시간 경과'
-                                      )
-                                    }</p>
-                                  )}
-                                </span>
+
+                              {item.seller
+                              && item.seller.walletAddress === address
+                              
+                              ///////////////&& item?.autoConfirmPayment
+
+                              && (
+
+                                <div className="flex flex-col gap-2 items-center justify-center">
+
+                                  <div className="flex flex-row gap-2">
+                                    
+                                    <button
+
+                                      disabled={confirmingPayment[index]}
+                                      
+                                      className={`
+                                        ${confirmingPayment[index]
+                                        ? 'text-gray-400 border-gray-400 bg-gray-100 cursor-not-allowed'
+                                        : 'text-blue-600 border-blue-600 bg-blue-100 hover:bg-blue-200 cursor-pointer hover:scale-105 hover:shadow-lg hover:shadow-blue-500/50'
+                                        } bg-blue-100 border border-blue-600 rounded-lg p-2
+                                      `}
+
+                                      onClick={() => {
+                                        confirm("정말 입금확인 하시겠습니까?") &&
+                                        confirmPayment(
+                                          index,
+                                          item._id,
+                                          //paymentAmounts[index],
+                                          //paymentAmountsUsdt[index],
+
+                                          item.krwAmount,
+                                          item.usdtAmount,
+                                          
+                                          item.walletAddress,
+
+                                          item.paymentMethod,
+                                        );
+                                      }}
+
+                                    >
+                                      <div className="flex flex-row gap-2 items-center justify-center">
+                                        { confirmingPayment[index] && (
+                                            <Image
+                                              src="/loading.png"
+                                              alt="Loading"
+                                              width={20}
+                                              height={20}
+                                              className="w-5 h-5
+                                              animate-spin"
+                                            />
+                                        )}
+                                        <span className="text-sm">
+                                          수동입금확인
+                                        </span>
+                                      </div>
+
+                                    </button>
+
+
+                                  </div>
+
+                                </div>
+
+
+                              )}
+
+
 
 
 
@@ -5953,23 +6248,6 @@ const fetchBuyOrders = async () => {
                                     
                                     <div className="flex flex-row items-center gap-2">
 
-                                      {/*
-                                      <input
-                                        disabled={confirmingPayment[index]}
-                                        type="checkbox"
-                                        checked={confirmPaymentCheck[index]}
-                                        onChange={(e) => {
-                                          setConfirmPaymentCheck(
-                                            confirmPaymentCheck.map((item, idx) => {
-                                              if (idx === index) {
-                                                return e.target.checked;
-                                              }
-                                              return item;
-                                            })
-                                          );
-                                        }}
-                                      />
-                                      */}
 
                                       <button
                                         disabled={isProcessingSendTransaction.current || confirmingPayment[index] }
@@ -6039,30 +6317,6 @@ const fetchBuyOrders = async () => {
                                       </button>
 
                                     </div>
-
-
-
-                                    {/* 결제은행정보 */}
-                                    {/*
-                                    <div className="flex flex-row gap-2 items-center justify-center">
-                                      <div className="flex flex-row items-center gap-2">
-                                        <div className="text-sm text-zinc-500">
-                                          {item.seller?.bankInfo?.bankName}
-                                        </div>
-                                        <div className="text-sm text-zinc-500">
-                                          {
-                                            item.seller?.bankInfo &&
-                                            item.seller?.bankInfo?.accountNumber.substring(0,3) + '...'
-                                          }
-                                        </div>
-                                      </div>
-                                      <div className="text-sm text-zinc-500">
-                                        {item.seller?.bankInfo?.accountHolder}
-                                      </div>
-                                    </div>
-                                    */}
-
-                                    {/* 결제금액 */}
 
                                     <div className="w-full flex flex-row gap-2 items-center justify-center">
                                       <input
