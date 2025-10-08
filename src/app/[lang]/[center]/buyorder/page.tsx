@@ -5758,12 +5758,12 @@ const fetchBuyOrders = async () => {
                                       className={`
                                         ${confirmingPayment[index]
                                         ? 'text-gray-400 border-gray-400 bg-gray-100 cursor-not-allowed'
-                                        : 'text-blue-600 border-blue-600 bg-blue-100 hover:bg-blue-200 cursor-pointer hover:scale-105 hover:shadow-lg hover:shadow-blue-500/50'
-                                        } bg-blue-100 border border-blue-600 rounded-lg p-2
+                                        : 'text-yellow-600 hover:text-yellow-700 hover:shadow-yellow-500/50 cursor-pointer'
+                                        } bg-yellow-100 border border-yellow-600 rounded-lg p-2
                                       `}
 
                                       onClick={() => {
-                                        confirm("정말 입금확인 하시겠습니까?") &&
+                                        confirm("수동으로 입금확인을 처리하시겠습니까?") &&
                                         confirmPayment(
                                           index,
                                           item._id,
@@ -5792,7 +5792,7 @@ const fetchBuyOrders = async () => {
                                             />
                                         )}
                                         <span className="text-sm">
-                                          수동입금확인
+                                          입금완료하기
                                         </span>
                                       </div>
 
@@ -6403,13 +6403,13 @@ const fetchBuyOrders = async () => {
                                           className={`
                                             w-full  
                                             flex flex-row gap-1 text-sm text-white px-2 py-1 rounded-md
-                                            border border-green-600
-                                            hover:border-green-700
+                                            border border-blue-600
+                                            hover:border-blue-700
                                             hover:shadow-lg
-                                            hover:shadow-green-500/50
+                                            hover:shadow-blue-500/50
                                             transition-all duration-200 ease-in-out
 
-                                            ${sendingTransaction[index] ? 'bg-red-500' : 'bg-green-500'}
+                                            ${sendingTransaction[index] ? 'bg-gray-500' : 'bg-blue-500'}
                                           `}
 
                                           // onclick avoid avoid repeated execution of onclick event
@@ -6440,7 +6440,7 @@ const fetchBuyOrders = async () => {
 
                                           <div className="flex flex-row gap-2 items-center justify-center">
                                             <Image
-                                              src="/icon-transfer.png"
+                                              src="/icon-tether.png"
                                               alt="Transfer"
                                               width={20}
                                               height={20}
@@ -6450,13 +6450,14 @@ const fetchBuyOrders = async () => {
                                               `}
                                             />
                                             <span className="text-sm text-white">
-                                              구매자에게 {item.usdtAmount.toFixed(3)} USDT<br />{sendingTransaction[index] ? '전송중...' : '전송하기'}
+                                              {sendingTransaction[index] ? '전송중...' : '전송하기'}
                                             </span>
                                           </div>
 
                                         </button>
 
                                         {/* warning message */}
+                                        {/*
                                         {sendingTransaction[index] && (
                                           <div className="flex flex-row gap-2 items-center justify-center">
                                             <Image
@@ -6471,6 +6472,7 @@ const fetchBuyOrders = async () => {
                                             </div>
                                           </div>
                                         )}
+                                        */}
 
                                       </div>
 
