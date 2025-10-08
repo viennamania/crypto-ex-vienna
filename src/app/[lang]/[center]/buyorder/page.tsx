@@ -6233,7 +6233,7 @@ const fetchBuyOrders = async () => {
                                 )}
 
 
-
+                                {/*
                                 {item.seller
                                 && item.seller.walletAddress === address
                                 && item.status === 'paymentRequested'
@@ -6263,22 +6263,6 @@ const fetchBuyOrders = async () => {
 
                                           ${confirmingPayment[index] ? 'bg-red-500' : 'bg-green-500'}
                                         `}
-
-                                        /*
-                                          confirmPayment(
-                                              index,
-                                              item._id,
-                                              
-                                              //paymentAmounts[index],
-                                              item.krwAmount,
-
-                                              //paymentAmountsUsdt[index],
-                                              item.usdtAmount,
-
-
-                                              item.walletAddress,
-                                            );
-                                            */
 
                                         
                                         onClick={() => {
@@ -6332,29 +6316,24 @@ const fetchBuyOrders = async () => {
                                       />{' '}원
                                     </div>
 
-
-                                    {/* 입금확인후 판매완료 버튼을 누르세요. */}
                                     <div className="text-sm text-red-500">
                                       입금확인후 판매완료 버튼을 눌러 P2P 거래를 완료하세요.
                                     </div>
 
-
-
-
                                   </div>
 
 
-
-
-
                                 )}
+                                */}
+
+
 
                                 {/* paymentConfirmed */}
                                 {/* paymentAmount */}
                                 {item.status === 'paymentConfirmed' && (
 
                                   <div className="
-                                    w-40
+                                    w-56
                                     flex flex-col gap-2 items-center justify-center">
 
 
@@ -6366,12 +6345,15 @@ const fetchBuyOrders = async () => {
                                   
                                     { !item?.settlement &&
 
-                                    item?.autoConfirmPayment
-                                    && (item?.transactionHash === '0x' || item?.transactionHash === undefined)
-                                    && (
+                                    ///item?.autoConfirmPayment &&
+
+                                    (item?.transactionHash === '0x' || item?.transactionHash === undefined) &&
+                                    
+                                    (
 
 
-                                      <div className="w-full flex flex-row items-center justify-center gap-2">
+                                      <div className="w-full flex flex-col items-start justify-center gap-2">
+
                                         {/*
                                         <input
                                           disabled={confirmingPayment[index]}
@@ -6392,14 +6374,17 @@ const fetchBuyOrders = async () => {
                                         */}
 
                                         <button
+                                          //disabled={confirmingPayment[index] || !confirmPaymentCheck[index]}
+                                          //disabled={confirmingPayment[index]}
                                           disabled={
-                                            //confirmingPayment[index]
-                                            //|| !confirmPaymentCheck[index]
-
+                                            
+                                            //isProcessingSendTransaction
                                             isProcessingSendTransaction.current
+
                                             || sendingTransaction[index]
                                           }
 
+                                          /*
                                           className={`
                                             w-full
                                           flex flex-row gap-1 text-sm text-white px-2 py-1 rounded-md
@@ -6409,39 +6394,32 @@ const fetchBuyOrders = async () => {
                                           hover:shadow-green-500/50
                                           transition-all duration-200 ease-in-out
 
-                                          ${sendingTransaction[index] ? 'bg-red-500' : 'bg-green-500'}
+                                          ${confirmingPayment[index] ? 'bg-red-500' : 'bg-green-500'}
+                                          ${!confirmPaymentCheck[index] ? 'bg-gray-500' : 'bg-green-500'}
                                           
                                           `}
+                                          */
 
-                                          
-
-                                          /*
                                           className={`
-                                            ${confirmingPayment[index] ? 'bg-gray-500' : 'bg-green-500'}
-                                          
-
-                                            
-
-                                          
-                                          
-                                          
-                                          "text-sm text-[#409192] font-semibold
-                                            border border-green-600 rounded-lg p-2
-                                            bg-green-100
-                                            w-full text-center
-                                            hover:bg-green-200
-                                            cursor-pointer
-                                            transition-all duration-200 ease-in-out
-                                            hover:scale-105
+                                            w-full  
+                                            flex flex-row gap-1 text-sm text-white px-2 py-1 rounded-md
+                                            border border-green-600
+                                            hover:border-green-700
                                             hover:shadow-lg
                                             hover:shadow-green-500/50
-                                          "
-                                          */
+                                            transition-all duration-200 ease-in-out
+
+                                            ${sendingTransaction[index] ? 'bg-red-500' : 'bg-green-500'}
+                                          `}
+
+                                          // onclick avoid avoid repeated execution of onclick event
+                                          // use a ref to track if the event is already in progress
                                           
+                                          onClick={(e) => {
 
+                                            //e.preventDefault();
+                                            //e.stopPropagation();
 
-
-                                          onClick={() => {
                                             //confirmPayment(
                                             sendPayment(
 
@@ -6458,8 +6436,6 @@ const fetchBuyOrders = async () => {
                                               item.walletAddress,
                                             );
                                           }}
-
-
                                         >
 
                                           <div className="flex flex-row gap-2 items-center justify-center">
@@ -6479,6 +6455,22 @@ const fetchBuyOrders = async () => {
                                           </div>
 
                                         </button>
+
+                                        {/* warning message */}
+                                        {sendingTransaction[index] && (
+                                          <div className="flex flex-row gap-2 items-center justify-center">
+                                            <Image
+                                              src="/icon-warning.png"
+                                              alt="Warning"
+                                              width={20}
+                                              height={20}
+                                              className="w-5 h-5"
+                                            />
+                                            <div className="text-sm text-red-500">
+                                              전송중에 절대 새로고침하거나 뒤로가기를 하지 마세요.
+                                            </div>
+                                          </div>
+                                        )}
 
                                       </div>
 
