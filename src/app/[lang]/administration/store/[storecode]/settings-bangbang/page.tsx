@@ -1150,9 +1150,54 @@ export default function SettingsPage({ params }: any) {
     }
 
 
+    // resetSettlementFeePercent
+    const [resettingSettlementFeePercent, setResettingSettlementFeePercent] = useState(false);
+    const resetSettlementFeePercent = async () => {
+        if (resettingSettlementFeePercent) {
+            return;
+        }
+        setResettingSettlementFeePercent(true);
+        const response = await fetch('/api/store/updateStoreSettlementFeePercent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(
+                {
+                    storecode: params.storecode,
+                    settlementFeePercent: 0,
+                }
+            ),
+        });
+        if (!response.ok) {
+            setResettingSettlementFeePercent(false);
+            alert('가맹점 수수료 비율 리셋에 실패했습니다.');
+            return;
+        }
+        const data = await response.json();
+        //console.log('data', data);
+        if (data.result) {
+            alert('가맹점 수수료 비율이 리셋되었습니다.');
+            setStore({
+                ...store,
+                settlementFeePercent: 0,
+            });
+            //fetchStore();
+        } else {
+            alert('가맹점 수수료 비율 리셋에 실패했습니다.');
+        }
+        setResettingSettlementFeePercent(false);
+        return data.result;
+    }
 
 
-   // agentFeeWalletAddress 변경
+
+
+
+
+
+
+    // agentFeeWalletAddress 변경
     const [updatingAgentWFeeWalletAddress, setUpdatingAgentWFeeWalletAddress] = useState(false);
     const [selectedAgentFeeWalletAddress, setSelectedAgentWFeeWalletAddress] = useState('');
 
@@ -2764,9 +2809,18 @@ export default function SettingsPage({ params }: any) {
                                     </span>
                                 </div>
 
-
-
                             </div>
+
+                            {/* resetSettlementFeePercent button */}
+                            <button
+                                disabled={!address || resettingSettlementFeePercent}
+                                className={`bg-[#0047ab] text-zinc-100 rounded-lg p-2 ${resettingSettlementFeePercent ? "opacity-50" : ""}`}
+                                onClick={() => {
+                                    confirm(`정말 가맹점 수수료율을 초기화하시겠습니까?`) && resetSettlementFeePercent();
+                                }}
+                            >
+                                {resettingSettlementFeePercent ? '초기화 중...' : '초기화'}
+                            </button>
 
                         </div>
 
