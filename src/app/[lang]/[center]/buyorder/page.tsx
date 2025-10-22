@@ -1710,7 +1710,7 @@ export default function Index({ params }: any) {
 
         const transactionHash = '0x';
 
-        console.log("transactionHash===", transactionHash);
+        ///console.log("transactionHash===", transactionHash);
 
 
 
@@ -1827,8 +1827,8 @@ export default function Index({ params }: any) {
             })
           );
 
-          //toast.success(Payment_has_been_confirmed);
-          alert(Payment_has_been_confirmed);
+          toast.success(Payment_has_been_confirmed);
+          //alert(Payment_has_been_confirmed);
           //////playSong();
 
 
@@ -2012,8 +2012,8 @@ export default function Index({ params }: any) {
 
 
 
-          //toast.success(Payment_has_been_confirmed);
-          alert(Payment_has_been_confirmed);
+          toast.success(Payment_has_been_confirmed);
+          //alert(Payment_has_been_confirmed);
           //playSong();
 
 
@@ -5763,7 +5763,7 @@ const fetchBuyOrders = async () => {
                                       `}
 
                                       onClick={() => {
-                                        confirm("수동으로 입금확인을 처리하시겠습니까?") &&
+                                        //confirm("수동으로 입금확인을 처리하시겠습니까?") &&
                                         confirmPayment(
                                           index,
                                           item._id,
