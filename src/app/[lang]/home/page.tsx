@@ -3053,9 +3053,12 @@ const fetchBuyOrders = async () => {
                       height={35}
                       className="w-6 h-6"
                     />
+                    {/*
                     <div className="text-sm text-zinc-500 font-semibold">
                       입금통장정보가 없습니다. 입금통장정보가 없으면 판매가 불가능합니다.
                     </div>
+                    */}
+
                     {/* 판매자 등록 버튼 */}
                     <button
                       onClick={() => {
