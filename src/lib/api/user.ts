@@ -537,41 +537,104 @@ export async function checkVaultWalletAddressExists(storecode: string, walletAdd
   return false;
 }
 
+
+
+
 // updateSellerVaultWallet
 export async function updateSellerVaultWallet(data: any) {
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
 
   // update and return updated user
-  if (!data.storecode || !data.walletAddress || !data.vaultWallet) {
+  if (!data.storecode || !data.walletAddress || !data.sellerStatus || !data.bankName || !data.accountNumber || !data.accountHolder || !data.vaultWallet) {
     console.log("Invalid data");
     return null;
   }
 
-  console.log("Updating vault wallet for storecode:", data.storecode, "walletAddress:", data.walletAddress);
 
+
+  const seller = {
+    status: data.sellerStatus,
+    bankInfo: {
+      bankName: data.bankName,
+      accountNumber: data.accountNumber,
+      accountHolder: data.accountHolder,
+    }
+  };
+  
+
+  // upsert seller info
+
+  /*
   const result = await collection.updateOne(
     {
       storecode: data.storecode,
       walletAddress: data.walletAddress
     },
-    { $set: { vaultWallet: data.vaultWallet } }
+    { $set: { seller: seller } }
   );
+  */
 
-  if (result) {
-
-    console.log("Vault wallet updated in database.");
-
-    const updated = await collection.findOne<UserProps>(
+  // if user is exist, update seller info
+  const existingUser = await collection.findOne(
+    {
+      storecode: data.storecode,
+      walletAddress: data.walletAddress,
+    }
+  );
+  if (existingUser) {
+    // update seller info
+    const result = await collection.updateOne(
       {
         storecode: data.storecode,
         walletAddress: data.walletAddress
       },
+      { $set: {
+        nickname: data.nickname,
+        seller: seller,
+        vaultWallet: data.vaultWallet,
+      } }
     );
-    return updated;
+
+    if (result) {
+      const updated = await collection.findOne<UserProps>(
+        {
+          storecode: data.storecode,
+          walletAddress: data.walletAddress
+        },
+      );
+      return updated;
+    } else {
+      return null;
+    }
+
   } else {
-    return null;
+
+    // insert new user with seller info
+    const result = await collection.insertOne(
+      {
+        storecode: data.storecode,
+        walletAddress: data.walletAddress,
+        nickname: data.nickname,
+        seller: seller,
+        vaultWallet: data.vaultWallet,
+      }
+    );
+
+    if (result) {
+      const updated = await collection.findOne<UserProps>(
+        {
+          storecode: data.storecode,
+          walletAddress: data.walletAddress
+        },
+      );
+      return updated;
+    } else {
+      return null;
+    }
   }
+
+
 }
 
 

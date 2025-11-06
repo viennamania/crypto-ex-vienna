@@ -2677,7 +2677,7 @@ const fetchBuyOrders = async () => {
                 <div className="w-full flex flex-col xl:flex-row items-center justify-end gap-2">
 
 
-                  <div className="flex flex-row items-center justify-center gap-2">
+                  <div className="hidden flex-row items-center justify-center gap-2">
                     {/* 구매하기 버튼 */}
                     {/* new window */}
 

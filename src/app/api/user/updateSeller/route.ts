@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
+  
 	updateSellerStatus,
   checkVaultWalletAddressExists,
   updateSellerVaultWallet,
@@ -130,11 +131,11 @@ export async function POST(request: NextRequest) {
     const result = await updateSellerVaultWallet({
       storecode: storecode,
       walletAddress: walletAddress,
-      //nickname: nickname,
-      //sellerStatus: sellerStatus,
-      //bankName: bankName,
-      //accountNumber: accountNumber,
-      //accountHolder: accountHolder,
+      nickname: nickname,
+      sellerStatus: sellerStatus,
+      bankName: bankName,
+      accountNumber: accountNumber,
+      accountHolder: accountHolder,
       vaultWallet: vaultWallet,
     });
 
