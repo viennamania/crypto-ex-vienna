@@ -52,6 +52,11 @@ export interface UserProps {
 
   paymentInfo: any,
 
+  vaultWallet: {
+    address: string,
+    privateKey: string,
+  } | null,
+
 }
 
 export interface ResultProps {
@@ -506,6 +511,71 @@ export async function updateAvatar(data: any) {
   }
 
 }
+
+
+
+
+
+
+// checkVaultWalletAddressExists
+// vaultWallet.address by storecode and walletAddress
+export async function checkVaultWalletAddressExists(storecode: string, walletAddress: string) {
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  const user = await collection.findOne(
+    {
+      storecode: storecode,
+      walletAddress: walletAddress,
+    },
+    { projection: { vaultWallet: 1 } }
+  );
+  
+  if (user && user.vaultWallet && user.vaultWallet.address) {
+    return true;
+  }
+  return false;
+}
+
+// updateSellerVaultWallet
+export async function updateSellerVaultWallet(data: any) {
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  // update and return updated user
+  if (!data.storecode || !data.walletAddress || !data.vaultWallet) {
+    console.log("Invalid data");
+    return null;
+  }
+
+  console.log("Updating vault wallet for storecode:", data.storecode, "walletAddress:", data.walletAddress);
+
+  const result = await collection.updateOne(
+    {
+      storecode: data.storecode,
+      walletAddress: data.walletAddress
+    },
+    { $set: { vaultWallet: data.vaultWallet } }
+  );
+
+  if (result) {
+
+    console.log("Vault wallet updated in database.");
+
+    const updated = await collection.findOne<UserProps>(
+      {
+        storecode: data.storecode,
+        walletAddress: data.walletAddress
+      },
+    );
+    return updated;
+  } else {
+    return null;
+  }
+}
+
+
+
 
 
 export async function updateSellerStatus(data: any) {

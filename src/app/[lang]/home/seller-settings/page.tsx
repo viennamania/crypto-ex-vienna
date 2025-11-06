@@ -52,7 +52,7 @@ import AppBarComponent from "@/components/Appbar/AppBar";
 import { getDictionary } from "../../../dictionaries";
 
 
-
+import { useQRCode } from 'next-qrcode';
 
 //const storecode = "admin";
 
@@ -276,7 +276,7 @@ export default function SettingsPage({ params }: any) {
     } = data;
     
     
-
+    const { Canvas } = useQRCode();
 
 
     const router = useRouter();
@@ -441,7 +441,10 @@ export default function SettingsPage({ params }: any) {
 
     const [seller, setSeller] = useState(null) as any;
 
-
+    const [vaultWallet, setVaultWallet] = useState({
+        address: '',
+        privateKey: '',
+    });
 
 
     useEffect(() => {
@@ -459,7 +462,26 @@ export default function SettingsPage({ params }: any) {
 
             const data = await response.json();
 
-            ////console.log("data", data);
+            //console.log("data", data);
+
+            /*
+            {
+                "_id": "690c382334f80c6d88725f72",
+                "storecode": "cfdkzznw",
+                "walletAddress": "0xC76033Fc29D138a01865884B32D0604765073613",
+                "nickname": "hasddsa",
+                "seller": {
+                    "status": "confirmed",
+                    "bankInfo": {
+                        "bankName": "신한은행",
+                        "accountNumber": "82937493283",
+                        "accountHolder": "오고고"
+                    }
+                }
+            }
+            */
+
+
 
             if (data.result) {
                 setNickname(data.result.nickname);
@@ -472,6 +494,9 @@ export default function SettingsPage({ params }: any) {
                 setSeller(data.result.seller);
 
                 setEscrowWalletAddress(data.result.escrowWalletAddress);
+
+                setVaultWallet(data.result?.vaultWallet);
+
             } else {
                 setNickname('');
                 setAvatar('/profile-default.png');
@@ -482,6 +507,12 @@ export default function SettingsPage({ params }: any) {
                 setAccountNumber('');
 
                 setEscrowWalletAddress('');
+
+
+                setVaultWallet({
+                    address: '',
+                    privateKey: '',
+                });
 
                 //setBankName('');
             }
@@ -654,6 +685,8 @@ export default function SettingsPage({ params }: any) {
             .then((data) => {
                 setNickname(data.result.nickname);
                 setSeller(data.result.seller);
+
+                setVaultWallet(data.result?.vaultWallet);
             });
 
   
@@ -865,7 +898,7 @@ export default function SettingsPage({ params }: any) {
 
                 {seller && (
 
-                    <div className='flex flex-row gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
+                    <div className='w-full flex flex-col gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
 
                         <div className="flex flex-row items-center gap-2">
                             {/* dot */}
@@ -879,10 +912,59 @@ export default function SettingsPage({ params }: any) {
                         <div className="flex flex-col p-2 gap-2">
                             {/* 판매자 아이디 */}
                             <span className="text-lg text-zinc-500 font-semibold">
-                                판매자 아이디: {
+                                아이디: {
                                     nickname ? nickname : '등록 안됨'
                                 }
                             </span>
+
+                            {/* 판매자 지갑주소 */}
+                            <div className='flex flex-col items-start gap-2'>
+
+                                <div className="flex flex-row items-center gap-2">
+                                    <span className="text-lg text-zinc-500 font-semibold">
+                                        지갑주소: {vaultWallet?.address || '등록 안됨'}
+                                    </span>
+                                    {vaultWallet?.address && (
+                                        <button
+                                            onClick={() => {
+                                                if (vaultWallet?.address) {
+                                                    navigator.clipboard.writeText(vaultWallet?.address);
+                                                    toast.success(Copied_Wallet_Address);
+                                                }
+                                            }}
+                                            className="p-1 bg-gray-200 rounded"
+                                        >
+                                            <Image
+                                                src="/icon-copy.png"
+                                                alt="Copy"
+                                                width={16}
+                                                height={16}
+                                            />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {vaultWallet?.address && (
+                                    <Canvas
+                                    text={vaultWallet?.address || ''}
+                                        options={{
+                                        //level: 'M',
+                                        margin: 2,
+                                        scale: 4,
+                                        ///width: 200,
+                                        // width 100%
+                                        width: 150,
+                                        color: {
+                                            dark: '#000000FF',
+                                            light: '#FFFFFFFF',
+                                        },
+                            
+                                        }}
+                                    />
+                                )}
+
+
+                            </div>
 
                             {/* 판매자 은행 정보 */}
                             <span className="text-lg text-zinc-500 font-semibold">
@@ -897,16 +979,6 @@ export default function SettingsPage({ params }: any) {
                             </span>
 
                         </div>
-
-                        <Image
-                            src="/icon-seller.png"
-                            alt="Seller"
-                            width={50}
-                            height={50}
-                            className='w-10 h-10'
-                        />
-
-
                     </div>
                 )}
 
