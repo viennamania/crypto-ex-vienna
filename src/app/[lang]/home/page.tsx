@@ -5162,7 +5162,7 @@ const fetchBuyOrders = async () => {
                                               item.usdtAmount,
                                               item.storecode,
 
-                                              item.store?.bankInfo,
+                                              //item.store?.bankInfo,
                                             );
                                           }}
                                         >
