@@ -2229,7 +2229,7 @@ export default function Index({ params }: any) {
           body: JSON.stringify(
 
             {
-              storecode: "",
+              storecode: searchStorecode,
               limit: Number(limitValue),
               page: Number(pageValue),
               walletAddress: address,
@@ -2339,6 +2339,8 @@ export default function Index({ params }: any) {
     searchFromDate,
     searchToDate,
     //playSong,
+
+    searchStorecode,
 ]);
 
 
