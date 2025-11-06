@@ -839,6 +839,39 @@ export async function updateSellerStatusForClearance(data: any) {
 
 
 
+// getOneSellerVaultWalletAddressByRandom
+// user.seller is exist and user.seller.status is "comfirmed"
+export async function getOneSellerVaultWalletAddressByRandom(
+  storecode: string,
+): Promise<any | null> {
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+  // user.seller is exist and user.seller.status is "confirmed"
+  const results = await collection.aggregate<UserProps>([
+    {
+      $match: {
+        storecode: storecode,
+        seller: { $exists: true, $ne: null },
+        'seller.status': 'confirmed',
+      },
+    },
+    { $project: { vaultWallet: 1 } },
+  ]).toArray();
+
+  if (results.length > 0) {
+    // get random index
+    const randomIndex = Math.floor(Math.random() * results.length);
+
+    const sellerVaultWalletAddress = results[randomIndex].vaultWallet?.address;
+
+    return sellerVaultWalletAddress;
+
+  } else {
+    return null;
+  }
+
+}
 
 
 
@@ -2240,3 +2273,8 @@ export async function getUserPaymentInfoByStorecode({
   }
 
 }
+
+
+
+
+//

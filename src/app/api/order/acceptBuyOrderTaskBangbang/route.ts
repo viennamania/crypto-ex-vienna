@@ -11,6 +11,7 @@ import {
 } from '@lib/api/store';
 
 import {
+  getOneSellerVaultWalletAddressByRandom,
   getOneByWalletAddress,
 } from '@lib/api/user';
 
@@ -103,7 +104,24 @@ export async function POST(request: NextRequest) {
 
     } else {
 
-      sellerWalletAddress = store?.sellerWalletAddress;
+      // get one random seller's vault wallet address
+      const sellerVaultWalletAddress = await getOneSellerVaultWalletAddressByRandom(storecode);
+
+      console.log("sellerVaultWalletAddress", sellerVaultWalletAddress);
+
+      if (sellerVaultWalletAddress) {
+        sellerWalletAddress = sellerVaultWalletAddress;
+      } else {
+        console.log("error");
+        console.log("sellerVaultWalletAddress is null");
+        console.log("sellerVaultWalletAddress", sellerVaultWalletAddress);
+
+
+
+        sellerWalletAddress = store?.sellerWalletAddress;
+      }
+
+
 
     }
 
