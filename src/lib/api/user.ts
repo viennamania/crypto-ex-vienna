@@ -520,7 +520,7 @@ export async function updateSellerStatus(data: any) {
   }
 
 
-  
+  /*
   // check data.accountNumber is exist from bankusers collection
   const bankUsersCollection = client.db(dbName).collection('bankusers');
   const checkBankUser = await bankUsersCollection.findOne(
@@ -531,7 +531,7 @@ export async function updateSellerStatus(data: any) {
   if (checkBankUser) {
     console.log('bank user already exists: ' + data.accountNumber);
   }
-  
+  */
 
 
   const seller = {
@@ -544,8 +544,9 @@ export async function updateSellerStatus(data: any) {
   };
   
 
+  // upsert seller info
 
-
+  /*
   const result = await collection.updateOne(
     {
       storecode: data.storecode,
@@ -553,36 +554,63 @@ export async function updateSellerStatus(data: any) {
     },
     { $set: { seller: seller } }
   );
+  */
 
-
-
-  if (result) {
-
-
-    /*
-    // insert bank user to bankusers collection
-    await bankUsersCollection.insertOne(
-      {
-        bankAccountNumber: data.accountNumber,
-        bankName: data.bankName,
-        accountHolder: data.accountHolder,
-      }
-    );
-    */
-
-
-
-    const updated = await collection.findOne<UserProps>(
+  // if user is exist, update seller info
+  const existingUser = await collection.findOne(
+    {
+      storecode: data.storecode,
+      walletAddress: data.walletAddress,
+    }
+  );
+  if (existingUser) {
+    // update seller info
+    const result = await collection.updateOne(
       {
         storecode: data.storecode,
         walletAddress: data.walletAddress
       },
-      { projection: { _id: 0, emailVerified: 0 } }
+      { $set: {
+        nickname: data.nickname,
+        seller: seller
+      } }
     );
 
-    return updated;
+    if (result) {
+      const updated = await collection.findOne<UserProps>(
+        {
+          storecode: data.storecode,
+          walletAddress: data.walletAddress
+        },
+      );
+      return updated;
+    } else {
+      return null;
+    }
+
   } else {
-    return null;
+
+    // insert new user with seller info
+    const result = await collection.insertOne(
+      {
+        storecode: data.storecode,
+        walletAddress: data.walletAddress,
+        nickname: data.nickname,
+        seller: seller
+      }
+    );
+
+    if (result) {
+      const updated = await collection.findOne<UserProps>(
+        {
+          storecode: data.storecode,
+          walletAddress: data.walletAddress
+        },
+      );
+      return updated;
+    } else {
+      return null;
+    }
   }
 
 

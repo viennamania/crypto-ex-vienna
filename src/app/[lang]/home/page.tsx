@@ -508,52 +508,6 @@ export default function Index({ params }: any) {
   
 
 
-  const [nativeBalance, setNativeBalance] = useState(0);
-  const [balance, setBalance] = useState(0);
-  useEffect(() => {
-
-    // get the balance
-    const getBalance = async () => {
-
-      ///console.log('getBalance address', address);
-
-      
-      const result = await balanceOf({
-        contract,
-        address: address || "",
-      });
-
-      if (chain === 'bsc') {
-        setBalance( Number(result) / 10 ** 18 );
-      } else {
-        setBalance( Number(result) / 10 ** 6 );
-      }
-
-
-
-
-    };
-
-
-    if (address) getBalance();
-
-    const interval = setInterval(() => {
-      if (address) getBalance();
-    } , 5000);
-
-
-    return () => clearInterval(interval);
-
-  } , [address]);
-
-
-
-
-
-
-
-
-
 
 
   const [escrowWalletAddress, setEscrowWalletAddress] = useState('');
@@ -2186,7 +2140,7 @@ export default function Index({ params }: any) {
 
 
       //console.log('buyOrders[0]', buyOrders?.[0]);
-
+      /*
       if (data.result.orders?.[0]?._id !== latestBuyOrder?._id) {
 
         setLatestBuyOrder(data.result.orders?.[0] || null);
@@ -2212,6 +2166,7 @@ export default function Index({ params }: any) {
 
 
       }
+      */
 
       setBuyOrders(data.result.orders);
 
@@ -2775,49 +2730,6 @@ const fetchBuyOrders = async () => {
                     </button>
                   </div>
 
-
-
-
-                  {address && (
-                    <div className="flex flex-col xl:flex-row items-center justify-center gap-2">
-
-                        <div className="flex flex-row items-center justify-center gap-2">
-                            <Image
-                                src="/icon-shield.png"
-                                alt="Wallet"
-                                width={100}
-                                height={100}
-                                className="w-6 h-6"
-                            />
-                            <span className="text-sm text-zinc-500">
-                              USDT지갑
-                            </span>
-                            <button
-                                className="text-lg text-zinc-600 underline"
-                                onClick={() => {
-                                    navigator.clipboard.writeText(address);
-                                    toast.success(Copied_Wallet_Address);
-                                } }
-                            >
-                                {address.substring(0, 6)}...{address.substring(address.length - 4)}
-                            </button>
-
-                        </div>
-
-                        <div className="flex flex-row items-center justify-center  gap-2">
-                            <span className="text-sm text-zinc-500">
-                                잔액
-                            </span>
-                            <span className="text-2xl xl:text-4xl font-semibold text-[#409192]">
-                                {Number(balance).toFixed(2)}
-                            </span>
-                            {' '}
-                            <span className="text-sm">USDT</span>
-                        </div>
-
-                      </div>
-
-                  )}
 
                 </div>
 

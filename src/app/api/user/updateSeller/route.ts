@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
 
-  const { storecode, walletAddress, sellerStatus, bankName, accountNumber, accountHolder } = body;
+  const { storecode, walletAddress, nickname, sellerStatus, bankName, accountNumber, accountHolder } = body;
 
   //console.log("walletAddress", walletAddress);
   //console.log("sellerStatus", sellerStatus);
@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
   const result = await updateSellerStatus({
     storecode: storecode,
     walletAddress: walletAddress,
+    nickname: nickname,
     sellerStatus: sellerStatus,
     bankName: bankName,
     accountNumber: accountNumber,
