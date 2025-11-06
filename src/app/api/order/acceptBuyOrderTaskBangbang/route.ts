@@ -293,7 +293,7 @@ export async function POST(request: NextRequest) {
 
         await buyOrderRequestPayment({
           orderId: buyorder._id,
-          transactionHash: '0x0',
+          transactionHash: '0x',
           bankInfo: bankInfo,
         });
 
