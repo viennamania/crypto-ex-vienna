@@ -848,7 +848,7 @@ export async function getOneSellerByVaultWalletAddress(
   const results = await collection.findOne<UserProps>(
     {
       storecode: storecode,
-      'seller.vaultWallet.address': vaultWalletAddress
+      'vaultWallet.address': vaultWalletAddress
     },
   );
 
