@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
       console.log("sellerVaultWalletAddress", sellerVaultWalletAddress);
 
       if (sellerVaultWalletAddress) {
+        sellerWalletAddressIsVault = true;
         sellerWalletAddress = sellerVaultWalletAddress;
       } else {
         console.log("error");
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
         console.log("sellerVaultWalletAddress", sellerVaultWalletAddress);
 
 
-        sellerWalletAddressIsVault = true;
+        
         sellerWalletAddress = store?.sellerWalletAddress;
       }
 
