@@ -4,6 +4,7 @@ import {
   getAllBuyOrdersForMatching,
 	acceptBuyOrder,
   cancelTradeBySeller,
+  buyOrderRequestPayment,
 } from '@lib/api/order';
 
 import {
@@ -13,6 +14,7 @@ import {
 import {
   getOneSellerVaultWalletAddressByRandom,
   getOneByWalletAddress,
+  getOneSellerByVaultWalletAddress,
 } from '@lib/api/user';
 
 
@@ -160,6 +162,8 @@ export async function POST(request: NextRequest) {
         
         sellerMemo = "볼트지갑(대행) 사용";
 
+
+
       
       } else {
         sellerMemo = "본인지갑(직접) 사용";
@@ -258,6 +262,46 @@ export async function POST(request: NextRequest) {
     ////console.log("acceptBuyOrder result", result);
 
     if (result) {
+
+
+
+      // if vault wallet used, request payment immediately
+      if (sellerWalletAddressIsVault) {
+
+        // get user bank info as 볼트지갑(대행)
+        const user = await getOneSellerByVaultWalletAddress(
+          storecode,
+          sellerWalletAddress
+        );
+
+        //console.log("seller for vault wallet", seller);
+
+        if (!user) {
+          console.log("error");
+          console.log("user is null for vault wallet");
+          console.log("user", user);
+
+          continue;
+        }
+
+
+        const bankInfo = {
+          bankName: user?.seller?.bankInfo?.bankName,
+          accountNumber: user?.seller?.bankInfo?.accountNumber,
+          accountHolder: user?.seller?.bankInfo?.accountHolder,
+        };
+
+        await buyOrderRequestPayment({
+          orderId: buyorder._id,
+          transactionHash: '0x0',
+          bankInfo: bankInfo,
+        });
+
+      }
+
+
+
+
 
       //console.log("acceptBuyOrder result", result);
 

@@ -836,6 +836,26 @@ export async function updateSellerStatusForClearance(data: any) {
 
 
 
+// getOneSellerByVaultWalletAddress
+export async function getOneSellerByVaultWalletAddress(
+  storecode: string,
+  vaultWalletAddress: string,
+): Promise<UserProps | null> {
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  const results = await collection.findOne<UserProps>(
+    {
+      storecode: storecode,
+      'seller.vaultWallet.address': vaultWalletAddress
+    },
+  );
+
+  return results;
+
+}
+
 
 
 
