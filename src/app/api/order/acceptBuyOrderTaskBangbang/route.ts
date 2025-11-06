@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
 
 
     let sellerWalletAddress = '';
+    let sellerWalletAddressIsVault = false;
 
 
     if (buyorder.privateSale) {
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
         console.log("sellerVaultWalletAddress", sellerVaultWalletAddress);
 
 
-
+        sellerWalletAddressIsVault = true;
         sellerWalletAddress = store?.sellerWalletAddress;
       }
 
@@ -153,6 +154,17 @@ export async function POST(request: NextRequest) {
 
     // 프라이빗 세일이 아닌 경우, 판매자의 은행 정보가 있는지 확인한다.
     if (!buyorder.privateSale) {
+
+      if (sellerWalletAddressIsVault) {
+        
+        sellerMemo = "볼트지갑(대행) 사용";
+
+      
+      } else {
+        sellerMemo = "본인지갑(직접) 사용";
+      
+
+
     
         const userSeller = await getOneByWalletAddress(
           sellerStorecode,
@@ -208,9 +220,10 @@ export async function POST(request: NextRequest) {
 
         sellerMemo = userSeller?.seller?.bankInfo?.bankName + " " + userSeller?.seller?.bankInfo?.accountNumber + " " + userSeller?.seller?.bankInfo?.accountHolder;
         */
-  
 
-    } 
+      }
+
+    }
 
 
     // if buyer's walletAddress is 
