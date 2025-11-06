@@ -1188,11 +1188,12 @@ export default function Index({ params }: any) {
 
       // check balance
       // send payment request
-
+      /*
       if (balance < amount) {
         toast.error(Insufficient_balance);
         return;
       }
+      */
 
 
       // check all escrowing is false
@@ -1356,7 +1357,7 @@ export default function Index({ params }: any) {
 
 
               // refresh balance
-
+              /*
               const result = await balanceOf({
                 contract,
                 address: address || "",
@@ -1365,7 +1366,7 @@ export default function Index({ params }: any) {
               //console.log(result);
 
               setBalance( Number(result) / 10 ** 6 );
-
+              */
 
             
 
@@ -1463,7 +1464,7 @@ export default function Index({ params }: any) {
 
 
             // refresh balance
-
+            /*
             const result = await balanceOf({
               contract,
               address: address || "",
@@ -1472,7 +1473,7 @@ export default function Index({ params }: any) {
             //console.log(result);
 
             setBalance( Number(result) / 10 ** 6 );
-
+            */
 
           } else {
             toast.error('결제요청이 실패했습니다.');
