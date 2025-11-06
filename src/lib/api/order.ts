@@ -3429,6 +3429,8 @@ export async function acceptBuyOrder(data: any) {
       ///tradeId: tradeId,
       
       seller: {
+        autoSend: data.sellerAutoSend || false,
+        storecode: data.sellerStorecode,
         walletAddress: data.sellerWalletAddress,
 
         /*

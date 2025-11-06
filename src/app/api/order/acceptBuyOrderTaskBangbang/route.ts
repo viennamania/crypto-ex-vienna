@@ -249,6 +249,7 @@ export async function POST(request: NextRequest) {
       sellerStorecode: sellerStorecode,
       sellerMemo: sellerMemo,
 
+      sellerAutoSend: true,
 
       /*
       sellerNickname: sellerNickname,
