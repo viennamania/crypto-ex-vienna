@@ -3337,22 +3337,35 @@ export async function acceptBuyOrder(data: any) {
 
   if (order && order?.privateSale === false) {
     
-
+    
     const userCollection = client.db(dbName).collection('users');
+
     user = await userCollection.findOne<UserProps>(
       {
-        walletAddress: data.sellerWalletAddress,
+        // data.sellerWalletAddress is walletAddress or vaultWallet.address
+
+      
+        $or: [
+          { walletAddress: data.sellerWalletAddress },
+          { 'vaultWallet.address': data.sellerWalletAddress },
+        ],
+        
+
+        //walletAddress: data.sellerWalletAddress,
+
+
         storecode: data.sellerStorecode,
       },
     );
 
     if (!user) {
 
-      console.log('acceptBuyOrder user is null: ' + JSON.stringify(user));
-
+      console.log('acceptBuyOrder user is null');
 
       return null;
     }
+    
+
 
   }
 
