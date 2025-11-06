@@ -92,6 +92,8 @@ import {
 } from "@/app/config/contractAddresses";
 
 
+import { useQRCode } from 'next-qrcode';
+
 
 
 interface BuyOrder {
@@ -200,6 +202,9 @@ export default function Index({ params }: any) {
     // OPTIONAL: the contract's abi
     //abi: [...],
   });
+
+
+  const { Canvas } = useQRCode();
 
 
 
@@ -508,6 +513,9 @@ export default function Index({ params }: any) {
   
 
 
+    const [searchStorecode, setSearchStorecode] = useState("");
+
+
 
 
   const [escrowWalletAddress, setEscrowWalletAddress] = useState('');
@@ -530,7 +538,7 @@ export default function Index({ params }: any) {
       },
       body: JSON.stringify({
         lang: params.lang,
-        storecode: "admin",
+        storecode: searchStorecode,
         walletAddress: address,
         //isSmartAccount: activeWallet === inAppConnectWallet ? false : true,
         isSmartAccount: false,
@@ -560,106 +568,6 @@ export default function Index({ params }: any) {
 
 
 
-  // get escrow wallet address and balance
-  
-  const [escrowBalance, setEscrowBalance] = useState(0);
-  const [escrowNativeBalance, setEscrowNativeBalance] = useState(0);
-
-  
-  useEffect(() => {
-
-    const getEscrowBalance = async () => {
-
-      if (!address) {
-        setEscrowBalance(0);
-        return;
-      }
-
-      if (!escrowWalletAddress || escrowWalletAddress === '') return;
-
-
-      
-      const result = await balanceOf({
-        contract,
-        address: escrowWalletAddress,
-      });
-
-      //console.log('escrowWalletAddress balance', result);
-
-  
-      setEscrowBalance( Number(result) / 10 ** 6 );
-            
-
-
-      /*
-      await fetch('/api/user/getUSDTBalanceByWalletAddress', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          storecode: "admin",
-          walletAddress: escrowWalletAddress,
-        }),
-      })
-      .then(response => response?.json())
-      .then(data => {
-
-        console.log('getUSDTBalanceByWalletAddress data.result.displayValue', data.result?.displayValue);
-
-        setEscrowBalance(data.result?.displayValue);
-
-      } );
-       */
-
-
-
-
-      await fetch('/api/user/getBalanceByWalletAddress', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          storecode: "admin",
-          walletAddress: escrowWalletAddress,
-        }),
-      })
-      .then(response => response?.json())
-      .then(data => {
-
-
-        ///console.log('getBalanceByWalletAddress data', data);
-
-
-        setEscrowNativeBalance(data.result?.displayValue);
-
-      });
-      
-
-
-
-    };
-
-    getEscrowBalance();
-
-    const interval = setInterval(() => {
-      getEscrowBalance();
-    } , 5000);
-
-    return () => clearInterval(interval);
-
-  } , [address, escrowWalletAddress, contract, "admin"]);
-  
-
-  //console.log('escrowBalance', escrowBalance);
-
-
-
-
-
-
-
   
 
   // get User by wallet address
@@ -684,7 +592,7 @@ export default function Index({ params }: any) {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            storecode: "admin",
+            storecode: searchStorecode,
             walletAddress: address,
         }),
     })
@@ -708,7 +616,7 @@ export default function Index({ params }: any) {
 
     setLoadingUser(false);
 
-  } , [address]);
+  } , [address, searchStorecode]);
 
 
 
@@ -737,7 +645,7 @@ export default function Index({ params }: any) {
   const openModal = () => setModalOpen(true);
 
   
-  const [searchStorecode, setSearchStorecode] = useState("");
+
   const [searchOrderStatusCancelled, setSearchOrderStatusCancelled] = useState(false);
   const [searchOrderStatusCompleted, setSearchOrderStatusCompleted] = useState(false);
 
@@ -2327,7 +2235,7 @@ const fetchBuyOrders = async () => {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              storecode: "admin",
+              storecode: selectedItem?.storecode,
               ////walletAddress: address,
             }),
         });
@@ -2348,7 +2256,7 @@ const fetchBuyOrders = async () => {
 
     fetchData();
 
-  } , []);
+  } , [searchStorecode]);
 
 
 
@@ -2453,7 +2361,7 @@ const fetchBuyOrders = async () => {
   
       if (!response.ok) {
         setFetchingAllStores(false);
-        toast.error('가맹점 검색에 실패했습니다.');
+        toast.error('상점 검색에 실패했습니다.');
         return;
       }
   
@@ -2474,6 +2382,35 @@ const fetchBuyOrders = async () => {
       fetchAllStores();
     }, []); 
 
+
+
+
+    // get balance of valut wallet address
+    const [vaultWalletBalance, setVaultWalletBalance] = useState("0");
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!user?.vaultWallet?.address) {
+                return;
+            }
+
+            const result = await balanceOf({
+                contract,
+                address: user?.vaultWallet?.address || '',
+            });
+
+            const balance = Number(result) / 10 ** 6;
+            setVaultWalletBalance(balance.toString());
+        };
+        fetchData();
+
+        // interval every 10 seconds
+        const interval = setInterval(() => {
+            fetchData();
+        }, 10000);
+
+        return () => clearInterval(interval);
+
+    }, [user?.vaultWallet?.address, contract]);
 
 
 
@@ -2544,52 +2481,6 @@ const fetchBuyOrders = async () => {
             )}
 
 
-            {!address && (
-              <ConnectButton
-                client={client}
-                wallets={wallets}
-
-                accountAbstraction={{
-                  chain: chain === 'ethereum' ? ethereum :
-                          chain === 'polygon' ? polygon :
-                          chain === 'arbitrum' ? arbitrum :
-                          chain === 'bsc' ? bsc : arbitrum,
-                  sponsorGas: false
-                }}
-                
-                
-                theme={"light"}
-
-                // button color is dark skyblue convert (49, 103, 180) to hex
-                connectButton={{
-                  style: {
-                    backgroundColor: "#0047ab", // cobalt blue
-
-                    color: "#f3f4f6", // gray-300 
-                    padding: "2px 2px",
-                    borderRadius: "10px",
-                    fontSize: "14px",
-                    //width: "40px",
-                    height: "38px",
-                  },
-                  label: "웹3 로그인",
-                }}
-
-                connectModal={{
-                  size: "wide", 
-                  //size: "compact",
-                  titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
-                  showThirdwebBranding: false,
-                }}
-
-                locale={"ko_KR"}
-                //locale={"en_US"}
-              />
-
-            )}
-
-
-
 
           </div>
 
@@ -2622,7 +2513,7 @@ const fetchBuyOrders = async () => {
 
 
 
-            {/* 홈 / 가맹점관리 / 회원관리 / P2P구매관리 */}
+            {/* 홈 / 상점관리 / 회원관리 / P2P구매관리 */}
             {/* memnu buttons same width left side */}
             <div className="w-full flex justify-start items-center gap-2">
 
@@ -2800,7 +2691,7 @@ const fetchBuyOrders = async () => {
                       <span className="
                         w-32
                         text-sm font-semibold">
-                        가맹점선택
+                        상점선택
                       </span>
 
 
@@ -2811,7 +2702,9 @@ const fetchBuyOrders = async () => {
 
                         // storecode parameter is passed to fetchBuyOrders
                         onChange={(e) => {
-                          router.push('/' + params.lang + '/administration/trade-history?storecode=' + e.target.value);
+                          setSearchStorecode(e.target.value);
+                          setPageValue(1);
+                          fetchBuyOrders();
                         }}
 
 
@@ -2822,7 +2715,7 @@ const fetchBuyOrders = async () => {
 
                         {fetchingAllStores && (
                           <option value="" disabled>
-                            가맹점 검색중...
+                            상점 검색중...
                           </option>
                         )}
 
@@ -3044,20 +2937,130 @@ const fetchBuyOrders = async () => {
                 )}
                 */}
 
-                {address && !user?.seller?.bankInfo && (
-                  <div className="flex flex-col xl:flex-row items-center gap-2 mt-4">
-                    <Image
-                      src="/icon-bank.png"
-                      alt="Bank"
-                      width={35}
-                      height={35}
-                      className="w-6 h-6"
-                    />
-                    {/*
-                    <div className="text-sm text-zinc-500 font-semibold">
-                      입금통장정보가 없습니다. 입금통장정보가 없으면 판매가 불가능합니다.
-                    </div>
-                    */}
+                {address && (
+                  <div className="flex flex-col items-center gap-2 mt-4">
+
+                    {/* 판매자 정보 */}
+                    {/* user.seller, user.vaultWallet */}
+
+                    {searchStorecode !== '' && !user?.seller && (
+                      <div className='w-full flex flex-col gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
+
+                        <div className="flex flex-row items-center gap-2">
+                            {/* dot */}
+                            <div className='w-2 h-2 bg-red-500 rounded-full'></div>
+                            <span className="text-lg">
+                                판매자 정보가 없습니다.
+                            </span>
+                        </div>
+
+                        <span className="text-lg text-zinc-500 font-semibold">
+                            판매를 위해 판매자 등록을 해주세요.
+                        </span>
+
+                      </div>
+                    )}
+
+                    {user?.seller && (
+
+                        <div className='w-full flex flex-col gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
+
+                            <div className="flex flex-row items-center gap-2">
+                                {/* dot */}
+                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                <span className="text-lg">
+                                    판매자 정보
+                                </span>
+                            </div>
+
+
+                            <div className="flex flex-col p-2 gap-2">
+                                {/* 판매자 아이디 */}
+                                <span className="text-lg text-zinc-500 font-semibold">
+                                    아이디: {
+                                        user?.nickname ? user?.nickname : '등록 안됨'
+                                    }
+                                </span>
+
+                                {/* 판매자 지갑주소 */}
+                                <div className='flex flex-col items-start gap-2'>
+
+                                    <div className="flex flex-row items-center gap-2">
+                                        <span className="text-lg text-zinc-500 font-semibold">
+                                            지갑주소: {user?.vaultWallet?.address || '등록 안됨'}
+                                        </span>
+                                        {user?.vaultWallet?.address && (
+                                            <button
+                                                onClick={() => {
+                                                    if (user?.vaultWallet?.address) {
+                                                        navigator.clipboard.writeText(user?.vaultWallet?.address);
+                                                        toast.success(Copied_Wallet_Address);
+                                                    }
+                                                }}
+                                                className="p-1 bg-gray-200 rounded"
+                                            >
+                                                <Image
+                                                    src="/icon-copy.png"
+                                                    alt="Copy"
+                                                    width={16}
+                                                    height={16}
+                                                />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {user?.vaultWallet?.address && (
+                                        <div className='flex flex-row items-center gap-2'>
+                                            <Canvas
+                                            text={user?.vaultWallet?.address || ''}
+                                                options={{
+                                                //level: 'M',
+                                                margin: 2,
+                                                scale: 4,
+                                                ///width: 200,
+                                                // width 100%
+                                                width: 45,
+                                                color: {
+                                                    dark: '#000000FF',
+                                                    light: '#FFFFFFFF',
+                                                },
+                                    
+                                                }}
+                                            />
+
+                                            {/* balance */}
+                                            <div className='flex flex-row items-center gap-2'>
+                                                <span className='text-4xl font-bold text-green-500'
+                                                    style={{ fontFamily: 'monospace' }}>
+                                                    {vaultWalletBalance
+                                                    && parseFloat(vaultWalletBalance).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                                                </span>
+                                                <span className='text-zinc-500 font-semibold'>
+                                                    USDT
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+
+
+                                </div>
+
+                                {/* 판매자 은행 정보 */}
+                                <span className="text-lg text-zinc-500 font-semibold">
+                                    은행이름: {user?.seller?.bankInfo?.bankName}
+                                </span>
+
+                                <span className="text-lg text-zinc-500 font-semibold">
+                                    계좌번호: {user?.seller?.bankInfo?.accountNumber}
+                                </span>
+                                <span className="text-lg text-zinc-500 font-semibold">
+                                    예금주: {user?.seller?.bankInfo?.accountHolder}
+                                </span>
+
+                            </div>
+                        </div>
+                    )}
+
 
                     {/* 판매자 등록 버튼 */}
                     <button
@@ -3075,10 +3078,11 @@ const fetchBuyOrders = async () => {
                           className="w-5 h-5"
                         />
                         <span className="text-sm">
-                          판매자 등록하기
+                          판매자 설정하기
                         </span>
                       </div>
                     </button>
+
                   </div>
                 )}
                 
@@ -3102,7 +3106,7 @@ const fetchBuyOrders = async () => {
                         <tr>
 
                           <th className="p-2">
-                            가맹점
+                            상점
                             <br/>
                             {TID}
                           </th>
@@ -4562,7 +4566,7 @@ const fetchBuyOrders = async () => {
                                   <span className="
                                   w-10
                                   text-sm text-zinc-500">
-                                    가맹점
+                                    상점
                                   </span>
                                   <span className="
                                   w-14 text-end
@@ -4616,7 +4620,7 @@ const fetchBuyOrders = async () => {
                                     fontFamily: 'monospace',
                                   }}
                                 >
-                                  가맹점:{' '}
+                                  상점:{' '}
                                   { //  settlementFeePercent
                                     // dealerFeePercent
                                     Number(
@@ -4730,7 +4734,7 @@ const fetchBuyOrders = async () => {
                                       className="animate-spin"
                                     />
                                     <span className="text-sm font-semibold text-zinc-500">
-                                      가맹점 결제중...
+                                      상점 결제중...
                                     </span>
                                   </div>
                                   )}
