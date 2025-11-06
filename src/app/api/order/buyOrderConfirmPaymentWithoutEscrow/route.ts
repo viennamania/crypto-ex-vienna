@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    /*
     const user = await getOneByWalletAddress(
       storecode,
       sellerWalletAddress
@@ -100,10 +101,16 @@ export async function POST(request: NextRequest) {
     ///console.log("user", user);
 
     if (!user) {
+      console.log("seller user not found");
       return NextResponse.json({
         result: null,
       });
     }
+    */
+
+
+
+    
 
 
     const queueId = "queueId";
