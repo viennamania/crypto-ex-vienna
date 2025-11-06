@@ -89,7 +89,7 @@ const wallets = [
 
 const contractAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"; // USDT on Polygon
 
-const contractAddressArbitrum = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"; // USDT on Arbitrum
+//const contractAddressArbitrum = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"; // USDT on Arbitrum
 
 
 
@@ -118,11 +118,12 @@ export default function SettingsPage({ params }: any) {
     const contract = getContract({
         // the client you have created via `createThirdwebClient()`
         client,
-        // the chain the contract is deployed on 
-        
-        chain: arbitrum,
+        // the chain the contract is deployed on
 
-        address: contractAddressArbitrum,
+        chain: polygon,
+
+        ///address: contractAddressArbitrum,
+        address: contractAddress,
     
     
         // OPTIONAL: the contract's abi
@@ -822,8 +823,32 @@ export default function SettingsPage({ params }: any) {
 
 
 
+    // get balance of valut wallet address
+    const [vaultWalletBalance, setVaultWalletBalance] = useState("0");
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!vaultWallet?.address) {
+                return;
+            }
 
+            const result = await balanceOf({
+                contract,
+                address: vaultWallet?.address || '',
+            });
 
+            const balance = Number(result) / 10 ** 6;
+            setVaultWalletBalance(balance.toString());
+        };
+        fetchData();
+
+        // interval every 10 seconds
+        const interval = setInterval(() => {
+            fetchData();
+        }, 10000);
+
+        return () => clearInterval(interval);
+
+    }, [vaultWallet?.address, contract]);
 
 
 
@@ -945,22 +970,36 @@ export default function SettingsPage({ params }: any) {
                                 </div>
 
                                 {vaultWallet?.address && (
-                                    <Canvas
-                                    text={vaultWallet?.address || ''}
-                                        options={{
-                                        //level: 'M',
-                                        margin: 2,
-                                        scale: 4,
-                                        ///width: 200,
-                                        // width 100%
-                                        width: 150,
-                                        color: {
-                                            dark: '#000000FF',
-                                            light: '#FFFFFFFF',
-                                        },
-                            
-                                        }}
-                                    />
+                                    <div className='flex flex-row items-center gap-2'>
+                                        <Canvas
+                                        text={vaultWallet?.address || ''}
+                                            options={{
+                                            //level: 'M',
+                                            margin: 2,
+                                            scale: 4,
+                                            ///width: 200,
+                                            // width 100%
+                                            width: 150,
+                                            color: {
+                                                dark: '#000000FF',
+                                                light: '#FFFFFFFF',
+                                            },
+                                
+                                            }}
+                                        />
+
+                                        {/* balance */}
+                                        <div className='flex flex-row items-center gap-2'>
+                                            <span className='text-4xl font-bold text-green-500'
+                                                style={{ fontFamily: 'monospace' }}>
+                                                {vaultWalletBalance
+                                                && parseFloat(vaultWalletBalance).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                                            </span>
+                                            <span className='text-zinc-500 font-semibold'>
+                                                USDT
+                                            </span>
+                                        </div>
+                                    </div>
                                 )}
 
 
