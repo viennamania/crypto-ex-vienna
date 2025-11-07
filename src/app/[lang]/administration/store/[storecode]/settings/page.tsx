@@ -2505,14 +2505,22 @@ export default function SettingsPage({ params }: any) {
                                         }}
                                     />
                                     <button
+                                        className={`bg-[#0047ab] text-sm text-white px-4 py-2 rounded-lg
+                                            ${updatingSettlementWalletAddress ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        disabled={updatingSettlementWalletAddress}
                                         onClick={() => {
                                             if (!selectedSettlementWalletAddress) {
-                                            toast.error('가맹점 결제용 USDT 입금지갑을 입력하세요.');
+                                            toast.error
+                                                ('가맹점 결제용 USDT 입금지갑을 선택하세요.');
                                             return;
                                             }
                                             if (selectedSettlementWalletAddress === store?.settlementWalletAddress) {
-                                                toast.success('가맹점 결제용 USDT 입금지갑이 변경되었습니다.');
+                                                toast.error('현재 가맹점 결제용 USDT 입금지갑과 동일합니다.');
+                                                return;
                                             }
+                                            confirm(
+                                            `정말 ${selectedSettlementWalletAddress}로 가맹점 결제용 USDT 입금지갑을 변경하시겠습니까?`
+                                            ) && updateSettlementWalletAddress();
                                         }}
                                     >
                                         {updatingSettlementWalletAddress ? '변경 중...' : '변경'}
