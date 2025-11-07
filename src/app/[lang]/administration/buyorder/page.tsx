@@ -5639,7 +5639,7 @@ const fetchBuyOrders = async () => {
 
                       <td className="p-2">
                         <div className="
-                        w-56   
+                        w-60
                         flex flex-col gap-2 items-center justify-center">
 
 
@@ -5856,7 +5856,8 @@ const fetchBuyOrders = async () => {
                             } 
 
                             rounded-md
-                            p-2 
+                            p-2
+                            w-full
                             flex flex-col xl:flex-row gap-2 items-start justify-start
                             `}>
 
