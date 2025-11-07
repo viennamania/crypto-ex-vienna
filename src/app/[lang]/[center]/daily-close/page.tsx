@@ -1338,7 +1338,7 @@ export default function Index({ params }: any) {
 
               {/* 가맹점 보유량 */}
               {version !== 'bangbang' && (
-              <div className="flex flex-col xl:flex-row items-start xl:items-center gap-2
+              <div className="hidden flex-col xl:flex-row items-start xl:items-center gap-2
                 bg-white/50 backdrop-blur-sm p-2 rounded-lg shadow-md">
 
                 <div className="flex flex-col items-start xl:items-center gap-2 mb-2 xl:mb-0">                

@@ -1177,7 +1177,7 @@ export default function Index({ params }: any) {
               {/* 가맹점 보유 */}
               {version !== 'bangbang' && (
                 <>
-              <div className="flex flex-row items-start xl:items-center gap-2">
+              <div className="hidden flex-row items-start xl:items-center gap-2">
                 <div className="flex flex-row gap-2 items-center">
                   <Image
                     src="/icon-escrow.png"
