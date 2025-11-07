@@ -997,20 +997,26 @@ export default function SettingsPage({ params }: any) {
 
 
                         <div className="flex flex-col p-2 gap-2">
-                            {/* 판매자 아이디 */}
+                            {/* 판매자 이름 */}
                             <span className="text-lg text-zinc-500 font-semibold">
-                                아이디: {
+                                판매자 이름: {
                                     nickname ? nickname : '등록 안됨'
                                 }
                             </span>
 
                             {/* 판매자 지갑주소 */}
-                            
-                            
                             <div className='flex flex-col items-start gap-2
                                 border-t border-b border-gray-300 py-2'>
-                                {/* 제목: 판매용 지갑 */}
-                                <span className="text-lg font-semibold">판매용 지갑</span>
+                                {/* 제목: 에스크로 지갑 */}
+                                <div className='flex flex-row items-start gap-2'>
+                                    <Image
+                                        src="/icon-escrow.jpeg"
+                                        alt="Escrow"
+                                        width={24}
+                                        height={24}
+                                    />
+                                    <span className="text-lg font-semibold">에스크로 지갑</span>
+                                </div>
 
                                 <div className="flex flex-row items-center gap-2">
                                     <span className="text-lg text-zinc-500 font-semibold">
@@ -1211,11 +1217,11 @@ export default function SettingsPage({ params }: any) {
                     {/* 아이디(nickname), 은행명, 계좌번호, 예금주 */}
                     <div className='flex flex-col gap-2 items-start justify-between'>
 
-                        {/* 판매자 아이디 (nickname) */}
+                        {/* 판매자 이름 (nickname) */}
                         <input
                             disabled={applying}
                             className="p-2 w-64 text-zinc-100 bg-zinc-800 rounded-lg text-lg"
-                            placeholder={Enter_your_nickname}
+                            placeholder='판매자 이름을 입력하세요.'
                             value={editedNickname}
                             type='text'
                             onChange={(e) => {
