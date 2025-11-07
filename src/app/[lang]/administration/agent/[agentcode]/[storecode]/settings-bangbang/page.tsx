@@ -2664,7 +2664,7 @@ export default function SettingsPage({ params }: any) {
 
                         {/* store bankInfo settings */}
                         {/* 가맹점 결제용 통장 설정 */}
-                        <div className='w-full flex flex-col items-start justify-center gap-2
+                        <div className='hidden w-full flex-col items-start justify-center gap-2
                             border border-gray-400 p-4 rounded-lg'>
 
                             <div className='w-full flex flex-col items-center justify-between gap-2'>
