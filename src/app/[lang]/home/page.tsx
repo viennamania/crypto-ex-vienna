@@ -607,7 +607,7 @@ export default function Index({ params }: any) {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            storecode: searchStorecode,
+            storecode: "admin",
             walletAddress: address,
         }),
     })
@@ -631,7 +631,47 @@ export default function Index({ params }: any) {
 
     setLoadingUser(false);
 
-  } , [address, searchStorecode]);
+  } , [address]);
+
+
+
+  // get seller
+  const [seller, setSeller] = useState<any>(null);
+  const [loadingSeller, setLoadingSeller] = useState(true);
+  useEffect(() => {
+
+    if (!address || searchStorecode === '') {
+      setSeller(null);
+      setLoadingSeller(false);
+      return;
+    }
+
+    setLoadingSeller(true);
+
+    fetch('/api/user/getUser', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            storecode: searchStorecode,
+            walletAddress: address,
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        setSeller(data.result);
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    })
+    .finally(() => {
+        setLoadingSeller(false);
+    });
+
+  }, [address, searchStorecode]);
+
+
 
 
 
@@ -2606,13 +2646,13 @@ const fetchBuyOrders = async () => {
     const [vaultWalletBalance, setVaultWalletBalance] = useState("0");
     useEffect(() => {
         const fetchData = async () => {
-            if (!user?.vaultWallet?.address) {
+            if (!seller?.vaultWallet?.address) {
                 return;
             }
 
             const result = await balanceOf({
                 contract,
-                address: user?.vaultWallet?.address || '',
+                address: seller?.vaultWallet?.address || '',
             });
 
             const balance = Number(result) / 10 ** 6;
@@ -2627,7 +2667,7 @@ const fetchBuyOrders = async () => {
 
         return () => clearInterval(interval);
 
-    }, [user?.vaultWallet?.address, contract]);
+    }, [seller?.vaultWallet?.address, contract]);
 
 
 
@@ -2749,7 +2789,7 @@ const fetchBuyOrders = async () => {
                 />
 
                 <div className="text-xl font-semibold">
-                  거래내역
+                  P2P 구매주문 내역
                 </div>
 
             </div>
@@ -3146,7 +3186,7 @@ const fetchBuyOrders = async () => {
                         className="animate-spin"
                       />
                       <span className="text-sm font-semibold text-zinc-500">
-                        자동자동입금확인중
+                        자동입금확인중
                       </span>
                     </div>
 
@@ -3160,7 +3200,7 @@ const fetchBuyOrders = async () => {
                     {/* 판매자 정보 */}
                     {/* user.seller, user.vaultWallet */}
 
-                    {searchStorecode !== '' && !user?.seller && (
+                    {searchStorecode !== '' && !seller && (
                       <div className='w-full flex flex-col gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
 
                         <div className="flex flex-row items-center gap-2">
@@ -3178,7 +3218,7 @@ const fetchBuyOrders = async () => {
                       </div>
                     )}
 
-                    {user?.seller && (
+                    {seller && (
 
                         <div className='w-full flex flex-col gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
 
@@ -3195,7 +3235,7 @@ const fetchBuyOrders = async () => {
                                 {/* 판매자 아이디 */}
                                 <span className="text-lg text-zinc-500 font-semibold">
                                     아이디: {
-                                        user?.nickname ? user?.nickname : '등록 안됨'
+                                        seller?.nickname ? seller?.nickname : '등록 안됨'
                                     }
                                 </span>
 
@@ -3204,13 +3244,13 @@ const fetchBuyOrders = async () => {
 
                                     <div className="flex flex-row items-center gap-2">
                                         <span className="text-lg text-zinc-500 font-semibold">
-                                            지갑주소: {user?.vaultWallet?.address || '등록 안됨'}
+                                            지갑주소: {seller?.vaultWallet?.address || '등록 안됨'}
                                         </span>
-                                        {user?.vaultWallet?.address && (
+                                        {seller?.vaultWallet?.address && (
                                             <button
                                                 onClick={() => {
-                                                    if (user?.vaultWallet?.address) {
-                                                        navigator.clipboard.writeText(user?.vaultWallet?.address);
+                                                    if (seller?.vaultWallet?.address) {
+                                                        navigator.clipboard.writeText(seller?.vaultWallet?.address);
                                                         toast.success(Copied_Wallet_Address);
                                                     }
                                                 }}
@@ -3226,10 +3266,10 @@ const fetchBuyOrders = async () => {
                                         )}
                                     </div>
 
-                                    {user?.vaultWallet?.address && (
+                                    {seller?.vaultWallet?.address && (
                                         <div className='flex flex-row items-center gap-2'>
                                             <Canvas
-                                            text={user?.vaultWallet?.address || ''}
+                                            text={seller?.vaultWallet?.address || ''}
                                                 options={{
                                                 //level: 'M',
                                                 margin: 2,
@@ -3264,14 +3304,14 @@ const fetchBuyOrders = async () => {
 
                                 {/* 판매자 은행 정보 */}
                                 <span className="text-lg text-zinc-500 font-semibold">
-                                    은행이름: {user?.seller?.bankInfo?.bankName}
+                                    은행이름: {seller?.bankInfo?.bankName}
                                 </span>
 
                                 <span className="text-lg text-zinc-500 font-semibold">
-                                    계좌번호: {user?.seller?.bankInfo?.accountNumber}
+                                    계좌번호: {seller?.bankInfo?.accountNumber}
                                 </span>
                                 <span className="text-lg text-zinc-500 font-semibold">
-                                    예금주: {user?.seller?.bankInfo?.accountHolder}
+                                    예금주: {seller?.bankInfo?.accountHolder}
                                 </span>
 
                             </div>
@@ -3365,6 +3405,9 @@ const fetchBuyOrders = async () => {
 
                               </div>
 
+                              <span className="text-sm text-zinc-50 font-semibold">
+                                판매자
+                              </span>
 
                             </div>
                           </th>
@@ -3389,7 +3432,7 @@ const fetchBuyOrders = async () => {
 
                               <div className="flex flex-row items-center justify-center gap-2">
                                 <span>
-                                  자동입금확인
+                                  입금확인
                                 </span>
                                 <Image
                                   src="/icon-bank-auto.png"
@@ -3546,7 +3589,7 @@ const fetchBuyOrders = async () => {
 
                               <div className="
 
-                              w-32
+                              w-32 h-32
                               flex flex-col xl:flex-row items-start justify-start gap-2
                               bg-zinc-100
                               rounded-lg
@@ -3811,20 +3854,7 @@ const fetchBuyOrders = async () => {
 
                                     <button
                                       className="text-sm text-red-600 font-semibold
-                                        border border-red-600 rounded-lg p-2
-                                        bg-red-100
-                                        w-full text-center
-                                        hover:bg-red-200
-                                        cursor-pointer
-                                        transition-all duration-200 ease-in-out
-                                        hover:scale-105
-                                        hover:shadow-lg
-                                        hover:shadow-red-500/50
-                                      "
-                                      onClick={() => {
-                                        setSelectedItem(item);
-                                        openModal();
-                                      }}
+                                        border border-red-600 rounded-lg p-2"
                                     >
                                       {Buy_Order_Opened}
                                     </button>
@@ -3872,15 +3902,23 @@ const fetchBuyOrders = async () => {
                                     </div>
 
 
-
-                                    <span className="text-lg font-semibold text-zinc-500">
-                                      {
-                                        item.seller?.nickname &&
-                                        item.seller.nickname.length > 10 ?
-                                        item.seller.nickname.slice(0, 10) + '...' :
-                                        item.seller?.nickname
-                                      }
-                                    </span>
+                                    <div className="flex flex-row items-center justify-center gap-2">
+                                      <Image
+                                        src={item.seller?.avatar || "/icon-seller.png"}
+                                        alt="Seller Avatar"
+                                        width={20}
+                                        height={20}
+                                        className="rounded-full w-5 h-5"
+                                      />
+                                      <span className="text-xl font-bold text-green-500">
+                                        {
+                                          item.seller?.nickname &&
+                                          item.seller.nickname.length > 10 ?
+                                          item.seller.nickname.slice(0, 10) + '...' :
+                                          item.seller?.nickname
+                                        }
+                                      </span>
+                                    </div>
 
                                     {/* wallet address */}
                                     <span className="text-sm text-zinc-500">
@@ -3907,20 +3945,7 @@ const fetchBuyOrders = async () => {
                                   <div className="flex flex-col gap-2 items-center justify-center">
                                     <button
                                       className="text-sm text-blue-600 font-semibold
-                                        border border-blue-600 rounded-lg p-2
-                                        bg-blue-100
-                                        w-full text-center
-                                        hover:bg-blue-200
-                                        cursor-pointer
-                                        transition-all duration-200 ease-in-out
-                                        hover:scale-105
-                                        hover:shadow-lg
-                                        hover:shadow-blue-500/50
-                                      "
-                                      onClick={() => {
-                                        setSelectedItem(item);
-                                        openModal();
-                                      }}
+                                        border border-blue-600 rounded-lg p-2"
                                     >
                                       {Trade_Started}
                                     </button>
@@ -3983,20 +4008,7 @@ const fetchBuyOrders = async () => {
                                     */}
                                     <button
                                       className="text-sm text-yellow-600 font-semibold
-                                        border border-yellow-600 rounded-lg p-2
-                                        bg-yellow-100
-                                        w-full text-center
-                                        hover:bg-yellow-200
-                                        cursor-pointer
-                                        transition-all duration-200 ease-in-out
-                                        hover:scale-105
-                                        hover:shadow-lg
-                                        hover:shadow-yellow-500/50
-                                      "
-                                      onClick={() => {
-                                        setSelectedItem(item);
-                                        openModal();
-                                      }}
+                                        border border-yellow-600 rounded-lg p-2"
                                     >
                                       {Request_Payment}
                                     </button>
@@ -4041,20 +4053,7 @@ const fetchBuyOrders = async () => {
                                       */}
                                       <button
                                         className="text-sm text-red-600 font-semibold
-                                          border border-red-600 rounded-lg p-2
-                                          bg-red-100
-                                          w-full text-center
-                                          hover:bg-red-200
-                                          cursor-pointer
-                                          transition-all duration-200 ease-in-out
-                                          hover:scale-105
-                                          hover:shadow-lg
-                                          hover:shadow-red-500/50
-                                        "
-                                        onClick={() => {
-                                          setSelectedItem(item);
-                                          openModal();
-                                        }}
+                                          border border-red-600 rounded-lg p-2"
                                       >
                                         {Cancelled_at}
                                       </button>
@@ -4109,20 +4108,7 @@ const fetchBuyOrders = async () => {
 
                                     <button
                                       className="text-sm text-[#409192] font-semibold
-                                        border border-green-600 rounded-lg p-2
-                                        bg-green-100
-                                        w-full text-center
-                                        hover:bg-green-200
-                                        cursor-pointer
-                                        transition-all duration-200 ease-in-out
-                                        hover:scale-105
-                                        hover:shadow-lg
-                                        hover:shadow-green-500/50
-                                      "
-                                      onClick={() => {
-                                        setSelectedItem(item);
-                                        openModal();
-                                      }}
+                                        border border-green-600 rounded-lg p-2"
                                     >
                                       {Completed}
                                     </button>
@@ -4718,7 +4704,7 @@ const fetchBuyOrders = async () => {
                                       className="animate-spin"
                                     />
                                     <span className="text-sm font-semibold text-zinc-500">
-                                      자동입금확인중
+                                      입금확인중
                                     </span>
                                   </div>
 
@@ -4743,7 +4729,7 @@ const fetchBuyOrders = async () => {
 
 
                                   {item.seller
-                                  && item.seller.walletAddress === user?.vaultWallet?.address
+                                  && item.seller.walletAddress === seller?.vaultWallet?.address
                                   && (
 
                                     <div className="flex flex-col gap-2 items-center justify-center">
@@ -5844,11 +5830,11 @@ const fetchBuyOrders = async () => {
 
                               {item?.settlement ? (
 
-                                <div className="flex flex-row gap-2 items-center justify-center">
-                                  <div className="flex flex-col gap-2 items-center justify-center">
+                                <div className="w-full flex flex-row gap-2 items-center justify-center">
+                                  <div className="w-full flex flex-col gap-2 items-end justify-center">
                                     <button
                                       className="
-                                      w-32
+                                      w-full
                                       flex flex-col gap-2 items-center justify-center px-4 py-2
                                       rounded-lg
                                       border border-blue-600
@@ -5883,8 +5869,7 @@ const fetchBuyOrders = async () => {
                                       }}
                                     >
 
-
-                                      <div className="flex flex-col gap-2 items-end justify-center"
+                                      <div className="w-full flex flex-row gap-2 items-center justify-center"
                                         style={{
                                           fontFamily: 'monospace',
                                         }}
@@ -5897,22 +5882,23 @@ const fetchBuyOrders = async () => {
                                             height={20}
                                             className="w-5 h-5"
                                           />
-                                          <span>
+                                          <span className="text-lg font-semibold text-[#409192]">
                                             {Number(item?.settlement?.settlementAmount).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                                           </span>
-
-
-                                          {/* chain logo */}
-                                          <Image
-                                            src={`/logo-chain-${chain}.png`}
-                                            alt={`${chain} Logo`}
-                                            width={20}
-                                            height={20}
-                                            className="w-5 h-5"
-                                          />
-
-
                                         </div>
+
+
+                                        {/* chain logo */}
+                                        <Image
+                                          src={`/logo-chain-${chain}.png`}
+                                          alt={`${chain} Logo`}
+                                          width={20}
+                                          height={20}
+                                          className="w-5 h-5"
+                                        />
+
+
+                                        
                                         {/*
                                         <span>
                                           {
