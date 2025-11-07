@@ -5559,7 +5559,6 @@ const fetchBuyOrders = async () => {
 
                                   {item.seller
                                   && item.seller.walletAddress === address
-                                  && item.status === 'paymentRequested'
                                   
                                   ///////////////&& item?.autoConfirmPayment
 
@@ -5569,24 +5568,19 @@ const fetchBuyOrders = async () => {
 
                                       <div className="flex flex-row gap-2">
                                         
-                                        {/*}
                                         <button
 
                                           disabled={confirmingPayment[index]}
                                           
-                                          className="text-sm text-[#409192] font-semibold
-                                            border border-green-600 rounded-lg p-2
-                                            bg-green-100
-                                            w-full text-center
-                                            hover:bg-green-200
-                                            cursor-pointer
-                                            transition-all duration-200 ease-in-out
-                                            hover:scale-105
-                                            hover:shadow-lg
-                                            hover:shadow-green-500/50
-                                          "
-                                          
+                                          className={`
+                                            ${confirmingPayment[index]
+                                            ? 'text-gray-400 border-gray-400 bg-gray-100 cursor-not-allowed'
+                                            : 'text-yellow-600 hover:text-yellow-700 hover:shadow-yellow-500/50 cursor-pointer'
+                                            } bg-yellow-100 border border-yellow-600 rounded-lg p-2
+                                          `}
+
                                           onClick={() => {
+                                            //confirm("수동으로 입금확인을 처리하시겠습니까?") &&
                                             confirmPayment(
                                               index,
                                               item._id,
@@ -5606,7 +5600,7 @@ const fetchBuyOrders = async () => {
                                           <div className="flex flex-row gap-2 items-center justify-center">
                                             { confirmingPayment[index] && (
                                                 <Image
-                                                  src="/icon-loading.png"
+                                                  src="/loading.png"
                                                   alt="Loading"
                                                   width={20}
                                                   height={20}
@@ -5615,12 +5609,11 @@ const fetchBuyOrders = async () => {
                                                 />
                                             )}
                                             <span className="text-sm">
-                                              수동입금확인
+                                              입금완료하기
                                             </span>
                                           </div>
 
                                         </button>
-                                        */}
 
 
                                       </div>

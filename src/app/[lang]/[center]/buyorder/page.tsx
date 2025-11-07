@@ -5738,8 +5738,6 @@ const fetchBuyOrders = async () => {
                                 )}
                               </span>
 
-
-
                               {item.seller
                               && item.seller.walletAddress === address
                               
@@ -5805,10 +5803,6 @@ const fetchBuyOrders = async () => {
 
 
                               )}
-
-
-
-
 
                             </div>
 
