@@ -1275,7 +1275,7 @@ export default function Index({ params }: any) {
                 {version !== 'bangbang' && (
                 <button
                     onClick={() => router.push('/' + params.lang + '/' + params.center + '/clearance-history')}
-                    className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                    className="hidden w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                     hover:bg-[#0047ab]/80
                     hover:cursor-pointer
                     hover:scale-105
@@ -1288,7 +1288,7 @@ export default function Index({ params }: any) {
                 {version !== 'bangbang' && (
                 <button
                   onClick={() => router.push('/' + params.lang + '/' + params.center + '/clearance-request')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                  className="hidden w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                   hover:bg-[#0047ab]/80
                   hover:cursor-pointer
                   hover:scale-105
@@ -1525,7 +1525,7 @@ export default function Index({ params }: any) {
 
               {/* 가맹점 판매금 */}
               {version !== 'bangbang' && (
-              <div className="flex flex-col xl:flex-row items-start xl:items-center gap-2">
+              <div className="hidden flex-col xl:flex-row items-start xl:items-center gap-2">
                 <div className="flex flex-row gap-2 items-center">
                   <Image
                     src="/icon-clearance.png"

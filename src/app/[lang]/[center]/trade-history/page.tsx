@@ -3218,7 +3218,7 @@ const fetchBuyOrders = async () => {
                 {version !== 'bangbang' && (
                 <button
                     onClick={() => router.push('/' + params.lang + '/' + params.center + '/clearance-history')}
-                    className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                    className="hidden w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                     hover:bg-[#0047ab]/80
                     hover:cursor-pointer
                     hover:scale-105
@@ -3231,7 +3231,7 @@ const fetchBuyOrders = async () => {
                 {version !== 'bangbang' && (
                 <button
                   onClick={() => router.push('/' + params.lang + '/' + params.center + '/clearance-request')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
+                  className="hidden w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
                   hover:bg-[#0047ab]/80
                   hover:cursor-pointer
                   hover:scale-105
