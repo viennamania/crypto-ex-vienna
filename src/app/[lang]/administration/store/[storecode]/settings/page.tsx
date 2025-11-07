@@ -3007,7 +3007,7 @@ export default function SettingsPage({ params }: any) {
 
                             {/* store escrowAmountUSDT */}
                             {/* 판매자용 USDT 수량 */}
-                            <div className='w-full flex flex-col items-start justify-center gap-2'>
+                            <div className='hidden w-full flex-col items-start justify-center gap-2'>
 
                                 <div className='w-full flex flex-row items-center justify-start gap-2'>
                                     {/* dot */}
