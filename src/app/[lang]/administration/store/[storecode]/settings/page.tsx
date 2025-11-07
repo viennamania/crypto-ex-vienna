@@ -3114,7 +3114,7 @@ export default function SettingsPage({ params }: any) {
 
                         {/* 가맹점 출금 원화통장 설정 */}
                         {/* writeStoreWithdrawalBankInfo */}
-                        <div className='w-full flex flex-col items-start justify-center gap-2
+                        <div className='hidden w-full flex-col items-start justify-center gap-2
                             border border-gray-400 p-4 rounded-lg'>
                             <div className='w-full flex flex-col items-center justify-between gap-2
                                 border-b border-gray-300 pb-2'>
@@ -3244,7 +3244,7 @@ export default function SettingsPage({ params }: any) {
 
                         {/* store bankInfo settings */}
                         {/* 가맹점 결제용 통장 설정 */}
-                        <div className='hidden w-full flex-col items-start justify-center gap-2
+                        <div className='flex w-full flex-col items-start justify-center gap-2
                             border border-gray-400 p-4 rounded-lg'>
 
                             <div className='w-full flex flex-col items-center justify-between gap-2'>
