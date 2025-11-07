@@ -6075,7 +6075,8 @@ const fetchBuyOrders = async () => {
                               */}
 
 
-                              {item.seller && item.seller.walletAddress === address &&
+                              {
+                                item.seller && item.seller.walletAddress === address &&
                                 item.status === 'accepted' && (
 
 
@@ -6084,6 +6085,7 @@ const fetchBuyOrders = async () => {
                                   flex flex-col gap-2 items-center justify-center">
 
                                   {item.store?.bankInfo ? (
+
                                     <div className="flex flex-row items-center gap-2">
 
                                       {/*
@@ -6102,9 +6104,10 @@ const fetchBuyOrders = async () => {
                                           );
                                         }}
                                       />
+                                      */}
 
                                       <button
-                                        disabled={escrowing[index] || requestingPayment[index] || !requestPaymentCheck[index]}
+                                        disabled={escrowing[index] || requestingPayment[index] }
                                         
                                         className="text-sm text-yellow-600 font-semibold
                                           border border-yellow-600 rounded-lg p-2
@@ -6148,9 +6151,9 @@ const fetchBuyOrders = async () => {
                                         </div>
                                       
                                       </button>
-                                      */}
 
                                     </div>
+
                                   ) : (
                                     <div className="flex flex-row gap-2 items-center justify-center">
                                       <Image
@@ -6171,7 +6174,7 @@ const fetchBuyOrders = async () => {
 
                                   {item?.paymentMethod === 'bank' && (
 
-                                    <div className="w-36 flex flex-col gap-2 items-center justify-center">
+                                    <div className="flex flex-col gap-2 items-center justify-center">
                                       <div className="flex flex-row gap-2 items-center justify-center">
                                         <span className="text-sm text-zinc-500">
                                           {item.store?.bankInfo?.accountHolder}
@@ -6180,7 +6183,7 @@ const fetchBuyOrders = async () => {
                                           {item.store?.bankInfo?.bankName}
                                         </span>
                                       </div>
-
+                                      {/*
                                       <span className="text-sm text-zinc-500">
                                         {
                                           item.store?.bankInfo?.accountNumber &&
@@ -6188,11 +6191,17 @@ const fetchBuyOrders = async () => {
                                           item.store?.bankInfo?.accountNumber.substring(0, 5) + '...'
                                         }
                                       </span>
+                                      */}
+
+                                      {/* 결제요청을 하면 회원에게 입금 안내가 전송됩니다. */}
+                                      <div className="text-xs text-red-500">
+                                        결제요청을 하면 회원에게 입금 안내가 전송됩니다.
+                                      </div>
 
                                     </div>
 
                                   )}
-         
+        
                                 </div>
                               )}
 
