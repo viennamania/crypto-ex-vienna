@@ -2440,109 +2440,131 @@ export default function SettingsPage({ params }: any) {
 
 
                                 {!fetchingStore && store && store.settlementWalletAddress ? (
-                                <button
-                                    onClick={() => {
-                                    navigator.clipboard.writeText(store.settlementWalletAddress);
-                                    toast.success(Copied_Wallet_Address);
-                                    } }
-                                    className="text-lg text-zinc-500 underline"
-                                >
-                                    <div className='flex flex-row items-center justify-start gap-2'>
+                                    <button
+                                        onClick={() => {
+                                        navigator.clipboard.writeText(store.settlementWalletAddress);
+                                        toast.success(Copied_Wallet_Address);
+                                        } }
+                                        className="text-lg text-zinc-500 underline"
+                                    >
+                                        <div className='flex flex-row items-center justify-start gap-2'>
+                                            <Image
+                                                src="/icon-shield.png"
+                                                alt="Shield"
+                                                width={20}
+                                                height={20}
+                                                className="w-5 h-5"
+                                            />
+                                            <span className="text-lg text-zinc-500">
+                                                {store && store.settlementWalletAddress.substring(0, 6)}...{store && store.settlementWalletAddress.substring(store.settlementWalletAddress.length - 4)}
+                                            </span>
+                                        </div>
+                                    </button>
+                                ) : (
+                                    <div className="flex flex-row items-center justify-start gap-2">
                                         <Image
-                                            src="/icon-shield.png"
-                                            alt="Shield"
-                                            width={20}
-                                            height={20}
-                                            className="w-5 h-5"
+                                        src="/icon-warning.png"
+                                        alt="Warning"
+                                        width={20}
+                                        height={20}
+                                        className="w-5 h-5"
                                         />
-                                        <span className="text-lg text-zinc-500">
-                                            {store && store.settlementWalletAddress.substring(0, 6)}...{store && store.settlementWalletAddress.substring(store.settlementWalletAddress.length - 4)}
+                                        <span className="text-sm text-red-500">
+                                        {store && store.storeName}의 가맹점 결제용 USDT 입금지갑이 설정되지 않았습니다.
                                         </span>
                                     </div>
-                                </button>
-                                ) : (
-                                <div className="flex flex-row items-center justify-start gap-2">
-                                    <Image
-                                    src="/icon-warning.png"
-                                    alt="Warning"
-                                    width={20}
-                                    height={20}
-                                    className="w-5 h-5"
-                                    />
-                                    <span className="text-sm text-red-500">
-                                    {store && store.storeName}의 가맹점 결제용 USDT 입금지갑이 설정되지 않았습니다.
-                                    </span>
-                                </div>
                                 )}
 
                                 {fetchingAllStoreSellers && (
-                                <Image
-                                    src="/icon-loading.png"
-                                    alt="Loading"
-                                    width={20}
-                                    height={20}
-                                    className="animate-spin"
-                                />
+                                    <Image
+                                        src="/icon-loading.png"
+                                        alt="Loading"
+                                        width={20}
+                                        height={20}
+                                        className="animate-spin"
+                                    />
                                 )}
 
-                                {!fetchingAllStoreSellers && allStoreSellers && allStoreSellers.length > 0 ? (
-                                
-                                <div className="w-full flex flex-row items-center justify-center gap-2">
-                                    {/* select list of all users */}
-                                    <select
-                                    value={selectedSettlementWalletAddress}
-                                    //value={store?.settlementWalletAddress}
-                                    onChange={(e) => setSelectedSettlementWalletAddress(e.target.value)}
-                                    className="w-64 p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500
-                                        bg-white text-zinc-500 text-sm"
-                                    disabled={updatingSettlementWalletAddress}
-                                    >
-                                    <option value="">가맹점 결제용 USDT 입금지갑 변경</option>
-                                    {allStoreSellers.map((user) => (
-                                        <option key={user._id} value={user.walletAddress}>
-                                        {user.nickname}
-                                        {' '}
-                                        ({user.walletAddress.substring(0, 6)}...{user.walletAddress.substring(user.walletAddress.length - 4)})
-                                        </option>
-                                    ))}
-                                    </select>
-                                    <button
-                                    onClick={() => {
-                                        if (!selectedSettlementWalletAddress) {
-                                        toast.error
-                                            ('가맹점 결제용 USDT 입금지갑을 선택하세요.');
-                                        return;
-                                        }
-                                        if (selectedSettlementWalletAddress === store?.settlementWalletAddress) {
-                                        toast.error('현재 가맹점 결제용 USDT 입금지갑과 동일합니다.');
-                                        return;
-                                        }
-                                        confirm(
-                                        `정말 ${selectedSettlementWalletAddress}로 가맹점 결제용 USDT 입금지갑을 변경하시겠습니까?`
-                                        ) && updateSettlementWalletAddress();
-                                    }}
-                                    className={`bg-[#0047ab] text-sm text-white px-4 py-2 rounded-lg
-                                        ${updatingSettlementWalletAddress ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                    {updatingSettlementWalletAddress ? '변경 중...' : '변경'}
-                                    </button>
-                                </div>
-                                ) : (
-                                <div className="flex flex-row items-center justify-center gap-2">
-                                    <Image
-                                    src="/icon-warning.png"
-                                    alt="Warning"
-                                    width={20}
-                                    height={20}
-                                    className="w-5 h-5"
+                                {/* input for changing store settlementWalletAddress */}
+                                <div className="w-full flex flex-col items-center justify-center gap-2">
+                                    <input
+                                        disabled={!address || updatingSettlementWalletAddress}
+                                        className="w-64 p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500
+                                            bg-white text-zinc-500 text-sm"
+                                        placeholder="가맹점 결제용 USDT 입금지갑 변경"
+                                        value={selectedSettlementWalletAddress}
+                                        type='text'
+                                        onChange={(e) => {
+                                            // check if the input is a valid wallet address, 0x...
+                                            if (!e.target.value.startsWith('0x')) {
+                                                toast.error('유효한 지갑주소를 입력하세요. 0x로 시작해야 합니다.');
+                                            } else {
+                                                setSelectedSettlementWalletAddress(e.target.value);
+                                            }
+                                        }}
                                     />
-                                    <span className="text-sm text-red-500">
-                                    {store && store.storeName}의 회원이 없습니다.
-                                    <br />
-                                   가맹점 텔레그램 봇에서 회원가입 후 가맹점 결제용 USDT 입금지갑을 설정하세요.
-                                    </span>
                                 </div>
+
+                                {/*
+                                {!fetchingAllStoreSellers && allStoreSellers && allStoreSellers.length > 0 ? (                                
+                                    <div className="w-full flex flex-row items-center justify-center gap-2">
+                                        <select
+                                        value={selectedSettlementWalletAddress}
+                                        //value={store?.settlementWalletAddress}
+                                        onChange={(e) => setSelectedSettlementWalletAddress(e.target.value)}
+                                        className="w-64 p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500
+                                            bg-white text-zinc-500 text-sm"
+                                        disabled={updatingSettlementWalletAddress}
+                                        >
+                                        <option value="">가맹점 결제용 USDT 입금지갑 변경</option>
+                                        {allStoreSellers.map((user) => (
+                                            <option key={user._id} value={user.walletAddress}>
+                                            {user.nickname}
+                                            {' '}
+                                            ({user.walletAddress.substring(0, 6)}...{user.walletAddress.substring(user.walletAddress.length - 4)})
+                                            </option>
+                                        ))}
+                                        </select>
+                                        <button
+                                        onClick={() => {
+                                            if (!selectedSettlementWalletAddress) {
+                                            toast.error
+                                                ('가맹점 결제용 USDT 입금지갑을 선택하세요.');
+                                            return;
+                                            }
+                                            if (selectedSettlementWalletAddress === store?.settlementWalletAddress) {
+                                            toast.error('현재 가맹점 결제용 USDT 입금지갑과 동일합니다.');
+                                            return;
+                                            }
+                                            confirm(
+                                            `정말 ${selectedSettlementWalletAddress}로 가맹점 결제용 USDT 입금지갑을 변경하시겠습니까?`
+                                            ) && updateSettlementWalletAddress();
+                                        }}
+                                        className={`bg-[#0047ab] text-sm text-white px-4 py-2 rounded-lg
+                                            ${updatingSettlementWalletAddress ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                        {updatingSettlementWalletAddress ? '변경 중...' : '변경'}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-row items-center justify-center gap-2">
+                                        <Image
+                                        src="/icon-warning.png"
+                                        alt="Warning"
+                                        width={20}
+                                        height={20}
+                                        className="w-5 h-5"
+                                        />
+                                        <span className="text-sm text-red-500">
+                                        {store && store.storeName}의 회원이 없습니다.
+                                        <br />
+                                        가맹점 텔레그램 봇에서 회원가입 후 가맹점 결제용 USDT 입금지갑을 설정하세요.
+                                        </span>
+                                    </div>
                                 )}
+                                */}
+
+
 
                             </div>
                         </div>
