@@ -996,13 +996,23 @@ export default function SettingsPage({ params }: any) {
                         </div>
 
 
-                        <div className="flex flex-col p-2 gap-2">
+                        <div className="flex flex-col gap-4 w-full">
+
                             {/* 판매자 이름 */}
-                            <span className="text-lg text-zinc-500 font-semibold">
-                                판매자 이름: {
-                                    nickname ? nickname : '등록 안됨'
-                                }
-                            </span>
+                            <div className='flex flex-row items-start gap-2
+                                border-t border-b border-gray-300 py-2'>
+                                <Image
+                                    src="/icon-seller.png"
+                                    alt="User"
+                                    width={24}
+                                    height={24}
+                                />
+                                <span className="text-lg text-zinc-500 font-semibold">
+                                    판매자 이름: {
+                                        nickname ? nickname : '등록 안됨'
+                                    }
+                                </span>
+                            </div>
 
                             {/* 판매자 지갑주소 */}
                             <div className='flex flex-col items-start gap-2
@@ -1102,63 +1112,78 @@ export default function SettingsPage({ params }: any) {
                                                 </div>
                                             </div>
 
-                                            {/* USDT 1개당 판매가격(원) */}
-                                            <div className='w-full flex flex-row items-center justify-between gap-4'>
-                                                <span className='text-zinc-500 font-semibold'>
-                                                    USDT 1개당 판매가격:
-                                                </span>
-                                                {editingUsdtPrice ? (
-                                                    <span className='text-zinc-500 font-semibold'>
-                                                        불러오는 중...
-                                                    </span>
-                                                ) : (
-                                                    <div className='flex flex-col items-center gap-2'>
-                                                        <div className='flex flex-row items-center gap-1'>
-                                                            <span className='text-green-500 font-bold text-4xl'>
-                                                                {usdtPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                                                            </span>
-                                                            <span className='text-zinc-500 font-semibold'>
-                                                                원
-                                                            </span>
-                                                        </div>
-
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* 설명 */}
-                                            {/* 판매가격보다 높은 구매주문이 있을 경우에만 매칭이 됩니다. */}
-                                            <div className='flex flex-row items-center gap-2'>
-                                                <Image
-                                                    src="/icon-info.png"
-                                                    alt="Info"
-                                                    width={16}
-                                                    height={16}
-                                                />
-                                                <span className='text-zinc-500 font-semibold'>
-                                                    판매가격보다 높은 구매주문이 있을 경우에만 매칭이 됩니다.
-                                                </span>
-                                            </div>
-
                                         </div>
 
                                     </div>
                                 )}
 
+                            </div>
+
+
+                            <div className='w-full flex flex-col items-start gap-4
+                                border-t border-b border-gray-300 py-2'>
+
+
+                                {/* USDT 1개당 판매가격(원) */}
+                                <div className='w-full flex flex-row items-center justify-between gap-4'>
+                                    <span className='text-zinc-500 font-semibold'>
+                                        USDT 1개당 판매가격:
+                                    </span>
+                                    {editingUsdtPrice ? (
+                                        <span className='text-zinc-500 font-semibold'>
+                                            불러오는 중...
+                                        </span>
+                                    ) : (
+                                        <div className='flex flex-col items-center gap-2'>
+                                            <div className='flex flex-row items-center gap-1'>
+                                                <span className='text-green-500 font-bold text-4xl'>
+                                                    {usdtPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                                                </span>
+                                                <span className='text-zinc-500 font-semibold'>
+                                                    원
+                                                </span>
+                                            </div>
+
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* 설명 */}
+                                {/* 판매가격보다 높은 구매주문이 있을 경우에만 매칭이 됩니다. */}
+                                <div className='flex flex-row items-center gap-2'>
+                                    <Image
+                                        src="/icon-info.png"
+                                        alt="Info"
+                                        width={16}
+                                        height={16}
+                                    />
+                                    <span className='text-zinc-500 font-semibold'>
+                                        판매가격보다 높은 구매주문이 있을 경우에만 매칭이 됩니다.
+                                    </span>
+                                </div>
+
+
 
                             </div>
 
-                            {/* 판매자 은행 정보 */}
-                            <span className="text-lg text-zinc-500 font-semibold">
-                                은행이름: {seller?.bankInfo?.bankName}
-                            </span>
 
-                            <span className="text-lg text-zinc-500 font-semibold">
-                                계좌번호: {seller?.bankInfo?.accountNumber}
-                            </span>
-                            <span className="text-lg text-zinc-500 font-semibold">
-                                예금주: {seller?.bankInfo?.accountHolder}
-                            </span>
+                            <div className='w-full flex flex-col items-start gap-2
+                                border-t border-b border-gray-300 py-2'>
+
+                                {/* 판매자 은행 정보 */}
+                                <span className="text-lg text-zinc-500 font-semibold">
+                                    은행이름: {seller?.bankInfo?.bankName}
+                                </span>
+
+                                <span className="text-lg text-zinc-500 font-semibold">
+                                    계좌번호: {seller?.bankInfo?.accountNumber}
+                                </span>
+                                <span className="text-lg text-zinc-500 font-semibold">
+                                    예금주: {seller?.bankInfo?.accountHolder}
+                                </span>
+
+                            </div>
+                                
 
                         </div>
                     </div>
