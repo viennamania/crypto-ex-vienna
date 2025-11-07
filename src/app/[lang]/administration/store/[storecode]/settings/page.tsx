@@ -2486,6 +2486,7 @@ export default function SettingsPage({ params }: any) {
                                 )}
 
                                 {/* input for changing store settlementWalletAddress */}
+                                {/*
                                 <div className="w-full flex flex-col items-center justify-center gap-2">
                                     <input
                                         disabled={!address || updatingSettlementWalletAddress}
@@ -2526,8 +2527,9 @@ export default function SettingsPage({ params }: any) {
                                         {updatingSettlementWalletAddress ? '변경 중...' : '변경'}
                                     </button>
                                 </div>
+                                */}
 
-                                {/*
+
                                 {!fetchingAllStoreSellers && allStoreSellers && allStoreSellers.length > 0 ? (                                
                                     <div className="w-full flex flex-row items-center justify-center gap-2">
                                         <select
@@ -2584,9 +2586,6 @@ export default function SettingsPage({ params }: any) {
                                         </span>
                                     </div>
                                 )}
-                                */}
-
-
 
                             </div>
                         </div>
