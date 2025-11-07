@@ -2489,20 +2489,34 @@ export default function SettingsPage({ params }: any) {
                                 <div className="w-full flex flex-col items-center justify-center gap-2">
                                     <input
                                         disabled={!address || updatingSettlementWalletAddress}
-                                        className="w-64 p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500
-                                            bg-white text-zinc-500 text-sm"
+                                        className={`
+                                            bg-white text-zinc-500 rounded-lg p-2 text-sm w-full
+                                        `}
                                         placeholder="가맹점 결제용 USDT 입금지갑 변경"
                                         value={selectedSettlementWalletAddress}
                                         type='text'
                                         onChange={(e) => {
                                             // check if the input is a valid wallet address, 0x...
                                             if (!e.target.value.startsWith('0x')) {
-                                                toast.error('유효한 지갑주소를 입력하세요. 0x로 시작해야 합니다.');
+                                                //toast.error('유효한 지갑주소를 입력하세요. 0x로 시작해야 합니다.');
                                             } else {
                                                 setSelectedSettlementWalletAddress(e.target.value);
                                             }
                                         }}
                                     />
+                                    <button
+                                        onClick={() => {
+                                            if (!selectedSettlementWalletAddress) {
+                                            toast.error('가맹점 결제용 USDT 입금지갑을 입력하세요.');
+                                            return;
+                                            }
+                                            if (selectedSettlementWalletAddress === store?.settlementWalletAddress) {
+                                                toast.success('가맹점 결제용 USDT 입금지갑이 변경되었습니다.');
+                                            }
+                                        }}
+                                    >
+                                        {updatingSettlementWalletAddress ? '변경 중...' : '변경'}
+                                    </button>
                                 </div>
 
                                 {/*
