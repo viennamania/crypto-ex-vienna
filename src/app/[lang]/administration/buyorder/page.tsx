@@ -5047,20 +5047,7 @@ const fetchBuyOrders = async () => {
 
                               <button
                                 className="text-sm text-red-600 font-semibold
-                                  border border-red-600 rounded-lg p-2
-                                  bg-red-100
-                                  w-full text-center
-                                  hover:bg-red-200
-                                  cursor-pointer
-                                  transition-all duration-200 ease-in-out
-                                  hover:scale-105
-                                  hover:shadow-lg
-                                  hover:shadow-red-500/50
-                                "
-                                onClick={() => {
-                                  setSelectedItem(item);
-                                  openModal();
-                                }}
+                                  border border-red-600 rounded-lg p-2"
                               >
                                 {Buy_Order_Opened}
                               </button>
@@ -5176,20 +5163,7 @@ const fetchBuyOrders = async () => {
                             <div className="flex flex-col gap-2 items-start justify-start">
                               <button
                                 className="text-sm text-blue-600 font-semibold
-                                  border border-blue-600 rounded-lg p-2
-                                  bg-blue-100
-                                  w-full text-center
-                                  hover:bg-blue-200
-                                  cursor-pointer
-                                  transition-all duration-200 ease-in-out
-                                  hover:scale-105
-                                  hover:shadow-lg
-                                  hover:shadow-blue-500/50
-                                "
-                                onClick={() => {
-                                  setSelectedItem(item);
-                                  openModal();
-                                }}
+                                  border border-blue-600 rounded-lg p-2"
                               >
                                 {Trade_Started}
                               </button>
@@ -5254,20 +5228,7 @@ const fetchBuyOrders = async () => {
                               */}
                               <button
                                 className="text-sm text-yellow-600 font-semibold
-                                  border border-yellow-600 rounded-lg p-2
-                                  bg-yellow-100
-                                  w-full text-center
-                                  hover:bg-yellow-200
-                                  cursor-pointer
-                                  transition-all duration-200 ease-in-out
-                                  hover:scale-105
-                                  hover:shadow-lg
-                                  hover:shadow-yellow-500/50
-                                "
-                                onClick={() => {
-                                  setSelectedItem(item);
-                                  openModal();
-                                }}
+                                  border border-yellow-600 rounded-lg p-2"
                               >
                                 {Request_Payment}
                               </button>
@@ -5312,20 +5273,7 @@ const fetchBuyOrders = async () => {
                                 */}
                                 <button
                                   className="text-sm text-red-600 font-semibold
-                                    border border-red-600 rounded-lg p-2
-                                    bg-red-100
-                                    w-full text-center
-                                    hover:bg-red-200
-                                    cursor-pointer
-                                    transition-all duration-200 ease-in-out
-                                    hover:scale-105
-                                    hover:shadow-lg
-                                    hover:shadow-red-500/50
-                                  "
-                                  onClick={() => {
-                                    setSelectedItem(item);
-                                    openModal();
-                                  }}
+                                    border border-red-600 rounded-lg p-2"
                                 >
                                   {Cancelled_at}
                                 </button>
@@ -5380,20 +5328,7 @@ const fetchBuyOrders = async () => {
 
                               <button
                                 className="text-sm text-[#409192] font-semibold
-                                  border border-green-600 rounded-lg p-2
-                                  bg-green-100
-                                  w-full text-center
-                                  hover:bg-green-200
-                                  cursor-pointer
-                                  transition-all duration-200 ease-in-out
-                                  hover:scale-105
-                                  hover:shadow-lg
-                                  hover:shadow-green-500/50
-                                "
-                                onClick={() => {
-                                  setSelectedItem(item);
-                                  openModal();
-                                }}
+                                  border border-green-600 rounded-lg p-2"
                               >
                                 {Completed}
                               </button>
