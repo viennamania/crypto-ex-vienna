@@ -4964,7 +4964,10 @@ const fetchBuyOrders = async () => {
 
                                 {
                                 (item.status === 'accepted' || item.status === 'paymentRequested')
-                                && item.seller && item.seller.walletAddress === address && (
+                                && item.seller
+                                && item.seller.walletAddress === address
+                                
+                                && (
                                   
                                   <div className="flex flex-col items-center gap-2">
                                   

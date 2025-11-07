@@ -98,6 +98,7 @@ import {
     useRouter,
     useSearchParams,
 } from "next//navigation";
+import { add } from 'thirdweb/extensions/farcaster/keyGateway';
 
 
 
@@ -852,6 +853,67 @@ export default function SettingsPage({ params }: any) {
 
 
 
+    // /api/vault/withdrawVault
+    // withdrawAmount
+    const [withdrawAmount, setWithdrawAmount] = useState("");
+    const [withdrawing, setWithdrawing] = useState(false);
+
+    const withdrawVault = async () => {
+        if (withdrawing) {
+            return;
+        }
+
+        if (!address) {
+            toast.error('Please connect your wallet');
+            return;
+        }
+        
+        if (!selectedStorecode) {
+            toast.error('Please select a store');
+            return;
+        }
+
+        if (!withdrawAmount || Number(withdrawAmount) <= 0) {
+            toast.error('Please enter a valid amount');
+            return;
+        }
+
+        setWithdrawing(true);
+
+        try {
+            const response = await fetch('/api/vault/withdrawVault', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    storecode: selectedStorecode,
+                    walletAddress: address,
+                    withdrawAmount: withdrawAmount,
+                }),
+            });
+
+            const data = await response.json();
+
+            //console.log('withdrawVault data', data);
+
+            if (data.result) {
+                setWithdrawAmount('');
+                toast.success('Withdraw request has been submitted');
+            } else {
+                toast.error('Withdraw request has been failed');
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            toast.error('Withdraw request has been failed');
+        }
+
+        setWithdrawing(false);
+    };
+
+    // render
+ 
     return (
 
         <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto">
@@ -988,17 +1050,46 @@ export default function SettingsPage({ params }: any) {
                                             }}
                                         />
 
-                                        {/* balance */}
-                                        <div className='flex flex-row items-center gap-2'>
-                                            <span className='text-4xl font-bold text-green-500'
-                                                style={{ fontFamily: 'monospace' }}>
-                                                {vaultWalletBalance
-                                                && parseFloat(vaultWalletBalance).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                                            </span>
-                                            <span className='text-zinc-500 font-semibold'>
-                                                USDT
-                                            </span>
+                                        <div className='flex flex-col items-start gap-2'>
+
+                                            {/* balance */}
+                                            <div className='flex flex-row items-center gap-2'>
+                                                <span className='text-4xl font-bold text-green-500'
+                                                    style={{ fontFamily: 'monospace' }}>
+                                                    {vaultWalletBalance
+                                                    && parseFloat(vaultWalletBalance).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                                                </span>
+                                                <span className='text-zinc-500 font-semibold'>
+                                                    USDT
+                                                </span>
+                                            </div>
+
+                                            {/* inpmut amount and withdraw vault button */}
+                                            <div className='flex flex-row items-center gap-2'>
+                                                <input
+                                                    type="text"
+                                                    placeholder="출금 금액"
+                                                    className={`
+                                                        p-2 border border-gray-300 rounded text-4xl w-48
+                                                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
+                                                    `}
+                                                    value={withdrawAmount}
+                                                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                                                />
+                                                <button
+                                                    className={`
+                                                        ${withdrawing ? 'bg-gray-300 text-gray-400' : 'bg-blue-500 text-white'}
+                                                        p-2 rounded-lg text-sm font-semibold
+                                                    `}
+                                                    onClick={withdrawVault}
+                                                    disabled={withdrawing}
+                                                >
+                                                    {withdrawing ? '출금 요청중...' : '출금 요청'}
+                                                </button>
+                                            </div>
+
                                         </div>
+
                                     </div>
                                 )}
 
@@ -1023,7 +1114,7 @@ export default function SettingsPage({ params }: any) {
 
 
 
-                <div className='flex flex-col gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
+                <div className='mt-4 flex flex-col gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
                     
 
                     <div className='w-full flex flex-row gap-2 items-center justify-between'>
