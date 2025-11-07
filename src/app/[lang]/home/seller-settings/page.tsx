@@ -985,7 +985,7 @@ export default function SettingsPage({ params }: any) {
 
                 {seller && (
 
-                    <div className='w-full flex flex-col gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
+                    <div className='w-full flex flex-col gap-2 items-start justify-between border border-gray-300 p-4 rounded-lg'>
 
                         <div className="flex flex-row items-center gap-2">
                             {/* dot */}
@@ -1005,7 +1005,12 @@ export default function SettingsPage({ params }: any) {
                             </span>
 
                             {/* 판매자 지갑주소 */}
-                            <div className='flex flex-col items-start gap-2'>
+                            
+                            
+                            <div className='flex flex-col items-start gap-2
+                                border-t border-b border-gray-300 py-2'>
+                                {/* 제목: 판매용 지갑 */}
+                                <span className="text-lg font-semibold">판매용 지갑</span>
 
                                 <div className="flex flex-row items-center gap-2">
                                     <span className="text-lg text-zinc-500 font-semibold">
@@ -1032,7 +1037,7 @@ export default function SettingsPage({ params }: any) {
                                 </div>
 
                                 {vaultWallet?.address && (
-                                    <div className='flex flex-row items-center gap-2'>
+                                    <div className='w-full flex flex-row items-center gap-2'>
                                         <Canvas
                                         text={vaultWallet?.address || ''}
                                             options={{
@@ -1041,7 +1046,7 @@ export default function SettingsPage({ params }: any) {
                                             scale: 4,
                                             ///width: 200,
                                             // width 100%
-                                            width: 150,
+                                            width: 100,
                                             color: {
                                                 dark: '#000000FF',
                                                 light: '#FFFFFFFF',
@@ -1050,42 +1055,83 @@ export default function SettingsPage({ params }: any) {
                                             }}
                                         />
 
-                                        <div className='flex flex-col items-start gap-2'>
+                                        <div className='w-full flex flex-col items-start gap-2'>
 
-                                            {/* balance */}
-                                            <div className='flex flex-row items-center gap-2'>
-                                                <span className='text-4xl font-bold text-green-500'
-                                                    style={{ fontFamily: 'monospace' }}>
-                                                    {vaultWalletBalance
-                                                    && parseFloat(vaultWalletBalance).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                                                </span>
-                                                <span className='text-zinc-500 font-semibold'>
-                                                    USDT
-                                                </span>
+                                            <div className='w-full flex flex-row items-center justify-between gap-4'>
+
+                                                {/* balance */}
+                                                <div className='flex flex-row items-center gap-2'>
+                                                    <span className='text-4xl font-bold text-green-500'
+                                                        style={{ fontFamily: 'monospace' }}>
+                                                        {vaultWalletBalance
+                                                        && parseFloat(vaultWalletBalance).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                                                    </span>
+                                                    <span className='text-zinc-500 font-semibold'>
+                                                        USDT
+                                                    </span>
+                                                </div>
+
+                                                {/* inpmut amount and withdraw vault button */}
+                                                <div className='flex flex-row items-center gap-2'>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="출금 금액"
+                                                        className={`
+                                                            p-2 border border-gray-300 rounded text-xl w-32
+                                                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
+                                                        `}
+                                                        value={withdrawAmount}
+                                                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                                                    />
+                                                    <button
+                                                        className={`
+                                                            ${withdrawing ? 'bg-gray-300 text-gray-400' : 'bg-blue-500 text-white'}
+                                                            p-2 rounded-lg text-sm font-semibold
+                                                        `}
+                                                        onClick={withdrawVault}
+                                                        disabled={withdrawing}
+                                                    >
+                                                        {withdrawing ? '출금 요청중...' : '출금 요청'}
+                                                    </button>
+                                                </div>
                                             </div>
 
-                                            {/* inpmut amount and withdraw vault button */}
+                                            {/* USDT 1개당 판매가격(원) */}
+                                            <div className='w-full flex flex-row items-center justify-between gap-4'>
+                                                <span className='text-zinc-500 font-semibold'>
+                                                    USDT 1개당 판매가격:
+                                                </span>
+                                                {editingUsdtPrice ? (
+                                                    <span className='text-zinc-500 font-semibold'>
+                                                        불러오는 중...
+                                                    </span>
+                                                ) : (
+                                                    <div className='flex flex-col items-center gap-2'>
+                                                        <div className='flex flex-row items-center gap-1'>
+                                                            <span className='text-green-500 font-bold text-4xl'>
+                                                                {usdtPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                                                            </span>
+                                                            <span className='text-zinc-500 font-semibold'>
+                                                                원
+                                                            </span>
+                                                        </div>
+
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* 설명 */}
+                                            {/* 판매가격보다 높은 구매주문이 있을 경우에만 매칭이 됩니다. */}
                                             <div className='flex flex-row items-center gap-2'>
-                                                <input
-                                                    type="text"
-                                                    placeholder="출금 금액"
-                                                    className={`
-                                                        p-2 border border-gray-300 rounded text-4xl w-48
-                                                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
-                                                    `}
-                                                    value={withdrawAmount}
-                                                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                                                <Image
+                                                    src="/icon-info.png"
+                                                    alt="Info"
+                                                    width={16}
+                                                    height={16}
                                                 />
-                                                <button
-                                                    className={`
-                                                        ${withdrawing ? 'bg-gray-300 text-gray-400' : 'bg-blue-500 text-white'}
-                                                        p-2 rounded-lg text-sm font-semibold
-                                                    `}
-                                                    onClick={withdrawVault}
-                                                    disabled={withdrawing}
-                                                >
-                                                    {withdrawing ? '출금 요청중...' : '출금 요청'}
-                                                </button>
+                                                <span className='text-zinc-500 font-semibold'>
+                                                    판매가격보다 높은 구매주문이 있을 경우에만 매칭이 됩니다.
+                                                </span>
                                             </div>
 
                                         </div>
