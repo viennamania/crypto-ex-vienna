@@ -1062,7 +1062,7 @@ export default function SettingsPage({ params }: any) {
                                             scale: 4,
                                             ///width: 200,
                                             // width 100%
-                                            width: 100,
+                                            width: 150,
                                             color: {
                                                 dark: '#000000FF',
                                                 light: '#FFFFFFFF',
@@ -1073,7 +1073,7 @@ export default function SettingsPage({ params }: any) {
 
                                         <div className='w-full flex flex-col items-start gap-2'>
 
-                                            <div className='w-full flex flex-row items-center justify-between gap-4'>
+                                            <div className='w-full flex flex-col items-end justify-center gap-2'>
 
                                                 {/* balance */}
                                                 <div className='flex flex-row items-center gap-2'>
@@ -1093,7 +1093,7 @@ export default function SettingsPage({ params }: any) {
                                                         type="text"
                                                         placeholder="출금 금액"
                                                         className={`
-                                                            p-2 border border-gray-300 rounded text-xl w-32
+                                                            p-2 border border-gray-300 rounded text-xl w-48
                                                             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
                                                         `}
                                                         value={withdrawAmount}
@@ -1102,7 +1102,7 @@ export default function SettingsPage({ params }: any) {
                                                     <button
                                                         className={`
                                                             ${withdrawing ? 'bg-gray-300 text-gray-400' : 'bg-blue-500 text-white'}
-                                                            p-2 rounded-lg text-sm font-semibold
+                                                            p-2 rounded-lg text-sm font-semibold w-32
                                                         `}
                                                         onClick={withdrawVault}
                                                         disabled={withdrawing}
@@ -1110,6 +1110,21 @@ export default function SettingsPage({ params }: any) {
                                                         {withdrawing ? '출금 요청중...' : '출금 요청'}
                                                     </button>
                                                 </div>
+
+                                                {/* 설명 */}
+                                                <div className='flex flex-row items-center gap-2'>
+                                                    <Image
+                                                        src="/icon-info.png"
+                                                        alt="Info"
+                                                        width={16}
+                                                        height={16}
+                                                    />
+                                                    <span className='text-zinc-500 font-semibold'>
+                                                        출금 요청 시, 판매자 지갑으로 출금이 진행됩니다.
+                                                    </span>
+                                                </div>
+
+
                                             </div>
 
                                         </div>
@@ -1126,9 +1141,18 @@ export default function SettingsPage({ params }: any) {
 
                                 {/* USDT 1개당 판매가격(원) */}
                                 <div className='w-full flex flex-row items-center justify-between gap-4'>
-                                    <span className='text-zinc-500 font-semibold'>
-                                        USDT 1개당 판매가격:
-                                    </span>
+                                    <div className='flex flex-row items-center gap-2'>
+                                        <Image
+                                            src="/icon-price.png"
+                                            alt="Price"
+                                            width={24}
+                                            height={24}
+                                        />
+                                        <span className='text-zinc-500 font-semibold'>
+                                            USDT 1개당 판매가격:
+                                        </span>
+                                    </div>
+
                                     {editingUsdtPrice ? (
                                         <span className='text-zinc-500 font-semibold'>
                                             불러오는 중...
