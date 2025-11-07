@@ -2315,49 +2315,49 @@ export default function SettingsPage({ params }: any) {
                                 </div>
 
                                 {!fetchingStore && store && store.adminWalletAddress ? (
-                                <button
-                                    onClick={() => {
-                                    navigator.clipboard.writeText(store.adminWalletAddress);
-                                    toast.success(Copied_Wallet_Address);
-                                    } }
-                                    className="text-lg text-zinc-500 underline"
-                                >
-                                    <div className='flex flex-row items-center justify-start gap-2'>
+                                    <button
+                                        onClick={() => {
+                                        navigator.clipboard.writeText(store.adminWalletAddress);
+                                        toast.success(Copied_Wallet_Address);
+                                        } }
+                                        className="text-lg text-zinc-500 underline"
+                                    >
+                                        <div className='flex flex-row items-center justify-start gap-2'>
+                                            <Image
+                                                src="/icon-shield.png"
+                                                alt="Shield"
+                                                width={20}
+                                                height={20}
+                                                className="w-5 h-5"
+                                            />
+                                            <span className="text-lg text-zinc-500">
+                                                {store && store.adminWalletAddress.substring(0, 6)}...{store && store.adminWalletAddress.substring(store.adminWalletAddress.length - 4)}
+                                            </span>
+                                        </div>
+                                    </button>
+                                ) : (
+                                    <div className="flex flex-row items-center justify-start gap-2">
                                         <Image
-                                            src="/icon-shield.png"
-                                            alt="Shield"
-                                            width={20}
-                                            height={20}
-                                            className="w-5 h-5"
+                                        src="/icon-warning.png"
+                                        alt="Warning"
+                                        width={20}
+                                        height={20}
+                                        className="w-5 h-5"
                                         />
-                                        <span className="text-lg text-zinc-500">
-                                            {store && store.adminWalletAddress.substring(0, 6)}...{store && store.adminWalletAddress.substring(store.adminWalletAddress.length - 4)}
+                                        <span className="text-sm text-red-500">
+                                        {store && store.storeName}의 가맹점 관리자 설정이 되어 있지 않습니다.
                                         </span>
                                     </div>
-                                </button>
-                                ) : (
-                                <div className="flex flex-row items-center justify-start gap-2">
-                                    <Image
-                                    src="/icon-warning.png"
-                                    alt="Warning"
-                                    width={20}
-                                    height={20}
-                                    className="w-5 h-5"
-                                    />
-                                    <span className="text-sm text-red-500">
-                                    {store && store.storeName}의 가맹점 관리자 설정이 되어 있지 않습니다.
-                                    </span>
-                                </div>
                                 )}
 
                                 {fetchingStore && (
-                                <Image
-                                    src="/icon-loading.png"
-                                    alt="Loading"
-                                    width={20}
-                                    height={20}
-                                    className="animate-spin"
-                                />
+                                    <Image
+                                        src="/icon-loading.png"
+                                        alt="Loading"
+                                        width={20}
+                                        height={20}
+                                        className="animate-spin"
+                                    />
                                 )}
 
                                 {!fetchingAllStoreSellers && allStoreSellers && allStoreSellers.length > 0 ? (
@@ -2371,7 +2371,7 @@ export default function SettingsPage({ params }: any) {
                                             bg-white text-zinc-500 text-sm"
                                         disabled={updatingAdminWalletAddress}
                                         >
-                                        <option value="">가맹점 관리자용 지갑주소 (권한 설정) 변경</option>
+                                        <option value="">가맹점 관리자용 지갑주소 변경</option>
                                         {allStoreSellers.map((user) => (
                                             <option key={user._id} value={user.walletAddress}>
                                             {user.nickname}
@@ -2395,10 +2395,10 @@ export default function SettingsPage({ params }: any) {
                                             `정말 ${selectedAdminWalletAddress}로 가맹점 관리자를 변경하시겠습니까?`
                                             ) && updateAdminWalletAddress();
                                         }}
-                                        className={`bg-[#0047ab] text-sm text-white px-4 py-2 rounded-lg
+                                        className={`bg-[#3167b4] text-sm text-white px-4 py-2 rounded-lg
                                             ${updatingAdminWalletAddress ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
-                                        {updatingAdminWalletAddress ? '변경 중...' : '변경'}
+                                        {updatingAdminWalletAddress ? '변경 중...' : '변경하기'}
                                         </button> 
                                     </div>
                                 ) : (
@@ -2414,7 +2414,7 @@ export default function SettingsPage({ params }: any) {
                                             <span className="text-sm text-red-500">
                                             {store && store.storeName}의 회원이 없습니다.
                                             <br />
-                                           가맹점 텔레그램 봇에서 회원가입 후 가맹점 관리자를 설정하세요.
+                                            가맹점 홈페이지에서 회원가입 후 가맹점 관리자를 설정하세요.
                                             </span>
                                         </div>
 
