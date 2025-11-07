@@ -138,11 +138,12 @@ export async function POST(request: NextRequest) {
 
 
         if (!userSeller
-          || !userSeller.seller
-          || !userSeller.seller.bankInfo
-          || !userSeller.seller.bankInfo.bankName
-          || !userSeller.seller.bankInfo.accountNumber
-          || !userSeller.seller.bankInfo.accountHolder
+          
+          //|| !userSeller.seller
+          //|| !userSeller.seller.bankInfo
+          //|| !userSeller.seller.bankInfo.bankName
+          //|| !userSeller.seller.bankInfo.accountNumber
+          //|| !userSeller.seller.bankInfo.accountHolder
         ) {
           console.log("error");
           console.log("userSeller is null");
