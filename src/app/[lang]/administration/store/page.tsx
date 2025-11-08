@@ -1982,6 +1982,7 @@ export default function Index({ params }: any) {
                     거래내역
                 </button>
 
+                {/*
                 {version !== 'bangbang' && (
                 <button
                     onClick={() => router.push('/' + params.lang + '/administration/clearance-history')}
@@ -1994,6 +1995,7 @@ export default function Index({ params }: any) {
                     청산관리
                 </button>
                 )}
+                */}
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/trade-history-daily')}
@@ -2017,6 +2019,7 @@ export default function Index({ params }: any) {
                   통계(AG)
               </button>
 
+              {/*
               {version !== 'bangbang' && (
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/escrow-history')}
@@ -2029,6 +2032,7 @@ export default function Index({ params }: any) {
                   보유량내역
               </button>
               )}
+              */}
 
             </div>
 
@@ -2460,6 +2464,7 @@ export default function Index({ params }: any) {
 
 
                 {/* Clearance Orders */}
+                {/*
                 {version !== 'bangbang' && (
                 <div className="hidden flex-row items-center justify-center gap-2
                 bg-white/80
@@ -2516,6 +2521,7 @@ export default function Index({ params }: any) {
                   )}
                 </div>
                 )}
+                */}
 
             
               </div>
@@ -2654,6 +2660,7 @@ export default function Index({ params }: any) {
 
 
                         {/* 청산건수<br/>청산금액(원)<br/>청산수량(USDT) */}
+                        {/*
                         {version !== 'bangbang' && (
                           <th className="p-2">
 
@@ -2675,9 +2682,11 @@ export default function Index({ params }: any) {
                           </div>
                         </th>
                         )}
+                        */}
 
 
                         {/* USDT지갑 잔고 */}
+                        {/*
                         {version !== 'bangbang' && (
                         <th className="p-2">
                           <div className="flex flex-col items-center justify-center gap-2">
@@ -2694,6 +2703,7 @@ export default function Index({ params }: any) {
                           </div>
                         </th>
                         )}
+                        */}
 
 
 
@@ -3367,7 +3377,7 @@ export default function Index({ params }: any) {
 
                           </td>
 
-
+                          {/*
                           {version !== 'bangbang' && (
                           <td className="p-2">
 
@@ -3424,8 +3434,6 @@ export default function Index({ params }: any) {
                                 </div>
 
                               </div>
-
-                              {/* 청산하기 button */}
                               
                               <button
                                 disabled={!isAdmin || insertingStore}
@@ -3448,12 +3456,17 @@ export default function Index({ params }: any) {
 
 
                             </div>
+                          
 
 
                           </td>
+   
+
                           )}
+                          */}
 
                           {/* USDT 잔액 */}
+                          {/*
                           {version !== 'bangbang' && (
                           <td className="p-2">
                             <div className="w-44
@@ -3463,8 +3476,6 @@ export default function Index({ params }: any) {
 
                               <div className="w-full flex flex-col items-center justify-center gap-2">
 
-
-                                {/* escrowAmountUSDT */}
                                 <div className="w-full flex flex-row items-center justify-center gap-1">
                                   <Image
                                     src="/icon-tether.png"
@@ -3480,8 +3491,6 @@ export default function Index({ params }: any) {
                                   </span>
                                 </div>
 
-
-                                {/* settlementWalletAddress */}
                                 <span className="text-sm text-gray-500">
                                   {item.settlementWalletAddress ? (
                                     <button
@@ -3502,60 +3511,13 @@ export default function Index({ params }: any) {
                                     </span>
                                   )}
                                 </span>
-
-                                {/* USDT 잔액 표시 */}
-                                {/*
-                                <div className="w-full flex flex-row items-center justify-center gap-1">
-                                  <Image
-                                    src="/icon-tether.png"
-                                    alt="Tether"
-                                    width={20}
-                                    height={20}
-                                    className="w-5 h-5"
-                                  />
-                                  <span className="text-lg text-[#409192]"
-                                    style={{ fontFamily: 'monospace' }}
-                                  >
-                                    {item?.usdtBalance ? item?.usdtBalance.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : 0}
-                                  </span>
-                                </div>
-
-                                <span className="text-lg text-[#409192]"
-                                  style={{ fontFamily: 'monospace' }}
-                                >
-                                  {item?.nativeBalance ? item?.nativeBalance.toFixed(3).toLocaleString('us-US') : 0}{' '}ETH
-                                </span>
-                                */}
                               
                               </div>
-
-
-                              {/*
-                              <button
-                                //disabled={!isAdmin || insertingStore}
-                                onClick={() => {
-                                  //if (!isAdmin || insertingStore) return;
-                                  //getBalance(item.storecode);
-
-                                  getBalanceOfStoreSettlementWalletAddress(item.storecode);
-          
-
-                                  toast.success('잔액을 가져왔습니다.');
-                                }}
-                                className={`
-                                  ${!isAdmin || insertingStore ? 'opacity-50 cursor-not-allowed' : ''}
-                                  w-full mb-2
-                                  bg-[#0047ab] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#0047ab]/80
-                                `}
-                              >
-                                잔액 확인하기
-                              </button>
-                              */}
 
                             </div>
                           </td>
                           )}
+                          */}
 
 
                         </tr>

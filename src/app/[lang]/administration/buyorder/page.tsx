@@ -3683,6 +3683,7 @@ const fetchBuyOrders = async () => {
                   거래내역
               </button>
 
+              {/*
               {version !== 'bangbang' && (
                 <button
                   onClick={() => router.push('/' + params.lang + '/administration/clearance-history')}
@@ -3695,6 +3696,7 @@ const fetchBuyOrders = async () => {
                   청산관리
               </button>
               )}
+              */}
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/trade-history-daily')}
@@ -3718,6 +3720,7 @@ const fetchBuyOrders = async () => {
                   통계(AG)
               </button>
 
+              {/*
               {version !== 'bangbang' && (
                 <button
                     onClick={() => router.push('/' + params.lang + '/administration/escrow-history')}
@@ -3730,6 +3733,7 @@ const fetchBuyOrders = async () => {
                   보유량내역
                 </button>
               )}
+              */}
 
           </div>
 

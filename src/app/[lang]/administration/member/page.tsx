@@ -2090,6 +2090,7 @@ export default function Index({ params }: any) {
                   거래내역
               </button>
 
+              {/*
               {version !== 'bangbang' && (
                 <button
                     onClick={() => router.push('/' + params.lang + '/administration/clearance-history')}
@@ -2102,6 +2103,7 @@ export default function Index({ params }: any) {
                     청산관리
                 </button>
               )}
+              */}
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/trade-history-daily')}
@@ -2125,6 +2127,7 @@ export default function Index({ params }: any) {
                   통계(AG)
               </button>
 
+              {/*
               { version !== 'bangbang' && (
                 <button
                     onClick={() => router.push('/' + params.lang + '/administration/escrow-history')}
@@ -2137,6 +2140,7 @@ export default function Index({ params }: any) {
                   보유량내역
                 </button>
               )}
+              */}
 
           </div>
 

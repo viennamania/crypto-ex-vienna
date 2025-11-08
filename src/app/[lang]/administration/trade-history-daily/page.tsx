@@ -1569,6 +1569,7 @@ const fetchBuyOrders = async () => {
                   거래내역
               </button>
 
+              {/*
               {version !== 'bangbang' && (
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/clearance-history')}
@@ -1581,6 +1582,7 @@ const fetchBuyOrders = async () => {
                   청산관리
               </button>
               )}
+              */}
 
 
               <div className='flex w-32 items-center justify-center gap-2
@@ -1608,6 +1610,7 @@ const fetchBuyOrders = async () => {
                   통계(AG)
               </button>
 
+              {/*
               {version !== 'bangbang' && (
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/escrow-history')}
@@ -1620,6 +1623,7 @@ const fetchBuyOrders = async () => {
                   보유량내역
               </button>
               )}
+              */}
 
           </div>
 
@@ -2157,6 +2161,7 @@ const fetchBuyOrders = async () => {
 
 
               {/* Clearance Orders */}
+              {/*
               {version !== 'bangbang' && (
               <div className="hidden flex-row items-center justify-center gap-2
               bg-white/80
@@ -2213,6 +2218,7 @@ const fetchBuyOrders = async () => {
                 )}
               </div>
               )}
+              */}
 
           
             </div>
