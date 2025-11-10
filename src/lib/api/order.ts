@@ -2743,6 +2743,10 @@ export async function getBuyOrdersGroupByStorecodeDaily(
         totalFeeAmount: { $sum: "$settlement.feeAmount" },
         totalFeeAmountKRW: { $sum: { $toDouble: "$settlement.feeAmountKRW" } },
 
+        // platformFeeAmount, platformFeeAmountKRW
+        totalPlatformFeeAmount: { $sum: "$settlement.platformFeeAmount" },
+        totalPlatformFeeAmountKRW: { $sum: { $toDouble: "$settlement.platformFeeAmountKRW" } },
+
       }
     },
     {
@@ -2821,6 +2825,8 @@ export async function getBuyOrdersGroupByStorecodeDaily(
       totalAgentFeeAmountKRW: result.totalAgentFeeAmountKRW,
       totalFeeAmount: result.totalFeeAmount,
       totalFeeAmountKRW: result.totalFeeAmountKRW,
+      totalPlatformFeeAmount: result.totalPlatformFeeAmount,
+      totalPlatformFeeAmountKRW: result.totalPlatformFeeAmountKRW,
 
 
       totalEscrowDepositAmount: escrowResults.find(escrow => escrow._id.date === result._id.date)?.totalEscrowDepositAmount || 0,

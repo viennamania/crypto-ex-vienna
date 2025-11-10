@@ -6298,7 +6298,7 @@ const fetchBuyOrders = async () => {
                               {item.status === 'paymentConfirmed' && (
 
                                 <div className="
-                                  w-40
+                                  w-full
                                   flex flex-col gap-2 items-center justify-center">
 
 
