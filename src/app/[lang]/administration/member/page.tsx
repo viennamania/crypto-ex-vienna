@@ -1808,57 +1808,6 @@ export default function Index({ params }: any) {
 
 
 
-
-
-  if (!address) {
-    return (
-      <div className="flex flex-col items-center justify-center">
-
-        <h1 className="text-2xl font-bold">로그인</h1>
-
-          <ConnectButton
-            client={client}
-            wallets={wallets}
-            /*
-            chain={chain === "ethereum" ? ethereum :
-                    chain === "polygon" ? polygon :
-                    chain === "arbitrum" ? arbitrum :
-                    chain === "bsc" ? bsc : arbitrum}
-            */
-            
-            theme={"light"}
-
-            // button color is dark skyblue convert (49, 103, 180) to hex
-            connectButton={{
-              style: {
-                backgroundColor: "#0047ab", // cobalt blue
-
-                color: "#f3f4f6", // gray-300 
-                padding: "2px 2px",
-                borderRadius: "10px",
-                fontSize: "14px",
-                //width: "40px",
-                height: "38px",
-              },
-              label: "웹3 로그인",
-            }}
-
-            connectModal={{
-              size: "wide", 
-              //size: "compact",
-              titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
-              showThirdwebBranding: false,
-            }}
-
-            locale={"ko_KR"}
-            //locale={"en_US"}
-          />
-
-      </div>
-    );
-  }
-
-
   if (address && !loadingUser && !isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center">
@@ -2774,6 +2723,20 @@ export default function Index({ params }: any) {
                               <span>{item?.buyer?.depositBankAccountNumber}</span>
                               
                               <span>{item?.buyer?.depositName}</span>
+
+                              <button
+                                onClick={() => {
+                                  router.push(
+                                    `/${params.lang}/administration/member-settings?storecode=${item?.storecode}&walletAddress=${item?.walletAddress}`
+                                  );
+                                }}
+                                className="mt-2 bg-[#3167b4] text-sm text-white px-2 py-1 rounded-lg
+                                  hover:bg-[#3167b4]/80"
+                              >
+                                변경하기
+                              </button>
+
+
                             </div>
                           </td>
 

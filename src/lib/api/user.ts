@@ -50,6 +50,16 @@ export interface UserProps {
 
   buyOrderStatus: string,
 
+  userType: string,
+
+  buyOrderAudioOn: boolean,
+
+  liveOnAndOff: boolean;
+
+  isBlack: boolean;
+
+
+
   paymentInfo: any,
 
   vaultWallet: {
@@ -987,6 +997,77 @@ export async function getOneByWalletAddress(
 
 }
 
+
+
+
+
+
+export async function checkSellerByWalletAddress(
+  storecode: string,
+  walletAddress: string,
+): Promise<UserProps | null> {
+
+  const client = await clientPromise;
+
+  const collection = client.db(dbName).collection('users');
+
+  // id is number
+
+  const results = await collection.findOne<UserProps>(
+    {
+      storecode: storecode,
+      walletAddress: walletAddress
+    },
+    { projection: { id: 1, nickname: 1 } }
+  );
+
+
+  return results;
+
+}
+
+
+
+
+
+
+
+// getOneByStorecodeAndWalletAddress
+export async function getOneByStorecodeAndWalletAddress(
+  storecode: string,
+  walletAddress: string,
+): Promise<UserProps | null> {
+
+  const client = await clientPromise;
+
+  const collection = client.db(dbName).collection('users');
+
+  const results = await collection.findOne<UserProps>(
+    {
+      storecode: storecode,
+      walletAddress: walletAddress
+    },
+    {
+      projection: {
+        nickname: 1,
+        email: 1,
+        walletAddress: 1,
+        buyer: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        userType: 1,
+
+        // liveOnAndOff
+        // if liveOnAndOff is not exist, set it to true
+        liveOnAndOff: { $ifNull: ['$liveOnAndOff', true] },
+
+      }
+    }
+  );
+
+  return results;
+
+}
 
 
 

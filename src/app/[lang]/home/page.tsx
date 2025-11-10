@@ -2513,7 +2513,7 @@ const fetchBuyOrders = async () => {
 
     fetchData();
 
-  } , [searchStorecode]);
+  } , [selectedItem]);
 
 
 
