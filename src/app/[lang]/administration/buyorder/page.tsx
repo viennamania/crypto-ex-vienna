@@ -3457,8 +3457,15 @@ const fetchBuyOrders = async () => {
         <div className="text-lg text-gray-500">{address}</div>
 
 
-
-
+        {/* goto profile-settings page button */}
+        <button
+          onClick={() => {
+            router.push('/' + params.lang + '/administration/profile-settings');
+          }}
+          className="mt-4 flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+        >
+          프로필 설정으로 이동
+        </button>
 
       </div>
     );
