@@ -80,7 +80,10 @@ import { get } from "http";
 import { useSearchParams } from 'next/navigation';
 
 
-import { version } from "../../../config/version";
+import {
+  version,
+  versionMinor,
+} from "../../../config/version";
 
 
 /*
@@ -2244,13 +2247,15 @@ const fetchBuyOrders = async () => {
                       <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">결제량(USDT)</th>
                       <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">결제금액(원)</th>
 
-                      {/*
-                      <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">AG 수수료량(USDT)</th>
-                      <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">AG 수수료금액(원)</th>
+                      {versionMinor === 'globaltether' && (
+                        <>
+                          <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">AG 수수료량(USDT)</th>
+                          <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">AG 수수료금액(원)</th>
 
-                      <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">센터 수수료량(USDT)</th>
-                      <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">센터 수수료금액(원)</th>
-                      */}
+                          <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">센터 수수료량(USDT)</th>
+                          <th className="px-4 py-2 text-right text-sm font-semibold text-zinc-600">센터 수수료금액(원)</th>
+                        </>
+                      )}
 
 
                     </tr>
@@ -2299,29 +2304,31 @@ const fetchBuyOrders = async () => {
                         </td>
 
 
-                        {/*
-                        <td className="px-4 py-2 text-sm text-[#409192] font-semibold text-right"
-                          style={{ fontFamily: 'monospace' }}
-                        >
-                          {Number(order.totalAgentFeeAmount).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-yellow-600 font-semibold text-right"
-                          style={{ fontFamily: 'monospace' }}
-                        >
-                          {Number(order.totalAgentFeeAmountKRW).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        </td>
+                        {versionMinor === 'globaltether' && (
+                          <>
+                            <td className="px-4 py-2 text-sm text-[#409192] font-semibold text-right"
+                              style={{ fontFamily: 'monospace' }}
+                            >
+                              {Number(order.totalAgentFeeAmount).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-yellow-600 font-semibold text-right"
+                              style={{ fontFamily: 'monospace' }}
+                            >
+                              {Number(order.totalAgentFeeAmountKRW).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            </td>
 
-                        <td className="px-4 py-2 text-sm text-[#409192] font-semibold text-right"
-                          style={{ fontFamily: 'monospace' }}
-                        >
-                          {Number(order.totalFeeAmount).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-yellow-600 font-semibold text-right"
-                          style={{ fontFamily: 'monospace' }}
-                        >
-                          {Number(order.totalFeeAmountKRW).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        </td>
-                        */}
+                            <td className="px-4 py-2 text-sm text-[#409192] font-semibold text-right"
+                              style={{ fontFamily: 'monospace' }}
+                            >
+                              {Number(order.totalFeeAmount).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-yellow-600 font-semibold text-right"
+                              style={{ fontFamily: 'monospace' }}
+                            >
+                              {Number(order.totalFeeAmountKRW).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            </td>
+                          </>
+                        )}
 
 
 
