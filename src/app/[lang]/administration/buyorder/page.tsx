@@ -1366,13 +1366,13 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
 
 
 
-    } catch (error) {
-      console.error('Error cancelling trade with escrow:', error);
-      toast.error('판매취소에 실패했습니다.');
-      setCancellings(
-        cancellings.map((item, i) => i === index ? false : item)
-      );
-      return;
+      } catch (error) {
+        console.error('Error cancelling trade with escrow:', error);
+        toast.error('판매취소에 실패했습니다.');
+        setCancellings(
+          cancellings.map((item, i) => i === index ? false : item)
+        );
+        return;
     }
 
 
@@ -1407,7 +1407,7 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
 
         toast.success(Order_has_been_cancelled);
 
-        playSong();
+        //playSong();
 
 
         await fetch('/api/order/getAllBuyOrders', {
@@ -5885,8 +5885,9 @@ const fetchBuyOrders = async () => {
                                 
                                 <div className="flex flex-col items-center gap-2">
 
-                                  {/*
+                                  
                                   <div className="flex flex-row items-center gap-2">
+                                    {/*
                                     <input
                                       type="checkbox"
                                       checked={agreementForCancelTrade[index]}
@@ -5896,6 +5897,7 @@ const fetchBuyOrders = async () => {
                                         );
                                       }}
                                     />
+                                    */}
                                     <button
                                       disabled={cancellings[index] || !agreementForCancelTrade[index]}
                   
@@ -5911,7 +5913,7 @@ const fetchBuyOrders = async () => {
                                         hover:shadow-red-500/50
                                       "  
                                       onClick={() => {
-                                        cancelTrade(item._id, index);
+                                        confirm("정말로 판매를 취소하시겠습니까?") && cancelTrade(item._id, index);
                                       }}
                                     >
                                       <div className="flex flex-row gap-2 items-center justify-center">
@@ -5946,7 +5948,7 @@ const fetchBuyOrders = async () => {
                                   <div className="text-xs text-red-500">
                                     취소사유가 없을 경우 판매자 평가에 영향을 미칠 수 있습니다.
                                   </div>
-                                  */}
+                                
 
 
                                 </div>
