@@ -119,12 +119,19 @@ const wallets = [
 ];
 
 
-const wallet = inAppWallet({
-  smartAccount: {
-    sponsorGas: false,
-    chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
-  }
-});  
+let wallet: ReturnType<typeof inAppWallet>;
+
+// NEXT_PUBLIC_SMART_ACCOUNT=no
+if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
+    wallet = inAppWallet();
+} else {
+    wallet = inAppWallet({
+        smartAccount: {    
+            sponsorGas: false,
+            chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
+        }
+    });
+}  
 
 
 
