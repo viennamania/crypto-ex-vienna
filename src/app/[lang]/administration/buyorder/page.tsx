@@ -5899,7 +5899,8 @@ const fetchBuyOrders = async () => {
                                     />
                                     */}
                                     <button
-                                      disabled={cancellings[index] || !agreementForCancelTrade[index]}
+                                      //disabled={cancellings[index] || !agreementForCancelTrade[index]}
+                                      disabled={cancellings[index]}
                   
                                       className="text-sm text-red-600 font-semibold
                                         border border-red-600 rounded-lg p-2
