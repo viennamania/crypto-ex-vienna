@@ -543,6 +543,7 @@ export default function SettingsPage({ params }: any) {
 
 
                 {/* liveOnAndOff toggle button */}
+                {/*
                 <div className='
                     mt-4 mb-4 w-full
                     flex flex-row gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
@@ -625,6 +626,7 @@ export default function SettingsPage({ params }: any) {
                     )}
 
                 </div>
+                */}
 
             
 
