@@ -1019,7 +1019,7 @@ const fetchBuyOrders = async () => {
 
 
 
-
+  /*
   const [tradeSummary, setTradeSummary] = useState({
     totalCount: 0,
     totalKrwAmount: 0,
@@ -1052,17 +1052,6 @@ const fetchBuyOrders = async () => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        /*
-        storecode: params.storecode,
-        walletAddress: address,
-        searchMyOrders: searchMyOrders,
-        searchOrderStatusCompleted: true,
-        //searchBuyer: searchBuyer,
-        //searchDepositName: searchDepositName,
-
-        //searchStoreBankAccountNumber: searchStoreBankAccountNumber,
-
-        */
 
         agentcode: params.agentcode,
         storecode: searchStorecode,
@@ -1123,7 +1112,7 @@ const fetchBuyOrders = async () => {
     searchFromDate, searchToDate,
   ]);
 
-
+  */
 
   
 
@@ -1897,6 +1886,7 @@ const fetchBuyOrders = async () => {
 
           {/* trade summary */}
 
+          {/*
           <div className="flex flex-col xl:flex-row items-center justify-between gap-2
             w-full
             bg-zinc-100/50
@@ -1945,7 +1935,7 @@ const fetchBuyOrders = async () => {
 
             </div>
 
-            {/* divider */}
+
             <div className="hidden xl:block w-0.5 h-10 bg-zinc-300"></div>
             <div className="xl:hidden w-full h-0.5 bg-zinc-300"></div>
 
@@ -1990,94 +1980,93 @@ const fetchBuyOrders = async () => {
                 </div>
               </div>
 
-              {/*
-              <div className="flex flex-col gap-2 items-center">
+              {versionMinor === 'globaltether' && (
+                <div className="flex flex-col gap-2 items-center">
 
-                <div className="flex flex-row gap-2 items-center">
+                  <div className="flex flex-row gap-2 items-center">
 
-                  <div className="flex flex-col gap-2 items-center">
-                    <div className="text-sm">총 센터 수수료량(USDT)</div>
-                    <div className="w-full flex flex-row items-center justify-end gap-1">
-                      <Image
-                        src="/icon-tether.png"
-                        alt="Tether"
-                        width={20}
-                        height={20}
-                        className="w-5 h-5"
-                      />
-                      <span className="text-xl font-semibold text-[#409192]"
-                        style={{ fontFamily: 'monospace' }}
-                      >
-                        {tradeSummary.totalFeeAmount
-                          ? tradeSummary.totalFeeAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                          : '0.000'}
-                      </span>
+                    <div className="flex flex-col gap-2 items-center">
+                      <div className="text-sm">총 센터 수수료량(USDT)</div>
+                      <div className="w-full flex flex-row items-center justify-end gap-1">
+                        <Image
+                          src="/icon-tether.png"
+                          alt="Tether"
+                          width={20}
+                          height={20}
+                          className="w-5 h-5"
+                        />
+                        <span className="text-xl font-semibold text-[#409192]"
+                          style={{ fontFamily: 'monospace' }}
+                        >
+                          {tradeSummary.totalFeeAmount
+                            ? tradeSummary.totalFeeAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                            : '0.000'}
+                        </span>
+                      </div>
                     </div>
+
+                    <div className="flex flex-col gap-2 items-center">
+                      <div className="text-sm">총 센터 수수료금액(원)</div>
+                      <div className="w-full flex flex-row items-center justify-end gap-1">
+                        <span className="text-xl font-semibold text-yellow-600"
+                          style={{ fontFamily: 'monospace' }}
+                        >
+                          {tradeSummary.totalFeeAmountKRW
+                            ? tradeSummary.totalFeeAmountKRW.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                            : '0'}
+                        </span>
+                        
+                      </div>
+                    </div>
+
                   </div>
 
-                  <div className="flex flex-col gap-2 items-center">
-                    <div className="text-sm">총 센터 수수료금액(원)</div>
-                    <div className="w-full flex flex-row items-center justify-end gap-1">
-                      <span className="text-xl font-semibold text-yellow-600"
-                        style={{ fontFamily: 'monospace' }}
-                      >
-                        {tradeSummary.totalFeeAmountKRW
-                          ? tradeSummary.totalFeeAmountKRW.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                          : '0'}
-                      </span>
-                      
+                  <div className="flex flex-row gap-2 items-center">
+
+                    <div className="flex flex-col gap-2 items-center">
+                      <div className="text-sm">총 AG 수수료량(USDT)</div>
+                      <div className="w-full flex flex-row items-center justify-end gap-1">
+                        <Image
+                          src="/icon-tether.png"
+                          alt="Tether"
+                          width={20}
+                          height={20}
+                          className="w-5 h-5"
+                        />
+                        <span className="text-xl font-semibold text-[#409192]"
+                          style={{ fontFamily: 'monospace' }}
+                        >
+                          {tradeSummary.totalAgentFeeAmount
+                            ? tradeSummary.totalAgentFeeAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                            : '0.000'}
+                        </span>
+                      </div>
                     </div>
+                    
+                    <div className="flex flex-col gap-2 items-center">
+                      <div className="text-sm">총 AG 수수료금액(원)</div>
+                      <div className="w-full flex flex-row items-center justify-end gap-1">
+                        <span className="text-xl font-semibold text-yellow-600"
+                          style={{ fontFamily: 'monospace' }}
+                        >
+                          {tradeSummary.totalAgentFeeAmountKRW
+                            ? tradeSummary.totalAgentFeeAmountKRW.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                            : '0'}
+                        </span>
+                        
+                      </div>
+                    </div>
+
+
                   </div>
 
                 </div>
-
-                <div className="flex flex-row gap-2 items-center">
-
-                  <div className="flex flex-col gap-2 items-center">
-                    <div className="text-sm">총 AG 수수료량(USDT)</div>
-                    <div className="w-full flex flex-row items-center justify-end gap-1">
-                      <Image
-                        src="/icon-tether.png"
-                        alt="Tether"
-                        width={20}
-                        height={20}
-                        className="w-5 h-5"
-                      />
-                      <span className="text-xl font-semibold text-[#409192]"
-                        style={{ fontFamily: 'monospace' }}
-                      >
-                        {tradeSummary.totalAgentFeeAmount
-                          ? tradeSummary.totalAgentFeeAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                          : '0.000'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col gap-2 items-center">
-                    <div className="text-sm">총 AG 수수료금액(원)</div>
-                    <div className="w-full flex flex-row items-center justify-end gap-1">
-                      <span className="text-xl font-semibold text-yellow-600"
-                        style={{ fontFamily: 'monospace' }}
-                      >
-                        {tradeSummary.totalAgentFeeAmountKRW
-                          ? tradeSummary.totalAgentFeeAmountKRW.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                          : '0'}
-                      </span>
-                      
-                    </div>
-                  </div>
-
-
-                </div>
-
-              </div>
-              */}
+              )}
 
             </div>
 
+
             
-            {/* divider */}
-            {/*}
             <div className="hidden xl:block w-0.5 h-10 bg-zinc-300"></div>
             <div className="xl:hidden w-full h-0.5 bg-zinc-300"></div>
 
@@ -2102,9 +2091,10 @@ const fetchBuyOrders = async () => {
                 </div>
               </div>
             </div>
-            */}
+     
             
           </div>
+          */}
 
 
             <div className="w-full flex flex-row items-center justify-end gap-2">
