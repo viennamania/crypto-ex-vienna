@@ -38,18 +38,26 @@ import {
 } from "@/app/config/contractAddresses";
 
 
+let wallet: ReturnType<typeof inAppWallet>;
 
+// NEXT_PUBLIC_SMART_ACCOUNT=no
+if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
 
+    wallet = inAppWallet();
+    
+} else {
 
-const wallet = inAppWallet({
-	smartAccount: {
-		
-        ///sponsorGas: false,
-        sponsorGas: false,
+    wallet = inAppWallet({
+        smartAccount: {
+            
+            ///sponsorGas: false,
+            sponsorGas: false,
 
-		chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
-	}
-});
+            chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
+        }
+    });
+
+}
 
 
 
@@ -118,17 +126,17 @@ function TelegramLoginContent() {
     }, [searchParams]);
  
 
-    console.log('params.signature=', params.signature);
-    console.log('params.message=', params.message);
-    console.log('params.storecode=', params.storecode);
-    console.log('params.storeUser=', params.storeUser);
-    console.log('params.depositName=', params.depositName);
-    console.log('params.depositBankName=', params.depositBankName);
-    console.log('params.depositBankAccountNumber=', params.depositBankAccountNumber);
-    console.log('params.depositAmountKrw=', params.depositAmountKrw);
-    console.log('params.center=', params.center);
-    console.log('params.referralCode=', params.referralCode);
-    console.log('params.path=', params.path);
+    //console.log('params.signature=', params.signature);
+    //console.log('params.message=', params.message);
+    //console.log('params.storecode=', params.storecode);
+    //console.log('params.storeUser=', params.storeUser);
+    //console.log('params.depositName=', params.depositName);
+    //console.log('params.depositBankName=', params.depositBankName);
+    //console.log('params.depositBankAccountNumber=', params.depositBankAccountNumber);
+    //console.log('params.depositAmountKrw=', params.depositAmountKrw);
+    //console.log('params.center=', params.center);
+    //console.log('params.referralCode=', params.referralCode);
+    //console.log('params.path=', params.path);
 
 
 
