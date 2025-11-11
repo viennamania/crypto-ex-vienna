@@ -6350,6 +6350,9 @@ const fetchBuyOrders = async () => {
 
                                     {/* 자동입금처리일경우 */}
                                     {/* 수동으로 결제완료처리 버튼 */}
+
+                                    {versionMinor !== 'globaltether' && (
+                                      <>
                                   
                                     { !item?.settlement &&
 
@@ -6487,6 +6490,9 @@ const fetchBuyOrders = async () => {
 
 
 
+                                    )}
+
+                                    </>
                                     )}
 
                                   </div>
