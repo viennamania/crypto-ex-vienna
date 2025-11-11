@@ -5741,6 +5741,9 @@ const fetchBuyOrders = async () => {
                                 )}
                               </span>
 
+
+                              {versionMinor !== 'globaltether' && (
+                              <>
                               {item.seller
                               && item.seller.walletAddress === address
                               
@@ -5806,6 +5809,10 @@ const fetchBuyOrders = async () => {
 
 
                               )}
+                              </>
+                              )}
+
+
 
                             </div>
 
