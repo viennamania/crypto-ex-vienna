@@ -83,7 +83,10 @@ import {
   platformFeeWalletAddress
 } from "../../../config/payment";
 
-import { version } from "../../../config/version";
+import {
+  version,
+  versionMinor,
+} from "../../../config/version";
 
 
 
@@ -5944,7 +5947,7 @@ const fetchBuyOrders = async () => {
                               `}>
 
 
-                              
+                              {versionMinor !== 'globaltether' && (
                               <div className="
                                 w-full
                                 flex flex-col gap-2 items-start justify-start">
@@ -6040,6 +6043,7 @@ const fetchBuyOrders = async () => {
                                 */}
 
                               </div>
+                              )}
                               
 
                               <div className="
@@ -6094,7 +6098,8 @@ const fetchBuyOrders = async () => {
 
 
 
-
+                                {versionMinor !== 'globaltether' && (
+                                <>
 
                                 {
                                   item.seller && item.seller.walletAddress === address &&
@@ -6224,6 +6229,8 @@ const fetchBuyOrders = async () => {
                                     )}
           
                                   </div>
+                                )}
+                                </>
                                 )}
 
 
