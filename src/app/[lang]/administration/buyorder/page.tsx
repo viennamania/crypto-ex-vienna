@@ -4793,7 +4793,7 @@ const fetchBuyOrders = async () => {
                       
                       <td className="p-2">
                         <div className="
-                          w-32     
+                          w-36  
                           flex flex-col items-start justify-start gap-2">
                           
                           <div className="w-full flex flex-col gap-2 items-center justify-start">
@@ -5400,7 +5400,7 @@ const fetchBuyOrders = async () => {
                         //!item?.escrowTransactionHash &&
                         item?.status === 'paymentConfirmed' && (
                           <div className="
-                            w-32
+                            w-36
                             flex flex-col gap-2 items-end justify-start">
                             
                             {item?.autoConfirmPayment === true ? (
