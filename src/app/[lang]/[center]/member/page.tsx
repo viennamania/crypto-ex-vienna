@@ -1059,7 +1059,7 @@ export default function Index({ params }: any) {
       return;
     }
     fetchAllBuyer();
-  } , [address, limitValue, pageValue]);
+  } , [address, params.center, limitValue, pageValue]);
 
 
 
@@ -1200,7 +1200,7 @@ export default function Index({ params }: any) {
 
 
 
-
+  /*
   // get All users by storecode
   const [fetchingAllUsers, setFetchingAllUsers] = useState(false);
   const [allUsers, setAllUsers] = useState([] as any[]);
@@ -1238,17 +1238,14 @@ export default function Index({ params }: any) {
   }
 
   useEffect(() => {
-    if (!address) {
-      setAllUsers([]);
-      return;
-    }
     fetchAllUsers();
     // interval
     const interval = setInterval(() => {
       fetchAllUsers();
-    } , 5000);
+    } , 10000);
     return () => clearInterval(interval);
-  } , [address]);
+  } , [params.center]);
+  */
 
   /*
   {

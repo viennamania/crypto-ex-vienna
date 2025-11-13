@@ -1288,14 +1288,12 @@ export async function getAllUsers(
 // search by storecode
 export async function getAllBuyers(
   {
-    agentcode,
     storecode,
     search,
     depositName,
     limit,
     page,
   }: {
-    agentcode: string;
     storecode: string;
     search: string;
     depositName: string;
@@ -1332,6 +1330,7 @@ export async function getAllBuyers(
           id: 1,
           createdAt: 1,
           nickname: 1,
+          password: 1,
           walletAddress: 1,
           storecode: 1,
           store: 1,
@@ -1730,6 +1729,7 @@ export async function getAllUsersByStorecodeAndVerified(
         limit: limit,
         skip: (page - 1) * limit,
       },
+
     )
     .sort({ nickname: 1 })
     .toArray();
