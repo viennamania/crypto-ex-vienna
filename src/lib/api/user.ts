@@ -1288,12 +1288,14 @@ export async function getAllUsers(
 // search by storecode
 export async function getAllBuyers(
   {
+    agentcode,
     storecode,
     search,
     depositName,
     limit,
     page,
   }: {
+    agentcode: string;
     storecode: string;
     search: string;
     depositName: string;
