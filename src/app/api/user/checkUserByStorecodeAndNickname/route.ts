@@ -22,6 +22,10 @@ export async function POST(request: NextRequest) {
 
   //console.log("walletAddress", walletAddress);
 
+  console.log("storecode", storecode);
+  console.log("nickname", nickname);
+  console.log("password", password);
+
 
   /*
   const client = createThirdwebClient({
