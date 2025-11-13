@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
   const {
     userCode,
     userName,
+    userPassword,
     userBankName,
     userBankAccountNumber,
   } = body;
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
   const nickname = userCode;
 
   const mobile = "+821012345678";
-  const password = "12345678";
+  const password = userPassword;
 
 
   /*

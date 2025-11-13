@@ -1198,12 +1198,12 @@ export default function Index({ params }: any) {
   
 
 
-
+  const [allUsers, setAllUsers] = useState([] as any[]);
 
   /*
   // get All users by storecode
   const [fetchingAllUsers, setFetchingAllUsers] = useState(false);
-  const [allUsers, setAllUsers] = useState([] as any[]);
+
   const [userTotalCount, setUserTotalCount] = useState(0);
   const fetchAllUsers = async () => {
     if (fetchingAllUsers) {
@@ -1311,11 +1311,13 @@ export default function Index({ params }: any) {
   */
 
 
-
+  /*
   const [usdtBalance, setUsdtBalance] = useState([] as any[]);
   allUsers.forEach((user) => {
     usdtBalance.push(0);
   });
+  */
+  const [usdtBalance, setUsdtBalance] = useState([] as number[]);
 
 
 
@@ -2766,7 +2768,11 @@ export default function Index({ params }: any) {
                     >
                       <tr>
                         <th className="p-2">등록일</th>
-                        <th className="p-2">회원아이디</th>
+                        <th className="p-2">
+                          아이디
+                          <br />
+                          비밀번호
+                        </th>
                         <th className="p-2">회원 통장</th>
                         <th className="p-2">구매수(건)</th>
                         <th className="p-2 text-right">
@@ -2806,7 +2812,14 @@ export default function Index({ params }: any) {
                           </td>
 
                           <td className="p-2">
-                            {item.nickname}
+                            <div className="flex flex-col items-start justify-center gap-1">
+                              <span className="text-sm text-zinc-700 font-semibold">
+                                {item.nickname}
+                              </span>
+                              <span className="text-sm text-zinc-500">
+                                {item.password}
+                              </span>
+                            </div>
                           </td>
 
                           <td className="p-2">

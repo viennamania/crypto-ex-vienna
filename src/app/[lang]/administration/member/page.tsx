@@ -2639,8 +2639,9 @@ export default function Index({ params }: any) {
                         </th>
 
                         <th className="p-2">
-                          <div className="flex flex-col xl:flex-row items-center justify-center gap-2">
-                            <span>회원아이디</span>
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <span>아이디</span>
+                            <span>비밀번호</span>
                             <span>가맹점 </span>
                           </div>
                         </th>
@@ -2700,16 +2701,17 @@ export default function Index({ params }: any) {
                         
                           <td className="p-2">
                             <div className="
-                              w-40
-                              xl:w-64
-                              flex flex-col xl:flex-row items-center justify-between gap-2">
+                              w-32
+                              flex flex-col items-center justify-between gap-2">
                               <span className="
-                                w-1/2
                                 text-lg font-semibold">
                                 {item.nickname}
                               </span>
                               <span className="
-                                w-1/2
+                                text-lg font-semibold">
+                                {item.password}
+                              </span>
+                              <span className="
                                 text-sm text-zinc-500">
                                 {item?.store?.storeName}{' '}({item?.store?.storecode})
                               </span>
