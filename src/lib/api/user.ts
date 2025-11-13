@@ -1071,6 +1071,46 @@ export async function getOneByStorecodeAndWalletAddress(
 
 
 
+// checkOneByStorecodeAndNickname
+export async function checkOneByStorecodeAndNickname(
+  storecode: string,
+  nickname: string,
+  password: string,
+): Promise<UserProps | null> {
+
+  const client = await clientPromise;
+
+  const collection = client.db(dbName).collection('users');
+
+  const results = await collection.findOne<UserProps>(
+    {
+      storecode: storecode,
+      nickname: nickname,
+      password: password
+    },
+    {
+      projection: {
+        nickname: 1,
+        email: 1,
+        walletAddress: 1,
+        buyer: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        userType: 1,
+        liveOnAndOff: 1,
+      }
+    }
+
+  );
+
+  if (results) {
+    return results;
+  } else {
+    return null;
+  }
+
+}
+
 
 
 
