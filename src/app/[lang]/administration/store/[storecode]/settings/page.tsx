@@ -2437,6 +2437,19 @@ export default function SettingsPage({ params }: any) {
                                         결제용 USDT 입금지갑
                                     </span>
                                 </div>
+                                {/* 구매자가 구매한 테더를 가맹점 결제를 위해서 자동 또는 수동으로 해당 지갑으로 전송합니다. */}
+                                <div className='flex flex-row items-center justify-start gap-2'>
+                                    <Image
+                                        src="/icon-info.png"
+                                        alt="Info"
+                                        width={20}
+                                        height={20}
+                                        className="w-5 h-5"
+                                    />
+                                    <span className="text-sm text-zinc-500">
+                                        구매자가 구매한 테더를 가맹점 결제를 위해서 자동 또는 수동으로 해당 지갑으로 전송합니다.
+                                    </span>
+                                </div>
 
 
                                 {!fetchingStore && store && store.settlementWalletAddress ? (
