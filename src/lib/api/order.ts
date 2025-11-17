@@ -311,9 +311,7 @@ export async function getOpenOrdersCount(): Promise<number> {
 
 // get sell orders order by createdAt desc
 export async function getSellOrders(
-
   {
-
     limit,
     page,
     walletAddress,
@@ -324,13 +322,17 @@ export async function getSellOrders(
     page: number;
     walletAddress: string;
     searchMyOrders: boolean;
-  
   }
-
 ): Promise<ResultProps> {
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('orders');
+
+
+  // if limit is more than 1000, set to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
 
 
   // status is not 'paymentConfirmed'
@@ -410,6 +412,11 @@ export async function getAllSellOrders(
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('orders');
+
+  // if limit is more than 1000, set to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
 
 
   // status is not 'paymentConfirmed'
@@ -759,6 +766,10 @@ export async function getSellOrdersForBuyer(
   const client = await clientPromise;
   const collection = client.db(dbName).collection('orders');
 
+  // if limit is more than 1000, set to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
 
   // status is not 'paymentConfirmed'
 
@@ -833,6 +844,10 @@ export async function getSellOrdersByWalletAddress(
   const client = await clientPromise;
   const collection = client.db(dbName).collection('orders');
 
+  // if limit is more than 1000, set to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
 
   const results = await collection.find<UserProps>(
     { walletAddress: walletAddress },
@@ -1220,11 +1235,13 @@ export async function getTradesByWalletAddress(
 
 ): Promise<ResultProps> {
 
-
-
   const client = await clientPromise;
   const collection = client.db(dbName).collection('orders');
 
+  // if limit is more than 1000, set to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
 
   // get orders by buyer.walletAddress = walletAddress 
   // tradeId is not null
@@ -1271,6 +1288,11 @@ export async function getTradesByWalletAddressProcessing(
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('orders');
+
+  // if limit is more than 1000, set to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
 
 
   // get orders by buyer.walletAddress = walletAddress 
@@ -1321,6 +1343,11 @@ export async function getSellTradesByWalletAddress(
   const client = await clientPromise;
   const collection = client.db(dbName).collection('orders');
 
+  // if limit is more than 1000, set to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
+
 
   // get orders by buyer.walletAddress = walletAddress 
   // tradeId is not null
@@ -1363,6 +1390,11 @@ export async function getSellTradesByWalletAddressProcessing(
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('orders');
+
+  // if limit is more than 1000, set to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
 
 
   // get orders by buyer.walletAddress = walletAddress 
@@ -2220,6 +2252,11 @@ export async function getBuyOrders(
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
+
+  // if limit is more than 1000, set to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
 
 
   // status is not 'paymentConfirmed'
@@ -3090,6 +3127,11 @@ export async function getBuyOrdersForSeller(
   const client = await clientPromise;
 
   const collection = client.db(dbName).collection('buyorders');
+
+  // if limit is more than 1000, set limit to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
 
 
   // status is not 'paymentConfirmed'
@@ -4143,6 +4185,11 @@ export async function getOneBuyOrder(
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
 
+  // if limit is more than 1000, set limit to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
+
 
   // status is not 'paymentConfirmed'
 
@@ -4316,6 +4363,11 @@ export async function getAllBuyOrdersBySeller(
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
+
+  // if limit is more than 1000, set to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
 
 
   const results = await collection.find<UserProps>(
@@ -4608,6 +4660,13 @@ export async function getAllBuyOrdersByStorecode(
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
+
+
+  // if limit is more than 1000, set limit to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
+
   const results = await collection.find<UserProps>(
     {
       storecode: storecode,
@@ -4783,6 +4842,10 @@ export async function getAllTradesByAdmin(
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
 
+  // if limit is more than 1000, set limit to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
 
 
 
@@ -5303,6 +5366,11 @@ export async function getAllTradesByAdmin(
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
 
+  // if limit is more than 1000, set limit to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
+
 
   const results = await collection.find<UserProps>(
     {
@@ -5718,6 +5786,12 @@ export async function getAllTradesForAgent(
   //console.log('getAllTradesForAgent endDate: ' + endDate);
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
+
+  // if limit is more than 1000, set limit to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
+
   const results = await collection.find<UserProps>(
     {
       privateSale: { $ne: true },
@@ -5947,12 +6021,18 @@ export async function getAllBuyOrdersForAgent(
 
 
 
-  console.log('getAllBuyOrdersForAgent agentcode: ' + agentcode);
+  ///console.log('getAllBuyOrdersForAgent agentcode: ' + agentcode);
 
 
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
+
+  // if limit is more than 1000, set limit to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
+
   const results = await collection.find<UserProps>(
     {
       agentcode: { $regex: agentcode, $options: 'i' },
@@ -6081,7 +6161,10 @@ export async function getAllTradesByStorecode(
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
 
-
+  // if limit is more than 1000, set limit to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
 
 
 
@@ -6393,6 +6476,12 @@ export async function getAllBuyOrdersByAdmin(
   }
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
+
+  // if limit is more than 1000, set limit to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
+
   const results = await collection.find<UserProps>(
     {
 
@@ -6558,6 +6647,13 @@ export async function getAllBuyOrdersForMatching(
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
+
+
+  // if limit is more than 1000, set limit to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
+
   const results = await collection.find<UserProps>(
     {
       
@@ -6778,6 +6874,11 @@ export async function getCollectOrdersForSeller(
 
   const collection = client.db(dbName).collection('buyorders');
 
+  // if limit is more than 1000, set limit to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
+
 
   // status is not 'paymentConfirmed'
 
@@ -6934,6 +7035,11 @@ export async function getCollectOrdersForUser(
   const client = await clientPromise;
 
   const collection = client.db(dbName).collection('buyorders');
+
+  // if limit is more than 1000, set limit to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
 
 
   // status is not 'paymentConfirmed'
@@ -7123,6 +7229,11 @@ export async function getAllBuyOrdersForRequestPayment(
   const client = await clientPromise;
 
   const collection = client.db(dbName).collection('buyorders');
+
+  // if limit is more than 1000, set limit to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
 
   const results = await collection.find<UserProps>(
     {
@@ -7768,7 +7879,12 @@ export async function getEscrowHistory(
 ): Promise<any> {
   const client = await clientPromise;
   const collection = client.db(dbName).collection('escrows');
-  
+
+  // if limit is more than 1000, set limit to 1000
+  if (limit > 1000) {
+    limit = 1000;
+  }
+
   const results = await collection.find<any>(
     { storecode: storecode },
   ).sort({ _id: -1 }).limit(limit).skip((page - 1) * limit).toArray();
