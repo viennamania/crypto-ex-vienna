@@ -1534,7 +1534,7 @@ export default function Index({ params }: any) {
 
             {/* trade summary */}
 
-            <div className="flex flex-col xl:flex-row items-center justify-between gap-2
+            <div className="hidden flex-col xl:flex-row items-center justify-between gap-2
               w-full
               bg-zinc-100/50
               p-4 rounded-lg shadow-md
