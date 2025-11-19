@@ -980,7 +980,7 @@ export default function Index({ params }: any) {
       return;
     }
     setFetchingAllStore(true);
-    const response = await fetch('/api/store/getAllStores', {
+    const response = await fetch('/api/store/getAllStoresByAgentcode', {
       method: 'POST',
       headers: {
           'Content-Type': 'application/json',
@@ -1002,7 +1002,6 @@ export default function Index({ params }: any) {
     }
     const data = await response.json();
     
-    console.log('getAllStores data', data);
 
 
     setAllStore(data.result.stores);

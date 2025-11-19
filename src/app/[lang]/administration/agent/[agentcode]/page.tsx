@@ -2220,7 +2220,7 @@ export default function Index({ params }: any) {
             </div>
             
             
-            <div className="w-full flex flex-col items-start justify-start gap-2  bg-white shadow-md rounded-lg p-4">
+            <div className="hidden w-full flex-col items-start justify-start gap-2  bg-white shadow-md rounded-lg p-4">
               
 
               <div className="w-full flex flex-col xl:flex-row items-center justify-start gap-2">

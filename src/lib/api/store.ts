@@ -731,6 +731,98 @@ export async function getAllStores(
 
 
 
+// getAllStoresByAgentcode
+export async function getAllStoresByAgentcode(
+  {
+    limit,
+    page,
+    //search,
+    agentcode,
+
+    fromDate = new Date(0).toISOString(),
+    toDate = new Date().toISOString(),
+  }: {
+    limit: number;
+    page: number;
+    //search: string;
+    agentcode: string;
+
+    fromDate?: string;
+    toDate?: string;
+
+  }
+): Promise<any> {
+
+  //console.log('getAllStoresByAgentcode', limit, page, search, agentcode);
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('stores');
+
+  const query: any = {};
+
+
+  /*  if (search) {
+    query.storeName = { $regex: String(search), $options: 'i' };
+  }
+  */
+  if (agentcode) {
+    query.agentcode = agentcode;
+  }
+  // exclude if stroecode is 'admin' or 'agent'
+  
+  query.storecode = { $nin: ['admin', 'agent'] };
+
+  if (fromDate && toDate) {
+    query.createdAt = { $gte: new Date(fromDate), $lte: new Date(toDate) };
+  }
+
+  const totalCount = await collection.countDocuments(query);
+
+  //console.log('getAllStoresByAgentcode totalCount', totalCount);
+  try {
+    const stores = await collection.aggregate([
+      { $match: query },
+      {
+        $lookup: {
+          from: 'agents',
+          localField: 'agentcode',
+          foreignField: 'agentcode',
+          as: 'agentInfo',
+        },
+      },
+      {
+        $unwind: { path: '$agentInfo', preserveNullAndEmptyArrays: true }
+      },
+      {
+        $project: {
+          createdAt: 1,
+          storecode: 1,
+          storeName: 1,
+          storeLogo: 1,
+          agentcode: 1,
+          agentName: { $ifNull: ['$agentInfo.agentName', null] },
+          agentLogo: { $ifNull: ['$agentInfo.agentLogo', null] },
+        },
+      },
+      { $sort: { createdAt: -1 } }, // Sort by createdAt in descending order
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+    ]).toArray();
+
+    //console.log('getAllStoresByAgentcode stores', stores);
+
+    return {
+      totalCount,
+      stores,
+    };
+
+  } catch (error) {
+    console.error('Error fetching stores by agentcode:', error);
+    throw new Error('Failed to fetch stores by agentcode');
+  }
+}
+
+
+
 
 // getAllStoresForAgent
 export async function getAllStoresForAgent(
