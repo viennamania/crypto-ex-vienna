@@ -2205,7 +2205,7 @@ export default function Index({ params }: any) {
 
 
 
-          <div className="flex flex-row items-center justify-start gap-2">
+          <div className="hidden flex-row items-center justify-start gap-2">
 
               <Image
                 src="/icon-homepage.png"
