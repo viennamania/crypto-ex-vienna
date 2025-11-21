@@ -3174,7 +3174,7 @@ const fetchBuyOrders = async () => {
 
                       {/* 총 거래수 */}
 
-                      <div className="w-full flex flex-row items-center justify-center gap-5">
+                      <div className="hidden w-full flex-row items-center justify-center gap-5">
 
 
                         <div className="flex flex-col items-center justify-center gap-2">
