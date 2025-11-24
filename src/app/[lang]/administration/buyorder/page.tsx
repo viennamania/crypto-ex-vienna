@@ -6745,7 +6745,7 @@ const fetchBuyOrders = async () => {
                                     }}>
                                     {Number(
                                       100 - (item.store?.agentFeePercent ? item.store?.agentFeePercent : 0.0)
-                                      - (item.store.settlementFeePercent ? item.store.settlementFeePercent : 0.3)
+                                      - (item.store.settlementFeePercent ? item.store.settlementFeePercent : 0.0)
                                       - (item?.platformFee?.percentage ? item?.platformFee?.percentage : 0.0)
                                     ).toFixed(2)
                                     }%
