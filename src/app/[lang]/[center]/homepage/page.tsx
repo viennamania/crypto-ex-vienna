@@ -1012,8 +1012,8 @@ export default function Index({ params }: any) {
                     walletAddress: address,
                     searchMyOrders: searchMyOrders,
 
-                    searchFromDate: searchFromDate,
-                    searchToDate: searchToDate,
+                    fromDate: searchFromDate,
+                    toDate: searchToDate,
 
                     searchOrderStatusCancelled: searchOrderStatusCancelled,
                     searchOrderStatusCompleted: searchOrderStatusCompleted,
@@ -1143,8 +1143,8 @@ export default function Index({ params }: any) {
               walletAddress: address,
               searchMyOrders: searchMyOrders,
 
-              searchFromDate: searchFromDate,
-              searchToDate: searchToDate,
+              fromDate: searchFromDate,
+              toDate: searchToDate,
 
               searchOrderStatusCancelled: searchOrderStatusCancelled,
               searchOrderStatusCompleted: searchOrderStatusCompleted,
@@ -1413,8 +1413,8 @@ export default function Index({ params }: any) {
                     walletAddress: address,
                     searchMyOrders: searchMyOrders,
 
-                    searchFromDate: searchFromDate,
-                    searchToDate: searchToDate,
+                    fromDate: searchFromDate,
+                    toDate: searchToDate,
 
                     searchOrderStatusCancelled: searchOrderStatusCancelled,
                     searchOrderStatusCompleted: searchOrderStatusCompleted,
@@ -1521,8 +1521,8 @@ export default function Index({ params }: any) {
                   walletAddress: address,
                   searchMyOrders: searchMyOrders,
 
-                  searchFromDate: searchFromDate,
-                  searchToDate: searchToDate,
+                  fromDate: searchFromDate,
+                  toDate: searchToDate,
 
                   searchOrderStatusCancelled: searchOrderStatusCancelled,
                   searchOrderStatusCompleted: searchOrderStatusCompleted,
@@ -1733,8 +1733,8 @@ export default function Index({ params }: any) {
                 walletAddress: address,
                 searchMyOrders: searchMyOrders,
 
-                searchFromDate: searchFromDate,
-                searchToDate: searchToDate,
+                fromDate: searchFromDate,
+                toDate: searchToDate,
 
                 searchOrderStatusCancelled: searchOrderStatusCancelled,
                 searchOrderStatusCompleted: searchOrderStatusCompleted,
@@ -1854,8 +1854,8 @@ export default function Index({ params }: any) {
                     walletAddress: address,
                     searchMyOrders: searchMyOrders,
 
-                    searchFromDate: searchFromDate,
-                    searchToDate: searchToDate,
+                    fromDate: searchFromDate,
+                    toDate: searchToDate,
 
                     searchOrderStatusCancelled: searchOrderStatusCancelled,
                     searchOrderStatusCompleted: searchOrderStatusCompleted,
@@ -2031,8 +2031,8 @@ export default function Index({ params }: any) {
               walletAddress: address,
               searchMyOrders: searchMyOrders,
 
-              searchFromDate: searchFromDate,
-              searchToDate: searchToDate,
+              fromDate: searchFromDate,
+              toDate: searchToDate,
 
               searchOrderStatusCancelled: searchOrderStatusCancelled,
               searchOrderStatusCompleted: searchOrderStatusCompleted,
@@ -2188,8 +2188,8 @@ export default function Index({ params }: any) {
               walletAddress: address,
               searchMyOrders: searchMyOrders,
 
-              searchFromDate: searchFromDate,
-              searchToDate: searchToDate,
+              fromDate: searchFromDate,
+              toDate: searchToDate,
 
               searchOrderStatusCancelled: searchOrderStatusCancelled,
               searchOrderStatusCompleted: searchOrderStatusCompleted,
