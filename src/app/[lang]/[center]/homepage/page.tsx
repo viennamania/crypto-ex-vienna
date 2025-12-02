@@ -2141,6 +2141,7 @@ export default function Index({ params }: any) {
     const fetchBuyOrders = async () => {
 
       //console.log('fetchBuyOrders===============>');
+
       //console.log("address=", address);
       //console.log("searchMyOrders=", searchMyOrders);
 
@@ -3094,11 +3095,14 @@ const fetchBuyOrders = async () => {
                       <input
                         type="date"
                         value={searchFromDate}
-                        onChange={(e) => setSearchFormDate(e.target.value)}
+                        onChange={(e) => {
+                          setSearchFormDate(e.target.value);
+                          setPageValue(1);
+                        }}
                         className="w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
                       />
                     </div>
-
+                    {'~'}
                     <div className="flex flex-row items-center gap-2">
                       <Image
                         src="/icon-calendar.png"
@@ -3110,7 +3114,10 @@ const fetchBuyOrders = async () => {
                       <input
                         type="date"
                         value={searchToDate}
-                        onChange={(e) => setSearchToDate(e.target.value)}
+                        onChange={(e) => {
+                          setSearchToDate(e.target.value);
+                          setPageValue(1);
+                        }}
                         className="w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
                       />
                     </div>

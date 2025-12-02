@@ -2230,8 +2230,8 @@ export async function getBuyOrders(
 ): Promise<any> {
 
 
-  //console.log('getBuyOrders fromDate: ' + fromDate);
-  //console.log('getBuyOrders toDate: ' + toDate);
+  console.log('getBuyOrders fromDate: ' + fromDate);
+  console.log('getBuyOrders toDate: ' + toDate);
 
   //console.log('getBuyOrders agentcode: ==========>' + agentcode);
 

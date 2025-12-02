@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
 
     searchStoreBankAccountNumber,
 
-    fromDate,
-    toDate,
+    searchFromDate,
+    searchToDate,
 
 
   } = body;
@@ -43,13 +43,14 @@ export async function POST(request: NextRequest) {
 
   
 
-  ///console.log("getAllBuyOrders body", body);
+  console.log("getAllBuyOrders body", body);
 
 
   // Error fetching buy orders: SyntaxError: Unexpected token 'A', "A server e"... is not valid JSON
 
   try {
 
+    /*
     // when fromDate is "" or undefined, set it to 30 days ago
     if (!fromDate || fromDate === "") {
       const date = new Date();
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
       const date = new Date();
       body.toDate = date.toISOString().split("T")[0]; // YYYY-MM-DD format
     }
-
+    */
 
 
     const result = await getBuyOrders({
@@ -85,11 +86,13 @@ export async function POST(request: NextRequest) {
       searchStoreBankAccountNumber: searchStoreBankAccountNumber || "",
 
 
-      fromDate: fromDate || "",
+      fromDate: searchFromDate || "",
 
-      toDate: toDate || "",
+      toDate: searchToDate || "",
 
     });
+
+    //console.log("Fetched buy orders:", result);
 
   
     return NextResponse.json({
