@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
 
     searchStoreBankAccountNumber,
 
-    searchFromDate,
-    searchToDate,
+    fromDate,
+    toDate,
 
 
   } = body;
@@ -86,9 +86,9 @@ export async function POST(request: NextRequest) {
       searchStoreBankAccountNumber: searchStoreBankAccountNumber || "",
 
 
-      fromDate: searchFromDate || "",
+      fromDate: fromDate || "",
 
-      toDate: searchToDate || "",
+      toDate: toDate || "",
 
     });
 
