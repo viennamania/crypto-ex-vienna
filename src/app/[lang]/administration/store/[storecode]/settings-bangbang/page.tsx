@@ -1627,6 +1627,94 @@ export default function SettingsPage({ params }: any) {
 
 
 
+
+
+
+    // minPaymentAmountKRW
+    const [minPaymentAmountKRW, setMinPaymentAmountKRW] = useState(0);
+    const [updatingMinPaymentAmountKRW, setUpdatingMinPaymentAmountKRW] = useState(false);
+    const updateMinPaymentAmountKRW = async () => {
+        if (!address) {
+            toast.error(Please_connect_your_wallet_first);
+            return;
+        }
+        if (!minPaymentAmountKRW || minPaymentAmountKRW < 1000 || minPaymentAmountKRW > 1000000) {
+            toast.error("최소 결제 금액을 1,000 ~ 1,000,000 KRW로 설정하세요");
+            return;
+        }
+        setUpdatingMinPaymentAmountKRW(true);
+        const response = await fetch('/api/store/updateMinPaymentAmountKRW', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                walletAddress: address,
+                storecode: params.storecode,
+                minPaymentAmountKRW: minPaymentAmountKRW,
+            }),
+        });
+        const data = await response.json();
+        //console.log("data", data);
+        if (data.result) {
+            toast.success('최소 결제 금액이 설정되었습니다');
+            setMinPaymentAmountKRW(0);
+            setStore({
+                ...store,
+                minPaymentAmountKRW: minPaymentAmountKRW,
+            });
+            //fetchStore();
+        } else {
+            toast.error('최소 결제 금액 설정에 실패하였습니다');
+        }
+        setUpdatingMinPaymentAmountKRW(false);
+    }
+
+
+
+    // maxPaymentAmountKRW
+    const [maxPaymentAmountKRW, setMaxPaymentAmountKRW] = useState(0);
+    const [updatingMaxPaymentAmountKRW, setUpdatingMaxPaymentAmountKRW] = useState(false);
+    const updateMaxPaymentAmountKRW = async () => {
+        if (!address) {
+            toast.error(Please_connect_your_wallet_first);
+            return;
+        }
+        if (!maxPaymentAmountKRW || maxPaymentAmountKRW < 1000 || maxPaymentAmountKRW > 10000000) {
+            toast.error("최대 결제 금액을 1,000 ~ 10,000,000 KRW로 설정하세요");
+            return;
+        }
+        setUpdatingMaxPaymentAmountKRW(true);
+        const response = await fetch('/api/store/updateMaxPaymentAmountKRW', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                walletAddress: address,
+                storecode: params.storecode,
+                maxPaymentAmountKRW: maxPaymentAmountKRW,
+            }),
+        });
+        const data = await response.json();
+        //console.log("data", data);
+        if (data.result) {
+            toast.success('최대 결제 금액이 설정되었습니다');
+            setMaxPaymentAmountKRW(0);
+            setStore({
+                ...store,
+                maxPaymentAmountKRW: maxPaymentAmountKRW,
+            });
+            //fetchStore();
+        } else {
+            toast.error('최대 결제 금액 설정에 실패하였습니다');
+        }
+        setUpdatingMaxPaymentAmountKRW(false);
+    }
+
+
+
+
     const [agentcode, setAgentCode] = useState("");
 
     const [updatingAgentcode, setUpdatingAgentcode] = useState(false);
@@ -3215,6 +3303,168 @@ export default function SettingsPage({ params }: any) {
                         </div>
 
 
+
+
+
+                        {/* 결제 하한 금액, 상한 금액 KRW 설정 */}
+                        <div className='flex w-full flex-col items-start justify-center gap-2
+                            border border-gray-400 p-4 rounded-lg'>
+
+                            <div className='w-full flex flex-col items-center justify-center gap-2'>
+
+                                <div className="w-full flex flex-row items-center justify-start gap-2
+                                    border-b border-gray-300 pb-2">
+                                    {/* dot */}
+                                    <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                    <span className="text-lg text-zinc-500">
+                                        결제 하한 금액(원) 설정
+                                    </span>
+                                </div>
+
+
+                                <div className='w-full flex flex-row items-center justify-start gap-2'>
+                                    {/* information icon */}
+                                    <Image
+                                        src="/icon-info.png"
+                                        alt="Info"
+                                        width={16}
+                                        height={16}
+                                        className="w-4 h-4"
+                                    />
+                                    <span className="text-zinc-500">
+                                        현재 결제 하한 금액: {store?.minPaymentAmountKRW
+                                            ? store?.minPaymentAmountKRW.toLocaleString() + ' 원'
+                                            : '설정된 결제 하한 금액이 없습니다. (기본값: 10,000 원)'}
+                                    </span>
+                                </div>
+
+                                <div className='w-full flex flex-row items-center justify-between'>
+                                    <input
+                                        type="text"
+                                        className="flex-1 bg-white text-zinc-500 rounded-lg p-2 text-sm"
+                                        placeholder="결제 하한 금액(KRW)을 입력하세요"
+                                        value={minPaymentAmountKRW}
+                                        onChange={(e) => {
+                                            // only number input with comma
+                                            const value = e.target.value;
+                                            const numericValue = value.replace(/[^0-9]/g, '');
+                                            const formattedValue = Number(numericValue).toLocaleString();
+                                            setMinPaymentAmountKRW(Number(numericValue));
+                                        }}
+
+                                    />
+                                    <span className="text-zinc-500 ml-2">
+                                        {minPaymentAmountKRW ? Number(minPaymentAmountKRW).toLocaleString() : '0'} 원
+                                    </span>
+                                </div>
+
+                                <button
+                                    disabled={!address || !minPaymentAmountKRW || updatingMinPaymentAmountKRW}
+                                    className={`w-full bg-[#3167b4] text-zinc-100 rounded-lg p-2
+                                        ${!address || !minPaymentAmountKRW || updatingMinPaymentAmountKRW
+                                        ? "opacity-50" : ""}`}
+                                    onClick={() => {
+
+
+                                        if (!minPaymentAmountKRW) {
+                                            toast.error("결제 하한 금액(KRW)을 입력하세요");
+                                            return;
+                                        }
+                                        if (Number(minPaymentAmountKRW) <= 0) {
+                                            toast.error("결제 하한 금액(KRW)은 0보다 커야 합니다");
+                                            return;
+                                        }
+
+                                        confirm(
+                                            `정말 ${Number(minPaymentAmountKRW).toLocaleString()} KRW로 결제 하한 금액을 변경하시겠습니까?`
+                                        ) && updateMinPaymentAmountKRW();
+                                    }}
+                                >
+                                    {updatingMinPaymentAmountKRW ? '변경 중...' : '변경하기'}
+                                </button>
+
+                            </div>
+
+                            {/* divider */}
+                            <hr className="my-4 w-full border-t border-gray-300" />
+
+
+                            <div className='w-full flex flex-col items-center justify-center gap-2'>
+
+                                <div className="w-full flex flex-row items-center justify-start gap-2
+                                    border-b border-gray-300 pb-2">
+                                    {/* dot */}
+                                    <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                    <span className="text-lg text-zinc-500">
+                                        결제 상한 금액(원) 설정
+                                    </span>
+                                </div>
+
+
+                                <div className='w-full flex flex-row items-center justify-start gap-2'>
+                                    {/* information icon */}
+                                    <Image
+                                        src="/icon-info.png"
+                                        alt="Info"
+                                        width={16}
+                                        height={16}
+                                        className="w-4 h-4"
+                                    />
+                                    <span className="text-zinc-500">
+                                        현재 결제 상한 금액: {store?.maxPaymentAmountKRW
+                                            ? store?.maxPaymentAmountKRW.toLocaleString() + ' 원'
+                                            : '설정된 결제 상한 금액이 없습니다. (기본값: 3,000,000 원)'}
+                                    </span>
+                                </div>
+
+                                <div className='w-full flex flex-row items-center justify-between'>
+                                    <input
+                                        type="text"
+                                        className="flex-1 bg-white text-zinc-500 rounded-lg p-2 text-sm"
+                                        placeholder="결제 상한 금액(KRW)을 입력하세요"
+                                        value={maxPaymentAmountKRW}
+                                        onChange={(e) => {
+                                            // only number input with comma
+                                            const value = e.target.value;
+                                            const numericValue = value.replace(/[^0-9]/g, '');
+                                            const formattedValue = Number(numericValue).toLocaleString();
+                                            setMaxPaymentAmountKRW(Number(numericValue));
+                                        }}
+
+                                    />
+                                    <span className="text-zinc-500 ml-2">
+                                        {maxPaymentAmountKRW ? Number(maxPaymentAmountKRW).toLocaleString() : '0'} 원
+                                    </span>
+                                </div>
+
+                                <button
+                                    disabled={!address || !maxPaymentAmountKRW || updatingMaxPaymentAmountKRW}
+                                    className={`w-full bg-[#3167b4] text-zinc-100 rounded-lg p-2
+                                        ${!address || !maxPaymentAmountKRW || updatingMaxPaymentAmountKRW
+                                        ? "opacity-50" : ""}`}
+                                    onClick={() => {
+
+
+                                        if (!maxPaymentAmountKRW) {
+                                            toast.error("결제 상한 금액(KRW)을 입력하세요");
+                                            return;
+                                        }
+                                        if (Number(maxPaymentAmountKRW) <= 0) {
+                                            toast.error("결제 상한 금액(KRW)은 0보다 커야 합니다");
+                                            return;
+                                        }
+
+                                        confirm(
+                                            `정말 ${Number(maxPaymentAmountKRW).toLocaleString()} KRW로 결제 상한 금액을 변경하시겠습니까?`
+                                        ) && updateMaxPaymentAmountKRW();
+                                    }}
+                                >
+                                    {updatingMaxPaymentAmountKRW ? '변경 중...' : '변경하기'}
+                                </button>
+
+                            </div>
+
+                        </div>
 
 
 

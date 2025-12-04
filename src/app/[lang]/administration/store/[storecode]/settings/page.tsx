@@ -3496,7 +3496,7 @@ export default function SettingsPage({ params }: any) {
 
 
 
-                                {/* 결제 하한 금액, 상한 금액 KRW 설정 */}
+                        {/* 결제 하한 금액, 상한 금액 KRW 설정 */}
                         <div className='flex w-full flex-col items-start justify-center gap-2
                             border border-gray-400 p-4 rounded-lg'>
 
