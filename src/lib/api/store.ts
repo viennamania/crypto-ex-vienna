@@ -191,6 +191,9 @@ export async function getStoreByStorecode(
 
         telegramBot: 1,
 
+        minPaymentAmountKRW: 1,
+        maxPaymentAmountKRW: 1,
+
       },
     },
   ]).toArray();
@@ -1186,3 +1189,60 @@ export async function updateStoreEscrowAmountUSDT(
 }
 
 
+
+
+// updateMinPaymentAmountKRW
+export async function updateMinPaymentAmountKRW(
+  {
+    walletAddress,
+    storecode,
+    minPaymentAmountKRW,
+  }: {
+    walletAddress: string;
+    storecode: string;
+    minPaymentAmountKRW: number;
+  }
+): Promise<boolean> {
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('stores');
+
+  // update storecode
+  const result = await collection.updateOne(
+    { storecode: storecode },
+    { $set: { minPaymentAmountKRW: minPaymentAmountKRW } }
+  );
+  if (result) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+
+
+// updateMaxPaymentAmountKRW
+export async function updateMaxPaymentAmountKRW(
+  {
+    walletAddress,
+    storecode,
+    maxPaymentAmountKRW,
+  }: {
+    walletAddress: string;
+    storecode: string;
+    maxPaymentAmountKRW: number;
+  }
+): Promise<boolean> {
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('stores');
+
+  // update storecode
+  const result = await collection.updateOne(
+    { storecode: storecode },
+    { $set: { maxPaymentAmountKRW: maxPaymentAmountKRW } }
+  );
+  if (result) {
+    return true;
+  } else {
+    return false;
+  }
+}
