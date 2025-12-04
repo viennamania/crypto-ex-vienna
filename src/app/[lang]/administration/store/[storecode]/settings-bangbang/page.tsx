@@ -1638,8 +1638,8 @@ export default function SettingsPage({ params }: any) {
             toast.error(Please_connect_your_wallet_first);
             return;
         }
-        if (!minPaymentAmountKRW || minPaymentAmountKRW < 1000 || minPaymentAmountKRW > 1000000) {
-            toast.error("최소 결제 금액을 1,000 ~ 1,000,000 KRW로 설정하세요");
+        if (minPaymentAmountKRW < 0) {
+            toast.error("최소 결제 금액을 0 이상으로 설정하세요");
             return;
         }
         setUpdatingMinPaymentAmountKRW(true);
@@ -1680,8 +1680,8 @@ export default function SettingsPage({ params }: any) {
             toast.error(Please_connect_your_wallet_first);
             return;
         }
-        if (!maxPaymentAmountKRW || maxPaymentAmountKRW < 1000 || maxPaymentAmountKRW > 10000000) {
-            toast.error("최대 결제 금액을 1,000 ~ 10,000,000 KRW로 설정하세요");
+        if (maxPaymentAmountKRW > 10000000) {
+            toast.error("최대 결제 금액을 10,000,000 이하로 설정하세요");
             return;
         }
         setUpdatingMaxPaymentAmountKRW(true);
