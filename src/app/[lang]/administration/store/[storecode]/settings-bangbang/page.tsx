@@ -3358,23 +3358,13 @@ export default function SettingsPage({ params }: any) {
                                     </span>
                                 </div>
 
+
                                 <button
-                                    disabled={!address || !minPaymentAmountKRW || updatingMinPaymentAmountKRW}
+                                    disabled={!address || updatingMinPaymentAmountKRW}
                                     className={`w-full bg-[#3167b4] text-zinc-100 rounded-lg p-2
-                                        ${!address || !minPaymentAmountKRW || updatingMinPaymentAmountKRW
+                                        ${!address || updatingMinPaymentAmountKRW
                                         ? "opacity-50" : ""}`}
                                     onClick={() => {
-
-
-                                        if (!minPaymentAmountKRW) {
-                                            toast.error("결제 하한 금액(KRW)을 입력하세요");
-                                            return;
-                                        }
-                                        if (Number(minPaymentAmountKRW) <= 0) {
-                                            toast.error("결제 하한 금액(KRW)은 0보다 커야 합니다");
-                                            return;
-                                        }
-
                                         confirm(
                                             `정말 ${Number(minPaymentAmountKRW).toLocaleString()} KRW로 결제 하한 금액을 변경하시겠습니까?`
                                         ) && updateMinPaymentAmountKRW();
@@ -3438,22 +3428,11 @@ export default function SettingsPage({ params }: any) {
                                 </div>
 
                                 <button
-                                    disabled={!address || !maxPaymentAmountKRW || updatingMaxPaymentAmountKRW}
+                                    disabled={!address || updatingMaxPaymentAmountKRW}
                                     className={`w-full bg-[#3167b4] text-zinc-100 rounded-lg p-2
-                                        ${!address || !maxPaymentAmountKRW || updatingMaxPaymentAmountKRW
+                                        ${!address || updatingMaxPaymentAmountKRW
                                         ? "opacity-50" : ""}`}
-                                    onClick={() => {
-
-
-                                        if (!maxPaymentAmountKRW) {
-                                            toast.error("결제 상한 금액(KRW)을 입력하세요");
-                                            return;
-                                        }
-                                        if (Number(maxPaymentAmountKRW) <= 0) {
-                                            toast.error("결제 상한 금액(KRW)은 0보다 커야 합니다");
-                                            return;
-                                        }
-
+                                    onClick={() => {                       
                                         confirm(
                                             `정말 ${Number(maxPaymentAmountKRW).toLocaleString()} KRW로 결제 상한 금액을 변경하시겠습니까?`
                                         ) && updateMaxPaymentAmountKRW();
