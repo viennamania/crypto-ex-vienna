@@ -3334,7 +3334,7 @@ export default function SettingsPage({ params }: any) {
                                     <span className="text-zinc-500">
                                         현재 결제 하한 금액: {store?.minPaymentAmountKRW
                                             ? store?.minPaymentAmountKRW.toLocaleString() + ' 원'
-                                            : '설정된 결제 하한 금액이 없습니다. (기본값: 10,000 원)'}
+                                            : '0 원'}
                                     </span>
                                 </div>
 
@@ -3403,7 +3403,7 @@ export default function SettingsPage({ params }: any) {
                                     <span className="text-zinc-500">
                                         현재 결제 상한 금액: {store?.maxPaymentAmountKRW
                                             ? store?.maxPaymentAmountKRW.toLocaleString() + ' 원'
-                                            : '설정된 결제 상한 금액이 없습니다. (기본값: 3,000,000 원)'}
+                                            : '설정된 결제 상한 금액이 없습니다.'}
                                     </span>
                                 </div>
 
@@ -3428,9 +3428,9 @@ export default function SettingsPage({ params }: any) {
                                 </div>
 
                                 <button
-                                    disabled={!address || updatingMaxPaymentAmountKRW}
+                                    disabled={!address || !maxPaymentAmountKRW || updatingMaxPaymentAmountKRW}
                                     className={`w-full bg-[#3167b4] text-zinc-100 rounded-lg p-2
-                                        ${!address || updatingMaxPaymentAmountKRW
+                                        ${!address || !maxPaymentAmountKRW || updatingMaxPaymentAmountKRW
                                         ? "opacity-50" : ""}`}
                                     onClick={() => {                       
                                         confirm(
