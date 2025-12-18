@@ -521,7 +521,7 @@ export default function SettingsPage({ params }: any) {
             return;
         }
 
-        if (!memberData?.storecode || !memberData?.nickname) {
+        if (!userStorecode || !memberData?.nickname) {
             toast.error('사용자 상점 코드와 닉네임이 필요합니다');
             return;
         }
@@ -536,7 +536,7 @@ export default function SettingsPage({ params }: any) {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    storecode: memberData.storecode,
+                    storecode: userStorecode,
                     nickname: memberData.nickname,
                     password: newPassword,
                 }),
