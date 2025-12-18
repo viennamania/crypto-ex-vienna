@@ -1050,6 +1050,7 @@ export async function getOneByStorecodeAndWalletAddress(
     {
       projection: {
         nickname: 1,
+        password: 1,
         email: 1,
         walletAddress: 1,
         buyer: 1,
@@ -2389,6 +2390,36 @@ export async function updateUserPaymentInfoByStorecode({
   );
   
 }
+
+// updatePasswordByStorecodeAndNickname
+export async function updatePasswordByStorecodeAndNickname({
+  storecode,
+  nickname,
+  password,
+}: {
+  storecode: string;
+  nickname: string;
+  password: string;
+}) {
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  return await collection.updateMany(
+    { storecode, nickname },
+    {
+      $set: {
+        password,
+      }
+    }
+  );
+  
+}
+
+
+
+
+
+
 
 // getUserPaymentInfoByStorecode
 export async function getUserPaymentInfoByStorecode({

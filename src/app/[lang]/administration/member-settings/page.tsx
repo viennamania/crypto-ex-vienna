@@ -460,52 +460,104 @@ export default function SettingsPage({ params }: any) {
 
 
 
-  const [isToggling, setIsToggling] = useState(false)
+    const [isToggling, setIsToggling] = useState(false)
 
 
-  const toggleLiveOnAndOff = async (liveOnAndOff: boolean) => {
+    const toggleLiveOnAndOff = async (liveOnAndOff: boolean) => {
 
-    if (isToggling) {
-        return;
-    }
+        if (isToggling) {
+            return;
+        }
 
 
 
-    setIsToggling(true);
+        setIsToggling(true);
 
-    const response = await fetch("/api/user/toggleLive", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        walletAddress: userWalletAddress,
-        liveOnAndOff,
-      }),
-    });
-
-    const data = await response.json();
-    //console.log("toggleViewOnAndOff", data);
-
-    if (data.success) {
-
-        // Update the store's viewOnAndOff status in the local state
-        setMemberData({
-            ...memberData,
-            liveOnAndOff: liveOnAndOff,
+        const response = await fetch("/api/user/toggleLive", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            walletAddress: userWalletAddress,
+            liveOnAndOff,
+        }),
         });
 
-        toast.success(`회원 ${liveOnAndOff ? "허용" : "차단"} 설정이 성공적으로 업데이트되었습니다.`);
+        const data = await response.json();
+        //console.log("toggleViewOnAndOff", data);
+
+        if (data.success) {
+
+            // Update the store's viewOnAndOff status in the local state
+            setMemberData({
+                ...memberData,
+                liveOnAndOff: liveOnAndOff,
+            });
+
+            toast.success(`회원 ${liveOnAndOff ? "허용" : "차단"} 설정이 성공적으로 업데이트되었습니다.`);
 
 
-    }
+        }
 
 
-    setIsToggling(false);
+        setIsToggling(false);
 
-  };
+    };
 
 
+
+    // updateUserPassword
+    const [newPassword, setNewPassword] = useState("");
+    const [updatingPassword, setUpdatingPassword] = useState(false);
+
+    const updateUserPassword = async () => {
+        if (updatingPassword) {
+            return;
+        }
+
+        if (!newPassword) {
+            toast.error('새로운 비밀번호를 입력해주세요');
+            return;
+        }
+
+        if (!memberData?.storecode || !memberData?.nickname) {
+            toast.error('사용자 상점 코드와 닉네임이 필요합니다');
+            return;
+        }
+
+        setUpdatingPassword(true);
+
+        try {
+
+            const response = await fetch('/api/user/updateUserPassword', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    storecode: memberData.storecode,
+                    nickname: memberData.nickname,
+                    password: newPassword,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.result) {
+                toast.success('비밀번호가 성공적으로 업데이트되었습니다');
+                setNewPassword('');
+            } else {
+                toast.error('비밀번호 업데이트에 실패했습니다. 다시 시도해주세요');
+            }
+
+        } catch (e) {
+            toast.error('비밀번호 업데이트 중 오류가 발생했습니다. 다시 시도해주세요');
+        }
+
+        setUpdatingPassword(false);
+
+    };
 
 
 
@@ -662,6 +714,10 @@ export default function SettingsPage({ params }: any) {
                         
                         <span className="text-lg text-zinc-500 font-semibold">
                             아이디: {memberData?.nickname}
+                        </span>
+                        {/* 비밀번호 */}
+                        <span className="text-lg text-zinc-500 font-semibold">
+                            비밀번호: {memberData?.password ? "설정됨" : "설정안됨"}
                         </span>
 
                         <span className="text-lg text-zinc-500 font-semibold">
@@ -859,6 +915,46 @@ export default function SettingsPage({ params }: any) {
                                 
                             {applying ? Applying + "..." : Apply}
                         </button>
+                    </div>
+
+
+                    {/* 비밀번호 변경 */}
+                    <div className='w-full flex flex-col gap-2 items-start justify-between mt-4'>
+
+                        <div className="flex flex-row items-center gap-2">
+                            {/* dot */}
+                            <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                            <span className="text-lg">
+                                비밀번호 변경
+                            </span>
+                        </div>
+
+                        <input 
+                            disabled={updatingPassword}
+                            className="p-2 w-64 text-zinc-100 bg-zinc-800 rounded-lg text-lg"
+                            placeholder="새 비밀번호 입력"
+                            value={newPassword}
+                            type='password'
+                            onChange={(e) => {
+                                setNewPassword(e.target.value);
+                            }}
+                        />
+
+                        <button
+                            disabled={updatingPassword || !newPassword}
+                            onClick={() => {
+                                updateUserPassword();
+                            }}
+                            className={`${!newPassword || updatingPassword
+                                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                : "bg-blue-500 text-white hover:bg-blue-600"
+                            } p-2 rounded-lg w-64
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                            `}>
+                                
+                            {updatingPassword ? "변경중..." : "비밀번호 변경하기"}
+                        </button>
+
                     </div>
 
 
