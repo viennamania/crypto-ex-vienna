@@ -547,6 +547,13 @@ export default function SettingsPage({ params }: any) {
             if (data.result) {
                 toast.success('비밀번호가 성공적으로 업데이트되었습니다');
                 setNewPassword('');
+
+                // update memberData password
+                setMemberData({
+                    ...memberData,
+                    password: newPassword,
+                });
+            
             } else {
                 toast.error('비밀번호 업데이트에 실패했습니다. 다시 시도해주세요');
             }
@@ -717,7 +724,7 @@ export default function SettingsPage({ params }: any) {
                         </span>
                         {/* 비밀번호 */}
                         <span className="text-lg text-zinc-500 font-semibold">
-                            비밀번호: {memberData?.password ? "설정됨" : "설정안됨"}
+                            비밀번호: {memberData?.password ? memberData.password : "설정안됨"}
                         </span>
 
                         <span className="text-lg text-zinc-500 font-semibold">
