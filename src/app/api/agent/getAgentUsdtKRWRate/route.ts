@@ -9,7 +9,7 @@ import {
 } from '@lib/api/client';
 
 
-const clientId = process.env.NEXT_PUBLIC_TEMPLATE_CLIENT_ID;
+const clientId = process.env.NEXT_PUBLIC_TEMPLATE_CLIENT_ID || "";
 
 
 

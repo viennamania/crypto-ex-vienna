@@ -5,16 +5,6 @@ import { NextRequest, NextResponse } from "next/server";
 //import { client } from "../../../constants";
 import { client } from "../../../client";
 
-
-const adminAccount = privateKeyToAccount({
-    privateKey: process.env.ADMIN_SECRET_KEY as string,
-    client,
-});
-
-
-
-
-
 // Remove the 'export' keyword from this function
 async function verifyTelegram(signature: string, message: string) {
     const metadata = JSON.parse(message);
@@ -32,6 +22,17 @@ async function verifyTelegram(signature: string, message: string) {
     if (!metadata.username) {
         return false;
     }
+
+    // Initialize admin account at runtime, not at module level
+    const adminSecretKey = process.env.ADMIN_SECRET_KEY;
+    if (!adminSecretKey) {
+        throw new Error("ADMIN_SECRET_KEY environment variable is not set");
+    }
+
+    const adminAccount = privateKeyToAccount({
+        privateKey: adminSecretKey,
+        client,
+    });
 
     const isValid = await verifySignature({
         client,
