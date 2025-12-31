@@ -672,6 +672,33 @@ export async function cancelTradeByBuyer(
 }
 
 
+// cancelBuyOrderByAdmin
+export async function cancelBuyOrderByAdmin(
+  {
+    orderId,
+  }: {
+    orderId: string;
+  }
+) {
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('buyorders');
+  // check orderId is valid ObjectId
+  if (!ObjectId.isValid(orderId)) {
+    return false;
+  }
+  // update status to 'cancelled' where status is 'ordered'
+  const result = await collection.updateOne(
+    { _id: new ObjectId(orderId), status: 'ordered' },
+    { $set: {
+      status: 'cancelled',
+      cancelledAt: new Date().toISOString(),
+      cancelTradeReason: '관리자에 의한 취소',
+      canceller: 'admin',
+    } }
+  );
+  return result;
+}
+
 
 
 // cancelTradeByAdmin

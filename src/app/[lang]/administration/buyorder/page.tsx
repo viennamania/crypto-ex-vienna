@@ -1030,6 +1030,51 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
 
   //console.log('buyOrders', buyOrders);
 
+
+  // cancel buy order function
+
+  const [cancellingBuyOrders, setCancellingBuyOrders] = useState([] as boolean[]);
+  for (let i = 0; i < 100; i++) {
+    cancellingBuyOrders.push(false);
+  }
+
+  const cancelBuyOrderByAdmin = (index: number, orderId: string) => {
+    if (cancellingBuyOrders[index]) {
+      return;
+    }
+    setCancellingBuyOrders(
+      cancellingBuyOrders.map((item, idx) => idx === index ? true : item)
+    );
+    fetch('/api/order/cancelBuyOrderByAdmin', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        walletAddress: address,
+        orderId: orderId,
+      }),
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('cancelBuyOrder data', data);
+      if (data.result) {
+        toast.success('Buy order has been cancelled');
+        setBuyOrders(
+          buyOrders.filter((item, idx) => idx !== index)
+        );
+      } else {
+        toast.error('Failed to cancel buy order');
+      }
+    })
+    .finally(() => {
+      setCancellingBuyOrders(
+        cancellingBuyOrders.map((item, idx) => idx === index ? false : item)
+      );
+    });
+  }
+
+
   
 
 
@@ -1231,6 +1276,10 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
 
 
 
+
+
+
+
   // agreement for cancel trade
   const [agreementForCancelTrade, setAgreementForCancelTrade] = useState([] as boolean[]);
   for (let i = 0; i < 100; i++) {
@@ -1264,6 +1313,7 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
       setCancellings(buyOrders.map(() => false));
     }, [buyOrders]);
     */
+
 
 
 
@@ -5156,46 +5206,30 @@ const fetchBuyOrders = async () => {
                         <div className="
                           w-52
                           flex flex-row items-start justify-start gap-2">
+                            
                           {/* status */}
                           {item.status === 'ordered' && (
-                            <div className="flex flex-col gap-2 items-center justify-center">
+                            <div className="w-full flex flex-col gap-2 items-center justify-center">
 
                               <div className="flex flex-row items-center justify-center gap-2">
                                 <Image
-                                  src="/icon-matching.png"
+                                  src="/icon-searching-seller.gif"
                                   alt="Auto Matching"
-                                  width={20}
-                                  height={20}
-                                  className="w-5 h-5 animate-spin"
+                                  width={50}
+                                  height={50}
+                                  className="w-8 h-8"
                                 />
                                 <span className="text-sm text-zinc-500 font-semibold">
-                                  판매자 매칭중
+                                  판매자<br/>매칭중
                                 </span>
                               </div>
 
-                              <button
-                                className="text-sm text-red-600 font-semibold
+                              <div
+                                className="w-full flex items-center justify-center text-sm text-red-600 font-semibold
                                   border border-red-600 rounded-lg p-2"
                               >
                                 {Buy_Order_Opened}
-                              </button>
-
-
-                      
-                            
-
-
-                            {/*
-                            <div className="text-lg text-yellow-600 font-semibold
-                              border border-yellow-600 rounded-lg p-2
-                              bg-yellow-100
-                              w-full text-center
-                              ">
-
-
-                              {Buy_Order_Opened}
-                            </div>
-                            */}
+                              </div>
 
                             </div>
                           )}
@@ -5205,103 +5239,123 @@ const fetchBuyOrders = async () => {
                       
 
                           {item.status === 'ordered' ? (
-                            <span className="text-sm text-zinc-500 font-semibold">
+                            <div className="w-full flex flex-col gap-2 items-start justify-start">
+
+                              {/* cancel buy order button */}
+                              {/* 주문취소하기 */}
+                              <button
+
+                                disabled={cancellingBuyOrders[index]}
+            
+                                className="w-full flex items-center justify-center
+                                  text-sm text-red-600 font-semibold
+                                  border border-red-600 rounded-lg p-2
+                                  bg-red-100
+                                  text-center
+                                  hover:bg-red-200
+                                  cursor-pointer
+                                  transition-all duration-200 ease-in-out
+                                  hover:scale-105
+                                  hover:shadow-lg
+                                  hover:shadow-red-500/50
+                                "  
+                                onClick={() => {
+                                  confirm("정말로 구매주문을 취소하시겠습니까?") && cancelBuyOrderByAdmin(index, item._id);
+                                }}
+                              >
+                                <div className="flex flex-row gap-2 items-center justify-center">
+                                  {cancellingBuyOrders[index] && (
+                                    <Image
+                                      src="/icon-loading.png"
+                                      alt="Loading"
+                                      width={20}
+                                      height={20}
+                                      className="w-5 h-5
+                                      animate-spin"
+                                    />
+                                  )}
+                                  <span className="text-sm">
+                                    취소하기
+                                  </span>
+                                </div>
                               
-                            </span>
+                              </button>
+                              
+                            </div>
                           ) : (
 
-                            <div className="flex flex-col gap-2 items-start justify-start">
+                            <>
+                              {item.seller && (
+                              <div className="w-full flex flex-col gap-2 items-start justify-start">
 
-                              <div className="flex flex-row items-center justify-center gap-2"> 
-                                <Image
-                                  src={item?.seller?.avatar || "/icon-seller.png"}
-                                  alt="Avatar"
-                                  width={20}
-                                  height={20}
-                                  className="rounded-full w-5 h-5"
-                                />
-                                <span className="text-lg font-semibold text-zinc-500">
-                                  {
-                                    item.seller?.nickname &&
-                                    item.seller.nickname.length > 8 ?
-                                    item.seller.nickname.slice(0, 8) + '...' :
-                                    item.seller?.nickname
-                                  }
-                                </span>
+                                <div className="flex flex-row items-center justify-center gap-2"> 
+                                  <Image
+                                    src={item?.seller?.avatar || "/icon-seller.png"}
+                                    alt="Avatar"
+                                    width={20}
+                                    height={20}
+                                    className="rounded-full w-5 h-5"
+                                  />
+                                  <span className="text-lg font-semibold text-zinc-500">
+                                    {
+                                      item.seller?.nickname &&
+                                      item.seller.nickname.length > 8 ?
+                                      item.seller.nickname.slice(0, 8) + '...' :
+                                      item.seller?.nickname
+                                    }
+                                  </span>
+                                </div>
+
+                                {/* wallet address */}
+                                <div className="flex flex-row items-center justify-center gap-1">
+                                  <Image
+                                    src="/icon-shield.png"
+                                    alt="Wallet Address"
+                                    width={20}
+                                    height={20}
+                                    className="w-5 h-5"
+                                  />
+                                  <button
+                                    className="text-sm text-blue-600 font-semibold underline
+                                    "
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(item.seller?.walletAddress);
+                                      toast.success(Copied_Wallet_Address);
+                                    }}
+                                  >
+                                    {item.seller?.walletAddress && item.seller?.walletAddress.substring(0, 6) + '...' + item.seller?.walletAddress.substring(item.seller?.walletAddress.length - 4)}
+                                  </button>
+                                </div>
+  
+                                <div className="flex flex-row items-center justify-center gap-2">
+                                  <Image
+                                    src="/icon-matching-completed.png"
+                                    alt="Matching Completed"
+                                    width={20}
+                                    height={20}
+                                    className="w-5 h-5"
+                                  />
+                                  <span className="text-sm text-zinc-500 font-semibold">
+                                    자동매칭
+                                  </span>
+                                </div>
+
                               </div>
+                              )}
 
-                              {/* wallet address */}
-                              <div className="flex flex-row items-center justify-center gap-1">
-                                <Image
-                                  src="/icon-shield.png"
-                                  alt="Wallet Address"
-                                  width={20}
-                                  height={20}
-                                  className="w-5 h-5"
-                                />
-                                <button
-                                  className="text-sm text-blue-600 font-semibold underline
-                                  "
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(item.seller?.walletAddress);
-                                    toast.success(Copied_Wallet_Address);
-                                  }}
-                                >
-                                  {item.seller?.walletAddress && item.seller?.walletAddress.substring(0, 6) + '...' + item.seller?.walletAddress.substring(item.seller?.walletAddress.length - 4)}
-                                </button>
-                              </div>
-                              {/*
-                              <span className="text-sm text-zinc-500">
-                                {
-                                  item.seller?.walletAddress &&
-                                  item.seller?.walletAddress.slice(0, 5) + '...' + item.seller?.walletAddress.slice(-5)
-                                }
-                              </span>
-                              */}
-
-                              <div className="h-14 flex flex-row items-center justify-center gap-2">
-                                <Image
-                                  src="/icon-matching.png"
-                                  alt="Matching Completed"
-                                  width={20}
-                                  height={20}
-                                  className="w-5 h-5 rounded-full"
-                                />
-                                <span className="text-sm text-zinc-500 font-semibold">
-                                  자동매칭
-                                </span>
-                              </div>
-
-                              {/*
-                              <span className="text-sm text-zinc-500">
-                                {item?.seller?.userStats?.totalPaymentConfirmedCount
-                                  ? item?.seller?.userStats?.totalPaymentConfirmedCount.toLocaleString() + ' 건' :
-                                  0 + ' 건'
-                                }
-                              </span>
-                              */}
-
-
-                            </div>
+                            </>
                           )}
 
 
                           {item.status === 'accepted' && (
 
-                            <div className="flex flex-col gap-2 items-start justify-start">
+                            <div className="w-full flex flex-col gap-2 items-start justify-start">
                               <button
                                 className="text-sm text-blue-600 font-semibold
                                   border border-blue-600 rounded-lg p-2"
                               >
                                 {Trade_Started}
                               </button>
-
-
-                              {/*
-                              <div className="text-sm text-white">
-                                {item.seller?.nickname}
-                              </div>
-                              */}
                               
                               <div className="text-sm text-zinc-500">
 
@@ -5337,23 +5391,8 @@ const fetchBuyOrders = async () => {
 
                           {item.status === 'paymentRequested' && (
 
-                            <div className="flex flex-col gap-2 items-start justify-start">
+                            <div className="w-full flex flex-col gap-2 items-start justify-start">
 
-
-
-                              {/*
-                              <div className="text-lg text-yellow-600 font-semibold
-                                border border-yellow-600 rounded-lg p-2
-                                bg-yellow-100
-                                w-full text-center
-                                ">
-                        
-
-                                {Request_Payment}
-
-
-                              </div>
-                              */}
                               <button
                                 className="text-sm text-yellow-600 font-semibold
                                   border border-yellow-600 rounded-lg p-2"
@@ -5386,7 +5425,7 @@ const fetchBuyOrders = async () => {
                           )}
 
                           {item.status === 'cancelled' && (
-                            <div className="flex flex-col gap-2 items-start justify-start">
+                            <div className="w-full flex flex-col gap-2 items-start justify-start">
 
                                 {/*
                                 <div className="text-lg text-red-600 font-semibold
@@ -5400,7 +5439,7 @@ const fetchBuyOrders = async () => {
                                 </div>
                                 */}
                                 <button
-                                  className="text-sm text-red-600 font-semibold
+                                  className="w-full flex items-center justify-center text-sm text-red-600 font-semibold
                                     border border-red-600 rounded-lg p-2"
                                 >
                                   {Cancelled_at}
@@ -5433,7 +5472,7 @@ const fetchBuyOrders = async () => {
 
                           {/* if status is accepted, show payment request button */}
                           {item.status === 'paymentConfirmed' && (
-                            <div className="flex flex-col gap-2 items-start justify-start">
+                            <div className="w-full flex flex-col gap-2 items-start justify-start">
 
                               {/*
                               <span className="text-lg text-[#409192] font-semibold
@@ -5455,7 +5494,7 @@ const fetchBuyOrders = async () => {
 
 
                               <button
-                                className="text-sm text-[#409192] font-semibold
+                                className="w-full flex items-center justify-center text-sm text-[#409192] font-semibold
                                   border border-green-600 rounded-lg p-2"
                               >
                                 {Completed}
@@ -5492,7 +5531,7 @@ const fetchBuyOrders = async () => {
 
 
                           {item.status === 'completed' && (
-                            <div className="flex flex-col gap-2 items-start justify-start">
+                            <div className="w-full flex flex-col gap-2 items-start justify-start">
                               
                               {Completed_at}
                             </div>
