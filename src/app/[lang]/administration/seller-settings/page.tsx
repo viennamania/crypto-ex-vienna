@@ -438,11 +438,15 @@ export default function SettingsPage({ params }: any) {
 
     const [seller, setSeller] = useState(null) as any;
 
+    const [escrowWalletAddress, setEscrowWalletAddress] = useState('');
 
 
 
+
+    const [loadingUserData, setLoadingUserData] = useState(false);
     useEffect(() => {
         const fetchData = async () => {
+            setLoadingUserData(true);
             const response = await fetch("/api/user/getUser", {
                 method: "POST",
                 headers: {
@@ -468,7 +472,7 @@ export default function SettingsPage({ params }: any) {
 
                 setSeller(data.result.seller);
 
-                setEscrowWalletAddress(data.result.escrowWalletAddress);
+                setEscrowWalletAddress(data.result.seller?.escrowWalletAddress || '');
             } else {
                 setNickname('');
                 setAvatar('/profile-default.png');
@@ -482,6 +486,7 @@ export default function SettingsPage({ params }: any) {
 
                 //setBankName('');
             }
+            setLoadingUserData(false);
 
         };
 
@@ -785,60 +790,12 @@ export default function SettingsPage({ params }: any) {
 
 
 
-    const [escrowWalletAddress, setEscrowWalletAddress] = useState('');
-    const [makeingEscrowWallet, setMakeingEscrowWallet] = useState(false);
-
-    const makeEscrowWallet = async () => {
-        
-        if (!address) {
-            toast.error('Please connect your wallet');
-            return;
-        }
-
-
-        setMakeingEscrowWallet(true);
-
-        fetch('/api/order/getEscrowWalletAddress', {
-            method: 'POST',
-            headers: {
-            'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-            lang: params.lang,
-            storecode: storecode,
-            walletAddress: address,
-            //isSmartAccount: activeWallet === inAppConnectWallet ? false : true,
-            isSmartAccount: false,
-            }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            
-            //console.log('getEscrowWalletAddress data.result', data.result);
-
-
-            if (data.result) {
-                setEscrowWalletAddress(data.result.escrowWalletAddress);
-                toast.success(Escrow_Wallet_Address_has_been_created);
-            } else {
-                toast.error(Failed_to_create_Escrow_Wallet_Address);
-            }
-        })
-        .finally(() => {
-            setMakeingEscrowWallet(false);
-        });
-
-    }
-
-    //console.log("escrowWalletAddress", escrowWalletAddress);
-
 
 
 
     // get escrow wallet address and balance
     
     const [escrowBalance, setEscrowBalance] = useState(0);
-    const [escrowNativeBalance, setEscrowNativeBalance] = useState(0);
 
     
     useEffect(() => {
@@ -855,64 +812,11 @@ export default function SettingsPage({ params }: any) {
 
         
         const result = await balanceOf({
-        contract,
-        address: escrowWalletAddress,
+            contract,
+            address: escrowWalletAddress,
         });
-
-        //console.log('escrowWalletAddress balance', result);
-
     
         setEscrowBalance( Number(result) / 10 ** 6 );
-            
-
-
-        /*
-        await fetch('/api/user/getUSDTBalanceByWalletAddress', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            chain: storecode,
-            walletAddress: escrowWalletAddress,
-        }),
-        })
-        .then(response => response?.json())
-        .then(data => {
-
-        console.log('getUSDTBalanceByWalletAddress data.result.displayValue', data.result?.displayValue);
-
-        setEscrowBalance(data.result?.displayValue);
-
-        } );
-        */
-
-
-
-
-        await fetch('/api/user/getBalanceByWalletAddress', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            storecode: storecode,
-            walletAddress: escrowWalletAddress,
-        }),
-        })
-        .then(response => response?.json())
-        .then(data => {
-
-
-        ///console.log('getBalanceByWalletAddress data', data);
-
-
-            setEscrowNativeBalance(data.result?.displayValue);
-
-        });
-        
-
-
 
     };
 
@@ -924,7 +828,7 @@ export default function SettingsPage({ params }: any) {
 
     return () => clearInterval(interval);
 
-    } , [address, escrowWalletAddress, contract, storecode]);
+    } , [address, escrowWalletAddress, contract]);
 
 
 
@@ -1022,400 +926,426 @@ export default function SettingsPage({ params }: any) {
                         </span>
                     </div>
 
-                    {!address && (
-                        <ConnectButton
-                        client={client}
-                        wallets={wallets}
 
-                        /*
-                        accountAbstraction={{
-                            chain: arbitrum,
-                            sponsorGas: false
-                        }}
-                        */
-                        
-                        theme={"light"}
-
-                        // button color is dark skyblue convert (49, 103, 180) to hex
-                        connectButton={{
-                            style: {
-                                backgroundColor: "#0047ab", // cobalt blue
-                                color: "#f3f4f6", // gray-300
-                                padding: "2px 10px",
-                                borderRadius: "10px",
-                                fontSize: "14px",
-                                width: "60x",
-                                height: "38px",
-                            },
-                            label: "웹3 로그인",
-                        }}
-
-                        connectModal={{
-                            size: "wide", 
-                            //size: "compact",
-                            titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
-                            showThirdwebBranding: false,
-                        }}
-
-                        locale={"ko_KR"}
-                        //locale={"en_US"}
-                        />
-                    )}
-
-                    {address && (
-                        <div className="w-full flex flex-col items-end justify-center gap-2">
-
-                            <div className="flex flex-row items-center justify-center gap-2">
-
-                                <button
-                                    className="text-lg text-zinc-600 underline"
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(address);
-                                        toast.success(Copied_Wallet_Address);
-                                    } }
-                                >
-                                    {address.substring(0, 6)}...{address.substring(address.length - 4)}
-                                </button>
-                                
-                                <Image
-                                    src="/icon-shield.png"
-                                    alt="Wallet"
-                                    width={100}
-                                    height={100}
-                                    className="w-6 h-6"
-                                />
-
-                            </div>
-
-                            <div className="flex flex-row items-center justify-end  gap-2">
-                                <span className="text-2xl xl:text-4xl font-semibold text-[#409192]">
-                                    {Number(balance).toFixed(2)}
-                                </span>
-                                {' '}
-                                <span className="text-sm">USDT</span>
-                            </div>
-
-                        </div>
-                    )}
 
                 </div>
 
-
-
-
-                {userCode && seller && (
-
-                    <div className='flex flex-row gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
-
-                        <div className="flex flex-row items-center gap-2">
-                            {/* dot */}
-                            <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                            <span className="text-lg">
-                                판매자 정보
-                            </span>
+                {!address && (
+                    <div className="w-full flex flex-col items-center justify-center gap-4 mt-8">
+                        <div className="text-lg text-zinc-500">
+                            {Please_connect_your_wallet_first}
                         </div>
+                    </div>
+                )}
 
 
-                        <div className="flex flex-col xl:flex-row p-2 gap-2">
+                {address && (
+                    <div className="w-full flex flex-col items-end justify-center gap-2">
+
+                        <div className="flex flex-row items-center justify-center gap-2">
+
+                            <button
+                                className="text-lg text-zinc-600 underline"
+                                onClick={() => {
+                                    navigator.clipboard.writeText(address);
+                                    toast.success(Copied_Wallet_Address);
+                                } }
+                            >
+                                {address.substring(0, 6)}...{address.substring(address.length - 4)}
+                            </button>
                             
-                            <span className="text-lg text-zinc-500 font-semibold">
-                                {seller?.bankInfo?.bankName}
-                            </span>
-
-                            <span className="text-lg text-zinc-500 font-semibold">
-                                {seller?.bankInfo?.accountNumber}
-                            </span>
-                            <span className="text-lg text-zinc-500 font-semibold">
-                                {seller?.bankInfo?.accountHolder}
-                            </span>
+                            <Image
+                                src="/icon-shield.png"
+                                alt="Wallet"
+                                width={100}
+                                height={100}
+                                className="w-6 h-6"
+                            />
 
                         </div>
 
-                        {/*
-                        <button
-                            onClick={() => {
-                                setEditSeller(!editSeller);
-                            }}
-                            className="p-2 bg-blue-500 text-zinc-100 rounded"
-                        >
-                            {editSeller ? Cancel : Edit}
-                        </button>
-                        */}
-
-
-                        
-
-
-                        <Image
-                            src="/icon-seller.png"
-                            alt="Seller"
-                            width={50}
-                            height={50}
-                            className='w-10 h-10'
-                        />
-
+                        <div className="flex flex-row items-center justify-end  gap-2">
+                            <span className="text-2xl xl:text-4xl font-semibold text-[#409192]">
+                                {Number(balance).toFixed(2)}
+                            </span>
+                            {' '}
+                            <span className="text-sm">USDT</span>
+                        </div>
 
                     </div>
                 )}
 
-                {
-                    //(userCode && !seller) || (userCode && seller && editSeller) && (
-                    true && (
+                {loadingUserData && (
+                    <div>Loading user data...</div>
+                )}
 
-                    <div className='flex flex-col gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
-                        
+
+                {!loadingUserData && seller && (
+
+                    <div className='w-full flex flex-col gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
+
+                        {/* image and title */}
+                        <div className='w-full flex flex-row gap-2 items-center justify-start'>
+                            <Image
+                                src="/icon-seller.png"
+                                alt="Seller"
+                                width={50}
+                                height={50}
+                                className='w-10 h-10'
+                            />
+                            <span className="text-2xl font-semibold">
+                                {Seller} 설정
+                            </span>
+                        </div>
+
+
+
+                        {/* nickname, bank info */}
                         <div className='w-full flex flex-row gap-2 items-center justify-between'>
-
                             <div className="flex flex-row items-center gap-2">
                                 {/* dot */}
                                 <div className='w-2 h-2 bg-green-500 rounded-full'></div>
                                 <span className="text-lg">
-                                    판매자 정보 수정
+                                    회원아이디
+                                </span>
+                            </div>
+                            <span className="text-4xl font-semibold text-[#409192]">
+                                {nickname}
+                            </span>
+                        </div>
+
+                        <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                            <div className="flex flex-row items-center gap-2">
+                                {/* dot */}
+                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                <span className="text-lg">
+                                    입금받을 계좌 정보
                                 </span>
                             </div>
 
-                            {!seller && (
-                                <div className="text-lg text-zinc-500">
-                                    {Not_a_seller}
-                                </div>
-                            )}
 
-                            {applying ? (
-                                <div className="p-2 bg-zinc-800 rounded text-zinc-100 text-xl font-semibold">
-                                    {Applying}...
-                                </div>
-                            ) : (
-                                <button
-                                    disabled={applying || !verifiedOtp}
+                            <div className="flex flex-col xl:flex-row p-2 gap-2">
+                                
+                                <span className="text-lg text-zinc-500 font-semibold">
+                                    {seller?.bankInfo?.bankName}
+                                </span>
 
-                                    onClick={() => {
-                                        // apply to be a seller
-                                        // set seller to true
-                                        // set seller to false
-                                        // set seller to pending
+                                <span className="text-lg text-zinc-500 font-semibold">
+                                    {seller?.bankInfo?.accountNumber}
+                                </span>
+                                <span className="text-lg text-zinc-500 font-semibold">
+                                    {seller?.bankInfo?.accountHolder}
+                                </span>
 
-                                        apply();
+                            </div>
 
-                                    }}
-                                    className={`
-                                        ${!verifiedOtp ? 'bg-gray-300 text-gray-400'
-                                        : 'bg-green-500 text-zinc-100'}
-
-                                        p-2 rounded-lg text-sm font-semibold
-                                    `}
-                                >
-                                    {Apply}
-                                </button>
-                            )}
-
-                        </div>
-
-                        {/* 은행명, 계좌번호, 예금주 */}
-                        <div className='flex flex-col gap-2 items-start justify-between'>
-
-                            {/*                             
-                            <input 
-                                disabled={applying}
-                                className="p-2 w-64 text-zinc-100 bg-zinc-800 rounded text-lg font-semibold"
-                                placeholder={Enter_your_bank_name}
-                                value={bankName}
-                                type='text'
-                                onChange={(e) => {
-                                    setBankName(e.target.value);
+                            {/*
+                            <button
+                                onClick={() => {
+                                    setEditSeller(!editSeller);
                                 }}
-                            />
+                                className="p-2 bg-blue-500 text-zinc-100 rounded"
+                            >
+                                {editSeller ? Cancel : Edit}
+                            </button>
                             */}
 
 
-                            <select
-                                disabled={!address}
-                                className="p-2 w-full text-lg text-center bg-zinc-800 rounded-lg text-zinc-100
-                                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-                                value={bankName}
-                                onChange={(e) => {
-                                    setBankName(e.target.value);
-                                }}
-                            >
-                                <option value="" selected={bankName === ""}>
-                                    은행선택
-                                </option>
-                                <option value="카카오뱅크" selected={bankName === "카카오뱅크"}>
-                                    카카오뱅크
-                                </option>
-                                <option value="케이뱅크" selected={bankName === "케이뱅크"}>
-                                    케이뱅크
-                                </option>
-                                <option value="토스뱅크" selected={bankName === "토스뱅크"}>
-                                    토스뱅크
-                                </option>
-                                <option value="국민은행" selected={bankName === "국민은행"}>
-                                    국민은행
-                                </option>
-                                <option value="우리은행" selected={bankName === "우리은행"}>
-                                    우리은행
-                                </option>
-                                <option value="신한은행" selected={bankName === "신한은행"}>
-                                    신한은행
-                                </option>
-                                <option value="농협" selected={bankName === "농협"}>
-                                    농협
-                                </option>
-                                <option value="기업은행" selected={bankName === "기업은행"}>
-                                    기업은행
-                                </option>
-                                <option value="하나은행" selected={bankName === "하나은행"}>
-                                    하나은행
-                                </option>
-                                <option value="외환은행" selected={bankName === "외환은행"}>
-                                    외환은행
-                                </option>
-                                <option value="부산은행" selected={bankName === "부산은행"}>
-                                    부산은행
-                                </option>
-                                <option value="대구은행" selected={bankName === "대구은행"}>
-                                    대구은행
-                                </option>
-                                <option value="전북은행" selected={bankName === "전북은행"}>
-                                    전북은행
-                                </option>
-                                <option value="경북은행" selected={bankName === "경북은행"}>
-                                    경북은행
-                                </option>
-                                <option value="광주은행" selected={bankName === "광주은행"}>
-                                    광주은행
-                                </option>
-                                <option value="수협" selected={bankName === "수협"}>
-                                    수협
-                                </option>
-                                <option value="씨티은행" selected={bankName === "씨티은행"}>
-                                    씨티은행
-                                </option>
-                                <option value="대신은행" selected={bankName === "대신은행"}>
-                                    대신은행
-                                </option>
-                                <option value="동양종합금융" selected={bankName === "동양종합금융"}>
-                                    동양종합금융
-                                </option>
-
-
-                            </select>
-                                
-
-
-
-
-
-
-                            
-                            <input 
-                                disabled={applying}
-                                className="p-2 w-64 text-zinc-100 bg-zinc-800 rounded-lg text-lg"
-                                placeholder={Enter_your_account_number}
-                                value={accountNumber}
-                                type='number'
-                                onChange={(e) => {
-
-                                    // check if the value is a number
-
-                                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
-
-                                    setAccountNumber(e.target.value);
-                                }}
-                            />
-                            <input 
-                                disabled={applying}
-                                className="p-2 w-64 text-zinc-100 bg-zinc-800 rounded-lg text-lg"
-                                placeholder={Enter_your_account_holder}
-                                value={accountHolder}
-                                type='text'
-                                onChange={(e) => {
-                                    setAccountHolder(e.target.value);
-                                }}
-                            />
                         </div>
 
 
-                        {/* otp verification */}
+                        <div className='mt-4 flex flex-col gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
+                            
+                            <div className='w-full flex flex-row gap-2 items-center justify-between'>
 
-                        {/*
-                        {verifiedOtp ? (
-                            <div className="w-full flex flex-row gap-2 items-center justify-center">
-                            <Image
-                                src="/verified.png"
-                                alt="check"
-                                width={30}
-                                height={30}
-                            />
-                            <div className="text-white">
-                                {OTP_verified}
+                                <div className="flex flex-row items-center gap-2">
+                                    <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                    <span className="text-lg">
+                                        입금받을 계좌 정보 수정
+                                    </span>
+                                </div>
+
+                                {!seller && (
+                                    <div className="text-lg text-zinc-500">
+                                        {Not_a_seller}
+                                    </div>
+                                )}
+
+                                {applying ? (
+                                    <div className="p-2 bg-zinc-800 rounded text-zinc-100 text-xl font-semibold">
+                                        {Applying}...
+                                    </div>
+                                ) : (
+                                    <button
+                                        disabled={applying || !verifiedOtp}
+
+                                        onClick={() => {
+                                            // apply to be a seller
+                                            // set seller to true
+                                            // set seller to false
+                                            // set seller to pending
+
+                                            apply();
+
+                                        }}
+                                        className={`
+                                            ${!verifiedOtp ? 'bg-gray-300 text-gray-400'
+                                            : 'bg-green-500 text-zinc-100'}
+
+                                            p-2 rounded-lg text-sm font-semibold
+                                        `}
+                                    >
+                                        {Apply}
+                                    </button>
+                                )}
+
                             </div>
-                            </div>
-                        ) : (
-                        
-                    
-                            <div className="w-full flex flex-row gap-2 items-start">
 
-                            <button
-                                disabled={!address || isSendingOtp}
-                                onClick={sendOtp}
-                                className={`
-                                
-                                ${isSendedOtp && 'hidden'}
+                            {/* 은행명, 계좌번호, 예금주 */}
+                            <div className='flex flex-col gap-2 items-start justify-between'>
 
-                                w-32 p-2 rounded-lg text-sm font-semibold
-
-                                    ${
-                                    !address || isSendingOtp
-                                    ?'bg-gray-300 text-gray-400'
-                                    : 'bg-green-500 text-white'
-                                    }
-                                
-                                `}
-                            >
-                                {Send_OTP}
-                            </button>
-
-
-                            <div className={`flex flex-row gap-2 items-center justify-center ${!isSendedOtp && 'hidden'}`}>
-                                <input
-                                type="text"
-                                placeholder={Enter_OTP}
-                                className=" w-40 p-2 border border-gray-300 rounded text-black text-sm font-semibold"
-                                value={otp}
-                                onChange={(e) => setOtp(e.target.value)}
+                                {/*                             
+                                <input 
+                                    disabled={applying}
+                                    className="p-2 w-64 text-zinc-100 bg-zinc-800 rounded text-lg font-semibold"
+                                    placeholder={Enter_your_bank_name}
+                                    value={bankName}
+                                    type='text'
+                                    onChange={(e) => {
+                                        setBankName(e.target.value);
+                                    }}
                                 />
+                                */}
+
+
+                                <select
+                                    disabled={!address}
+                                    className="p-2 w-full text-lg text-center bg-zinc-800 rounded-lg text-zinc-100
+                                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                                    value={bankName}
+                                    onChange={(e) => {
+                                        setBankName(e.target.value);
+                                    }}
+                                >
+                                    <option value="" selected={bankName === ""}>
+                                        은행선택
+                                    </option>
+                                    <option value="카카오뱅크" selected={bankName === "카카오뱅크"}>
+                                        카카오뱅크
+                                    </option>
+                                    <option value="케이뱅크" selected={bankName === "케이뱅크"}>
+                                        케이뱅크
+                                    </option>
+                                    <option value="토스뱅크" selected={bankName === "토스뱅크"}>
+                                        토스뱅크
+                                    </option>
+                                    <option value="국민은행" selected={bankName === "국민은행"}>
+                                        국민은행
+                                    </option>
+                                    <option value="우리은행" selected={bankName === "우리은행"}>
+                                        우리은행
+                                    </option>
+                                    <option value="신한은행" selected={bankName === "신한은행"}>
+                                        신한은행
+                                    </option>
+                                    <option value="농협" selected={bankName === "농협"}>
+                                        농협
+                                    </option>
+                                    <option value="기업은행" selected={bankName === "기업은행"}>
+                                        기업은행
+                                    </option>
+                                    <option value="하나은행" selected={bankName === "하나은행"}>
+                                        하나은행
+                                    </option>
+                                    <option value="외환은행" selected={bankName === "외환은행"}>
+                                        외환은행
+                                    </option>
+                                    <option value="부산은행" selected={bankName === "부산은행"}>
+                                        부산은행
+                                    </option>
+                                    <option value="대구은행" selected={bankName === "대구은행"}>
+                                        대구은행
+                                    </option>
+                                    <option value="전북은행" selected={bankName === "전북은행"}>
+                                        전북은행
+                                    </option>
+                                    <option value="경북은행" selected={bankName === "경북은행"}>
+                                        경북은행
+                                    </option>
+                                    <option value="광주은행" selected={bankName === "광주은행"}>
+                                        광주은행
+                                    </option>
+                                    <option value="수협" selected={bankName === "수협"}>
+                                        수협
+                                    </option>
+                                    <option value="씨티은행" selected={bankName === "씨티은행"}>
+                                        씨티은행
+                                    </option>
+                                    <option value="대신은행" selected={bankName === "대신은행"}>
+                                        대신은행
+                                    </option>
+                                    <option value="동양종합금융" selected={bankName === "동양종합금융"}>
+                                        동양종합금융
+                                    </option>
+
+
+                                </select>
+
+                                
+                                <input 
+                                    disabled={applying}
+                                    className="p-2 w-64 text-zinc-100 bg-zinc-800 rounded-lg text-lg"
+                                    placeholder={Enter_your_account_number}
+                                    value={accountNumber}
+                                    type='number'
+                                    onChange={(e) => {
+
+                                        // check if the value is a number
+
+                                        e.target.value = e.target.value.replace(/[^0-9]/g, '');
+
+                                        setAccountNumber(e.target.value);
+                                    }}
+                                />
+                                <input 
+                                    disabled={applying}
+                                    className="p-2 w-64 text-zinc-100 bg-zinc-800 rounded-lg text-lg"
+                                    placeholder={Enter_your_account_holder}
+                                    value={accountHolder}
+                                    type='text'
+                                    onChange={(e) => {
+                                        setAccountHolder(e.target.value);
+                                    }}
+                                />
+                            </div>
+
+
+                            {/* otp verification */}
+
+                            {/*
+                            {verifiedOtp ? (
+                                <div className="w-full flex flex-row gap-2 items-center justify-center">
+                                <Image
+                                    src="/verified.png"
+                                    alt="check"
+                                    width={30}
+                                    height={30}
+                                />
+                                <div className="text-white">
+                                    {OTP_verified}
+                                </div>
+                                </div>
+                            ) : (
+                            
+                        
+                                <div className="w-full flex flex-row gap-2 items-start">
 
                                 <button
-                                disabled={!otp || isVerifingOtp}
-                                onClick={verifyOtp}
-                                className={`w-32 p-2 rounded-lg text-sm font-semibold
+                                    disabled={!address || isSendingOtp}
+                                    onClick={sendOtp}
+                                    className={`
+                                    
+                                    ${isSendedOtp && 'hidden'}
 
-                                    ${
-                                    !otp || isVerifingOtp
-                                    ?'bg-gray-300 text-gray-400'
-                                    : 'bg-green-500 text-white'
-                                    }
+                                    w-32 p-2 rounded-lg text-sm font-semibold
+
+                                        ${
+                                        !address || isSendingOtp
+                                        ?'bg-gray-300 text-gray-400'
+                                        : 'bg-green-500 text-white'
+                                        }
                                     
                                     `}
                                 >
-                                    {Verify_OTP}
+                                    {Send_OTP}
                                 </button>
-                            </div>
+
+
+                                <div className={`flex flex-row gap-2 items-center justify-center ${!isSendedOtp && 'hidden'}`}>
+                                    <input
+                                    type="text"
+                                    placeholder={Enter_OTP}
+                                    className=" w-40 p-2 border border-gray-300 rounded text-black text-sm font-semibold"
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value)}
+                                    />
+
+                                    <button
+                                    disabled={!otp || isVerifingOtp}
+                                    onClick={verifyOtp}
+                                    className={`w-32 p-2 rounded-lg text-sm font-semibold
+
+                                        ${
+                                        !otp || isVerifingOtp
+                                        ?'bg-gray-300 text-gray-400'
+                                        : 'bg-green-500 text-white'
+                                        }
+                                        
+                                        `}
+                                    >
+                                        {Verify_OTP}
+                                    </button>
+                                </div>
 
 
 
-                            </div>
+                                </div>
 
-                        )}
-                        */}
+                            )}
+                            */}
 
+
+
+                        </div>
+
+
+ 
 
 
                     </div>
                 )}
 
 
+                {!loadingUserData && escrowWalletAddress && (
+                    
+                    <div className='w-full flex flex-col gap-2 items-start justify-between mt-4 p-4 border border-gray-300 rounded-lg'>
 
+                        <div className='w-full flex flex-row gap-2 items-center justify-start mb-2'>
+                            <Image
+                                src="/icon-escrow-wallet.png"
+                                alt="Escrow Wallet"
+                                width={50}
+                                height={50}
+                                className='w-10 h-10'
+                            />
+                            <span className="text-2xl font-semibold">
+                                에스크로 지갑 정보
+                            </span>
+                        </div>
+
+                        <div className="flex flex-row items-center gap-2">
+                            <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                            <span className="text-lg">
+                                에스크로 지갑 주소
+                            </span>
+                        </div>
+
+                        <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                            <span className="text-lg break-all">
+                                {escrowWalletAddress.slice(0, 6)}...{escrowWalletAddress.slice(-4)}
+                            </span>
+                        </div>
+
+                        <div className='w-full flex flex-row gap-2 items-center justify-between'>
+
+                            <span className="text-lg font-semibold">
+                                USDT 잔액: {escrowBalance.toFixed(2)} USDT
+                            </span>
+
+                        </div>
+
+                    </div>
+                )}
 
 
 
