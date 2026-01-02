@@ -13,13 +13,6 @@ import {
     sendAndConfirmTransaction,
 } from "thirdweb";
 
-
-
-import {
-    polygon,
-    arbitrum,
-} from "thirdweb/chains";
-
 import {
     ConnectButton,
     useActiveAccount,
@@ -51,6 +44,26 @@ import { balanceOf, transfer } from "thirdweb/extensions/erc20";
 import AppBarComponent from "@/components/Appbar/AppBar";
 import { getDictionary } from "../../../dictionaries";
 
+
+import { useQRCode } from 'next-qrcode';
+
+
+import {
+  ethereum,
+  polygon,
+  arbitrum,
+  bsc,
+} from "thirdweb/chains";
+
+import {
+  chain,
+  ethereumContractAddressUSDT,
+  polygonContractAddressUSDT,
+  arbitrumContractAddressUSDT,
+  bscContractAddressUSDT,
+
+  bscContractAddressMKRW,
+} from "@/app/config/contractAddresses";
 
 
 
@@ -95,25 +108,37 @@ export default function SettingsPage({ params }: any) {
  
     ///const wallet = searchParams.get('wallet');
 
+    const { Canvas } = useQRCode();
+
 
 
 
     const contract = getContract({
         // the client you have created via `createThirdwebClient()`
         client,
-        // the chain the contract is deployed on 
-        
-        chain: arbitrum,
+        // the chain the contract is deployed on
 
-        address: contractAddressArbitrum,
-    
-    
+
+        //chain: arbitrum,
+        chain:  chain === "ethereum" ? ethereum :
+                chain === "polygon" ? polygon :
+                chain === "arbitrum" ? arbitrum :
+                chain === "bsc" ? bsc : arbitrum,
+
+
+
+        // the contract's address
+        ///address: contractAddressArbitrum,
+
+        address: chain === "ethereum" ? ethereumContractAddressUSDT :
+                chain === "polygon" ? polygonContractAddressUSDT :
+                chain === "arbitrum" ? arbitrumContractAddressUSDT :
+                chain === "bsc" ? bscContractAddressUSDT : arbitrumContractAddressUSDT,
+
+
         // OPTIONAL: the contract's abi
         //abi: [...],
-      });
-    
-    
-
+    });
 
       
 
@@ -318,7 +343,7 @@ export default function SettingsPage({ params }: any) {
 
 
 
-    const [nativeBalance, setNativeBalance] = useState(0);
+    ///const [nativeBalance, setNativeBalance] = useState(0);
     const [balance, setBalance] = useState(0);
     useEffect(() => {
   
@@ -334,11 +359,11 @@ export default function SettingsPage({ params }: any) {
         });
   
     
-        //console.log(result);
+        //console.log('balance result', result);
     
         setBalance( Number(result) / 10 ** 6 );
   
-  
+        /*
         await fetch('/api/user/getBalanceByWalletAddress', {
           method: 'POST',
           headers: {
@@ -355,7 +380,7 @@ export default function SettingsPage({ params }: any) {
         .then(data => {
             setNativeBalance(data.result?.displayValue);
         });
-  
+        */
   
   
       };
@@ -368,7 +393,7 @@ export default function SettingsPage({ params }: any) {
   
       return () => clearInterval(interval);
   
-    } , [address, contract, storecode]);
+    } , [address, contract]);
   
 
 
@@ -803,18 +828,18 @@ export default function SettingsPage({ params }: any) {
     const getEscrowBalance = async () => {
 
         if (!address) {
-        setEscrowBalance(0);
-        return;
+            setEscrowBalance(0);
+            return;
         }
 
         if (!escrowWalletAddress || escrowWalletAddress === '') return;
 
-
-        
         const result = await balanceOf({
             contract,
             address: escrowWalletAddress,
         });
+
+        //console.log('escrow balance result', result);
     
         setEscrowBalance( Number(result) / 10 ** 6 );
 
@@ -965,7 +990,9 @@ export default function SettingsPage({ params }: any) {
                         </div>
 
                         <div className="flex flex-row items-center justify-end  gap-2">
-                            <span className="text-2xl xl:text-4xl font-semibold text-[#409192]">
+                            <span className="text-2xl xl:text-4xl font-semibold text-[#409192]"
+                                style={{ fontFamily: 'monospace' }}
+                            >
                                 {Number(balance).toFixed(2)}
                             </span>
                             {' '}
@@ -999,7 +1026,6 @@ export default function SettingsPage({ params }: any) {
                         </div>
 
 
-
                         {/* nickname, bank info */}
                         <div className='w-full flex flex-row gap-2 items-center justify-between'>
                             <div className="flex flex-row items-center gap-2">
@@ -1014,7 +1040,8 @@ export default function SettingsPage({ params }: any) {
                             </span>
                         </div>
 
-                        <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                        <div className='w-full flex flex-row gap-2 items-center justify-between
+                        border-t border-gray-300 pt-4'>
                             <div className="flex flex-row items-center gap-2">
                                 {/* dot */}
                                 <div className='w-2 h-2 bg-green-500 rounded-full'></div>
@@ -1102,7 +1129,7 @@ export default function SettingsPage({ params }: any) {
                             </div>
 
                             {/* 은행명, 계좌번호, 예금주 */}
-                            <div className='flex flex-col gap-2 items-start justify-between'>
+                            <div className='flex flex-col gap-2 items-start justify-between w-full'>
 
                                 {/*                             
                                 <input 
@@ -1294,13 +1321,7 @@ export default function SettingsPage({ params }: any) {
                             )}
                             */}
 
-
-
                         </div>
-
-
- 
-
 
                     </div>
                 )}
@@ -1331,16 +1352,43 @@ export default function SettingsPage({ params }: any) {
                         </div>
 
                         <div className='w-full flex flex-row gap-2 items-center justify-between'>
-                            <span className="text-lg break-all">
-                                {escrowWalletAddress.slice(0, 6)}...{escrowWalletAddress.slice(-4)}
-                            </span>
+                            <div className="flex flex-row items-center gap-2">
+                                <Image
+                                    src="/icon-smart-wallet.png"
+                                    alt="Smart Wallet"
+                                    width={50}
+                                    height={50}
+                                    className='w-8 h-8'
+                                />
+                                <button
+                                    className="text-lg text-zinc-600 underline"
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(escrowWalletAddress);
+                                        toast.success("에스크로 지갑 주소가 복사되었습니다" );
+                                    } }
+                                >
+                                    {escrowWalletAddress.slice(0, 6)}...{escrowWalletAddress.slice(-4)}
+                                </button>
+                            </div>
+                            {/* QR code */}
+                            <Canvas text={escrowWalletAddress} />
                         </div>
 
-                        <div className='w-full flex flex-row gap-2 items-center justify-between'>
-
-                            <span className="text-lg font-semibold">
-                                USDT 잔액: {escrowBalance.toFixed(2)} USDT
-                            </span>
+                        <div className='w-full flex flex-row gap-2 items-center justify-between mt-4
+                        border-t border-gray-300 pt-4'>
+                            <div className="flex flex-row items-center gap-2">
+                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                <span className="text-lg">
+                                    에스크로 잔액
+                                </span>
+                            </div>
+                            <div className='flex flex-row items-center gap-2 mb-2'>
+                                <span className="text-2xl xl:text-4xl font-semibold text-[#409192]"
+                                    style={{ fontFamily: 'monospace' }}
+                                >
+                                    {escrowBalance.toFixed(2)}
+                                </span>
+                            </div>
 
                         </div>
 
