@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
 
   // check vault wallet address, if not exist, create new smart wallet
-
+  /*
   const vaultWalletExists = await checkVaultWalletAddressExists(storecode, walletAddress);
 
   if (!vaultWalletExists) {
@@ -170,5 +170,16 @@ export async function POST(request: NextRequest) {
     });
 
   }
+  */
+
+  const result = await updateSellerStatus({
+    storecode: storecode,
+    walletAddress: walletAddress,
+    nickname: nickname,
+    sellerStatus: sellerStatus,
+    bankName: bankName,
+    accountNumber: accountNumber,
+    accountHolder: accountHolder,
+  });
   
 }

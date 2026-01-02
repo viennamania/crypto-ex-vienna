@@ -658,7 +658,7 @@ export async function updateSellerStatus(data: any) {
 
   // update and return updated user
 
-  if (!data.storecode || !data.walletAddress || !data.sellerStatus || !data.bankName || !data.accountNumber || !data.accountHolder) {
+  if (!data.storecode || !data.walletAddress || !data.bankName || !data.accountNumber || !data.accountHolder) {
     return null;
   }
 
@@ -677,13 +677,10 @@ export async function updateSellerStatus(data: any) {
   */
 
 
-  const seller = {
-    status: data.sellerStatus,
-    bankInfo: {
-      bankName: data.bankName,
-      accountNumber: data.accountNumber,
-      accountHolder: data.accountHolder,
-    }
+  const sellerBankInfo = {
+    bankName: data.bankName,
+    accountNumber: data.accountNumber,
+    accountHolder: data.accountHolder,
   };
   
 
@@ -706,54 +703,36 @@ export async function updateSellerStatus(data: any) {
       walletAddress: data.walletAddress,
     }
   );
-  if (existingUser) {
-    // update seller info
-    const result = await collection.updateOne(
+
+  if (!existingUser) {
+    console.log('No existing user found for updateSellerStatus');
+    return null;
+  }
+
+
+  // update seller info
+  const result = await collection.updateOne(
+    {
+      storecode: data.storecode,
+      walletAddress: data.walletAddress
+    },
+    {
+      $set: {
+        'seller.bankInfo': sellerBankInfo,
+      }
+  }
+  );
+
+  if (result.modifiedCount > 0) {
+    const updated = await collection.findOne<UserProps>(
       {
         storecode: data.storecode,
         walletAddress: data.walletAddress
       },
-      { $set: {
-        nickname: data.nickname,
-        seller: seller
-      } }
     );
-
-    if (result) {
-      const updated = await collection.findOne<UserProps>(
-        {
-          storecode: data.storecode,
-          walletAddress: data.walletAddress
-        },
-      );
-      return updated;
-    } else {
-      return null;
-    }
-
+    return updated;
   } else {
-
-    // insert new user with seller info
-    const result = await collection.insertOne(
-      {
-        storecode: data.storecode,
-        walletAddress: data.walletAddress,
-        nickname: data.nickname,
-        seller: seller
-      }
-    );
-
-    if (result) {
-      const updated = await collection.findOne<UserProps>(
-        {
-          storecode: data.storecode,
-          walletAddress: data.walletAddress
-        },
-      );
-      return updated;
-    } else {
-      return null;
-    }
+    return null;
   }
 
 
@@ -2539,6 +2518,41 @@ export async function updateSellerEnabled(
     {
       $set: {
         'seller.enabled': sellerEnabled,
+      }
+    }
+  );
+  
+}
+
+// updateUserForSeller
+export async function updateUserForSeller(
+  {
+    storecode,
+    walletAddress,
+    escrowWalletAddress,
+  }: {
+    storecode: string;
+    walletAddress: string;
+    escrowWalletAddress: string;
+  }
+) {
+
+  console.log('updateUserForSeller storecode: ' + storecode + ' walletAddress: ' + walletAddress + ' escrowWalletAddress: ' + escrowWalletAddress);
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  return await collection.updateOne(
+    {
+      storecode: storecode,
+      walletAddress: walletAddress
+    },
+    {
+      $set: {
+        seller: {
+          status: 'confirmed',
+          enabled: false,
+          escrowWalletAddress: escrowWalletAddress,
+        }
       }
     }
   );

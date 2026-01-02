@@ -463,7 +463,7 @@ export default function SettingsPage({ params }: any) {
 
     const [seller, setSeller] = useState(null) as any;
 
-    const [escrowWalletAddress, setEscrowWalletAddress] = useState('');
+    //const [escrowWalletAddress, setEscrowWalletAddress] = useState('');
 
 
 
@@ -497,7 +497,7 @@ export default function SettingsPage({ params }: any) {
 
                 setSeller(data.result.seller);
 
-                setEscrowWalletAddress(data.result.seller?.escrowWalletAddress || '');
+                ////setEscrowWalletAddress(data.result.seller?.escrowWalletAddress || '');
             } else {
                 setNickname('');
                 setAvatar('/profile-default.png');
@@ -507,7 +507,7 @@ export default function SettingsPage({ params }: any) {
                 setAccountHolder('');
                 setAccountNumber('');
 
-                setEscrowWalletAddress('');
+                ///setEscrowWalletAddress('');
 
                 //setBankName('');
             }
@@ -745,6 +745,40 @@ export default function SettingsPage({ params }: any) {
     };
 
 
+    // apply seller
+    const [applyingSeller, setApplyingSeller] = useState(false);
+    const applySeller = async () => {
+        if (applyingSeller) return;
+        setApplyingSeller(true);
+        await fetch('/api/user/applySeller', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                storecode: storecode,
+                walletAddress: address,
+            }),
+        });
+        // reload seller data
+        const response = await fetch("/api/user/getUser", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                storecode: storecode,
+                walletAddress: address,
+            }),
+        });
+        const data = await response.json();
+        if (data.result) {
+            setSeller(data.result.seller);
+        }
+        setApplyingSeller(false);
+    };
+
+
 
     // check box edit seller
     const [editSeller, setEditSeller] = useState(false);
@@ -855,11 +889,11 @@ export default function SettingsPage({ params }: any) {
             return;
         }
 
-        if (!escrowWalletAddress || escrowWalletAddress === '') return;
+        if (!seller?.escrowWalletAddress || seller?.escrowWalletAddress === '') return;
 
         const result = await balanceOf({
             contract,
-            address: escrowWalletAddress,
+            address: seller?.escrowWalletAddress,
         });
 
         //console.log('escrow balance result', result);
@@ -876,7 +910,7 @@ export default function SettingsPage({ params }: any) {
 
     return () => clearInterval(interval);
 
-    } , [address, escrowWalletAddress, contract]);
+    } , [address, seller?.escrowWalletAddress, contract]);
 
 
 
@@ -1027,6 +1061,47 @@ export default function SettingsPage({ params }: any) {
 
                 {loadingUserData && (
                     <div>Loading user data...</div>
+                )}
+
+                {!loadingUserData && !nickname && (
+                    <div className='w-full flex flex-col gap-2 items-center justify-center border border-gray-300 p-4 rounded-lg'>
+
+                        <span className="text-lg font-semibold">
+                            회원이 아닙니다.
+                        </span>
+
+                        <button
+                            onClick={() => {
+                                router.push('/' + params.lang + '/administration/profile-settings');
+                            }}
+                            className="bg-blue-500 text-zinc-100 px-4 py-2 rounded"
+                        >
+                            회원가입하기
+                        </button>
+
+                    </div>
+                )}
+
+                {!loadingUserData && nickname && !seller && (
+                    <div className='w-full flex flex-col gap-2 items-center justify-center border border-gray-300 p-4 rounded-lg'>
+
+                        <span className="text-lg font-semibold">
+                            판매자가 아닙니다.
+                        </span>
+
+                        <button
+                            onClick={() => {
+                                applySeller();
+                            }}
+                            className={`
+                                ${applyingSeller ? 'bg-gray-400' : 'bg-blue-500'} text-zinc-100 px-4 py-2 rounded
+                            `}
+                            disabled={applyingSeller}
+                        >
+                            {applyingSeller ? Applying + '...' : Apply}
+                        </button>
+
+                    </div>
                 )}
 
 
@@ -1425,7 +1500,7 @@ export default function SettingsPage({ params }: any) {
                 )}
 
 
-                {!loadingUserData && escrowWalletAddress && (
+                {!loadingUserData && seller?.escrowWalletAddress && (
                     
                     <div className='w-full flex flex-col gap-2 items-start justify-between mt-4 p-4 border border-gray-300 rounded-lg'>
 
@@ -1461,15 +1536,15 @@ export default function SettingsPage({ params }: any) {
                                 <button
                                     className="text-lg text-zinc-600 underline"
                                     onClick={() => {
-                                        navigator.clipboard.writeText(escrowWalletAddress);
+                                        navigator.clipboard.writeText(seller?.escrowWalletAddress || "");
                                         toast.success("에스크로 지갑 주소가 복사되었습니다" );
                                     } }
                                 >
-                                    {escrowWalletAddress.slice(0, 6)}...{escrowWalletAddress.slice(-4)}
+                                    {seller?.escrowWalletAddress.slice(0, 6)}...{seller?.escrowWalletAddress.slice(-4)}
                                 </button>
                             </div>
                             {/* QR code */}
-                            <Canvas text={escrowWalletAddress} />
+                            <Canvas text={seller?.escrowWalletAddress || ""} />
                         </div>
 
                         <div className='w-full flex flex-row gap-2 items-center justify-between mt-4
