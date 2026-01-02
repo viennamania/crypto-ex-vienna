@@ -14,6 +14,7 @@ import twilio from "twilio";
 export async function GET(request: NextRequest) {
 
 
+  /*
   const result = await cancelTradeByAdmin();
 
   console.log("result", result);
@@ -37,5 +38,12 @@ export async function GET(request: NextRequest) {
     });
 
   }
+  */
+
+  return NextResponse.json({
+
+    result: true,
+    
+  });
   
 }
