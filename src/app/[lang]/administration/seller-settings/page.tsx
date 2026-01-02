@@ -722,6 +722,29 @@ export default function SettingsPage({ params }: any) {
 
 
 
+    // sellerEnabled
+    // functon to toggle seller enabled
+    const toggleSellerEnabled = async () => {
+        if (!seller) return;
+        const newEnabled = !seller.enabled;
+        await fetch('/api/user/updateSellerEnabled', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                storecode: storecode,
+                walletAddress: address,
+                sellerEnabled: newEnabled,
+            }),
+        });
+        setSeller({
+            ...seller,
+            enabled: newEnabled,
+        });
+    };
+
+
 
     // check box edit seller
     const [editSeller, setEditSeller] = useState(false);
@@ -1026,7 +1049,7 @@ export default function SettingsPage({ params }: any) {
                         </div>
 
 
-                        {/* nickname, bank info */}
+                        {/* nickname */}
                         <div className='w-full flex flex-row gap-2 items-center justify-between'>
                             <div className="flex flex-row items-center gap-2">
                                 {/* dot */}
@@ -1040,8 +1063,83 @@ export default function SettingsPage({ params }: any) {
                             </span>
                         </div>
 
+                        {/* seller?.status */}
+                        {/* status: pending, confirmed, rejected */}
                         <div className='w-full flex flex-row gap-2 items-center justify-between
-                        border-t border-gray-300 pt-4'>
+                            border-t border-gray-300 pt-4'>
+                            <div className="flex flex-row items-center gap-2">
+                                {/* dot */}
+                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                <span className="text-lg">
+                                    판매자 상태
+                                </span>
+                            </div>
+                            {seller?.status === 'pending' ? (
+                                <div className="flex flex-row items-center gap-2
+                                    bg-yellow-200 text-yellow-800 p-2 rounded-lg">
+                                    <span className="text-lg font-semibold">
+                                        승인대기중
+                                    </span>
+                                </div>
+                            ) : seller?.status === 'confirmed' ? (
+                                <div className="flex flex-row items-center gap-2
+                                    bg-green-200 text-green-800 p-2 rounded-lg">
+                                    <span className="text-lg font-semibold">
+                                        승인완료
+                                    </span>
+                                </div>
+                            ) : seller?.status === 'rejected' ? (
+                                <div className="flex flex-row items-center gap-2
+                                    bg-red-200 text-red-800 p-2 rounded-lg">
+                                    <span className="text-lg font-semibold">
+                                        승인거절
+                                    </span>
+                                </div>
+                            ) : null}
+                        </div>
+
+
+                        {/* seller?.enabled */}
+                        {/* 판매시작 여부 */}
+                        {/* toggle seller enabled */}
+                        <div className='w-full flex flex-row gap-2 items-center justify-between
+                            border-t border-gray-300 pt-4'>
+                            <div className="flex flex-row items-center gap-2">
+                                {/* dot */}
+                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                <span className="text-lg">
+                                    판매자 활동 상태
+                                </span>
+                            </div>
+                            {seller?.enabled ? (
+                                <button
+                                    onClick={toggleSellerEnabled}
+                                    className="flex flex-row items-center gap-2
+                                        bg-green-500 text-zinc-100 p-2 rounded-lg"
+                                >
+                                    <span className="text-lg font-semibold">
+                                        판매중
+                                    </span>
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={toggleSellerEnabled}
+                                    className="flex flex-row items-center gap-2
+                                        bg-gray-300 text-gray-600 p-2 rounded-lg"
+                                >
+                                    <span className="text-lg font-semibold">
+                                        판매중지
+                                    </span>
+                                </button>
+                            )}
+                        </div>
+                        
+
+
+                        {/* bank info */}
+
+                        <div className='w-full flex flex-row gap-2 items-center justify-between
+                            border-t border-gray-300 pt-4'>
                             <div className="flex flex-row items-center gap-2">
                                 {/* dot */}
                                 <div className='w-2 h-2 bg-green-500 rounded-full'></div>

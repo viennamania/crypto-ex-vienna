@@ -4497,11 +4497,11 @@ const fetchBuyOrders = async () => {
                       <button
                         className="text-sm text-zinc-600 underline"
                         onClick={() => {
-                          navigator.clipboard.writeText(seller.walletAddress);
+                          navigator.clipboard.writeText(seller.seller.escrowWalletAddress);
                           toast.success(Copied_Wallet_Address);
                         } }
                       >
-                        {seller.walletAddress.substring(0, 6)}...{seller.walletAddress.substring(seller.walletAddress.length - 4)}
+                        {seller.seller.escrowWalletAddress.substring(0, 6)}...{seller.seller.escrowWalletAddress.substring(seller.seller.escrowWalletAddress.length - 4)}
                       </button>
                     </div>
                   </div>

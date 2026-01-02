@@ -2476,13 +2476,17 @@ export async function getAllSellersForBalanceInquiry(
 
         walletAddress: { $exists: true, $ne: null },
         seller: { $exists: true  , $ne: null},
+        
         'seller.status': 'confirmed',
+        'seller.enabled': true,
+
       },
       {
         projection: {
           id: 1,
           nickname: 1,
           walletAddress: 1,
+          seller: 1,
         },
       }
     )
@@ -2506,4 +2510,37 @@ export async function getAllSellersForBalanceInquiry(
     totalCount,
     users ,
   };
+}
+
+
+
+// updateSellerEnabled
+export async function updateSellerEnabled(
+  {
+    storecode,
+    walletAddress,
+    sellerEnabled,
+  }: {
+    storecode: string;
+    walletAddress: string;
+    sellerEnabled: boolean;
+  }
+) {
+
+  console.log('updateSellerEnabled storecode: ' + storecode + ' walletAddress: ' + walletAddress + ' sellerEnabled: ' + sellerEnabled);
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  return await collection.updateOne(
+    {
+      storecode: storecode,
+      walletAddress: walletAddress
+    },
+    {
+      $set: {
+        'seller.enabled': sellerEnabled,
+      }
+    }
+  );
+  
 }

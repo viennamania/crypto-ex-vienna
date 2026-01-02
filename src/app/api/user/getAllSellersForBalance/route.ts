@@ -110,12 +110,16 @@ export async function POST(request: NextRequest) {
     // for each user, get the balance of walletAddress
     for (let i = 0; i < result.users.length; i++) {
       const user = result.users[i];
-      if (user.walletAddress) {
+
+      //if (user.walletAddress) {
+      if (user.seller.escrowWalletAddress) {
+
         try {
 
           const result = await balanceOf({
             contract,
-            address: user.walletAddress,
+            //address: user.walletAddress,
+            address: user.seller.escrowWalletAddress,
           });
 
           if (chain === 'bsc') {
@@ -129,7 +133,7 @@ export async function POST(request: NextRequest) {
 
 
         } catch (error) {
-          console.error(`Error getting balance for user ${user.nickname} (${user.walletAddress}):`, error);
+          console.error(`Error getting balance for user ${user.nickname} (${user.seller.escrowWalletAddress}):`, JSON.stringify(error));
           user.currentUsdtBalance = 0;
         }
       } else {
