@@ -696,6 +696,23 @@ export async function cancelBuyOrderByAdmin(
       canceller: 'admin',
     } }
   );
+
+  // also update user collection
+  // find storecode and walletAddress by orderId
+  const order = await collection.findOne<any>(
+    { _id: new ObjectId(orderId) },
+    { projection: { storecode: 1, walletAddress: 1 } }
+  );
+
+  // user.buyOrderStatus = 'cancelled'
+  const userCollection = client.db(dbName).collection('users');
+  await userCollection.updateOne(
+    { storecode: order.storecode, walletAddress: order.walletAddress },
+    { $set: { 'buyer.buyOrderStatus': 'cancelled' } }
+  );
+
+
+
   return result;
 }
 
