@@ -3301,7 +3301,7 @@ const fetchBuyOrders = async () => {
                     {/* 판매자 등록 버튼 */}
                     <button
                       onClick={() => {
-                        router.push('/' + params.lang + '/' + params.center + '/seller-settings');
+                        router.push('/' + params.lang + '/administration/seller-settings');
                       }}
                       className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
                     >
@@ -3320,6 +3320,7 @@ const fetchBuyOrders = async () => {
                     </button>
 
                     {/* KYC 버튼 */}
+                    {/*
                     <button
                       onClick={() => {
                         router.push('/' + params.lang + '/' + params.center + '/my-page-kyc');
@@ -3339,6 +3340,7 @@ const fetchBuyOrders = async () => {
                         </span>
                       </div>
                     </button>
+                    */}
 
 
                   </div>
