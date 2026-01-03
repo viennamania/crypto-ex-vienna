@@ -4476,22 +4476,21 @@ const fetchBuyOrders = async () => {
 
 
           {sellersBalance.length > 0 && (
-            <div className="w-full flex flex-col sm:flex-row items-center justify-end gap-4 overflow-x-auto">
+            <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
 
               {sellersBalance.map((seller, index) => (
                 <div key={index}
-                  className="flex flex-row items-center justify-between gap-4
+                  className="w-full flex flex-row items-start justify-between gap-4
                   bg-white/80
                   p-4 rounded-lg shadow-md
                   backdrop-blur-md
                   ">
 
                   <div className="
-                    w-52
-                    flex flex-row items-center gap-4
-                    bg-white/80
-                    p-2 rounded-lg shadow-md
-                    backdrop-blur-md
+                    w-56
+                    flex flex-row items-start justify-center gap-2
+                    p-2
+                    border border-zinc-300 rounded-lg
                     ">
                     <Image
                       src="/icon-seller.png"
@@ -4501,7 +4500,8 @@ const fetchBuyOrders = async () => {
                       className="w-10 h-10"
                     />
                     <div className="w-full flex flex-col items-start justify-center gap-2">
-                      <div className="w-full flex flex-row items-center justify-between gap-2">                   
+
+                      <div className="w-full flex flex-col items-center justify-between gap-2">                   
                         <span className="text-sm font-semibold">
                           {seller.nickname}
                         </span>
@@ -4534,10 +4534,18 @@ const fetchBuyOrders = async () => {
                   </div>
 
                   {/* seller.buyOrder.status */}
-                  {/* seller.buyOrder.createdAt */}
-                  <div className="flex flex-row items-center gap-2">
+                  {/* seller.buyOrder.nickname => 구매자 아이디 */}
+                  {/* seller.buyOrder.walletAddress => 구매자 USDT지갑 */}
+                  {/* seller.buyOrder.paymentRequestedAt */}
+                  {/* seller.buyOrder.usdtAmount => 구매량 */}
+                  {/* seller.buyOrder.krwAmount => 구매금액 */}
+                  {/* seller.buyOrder.rate => 단가 */}
+                  <div className="
+                    w-56
+                    flex flex-col items-start justify-center gap-2">
                     <span className="text-sm font-semibold">
-                      {seller.seller?.buyOrder?.status === 'paymentRequested' && (
+
+                      {seller.seller?.buyOrder?.status === 'paymentRequested' ? (
                         <div className="flex flex-row items-center gap-2
                         bg-yellow-500 text-gray-800 px-3 py-1 rounded-lg">
                           <Image
@@ -4549,8 +4557,41 @@ const fetchBuyOrders = async () => {
                           />
                           <span>입금확인중</span>
                         </div>
+                      ) : (
+                        <div className="flex flex-row items-center gap-2
+                        bg-zinc-300 text-gray-800 px-3 py-1 rounded-lg">
+                          <span>상태: 판매대기중</span>
+                        </div>
                       )}
-                      
+                    </span>
+                    <div className="w-full flex flex-row items-center justify-start gap-2">
+                      <span className="text-sm">
+                        구매자:
+                      </span>
+                      <span className="text-sm font-semibold">
+                        {seller.seller?.buyOrder?.nickname}
+                      </span>
+                      <button
+                        className="text-sm text-zinc-600 underline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(seller.seller?.buyOrder?.walletAddress);
+                          toast.success(Copied_Wallet_Address);
+                        } }
+                      >
+                        {seller.seller?.buyOrder?.walletAddress.substring(0, 6)}...{seller.seller?.buyOrder?.walletAddress.substring(seller.seller?.buyOrder?.walletAddress.length - 4)}
+                      </button>
+                    </div>
+                    <span className="text-sm">
+                      입금요청시간: {seller.seller?.buyOrder?.paymentRequestedAt ? new Date(seller.seller?.buyOrder?.paymentRequestedAt).toLocaleString() : ''}
+                    </span>
+                    <span className="text-sm">
+                      {Buy_Amount}(USDT): {seller.seller?.buyOrder?.usdtAmount}
+                    </span>
+                    <span className="text-sm">
+                      {Payment_Amount}(원): {seller.seller?.buyOrder?.krwAmount.toLocaleString()}
+                    </span>
+                    <span className="text-sm">
+                      {Rate}(원): {seller.seller?.buyOrder?.rate.toLocaleString()} 
                     </span>
                   </div>
 
