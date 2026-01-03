@@ -919,6 +919,8 @@ export async function getOneSellerByAlgorithm(
     { $project: { seller: 1 } },
   ]).toArray();
 
+  console.log("getOneSellerByAlgorithm results.length", results.length);
+
   if (results.length > 0) {
     // get index by algorithm
     const index = algorithm % results.length;
