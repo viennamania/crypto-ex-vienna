@@ -884,9 +884,9 @@ export async function getOneSellerVaultWalletAddressByRandom(
 
 
 
-// getOneSellerEscrowWalletAddressByAlgorithm
-// get one seller's escrowWalletAddress by algorithm
-export async function getOneSellerEscrowWalletAddressByAlgorithm(
+
+// get one seller by algorithm
+export async function getOneSellerByAlgorithm(
   storecode: string,
   algorithm: number,
 ): Promise<any | null> {
@@ -903,16 +903,16 @@ export async function getOneSellerEscrowWalletAddressByAlgorithm(
         'seller.escrowWalletAddress': { $exists: true, $ne: null },
       },
     },
-    { $project: { 'seller.escrowWalletAddress': 1 } },
+    { $project: { seller: 1 } },
   ]).toArray();
 
   if (results.length > 0) {
     // get index by algorithm
     const index = algorithm % results.length;
 
-    const sellerEscrowWalletAddress = results[index].escrowWalletAddress;
+    const seller = results[index].seller;
 
-    return sellerEscrowWalletAddress;
+    return seller;
 
   } else {
     return null;

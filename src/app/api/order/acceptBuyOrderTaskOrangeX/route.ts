@@ -13,7 +13,7 @@ import {
 
 import {
   //getOneSellerVaultWalletAddressByRandom,
-  getOneSellerEscrowWalletAddressByAlgorithm,
+  getOneSellerByAlgorithm,
 
   getOneByWalletAddress,
   getOneSellerByVaultWalletAddress,
@@ -169,6 +169,7 @@ export async function POST(request: NextRequest) {
 
     let sellerWalletAddress = '';
     let sellerWalletAddressIsEscrow = false;
+    let sellerBankInfo = null;
 
 
     if (buyorder.privateSale) {
@@ -185,13 +186,13 @@ export async function POST(request: NextRequest) {
       // to distribute orders evenly among sellers
       //
       const algorithm = Math.floor(Date.now() / 60000); // number of minutes since epoch
-      const sellerEscrowWalletAddress = await getOneSellerEscrowWalletAddressByAlgorithm(
+      const seller = await getOneSellerByAlgorithm(
         sellerStorecode,
         algorithm,
       );
 
-      console.log("sellerEscrowWalletAddress", sellerEscrowWalletAddress);
-      if (sellerEscrowWalletAddress) {
+      console.log("seller", seller);
+      if (seller?.escrowWalletAddress) {
 
         let sellerEscrowWalletAddressBalance = 0;
 
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
 
           const result = await balanceOf({
             contract,
-            address: sellerEscrowWalletAddress,
+            address: seller.escrowWalletAddress,
           });
 
           if (chain === 'bsc') {
@@ -213,7 +214,7 @@ export async function POST(request: NextRequest) {
 
 
         } catch (error) {
-          console.error(`Error getting balance for sellerEscrowWalletAddress ${sellerEscrowWalletAddress}:`, JSON.stringify(error));
+          console.error(`Error getting balance for sellerEscrowWalletAddress ${seller.escrowWalletAddress}:`, JSON.stringify(error));
           sellerEscrowWalletAddressBalance = 0;
         }
 
@@ -228,13 +229,18 @@ export async function POST(request: NextRequest) {
 
 
         sellerWalletAddressIsEscrow = true;
-        sellerWalletAddress = sellerEscrowWalletAddress;
+        sellerWalletAddress = seller.escrowWalletAddress;
+        sellerBankInfo = {
+          bankName: seller?.bankInfo?.bankName,
+          accountNumber: seller?.bankInfo?.accountNumber,
+          accountHolder: seller?.bankInfo?.accountHolder,
+        };
 
-        
+
       } else {
         console.log("error");
         console.log("sellerEscrowWalletAddress is null");
-        console.log("sellerEscrowWalletAddress", sellerEscrowWalletAddress);
+        console.log("sellerEscrowWalletAddress", seller.escrowWalletAddress);
 
         
         ////sellerWalletAddress = store?.sellerWalletAddress;
@@ -264,7 +270,6 @@ export async function POST(request: NextRequest) {
 
 
     let sellerMemo = "";
-
 
     
 
@@ -379,36 +384,15 @@ export async function POST(request: NextRequest) {
 
 
 
-      // if vault wallet used, request payment immediately
-      if (sellerWalletAddressIsVault) {
-
-        // get user bank info as 볼트지갑(대행)
-        const user = await getOneSellerByVaultWalletAddress(
-          storecode,
-          sellerWalletAddress
-        );
-
-        //console.log("seller for vault wallet", seller);
-
-        if (!user) {
-          console.log("error");
-          console.log("user is null for vault wallet");
-          console.log("user", user);
-
-          continue;
-        }
 
 
-        const bankInfo = {
-          bankName: user?.seller?.bankInfo?.bankName,
-          accountNumber: user?.seller?.bankInfo?.accountNumber,
-          accountHolder: user?.seller?.bankInfo?.accountHolder,
-        };
+      // if escrow wallet used, request payment immediately
+      if (sellerWalletAddressIsEscrow) {
 
         await buyOrderRequestPayment({
           orderId: buyorder._id,
           transactionHash: '0x',
-          bankInfo: bankInfo,
+          bankInfo: sellerBankInfo,
         });
 
       }
