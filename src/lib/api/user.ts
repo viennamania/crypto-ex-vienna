@@ -895,6 +895,7 @@ export async function getOneSellerByAlgorithm(
   const collection = client.db(dbName).collection('users');
 
   // user.seller is exist and user.seller.status is "confirmed"
+  // and user.seller.enabled is true
   // and user.seller.escrowWalletAddress is exist and not nul
   // and user.seller.buyOrderStatus is not  "accepted" and "paymentRequested"
   const results = await collection.aggregate<UserProps>([
@@ -903,6 +904,7 @@ export async function getOneSellerByAlgorithm(
         storecode: storecode,
         seller: { $exists: true, $ne: null },
         'seller.status': 'confirmed',
+        'seller.enabled': true,
         'seller.escrowWalletAddress': { $exists: true, $ne: null },
         $or: [
           {
