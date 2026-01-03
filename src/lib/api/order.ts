@@ -4209,7 +4209,11 @@ export async function cancelTradeBySeller(
 
     const order = await collection.findOne<any>(
       { _id: new ObjectId(orderId) },
-      { projection: { storecode: 1, walletAddress: 1 } }
+      { projection: {
+        storecode: 1,
+        walletAddress: 1,
+        seller: 1,
+      } }
     );
 
 
@@ -4223,6 +4227,20 @@ export async function cancelTradeBySeller(
       },
       { $set: { buyOrderStatus: 'cancelled' } }
     );
+
+    
+    // update user.seller.buyOrder.status to 'cancelled'
+    await userCollection.updateOne(
+      {
+        'seller.escrowWalletAddress': order.seller?.walletAddress
+      },
+      { $set: {
+          //'seller.buyOrderStatus': 'cancelled',
+          'seller.buyOrder.status': 'cancelled',
+          'seller.buyOrder.cancelledAt': new Date().toISOString(),
+        } }
+    );
+
 
 
 
