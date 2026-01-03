@@ -3420,6 +3420,9 @@ const fetchBuyOrders = async () => {
     });
 
     const data = await response.json();
+
+    ///console.log('getAllSellersForBalance data', data);
+
     if (data.result) {
       setSellersBalance(data.result.users);
     } else {
@@ -4482,7 +4485,14 @@ const fetchBuyOrders = async () => {
                   p-4 rounded-lg shadow-md
                   backdrop-blur-md
                   ">
-                  <div className="flex flex-row items-center gap-4">
+
+                  <div className="
+                    w-52
+                    flex flex-row items-center gap-4
+                    bg-white/80
+                    p-2 rounded-lg shadow-md
+                    backdrop-blur-md
+                    ">
                     <Image
                       src="/icon-seller.png"
                       alt="Seller"
@@ -4490,39 +4500,56 @@ const fetchBuyOrders = async () => {
                       height={40}
                       className="w-10 h-10"
                     />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold">
-                        {seller.nickname}
-                      </span>
-                      <button
-                        className="text-sm text-zinc-600 underline"
-                        onClick={() => {
-                          navigator.clipboard.writeText(seller.seller.escrowWalletAddress);
-                          toast.success(Copied_Wallet_Address);
-                        } }
-                      >
-                        {seller.seller.escrowWalletAddress.substring(0, 6)}...{seller.seller.escrowWalletAddress.substring(seller.seller.escrowWalletAddress.length - 4)}
-                      </button>
+                    <div className="w-full flex flex-col items-start justify-center gap-2">
+                      <div className="w-full flex flex-row items-center justify-between gap-2">                   
+                        <span className="text-sm font-semibold">
+                          {seller.nickname}
+                        </span>
+                        <button
+                          className="text-sm text-zinc-600 underline"
+                          onClick={() => {
+                            navigator.clipboard.writeText(seller.seller.escrowWalletAddress);
+                            toast.success(Copied_Wallet_Address);
+                          } }
+                        >
+                          {seller.seller.escrowWalletAddress.substring(0, 6)}...{seller.seller.escrowWalletAddress.substring(seller.seller.escrowWalletAddress.length - 4)}
+                        </button>
+                      </div>
+
+                      <div className="w-full flex flex-row items-center justify-end gap-1">
+                        <Image
+                          src="/icon-tether.png"
+                          alt="USDT"
+                          width={20}
+                          height={20}
+                          className="w-5 h-5"
+                        />
+                        <span className="text-xl text-[#409192]"
+                          style={{ fontFamily: 'monospace' }}>
+                          {Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        </span>
+                      </div>
+
                     </div>
-                  </div>
-                  <div className="flex flex-row items-center gap-2">
-                    <Image
-                      src="/icon-tether.png"
-                      alt="USDT"
-                      width={30}
-                      height={30}
-                      className="w-7 h-7"
-                    />
-                    <span className="text-2xl font-semibold text-[#409192]"
-                      style={{ fontFamily: 'monospace' }}>
-                      {Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    </span>
                   </div>
 
                   {/* seller.buyOrderStatus */}
                   <div className="flex flex-row items-center gap-2">
                     <span className="text-sm font-semibold">
-                      {seller?.buyOrderStatus}
+                      {seller.seller?.buyOrderStatus === 'paymentRequested' && (
+                        <div className="flex flex-row items-center gap-2
+                        bg-yellow-500 text-gray-800 px-3 py-1 rounded-lg">
+                          <Image
+                            src="/icon-bank-auto.png"
+                            alt="Bank Auto"
+                            width={20}
+                            height={20}
+                            className="w-5 h-5 animate-spin"
+                          />
+                          <span>입금확인중</span>
+                        </div>
+                      )}
+                      
                     </span>
                   </div>
 

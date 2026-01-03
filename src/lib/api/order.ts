@@ -6,6 +6,7 @@ import { dbName } from '../mongodb';
 
 // object id
 import { ObjectId } from 'mongodb';
+import { create } from 'domain';
 
 
 
@@ -3649,19 +3650,29 @@ export async function buyOrderRequestPayment(data: any) {
   if (result) {
 
 
-    const order = await collection.findOne<UserProps>(
+    const buyOrder = await collection.findOne<UserProps>(
       { _id: new ObjectId(data.orderId + '') },
-      { projection: { storecode: 1, walletAddress: 1, seller: 1 } }
+      { projection: {
+        orderId: 1,
+        createdAt: 1,
+        storecode: 1,
+        walletAddress: 1,
+        usdtAmount: 1,
+        krwAmount: 1,
+        rate: 1,
+        seller: 1,
+        status: 1,
+      } }
     );
-    if (order) {
+    if (buyOrder) {
 
       // update user collection buyOrderStatus to "paymentRequested"
       const userCollection = client.db(dbName).collection('users');
 
       await userCollection.updateOne(
         {
-          walletAddress: order.walletAddress,
-          storecode: order.storecode,
+          walletAddress: buyOrder.walletAddress,
+          storecode: buyOrder.storecode,
         },
         { $set: { buyOrderStatus: 'paymentRequested' } }
       ).finally(() => {
@@ -3669,14 +3680,16 @@ export async function buyOrderRequestPayment(data: any) {
       });
 
 
-      console.log('buyOrderRequestPayment order.seller: ' + JSON.stringify(order.seller));
 
       // update seller buyOrderStatus to "paymentRequested"
       await userCollection.updateOne(
         {
-          'seller.escrowWalletAddress': order.seller?.walletAddress,
+          'seller.escrowWalletAddress': buyOrder.seller?.walletAddress,
         },
-        { $set: { 'seller.buyOrderStatus': 'paymentRequested' } }
+        { $set: {
+          //'seller.buyOrderStatus': 'paymentRequested',
+          'seller.buyOrder' : buyOrder,
+        } }
       ).finally(() => {
         console.log('buyOrderRequestPayment seller buyOrderStatus updated to paymentRequested');
       });

@@ -102,6 +102,52 @@ export async function POST(request: NextRequest) {
 
 
 
+  // api call
+  try {
+
+    const stableUrl = 'https://api.orangex.center';
+
+    const apiUrl = `${stableUrl}/api/order/setBuyOrder`;
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        storecode,
+        walletAddress,
+        nickname,
+        usdtAmount,
+        krwAmount,
+        rate,
+        privateSale,
+        buyer
+      }),
+    });
+
+
+
+    if (!response.ok) {
+      
+      console.error("Failed to insert buy order:", response.status, response.statusText);
+      console.error("Response body:", await response.text());
+    }
+
+    const result = await response.json();
+    console.log("setBuyOrder =====  result", result);
+
+  } catch (error) {
+    console.error("Error in setBuyOrder:", error);
+  }
+
+
+
+
+
+
+
+
+
 
   // check storecode exists and valid
   const store = await getStoreByStorecode({
@@ -301,9 +347,6 @@ NEXT_PUBLIC_PLATFORM_FEE_ADDRESS=0x77D98480b04404a3852ccaa31f2272CC94F35093
     , { status: 500 });
 
   }
-
-
-
 
  
   return NextResponse.json({
