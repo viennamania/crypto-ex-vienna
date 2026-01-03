@@ -696,7 +696,7 @@ export async function cancelBuyOrderByAdmin(
   );
 
   if (!order) {
-    return null;
+    return false;
   }
 
 

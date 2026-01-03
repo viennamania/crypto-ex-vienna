@@ -5798,11 +5798,10 @@ const fetchBuyOrders = async () => {
                         w-60
                         flex flex-col gap-2 items-center justify-center">
 
-
+                        {/*
                         {
                           user?.seller &&
                           item.status === 'ordered'  && (
-
 
                           <div className="bg-gray-500/10
                             rounded-md
@@ -5864,7 +5863,6 @@ const fetchBuyOrders = async () => {
                                   height={20}
                                   className="w-5 h-5"
                                 />
-                                {/* seller nickname */}
                                 <div className="text-lg text-zinc-500 font-semibold">
                                   {user?.nickname}
                                 </div>
@@ -5876,6 +5874,7 @@ const fetchBuyOrders = async () => {
                           </div>
 
                         )}
+                        */}
 
 
 
