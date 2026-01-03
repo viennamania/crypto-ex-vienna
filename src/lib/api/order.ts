@@ -1613,7 +1613,7 @@ export async function sellOrderRollbackPayment(data: any) {
 export async function insertBuyOrder(data: any) {
 
 
-  if (!data.storecode || !data.walletAddress || !data.usdtAmount || !data.krwAmount || !data.rate) {
+  if (!data.clientId || !data.storecode || !data.walletAddress || !data.usdtAmount || !data.krwAmount || !data.rate) {
     
     console.log('insertBuyOrder data is null: ' + JSON.stringify(data));
     
@@ -1678,7 +1678,7 @@ export async function insertBuyOrder(data: any) {
     // inser user if not exists
     await userCollection.insertOne({
       chain: data.chain,
-
+      clientId: data.clientId,
       storecode: data.storecode,
       walletAddress: data.walletAddress,
       nickname: nickname,
@@ -1743,7 +1743,7 @@ export async function insertBuyOrder(data: any) {
 
 
 
-  const tradeId = Math.floor(Math.random() * 90000000) + 10000000 + '';
+  const tradeId = Math.floor(Math.random() * 900000000) + 100000000 + '';
 
   ///console.log('insertBuyOrder tradeId: ' + tradeId);
 
@@ -1761,6 +1761,7 @@ export async function insertBuyOrder(data: any) {
       chain: data.chain,
       lang: data.lang,
 
+      clientId: data.clientId,
 
       agentcode: agentcode,
       agent: agent,
@@ -4228,7 +4229,7 @@ export async function cancelTradeBySeller(
       { $set: { buyOrderStatus: 'cancelled' } }
     );
 
-    
+
     // update user.seller.buyOrder.status to 'cancelled'
     await userCollection.updateOne(
       {

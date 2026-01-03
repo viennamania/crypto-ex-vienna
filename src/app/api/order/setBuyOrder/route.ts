@@ -56,6 +56,7 @@ import {
 } from "@/app/config/contractAddresses";
 
 
+const clientId = process.env.NEXT_PUBLIC_TEMPLATE_CLIENT_ID || "";
 
 export async function POST(request: NextRequest) {
 
@@ -309,6 +310,8 @@ NEXT_PUBLIC_PLATFORM_FEE_ADDRESS=0x77D98480b04404a3852ccaa31f2272CC94F35093
 
   const result = await insertBuyOrder({
     chain: chain,
+
+    clientId: clientId,
     
     //agentcode: agentcode,
     storecode: storecode,
