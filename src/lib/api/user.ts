@@ -893,7 +893,10 @@ export async function getOneSellerByAlgorithm(
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
+
   // user.seller is exist and user.seller.status is "confirmed"
+  // and user.seller.escrowWalletAddress is exist and not nul
+  // and user.seller.buyOrderStatus is not  "accepted" and "paymentRequested"
   const results = await collection.aggregate<UserProps>([
     {
       $match: {
@@ -901,6 +904,14 @@ export async function getOneSellerByAlgorithm(
         seller: { $exists: true, $ne: null },
         'seller.status': 'confirmed',
         'seller.escrowWalletAddress': { $exists: true, $ne: null },
+        $or: [
+          {
+            'seller.buyOrderStatus': { $exists: false },
+          },
+          {
+            'seller.buyOrderStatus': { $nin: ['accepted', 'paymentRequested'] },
+          },
+        ],
       },
     },
     { $project: { seller: 1 } },

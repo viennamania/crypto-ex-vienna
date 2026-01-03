@@ -3552,9 +3552,6 @@ export async function acceptBuyOrder(data: any) {
   );
 
 
-
-
-
   if (result) {
 
 
@@ -3667,6 +3664,15 @@ export async function buyOrderRequestPayment(data: any) {
         },
         { $set: { buyOrderStatus: 'paymentRequested' } }
       );
+
+      // update seller buyOrderStatus to "paymentRequested"
+      await userCollection.updateOne(
+        {
+          'seller.escrowWalletAddress': order.seller?.walletAddress,
+        },
+        { $set: { 'seller.buyOrderStatus': 'paymentRequested' } }
+      );
+
 
     }
 
