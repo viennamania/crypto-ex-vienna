@@ -2509,6 +2509,7 @@ export async function getAllSellersForBalanceInquiry(
         
         'seller.status': 'confirmed',
         'seller.enabled': true,
+        'seller.escrowWalletAddress': { $exists: true, $ne: null },
 
       },
       {
@@ -2532,6 +2533,8 @@ export async function getAllSellersForBalanceInquiry(
       walletAddress: { $exists: true, $ne: null },
       seller: { $exists: true  , $ne: null},
       'seller.status': 'confirmed',
+      'seller.enabled': true,
+      'seller.escrowWalletAddress': { $exists: true, $ne: null },
     }
   );
 

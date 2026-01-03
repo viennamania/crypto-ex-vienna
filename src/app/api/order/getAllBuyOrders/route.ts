@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
   
 
-  console.log("getAllBuyOrders body", body);
+  //console.log("getAllBuyOrders body", body);
 
 
   // Error fetching buy orders: SyntaxError: Unexpected token 'A', "A server e"... is not valid JSON

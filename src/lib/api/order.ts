@@ -2283,8 +2283,8 @@ export async function getBuyOrders(
 ): Promise<any> {
 
 
-  console.log('getBuyOrders fromDate: ' + fromDate);
-  console.log('getBuyOrders toDate: ' + toDate);
+  //console.log('getBuyOrders fromDate: ' + fromDate);
+  //console.log('getBuyOrders toDate: ' + toDate);
 
   //console.log('getBuyOrders agentcode: ==========>' + agentcode);
 
@@ -3651,19 +3651,25 @@ export async function buyOrderRequestPayment(data: any) {
 
     const order = await collection.findOne<UserProps>(
       { _id: new ObjectId(data.orderId + '') },
-      { projection: { storecode: 1, walletAddress: 1 } }
+      { projection: { storecode: 1, walletAddress: 1, seller: 1 } }
     );
     if (order) {
 
       // update user collection buyOrderStatus to "paymentRequested"
       const userCollection = client.db(dbName).collection('users');
+
       await userCollection.updateOne(
         {
           walletAddress: order.walletAddress,
           storecode: order.storecode,
         },
         { $set: { buyOrderStatus: 'paymentRequested' } }
-      );
+      ).finally(() => {
+        console.log('buyOrderRequestPayment user buyOrderStatus updated to paymentRequested');
+      });
+
+
+      console.log('buyOrderRequestPayment order.seller: ' + JSON.stringify(order.seller));
 
       // update seller buyOrderStatus to "paymentRequested"
       await userCollection.updateOne(
@@ -3671,7 +3677,9 @@ export async function buyOrderRequestPayment(data: any) {
           'seller.escrowWalletAddress': order.seller?.walletAddress,
         },
         { $set: { 'seller.buyOrderStatus': 'paymentRequested' } }
-      );
+      ).finally(() => {
+        console.log('buyOrderRequestPayment seller buyOrderStatus updated to paymentRequested');
+      });
 
 
     }

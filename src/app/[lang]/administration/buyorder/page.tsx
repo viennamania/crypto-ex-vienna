@@ -4519,6 +4519,13 @@ const fetchBuyOrders = async () => {
                     </span>
                   </div>
 
+                  {/* seller.buyOrderStatus */}
+                  <div className="flex flex-row items-center gap-2">
+                    <span className="text-sm font-semibold">
+                      {seller?.buyOrderStatus}
+                    </span>
+                  </div>
+
                   {/* if seller nickname is 'seller', then show withdraw button */}
                   {/*
                   {seller.nickname === 'seller' && (
