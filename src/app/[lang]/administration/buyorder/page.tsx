@@ -4533,10 +4533,11 @@ const fetchBuyOrders = async () => {
                     </div>
                   </div>
 
-                  {/* seller.buyOrderStatus */}
+                  {/* seller.buyOrder.status */}
+                  {/* seller.buyOrder.createdAt */}
                   <div className="flex flex-row items-center gap-2">
                     <span className="text-sm font-semibold">
-                      {seller.seller?.buyOrderStatus === 'paymentRequested' && (
+                      {seller.seller?.buyOrder?.status === 'paymentRequested' && (
                         <div className="flex flex-row items-center gap-2
                         bg-yellow-500 text-gray-800 px-3 py-1 rounded-lg">
                           <Image

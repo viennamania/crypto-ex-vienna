@@ -3653,8 +3653,9 @@ export async function buyOrderRequestPayment(data: any) {
     const buyOrder = await collection.findOne<UserProps>(
       { _id: new ObjectId(data.orderId + '') },
       { projection: {
-        orderId: 1,
+        tradeId: 1,
         createdAt: 1,
+        paymentRequestedAt: 1,
         storecode: 1,
         walletAddress: 1,
         usdtAmount: 1,
