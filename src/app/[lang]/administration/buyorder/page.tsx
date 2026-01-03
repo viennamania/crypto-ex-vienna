@@ -4495,25 +4495,43 @@ const fetchBuyOrders = async () => {
                     <Image
                       src="/icon-seller.png"
                       alt="Seller"
-                      width={40}
-                      height={40}
-                      className="w-10 h-10"
+                      width={20}
+                      height={20}
+                      className="w-6 h-6 rounded-lg object-cover"
                     />
                     <div className="w-full flex flex-col items-start justify-center gap-2">
 
-                      <div className="w-full flex flex-col items-center justify-between gap-2">                   
+                      <div className="w-full flex flex-col items-start justify-between gap-2">    
+
                         <span className="text-sm font-semibold">
                           {seller.nickname}
                         </span>
-                        <button
-                          className="text-sm text-zinc-600 underline"
-                          onClick={() => {
-                            navigator.clipboard.writeText(seller.seller.escrowWalletAddress);
-                            toast.success(Copied_Wallet_Address);
-                          } }
-                        >
-                          {seller.seller.escrowWalletAddress.substring(0, 6)}...{seller.seller.escrowWalletAddress.substring(seller.seller.escrowWalletAddress.length - 4)}
-                        </button>
+                        <div className="flex flex-row items-center justify-center gap-2">
+                          회원 지갑:
+                          <button
+                            className="text-sm text-zinc-600 underline"
+                            onClick={() => {
+                              navigator.clipboard.writeText(seller.walletAddress);
+                              toast.success(Copied_Wallet_Address);
+                            } }
+                          >
+                            {seller.walletAddress.substring(0, 6)}...{seller.walletAddress.substring(seller.walletAddress.length - 4)}
+                          </button>
+                        </div>
+
+                        <div className="flex flex-row items-center justify-center gap-2">
+                          에스크로:
+                          <button
+                            className="text-sm text-zinc-600 underline"
+                            onClick={() => {
+                              navigator.clipboard.writeText(seller.seller.escrowWalletAddress);
+                              toast.success(Copied_Wallet_Address);
+                            } }
+                          >
+                            {seller.seller.escrowWalletAddress.substring(0, 6)}...{seller.seller.escrowWalletAddress.substring(seller.seller.escrowWalletAddress.length - 4)}
+                          </button>
+                        </div>
+
                       </div>
 
                       <div className="w-full flex flex-row items-center justify-end gap-1">
