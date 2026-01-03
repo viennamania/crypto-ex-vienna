@@ -3443,12 +3443,13 @@ export async function acceptBuyOrder(data: any) {
 
     user = await userCollection.findOne<UserProps>(
       {
-        // data.sellerWalletAddress is walletAddress or vaultWallet.address
+        // data.sellerWalletAddress is walletAddress or vaultWallet.address or seller.escrowWalletAddress
 
       
         $or: [
           { walletAddress: data.sellerWalletAddress },
-          { 'vaultWallet.address': data.sellerWalletAddress },
+          //{ 'vaultWallet.address': data.sellerWalletAddress },
+          { 'seller.escrowWalletAddress': data.sellerWalletAddress },
         ],
         
 
@@ -3465,8 +3466,6 @@ export async function acceptBuyOrder(data: any) {
 
       return null;
     }
-    
-
 
   }
 
