@@ -4564,35 +4564,46 @@ const fetchBuyOrders = async () => {
                         </div>
                       )}
                     </span>
-                    <div className="w-full flex flex-row items-center justify-start gap-2">
-                      <span className="text-sm">
-                        구매자:
-                      </span>
-                      <span className="text-sm font-semibold">
-                        {seller.seller?.buyOrder?.nickname}
-                      </span>
-                      <button
-                        className="text-sm text-zinc-600 underline"
-                        onClick={() => {
-                          navigator.clipboard.writeText(seller.seller?.buyOrder?.walletAddress);
-                          toast.success(Copied_Wallet_Address);
-                        } }
-                      >
-                        {seller.seller?.buyOrder?.walletAddress.substring(0, 6)}...{seller.seller?.buyOrder?.walletAddress.substring(seller.seller?.buyOrder?.walletAddress.length - 4)}
-                      </button>
-                    </div>
-                    <span className="text-sm">
-                      입금요청시간: {seller.seller?.buyOrder?.paymentRequestedAt ? new Date(seller.seller?.buyOrder?.paymentRequestedAt).toLocaleString() : ''}
-                    </span>
-                    <span className="text-sm">
-                      {Buy_Amount}(USDT): {seller.seller?.buyOrder?.usdtAmount}
-                    </span>
-                    <span className="text-sm">
-                      {Payment_Amount}(원): {seller.seller?.buyOrder?.krwAmount.toLocaleString()}
-                    </span>
-                    <span className="text-sm">
-                      {Rate}(원): {seller.seller?.buyOrder?.rate.toLocaleString()} 
-                    </span>
+
+                    {seller.seller?.buyOrder?.status === 'paymentRequested' ? (
+                      <div className="w-full flex flex-col items-start justify-center gap-2">
+
+                        <div className="w-full flex flex-row items-center justify-start gap-2">
+                          <span className="text-sm">
+                            구매자:
+                          </span>
+                          <span className="text-sm font-semibold">
+                            {seller.seller?.buyOrder?.nickname}
+                          </span>
+                          <button
+                            className="text-sm text-zinc-600 underline"
+                            onClick={() => {
+                              navigator.clipboard.writeText(seller.seller?.buyOrder?.walletAddress);
+                              toast.success(Copied_Wallet_Address);
+                            } }
+                          >
+                            {seller.seller?.buyOrder?.walletAddress.substring(0, 6)}...{seller.seller?.buyOrder?.walletAddress.substring(seller.seller?.buyOrder?.walletAddress.length - 4)}
+                          </button>
+                        </div>
+                        <span className="text-sm">
+                          입금요청시간: {seller.seller?.buyOrder?.paymentRequestedAt ? new Date(seller.seller?.buyOrder?.paymentRequestedAt).toLocaleString() : ''}
+                        </span>
+                        <span className="text-sm">
+                          {Buy_Amount}(USDT): {seller.seller?.buyOrder?.usdtAmount}
+                        </span>
+                        <span className="text-sm">
+                          {Payment_Amount}(원): {seller.seller?.buyOrder?.krwAmount.toLocaleString()}
+                        </span>
+                        <span className="text-sm">
+                          {Rate}(원): {seller.seller?.buyOrder?.rate.toLocaleString()} 
+                        </span>
+
+                      </div>
+                    ) : (
+                      <></>
+                    )}
+
+
                   </div>
 
                   {/* if seller nickname is 'seller', then show withdraw button */}
