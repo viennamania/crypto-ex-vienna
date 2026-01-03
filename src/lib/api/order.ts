@@ -3813,6 +3813,7 @@ export async function buyOrderConfirmPayment(data: any) {
         storecode: 1,
         agentcode: 1,
         walletAddress: 1,
+        seller: 1,
       } }
     );
 
@@ -3859,6 +3860,24 @@ export async function buyOrderConfirmPayment(data: any) {
             }
           }
         );
+
+
+
+
+
+        // update user.seller
+        await userCollection.updateOne(
+          {'seller.escrowWalletAddress': order.seller?.walletAddress
+          },
+          { $set: {
+              //'seller.buyOrderStatus': 'paymentConfirmed',
+              'seller.buyOrder.status': 'paymentConfirmed',
+              'seller.buyOrder.paymentConfirmedAt': new Date().toISOString(),
+            }
+          }
+        );
+
+
 
 
 
