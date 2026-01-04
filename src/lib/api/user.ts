@@ -888,6 +888,7 @@ export async function getOneSellerVaultWalletAddressByRandom(
 // get one seller by algorithm
 export async function getOneSellerByAlgorithm(
   storecode: string,
+  usdtToKrwRate: number,
   algorithm: number,
 ): Promise<any | null> {
 
@@ -924,6 +925,17 @@ export async function getOneSellerByAlgorithm(
               },
               {
                 'seller.buyOrder.transactionHash': { $ne: '0x' },
+              },
+            ],
+          },
+          // seller.usdtToKrwRate is exist and greater than or equal to usdtToKrwRate
+          {
+            $or: [
+              {
+                'seller.usdtToKrwRate': { $exists: false },
+              },
+              {
+                'seller.usdtToKrwRate': { $gte: usdtToKrwRate },
               },
             ],
           },

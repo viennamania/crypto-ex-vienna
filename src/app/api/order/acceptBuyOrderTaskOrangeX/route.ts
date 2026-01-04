@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
 
   const buyordersResult = await getAllBuyOrdersForMatching({
     //limit: 100,
-    limit: 1,
+    limit: 10,
     page: 1,
     startDate: "",
     endDate: "",
@@ -189,6 +189,7 @@ export async function POST(request: NextRequest) {
       const algorithm = Math.floor(Date.now() / 60000); // number of minutes since epoch
       const seller = await getOneSellerByAlgorithm(
         sellerStorecode,
+        usdtToKrwRate: buyorder.rate,
         algorithm,
       );
 

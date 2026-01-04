@@ -1000,7 +1000,7 @@ getAllBuyOrders result totalFeeAmountKRW 534718.74
 getAllBuyOrders result totalAgentFeeAmount 0
 getAllBuyOrders result totalAgentFeeAmountKRW 0
 */
-
+  /*
   const [buyOrderStats, setBuyOrderStats] = useState({
     totalCount: 0,
     totalKrwAmount: 0,
@@ -1012,6 +1012,67 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
     totalFeeAmountKRW: 0,
     totalAgentFeeAmount: 0,
     totalAgentFeeAmountKRW: 0,
+  });
+
+  */
+
+ const [buyOrderStats, setBuyOrderStats] = useState<{
+    totalCount: number;
+    totalKrwAmount: number;
+    totalUsdtAmount: number;
+    totalSettlementCount: number;
+    totalSettlementAmount: number;
+    totalSettlementAmountKRW: number;
+    totalFeeAmount: number;
+    totalFeeAmountKRW: number;
+    totalAgentFeeAmount: number;
+    totalAgentFeeAmountKRW: number;
+
+    /*
+    totalByUserType: Array<{
+      _id: string;
+      totalCount: number;
+      totalKrwAmount: number;
+      totalUsdtAmount: number;
+    }>;
+    */
+
+    totalByBuyerDepositName: Array<{
+        _id: string;
+        totalCount: number;
+        totalKrwAmount: number;
+        totalUsdtAmount: number;
+      }>;
+    totalReaultGroupByBuyerDepositNameCount: number;
+
+    /*
+    totalBySellerBankAccountNumber: Array<{
+      _id: string;
+      totalCount: number;
+      totalKrwAmount: number;
+      totalUsdtAmount: number;
+      bankUserInfo: any;
+    }>;
+    */
+  }>({
+    totalCount: 0,
+    totalKrwAmount: 0,
+    totalUsdtAmount: 0,
+    totalSettlementCount: 0,
+    totalSettlementAmount: 0,
+    totalSettlementAmountKRW: 0,
+    totalFeeAmount: 0,
+    totalFeeAmountKRW: 0,
+    totalAgentFeeAmount: 0,
+    totalAgentFeeAmountKRW: 0,
+
+    //totalByUserType: [],
+    
+    totalByBuyerDepositName: [],
+    totalReaultGroupByBuyerDepositNameCount: 0,
+
+    
+    //totalBySellerBankAccountNumber: [],
   });
 
 
@@ -1236,6 +1297,9 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
                   totalFeeAmountKRW: data.result.totalFeeAmountKRW,
                   totalAgentFeeAmount: data.result.totalAgentFeeAmount,
                   totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+
+                  totalByBuyerDepositName: data.result.totalByBuyerDepositName,
+                  totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
                 });
 
             })
@@ -1393,6 +1457,9 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
               totalFeeAmountKRW: data.result.totalFeeAmountKRW,
               totalAgentFeeAmount: data.result.totalAgentFeeAmount,
               totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+
+              totalByBuyerDepositName: data.result.totalByBuyerDepositName,
+              totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
             });
 
           }
@@ -1489,6 +1556,9 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
               totalFeeAmountKRW: data.result.totalFeeAmountKRW,
               totalAgentFeeAmount: data.result.totalAgentFeeAmount,
               totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+
+              totalByBuyerDepositName: data.result.totalByBuyerDepositName,
+              totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
             });
 
 
@@ -1793,6 +1863,9 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
                   totalFeeAmountKRW: data.result.totalFeeAmountKRW,
                   totalAgentFeeAmount: data.result.totalAgentFeeAmount,
                   totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+
+                  totalByBuyerDepositName: data.result.totalByBuyerDepositName,
+                  totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
                 });
 
               }
@@ -1922,6 +1995,9 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
                 totalFeeAmountKRW: data.result.totalFeeAmountKRW,
                 totalAgentFeeAmount: data.result.totalAgentFeeAmount,
                 totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+
+                totalByBuyerDepositName: data.result.totalByBuyerDepositName,
+                totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
               });
 
             }
@@ -2201,6 +2277,9 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
                 totalFeeAmountKRW: data.result.totalFeeAmountKRW,
                 totalAgentFeeAmount: data.result.totalAgentFeeAmount,
                 totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+
+                totalByBuyerDepositName: data.result.totalByBuyerDepositName,
+                totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
               });
 
 
@@ -2374,6 +2453,9 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
                 totalFeeAmountKRW: data.result.totalFeeAmountKRW,
                 totalAgentFeeAmount: data.result.totalAgentFeeAmount,
                 totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+
+                totalByBuyerDepositName: data.result.totalByBuyerDepositName,
+                totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
               });
 
             }
@@ -2553,6 +2635,9 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
               totalFeeAmountKRW: data.result.totalFeeAmountKRW,
               totalAgentFeeAmount: data.result.totalAgentFeeAmount,
               totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+
+              totalByBuyerDepositName: data.result.totalByBuyerDepositName,
+              totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
             });
 
         })
@@ -2668,6 +2753,9 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
               totalFeeAmountKRW: data.result.totalFeeAmountKRW,
               totalAgentFeeAmount: data.result.totalAgentFeeAmount,
               totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+
+              totalByBuyerDepositName: data.result.totalByBuyerDepositName,
+              totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
             });
 
         })
@@ -2900,6 +2988,9 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
         totalFeeAmountKRW: data.result.totalFeeAmountKRW,
         totalAgentFeeAmount: data.result.totalAgentFeeAmount,
         totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+
+        totalByBuyerDepositName: data.result.totalByBuyerDepositName,
+        totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
       });
 
 
