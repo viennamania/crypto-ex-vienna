@@ -4565,7 +4565,7 @@ const fetchBuyOrders = async () => {
 
                       {seller.seller?.buyOrder?.status === 'paymentRequested' ? (
                         <div className="flex flex-row items-center gap-2
-                        bg-yellow-500 text-gray-800 px-3 py-1 rounded-lg">
+                        bg-yellow-500 text-white px-3 py-1 rounded-lg">
                           <Image
                             src="/icon-bank-auto.png"
                             alt="Bank Auto"
@@ -4573,17 +4573,33 @@ const fetchBuyOrders = async () => {
                             height={20}
                             className="w-5 h-5 animate-spin"
                           />
-                          <span>입금확인중</span>
+                          <span>{seller.seller?.buyOrder.krwAmount.toLocaleString()} 원 입금 확인중</span>
+                        </div>
+                      ) : seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
+                          (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x') ? (
+                        <div className="flex flex-row items-center gap-2
+                        bg-blue-500 text-white px-3 py-1 rounded-lg">
+                          <Image
+                            src="/icon-transfer.png"
+                            alt="Transfer Auto"
+                            width={20}
+                            height={20}
+                            className="w-5 h-5 animate-spin"
+                          />
+                          <span>{seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 전송중</span>
                         </div>
                       ) : (
                         <div className="flex flex-row items-center gap-2
-                        bg-zinc-300 text-gray-800 px-3 py-1 rounded-lg">
-                          <span>상태: 판매대기중</span>
+                        bg-green-500 text-white px-3 py-1 rounded-lg">
+                          <span>판매 대기중</span>
                         </div>
                       )}
                     </span>
 
-                    {seller.seller?.buyOrder?.status === 'paymentRequested' ? (
+                    {seller.seller?.buyOrder?.status === 'paymentRequested'
+                    || (seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
+                        (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x'))
+                    ? (
                       <div className="w-full flex flex-col items-start justify-center gap-2">
 
                         <div className="w-full flex flex-row items-center justify-start gap-2">
@@ -5818,8 +5834,10 @@ const fetchBuyOrders = async () => {
                                     )}
                                   </span>
 
-                                  {item.seller
-                                  && item.seller.walletAddress === address
+                                  {
+                                  true
+                                  //item.seller
+                                  //&& item.seller.walletAddress === address
                                   
                                   ///////////////&& item?.autoConfirmPayment
 
