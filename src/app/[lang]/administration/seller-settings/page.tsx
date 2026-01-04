@@ -1085,6 +1085,20 @@ export default function SettingsPage({ params }: any) {
                 {!loadingUserData && nickname && !seller && (
                     <div className='w-full flex flex-col gap-2 items-center justify-center border border-gray-300 p-4 rounded-lg'>
 
+                        {/* nickname */}
+                        <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                            <div className="flex flex-row items-center gap-2">
+                                {/* dot */}
+                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                <span className="text-lg">
+                                    회원아이디
+                                </span>
+                            </div>
+                            <span className="text-4xl font-semibold text-[#409192]">
+                                {nickname}
+                            </span>
+                        </div>
+
                         <span className="text-lg font-semibold">
                             판매자가 아닙니다.
                         </span>
@@ -1516,6 +1530,11 @@ export default function SettingsPage({ params }: any) {
                                 에스크로 지갑 정보
                             </span>
                         </div>
+                        {/* 설명 */}
+                        {/* 에스크로 지갑에 잔액이 있어야 구매주문을 자동으로 처리할 수 있습니다. */}
+                        <div className="text-zinc-500 mb-4">
+                            에스크로 지갑에 잔액이 있어야 구매주문을 자동으로 처리할 수 있습니다.
+                        </div>
 
                         <div className="flex flex-row items-center gap-2">
                             <div className='w-2 h-2 bg-green-500 rounded-full'></div>
@@ -1562,6 +1581,30 @@ export default function SettingsPage({ params }: any) {
                                     {escrowBalance.toFixed(2)}
                                 </span>
                             </div>
+
+                        </div>
+
+                        {/* 충전하기, 회수하기 버튼 */}
+                        <div className='w-full flex flex-row gap-2 items-center justify-end'>
+
+                            <button
+                                onClick={() => {
+                                    //router.push('/' + params.lang + '/wallet/deposit?storecode=' + storecode + '&to=' + (seller?.escrowWalletAddress || ''));
+                                }}
+                                className="bg-blue-500 text-zinc-100 px-4 py-2 rounded-lg"
+                            >
+                                충전하기
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    // open transfer escrow balance modal
+                                    //setIsOpenTransferEscrowBalanceModal(true);
+                                }}
+                                className="bg-red-500 text-zinc-100 px-4 py-2 rounded-lg"
+                            >
+                                회수하기
+                            </button>
 
                         </div>
 
