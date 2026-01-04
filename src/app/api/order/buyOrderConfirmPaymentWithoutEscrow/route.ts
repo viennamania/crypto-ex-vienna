@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     
 
 
-    const queueId = "queueId";
+    const queueId = null; // no queueId for without escrow payment
 
     const result = await buyOrderConfirmPayment({
       lang: lang,

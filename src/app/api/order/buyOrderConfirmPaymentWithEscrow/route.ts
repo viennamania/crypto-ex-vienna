@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
     console.log("escrowTransactionHash", escrowTransactionHash);
 
 
-    const queueId = "queueId";
+    const queueId = null; // no queueId for with escrow payment
 
     const result = await buyOrderConfirmPayment({
       lang: lang,
