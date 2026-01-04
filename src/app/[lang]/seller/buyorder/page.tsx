@@ -4473,7 +4473,7 @@ const fetchBuyOrders = async () => {
                   bg-white/80
                   p-4 rounded-lg shadow-md
                   backdrop-blur-md
-                  ${(seller.seller.buyOrder.status === 'ordered' || seller.seller.buyOrder.status === 'paymentRequested') ?
+                  ${(seller.seller.buyOrder?.status === 'ordered' || seller.seller.buyOrder?.status === 'paymentRequested') ?
                     'border-4 border-red-500 animate-pulse' : ''
                   }
                   `}
