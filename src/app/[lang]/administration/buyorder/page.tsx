@@ -3446,6 +3446,38 @@ const fetchBuyOrders = async () => {
 
 
 
+  // currentUsdtBalance array for animated display
+  const [currentUsdtBalanceArray, setCurrentUsdtBalanceArray] = useState<number[]>([]);
+  function animateUsdtBalance(targetBalances: number[]) {
+    const animationDuration = 1000; // 1 second
+    const frameRate = 30; // 30 frames per second
+    const totalFrames = Math.round((animationDuration / 1000) * frameRate);
+    const initialBalances = currentUsdtBalanceArray.length === targetBalances.length
+      ? [...currentUsdtBalanceArray]
+      : targetBalances.map(() => 0);
+
+    let frame = 0;
+    const interval = setInterval(() => {
+      frame++;
+      const newBalances = targetBalances.map((target, index) => {
+        const initial = initialBalances[index];
+        const progress = Math.min(frame / totalFrames, 1);
+        return initial + (target - initial) * progress;
+      });
+      setCurrentUsdtBalanceArray(newBalances);
+      if (frame >= totalFrames) {
+        clearInterval(interval);
+      }
+    }, 1000 / frameRate);
+  }
+  useEffect(() => {
+    const targetBalances = sellersBalance.map((seller) => seller.currentUsdtBalance || 0);
+    animateUsdtBalance(targetBalances);
+  }, [sellersBalance]);
+
+
+
+
   if (!address) {
     return (
       <div className="flex flex-col items-center justify-center">
@@ -4480,11 +4512,23 @@ const fetchBuyOrders = async () => {
 
               {sellersBalance.map((seller, index) => (
                 <div key={index}
+
+                  // if currentUsdtBalanceArray[index] is changed, then animate the background color
+
+                  /*
                   className="w-full flex flex-row items-start justify-between gap-4
                   bg-white/80
                   p-4 rounded-lg shadow-md
                   backdrop-blur-md
                   ">
+                  */
+
+                  className={`w-full flex flex-row items-start justify-between gap-4
+                  p-4 rounded-lg shadow-md
+                  backdrop-blur-md
+                  ${seller.currentUsdtBalanceChanged ? 'bg-green-100/70 animate-pulse' : 'bg-white/80'}
+                  `}
+                >
 
                   <div className="
                     w-56
@@ -4492,6 +4536,9 @@ const fetchBuyOrders = async () => {
                     p-2
                     border border-zinc-300 rounded-lg
                     ">
+
+
+
                     <Image
                       src="/icon-seller.png"
                       alt="Seller"
@@ -4533,7 +4580,9 @@ const fetchBuyOrders = async () => {
                               toast.success(Copied_Wallet_Address);
                             } }
                           >
-                            {seller.seller.escrowWalletAddress.substring(0, 6)}...{seller.seller.escrowWalletAddress.substring(seller.seller.escrowWalletAddress.length - 4)}
+                            {
+                              seller.seller.escrowWalletAddress.substring(0, 6)}...{seller.seller.escrowWalletAddress.substring(seller.seller.escrowWalletAddress.length - 4)
+                            }
                           </button>
                         </div>
 
@@ -4543,15 +4592,66 @@ const fetchBuyOrders = async () => {
                         <Image
                           src="/icon-tether.png"
                           alt="USDT"
-                          width={20}
-                          height={20}
-                          className="w-5 h-5"
+                          width={30}
+                          height={30}
+                          className="w-6 h-6"
                         />
-                        <span className="text-xl text-[#409192]"
+                        <span className="text-4xl text-[#409192] font-semibold"
                           style={{ fontFamily: 'monospace' }}>
-                          {Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                          {
+                            //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                            currentUsdtBalanceArray[index]?.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+
+                          }
                         </span>
                       </div>
+
+                      {/* seller.seller.bankInfo */}
+                      {seller.seller?.bankInfo && (
+                        <div className="w-full flex flex-row items-center justify-start gap-2">
+                          <Image
+                            src="/icon-bank.png"
+                            alt="Bank"
+                            width={20}
+                            height={20}
+                            className="w-5 h-5"
+                          />
+                          <span className="text-sm">
+                            {seller.seller?.bankInfo?.bankName}{' '}
+                            {seller.seller?.bankInfo?.accountNumber.length > 10
+                              ? seller.seller?.bankInfo?.accountNumber.substring(0, 4) +'****'+
+                                seller.seller?.bankInfo?.accountNumber.substring(seller.seller?.bankInfo?.accountNumber.length - 4)
+                              : seller.seller?.bankInfo?.accountNumber
+                            }{' '}
+                            {seller.seller?.bankInfo?.accountHolder.length > 2
+                              ? seller.seller?.bankInfo?.accountHolder.substring(0, 1) +'**'
+                              : seller.seller?.bankInfo?.accountHolder
+                            }
+                          </span>
+                        </div>
+                      )}
+
+                      {/* seller.usdtToKrwRate */}
+                      {seller.seller?.usdtToKrwRate && (
+                        <div className="w-full flex flex-row items-center justify-start gap-2">
+                          <Image
+                            src="/icon-price.png"
+                            alt="Price"
+                            width={20}
+                            height={20}
+                            className="w-5 h-5"
+                          />
+                          <div className="flex flex-row items-center justify-center gap-1">
+                            <span className="text-sm">
+                              판매금액(원/USDT):
+                            </span>
+                            <span className="text-2xl font-semibold text-yellow-600"
+                              style={{ fontFamily: 'monospace' }}>
+                              {seller.seller?.usdtToKrwRate.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
                     </div>
                   </div>

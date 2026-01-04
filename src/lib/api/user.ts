@@ -2629,3 +2629,37 @@ export async function updateUserForSeller(
   );
   
 }
+
+
+
+// updateSellerUsdtToKrwRate
+export async function updateSellerUsdtToKrwRate(
+  {
+    storecode,
+    walletAddress,
+    usdtToKrwRate,
+  }: {
+    storecode: string;
+    walletAddress: string;
+    usdtToKrwRate: number;
+  }
+) {
+
+  console.log('updateSellerUsdtToKrwRate storecode: ' + storecode + ' walletAddress: ' + walletAddress + ' usdtToKrwRate: ' + usdtToKrwRate);
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  return await collection.updateOne(
+    {
+      storecode: storecode,
+      walletAddress: walletAddress
+    },
+    {
+      $set: {
+        'seller.usdtToKrwRate': usdtToKrwRate,
+      }
+    }
+  );
+  
+}
+

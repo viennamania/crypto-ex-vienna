@@ -972,6 +972,32 @@ export default function SettingsPage({ params }: any) {
 
 
 
+    // user.seller usdtToKrwRate rate update
+    const [usdtToKrwRate, setUsdtToKrwRate] = useState(0);
+    const [updatingUsdtToKrw, setUpdatingUsdtToKrw] = useState(false);
+    const updateUsdtToKrwRate = async () => {
+        if (!seller) return;
+        setUpdatingUsdtToKrw(true);
+        await fetch('/api/user/updateSellerUsdtToKrwRate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                storecode: storecode,
+                walletAddress: address,
+                usdtToKrwRate: usdtToKrwRate,
+            }),
+        });
+        setUpdatingUsdtToKrw(false);
+        setSeller({
+            ...seller,
+            usdtToKrwRate: usdtToKrwRate,
+        });
+    };
+
+
+
     return (
 
         <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto">
@@ -1052,8 +1078,6 @@ export default function SettingsPage({ params }: any) {
                             >
                                 {Number(balance).toFixed(2)}
                             </span>
-                            {' '}
-                            <span className="text-sm">USDT</span>
                         </div>
 
                     </div>
@@ -1605,6 +1629,52 @@ export default function SettingsPage({ params }: any) {
                             >
                                 회수하기
                             </button>
+
+                        </div>
+
+
+                        {/* 판매금액(원) 설정 */}
+                        <div className='w-full flex flex-col gap-2 items-start justify-between mt-4
+                        border-t border-gray-300 pt-4'>
+
+                            <div className="flex flex-row items-center gap-2">
+                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                <span className="text-lg">
+                                    1 USDT 당 판매금액(원) 설정
+                                </span>
+
+                                {/* seller.usdtToKrwRate */}
+                                <span className="text-lg text-zinc-500">
+                                    (현재 설정: {seller?.usdtToKrwRate || 0} 원)
+                                </span>
+                            </div>
+
+                            <div className='w-full flex flex-row gap-2 items-center justify-end'>
+
+                                <input 
+                                    className="p-2 w-32 text-zinc-100 bg-zinc-800 rounded-lg text-lg font-semibold text-right"
+                                    placeholder="예: 1300"
+                                    value={usdtToKrwRate}
+                                    type='number'
+                                    onChange={(e) => {
+                                        // check if the value is a number
+                                        e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                                        setUsdtToKrwRate(Number(e.target.value));
+                                    }}
+                                />
+
+                                <button
+                                    disabled={updatingUsdtToKrw}
+                                    onClick={updateUsdtToKrwRate}
+                                    className={`
+                                        ${updatingUsdtToKrw ? 'bg-gray-300 text-gray-400' : 'bg-green-500 text-zinc-100'}
+                                        p-2 rounded-lg text-sm font-semibold
+                                    `}
+                                >
+                                    {updatingUsdtToKrw ? '수정중...' : '수정하기'}
+                                </button>
+
+                            </div>
 
                         </div>
 
