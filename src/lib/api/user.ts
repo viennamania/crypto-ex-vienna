@@ -928,14 +928,14 @@ export async function getOneSellerByAlgorithm(
               },
             ],
           },
-          // seller.usdtToKrwRate is exist and greater than or equal to usdtToKrwRate
+          // seller.usdtToKrwRate is exist and less than or equal to usdtToKrwRate
           {
             $or: [
               {
                 'seller.usdtToKrwRate': { $exists: false },
               },
               {
-                'seller.usdtToKrwRate': { $gte: usdtToKrwRate },
+                'seller.usdtToKrwRate': { $lte: usdtToKrwRate },
               },
             ],
           },
