@@ -4624,6 +4624,10 @@ const fetchBuyOrders = async () => {
                             {seller.seller?.buyOrder?.walletAddress.substring(0, 6)}...{seller.seller?.buyOrder?.walletAddress.substring(seller.seller?.buyOrder?.walletAddress.length - 4)}
                           </button>
                         </div>
+                        {/* 구매주문번호 */}
+                        <span className="text-sm">
+                          구매주문번호: {seller.seller?.buyOrder?.tradeId}
+                        </span>
                         <span className="text-sm">
                           구매주문시간: {seller.seller?.buyOrder?.createdAt ? new Date(seller.seller?.buyOrder?.createdAt).toLocaleString() : ''}
                         </span>

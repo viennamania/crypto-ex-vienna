@@ -8412,7 +8412,7 @@ export async function buyOrderConfirmPaymentCompleted(data: any) {
       // update user.seller.buyOrder.transactionHash
       const userCollection = client.db(dbName).collection('users');
       await userCollection.updateOne(
-        { 'seller.walletAddress': buyOrder.seller.walletAddress },
+        { 'seller.escrowWalletAddress': buyOrder.seller.walletAddress },
         { $set: {
             'seller.buyOrder.transactionHash': data.transactionHash,
         } }
