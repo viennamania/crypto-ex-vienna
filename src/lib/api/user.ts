@@ -908,11 +908,17 @@ export async function getOneSellerByAlgorithm(
         'seller.escrowWalletAddress': { $exists: true, $ne: null },
         $or: [
           {
-            'seller.buyOrderStatus': { $exists: false },
+            'seller.buyOrder.status': { $exists: false },
           },
           {
-            'seller.buyOrderStatus': { $nin: ['accepted', 'paymentRequested'] },
+            'seller.buyOrder.status': { $nin: ['accepted', 'paymentRequested'] },
           },
+          {
+            'seller.buyOrder.transactionHash': { $exists: false },
+          },
+          { // not '0x'
+            'seller.buyOrder.transactionHash': { $ne: '0x' },
+          }
         ],
       },
     },
