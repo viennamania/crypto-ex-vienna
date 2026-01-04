@@ -4626,7 +4626,15 @@ const fetchBuyOrders = async () => {
                         </div>
                         {/* 구매주문번호 */}
                         <span className="text-sm">
-                          구매주문번호: {seller.seller?.buyOrder?.tradeId}
+                          구매주문번호: #<button
+                              className="text-sm text-zinc-600 underline"
+                              onClick={() => {
+                                navigator.clipboard.writeText(seller.seller?.buyOrder?.tradeId);
+                                toast.success('구매주문번호가 복사되었습니다.');
+                              } }
+                            >
+                              {seller.seller?.buyOrder?.tradeId}
+                            </button>
                         </span>
                         <span className="text-sm">
                           구매주문시간: {seller.seller?.buyOrder?.createdAt ? new Date(seller.seller?.buyOrder?.createdAt).toLocaleString() : ''}
