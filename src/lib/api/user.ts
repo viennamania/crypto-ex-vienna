@@ -906,20 +906,30 @@ export async function getOneSellerByAlgorithm(
         'seller.status': 'confirmed',
         'seller.enabled': true,
         'seller.escrowWalletAddress': { $exists: true, $ne: null },
-        $or: [
+        $and: [
           {
-            'seller.buyOrder.status': { $exists: false },
+            $or: [
+              {
+                'seller.buyOrder.status': { $exists: false },
+              },
+              {
+                'seller.buyOrder.status': { $nin: ['accepted', 'paymentRequested'] },
+              },
+            ],
           },
           {
-            'seller.buyOrder.status': { $nin: ['accepted', 'paymentRequested'] },
+            $or: [
+              {
+                'seller.buyOrder.transactionHash': { $exists: false },
+              },
+              {
+                'seller.buyOrder.transactionHash': { $ne: '0x' },
+              },
+            ],
           },
-          {
-            'seller.buyOrder.transactionHash': { $exists: false },
-          },
-          { // not '0x'
-            'seller.buyOrder.transactionHash': { $ne: '0x' },
-          }
         ],
+
+
       },
     },
     { $project: { seller: 1 } },
