@@ -179,6 +179,8 @@ export async function POST(request: NextRequest) {
 
     } else {
 
+      const usdtToKrwRate = buyorder.rate;
+
       // get one random seller's vault wallet address
       //const sellerVaultWalletAddress = await getOneSellerVaultWalletAddressByRandom(storecode);
 
@@ -189,7 +191,7 @@ export async function POST(request: NextRequest) {
       const algorithm = Math.floor(Date.now() / 60000); // number of minutes since epoch
       const seller = await getOneSellerByAlgorithm(
         sellerStorecode,
-        usdtToKrwRate: buyorder.rate,
+        usdtToKrwRate,
         algorithm,
       );
 
