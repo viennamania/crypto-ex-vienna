@@ -8354,3 +8354,73 @@ export async function updateAudioNotification(data: any) {
     return null;
   }
 }
+
+
+
+
+export async function buyOrderConfirmPaymentEnqueueTransaction(data: any) {
+  // orderId, queueId
+  if (!data.orderId || !data.queueId) {
+    return null;
+  }
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('buyorders');
+  const result = await collection.updateOne(
+    { _id: new ObjectId(data.orderId+'')},
+    { $set: {
+      queueId: data.queueId,
+      status: 'paymentConfirmed',
+      paymentConfirmedAt: new Date().toISOString(),
+    } }
+  );
+  return {
+    success: result.modifiedCount === 1,
+  };
+}
+
+
+// buyOrderConfirmPaymentCompleted
+export async function buyOrderConfirmPaymentCompleted(data: any) {
+  // queueId, transactionHash
+  if (!data.queueId || !data.transactionHash) {
+    return null;
+  }
+
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('buyorders');
+  const result = await collection.updateOne(
+    { queueId: data.queueId },
+    { $set: {
+      transactionHash: data.transactionHash,
+      status: 'paymentConfirmed',
+      paymentConfirmedAt: new Date().toISOString(),
+    } }
+  );
+  
+  return {
+    success: result.modifiedCount === 1,
+  };
+
+}
+
+
+// buyOrderConfirmPaymentReverted
+export async function buyOrderConfirmPaymentReverted(data: any) {
+  // tradeId
+  if (!data.tradeId) {
+    return null;
+  }
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('buyorders');
+  const result = await collection.updateOne(
+    { tradeId: data.tradeId },
+    { $set: {
+      queueId: null,
+    } }
+  );
+  return {
+    success: result.modifiedCount === 1,
+  };
+}
