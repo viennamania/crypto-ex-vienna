@@ -103,6 +103,12 @@ import {
 } from "@/app/config/contractAddresses";
 
 
+
+import { useAnimatedNumber } from "@/components/useAnimatedNumber";
+
+
+
+
 interface BuyOrder {
   _id: string;
   createdAt: string;
@@ -1074,6 +1080,17 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
     
     //totalBySellerBankAccountNumber: [],
   });
+
+
+
+
+  const animatedTotalCount = useAnimatedNumber(buyOrderStats.totalCount);
+  const animatedTotalUsdtAmount = useAnimatedNumber(buyOrderStats.totalUsdtAmount, { decimalPlaces: 3 });
+  const animatedTotalKrwAmount = useAnimatedNumber(buyOrderStats.totalKrwAmount);
+
+  const animatedTotalSettlementCount = useAnimatedNumber(buyOrderStats.totalSettlementCount);
+  const animatedTotalSettlementAmount = useAnimatedNumber(buyOrderStats.totalSettlementAmount, { decimalPlaces: 3 });
+  const animatedTotalSettlementAmountKRW = useAnimatedNumber(buyOrderStats.totalSettlementAmountKRW);
 
 
 
@@ -4127,7 +4144,10 @@ const fetchBuyOrders = async () => {
               <div className="flex flex-col gap-2 items-center">
                 <div className="text-sm">P2P 거래수(건)</div>
                 <div className="text-4xl font-semibold text-zinc-500">
-                  {buyOrderStats.totalCount?.toLocaleString()}
+                  {
+                    //buyOrderStats.totalCount?.toLocaleString()
+                    animatedTotalCount
+                  }
                 </div>
               </div>
 
@@ -4144,11 +4164,14 @@ const fetchBuyOrders = async () => {
                       className="w-5 h-5"
                     />
                     {/* RGB: 64, 145, 146 */}
-                    <span className="text-xl font-semibold text-[#409192]"
+                    <span className="text-4xl font-semibold text-[#409192]"
                       style={{ fontFamily: 'monospace' }}>
-                      {buyOrderStats.totalUsdtAmount
-                        ? buyOrderStats.totalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                        : '0.000'}
+                      {
+                        //buyOrderStats.totalUsdtAmount
+                        //? buyOrderStats.totalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                        //: '0.000'
+                        animatedTotalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                      }
                     </span>
                   </div>
                 </div>
@@ -4156,9 +4179,12 @@ const fetchBuyOrders = async () => {
                 <div className="flex flex-col gap-2 items-center">
                   <div className="text-sm">P2P 거래금액(원)</div>
                   <div className="flex flex-row items-center justify-center gap-1">
-                    <span className="text-xl font-semibold text-yellow-600"
+                    <span className="text-4xl font-semibold text-yellow-600"
                       style={{ fontFamily: 'monospace' }}>
-                      {buyOrderStats.totalKrwAmount?.toLocaleString()}
+                      {
+                        //buyOrderStats.totalKrwAmount?.toLocaleString()
+                        animatedTotalKrwAmount.toLocaleString()
+                      }
                     </span>
                   </div>
                 </div>
