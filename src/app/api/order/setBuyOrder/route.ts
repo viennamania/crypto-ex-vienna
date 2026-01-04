@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
 
 
   // api call
+  /*
   try {
 
     const stableUrl = 'https://api.orangex.center';
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
     console.error("Error in setBuyOrder:", error);
   }
 
-
+  */
 
 
 
