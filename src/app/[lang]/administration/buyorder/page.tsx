@@ -4501,13 +4501,10 @@ const fetchBuyOrders = async () => {
                     />
                     <div className="w-full flex flex-col items-start justify-center gap-2">
 
-                      <div className="w-full flex flex-col items-start justify-between gap-2">    
-
-                        <span className="text-sm font-semibold">
-                          {seller.nickname}
-                        </span>
-                        <div className="flex flex-row items-center justify-center gap-2">
-                          회원 지갑:
+                      <div className="w-full flex flex-row items-center justify-start gap-2">
+                          <span className="text-lg font-semibold text-zinc-700">
+                            {seller.nickname}
+                          </span>
                           <button
                             className="text-sm text-zinc-600 underline"
                             onClick={() => {
@@ -4517,10 +4514,18 @@ const fetchBuyOrders = async () => {
                           >
                             {seller.walletAddress.substring(0, 6)}...{seller.walletAddress.substring(seller.walletAddress.length - 4)}
                           </button>
-                        </div>
+                      </div>
+
+                      <div className="w-full flex flex-col items-start justify-between gap-2">    
 
                         <div className="flex flex-row items-center justify-center gap-2">
-                          에스크로:
+                          <Image
+                            src="/icon-escrow-wallet.webp"
+                            alt="Escrow Wallet"
+                            width={20}
+                            height={20}
+                            className="w-5 h-5"
+                          />
                           <button
                             className="text-sm text-zinc-600 underline"
                             onClick={() => {
@@ -4620,7 +4625,7 @@ const fetchBuyOrders = async () => {
                           </button>
                         </div>
                         <span className="text-sm">
-                          입금요청시간: {seller.seller?.buyOrder?.paymentRequestedAt ? new Date(seller.seller?.buyOrder?.paymentRequestedAt).toLocaleString() : ''}
+                          구매주문시간: {seller.seller?.buyOrder?.createdAt ? new Date(seller.seller?.buyOrder?.createdAt).toLocaleString() : ''}
                         </span>
                         <span className="text-sm">
                           {Buy_Amount}(USDT): {seller.seller?.buyOrder?.usdtAmount}
