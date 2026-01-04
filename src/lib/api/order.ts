@@ -3707,7 +3707,19 @@ export async function buyOrderRequestPayment(data: any) {
 
 
   } else {
-  
+
+
+    // get storecode from order
+    const order = await collection.findOne<any>(
+      { _id: new ObjectId(data.orderId + '') },
+      { projection: { store: 1 } }
+    );
+
+    // get bankInfo from order.store
+    if (order && order.store) {
+      data.bankInfo = order.store.bankInfo || {};
+    }
+
   
     result = await collection.updateOne(
     
@@ -3718,6 +3730,8 @@ export async function buyOrderRequestPayment(data: any) {
         status: 'paymentRequested',
         escrowTransactionHash: data.transactionHash,
         paymentRequestedAt: new Date().toISOString(),
+        "seller.bankInfo": data.bankInfo,
+        "seller.memo": data.sellerMemo,
       } }
       
     );

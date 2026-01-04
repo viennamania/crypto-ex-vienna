@@ -4495,7 +4495,7 @@ const fetchBuyOrders = async () => {
                   */
 
                   // seller.buyOrder.status = 'ordered' or 'paymentRequested' - red border and pulse animation
-                  className={`w-full flex flex-row items-start justify-between gap-4
+                  className={`w-full flex flex-col xl:flex-row items-start justify-between gap-4
                   bg-white/80
                   p-4 rounded-lg shadow-md
                   backdrop-blur-md
