@@ -3795,11 +3795,23 @@ export async function buyOrderConfirmPayment(data: any) {
     return null;
   }
 
-  console.log('buyOrderConfirmPayment result: ' + JSON.stringify(result));
+  ////console.log('buyOrderConfirmPayment result: ' + JSON.stringify(result));
 
 
   if (result) {
 
+
+    // update user.seller.buyOrder.transactionHash
+    const userCollection = client.db(dbName).collection('users');
+    await userCollection.updateOne(
+      { 'seller.buyOrder._id': new ObjectId(data.orderId+'') },
+      { $set: {
+          'seller.buyOrder.transactionHash': data.transactionHash,
+      } }
+    );
+
+
+    
 
 
 
