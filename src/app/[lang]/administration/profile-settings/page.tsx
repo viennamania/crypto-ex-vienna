@@ -861,6 +861,35 @@ export default function SettingsPage({ params }: any) {
                             </div>
                         )}
 
+                        {/* 판매자 설정 버튼 */}
+                        {userCode && (
+                            <div className='flex flex-col gap-4 border border-gray-300 p-4 rounded-lg w-full'>
+                                <div className="flex flex-row items-center gap-2">
+                                    {/* dot */}
+                                    <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                    <span className="text-lg">
+                                        {Seller} 설정
+                                    </span>
+                                </div>
+
+                                {seller ? (
+                                    <div className="text-green-500 font-semibold
+                                    bg-green-100 p-2 rounded-lg">
+                                        {Seller} 승인 완료
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => {
+                                            router.push(`/${params.lang}/administration/seller-settings`);
+                                        }}
+                                        className="bg-[#0047ab] text-zinc-100 rounded-lg p-2"
+                                    >
+                                        {Apply} {seller ? "" : Not_a_seller}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
 
                     </div>
 
