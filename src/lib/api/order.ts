@@ -8398,10 +8398,37 @@ export async function buyOrderConfirmPaymentCompleted(data: any) {
       paymentConfirmedAt: new Date().toISOString(),
     } }
   );
+
+  if (result.modifiedCount === 1) {
+
+    // get the buyorder to find the user
+    const buyOrder = await collection.findOne<any>(
+      { queueId: data.queueId },
+      { projection: { 'seller.walletAddress': 1 } }
+    );
+
+    if (buyOrder) {
+
+      // update user.seller.buyOrder.transactionHash
+      const userCollection = client.db(dbName).collection('users');
+      await userCollection.updateOne(
+        { 'seller.walletAddress': buyOrder.seller.walletAddress },
+        { $set: {
+            'seller.buyOrder.transactionHash': data.transactionHash,
+        } }
+      );
+
+    }
   
-  return {
-    success: result.modifiedCount === 1,
-  };
+    return {
+      success: result.modifiedCount === 1,
+    };
+
+  } else {
+    return {
+      success: false,
+    };
+  }
 
 }
 
