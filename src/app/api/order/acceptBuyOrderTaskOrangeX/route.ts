@@ -92,7 +92,8 @@ export async function POST(request: NextRequest) {
 
 
   const buyordersResult = await getAllBuyOrdersForMatching({
-    limit: 100,
+    //limit: 100,
+    limit: 1,
     page: 1,
     startDate: "",
     endDate: "",
@@ -235,7 +236,6 @@ export async function POST(request: NextRequest) {
           accountNumber: seller?.bankInfo?.accountNumber,
           accountHolder: seller?.bankInfo?.accountHolder,
         };
-
 
       } else {
         console.log("error");
