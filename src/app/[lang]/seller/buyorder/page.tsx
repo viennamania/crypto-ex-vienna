@@ -1095,6 +1095,46 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
 
 
 
+
+
+
+  const [buyerDisplayValueArray, setBuyerDisplayValueArray] = useState<number[]>([]);
+  function updateBuyerDisplayValue(index: number, value: number) {
+    setBuyerDisplayValueArray((prevValues) => {
+      const newValues = [...prevValues];
+      newValues[index] = value;
+      return newValues;
+    });
+  }
+
+  useEffect(() => {
+    buyOrderStats.totalByBuyerDepositName.forEach((item, index) => {
+      const targetValue = item.totalKrwAmount;
+      const duration = 1000; // animation duration in ms
+      const startValue = buyerDisplayValueArray[index] || 0;
+      const startTime = performance.now();
+      function animate(currentTime: number) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const currentValue = startValue + (targetValue - startValue) * progress;
+        updateBuyerDisplayValue(index, Math.round(currentValue));
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      }
+      requestAnimationFrame(animate);
+    });
+  }, [buyOrderStats.totalByBuyerDepositName]);
+
+
+
+
+
+
+
+
+
+
   //console.log('buyOrders', buyOrders);
 
 
@@ -4008,6 +4048,82 @@ const fetchBuyOrders = async () => {
 
 
 
+          
+          
+          
+          
+          
+
+          {/* buyOrderStats.totalByBuyerDepositName */}
+          
+          <div className="w-full
+            grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6
+            gap-4
+            items-start justify-start
+            border-t border-zinc-300
+            py-4
+            ">
+            {buyOrderStats.totalByBuyerDepositName?.map((item, index) => (
+              <div
+                key={index}
+                className={`flex flex-col gap-1 items-center
+                p-2 rounded-lg shadow-md
+                backdrop-blur-md
+                ${buyerDisplayValueArray && buyerDisplayValueArray[index] !== undefined && buyerDisplayValueArray[index] !== item.totalKrwAmount
+                  ? 'bg-yellow-100/80 animate-pulse'
+                  : 'bg-white/80'}
+                `}
+              >
+                <div className="flex flex-row items-start justify-start gap-1">
+                  <Image
+                    src="/icon-user.png"
+                    alt="User"
+                    width={30}
+                    height={30}
+                    className="w-6 h-6"
+                  />          
+                  <button
+                    className="text-lg font-semibold underline text-blue-600"
+                    onClick={() => {
+                      const depositName = item._id || '알수없음';
+                      navigator.clipboard.writeText(depositName)
+                        .then(() => {
+                          toast.success(`입금자명 ${depositName} 복사됨`);
+                        })
+                        .catch((err) => {
+                          toast.error('복사 실패: ' + err);
+                        });
+                    }}
+                    title="입금자명 복사"
+                  >
+                    {item._id || '알수없음'}
+                  </button>
+                </div>
+                <div className="w-full flex flex-row items-center justify-between gap-1">
+                  <span className="text-lg text-zinc-500">
+                    {item.totalCount?.toLocaleString() || '0'}
+                  </span>
+                  <span className="text-lg text-yellow-600"
+                    style={{ fontFamily: 'monospace' }}>
+                    {(item.totalKrwAmount || 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+
+
+            {buyOrderStats.totalReaultGroupByBuyerDepositNameCount! - buyOrderStats.totalByBuyerDepositName!.length > 0 && (
+
+              <div className="text-xl font-bold text-red-500
+                flex items-center justify-center"
+              >
+                +{buyOrderStats.totalReaultGroupByBuyerDepositNameCount! - buyOrderStats.totalByBuyerDepositName!.length} 명
+              </div>
+
+            )}
+          </div>
+          
+          
           <div className="w-full flex flex-col items-start justify-center gap-2
           border-t border-b border-zinc-300
           py-4
