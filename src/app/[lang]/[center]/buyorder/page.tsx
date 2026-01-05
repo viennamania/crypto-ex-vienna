@@ -3911,6 +3911,9 @@ const fetchBuyOrders = async () => {
                             <span className="text-sm font-semibold">
                               {seller.nickname}
                             </span>
+                          </div>
+
+                          <div className="flex flex-row gap-2 items-center">
                             <button
                               className="text-sm text-zinc-600 underline"
                               onClick={() => {
@@ -3920,6 +3923,17 @@ const fetchBuyOrders = async () => {
                             >
                               {seller.walletAddress.substring(0, 6)}...{seller.walletAddress.substring(seller.walletAddress.length - 4)}
                             </button>
+                            {seller.seller?.escrowWalletAddress && (
+                              <button
+                                className="text-sm text-zinc-600 underline"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(seller.seller.escrowWalletAddress || '');
+                                  toast.success(Copied_Wallet_Address);
+                                } }
+                              >
+                                {seller.seller.escrowWalletAddress?.substring(0, 6)}...{seller.seller.escrowWalletAddress?.substring(seller.seller.escrowWalletAddress?.length - 4)}
+                              </button>
+                            )}
                           </div>
 
                           {/* seller bank info */}
