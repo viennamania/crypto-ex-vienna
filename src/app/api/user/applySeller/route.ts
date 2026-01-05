@@ -58,6 +58,12 @@ export async function POST(request: NextRequest) {
             escrowWalletAddress,
         });
 
+        if (!result) {
+            return NextResponse.json({
+                error: "Failed to update user for seller",
+            }, { status: 500 });
+        }
+
         //console.log("applySeller result", result);
         
         return NextResponse.json({
