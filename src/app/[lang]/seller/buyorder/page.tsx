@@ -6109,12 +6109,10 @@ const fetchBuyOrders = async () => {
                             {/* seller bank info */}
                             <div className="flex flex-row gap-2 items-center justify-end">
                               <span className="text-sm text-zinc-500">
-                                {/*item.seller?.bankInfo?.bankName*/}
-                                {item.store?.bankInfo?.bankName}
+                                {item.seller?.bankInfo?.bankName}
                               </span>
                               <span className="text-lg text-gray-800 font-bold">
-                                {/*item.seller?.bankInfo?.accountHolder*/}
-                                {item.store?.bankInfo?.accountHolder}
+                                {item.seller?.bankInfo?.accountHolder}
                               </span>
                             </div>
 
@@ -6204,17 +6202,15 @@ const fetchBuyOrders = async () => {
 
                                 <div className="flex flex-row gap-1 items-center justify-end">
                                   <div className="text-sm text-zinc-500">
-                                    {/*item.seller?.bankInfo?.bankName*/}
-                                    {item.store?.bankInfo?.bankName}
+                                    {item.seller?.bankInfo?.bankName}
                                   </div>
                                   <div className="text-lg text-gray-800 font-bold">
-                                    {/*item.seller?.bankInfo?.accountHolder*/}
-                                    {item.store?.bankInfo?.accountHolder}
+                                    {item.seller?.bankInfo?.accountHolder}
                                   </div>
                                 </div>
                                 {/*
                                 <div className="flex flex-row items-end justify-start text-sm text-zinc-500">
-                                  {item.store?.bankInfo?.accountNumber}
+                                  {item.seller?.bankInfo?.accountNumber}
                                 </div>
                                 */}
 
@@ -6706,7 +6702,7 @@ const fetchBuyOrders = async () => {
                                   w-full
                                   flex flex-col gap-2 items-center justify-center">
 
-                                  {item.store?.bankInfo ? (
+                                  {item.seller?.bankInfo ? (
 
                                     <div className="flex flex-row items-center gap-2">
 
@@ -6751,7 +6747,7 @@ const fetchBuyOrders = async () => {
                                             item.usdtAmount,
                                             item.storecode,
 
-                                            item.store?.bankInfo,
+                                            item.seller?.bankInfo,
                                           );
                                         }}
                                       >
@@ -6799,18 +6795,18 @@ const fetchBuyOrders = async () => {
                                     <div className="flex flex-col gap-2 items-center justify-center">
                                       <div className="flex flex-row gap-2 items-center justify-center">
                                         <span className="text-sm text-zinc-500">
-                                          {item.store?.bankInfo?.accountHolder}
+                                          {item.seller?.bankInfo?.accountHolder}
                                         </span>
                                         <span className="text-sm text-zinc-500">
-                                          {item.store?.bankInfo?.bankName}
+                                          {item.seller?.bankInfo?.bankName}
                                         </span>
                                       </div>
                                       {/*
                                       <span className="text-sm text-zinc-500">
                                         {
-                                          item.store?.bankInfo?.accountNumber &&
-                                          item.store?.bankInfo?.accountNumber.length > 5 &&
-                                          item.store?.bankInfo?.accountNumber.substring(0, 5) + '...'
+                                          item.seller?.bankInfo?.accountNumber &&
+                                          item.seller?.bankInfo?.accountNumber.length > 5 &&
+                                          item.seller?.bankInfo?.accountNumber.substring(0, 5) + '...'
                                         }
                                       </span>
                                       */}

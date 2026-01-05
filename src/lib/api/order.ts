@@ -2718,7 +2718,9 @@ export async function getBuyOrders(
     const totalReaultGroupByBuyerDepositName = await collection.aggregate([
       {
         $match: {
+          
           status: 'paymentConfirmed',
+
           //settlement: { $exists: true, $ne: null },
           privateSale: privateSale,
           ...(agentcode ? { agentcode: { $regex: String(agentcode), $options: 'i' } } : {}),
