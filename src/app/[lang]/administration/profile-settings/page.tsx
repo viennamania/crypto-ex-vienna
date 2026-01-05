@@ -873,19 +873,36 @@ export default function SettingsPage({ params }: any) {
                                 </div>
 
                                 {seller ? (
-                                    <div className="text-green-500 font-semibold
-                                    bg-green-100 p-2 rounded-lg">
-                                        {Seller} 승인 완료
+                                    <div className="w-full flex flex-row items-center justify-between">                                    
+                                        <div className="text-green-500 font-semibold
+                                        bg-green-100 p-2 rounded-lg">
+                                            {Seller} 승인 완료
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                router.push(`/${params.lang}/administration/seller-settings`);
+                                            }}
+                                            className="bg-[#0047ab] text-zinc-100 rounded-lg p-2"
+                                        >
+                                            {Seller} 설정 보기
+                                        </button>
                                     </div>
                                 ) : (
-                                    <button
-                                        onClick={() => {
-                                            router.push(`/${params.lang}/administration/seller-settings`);
-                                        }}
-                                        className="bg-[#0047ab] text-zinc-100 rounded-lg p-2"
-                                    >
-                                        {Apply} {seller ? "" : Not_a_seller}
-                                    </button>
+                                    <div className="w-full flex flex-row items-center justify-between">                                    
+                                        <div className="text-red-500 font-semibold
+                                        bg-red-100 p-2 rounded-lg">
+                                            {Not_a_seller}
+                                        </div>
+
+                                        <button
+                                            onClick={() => {
+                                                router.push(`/${params.lang}/administration/seller-settings`);
+                                            }}
+                                            className="bg-[#0047ab] text-zinc-100 rounded-lg p-2"
+                                        >
+                                            판매자 신청하기
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         )}
