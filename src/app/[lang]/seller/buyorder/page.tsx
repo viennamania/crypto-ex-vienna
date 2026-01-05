@@ -4323,9 +4323,45 @@ const fetchBuyOrders = async () => {
                             <span>{seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 전송중</span>
                           </div>
                         ) : (
-                          <div className="flex flex-row items-center gap-2
-                          bg-green-500 text-white px-3 py-1 rounded-lg">
-                            <span>판매 대기중</span>
+                          <div className="w-full flex flex-col items-start justify-center gap-2">
+                            <div className="flex flex-row items-center gap-2
+                            bg-green-500 text-white px-3 py-1 rounded-lg">
+                              <span>판매 대기중</span>
+                            </div>
+
+                            {/* 최근 거래내역 */}
+                            {/* seller?.buyOrder */}
+                            {seller.seller?.buyOrder && (
+                              <div className="w-full flex flex-col items-start justify-center gap-1
+                              border-t border-zinc-300 pt-2
+                              ">
+                                <span className="text-sm font-semibold">
+                                  최근 거래내역
+                                </span>
+                                <div className="w-full flex flex-row items-center justify-start gap-2">
+                                  <span className="text-sm">
+                                    상태:
+                                  </span>
+                                  <span className="text-sm font-semibold">
+                                    {seller.seller?.buyOrder?.status === 'completed' ? '거래완료' :
+                                     seller.seller?.buyOrder?.status === 'paymentConfirmed' ? 'USDT전송완료' :
+                                     seller.seller?.buyOrder?.status === 'paymentRequested' ? '입금확인중' :
+                                     seller.seller?.buyOrder?.status === 'ordered' ? '입금대기중' :
+                                     '알수없음'
+                                    }
+                                  </span>
+                                </div>
+                                <div className="w-full flex flex-row items-center justify-start gap-2">
+                                  <span className="text-sm">
+                                    거래시간:
+                                  </span>
+                                  <span className="text-sm font-semibold">
+                                    {seller.seller?.buyOrder?.createdAt ? new Date(seller.seller?.buyOrder?.createdAt).toLocaleString() : ''}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
                           </div>
                         )}
                       </span>
