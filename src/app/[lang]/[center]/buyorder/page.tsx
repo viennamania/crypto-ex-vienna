@@ -3889,7 +3889,7 @@ const fetchBuyOrders = async () => {
               </div>
               {sellersBalance.length > 0 && (
                 <div className="w-full
-                grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 mb-2">
+                grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mb-2">
 
                   {sellersBalance.map((seller, index) => (
                     <div key={index}
@@ -5718,12 +5718,10 @@ const fetchBuyOrders = async () => {
                               {/* seller bank info */}
                               <div className="flex flex-row gap-2 items-center justify-center">
                                 <span className="text-lg text-gray-800 font-bold">
-                                  {/*item.seller?.bankInfo?.accountHolder*/}
-                                  {item.store?.bankInfo?.accountHolder}
+                                  {item.seller?.bankInfo?.accountHolder}
                                 </span>
                                 <span className="text-sm text-zinc-500">
-                                  {/*item.seller?.bankInfo?.bankName*/}
-                                  {item.store?.bankInfo?.bankName}
+                                  {item.seller?.bankInfo?.bankName}
                                 </span>
 
                               </div>
@@ -5793,11 +5791,9 @@ const fetchBuyOrders = async () => {
                               <div className="flex flex-col gap-2 items-center justify-center">
                                 <div className="flex flex-row items-center gap-2">
                                   <div className="text-lg text-gray-800 font-bold">
-                                    {/*item.seller?.bankInfo?.accountHolder*/}
                                     {item.seller?.bankInfo?.accountHolder}
                                   </div>
                                   <div className="text-sm text-zinc-500">
-                                    {/*item.seller?.bankInfo?.bankName*/}
                                     {item.seller?.bankInfo?.bankName}
                                   </div>
                                 </div>
