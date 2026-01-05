@@ -4039,21 +4039,32 @@ const fetchBuyOrders = async () => {
                     bg-white/80
                     p-4 rounded-lg shadow-md
                     backdrop-blur-md
+                    
                     ${(seller.seller.buyOrder?.status === 'ordered' || seller.seller.buyOrder?.status === 'paymentRequested') ?
                       'border-4 border-red-500 animate-pulse' : ''
                     }
+                    
+                    ${seller.currentUsdtBalanceChanged
+                    ? 'border-2 border-green-500/70 animate-pulse' : 'border border-zinc-300'
+                    }
+
+                    ${seller.walletAddress === address
+                    ? 'ring-4 ring-yellow-400/70' : ''
+                    }
+
                     `}
                   >
 
 
                     {/* if seller.walletAddress is equal to address, fixed position notice for my seller account */}
                     {seller.walletAddress === address && (
-                      <div className="absolute top-0 right-0
-                        bg-yellow-300/80
-                        p-2 rounded-lg shadow-md
-                        backdrop-blur-md
+                      <div
+                        // top right corner ribbon style
+                        className="absolute top-0 right-0
+                        bg-yellow-400 text-zinc-800 px-2 py-1 rounded-bl-lg rounded-tr-lg
+                        shadow-lg
                         ">
-                        <span className="text-sm font-semibold text-zinc-700">
+                        <span className="text-sm font-semibold">
                           나의 판매자계정
                         </span>
                       </div>
