@@ -3759,7 +3759,7 @@ const fetchBuyOrders = async () => {
                   </span>
                 </div>
               </button>
-              
+
             </div>
 
           )}
@@ -4138,7 +4138,7 @@ const fetchBuyOrders = async () => {
                             height={30}
                             className="w-6 h-6"
                           />
-                          <span className="text-4xl text-[#409192] font-semibold"
+                          <span className="text-xl text-[#409192] font-semibold"
                             style={{ fontFamily: 'monospace' }}>
                             {
                               //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -4186,7 +4186,7 @@ const fetchBuyOrders = async () => {
                                 height={20}
                                 className="w-5 h-5"
                               />
-                              <div className="flex flex-row items-center justify-center gap-1">
+                              <div className="flex flex-col items-start justify-center gap-0">
                                 <span className="text-sm">
                                   판매금액(원/USDT):
                                 </span>
