@@ -20,14 +20,14 @@ export async function POST(request: NextRequest) {
     const {
         storecode,
         walletAddress,
-        contactEmail,
-        businessRegistrationNumber,
+        //contactEmail,
+        //businessRegistrationNumber,
     } = body;
 
     //console.log("applySeller request body", body);
 
     const client = createThirdwebClient({
-    secretKey: process.env.THIRDWEB_SECRET_KEY || "",
+        secretKey: process.env.THIRDWEB_SECRET_KEY || "",
     });
 
     if (!client) {

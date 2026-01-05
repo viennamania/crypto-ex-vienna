@@ -746,7 +746,8 @@ export default function SettingsPage({ params }: any) {
     const applySeller = async () => {
         if (applyingSeller) return;
         setApplyingSeller(true);
-        await fetch('/api/user/applySeller', {
+
+        const response = await fetch('/api/user/applySeller', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -756,8 +757,17 @@ export default function SettingsPage({ params }: any) {
                 walletAddress: address,
             }),
         });
+        const data = await response.json();
+
+        if (!data.result) {
+            toast.error('판매자 신청에 실패했습니다');
+            setApplyingSeller(false);
+            return;
+        }
+
+
         // reload seller data
-        const response = await fetch("/api/user/getUser", {
+        const responseGetUser  = await fetch("/api/user/getUser", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -767,9 +777,9 @@ export default function SettingsPage({ params }: any) {
                 walletAddress: address,
             }),
         });
-        const data = await response.json();
-        if (data.result) {
-            setSeller(data.result.seller);
+        const dataGetUser = await responseGetUser.json();
+        if (dataGetUser.result) {
+            setSeller(dataGetUser.result.seller);
         }
         setApplyingSeller(false);
     };
