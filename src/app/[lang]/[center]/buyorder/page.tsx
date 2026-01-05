@@ -3613,9 +3613,9 @@ const fetchBuyOrders = async () => {
             <div className="w-full flex flex-col items-end gap-4">
 
               {/* 가맹점 P2P 판매용 입금통장 */}
+              {/*
               <div className="flex flex-col xl:flex-row items-start xl:items-end gap-1">
                 <div className="flex flex-row gap-2 items-center">
-                  {/* dot */}
                   <div className="w-1 h-1 rounded-full bg-zinc-500" />
                   <span className="text-sm text-zinc-500">
                     가맹점 P2P 판매용 입금통장
@@ -3646,12 +3646,13 @@ const fetchBuyOrders = async () => {
                   </span>
                 </div>
               </div>
+              */}
 
               {/* 판매용 USDT 출금지갑 */}
               {/* storeInfo.walletAddress */}
+              {/*
               <div className="flex flex-col xl:flex-row items-start xl:items-end gap-1">
                 <div className="flex flex-row gap-2 items-center">
-                  {/* dot */}
                   <div className="w-1 h-1 rounded-full bg-zinc-500" /> 
                   <span className="text-sm text-zinc-500">
                     가맹점 P2P 판매용 USDT 출금지갑
@@ -3673,6 +3674,9 @@ const fetchBuyOrders = async () => {
                   </span>
                 </div>
               </div>
+              */}
+
+
 
               {/* 결제용 USDT 입금지갑 */}
               {/* store.settlementWalletAddress */}
@@ -3865,16 +3869,106 @@ const fetchBuyOrders = async () => {
               </div>
               )}
 
-
-
-
-
-
-
             </div>
 
 
+            <div className="w-full flex flex-col items-start justify-center gap-2
+            border-b border-zinc-300 pb-2">
+              {/* title */}
+              <div className="flex flex-row gap-2 items-center">
+                <Image
+                  src="/icon-seller.png"
+                  alt="Sellers"
+                  width={35}
+                  height={35}
+                  className="w-6 h-6"
+                />
+                <span className="text-xl font-semibold text-zinc-500">
+                  판매자
+                </span>
+              </div>
+              {sellersBalance.length > 0 && (
+                <div className="w-full
+                grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 mb-2">
 
+                  {sellersBalance.map((seller, index) => (
+                    <div key={index}
+                      className="flex flex-row items-center justify-between gap-4
+                      bg-white/80
+                      p-4 rounded-lg shadow-md
+                      backdrop-blur-md
+                      ">
+                      <div className="flex flex-row items-center gap-4">
+                        <Image
+                          src="/icon-seller.png"
+                          alt="Seller"
+                          width={40}
+                          height={40}
+                          className="w-10 h-10"
+                        />
+                        <div className="flex flex-col">
+                          <div className="flex flex-row gap-2 items-center">
+                            <span className="text-sm font-semibold">
+                              {seller.nickname}
+                            </span>
+                            <button
+                              className="text-sm text-zinc-600 underline"
+                              onClick={() => {
+                                navigator.clipboard.writeText(seller.walletAddress);
+                                toast.success(Copied_Wallet_Address);
+                              } }
+                            >
+                              {seller.walletAddress.substring(0, 6)}...{seller.walletAddress.substring(seller.walletAddress.length - 4)}
+                            </button>
+                          </div>
+
+                          {/* seller bank info */}
+                          {seller.seller?.bankInfo && (
+                            <div className="flex flex-col items-start justify-center mt-1">
+                              <span className="text-sm text-zinc-600">
+                                {seller.seller.bankInfo.bankName}{" "}{seller.seller.bankInfo.accountHolder}
+                              </span>
+                              <span className="text-sm text-zinc-600">
+                                {seller.seller.bankInfo.accountNumber}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-row items-center gap-2">
+                        <Image
+                          src="/icon-tether.png"
+                          alt="USDT"
+                          width={30}
+                          height={30}
+                          className="w-7 h-7"
+                        />
+                        <span className="text-2xl font-semibold text-[#409192]"
+                          style={{ fontFamily: 'monospace' }}>
+                          {Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        </span>
+                      </div>
+
+                      {/* if seller nickname is 'seller', then show withdraw button */}
+                      {/*
+                      {seller.nickname === 'seller' && (
+                        <button
+                          onClick={() => {
+                            router.push('/' + params.lang + '/admin/withdraw-vault?walletAddress=' + seller.walletAddress);
+                          }}
+                          className="bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                        >
+                          출금하기
+                        </button>
+                      )}
+                      */}
+
+                    </div>
+                  ))}
+
+                </div>
+              )}
+            </div>
 
 
 
@@ -3927,6 +4021,10 @@ const fetchBuyOrders = async () => {
               */}
 
             </div>
+
+
+
+
 
 
 
@@ -3984,16 +4082,6 @@ const fetchBuyOrders = async () => {
 
                 </div>
                 */}
-
-
-
-
-
-
-
-
-            
-
 
 
 
@@ -4623,79 +4711,7 @@ const fetchBuyOrders = async () => {
               </div>
               )}
 
-
-
-
             </div>
-
-
-
-            {sellersBalance.length > 0 && (
-              <div className="w-full flex flex-col sm:flex-row items-center justify-end gap-4 overflow-x-auto">
-
-                {sellersBalance.map((seller, index) => (
-                  <div key={index}
-                    className="flex flex-row items-center justify-between gap-4
-                    bg-white/80
-                    p-4 rounded-lg shadow-md
-                    backdrop-blur-md
-                    ">
-                    <div className="flex flex-row items-center gap-4">
-                      <Image
-                        src="/icon-seller.png"
-                        alt="Seller"
-                        width={40}
-                        height={40}
-                        className="w-10 h-10"
-                      />
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold">
-                          {seller.nickname}
-                        </span>
-                        <button
-                          className="text-sm text-zinc-600 underline"
-                          onClick={() => {
-                            navigator.clipboard.writeText(seller.walletAddress);
-                            toast.success(Copied_Wallet_Address);
-                          } }
-                        >
-                          {seller.walletAddress.substring(0, 6)}...{seller.walletAddress.substring(seller.walletAddress.length - 4)}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex flex-row items-center gap-2">
-                      <Image
-                        src="/icon-tether.png"
-                        alt="USDT"
-                        width={30}
-                        height={30}
-                        className="w-7 h-7"
-                      />
-                      <span className="text-2xl font-semibold text-[#409192]"
-                        style={{ fontFamily: 'monospace' }}>
-                        {Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      </span>
-                    </div>
-
-                    {/* if seller nickname is 'seller', then show withdraw button */}
-                    {/*
-                    {seller.nickname === 'seller' && (
-                      <button
-                        onClick={() => {
-                          router.push('/' + params.lang + '/admin/withdraw-vault?walletAddress=' + seller.walletAddress);
-                        }}
-                        className="bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
-                      >
-                        출금하기
-                      </button>
-                    )}
-                    */}
-
-                  </div>
-                ))}
-
-              </div>
-            )}
 
 
 
@@ -5778,17 +5794,17 @@ const fetchBuyOrders = async () => {
                                 <div className="flex flex-row items-center gap-2">
                                   <div className="text-lg text-gray-800 font-bold">
                                     {/*item.seller?.bankInfo?.accountHolder*/}
-                                    {item.store?.bankInfo?.accountHolder}
+                                    {item.seller?.bankInfo?.accountHolder}
                                   </div>
                                   <div className="text-sm text-zinc-500">
                                     {/*item.seller?.bankInfo?.bankName*/}
-                                    {item.store?.bankInfo?.bankName}
+                                    {item.seller?.bankInfo?.bankName}
                                   </div>
                                 </div>
                                 
                                 {/*
                                 <div className="text-sm text-zinc-500">
-                                  {item.store?.bankInfo?.accountNumber.slice(0, 3) + '****' + item.store?.bankInfo?.accountNumber.slice(item.store?.bankInfo?.accountNumber.length - 3)}
+                                  {item.seller?.bankInfo?.accountNumber.slice(0, 3) + '****' + item.seller?.bankInfo?.accountNumber.slice(item.seller?.bankInfo?.accountNumber.length - 3)}
                                 </div>
                                 */}
                                 
@@ -6196,7 +6212,7 @@ const fetchBuyOrders = async () => {
                                     w-full
                                     flex flex-col gap-2 items-center justify-center">
 
-                                    {item.store?.bankInfo ? (
+                                    {item.seller?.bankInfo ? (
 
                                       <div className="flex flex-row items-center gap-2">
 
@@ -6241,7 +6257,7 @@ const fetchBuyOrders = async () => {
                                               item.usdtAmount,
                                               item.storecode,
 
-                                              item.store?.bankInfo,
+                                              item.seller?.bankInfo,
                                             );
                                           }}
                                         >
@@ -6289,18 +6305,18 @@ const fetchBuyOrders = async () => {
                                       <div className="flex flex-col gap-2 items-center justify-center">
                                         <div className="flex flex-row gap-2 items-center justify-center">
                                           <span className="text-sm text-zinc-500">
-                                            {item.store?.bankInfo?.accountHolder}
+                                            {item.seller?.bankInfo?.accountHolder}
                                           </span>
                                           <span className="text-sm text-zinc-500">
-                                            {item.store?.bankInfo?.bankName}
+                                            {item.seller?.bankInfo?.bankName}
                                           </span>
                                         </div>
                                         {/*
                                         <span className="text-sm text-zinc-500">
                                           {
-                                            item.store?.bankInfo?.accountNumber &&
-                                            item.store?.bankInfo?.accountNumber.length > 5 &&
-                                            item.store?.bankInfo?.accountNumber.substring(0, 5) + '...'
+                                            item.seller?.bankInfo?.accountNumber &&
+                                            item.seller?.bankInfo?.accountNumber.length > 5 &&
+                                            item.seller?.bankInfo?.accountNumber.substring(0, 5) + '...'
                                           }
                                         </span>
                                         */}
