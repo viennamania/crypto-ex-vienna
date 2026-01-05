@@ -4048,7 +4048,7 @@ const fetchBuyOrders = async () => {
 
                     {/* if seller.walletAddress is equal to address, fixed position notice for my seller account */}
                     {seller.walletAddress === address && (
-                      <div className="absolute top-4 right-4
+                      <div className="absolute top-0 right-0
                         bg-yellow-300/80
                         p-2 rounded-lg shadow-md
                         backdrop-blur-md
