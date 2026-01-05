@@ -4061,12 +4061,23 @@ const fetchBuyOrders = async () => {
                       <div
                         // top right corner ribbon style
                         className="absolute top-0 right-0
+                        flex flex-col items-center justify-center
                         bg-yellow-400 text-zinc-800 px-2 py-1 rounded-bl-lg rounded-tr-lg
                         shadow-lg
                         ">
                         <span className="text-sm font-semibold">
                           나의 판매자계정
                         </span>
+
+                        <button
+                          onClick={() => {
+                            router.push('/' + params.lang + '/administration/seller-settings');
+                          }}
+                          className="text-xs text-zinc-700 underline"
+                        >
+                          수정하기
+                        </button>
+
                       </div>
                     )}
 
@@ -4116,47 +4127,72 @@ const fetchBuyOrders = async () => {
                             </button>
                         </div>
 
-                        <div className="w-full flex flex-col items-start justify-between gap-2">    
+                        {/* top right fixed image escrow wallet icon */}
+                        <div className="w-full flex flex-col items-start justify-center gap-2
+                        border border-zinc-300 p-2 rounded-lg
+                        ">
 
-                          <div className="flex flex-row items-center justify-center gap-2">
+                          {/*}
+                          <div className="absolute top-2 right-2">
                             <Image
-                              src="/icon-escrow-wallet.webp"
-                              alt="Escrow Wallet"
-                              width={20}
-                              height={20}
-                              className="w-5 h-5"
+                              src="/icon-in-escrow.png"
+                              alt="In Escrow"
+                              width="80"
+                              height="50"
+                              className="w-20 h-10 object-contain"
                             />
-                            <button
-                              className="text-sm text-zinc-600 underline"
-                              onClick={() => {
-                                navigator.clipboard.writeText(seller.seller.escrowWalletAddress);
-                                toast.success(Copied_Wallet_Address);
-                              } }
-                            >
-                              {
-                                seller.seller.escrowWalletAddress.substring(0, 6)}...{seller.seller.escrowWalletAddress.substring(seller.seller.escrowWalletAddress.length - 4)
-                              }
-                            </button>
+                          </div>
+                          */}
+
+
+                          <div className="w-full flex flex-col items-start justify-between gap-2">    
+
+                            <div className="flex flex-row items-center justify-center gap-2">
+                              <Image
+                                src="/icon-escrow-wallet.webp"
+                                alt="Escrow Wallet"
+                                width={20}
+                                height={20}
+                                className="w-5 h-5"
+                              />
+                              <button
+                                className="text-sm text-zinc-600 underline"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(seller.seller.escrowWalletAddress);
+                                  toast.success(Copied_Wallet_Address);
+                                } }
+                              >
+                                {
+                                  seller.seller.escrowWalletAddress.substring(0, 6)}...{seller.seller.escrowWalletAddress.substring(seller.seller.escrowWalletAddress.length - 4)
+                                }
+                              </button>
+                            </div>
+
                           </div>
 
-                        </div>
+                          <div className="w-full flex flex-row items-center justify-between gap-2">
 
-                        <div className="w-full flex flex-row items-center justify-end gap-1">
-                          <Image
-                            src="/icon-tether.png"
-                            alt="USDT"
-                            width={30}
-                            height={30}
-                            className="w-6 h-6"
-                          />
-                          <span className="text-xl text-[#409192] font-semibold"
-                            style={{ fontFamily: 'monospace' }}>
-                            {
-                              //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                              currentUsdtBalanceArray[index]?.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                            <div className="flex flex-row items-center justify-end gap-1">
+                              <Image
+                                src="/icon-tether.png"
+                                alt="USDT"
+                                width={30}
+                                height={30}
+                                className="w-6 h-6"
+                              />
+                              <span className="text-xl text-[#409192] font-semibold"
+                                style={{ fontFamily: 'monospace' }}>
+                                {
+                                  //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                                  currentUsdtBalanceArray[index]?.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 
-                            }
-                          </span>
+                                }
+                              </span>
+                            </div>
+                          </div>
+
+                          
+
                         </div>
 
                         {/* seller.seller.bankInfo */}
@@ -4207,20 +4243,6 @@ const fetchBuyOrders = async () => {
                                 </span>
                               </div>
                             </div>
-
-                            {/* 수정하기 button */}
-                            {/* route /ko/administration/seller-setings */}
-                            {seller.walletAddress === address && (
-                              <button
-                                onClick={() => {
-                                  router.push('/' + params.lang + '/administration/seller-settings');
-                                }}
-                                className="w-full flex items-center justify-center
-                                bg-yellow-600 text-sm text-white px-4 py-2 rounded-lg hover:bg-yellow-700 hover:shadow-yellow-500/50"
-                              >
-                                수정하기
-                              </button>
-                            )}
 
                           </div>
 
