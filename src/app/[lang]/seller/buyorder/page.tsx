@@ -3573,7 +3573,19 @@ const fetchBuyOrders = async () => {
     ///console.log('getAllSellersForBalance data', data);
 
     if (data.result) {
-      setSellersBalance(data.result.users);
+      
+      //setSellersBalance(data.result.users);
+
+      // if seller.walletAddress of data.result.users is address,
+      // then order first
+      const sortedSellers = data.result.users.sort((a: any, b: any) => {
+        if (a.walletAddress === address) return -1;
+        if (b.walletAddress === address) return 1;
+        return 0;
+      });
+
+      setSellersBalance(sortedSellers);
+      
     } else {
       console.error('Error fetching sellers balance');
     }
