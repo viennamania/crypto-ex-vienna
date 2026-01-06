@@ -4489,9 +4489,15 @@ const fetchBuyOrders = async () => {
                                   {seller.seller?.buyOrder.krwAmount.toLocaleString()} 원 입금확인중
                                 </span>
                                 {/* 입금자명 */}
-                                <span className="text-sm">
-                                  입금자명: {seller.seller?.buyOrder?.buyer?.depositName || '알수없음'}
-                                </span>
+                                {seller.walletAddress === address ? (
+                                  <span className="text-sm">
+                                    입금자명: {seller.seller?.buyOrder?.buyer?.depositName || '알수없음'}
+                                  </span>
+                                ) : (
+                                  <span className="text-sm">
+                                    입금자명: *****
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
