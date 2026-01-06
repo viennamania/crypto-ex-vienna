@@ -3585,7 +3585,7 @@ const fetchBuyOrders = async () => {
       });
 
       setSellersBalance(sortedSellers);
-      
+
     } else {
       console.error('Error fetching sellers balance');
     }
@@ -4492,17 +4492,45 @@ const fetchBuyOrders = async () => {
 
                       ) : seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
                           (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x') ? (
-                        <div className="flex flex-row items-center gap-2
-                        bg-blue-500 text-white px-3 py-1 rounded-lg">
-                          <Image
-                            src="/icon-transfer.png"
-                            alt="Transfer Auto"
-                            width={20}
-                            height={20}
-                            className="w-5 h-5 animate-spin"
-                          />
-                          <span>{seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 전송중</span>
+                        <div className="w-full flex flex-col items-start justify-center gap-2">
+                          {/* 판매중 */}
+                          <div className="flex flex-row items-center gap-2
+                          bg-red-500 text-white px-3 py-1 rounded-lg">
+                            <span>판매중</span>
+                          </div>
+
+                          <div className="w-full flex flex-col items-start justify-center gap-1
+                            border-t border-zinc-300 pt-2
+                            ">
+                            {/* TID */}
+                            <span className="text-sm">
+                              TID: #<button
+                                  className="text-sm text-zinc-600 underline"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(seller.seller?.buyOrder?.tradeId);
+                                    toast.success('TID가 복사되었습니다.');
+                                  } }
+                                >
+                                  {seller.seller?.buyOrder?.tradeId}
+                                </button>
+                            </span>
+
+                            <div className="flex flex-row items-center gap-2
+                            bg-blue-500 text-white px-3 py-1 rounded-lg">
+                              <Image
+                                src="/icon-transfer.png"
+                                alt="Transfer Auto"
+                                width={20}
+                                height={20}
+                                className="w-5 h-5 animate-spin"
+                              />
+                              <span>{seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 전송중</span>
+                            </div>
+
+                          </div>
+
                         </div>
+
                       ) : (
                         <div className="w-full flex flex-col items-start justify-center gap-2">
                           <div className="flex flex-row items-center gap-2
