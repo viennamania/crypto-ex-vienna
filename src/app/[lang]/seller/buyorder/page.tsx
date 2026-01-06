@@ -4475,7 +4475,7 @@ const fetchBuyOrders = async () => {
                                 </button>
                             </span>
 
-                            <div className="flex flex-row items-center gap-2
+                            <div className="w-full flex flex-row items-center gap-2
                             bg-yellow-500 text-white px-3 py-1 rounded-lg">
                               <Image
                                 src="/icon-bank-auto.png"
@@ -4484,7 +4484,15 @@ const fetchBuyOrders = async () => {
                                 height={20}
                                 className="w-5 h-5 animate-spin"
                               />
-                              <span>{seller.seller?.buyOrder.krwAmount.toLocaleString()} 원 입금 확인중</span>
+                              <div className="flex flex-col items-start justify-center gap-0">
+                                <span className="text-sm font-semibold">
+                                  {seller.seller?.buyOrder.krwAmount.toLocaleString()} 원 입금확인중
+                                </span>
+                                {/* 입금자명 */}
+                                <span className="text-sm">
+                                  입금자명: {seller.seller?.buyOrder?.buyer?.depositName || '알수없음'}
+                                </span>
+                              </div>
                             </div>
                           </div>
 
@@ -4581,22 +4589,30 @@ const fetchBuyOrders = async () => {
                       ? (
                         <div className="w-full flex flex-col items-start justify-center gap-2">
 
-                          <div className="w-full flex flex-row items-center justify-start gap-2">
-                            <span className="text-sm">
-                              구매자:
-                            </span>
-                            <span className="text-sm font-semibold">
-                              {seller.seller?.buyOrder?.nickname}
-                            </span>
-                            <button
-                              className="text-sm text-zinc-600 underline"
-                              onClick={() => {
-                                navigator.clipboard.writeText(seller.seller?.buyOrder?.walletAddress);
-                                toast.success(Copied_Wallet_Address);
-                              } }
-                            >
-                              {seller.seller?.buyOrder?.walletAddress.substring(0, 6)}...
-                            </button>
+                          <div className="w-full flex flex-row items-center justify-start gap-2
+                          border-t border-b border-zinc-300 py-2
+                          ">
+                            <Image
+                              src="/icon-buyer.png"
+                              alt="Buyer"
+                              width={20}
+                              height={20}
+                              className="w-5 h-5 rounded-lg object-cover"
+                            />
+                            <div className="flex flex-col items-start justify-center gap-0">
+                              <span className="text-sm font-semibold">
+                                {seller.seller?.buyOrder?.nickname}
+                              </span>
+                              <button
+                                className="text-sm text-zinc-600 underline"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(seller.seller?.buyOrder?.walletAddress);
+                                  toast.success(Copied_Wallet_Address);
+                                } }
+                              >
+                                {seller.seller?.buyOrder?.walletAddress.substring(0, 6)}...{seller.seller?.buyOrder?.walletAddress.substring(seller.seller?.buyOrder?.walletAddress.length - 4)}
+                              </button>
+                            </div>
                           </div>
 
                           <span className="text-sm">
