@@ -3978,6 +3978,22 @@ export async function buyOrderConfirmPayment(data: any) {
 
 
         // update user.seller
+
+        // totalPaymentConfirmedForSeller
+        const totalPaymentConfirmedForSeller = await collection.aggregate([
+          { $match: {
+            'seller.walletAddress': order.seller?.walletAddress,
+            status: 'paymentConfirmed'
+          } },
+          { $group: {
+            _id: null,
+            totalPaymentConfirmedCount: { $sum: 1 },
+            totalKrwAmount: { $sum: '$krwAmount' },
+            totalUsdtAmount: { $sum: '$usdtAmount' }
+          }}
+        ]).toArray();
+
+
         await userCollection.updateOne(
           {'seller.escrowWalletAddress': order.seller?.walletAddress
           },
@@ -3985,6 +4001,9 @@ export async function buyOrderConfirmPayment(data: any) {
               //'seller.buyOrderStatus': 'paymentConfirmed',
               'seller.buyOrder.status': 'paymentConfirmed',
               'seller.buyOrder.paymentConfirmedAt': new Date().toISOString(),
+              'seller.totalPaymentConfirmedCount': totalPaymentConfirmedForSeller[0]?.totalPaymentConfirmedCount || 0,
+              'seller.totalPaymentConfirmedKrwAmount': totalPaymentConfirmedForSeller[0]?.totalKrwAmount || 0,
+              'seller.totalPaymentConfirmedUsdtAmount': totalPaymentConfirmedForSeller[0]?.totalUsdtAmount || 0,
             }
           }
         );
