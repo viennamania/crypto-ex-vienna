@@ -3763,6 +3763,7 @@ export async function buyOrderRequestPayment(data: any) {
         usdtAmount: 1,
         krwAmount: 1,
         rate: 1,
+        buyer: 1,
         seller: 1,
         status: 1,
       } }
