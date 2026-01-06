@@ -2812,6 +2812,7 @@ const fetchBuyOrders = async () => {
       },
       body: JSON.stringify(
         {
+          storecode: params.center,
           limit: 100,
           page: 1,
         }

@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
 
   const {
+    storecode,
     limit,
     page,
   } = body;
@@ -53,6 +54,7 @@ export async function POST(request: NextRequest) {
 
 
   const result = await getAllSellersForBalanceInquiry({
+    storecode: storecode || "",
     limit: limit || 100,
     page: page || 1,
   });

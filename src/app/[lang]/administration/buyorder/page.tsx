@@ -3504,6 +3504,7 @@ const fetchBuyOrders = async () => {
       },
       body: JSON.stringify(
         {
+          storecode: "admin",
           limit: 100,
           page: 1,
         }

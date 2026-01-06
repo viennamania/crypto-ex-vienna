@@ -2513,9 +2513,11 @@ export async function getUserPaymentInfoByStorecode({
 // getAllSellersForBalanceInquiry
 export async function getAllSellersForBalanceInquiry(
   {
+    storecode,
     limit,
     page,
   }: {
+    storecode: string;
     limit: number;
     page: number;
   }
@@ -2531,7 +2533,7 @@ export async function getAllSellersForBalanceInquiry(
   const users = await collection
     .find<UserProps>(
       {
-        //storecode: 'admin',
+        storecode: { $regex: String(storecode), $options: 'i' },
 
         walletAddress: { $exists: true, $ne: null },
         seller: { $exists: true  , $ne: null},
@@ -2557,7 +2559,7 @@ export async function getAllSellersForBalanceInquiry(
 
   const totalCount = await collection.countDocuments(
     {
-      //storecode: 'admin',
+      storecode: { $regex: String(storecode), $options: 'i' },
 
       walletAddress: { $exists: true, $ne: null },
       seller: { $exists: true  , $ne: null},
