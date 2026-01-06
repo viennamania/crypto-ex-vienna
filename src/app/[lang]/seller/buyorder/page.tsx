@@ -4185,7 +4185,7 @@ const fetchBuyOrders = async () => {
                         <span className="text-sm font-semibold">
                           나의 판매자계정
                         </span>
-
+                        {/*}
                         <button
                           onClick={() => {
                             router.push('/' + params.lang + '/administration/seller-settings');
@@ -4194,6 +4194,60 @@ const fetchBuyOrders = async () => {
                         >
                           수정하기
                         </button>
+                        */}
+
+                        {seller.seller?.buyOrder.status === 'paymentRequested' && (
+                          <button
+            
+                            disabled={confirmingPayment[index]}
+                            
+                            className={`
+                              ${confirmingPayment[index]
+                              ? 'text-gray-400 border-gray-400 bg-gray-100 cursor-not-allowed'
+                              : 'text-yellow-600 hover:text-yellow-700 hover:shadow-yellow-500/50 cursor-pointer'
+                              } bg-yellow-100 border border-yellow-600 rounded-lg p-2
+                            `}
+
+                            onClick={() => {
+                              //confirm("수동으로 입금확인을 처리하시겠습니까?") &&
+                              confirmPayment(
+                                index,
+                                seller.seller.buyOrder._id,
+                                //paymentAmounts[index],
+                                //paymentAmountsUsdt[index],
+
+                                seller.seller.buyOrder.krwAmount,
+                                seller.seller.buyOrder.usdtAmount,
+                                
+                                seller.seller.buyOrder?.walletAddress,
+
+                                seller.seller.buyOrder?.paymentMethod,
+                              );
+                            }}
+
+                          >
+                            <div className="flex flex-row gap-2 items-center justify-center">
+                              { confirmingPayment[index] && (
+                                  <Image
+                                    src="/loading.png"
+                                    alt="Loading"
+                                    width={20}
+                                    height={20}
+                                    className="w-5 h-5
+                                    animate-spin"
+                                  />
+                              )}
+                              <span className="text-sm">
+                                입금완료하기
+                              </span>
+                            </div>
+
+                          </button>
+
+                        )}
+
+
+
 
                       </div>
                     )}
@@ -4297,7 +4351,7 @@ const fetchBuyOrders = async () => {
                                 height={30}
                                 className="w-6 h-6"
                               />
-                              <span className="text-xl text-[#409192] font-semibold"
+                              <span className="text-2xl text-[#409192] font-semibold"
                                 style={{ fontFamily: 'monospace' }}>
                                 {
                                   //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -4322,18 +4376,24 @@ const fetchBuyOrders = async () => {
                               height={20}
                               className="w-5 h-5"
                             />
-                            <span className="text-sm">
-                              {seller.seller?.bankInfo?.bankName}{' '}
-                              {seller.seller?.bankInfo?.accountNumber.length > 10
-                                ? seller.seller?.bankInfo?.accountNumber.substring(0, 4) +'****'+
-                                  seller.seller?.bankInfo?.accountNumber.substring(seller.seller?.bankInfo?.accountNumber.length - 4)
-                                : seller.seller?.bankInfo?.accountNumber
-                              }{' '}
-                              {seller.seller?.bankInfo?.accountHolder.length > 2
-                                ? seller.seller?.bankInfo?.accountHolder.substring(0, 1) +'**'
-                                : seller.seller?.bankInfo?.accountHolder
-                              }
-                            </span>
+                            <div className="flex flex-col items-start justify-center gap-0">
+                              <span className="text-sm">
+                                {seller.seller?.bankInfo?.bankName}
+                              </span>
+                              <span className="text-sm">
+                                {seller.seller?.bankInfo?.accountNumber.length > 10
+                                  ? seller.seller?.bankInfo?.accountNumber.substring(0, 4) +'****'+
+                                    seller.seller?.bankInfo?.accountNumber.substring(seller.seller?.bankInfo?.accountNumber.length - 4)
+                                  : seller.seller?.bankInfo?.accountNumber
+                                }
+                              </span>
+                              <span className="text-sm font-semibold">
+                                {seller.seller?.bankInfo?.accountHolder.length > 2
+                                  ? seller.seller?.bankInfo?.accountHolder.substring(0, 1) +'**'
+                                  : seller.seller?.bankInfo?.accountHolder
+                                }
+                              </span>
+                            </div>
                           </div>
                         )}
 
@@ -4378,10 +4438,31 @@ const fetchBuyOrders = async () => {
                     <div className="
                       w-56
                       flex flex-col items-start justify-center gap-2">
-                      <span className="text-sm font-semibold">
 
-                        {seller.seller?.buyOrder?.status === 'paymentRequested' ? (
-                          <div className="flex flex-col items-start justify-center gap-1">                        
+                      {seller.seller?.buyOrder?.status === 'paymentRequested' ? (
+                        <div className="flex flex-col items-start justify-center gap-2">
+                          {/* 판매중 */}
+                          <div className="flex flex-row items-center gap-2
+                          bg-red-500 text-white px-3 py-1 rounded-lg">
+                            <span>판매중</span>
+                          </div>
+
+                          <div className="w-full flex flex-col items-start justify-center gap-1
+                            border-t border-zinc-300 pt-2
+                            ">
+                            {/* TID */}
+                            <span className="text-sm">
+                              TID: #<button
+                                  className="text-sm text-zinc-600 underline"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(seller.seller?.buyOrder?.tradeId);
+                                    toast.success('TID가 복사되었습니다.');
+                                  } }
+                                >
+                                  {seller.seller?.buyOrder?.tradeId}
+                                </button>
+                            </span>
+
                             <div className="flex flex-row items-center gap-2
                             bg-yellow-500 text-white px-3 py-1 rounded-lg">
                               <Image
@@ -4393,117 +4474,66 @@ const fetchBuyOrders = async () => {
                               />
                               <span>{seller.seller?.buyOrder.krwAmount.toLocaleString()} 원 입금 확인중</span>
                             </div>
-
-                            {seller.walletAddress === address && (
-                              <div className="w-full flex flex-row items-center justify-end">
-                                          <button
-                            
-                                            disabled={confirmingPayment[index]}
-                                            
-                                            className={`
-                                              ${confirmingPayment[index]
-                                              ? 'text-gray-400 border-gray-400 bg-gray-100 cursor-not-allowed'
-                                              : 'text-yellow-600 hover:text-yellow-700 hover:shadow-yellow-500/50 cursor-pointer'
-                                              } bg-yellow-100 border border-yellow-600 rounded-lg p-2
-                                            `}
-
-                                            onClick={() => {
-                                              //confirm("수동으로 입금확인을 처리하시겠습니까?") &&
-                                              confirmPayment(
-                                                index,
-                                                seller.seller.buyOrder._id,
-                                                //paymentAmounts[index],
-                                                //paymentAmountsUsdt[index],
-
-                                                seller.seller.buyOrder.krwAmount,
-                                                seller.seller.buyOrder.usdtAmount,
-                                                
-                                                seller.seller.buyOrder?.walletAddress,
-
-                                                seller.seller.buyOrder?.paymentMethod,
-                                              );
-                                            }}
-
-                                          >
-                                            <div className="flex flex-row gap-2 items-center justify-center">
-                                              { confirmingPayment[index] && (
-                                                  <Image
-                                                    src="/loading.png"
-                                                    alt="Loading"
-                                                    width={20}
-                                                    height={20}
-                                                    className="w-5 h-5
-                                                    animate-spin"
-                                                  />
-                                              )}
-                                              <span className="text-sm">
-                                                입금완료하기
-                                              </span>
-                                            </div>
-
-                                          </button>
-
-                              </div>
-                            )}
-
                           </div>
 
-                        ) : seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
-                            (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x') ? (
+                        </div>
+
+                      ) : seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
+                          (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x') ? (
+                        <div className="flex flex-row items-center gap-2
+                        bg-blue-500 text-white px-3 py-1 rounded-lg">
+                          <Image
+                            src="/icon-transfer.png"
+                            alt="Transfer Auto"
+                            width={20}
+                            height={20}
+                            className="w-5 h-5 animate-spin"
+                          />
+                          <span>{seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 전송중</span>
+                        </div>
+                      ) : (
+                        <div className="w-full flex flex-col items-start justify-center gap-2">
                           <div className="flex flex-row items-center gap-2
-                          bg-blue-500 text-white px-3 py-1 rounded-lg">
-                            <Image
-                              src="/icon-transfer.png"
-                              alt="Transfer Auto"
-                              width={20}
-                              height={20}
-                              className="w-5 h-5 animate-spin"
-                            />
-                            <span>{seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 전송중</span>
+                          bg-green-500 text-white px-3 py-1 rounded-lg">
+                            <span>판매 대기중</span>
                           </div>
-                        ) : (
-                          <div className="w-full flex flex-col items-start justify-center gap-2">
-                            <div className="flex flex-row items-center gap-2
-                            bg-green-500 text-white px-3 py-1 rounded-lg">
-                              <span>판매 대기중</span>
-                            </div>
 
-                            {/* 최근 거래내역 */}
-                            {/* seller?.buyOrder */}
-                            {seller.seller?.buyOrder && (
-                              <div className="w-full flex flex-col items-start justify-center gap-1
-                              border-t border-zinc-300 pt-2
-                              ">
-                                <span className="text-sm font-semibold">
-                                  최근 거래내역
+                          {/* 최근 거래내역 */}
+                          {/* seller?.buyOrder */}
+                          {seller.seller?.buyOrder && (
+                            <div className="w-full flex flex-col items-start justify-center gap-1
+                            border-t border-zinc-300 pt-2
+                            ">
+                              <span className="text-sm font-semibold">
+                                최근 거래내역
+                              </span>
+                              <div className="w-full flex flex-row items-center justify-start gap-2">
+                                <span className="text-sm">
+                                  상태:
                                 </span>
-                                <div className="w-full flex flex-row items-center justify-start gap-2">
-                                  <span className="text-sm">
-                                    상태:
-                                  </span>
-                                  <span className="text-sm font-semibold">
-                                    {seller.seller?.buyOrder?.status === 'completed' ? '거래완료' :
-                                     seller.seller?.buyOrder?.status === 'paymentConfirmed' ? 'USDT전송완료' :
-                                     seller.seller?.buyOrder?.status === 'paymentRequested' ? '입금확인중' :
-                                     seller.seller?.buyOrder?.status === 'ordered' ? '입금대기중' :
-                                     '알수없음'
-                                    }
-                                  </span>
-                                </div>
-                                <div className="w-full flex flex-row items-center justify-start gap-2">
-                                  <span className="text-sm">
-                                    거래시간:
-                                  </span>
-                                  <span className="text-sm font-semibold">
-                                    {seller.seller?.buyOrder?.createdAt ? new Date(seller.seller?.buyOrder?.createdAt).toLocaleString() : ''}
-                                  </span>
-                                </div>
+                                <span className="text-sm font-semibold">
+                                  {seller.seller?.buyOrder?.status === 'completed' ? '거래완료' :
+                                    seller.seller?.buyOrder?.status === 'paymentConfirmed' ? 'USDT전송완료' :
+                                    seller.seller?.buyOrder?.status === 'paymentRequested' ? '입금확인중' :
+                                    seller.seller?.buyOrder?.status === 'ordered' ? '입금대기중' :
+                                    '알수없음'
+                                  }
+                                </span>
                               </div>
-                            )}
+                              <div className="w-full flex flex-row items-center justify-start gap-2">
+                                <span className="text-sm">
+                                  거래시간:
+                                </span>
+                                <span className="text-sm font-semibold">
+                                  {seller.seller?.buyOrder?.createdAt ? new Date(seller.seller?.buyOrder?.createdAt).toLocaleString() : ''}
+                                </span>
+                              </div>
+                            </div>
+                          )}
 
-                          </div>
-                        )}
-                      </span>
+                        </div>
+                      )}
+
 
                       {seller.seller?.buyOrder?.status === 'paymentRequested'
                       || (seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
@@ -4525,23 +4555,12 @@ const fetchBuyOrders = async () => {
                                 toast.success(Copied_Wallet_Address);
                               } }
                             >
-                              {seller.seller?.buyOrder?.walletAddress.substring(0, 6)}...{seller.seller?.buyOrder?.walletAddress.substring(seller.seller?.buyOrder?.walletAddress.length - 4)}
+                              {seller.seller?.buyOrder?.walletAddress.substring(0, 6)}...
                             </button>
                           </div>
-                          {/* 구매주문번호 */}
+
                           <span className="text-sm">
-                            구매주문번호: #<button
-                                className="text-sm text-zinc-600 underline"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(seller.seller?.buyOrder?.tradeId);
-                                  toast.success('구매주문번호가 복사되었습니다.');
-                                } }
-                              >
-                                {seller.seller?.buyOrder?.tradeId}
-                              </button>
-                          </span>
-                          <span className="text-sm">
-                            구매주문시간: {seller.seller?.buyOrder?.createdAt ? new Date(seller.seller?.buyOrder?.createdAt).toLocaleString() : ''}
+                            주문시간: {seller.seller?.buyOrder?.createdAt ? new Date(seller.seller?.buyOrder?.createdAt).toLocaleString() : ''}
                           </span>
                           <span className="text-sm">
                             {Buy_Amount}(USDT): {seller.seller?.buyOrder?.usdtAmount}
