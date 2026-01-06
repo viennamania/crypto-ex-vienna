@@ -4277,7 +4277,7 @@ const fetchBuyOrders = async () => {
                       // seller.currentUsdtBalanceChanged
                       className={`
                       w-56
-                      flex flex-row items-start justify-center gap-2
+                      flex flex-col items-start justify-center gap-2
                       p-2
                       border border-zinc-300 rounded-lg
                       ${seller.currentUsdtBalanceChanged ? 'bg-green-100/70 animate-pulse' : ''}
@@ -4285,30 +4285,31 @@ const fetchBuyOrders = async () => {
                     >
 
 
-
-                      <Image
-                        src="/icon-seller.png"
-                        alt="Seller"
-                        width={20}
-                        height={20}
-                        className="w-6 h-6 rounded-lg object-cover"
-                      />
+                      <div className="flex flex-row items-center justify-start gap-2">
+                        <Image
+                          src="/icon-seller.png"
+                          alt="Seller"
+                          width={20}
+                          height={20}
+                          className="w-6 h-6 rounded-lg object-cover"
+                        />
+                          <div className="w-full flex flex-col items-start justify-center gap-0">
+                              <span className="text-lg font-semibold text-zinc-700">
+                                {seller.nickname}
+                              </span>
+                              <button
+                                className="text-sm text-zinc-600 underline"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(seller.walletAddress);
+                                  toast.success(Copied_Wallet_Address);
+                                } }
+                              >
+                                {seller.walletAddress.substring(0, 6)}...{seller.walletAddress.substring(seller.walletAddress.length - 4)}
+                              </button>
+                          </div>
+                      </div>
+                      
                       <div className="w-full flex flex-col items-start justify-center gap-2">
-
-                        <div className="w-full flex flex-row items-center justify-start gap-2">
-                            <span className="text-lg font-semibold text-zinc-700">
-                              {seller.nickname}
-                            </span>
-                            <button
-                              className="text-sm text-zinc-600 underline"
-                              onClick={() => {
-                                navigator.clipboard.writeText(seller.walletAddress);
-                                toast.success(Copied_Wallet_Address);
-                              } }
-                            >
-                              {seller.walletAddress.substring(0, 6)}...{seller.walletAddress.substring(seller.walletAddress.length - 4)}
-                            </button>
-                        </div>
 
                         {/* top right fixed image escrow wallet icon */}
                         <div className="w-full flex flex-col items-start justify-center gap-2
@@ -4438,6 +4439,34 @@ const fetchBuyOrders = async () => {
                         )}
 
                       </div>
+
+                      {/* totalPaymentConfirmedCount
+                      totalPaymentConfirmedUsdtAmount
+                      totalPaymentConfirmedKrwAmount
+                      누적 거래 */}
+                      <div className="w-full flex flex-row items-center justify-between gap-2 mt-2
+                      p-2 bg-zinc-100 rounded-lg
+                      ">
+                        <span className="text-sm text-zinc-500">
+                          누적 거래
+                        </span>
+                        <div className="w-full flex flex-col items-end justify-center gap-1">
+                          <span className="text-lg font-semibold">
+                            {seller.seller?.totalPaymentConfirmedCount || 0} 건
+                          </span>
+                          <span className="text-lg font-semibold text-[#409192]"
+                            style={{ fontFamily: 'monospace' }}>
+                            {seller.seller?.totalPaymentConfirmedUsdtAmount
+                            && seller.seller?.totalPaymentConfirmedUsdtAmount.toLocaleString()} USDT
+                          </span>
+                          <span className="text-lg font-semibold text-yellow-600"
+                            style={{ fontFamily: 'monospace' }}>
+                            {seller.seller?.totalPaymentConfirmedKrwAmount
+                            && seller.seller?.totalPaymentConfirmedKrwAmount.toLocaleString()} 원
+                          </span>
+                        </div>
+                      </div>
+
                     </div>
 
                     {/* seller.buyOrder.status */}
