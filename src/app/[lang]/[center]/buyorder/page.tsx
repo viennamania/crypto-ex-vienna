@@ -3264,7 +3264,7 @@ const fetchBuyOrders = async () => {
 
                       <button
                         onClick={() => {
-                          router.push('/' + params.lang + '/administration/profile-settings');
+                          router.push('/' + params.lang + '/' + params.center + '/profile-settings');
                         }}
                         className="
                         items-center justify-center
