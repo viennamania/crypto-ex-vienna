@@ -4199,7 +4199,7 @@ const fetchBuyOrders = async () => {
                         </button>
                         */}
 
-                        {seller.seller?.buyOrder.status === 'paymentRequested' && (
+                        {seller.seller?.buyOrder?.status === 'paymentRequested' && (
                           <button
             
                             disabled={confirmingPayment[index]}
@@ -4227,7 +4227,6 @@ const fetchBuyOrders = async () => {
                                 seller.seller.buyOrder?.paymentMethod,
                               );
                             }}
-
                           >
                             <div className="flex flex-row gap-2 items-center justify-center">
                               { confirmingPayment[index] && (
