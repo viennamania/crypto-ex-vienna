@@ -4442,9 +4442,10 @@ const fetchBuyOrders = async () => {
                       {/* totalPaymentConfirmedCount
                       totalPaymentConfirmedUsdtAmount
                       totalPaymentConfirmedKrwAmount
-                      누적 거래 */}
+                      정상 거래 */}
+                      {/* green color for background */}
                       <div className="w-full flex flex-row items-center justify-between gap-2 mt-2
-                      p-2 bg-zinc-100 rounded-lg
+                      p-2 bg-green-100 rounded-lg
                       ">
                         <span className="text-sm text-zinc-500">
                           정상 거래
@@ -4467,8 +4468,9 @@ const fetchBuyOrders = async () => {
                       </div>
 
                       {/* 소명 거래 */}
+                      {/* red color for background */}
                       <div className="w-full flex flex-row items-center justify-between gap-2 mt-2
-                      p-2 bg-zinc-100 rounded-lg
+                      p-2 bg-red-100 rounded-lg
                       ">
                         <span className="text-sm text-zinc-500">
                           소명 거래
