@@ -4685,6 +4685,23 @@ const fetchBuyOrders = async () => {
                           </div>
                           )}
 
+                          {/* 입금완료시간 */}
+                          {seller.seller?.buyOrder?.paymentConfirmedAt && (
+                          <div className="w-full flex flex-row items-center justify-between gap-2">
+                            <span className="text-sm">
+                              입금완료시간:
+                            </span>
+                            <span className="text-sm">
+                              {new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getFullYear() + '-' +
+                                String(new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getMonth() + 1).padStart(2, '0') + '-' +
+                                String(new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getDate()).padStart(2, '0') + ' ' +
+                                String(new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getHours()).padStart(2, '0') + ':' +
+                                String(new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getMinutes()).padStart(2, '0')
+                              }
+                            </span>
+                          </div>
+                          )}
+                          
                           <span className="text-sm">
                             {Buy_Amount}(USDT): {seller.seller?.buyOrder?.usdtAmount}
                           </span>
