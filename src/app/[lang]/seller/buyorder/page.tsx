@@ -3578,13 +3578,39 @@ const fetchBuyOrders = async () => {
 
       // if seller.walletAddress of data.result.users is address,
       // then order first
+      // and others is ordered by seller.usdtToKrwRate ascending
+      /*
       const sortedSellers = data.result.users.sort((a: any, b: any) => {
         if (a.walletAddress === address) return -1;
         if (b.walletAddress === address) return 1;
         return 0;
       });
+      */
+      const sortedSellers = data.result.users;
+      const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
+        if (a.walletAddress === address) return -1;
+        if (b.walletAddress === address) return 1;
+        return a.seller?.usdtToKrwRate - b.seller?.usdtToKrwRate;
+      });
 
-      setSellersBalance(sortedSellers);
+
+      /*
+      // reorder status is 'accepted' first, then 'paymentRequested', then 'paymentConfirmed', then 'cancelled'
+      const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
+        const statusOrder = ['accepted', 'paymentRequested', 'paymentConfirmed', 'cancelled'];
+        const aStatusIndex = statusOrder.indexOf(a.status);
+        const bStatusIndex = statusOrder.indexOf(b.status);
+        return aStatusIndex - bStatusIndex;
+      });
+
+      // usdtToKrwRate ascending
+      finalSortedSellers.sort((a: any, b: any) => {
+        return a.usdtToKrwRate - b.usdtToKrwRate;
+      });
+      */
+      
+
+      setSellersBalance(finalSortedSellers);
 
     } else {
       console.error('Error fetching sellers balance');
@@ -4133,9 +4159,9 @@ const fetchBuyOrders = async () => {
           py-4
           ">
 
-            {/* title - 판매자별 에스크로 잔액 현황 */}
+            {/* title - 판매주문 */}
             <h2 className="text-2xl font-bold text-zinc-700">
-              판매자별 에스크로 잔액 현황
+              판매자 계정 현황
             </h2>
 
             {sellersBalance.length > 0 && (
@@ -4365,9 +4391,13 @@ const fetchBuyOrders = async () => {
                             </div>
 
                             {/* if balance is less than 10 USDT, show warning */}
-                            {currentUsdtBalanceArray[index] < 10 && (
+                            {currentUsdtBalanceArray[index] < 10 ? (
                               <div className="text-red-600 text-sm">
                                 Warning: Low escrow balance
+                              </div>
+                            ) : (
+                              <div className="text-green-600 text-sm">
+                                If you deposit more USDT, more orders will be assigned.
                               </div>
                             )}
 
@@ -4421,14 +4451,16 @@ const fetchBuyOrders = async () => {
                                 height={20}
                                 className="w-5 h-5"
                               />
-                              <div className="flex flex-col items-start justify-center gap-0">
+                              <div className="w-full flex flex-row items-center justify-between gap-2">
                                 <span className="text-sm">
-                                  판매금액(원/USDT):
+                                  판매금액<br/>(원/USDT):
                                 </span>
+
                                 <span className="text-2xl font-semibold text-yellow-600"
                                   style={{ fontFamily: 'monospace' }}>
                                   {seller.seller?.usdtToKrwRate.toLocaleString()}
                                 </span>
+
                               </div>
                             </div>
 
