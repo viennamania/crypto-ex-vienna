@@ -3664,6 +3664,44 @@ const fetchBuyOrders = async () => {
 
 
 
+  // updateUsdtToKrwRate
+  const [updatingUsdtToKrwRateArray, setUpdatingUsdtToKrwRateArray] = useState<boolean[]>([]);
+
+  const updateUsdtToKrwRate = async (index: number, sellerId: string, newRate: number) => {
+    try {
+
+      updatingUsdtToKrwRateArray[index] = true;
+      setUpdatingUsdtToKrwRateArray([...updatingUsdtToKrwRateArray]);
+
+      const response = await fetch('/api/user/updateUsdtToKrwRate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sellerId,
+          newRate,
+        }),
+      });
+      const data = await response.json();
+      //console.log('updateUsdtToKrwRate data', data);
+      if (data.result) {
+        toast.success('USDT to KRW rate has been updated');
+        // refresh sellers balance
+        fetchSellersBalance();
+      } else {
+        toast.error('Failed to update USDT to KRW rate');
+      }
+    } catch (error) {
+      console.error('Error updating USDT to KRW rate:', error);
+      toast.error('Failed to update USDT to KRW rate');
+    }
+
+    updatingUsdtToKrwRateArray[index] = false;
+    setUpdatingUsdtToKrwRateArray([...updatingUsdtToKrwRateArray]);
+  };
+
+
 
   if (!address) {
     return (
@@ -4461,6 +4499,61 @@ const fetchBuyOrders = async () => {
                                   {seller.seller?.usdtToKrwRate.toLocaleString()}
                                 </span>
 
+                                <div className="w-full flex flex-col items-end justify-center gap-0">
+                                  {/* up button */}
+                                  {
+                                  seller.walletAddress === address &&
+                                  seller.seller?.buyOrder?.status !== 'ordered'
+                                  && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
+                                    <button
+                                      onClick={() => {
+                                        updateUsdtToKrwRate(
+                                          index,
+                                          seller.seller._id,
+                                          seller.seller.usdtToKrwRate + 1,
+                                        );
+                                      }}
+                                      disabled={updatingUsdtToKrwRateArray[index]}
+                                      className={`
+                                        ${updatingUsdtToKrwRateArray[index]
+                                        ? 'text-gray-400 cursor-not-allowed'
+                                        : 'text-green-600 hover:text-green-700 hover:shadow-green-500/50 cursor-pointer'
+                                        }
+                                      `}
+                                    >
+                                      ▲
+                                    </button>
+                                  )}
+
+
+
+                                  {/* down button */}
+                                  {
+                                  seller.walletAddress === address &&
+                                  seller.seller?.buyOrder?.status !== 'ordered'
+                                  && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
+                                    <button
+                                      onClick={() => {
+                                        updateUsdtToKrwRate(
+                                          index,
+                                          seller.seller._id,
+                                          seller.seller.usdtToKrwRate - 1,
+                                        );
+                                      }}
+                                      disabled={updatingUsdtToKrwRateArray[index]}
+                                      className={`
+                                        ${updatingUsdtToKrwRateArray[index]
+                                        ? 'text-gray-400 cursor-not-allowed'
+                                        : 'text-red-600 hover:text-red-700 hover:shadow-red-500/50 cursor-pointer'
+                                        }
+                                      `}
+                                    >
+                                      ▼
+                                    </button>
+                                  )}
+
+                                </div>
+
                               </div>
                             </div>
 
@@ -4478,13 +4571,16 @@ const fetchBuyOrders = async () => {
                       <div className="w-full flex flex-row items-center justify-between gap-2 mt-2
                       p-2 bg-green-100 rounded-lg
                       ">
-                        <span className="text-sm text-zinc-500">
-                          정상 거래
-                        </span>
-                        <div className="w-full flex flex-col items-end justify-center gap-1">
+                        <div className="flex flex-col items-start justify-center gap-0">
+                          <span className="text-sm text-zinc-500">
+                            정상 거래
+                          </span>
                           <span className="text-lg font-semibold">
                             {seller.seller?.totalPaymentConfirmedCount || 0} 건
                           </span>
+                        </div>
+                        <div className="w-full flex flex-col items-end justify-center gap-1">
+
                           <span className="text-lg font-semibold text-[#409192]"
                             style={{ fontFamily: 'monospace' }}>
                             {seller.seller?.totalPaymentConfirmedUsdtAmount
@@ -4500,16 +4596,18 @@ const fetchBuyOrders = async () => {
 
                       {/* 소명 거래 */}
                       {/* red color for background */}
-                      <div className="w-full flex flex-row items-center justify-between gap-2 mt-2
+                      <div className="w-full flex flex-row items-center justify-between gap-2
                       p-2 bg-red-100 rounded-lg
                       ">
-                        <span className="text-sm text-zinc-500">
-                          소명 거래
-                        </span>
-                        <div className="w-full flex flex-col items-end justify-center gap-1">
+                        <div className="flex flex-col items-start justify-center gap-0">
+                          <span className="text-sm text-zinc-500">
+                            소명 거래
+                          </span>
                           <span className="text-lg font-semibold">
                             {seller.seller?.totalDisputeResolvedCount || 0} 건
                           </span>
+                        </div>
+                        <div className="w-full flex flex-col items-end justify-center gap-1">
                           <span className="text-lg font-semibold text-[#409192]"
                             style={{ fontFamily: 'monospace' }}>
                             {seller.seller?.totalDisputeResolvedUsdtAmount
