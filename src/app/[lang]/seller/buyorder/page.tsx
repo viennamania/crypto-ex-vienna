@@ -4650,9 +4650,41 @@ const fetchBuyOrders = async () => {
                             </div>
                           </div>
 
-                          <span className="text-sm">
-                            주문시간: {seller.seller?.buyOrder?.createdAt ? new Date(seller.seller?.buyOrder?.createdAt).toLocaleString() : ''}
-                          </span>
+                          <div className="w-full flex flex-row items-center justify-between gap-2">
+                            <span className="text-sm">
+                              주문시간:
+                            </span>
+                            <span className="text-sm">
+                              {seller.seller?.buyOrder?.createdAt ?
+                                // format date to day time string YYYY-MM-DD HH:mm
+                                new Date(seller.seller?.buyOrder?.createdAt).getFullYear() + '-' +
+                                String(new Date(seller.seller?.buyOrder?.createdAt).getMonth() + 1).padStart(2, '0') + '-' +
+                                String(new Date(seller.seller?.buyOrder?.createdAt).getDate()).padStart(2, '0') + ' ' +
+                                String(new Date(seller.seller?.buyOrder?.createdAt).getHours()).padStart(2, '0') + ':' +
+                                String(new Date(seller.seller?.buyOrder?.createdAt).getMinutes()).padStart(2, '0')
+                                : ''
+                              }
+                            </span>
+                          </div>
+
+                          {/* seller.seller.buyOrder.paymentRequestedAt */}
+                          {/* if paymentRequestedAt exists, show the time */}
+                          {seller.seller?.buyOrder?.paymentRequestedAt && (
+                          <div className="w-full flex flex-row items-center justify-between gap-2">
+                            <span className="text-sm">
+                              입금요청시간:
+                            </span>
+                            <span className="text-sm">
+                              {new Date(seller.seller?.buyOrder?.paymentRequestedAt).getFullYear() + '-' +
+                                String(new Date(seller.seller?.buyOrder?.paymentRequestedAt).getMonth() + 1).padStart(2, '0') + '-' +
+                                String(new Date(seller.seller?.buyOrder?.paymentRequestedAt).getDate()).padStart(2, '0') + ' ' +
+                                String(new Date(seller.seller?.buyOrder?.paymentRequestedAt).getHours()).padStart(2, '0') + ':' +
+                                String(new Date(seller.seller?.buyOrder?.paymentRequestedAt).getMinutes()).padStart(2, '0')
+                              }
+                            </span>
+                          </div>
+                          )}
+
                           <span className="text-sm">
                             {Buy_Amount}(USDT): {seller.seller?.buyOrder?.usdtAmount}
                           </span>
