@@ -32,6 +32,8 @@ export async function POST(request: NextRequest) {
 
   const { storecode, walletAddress, usdtToKrwRate } = body;
 
+  //console.log('updateSellerUsdtToKrwRate body:', body);
+
 
   const result = await updateSellerUsdtToKrwRate({
     storecode: storecode,

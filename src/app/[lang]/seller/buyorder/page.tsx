@@ -3673,14 +3673,19 @@ const fetchBuyOrders = async () => {
       updatingUsdtToKrwRateArray[index] = true;
       setUpdatingUsdtToKrwRateArray([...updatingUsdtToKrwRateArray]);
 
-      const response = await fetch('/api/user/updateUsdtToKrwRate', {
+      const response = await fetch('/api/user/updateSellerUsdtToKrwRate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sellerId,
-          newRate,
+
+          storecode: "admin",
+          walletAddress: address,
+          usdtToKrwRate: newRate,
+
+          //sellerId,
+          //newRate,
         }),
       });
       const data = await response.json();
@@ -4723,6 +4728,11 @@ const fetchBuyOrders = async () => {
                               />
                               <span>{seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 전송중</span>
                             </div>
+
+                            {/* USDT 전송이 환료된후에 판매 대기중으로 변경됩니다. */}
+                            <span className="text-sm text-zinc-600">
+                              USDT 전송이 완료된후에 판매 대기중으로 변경됩니다.
+                            </span>
 
                           </div>
 
