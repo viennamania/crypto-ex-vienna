@@ -4079,7 +4079,7 @@ const fetchBuyOrders = async () => {
             {buyOrderStats.totalByBuyerDepositName?.map((item, index) => (
               <div
                 key={index}
-                className={`flex flex-col gap-1 items-center
+                className={`w-full flex flex-col items-start justify-center gap-2
                 p-2 rounded-lg shadow-md
                 backdrop-blur-md
                 ${buyerDisplayValueArray && buyerDisplayValueArray[index] !== undefined && buyerDisplayValueArray[index] !== item.totalKrwAmount
@@ -4095,30 +4095,21 @@ const fetchBuyOrders = async () => {
                     height={30}
                     className="w-6 h-6"
                   />          
-                  <button
-                    className="text-lg font-semibold underline text-blue-600"
-                    onClick={() => {
-                      const depositName = item._id || '알수없음';
-                      navigator.clipboard.writeText(depositName)
-                        .then(() => {
-                          toast.success(`입금자명 ${depositName} 복사됨`);
-                        })
-                        .catch((err) => {
-                          toast.error('복사 실패: ' + err);
-                        });
-                    }}
-                    title="입금자명 복사"
-                  >
-                    {item._id || '알수없음'}
-                  </button>
+                  {item._id.length > 1 ? item._id.slice(0, 1) + '*' .repeat(item._id.length - 1) : item._id}  
                 </div>
                 <div className="w-full flex flex-row items-center justify-between gap-1">
-                  <span className="text-lg text-zinc-500">
-                    {item.totalCount?.toLocaleString() || '0'}
+                  <span className="text-sm text-zinc-500">
+                    {item.totalCount?.toLocaleString() || '0'}건
                   </span>
-                  <span className="text-lg text-yellow-600"
+                  ｜
+                  <span className="text-sm text-green-600"
                     style={{ fontFamily: 'monospace' }}>
-                    {(item.totalKrwAmount || 0).toLocaleString()}
+                    {(item.totalUsdtAmount || 0).toLocaleString()}테더
+                  </span>
+                  ｜
+                  <span className="text-sm text-yellow-600"
+                    style={{ fontFamily: 'monospace' }}>
+                    {(item.totalKrwAmount || 0).toLocaleString()}원
                   </span>
                 </div>
               </div>
