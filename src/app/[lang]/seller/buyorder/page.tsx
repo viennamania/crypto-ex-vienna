@@ -4354,9 +4354,9 @@ const fetchBuyOrders = async () => {
 
                           </div>
 
-                          <div className="w-full flex flex-row items-center justify-between gap-2">
+                          <div className="w-full flex flex-col items-start justify-center gap-1">
 
-                            <div className="flex flex-row items-center justify-end gap-1">
+                            <div className="w-full flex flex-row items-center justify-between gap-2">
                               <Image
                                 src="/icon-tether.png"
                                 alt="USDT"
@@ -4373,6 +4373,14 @@ const fetchBuyOrders = async () => {
                                 }
                               </span>
                             </div>
+
+                            {/* if balance is less than 10 USDT, show warning */}
+                            {currentUsdtBalanceArray[index] < 10 && (
+                              <div className="text-red-600 text-sm">
+                                Warning: Low escrow balance
+                              </div>
+                            )}
+
                           </div>
 
                           
@@ -4448,7 +4456,7 @@ const fetchBuyOrders = async () => {
                       p-2 bg-zinc-100 rounded-lg
                       ">
                         <span className="text-sm text-zinc-500">
-                          누적 거래
+                          정상 거래
                         </span>
                         <div className="w-full flex flex-col items-end justify-center gap-1">
                           <span className="text-lg font-semibold">
@@ -4463,6 +4471,30 @@ const fetchBuyOrders = async () => {
                             style={{ fontFamily: 'monospace' }}>
                             {seller.seller?.totalPaymentConfirmedKrwAmount
                             && seller.seller?.totalPaymentConfirmedKrwAmount.toLocaleString()} 원
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 소명 거래 */}
+                      <div className="w-full flex flex-row items-center justify-between gap-2 mt-2
+                      p-2 bg-zinc-100 rounded-lg
+                      ">
+                        <span className="text-sm text-zinc-500">
+                          소명 거래
+                        </span>
+                        <div className="w-full flex flex-col items-end justify-center gap-1">
+                          <span className="text-lg font-semibold">
+                            {seller.seller?.totalDisputeResolvedCount || 0} 건
+                          </span>
+                          <span className="text-lg font-semibold text-[#409192]"
+                            style={{ fontFamily: 'monospace' }}>
+                            {seller.seller?.totalDisputeResolvedUsdtAmount
+                            && seller.seller?.totalDisputeResolvedUsdtAmount.toLocaleString()} USDT
+                          </span>
+                          <span className="text-lg font-semibold text-yellow-600"
+                            style={{ fontFamily: 'monospace' }}>
+                            {seller.seller?.totalDisputeResolvedKrwAmount
+                            && seller.seller?.totalDisputeResolvedKrwAmount.toLocaleString()} 원
                           </span>
                         </div>
                       </div>
@@ -4576,10 +4608,19 @@ const fetchBuyOrders = async () => {
 
                       ) : (
                         <div className="w-full flex flex-col items-start justify-center gap-2">
-                          <div className="flex flex-row items-center gap-2
-                          bg-green-500 text-white px-3 py-1 rounded-lg">
-                            <span>판매 대기중</span>
-                          </div>
+                          
+                          {/* if balance is greater than or equal to 10 USDT, show 판매 대기중 */}
+                          {currentUsdtBalanceArray[index] >= 10 ? (
+                            <div className="flex flex-row items-center gap-2
+                            bg-green-500 text-white px-3 py-1 rounded-lg">
+                              <span>판매 대기중</span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-row items-center gap-2
+                            bg-red-500 text-white px-3 py-1 rounded-lg">
+                              <span>에스크로 잔액 부족</span>
+                            </div>
+                          )}
 
                           {/* 최근 거래내역 */}
                           {/* seller?.buyOrder */}
@@ -4701,7 +4742,7 @@ const fetchBuyOrders = async () => {
                             </span>
                           </div>
                           )}
-                          
+
                           <span className="text-sm">
                             {Buy_Amount}(USDT): {seller.seller?.buyOrder?.usdtAmount}
                           </span>
