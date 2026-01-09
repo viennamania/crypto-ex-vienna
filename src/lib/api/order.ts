@@ -52,6 +52,7 @@ export interface UserProps {
 
   walletAddress: string,
   walletPrivateKey: string,
+  isWeb3Wallet: boolean,
 
   tradeId: string,
 

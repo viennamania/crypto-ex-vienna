@@ -994,6 +994,7 @@ export default function Index({ params }: any) {
   const [buyOrders, setBuyOrders] = useState<BuyOrder[]>([]);
 
 
+
   /*
   getAllBuyOrders result totalCount 367
 getAllBuyOrders result totalKrwAmount 91645000
@@ -1236,153 +1237,153 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
     } , [buyOrders, user]);
     */
 
-    const [smsReceiverMobileNumber, setSmsReceiverMobileNumber] = useState('');
-    useEffect(() => {
-        setSmsReceiverMobileNumber(phoneNumber);
-    } , [phoneNumber]);
+  const [smsReceiverMobileNumber, setSmsReceiverMobileNumber] = useState('');
+  useEffect(() => {
+      setSmsReceiverMobileNumber(phoneNumber);
+  } , [phoneNumber]);
 
 
 
-    const acceptBuyOrder = (
-      index: number,
-      orderId: string,
-      smsNumber: string,
+  const acceptBuyOrder = (
+    index: number,
+    orderId: string,
+    smsNumber: string,
 
-      tradeId: string,
-      walletAddress: string,
-    ) => {
+    tradeId: string,
+    walletAddress: string,
+  ) => {
 
-        if (!address) {
-            toast.error('Please connect your wallet');
-            return;
-        }
-
-        /*
-        if (!escrowWalletAddress || escrowWalletAddress === '') {
-          toast.error('에스크로 지갑이 없습니다.');
+      if (!address) {
+          toast.error('Please connect your wallet');
           return;
-        }
-        */
+      }
 
-        setAcceptingBuyOrder (
-          acceptingBuyOrder.map((item, idx) => idx === index ? true : item)
-        );
+      /*
+      if (!escrowWalletAddress || escrowWalletAddress === '') {
+        toast.error('에스크로 지갑이 없습니다.');
+        return;
+      }
+      */
 
-
-        fetch('/api/order/acceptBuyOrder', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                lang: params.lang,
-                storecode: "admin",
-                orderId: orderId,
-                sellerWalletAddress: address,
-                sellerStorecode: "admin",
-
-                /*
-                sellerNickname: user ? user.nickname : '',
-                sellerAvatar: user ? user.avatar : '',
-
-                //buyerMobile: user.mobile,
-
-                sellerMobile: smsNumber,
-                */
+      setAcceptingBuyOrder (
+        acceptingBuyOrder.map((item, idx) => idx === index ? true : item)
+      );
 
 
+      fetch('/api/order/acceptBuyOrder', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+              lang: params.lang,
+              storecode: "admin",
+              orderId: orderId,
+              sellerWalletAddress: address,
+              sellerStorecode: "admin",
 
-                seller: user?.seller,
+              /*
+              sellerNickname: user ? user.nickname : '',
+              sellerAvatar: user ? user.avatar : '',
 
-                tradeId: tradeId,
-                buyerWalletAddress: walletAddress,
+              //buyerMobile: user.mobile,
 
-            }),
-        })
-        .then(response => response.json())
-        .then(data => {
-
-            console.log('data', data);
-
-            //setBuyOrders(data.result.orders);
-            //openModal();
-
-            toast.success(Order_accepted_successfully);
-
-            playSong();
+              sellerMobile: smsNumber,
+              */
 
 
 
-            fetch('/api/order/getAllBuyOrders', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(
-                  {
-                    storecode: searchStorecode,
-                    limit: Number(limitValue),
-                    page: Number(pageValue),
-                    walletAddress: address,
-                    searchMyOrders: searchMyOrders,
-                    searchOrderStatusCancelled: searchOrderStatusCancelled,
-                    searchOrderStatusCompleted: searchOrderStatusCompleted,
+              seller: user?.seller,
 
-                    searchStoreName: searchStoreName,
+              tradeId: tradeId,
+              buyerWalletAddress: walletAddress,
 
-                    fromDate: searchFromDate,
-                    toDate: searchToDate,
+          }),
+      })
+      .then(response => response.json())
+      .then(data => {
 
-                  }
-                ),
-            })
-            .then(response => response.json())
-            .then(data => {
-                ///console.log('data', data);
-                setBuyOrders(data.result.orders);
+          console.log('data', data);
 
-                //setTotalCount(data.result.totalCount);
+          //setBuyOrders(data.result.orders);
+          //openModal();
 
-                setBuyOrderStats({
-                  totalCount: data.result.totalCount,
-                  totalKrwAmount: data.result.totalKrwAmount,
-                  totalUsdtAmount: data.result.totalUsdtAmount,
-                  totalSettlementCount: data.result.totalSettlementCount,
-                  totalSettlementAmount: data.result.totalSettlementAmount,
-                  totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-                  totalFeeAmount: data.result.totalFeeAmount,
-                  totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-                  totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-                  totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+          toast.success(Order_accepted_successfully);
 
-                  totalByBuyerDepositName: data.result.totalByBuyerDepositName,
-                  totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
-                });
-
-            })
+          playSong();
 
 
 
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-        })
-        .finally(() => {
+          fetch('/api/order/getAllBuyOrders', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(
+                {
+                  storecode: searchStorecode,
+                  limit: Number(limitValue),
+                  page: Number(pageValue),
+                  walletAddress: address,
+                  searchMyOrders: searchMyOrders,
+                  searchOrderStatusCancelled: searchOrderStatusCancelled,
+                  searchOrderStatusCompleted: searchOrderStatusCompleted,
+
+                  searchStoreName: searchStoreName,
+
+                  fromDate: searchFromDate,
+                  toDate: searchToDate,
+
+                }
+              ),
+          })
+          .then(response => response.json())
+          .then(data => {
+              ///console.log('data', data);
+              setBuyOrders(data.result.orders);
+
+              //setTotalCount(data.result.totalCount);
+
+              setBuyOrderStats({
+                totalCount: data.result.totalCount,
+                totalKrwAmount: data.result.totalKrwAmount,
+                totalUsdtAmount: data.result.totalUsdtAmount,
+                totalSettlementCount: data.result.totalSettlementCount,
+                totalSettlementAmount: data.result.totalSettlementAmount,
+                totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
+                totalFeeAmount: data.result.totalFeeAmount,
+                totalFeeAmountKRW: data.result.totalFeeAmountKRW,
+                totalAgentFeeAmount: data.result.totalAgentFeeAmount,
+                totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+
+                totalByBuyerDepositName: data.result.totalByBuyerDepositName,
+                totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
+              });
+
+          })
 
 
-            setAgreementForTrade (
-              agreementForTrade.map((item, idx) => idx === index ? false : item)
-            );
+
+      })
+      .catch((error) => {
+          console.error('Error:', error);
+      })
+      .finally(() => {
 
 
-            setAcceptingBuyOrder (
-                acceptingBuyOrder.map((item, idx) => idx === index ? false : item)
-            );
-
-        } );
+          setAgreementForTrade (
+            agreementForTrade.map((item, idx) => idx === index ? false : item)
+          );
 
 
-    }
+          setAcceptingBuyOrder (
+              acceptingBuyOrder.map((item, idx) => idx === index ? false : item)
+          );
+
+      } );
+
+
+  }
 
 
 
@@ -3713,6 +3714,8 @@ const fetchBuyOrders = async () => {
 
   const [upbitUsdtToKrwRate, setUpbitUsdtToKrwRate] = useState(0);
   const [upbitUsdtToKrwRateTimestamp, setUpbitUsdtToKrwRateTimestamp] = useState(0);
+  const [TradeDateKst, setTradeDateKst] = useState<any>(null);
+  const [TradeTimeKst, setTradeTimeKst] = useState<string>('');
   const [loadingUpbitRate, setLoadingUpbitRate] = useState(false);
   useEffect(() => {
     const fetchUpbitRate = async () => {
@@ -3765,6 +3768,8 @@ const fetchBuyOrders = async () => {
       if (data.data && data.data.length > 0) {
         setUpbitUsdtToKrwRate(data.data[0].trade_price);
         setUpbitUsdtToKrwRateTimestamp(data.data[0].trade_timestamp);
+        setTradeDateKst(data.data[0].trade_date_kst);
+        setTradeTimeKst(data.data[0].trade_time_kst);
       }
 
       setLoadingUpbitRate(false);
@@ -4296,7 +4301,6 @@ const fetchBuyOrders = async () => {
           <div className="w-full flex flex-row items-center justify-end gap-2
             mt-2
             ">
-
             <Image
               src="/icon-upbit.png"
               alt="Upbit"
@@ -4311,8 +4315,19 @@ const fetchBuyOrders = async () => {
               </span>
             </span>
             <span className="text-sm text-zinc-500">
-              {upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''}
+              {
+                //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
+              
+                TradeDateKst && TradeTimeKst ? `${TradeDateKst.slice(0,4)}-${TradeDateKst.slice(4,6)}-${TradeDateKst.slice(6,8)} ${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
+              }
             </span>
+            <Image
+              src="/icon-live.gif"
+              alt="Live"
+              width={30}
+              height={30}
+              className="w-8 h-8 object-cover"
+            />
           </div>
           
           
@@ -4787,6 +4802,7 @@ const fetchBuyOrders = async () => {
                     {/* seller.buyOrder.status */}
                     {/* seller.buyOrder.nickname => 구매자 아이디 */}
                     {/* seller.buyOrder.walletAddress => 구매자 USDT지갑 */}
+                    {/* seller.buyOrder.isWeb3Wallet => 구매자 지갑타입 */}
                     {/* seller.buyOrder.paymentRequestedAt */}
                     {/* seller.buyOrder.usdtAmount => 구매량 */}
                     {/* seller.buyOrder.krwAmount => 구매금액 */}
@@ -5006,6 +5022,19 @@ const fetchBuyOrders = async () => {
                                 {seller.seller?.buyOrder?.walletAddress.substring(0, 6)}...{seller.seller?.buyOrder?.walletAddress.substring(seller.seller?.buyOrder?.walletAddress.length - 4)}
                               </button>
                             </div>
+
+                            {/* isWeb3Wallet is false, 결제용 지갑 */}
+                            {seller.seller?.buyOrder?.isWeb3Wallet ? (
+                              <span className="text-sm">
+                                (Web3 지갑)
+                              </span>
+                            ) : (
+                              <span className="text-sm">
+                                (결제용 지갑)
+                              </span>
+                            )}
+
+
                           </div>
 
                           <div className="w-full flex flex-row items-center justify-between gap-2">
