@@ -4760,21 +4760,60 @@ const fetchBuyOrders = async () => {
                           <div className="w-full flex flex-col items-start justify-center gap-1">
 
                             <div className="w-full flex flex-row items-center justify-between gap-2">
-                              <Image
-                                src="/icon-tether.png"
-                                alt="USDT"
-                                width={30}
-                                height={30}
-                                className="w-6 h-6"
-                              />
-                              <span className="text-2xl text-[#409192] font-semibold"
-                                style={{ fontFamily: 'monospace' }}>
-                                {
-                                  //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                                  currentUsdtBalanceArray[index]?.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 
-                                }
-                              </span>
+                              <div className="w-full flex flex-row items-center justify-right gap-2">
+                                <Image
+                                  src="/icon-tether.png"
+                                  alt="USDT"
+                                  width={20}
+                                  height={20}
+                                  className="w-5 h-5"
+                                />
+                                <span className="text-lg text-[#409192]"
+                                  style={{ fontFamily: 'monospace' }}>
+                                  {
+                                    //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                                    currentUsdtBalanceArray[index]?.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+
+                                  }
+                                </span>
+                              </div>
+
+                              {seller.walletAddress === address && (
+                                <div className="w-28 flex flex-col items-center justify-center gap-1">
+                                  {/* 충전금액 입력 */}
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    placeholder="충전금액"
+                                    className="w-full border border-zinc-300 rounded-lg p-1 text-xs text-center
+                                    focus:outline-none focus:ring-2 focus:ring-blue-500
+                                    "
+                                  />
+
+                                  {/* 충전하기 버튼 */}
+                                  <button
+                                    onClick={() => {
+                                      /*
+                                      const inputElement = document.querySelectorAll('input')[index];
+                                      const amount = Number(inputElement.value);
+                                      if (amount >= 1) {
+                                        router.push('/' + params.lang + '/seller/deposit-usdt?amount=' + amount);
+                                      } else {
+                                        toast.error('충전금액은 1 USDT 이상이어야 합니다.');
+                                      }
+                                      */
+                                    }}
+                                    className="w-full text-xs text-white bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded-lg
+                                    bg-shadow-md hover:shadow-blue-500/50
+                                    border border-blue-600
+                                    "
+                                  >
+                                    충전하기
+                                  </button>
+                                </div>
+                              )}
+
                             </div>
 
                             {/* if balance is less than 10 USDT, show warning */}
@@ -4829,62 +4868,73 @@ const fetchBuyOrders = async () => {
 
                       </div>
 
-                      {/* totalPaymentConfirmedCount
-                      totalPaymentConfirmedUsdtAmount
-                      totalPaymentConfirmedKrwAmount
-                      정상 거래 */}
-                      {/* green color for background */}
-                      <div className="w-full flex flex-row items-center justify-between gap-2 mt-2
-                      p-2 bg-green-100 rounded-lg
-                      ">
-                        <div className="flex flex-col items-start justify-center gap-0">
-                          <span className="text-sm text-zinc-500">
-                            정상 거래
-                          </span>
-                          <span className="text-lg font-semibold">
-                            {seller.seller?.totalPaymentConfirmedCount || 0} 건
-                          </span>
-                        </div>
-                        <div className="w-full flex flex-col items-end justify-center gap-1">
+                      {/* if seller.walletAddress is equal to address, hide this section */}
+                      <div className={
+                        `${seller.walletAddress === address ? 'hidden' : 'w-full flex flex-col items-start justify-center gap-2'}`
+                      }>
 
-                          <span className="text-lg font-semibold text-[#409192]"
-                            style={{ fontFamily: 'monospace' }}>
-                            {seller.seller?.totalPaymentConfirmedUsdtAmount
-                            && seller.seller?.totalPaymentConfirmedUsdtAmount.toLocaleString()} USDT
-                          </span>
-                          <span className="text-lg font-semibold text-yellow-600"
-                            style={{ fontFamily: 'monospace' }}>
-                            {seller.seller?.totalPaymentConfirmedKrwAmount
-                            && seller.seller?.totalPaymentConfirmedKrwAmount.toLocaleString()} 원
-                          </span>
-                        </div>
-                      </div>
+                        {/* totalPaymentConfirmedCount
+                        totalPaymentConfirmedUsdtAmount
+                        totalPaymentConfirmedKrwAmount
+                        정상 거래 */}
+                        {/* green color for background */}
+                        <div className="w-full flex flex-row items-center justify-between gap-2 mt-2
+                        p-2 bg-green-100 rounded-lg
+                        ">
+                          <div className="flex flex-col items-start justify-center gap-0">
+                            <span className="text-sm text-zinc-500">
+                              정상 거래
+                            </span>
+                            <span className="text-lg">
+                              {seller.seller?.totalPaymentConfirmedCount || 0} 건
+                            </span>
+                          </div>
+                          <div className="w-full flex flex-col items-end justify-center gap-1">
 
-                      {/* 중재 거래 */}
-                      {/* red color for background */}
-                      <div className="w-full flex flex-row items-center justify-between gap-2
-                      p-2 bg-red-100 rounded-lg
-                      ">
-                        <div className="flex flex-col items-start justify-center gap-0">
-                          <span className="text-sm text-zinc-500">
-                            중재 거래
-                          </span>
-                          <span className="text-lg font-semibold">
-                            {seller.seller?.totalDisputeResolvedCount || 0} 건
-                          </span>
+                            <span className="text-lg text-[#409192]"
+                              style={{ fontFamily: 'monospace' }}>
+                              {seller.seller?.totalPaymentConfirmedUsdtAmount
+                              && seller.seller?.totalPaymentConfirmedUsdtAmount.toLocaleString()} USDT
+                            </span>
+                            <span className="text-lg text-yellow-600"
+                              style={{ fontFamily: 'monospace' }}>
+                              {seller.seller?.totalPaymentConfirmedKrwAmount
+                              && seller.seller?.totalPaymentConfirmedKrwAmount.toLocaleString()} 원
+                            </span>
+                          </div>
                         </div>
-                        <div className="w-full flex flex-col items-end justify-center gap-1">
-                          <span className="text-lg font-semibold text-[#409192]"
-                            style={{ fontFamily: 'monospace' }}>
-                            {seller.seller?.totalDisputeResolvedUsdtAmount
-                            && seller.seller?.totalDisputeResolvedUsdtAmount.toLocaleString()} USDT
-                          </span>
-                          <span className="text-lg font-semibold text-yellow-600"
-                            style={{ fontFamily: 'monospace' }}>
-                            {seller.seller?.totalDisputeResolvedKrwAmount
-                            && seller.seller?.totalDisputeResolvedKrwAmount.toLocaleString()} 원
-                          </span>
+
+                        {/* 중재 거래 */}
+                        {/* red color for background */}
+                        <div className="w-full flex flex-row items-center justify-between gap-2
+                        p-2 bg-red-100 rounded-lg
+                        ">
+                          <div className="flex flex-col items-start justify-center gap-0">
+                            <span className="text-sm text-zinc-500">
+                              중재 거래
+                            </span>
+                            <span className="text-lg">
+                              {seller.seller?.totalDisputeResolvedCount || 0} 건
+                            </span>
+                          </div>
+                          <div className="w-full flex flex-col items-end justify-center gap-1">
+                            <span className="text-lg text-[#409192]"
+                              style={{ fontFamily: 'monospace' }}>
+                              {seller.seller?.totalDisputeResolvedUsdtAmount
+                              ? seller.seller?.totalDisputeResolvedUsdtAmount.toLocaleString()
+                              : '0'
+                              } USDT
+                            </span>
+                            <span className="text-lg text-yellow-600"
+                              style={{ fontFamily: 'monospace' }}>
+                              {seller.seller?.totalDisputeResolvedKrwAmount
+                              ? seller.seller?.totalDisputeResolvedKrwAmount.toLocaleString()
+                              : '0'
+                              } 원
+                            </span>
+                          </div>
                         </div>
+
                       </div>
 
                     </div>
@@ -5077,6 +5127,82 @@ const fetchBuyOrders = async () => {
                               </div>
                             </div>
                           )}
+
+
+
+                          {/* if seller.walletAddress is equal to address, show this section */}
+                          <div className={
+                            `${seller.walletAddress === address ? 'w-full flex flex-col items-start justify-center gap-2' : 'hidden'}`
+                          }>
+
+
+                            {/* totalPaymentConfirmedCount
+                            totalPaymentConfirmedUsdtAmount
+                            totalPaymentConfirmedKrwAmount
+                            정상 거래 */}
+                            {/* green color for background */}
+                            <div className="w-full flex flex-row items-center justify-between gap-2 mt-2
+                            p-2 bg-green-100 rounded-lg
+                            ">
+                              <div className="flex flex-col items-start justify-center gap-0">
+                                <span className="text-sm text-zinc-500">
+                                  정상 거래
+                                </span>
+                                <span className="text-lg">
+                                  {seller.seller?.totalPaymentConfirmedCount || 0} 건
+                                </span>
+                              </div>
+                              <div className="w-full flex flex-col items-end justify-center gap-1">
+
+                                <span className="text-lg text-[#409192]"
+                                  style={{ fontFamily: 'monospace' }}>
+                                  {seller.seller?.totalPaymentConfirmedUsdtAmount
+                                  && seller.seller?.totalPaymentConfirmedUsdtAmount.toLocaleString()} USDT
+                                </span>
+                                <span className="text-lg text-yellow-600"
+                                  style={{ fontFamily: 'monospace' }}>
+                                  {seller.seller?.totalPaymentConfirmedKrwAmount
+                                  && seller.seller?.totalPaymentConfirmedKrwAmount.toLocaleString()} 원
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* 중재 거래 */}
+                            {/* red color for background */}
+                            <div className="w-full flex flex-row items-center justify-between gap-2
+                            p-2 bg-red-100 rounded-lg
+                            ">
+                              <div className="flex flex-col items-start justify-center gap-0">
+                                <span className="text-sm text-zinc-500">
+                                  중재 거래
+                                </span>
+                                <span className="text-lg">
+                                  {seller.seller?.totalDisputeResolvedCount || 0} 건
+                                </span>
+                              </div>
+                              <div className="w-full flex flex-col items-end justify-center gap-1">
+                                <span className="text-lg text-[#409192]"
+                                  style={{ fontFamily: 'monospace' }}>
+                                  {seller.seller?.totalDisputeResolvedUsdtAmount
+                                  ? seller.seller?.totalDisputeResolvedUsdtAmount.toLocaleString()
+                                  : '0'
+                                  } USDT
+                                </span>
+                                <span className="text-lg text-yellow-600"
+                                  style={{ fontFamily: 'monospace' }}>
+                                  {seller.seller?.totalDisputeResolvedKrwAmount
+                                  ? seller.seller?.totalDisputeResolvedKrwAmount.toLocaleString()
+                                  : '0'
+                                  } 원
+                                </span>
+                              </div>
+                            </div>
+
+                          </div>
+
+
+
+
 
                           {/* 구래하기 */}
                           {/* 구래수량(USDT) 입력, 구해하기 버튼 */}
