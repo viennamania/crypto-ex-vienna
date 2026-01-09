@@ -4688,17 +4688,32 @@ const fetchBuyOrders = async () => {
                             border-t border-zinc-300 pt-2
                             ">
                             {/* TID */}
-                            <span className="text-sm">
-                              TID: #<button
-                                  className="text-sm text-zinc-600 underline"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(seller.seller?.buyOrder?.tradeId);
-                                    toast.success('TID가 복사되었습니다.');
-                                  } }
-                                >
-                                  {seller.seller?.buyOrder?.tradeId}
-                                </button>
-                            </span>
+                            <div className="flex flex-row items-center justify-start gap-2">
+                              <Image
+                                src="/icon-trade.png"
+                                alt="Trade ID"
+                                width={20}
+                                height={20}
+                                className={
+                                  `${seller.seller?.buyOrder?.status === 'accepted'
+                                  || seller.seller?.buyOrder?.status === 'paymentRequested'
+                                  ? 'w-5 h-5 animate-spin'
+                                  : 'w-5 h-5'
+                                  }`
+                                }
+                              />
+                              <span className="text-sm">
+                                TID: #<button
+                                    className="text-sm text-zinc-600 underline"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(seller.seller?.buyOrder?.tradeId);
+                                      toast.success('TID가 복사되었습니다.');
+                                    } }
+                                  >
+                                    {seller.seller?.buyOrder?.tradeId}
+                                  </button>
+                              </span>
+                            </div>
 
                             <div className="w-full flex flex-row items-center gap-2
                             bg-yellow-500 text-white px-3 py-1 rounded-lg">
