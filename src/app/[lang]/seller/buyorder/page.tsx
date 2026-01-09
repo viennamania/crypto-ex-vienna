@@ -4636,14 +4636,14 @@ const fetchBuyOrders = async () => {
                         </div>
                       </div>
 
-                      {/* 소명 거래 */}
+                      {/* 중재 거래 */}
                       {/* red color for background */}
                       <div className="w-full flex flex-row items-center justify-between gap-2
                       p-2 bg-red-100 rounded-lg
                       ">
                         <div className="flex flex-col items-start justify-center gap-0">
                           <span className="text-sm text-zinc-500">
-                            소명 거래
+                            중재 거래
                           </span>
                           <span className="text-lg font-semibold">
                             {seller.seller?.totalDisputeResolvedCount || 0} 건
@@ -4743,6 +4743,17 @@ const fetchBuyOrders = async () => {
                                 )}
                               </div>
                             </div>
+
+                            {/* noew - paymentRequestedAt 경과 */}
+                            {/* time ago from paymentRequestedAt to now */}
+                            <span className="text-sm text-zinc-600">
+                              {
+                                (new Date().getTime() - new Date(seller.seller?.buyOrder?.paymentRequestedAt).getTime()) > 0
+                                ? `입금요청 후 ${Math.floor((new Date().getTime() - new Date(seller.seller?.buyOrder?.paymentRequestedAt).getTime()) / 60000)}분 경과`
+                                : ''
+                              }
+                            </span>
+
                           </div>
 
                         </div>
