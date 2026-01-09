@@ -4238,69 +4238,127 @@ const fetchBuyOrders = async () => {
 
           
           
-          
-          
-          
+          {/* 오늘 거래 현황 */}
 
-          {/* buyOrderStats.totalByBuyerDepositName */}
-          
-          <div className="w-full
-            grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6
-            gap-4
-            items-start justify-start
-            border-t border-zinc-300
-            py-4
-            ">
-            {buyOrderStats.totalByBuyerDepositName?.map((item, index) => (
-              <div
-                key={index}
-                className={`w-full flex flex-col items-start justify-center gap-2
-                p-2 rounded-lg shadow-md
-                backdrop-blur-md
-                ${buyerDisplayValueArray && buyerDisplayValueArray[index] !== undefined && buyerDisplayValueArray[index] !== item.totalKrwAmount
-                  ? 'bg-yellow-100/80 animate-pulse'
-                  : 'bg-white/80'}
-                `}
-              >
-                <div className="flex flex-row items-start justify-start gap-1">
+          <div className="w-full flex flex-col xl:flex-row items-center justify-center gap-4
+          border-t border-b border-zinc-300
+          py-4
+          ">
+
+            <Image
+              src="/icon-trade.png"
+              alt="Trade"
+              width={50}
+              height={50}
+              className="w-16 h-16 rounded-lg object-cover"
+            />
+
+            <div className="flex flex-col gap-2 items-center">
+              <div className="text-sm">P2P 거래수(건)</div>
+              <div className="text-4xl font-semibold text-zinc-500">
+                {
+                  //buyOrderStats.totalCount?.toLocaleString()
+                  animatedTotalCount
+                }
+              </div>
+            </div>
+
+            <div className="flex flex-row items-center justify-center gap-2">
+
+              <div className="flex flex-col gap-2 items-center">
+                <div className="text-sm">P2P 거래량(USDT)</div>
+                <div className="flex flex-row items-center justify-center gap-1">
                   <Image
-                    src="/icon-user.png"
-                    alt="User"
-                    width={30}
-                    height={30}
-                    className="w-6 h-6"
-                  />          
-                  {item._id.length > 1 ? item._id.slice(0, 1) + '*' .repeat(item._id.length - 1) : item._id}  
-                </div>
-                <div className="w-full flex flex-row items-center justify-between gap-1">
-                  <span className="text-sm text-zinc-500">
-                    {item.totalCount?.toLocaleString() || '0'}건
-                  </span>
-                  ｜
-                  <span className="text-sm text-green-600"
+                    src="/icon-tether.png"
+                    alt="Tether"
+                    width={20}
+                    height={20}
+                    className="w-5 h-5"
+                  />
+                  {/* RGB: 64, 145, 146 */}
+                  <span className="text-4xl font-semibold text-[#409192]"
                     style={{ fontFamily: 'monospace' }}>
-                    {(item.totalUsdtAmount || 0).toLocaleString()}테더
-                  </span>
-                  ｜
-                  <span className="text-sm text-yellow-600"
-                    style={{ fontFamily: 'monospace' }}>
-                    {(item.totalKrwAmount || 0).toLocaleString()}원
+                    {
+                      //buyOrderStats.totalUsdtAmount
+                      //? buyOrderStats.totalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                      //: '0.000'
+                      animatedTotalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                    }
                   </span>
                 </div>
               </div>
-            ))}
 
-
-            {buyOrderStats.totalReaultGroupByBuyerDepositNameCount! - buyOrderStats.totalByBuyerDepositName!.length > 0 && (
-
-              <div className="text-xl font-bold text-red-500
-                flex items-center justify-center"
-              >
-                +{buyOrderStats.totalReaultGroupByBuyerDepositNameCount! - buyOrderStats.totalByBuyerDepositName!.length} 명
+              <div className="flex flex-col gap-2 items-center">
+                <div className="text-sm">P2P 거래금액(원)</div>
+                <div className="flex flex-row items-center justify-center gap-1">
+                  <span className="text-4xl font-semibold text-yellow-600"
+                    style={{ fontFamily: 'monospace' }}>
+                    {
+                      //buyOrderStats.totalKrwAmount?.toLocaleString()
+                      animatedTotalKrwAmount.toLocaleString()
+                    }
+                  </span>
+                </div>
               </div>
 
-            )}
+            </div>
+
+
+            {/* list of buyOrders when status is 'ordered' or 'accepted' or 'paymentRequested' */}
+            {/* traideId, usdtAmount, krwAmount, createdAt */}
+            <table className="w-full xl:table-auto border-collapse border border-zinc-300
+            bg-white/80
+            p-4 rounded-lg shadow-md
+            backdrop-blur-md
+            ">
+              <thead>
+                <tr className="bg-zinc-200 text-zinc-700 text-sm font-semibold">
+                  <th className="border border-zinc-300 px-2 py-1">거래ID</th>
+                  <th className="border border-zinc-300 px-2 py-1">구래량(USDT)</th>
+                  <th className="border border-zinc-300 px-2 py-1">거래금액(원)</th>
+                  <th className="border border-zinc-300 px-2 py-1">생성일시</th>
+                  <th className="border border-zinc-300 px-2 py-1">상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                {buyOrders.filter((order) =>
+                  order.status === 'ordered' ||
+                  order.status === 'accepted' ||
+                  order.status === 'paymentRequested'
+                ).map((order, index) => (
+                  <tr key={index} className="text-zinc-600 text-sm hover:bg-zinc-100
+                  transition-colors duration-150 ease-in-out
+                  ">
+                    <td className="border border-zinc-300 px-2 py-1 text-center">{order.tradeId}</td>
+                    <td className="border border-zinc-300 px-2 py-1 text-center"
+                      style={{ fontFamily: 'monospace' }}
+                    >
+                      {order.usdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    </td>
+                    <td className="border border-zinc-300 px-2 py-1 text-center"
+                      style={{ fontFamily: 'monospace' }}
+                    >
+                      {order.krwAmount.toLocaleString()}
+                    </td>
+                    <td className="border border-zinc-300 px-2 py-1 text-center">
+                      {new Date(order.createdAt).toLocaleString()}
+                    </td>
+                    <td className="border border-zinc-300 px-2 py-1 text-center capitalize">
+                      {order.status === 'ordered' && '주문접수'}
+                      {order.status === 'accepted' && '결제대기'}
+                      {order.status === 'paymentRequested' && '결제요청중'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
           </div>
+
+          
+          
+
+
 
           {/* animatedUpbitUsdtToKrwRate */}
           {/* logo-upbit.jpg */}
@@ -5020,6 +5078,50 @@ const fetchBuyOrders = async () => {
                             </div>
                           )}
 
+                          {/* 구래하기 */}
+                          {/* 구래수량(USDT) 입력, 구해하기 버튼 */}
+                          {/* 판매 대기중일 경우 */}
+                          {/* 나의 판매 계정이 아닐 경우 */}
+                          {
+                            seller.walletAddress !== address &&
+                            currentUsdtBalanceArray[index] >= 10 && (
+
+                            <div className="w-full flex flex-col items-start justify-center gap-2
+                              border-t border-zinc-300 pt-2
+                              ">
+                              <div className="w-full flex flex-row items-center gap-2">
+                                <input
+                                  type="number"
+                                  min={1}
+                                  onChange={(e) => {
+                                  }}
+                                  className="w-full border border-zinc-300 rounded-lg px-3 py-2
+                                  focus:outline-none focus:ring-2 focus:ring-blue-500
+                                  "
+                                />
+                                <button
+                                  onClick={() => {
+                                    /*
+                                    initiateBuyOrder(
+                                      index,
+                                      seller.seller._id,
+                                      Number(paymentAmounts[index]),
+                                    );
+                                    */
+                                  }}
+                                  className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg
+                                  hover:bg-blue-700
+                                  "
+                                >
+                                  구매하기
+                                </button>
+                              </div>
+
+                            </div>
+                          )}
+
+
+
                         </div>
                       )}
 
@@ -5162,7 +5264,8 @@ const fetchBuyOrders = async () => {
 
 
 
-          <div className='flex flex-row items-center space-x-4'>
+          <div className='hidden
+            flex flex-row items-center space-x-4'>
               <Image
                 src="/icon-buyorder.png"
                 alt="Trade"
@@ -5176,13 +5279,14 @@ const fetchBuyOrders = async () => {
               </div>
           </div>
 
-          <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-5">
+          <div className="hidden
+            w-full flex-col xl:flex-row items-center justify-between gap-5">
 
             <div className="flex flex-col xl:flex-row items-center gap-2">
 
 
               {/* select storecode */}
-              <div className="hidden flex flex-row items-center gap-2">
+              <div className="flex flex-row items-center gap-2">
                 {fetchingAllStores ? (
                   <Image
                     src="/icon-loading.png"
@@ -5243,7 +5347,8 @@ const fetchBuyOrders = async () => {
               </div>
 
 
-              <div className="flex flex-row items-center gap-2">
+              <div className="flex
+                flex-row items-center gap-2">
                 {/* checkbox for searchOrderStatus is 'cancelled' */}
                 {/* 판매취소 */}
                 {/* 판매완료 */}
@@ -5281,7 +5386,8 @@ const fetchBuyOrders = async () => {
 
               {/* serach fromDate and toDate */}
               {/* DatePicker for fromDate and toDate */}
-              <div className="flex flex-col xl:flex-row items-center gap-2">
+              <div className="flex
+                flex-col xl:flex-row items-center gap-2">
                 <div className="flex flex-row items-center gap-2">
                   <Image
                     src="/icon-calendar.png"
@@ -5409,7 +5515,8 @@ const fetchBuyOrders = async () => {
 
           {/* trade summary */}
 
-          <div className="flex flex-col xl:flex-row items-start justify-between gap-2
+          <div className="hidden
+            flex-col xl:flex-row items-start justify-between gap-2
             w-full
             bg-zinc-100/50
             p-4 rounded-lg shadow-md
@@ -5651,14 +5758,75 @@ const fetchBuyOrders = async () => {
           </div>
 
 
+          {/* buyOrderStats.totalByBuyerDepositName */}
+          
+          <div className="hidden
+            w-full
+            grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6
+            gap-4
+            items-start justify-start
+            border-t border-zinc-300
+            py-4
+            ">
+            {buyOrderStats.totalByBuyerDepositName?.map((item, index) => (
+              <div
+                key={index}
+                className={`w-full flex flex-col items-start justify-center gap-2
+                p-2 rounded-lg shadow-md
+                backdrop-blur-md
+                ${buyerDisplayValueArray && buyerDisplayValueArray[index] !== undefined && buyerDisplayValueArray[index] !== item.totalKrwAmount
+                  ? 'bg-yellow-100/80 animate-pulse'
+                  : 'bg-white/80'}
+                `}
+              >
+                <div className="flex flex-row items-start justify-start gap-1">
+                  <Image
+                    src="/icon-user.png"
+                    alt="User"
+                    width={30}
+                    height={30}
+                    className="w-6 h-6"
+                  />          
+                  {item._id.length > 1 ? item._id.slice(0, 1) + '*' .repeat(item._id.length - 1) : item._id}  
+                </div>
+                <div className="w-full flex flex-row items-center justify-between gap-1">
+                  <span className="text-sm text-zinc-500">
+                    {item.totalCount?.toLocaleString() || '0'}건
+                  </span>
+                  ｜
+                  <span className="text-sm text-green-600"
+                    style={{ fontFamily: 'monospace' }}>
+                    {(item.totalUsdtAmount || 0).toLocaleString()}테더
+                  </span>
+                  ｜
+                  <span className="text-sm text-yellow-600"
+                    style={{ fontFamily: 'monospace' }}>
+                    {(item.totalKrwAmount || 0).toLocaleString()}원
+                  </span>
+                </div>
+              </div>
+            ))}
 
+
+            {buyOrderStats.totalReaultGroupByBuyerDepositNameCount! - buyOrderStats.totalByBuyerDepositName!.length > 0 && (
+
+              <div className="text-xl font-bold text-red-500
+                flex items-center justify-center"
+              >
+                +{buyOrderStats.totalReaultGroupByBuyerDepositNameCount! - buyOrderStats.totalByBuyerDepositName!.length} 명
+              </div>
+
+            )}
+          </div>
 
 
           {/* table view is horizontal scroll */}
           {tableView ? (
 
 
-            <div className="w-full overflow-x-auto">
+            <div className="
+              hidden
+              w-full overflow-x-auto">
 
               <table className="w-full table-auto border-collapse border border-zinc-800 rounded-md">
 
@@ -9577,7 +9745,8 @@ const fetchBuyOrders = async () => {
         {/* ?limit=10&page=1 */}
         {/* submit button */}
         {/* totalPage = Math.ceil(totalCount / limit) */}
-        <div className="mt-4 flex flex-row items-center justify-center gap-4">
+        <div className="hidden
+        mt-4 flex-row items-center justify-center gap-4">
 
 
           <div className="flex flex-row items-center gap-2">
