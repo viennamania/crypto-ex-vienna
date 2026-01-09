@@ -4679,17 +4679,12 @@ const fetchBuyOrders = async () => {
                       {seller.seller?.buyOrder?.status === 'paymentRequested' ? (
                         <div className="flex flex-col items-start justify-center gap-2">
                           {/* 판매중 */}
-                          <div className="flex flex-row items-center gap-2
-                          bg-red-500 text-white px-3 py-1 rounded-lg">
-                            <span>판매중</span>
-                          </div>
-
-                          <div className="w-full flex flex-col items-start justify-center gap-1
-                            border-t border-zinc-300 pt-2
-                            ">
-                            {/* TID */}
-                            <div className="flex flex-row items-center justify-start gap-2">
-                              <Image
+                          <div className="w-full flex flex-row items-center justify-start gap-2">
+                            <div className="flex flex-row items-center gap-2
+                            bg-red-500 text-white px-3 py-1 rounded-lg">
+                              <span>판매중</span>
+                            </div>
+                            <Image
                                 src="/icon-trade.png"
                                 alt="Trade ID"
                                 width={20}
@@ -4702,6 +4697,14 @@ const fetchBuyOrders = async () => {
                                   }`
                                 }
                               />
+                          </div>
+
+                          <div className="w-full flex flex-col items-start justify-center gap-1
+                            border-t border-zinc-300 pt-2
+                            ">
+                            {/* TID */}
+                            <div className="flex flex-row items-center justify-start gap-2">
+
                               <span className="text-sm">
                                 TID: #<button
                                     className="text-sm text-zinc-600 underline"
