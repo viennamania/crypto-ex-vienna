@@ -3708,6 +3708,98 @@ const fetchBuyOrders = async () => {
 
 
 
+  // api/market/upbit
+  // get upbit usdt to krw rate every 10 seconds
+
+  const [upbitUsdtToKrwRate, setUpbitUsdtToKrwRate] = useState(0);
+  const [upbitUsdtToKrwRateTimestamp, setUpbitUsdtToKrwRateTimestamp] = useState(0);
+  const [loadingUpbitRate, setLoadingUpbitRate] = useState(false);
+  useEffect(() => {
+    const fetchUpbitRate = async () => {
+      setLoadingUpbitRate(true);
+      const response = await fetch('/api/market/upbit', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await response.json();
+      //console.log('upbit usdt to krw rate data', data);
+
+      /*
+      data example:
+{
+    "data": [
+        {
+            "market": "KRW-USDT",
+            "trade_date": "20260109",
+            "trade_time": "020734",
+            "trade_date_kst": "20260109",
+            "trade_time_kst": "110734",
+            "trade_timestamp": 1767924454081,
+            "opening_price": 1463,
+            "high_price": 1464,
+            "low_price": 1461,
+            "trade_price": 1462,
+            "prev_closing_price": 1463,
+            "change": "FALL",
+            "change_price": 1,
+            "change_rate": 0.000683527,
+            "signed_change_price": -1,
+            "signed_change_rate": -0.000683527,
+            "trade_volume": 700.95335392,
+            "acc_trade_price": 12173821867.892721,
+            "acc_trade_price_24h": 78247847399.65994,
+            "acc_trade_volume": 8322481.42305814,
+            "acc_trade_volume_24h": 53564845.41172017,
+            "highest_52_week_price": 1655,
+            "highest_52_week_date": "2025-10-10",
+            "lowest_52_week_price": 1339.5,
+            "lowest_52_week_date": "2025-07-11",
+            "timestamp": 1767924454289
+        }
+    ]
+}
+      */
+
+      if (data.data && data.data.length > 0) {
+        setUpbitUsdtToKrwRate(data.data[0].trade_price);
+        setUpbitUsdtToKrwRateTimestamp(data.data[0].trade_timestamp);
+      }
+
+      setLoadingUpbitRate(false);
+
+    };
+    fetchUpbitRate();
+    const interval = setInterval(() => {
+      fetchUpbitRate();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+
+  // animate upbitUsdtToKrwRate
+  const [animatedUpbitUsdtToKrwRate, setAnimatedUpbitUsdtToKrwRate] = useState(0);
+  useEffect(() => {
+    const animationDuration = 1000; // 1 second
+    const frameRate = 30; // 30 frames per second
+    const totalFrames = Math.round((animationDuration / 1000) * frameRate);
+    const initialRate = animatedUpbitUsdtToKrwRate;
+    const targetRate = upbitUsdtToKrwRate;
+    let frame = 0;
+    const interval = setInterval(() => {
+      frame++;
+      const progress = Math.min(frame / totalFrames, 1);
+      const newRate = initialRate + (targetRate - initialRate) * progress;
+      setAnimatedUpbitUsdtToKrwRate(newRate);
+      if (frame >= totalFrames) {
+        clearInterval(interval);
+      }
+    }, 1000 / frameRate);
+    return () => clearInterval(interval);
+  }, [upbitUsdtToKrwRate]);
+
+
   if (!address) {
     return (
       <div className="flex flex-col items-center justify-center">
@@ -4194,6 +4286,33 @@ const fetchBuyOrders = async () => {
               </div>
 
             )}
+          </div>
+
+          {/* animatedUpbitUsdtToKrwRate */}
+          {/* logo-upbit.jpg */}
+          {/* upbit usdt to krw rate display */}
+          {/* large font size */}
+          {/* upbitUsdtToKrwRateTimestamp - convert to local time */}
+          <div className="w-full flex flex-row items-center justify-end gap-2
+            mt-2
+            ">
+
+            <Image
+              src="/icon-upbit.png"
+              alt="Upbit"
+              width={50}
+              height={50}
+              className="w-12 h-12 object-cover"
+            />
+            <span className="text-lg font-semibold text-zinc-700">
+              USDT to KRW: {' '}
+              <span style={{ fontFamily: 'monospace' }}>
+                {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 원
+              </span>
+            </span>
+            <span className="text-sm text-zinc-500">
+              {upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''}
+            </span>
           </div>
           
           
