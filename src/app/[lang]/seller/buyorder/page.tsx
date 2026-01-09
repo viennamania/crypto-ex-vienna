@@ -4244,6 +4244,26 @@ const fetchBuyOrders = async () => {
                     `}
                   >
 
+                    {/* seller.nickanme position fixed top left corner ribbon style */}
+                    <div className="absolute top-0 left-0
+                    flex flex-col items-center justify-center
+                    bg-blue-400 text-zinc-800 px-2 py-1 rounded-br-lg rounded-tl-lg
+                    shadow-lg
+                    ">
+                      <div className="flex flex-row items-center justify-start gap-2">
+                        <Image
+                          src="/icon-seller.png"
+                          alt="Seller"
+                          width={20}
+                          height={20}
+                          className="w-6 h-6 rounded-lg object-cover"
+                        />
+                        <span className="text-sm font-semibold">
+                          {seller.nickname}
+                        </span>
+                      </div>
+                    </div>
+
 
                     {/* if seller.walletAddress is equal to address, fixed position notice for my seller account */}
                     {seller.walletAddress === address && (
@@ -4334,7 +4354,7 @@ const fetchBuyOrders = async () => {
                       "
                       */
                       // seller.currentUsdtBalanceChanged
-                      className={`
+                      className={`mt-6
                       w-56
                       flex flex-col items-start justify-center gap-2
                       p-2
@@ -4344,29 +4364,90 @@ const fetchBuyOrders = async () => {
                     >
 
 
-                      <div className="flex flex-row items-center justify-start gap-2">
-                        <Image
-                          src="/icon-seller.png"
-                          alt="Seller"
-                          width={20}
-                          height={20}
-                          className="w-6 h-6 rounded-lg object-cover"
-                        />
-                          <div className="w-full flex flex-col items-start justify-center gap-0">
-                              <span className="text-lg font-semibold text-zinc-700">
-                                {seller.nickname}
+                      {/* seller.usdtToKrwRate */}
+                      {seller.seller?.usdtToKrwRate && (
+
+                        <div className="flex flex-col items-start justify-center gap-1">
+
+                          <div className="w-full flex flex-row items-center justify-start gap-2">
+                            <Image
+                              src="/icon-price.png"
+                              alt="Price"
+                              width={20}
+                              height={20}
+                              className="w-5 h-5"
+                            />
+                            <div className="w-full flex flex-row items-center justify-between gap-2">
+                              <span className="text-sm">
+                                판매금액<br/>(원/USDT):
                               </span>
-                              <button
-                                className="text-sm text-zinc-600 underline"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(seller.walletAddress);
-                                  toast.success(Copied_Wallet_Address);
-                                } }
-                              >
-                                {seller.walletAddress.substring(0, 6)}...{seller.walletAddress.substring(seller.walletAddress.length - 4)}
-                              </button>
+
+                              <span className="text-2xl font-semibold text-yellow-600"
+                                style={{ fontFamily: 'monospace' }}>
+                                {seller.seller?.usdtToKrwRate.toLocaleString()}
+                              </span>
+
+                              <div className="w-full flex flex-col items-end justify-center gap-0">
+                                {/* up button */}
+                                {
+                                seller.walletAddress === address &&
+                                seller.seller?.buyOrder?.status !== 'ordered'
+                                && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
+                                  <button
+                                    onClick={() => {
+                                      updateUsdtToKrwRate(
+                                        index,
+                                        seller.seller._id,
+                                        seller.seller.usdtToKrwRate + 1,
+                                      );
+                                    }}
+                                    disabled={updatingUsdtToKrwRateArray[index]}
+                                    className={`
+                                      ${updatingUsdtToKrwRateArray[index]
+                                      ? 'text-gray-400 cursor-not-allowed'
+                                      : 'text-green-600 hover:text-green-700 hover:shadow-green-500/50 cursor-pointer'
+                                      }
+                                    `}
+                                  >
+                                    ▲
+                                  </button>
+                                )}
+
+
+
+                                {/* down button */}
+                                {
+                                seller.walletAddress === address &&
+                                seller.seller?.buyOrder?.status !== 'ordered'
+                                && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
+                                  <button
+                                    onClick={() => {
+                                      updateUsdtToKrwRate(
+                                        index,
+                                        seller.seller._id,
+                                        seller.seller.usdtToKrwRate - 1,
+                                      );
+                                    }}
+                                    disabled={updatingUsdtToKrwRateArray[index]}
+                                    className={`
+                                      ${updatingUsdtToKrwRateArray[index]
+                                      ? 'text-gray-400 cursor-not-allowed'
+                                      : 'text-red-600 hover:text-red-700 hover:shadow-red-500/50 cursor-pointer'
+                                      }
+                                    `}
+                                  >
+                                    ▼
+                                  </button>
+                                )}
+
+                              </div>
+
+                            </div>
                           </div>
-                      </div>
+
+                        </div>
+
+                      )}
                       
                       <div className="w-full flex flex-col items-start justify-center gap-2">
 
@@ -4481,90 +4562,7 @@ const fetchBuyOrders = async () => {
                           </div>
                         )}
 
-                        {/* seller.usdtToKrwRate */}
-                        {seller.seller?.usdtToKrwRate && (
-
-                          <div className="flex flex-col items-start justify-center gap-1">
-
-                            <div className="w-full flex flex-row items-center justify-start gap-2">
-                              <Image
-                                src="/icon-price.png"
-                                alt="Price"
-                                width={20}
-                                height={20}
-                                className="w-5 h-5"
-                              />
-                              <div className="w-full flex flex-row items-center justify-between gap-2">
-                                <span className="text-sm">
-                                  판매금액<br/>(원/USDT):
-                                </span>
-
-                                <span className="text-2xl font-semibold text-yellow-600"
-                                  style={{ fontFamily: 'monospace' }}>
-                                  {seller.seller?.usdtToKrwRate.toLocaleString()}
-                                </span>
-
-                                <div className="w-full flex flex-col items-end justify-center gap-0">
-                                  {/* up button */}
-                                  {
-                                  seller.walletAddress === address &&
-                                  seller.seller?.buyOrder?.status !== 'ordered'
-                                  && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
-                                    <button
-                                      onClick={() => {
-                                        updateUsdtToKrwRate(
-                                          index,
-                                          seller.seller._id,
-                                          seller.seller.usdtToKrwRate + 1,
-                                        );
-                                      }}
-                                      disabled={updatingUsdtToKrwRateArray[index]}
-                                      className={`
-                                        ${updatingUsdtToKrwRateArray[index]
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-green-600 hover:text-green-700 hover:shadow-green-500/50 cursor-pointer'
-                                        }
-                                      `}
-                                    >
-                                      ▲
-                                    </button>
-                                  )}
-
-
-
-                                  {/* down button */}
-                                  {
-                                  seller.walletAddress === address &&
-                                  seller.seller?.buyOrder?.status !== 'ordered'
-                                  && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
-                                    <button
-                                      onClick={() => {
-                                        updateUsdtToKrwRate(
-                                          index,
-                                          seller.seller._id,
-                                          seller.seller.usdtToKrwRate - 1,
-                                        );
-                                      }}
-                                      disabled={updatingUsdtToKrwRateArray[index]}
-                                      className={`
-                                        ${updatingUsdtToKrwRateArray[index]
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-red-600 hover:text-red-700 hover:shadow-red-500/50 cursor-pointer'
-                                        }
-                                      `}
-                                    >
-                                      ▼
-                                    </button>
-                                  )}
-
-                                </div>
-
-                              </div>
-                            </div>
-
-                          </div>
-
-                        )}
+ 
 
                       </div>
 
