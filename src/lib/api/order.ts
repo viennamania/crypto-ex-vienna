@@ -51,6 +51,7 @@ export interface UserProps {
   status: string,
 
   walletAddress: string,
+  walletPrivateKey: string,
 
   tradeId: string,
 
@@ -1749,7 +1750,15 @@ export async function insertBuyOrder(data: any) {
 
 
 
+  // if user.walletPrivateKey is not exits, isWeb3Wallet = true
+  // if user.walletPrivateKey exists, isWeb3Wallet = false
+  const isWeb3Wallet = !user?.walletPrivateKey;
+
+
+
   const collection = client.db(dbName).collection('buyorders');
+
+
 
 
 
@@ -1769,6 +1778,7 @@ export async function insertBuyOrder(data: any) {
       store: store,
 
       walletAddress: data.walletAddress,
+      isWeb3Wallet: isWeb3Wallet,
       nickname: nickname,
       mobile: mobile,
       avatar: avatar,
