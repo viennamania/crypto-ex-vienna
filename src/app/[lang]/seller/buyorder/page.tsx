@@ -3694,7 +3694,16 @@ const fetchBuyOrders = async () => {
       if (data.result) {
         toast.success('USDT to KRW rate has been updated');
         // refresh sellers balance
-        fetchSellersBalance();
+        //fetchSellersBalance();
+
+        // update local state for immediate UI feedback
+        setSellersBalance((prev) =>
+          prev.map((seller, idx) =>
+            idx === index ? { ...seller, seller: { ...seller.seller, usdtToKrwRate: newRate } } : seller
+          )
+        );
+
+
       } else {
         toast.error('Failed to update USDT to KRW rate');
       }
@@ -4537,7 +4546,7 @@ const fetchBuyOrders = async () => {
                                 {seller.seller?.usdtToKrwRate.toLocaleString()}
                               </span>
 
-                              <div className="w-full flex flex-col items-end justify-center gap-0">
+                              <div className="w-full flex flex-col items-center justify-center gap-1">
                                 {/* up button */}
                                 {
                                 seller.walletAddress === address &&
@@ -4564,6 +4573,29 @@ const fetchBuyOrders = async () => {
                                 )}
 
 
+                                {/* button for market price */}
+                                {seller.walletAddress === address &&
+                                seller.seller?.buyOrder?.status !== 'ordered'
+                                && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
+                                  <button
+                                    onClick={() => {
+                                      updateUsdtToKrwRate(
+                                        index,
+                                        seller.seller._id,
+                                        Math.round(upbitUsdtToKrwRate),
+                                      );
+                                    }}
+                                    disabled={updatingUsdtToKrwRateArray[index]}
+                                    className={`
+                                      ${updatingUsdtToKrwRateArray[index]
+                                      ? 'text-gray-400 cursor-not-allowed'
+                                      : 'text-blue-600 hover:text-blue-700 hover:shadow-blue-500/50 cursor-pointer'
+                                      }
+                                    `}
+                                  >
+                                    ⬤
+                                  </button>
+                                )}
 
                                 {/* down button */}
                                 {
