@@ -1247,6 +1247,10 @@ export default function SettingsPage({ params }: any) {
                                                     <option value="054" selected={buyer?.bankInfo?.bankName === "054"}>
                                                         동양종합금융
                                                     </option>
+                                                    {/* JT친애저축은행 */}
+                                                    <option value="1000" selected={buyer?.bankInfo?.bankName === "1000"}>
+                                                        JT친애저축은행
+                                                    </option>
 
 
                                                 </select>
