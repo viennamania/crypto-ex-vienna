@@ -4245,22 +4245,39 @@ const fetchBuyOrders = async () => {
                   >
 
                     {/* seller.nickanme position fixed top left corner ribbon style */}
-                    <div className="absolute top-0 left-0
-                    flex flex-col items-center justify-center
-                    bg-blue-400 text-zinc-800 px-2 py-1 rounded-br-lg rounded-tl-lg
-                    shadow-lg
+                    <div className="w-36 
+                    absolute top-0 left-0
+                    flex flex-row items-center justify-start
                     ">
-                      <div className="flex flex-row items-center justify-start gap-2">
-                        <Image
-                          src="/icon-seller.png"
-                          alt="Seller"
-                          width={20}
-                          height={20}
-                          className="w-6 h-6 rounded-lg object-cover"
-                        />
-                        <span className="text-sm font-semibold">
-                          {seller.nickname}
-                        </span>
+                      <div className="w-full flex flex-row items-center justify-between gap-2
+                      bg-white/90 text-zinc-800 px-2 py-1 rounded-br-lg rounded-tl-lg
+                      shadow-lg
+                      ">
+                        <div className="flex flex-row items-center justify-center gap-1">
+                          <Image
+                            src="/icon-seller.png"
+                            alt="Seller"
+                            width={20}
+                            height={20}
+                            className="w-6 h-6 rounded-lg object-cover"
+                          />
+                          <span className="text-sm font-semibold">
+                            {seller.nickname}
+                          </span>
+                        </div>
+
+                        {/* whe  seller.seller?.totalPaymentConfirmedUsdtAmount > 10, show a badge */}
+                        {seller.seller?.totalPaymentConfirmedUsdtAmount > 20 && (
+                          <Image
+                            src="/icon-best-seller.png"
+                            alt="Best Seller"
+                            width={30}
+                            height={30}
+                            className="w-6 h-6 rounded-lg object-cover"
+                          />
+                        )}
+
+
                       </div>
                     </div>
 
@@ -4379,7 +4396,7 @@ const fetchBuyOrders = async () => {
                             />
                             <div className="w-full flex flex-row items-center justify-between gap-2">
                               <span className="text-sm">
-                                판매금액<br/>(원/USDT):
+                                판매금액<br/>(원/USDT)
                               </span>
 
                               <span className="text-2xl font-semibold text-yellow-600"
@@ -4469,7 +4486,7 @@ const fetchBuyOrders = async () => {
                           */}
 
 
-                          <div className="w-full flex flex-col items-start justify-between gap-2">    
+                          <div className="w-full flex flex-row items-center justify-between gap-2">    
 
                             <div className="flex flex-row items-center justify-center gap-2">
                               <Image
@@ -4491,6 +4508,29 @@ const fetchBuyOrders = async () => {
                                 }
                               </button>
                             </div>
+
+                            {/* https://polygonscan.com/token/0xc2132d05d31c914a87c6611c10748aeb04b58e8f?a=0x07385f5149Eb1dE0D17739fBc395B560cb7fFE44 */}
+                            {/* open new window to polygonscan escrow wallet address */}
+                            {/* logo-polygon.png */}
+                            <button
+                              className="flex items-center justify-center gap-2
+                              rounded-lg p-1
+                              hover:bg-black/10
+                              hover:cursor-pointer
+                              hover:scale-105
+                              transition-transform duration-200 ease-in-out"
+                              onClick={() => {
+                                window.open(`https://polygonscan.com/token/0xc2132d05d31c914a87c6611c10748aeb04b58e8f?a=${seller.seller.escrowWalletAddress}`, '_blank');
+                              }}
+                            >
+                              <Image
+                                src="/logo-polygon.png"
+                                alt="Polygon"
+                                width={20}
+                                height={20}
+                                className="w-5 h-5"
+                              />
+                            </button>
 
                           </div>
 
@@ -4535,11 +4575,11 @@ const fetchBuyOrders = async () => {
                         {seller.seller?.bankInfo && (
                           <div className="w-full flex flex-row items-center justify-start gap-2">
                             <Image
-                              src="/icon-bank.png"
+                              src="/icon-bank-transfer.png"
                               alt="Bank"
                               width={20}
                               height={20}
-                              className="w-5 h-5"
+                              className="w-12 h-12"
                             />
                             <div className="flex flex-col items-start justify-center gap-0">
                               <span className="text-sm">
