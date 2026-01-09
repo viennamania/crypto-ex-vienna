@@ -4250,8 +4250,7 @@ const fetchBuyOrders = async () => {
                     flex flex-row items-center justify-start
                     ">
                       <div className="w-full flex flex-row items-center justify-between gap-2
-                      bg-white/90 text-zinc-800 px-2 py-1 rounded-br-lg rounded-tl-lg
-                      shadow-lg
+                      bg-blue-500 text-white px-2 py-1 rounded-br-lg rounded-tl-lg shadow-lg
                       ">
                         <div className="flex flex-row items-center justify-center gap-1">
                           <Image
