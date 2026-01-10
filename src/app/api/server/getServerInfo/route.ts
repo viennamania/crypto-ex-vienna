@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 
 
-export async function GEt(request: NextRequest) {
+export async function GET(request: NextRequest) {
 
   // get my ip address by fetching from an external service
 
