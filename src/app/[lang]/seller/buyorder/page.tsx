@@ -3854,6 +3854,47 @@ const fetchBuyOrders = async () => {
 
 
 
+  // /api/user/toggleAutoProcessDeposit
+  const [togglingAutoProcessDeposit, setTogglingAutoProcessDeposit] = useState(false);
+  const toggleAutoProcessDeposit = async (currentValue: boolean) => {
+    if (togglingAutoProcessDeposit) {
+      return;
+    }
+    setTogglingAutoProcessDeposit(true);
+    try {
+      const response = await fetch('/api/user/toggleAutoProcessDeposit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storecode: "admin",
+          walletAddress: address,
+          autoProcessDeposit: !currentValue,
+        }),
+      });
+      const data = await response.json();
+      //console.log('toggleAutoProcessDeposit data', data);
+      if (data.result) {
+        // update local state
+        setSellersBalance((prev) =>
+          prev.map((seller) =>
+            seller.walletAddress === address
+              ? { ...seller, autoProcessDeposit: !currentValue }
+              : seller
+          )
+        );
+        toast.success('자동 입금 처리 설정이 변경되었습니다.');
+      } else {
+        toast.error('자동 입금 처리 설정 변경에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Error toggling auto process deposit:', error);
+      toast.error('자동 입금 처리 설정 변경에 실패했습니다.');
+    }
+    setTogglingAutoProcessDeposit(false);
+  };
+
 
 
   //if (!address) {
@@ -4757,10 +4798,10 @@ const fetchBuyOrders = async () => {
               height={50}
               className="w-12 h-12 object-cover"
             />
-            <span className="text-lg font-semibold text-zinc-700">
+            <span className="text-xl font-semibold text-zinc-700">
               USDT to KRW: {' '}
               <span style={{ fontFamily: 'monospace' }}>
-                {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 원
+                {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 원
               </span>
             </span>
             <span className="text-sm text-zinc-500">
@@ -5226,16 +5267,15 @@ const fetchBuyOrders = async () => {
                               alt="Bank"
                               width={20}
                               height={20}
-                              className="w-12 h-12"
+                              className="w-5 h-5"
                             />
                             <div className="flex flex-col items-start justify-center gap-0">
                               <span className="text-sm">
                                 {seller.seller?.bankInfo?.bankName}
                               </span>
                               <span className="text-sm">
-                                {seller.seller?.bankInfo?.accountNumber.length > 10
-                                  ? seller.seller?.bankInfo?.accountNumber.substring(0, 4) +'****'+
-                                    seller.seller?.bankInfo?.accountNumber.substring(seller.seller?.bankInfo?.accountNumber.length - 4)
+                                {seller.seller?.bankInfo?.accountNumber.length > 5
+                                  ? seller.seller?.bankInfo?.accountNumber.substring(0, 5) +'****'
                                   : seller.seller?.bankInfo?.accountNumber
                                 }
                               </span>
@@ -5246,6 +5286,52 @@ const fetchBuyOrders = async () => {
                                 }
                               </span>
                             </div>
+
+                            {/* seller?.autoProcessDeposit */}
+                            {/* toggleAutoProcessDeposit */}
+                            {seller.walletAddress === address ? (
+                              <div className="flex flex-col items-start justify-center ml-4">
+                                <span className="w-full flex text-sm font-semibold">
+                                  자동입금처리
+                                </span>
+                                <button
+                                  onClick={() => {
+                                      const currentValue = seller?.seller.autoProcessDeposit;
+                                      toggleAutoProcessDeposit(currentValue)
+                                  }}
+                                  className={`
+                                    ${seller.seller?.autoProcessDeposit
+                                    ? 'bg-green-100 text-green-600 hover:bg-green-200 hover:shadow-green-500/50 cursor-pointer'
+                                    : 'bg-red-100 text-red-600 hover:bg-red-200 hover:shadow-red-500/50 cursor-pointer'
+                                    }
+                                    w-full rounded-lg p-2 border h-8 text-xs
+                                  `}
+                                  disabled={togglingAutoProcessDeposit}
+                                >
+                                  {seller.seller?.autoProcessDeposit ? '활성화' : '비활성화'}
+                                </button>
+                             </div>
+                            ) : (
+                              <div className="flex flex-col items-start justify-center ml-4">
+                                <span className="w-full flex text-sm font-semibold">
+                                  자동입금처리
+                                </span>
+                                {seller.seller?.autoProcessDeposit ? (
+                                  <div className="w-full flex text-xs text-green-600
+                                  bg-white border border-zinc-300 rounded-lg p-2 h-8
+                                  ">
+                                    활성화
+                                  </div>
+                                ) : (
+                                  <div className="w-full flex text-xs text-red-600
+                                  bg-white border border-zinc-300 rounded-lg p-2 h-8
+                                  ">
+                                    비활성화
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
                           </div>
                         )}
 

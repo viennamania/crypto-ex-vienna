@@ -16,6 +16,8 @@ export async function POST(request: NextRequest) {
         autoProcessDeposit,
     } = body;
 
+    //console.log("toggleAutoProcessDeposit body:", body);
+
     const result = await toggleAutoProcessDeposit({
         storecode: storecode,
         walletAddress: walletAddress,

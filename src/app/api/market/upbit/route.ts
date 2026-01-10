@@ -47,9 +47,10 @@ export async function GET(request: NextRequest) {
 
     const response = await fetch(upbitApiUrl, {
         method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+
+        //headers: {
+        //    'Content-Type': 'application/json',
+        //},
     });
 
     const data = await response.json();
