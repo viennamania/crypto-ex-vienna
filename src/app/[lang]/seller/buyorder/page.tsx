@@ -3624,7 +3624,7 @@ const fetchBuyOrders = async () => {
       return;
     }
     */
-   
+
     fetchSellersBalance();
     // interval to fetch every 10 seconds
     const interval = setInterval(() => {
@@ -5225,9 +5225,13 @@ const fetchBuyOrders = async () => {
                                   min={1}
                                   onChange={(e) => {
                                   }}
-                                  className="w-full border border-zinc-300 rounded-lg px-3 py-2
-                                  focus:outline-none focus:ring-2 focus:ring-blue-500
-                                  "
+                                  className={`
+                                    ${address ? 'border border-zinc-300 rounded-lg p-2 text-sm' :
+                                    'border border-zinc-300 rounded-lg p-2 text-sm bg-gray-100 cursor-not-allowed'
+                                    }
+                                    w-full focus:outline-none focus:ring-2 focus:ring-blue-500
+                                  `}
+                                  disabled={!address}
                                 />
                                 <button
                                   onClick={() => {
@@ -5239,13 +5243,23 @@ const fetchBuyOrders = async () => {
                                     );
                                     */
                                   }}
-                                  className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg
-                                  hover:bg-blue-700
-                                  "
+                                  className={`
+                                    ${address ? 'bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700' :
+                                    'bg-gray-400 text-white px-4 py-2 rounded-lg cursor-not-allowed'
+                                    }
+                                    w-full
+                                  `}
+                                  disabled={!address}
                                 >
                                   구매하기
                                 </button>
                               </div>
+                              {/* 로그인을 해야 구매할 수 있습니다. */}
+                              {!address && (
+                                <div className="text-sm text-red-600">
+                                  로그인을 해야 구매할 수 있습니다.
+                                </div>
+                              )}
 
                             </div>
                           )}
