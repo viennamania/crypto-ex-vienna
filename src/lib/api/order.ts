@@ -7876,6 +7876,7 @@ export async function getTotalNumberOfBuyOrders(
       avatar: 1,
       store: 1,
       buyer: 1,
+      seller: 1,
       createdAt: 1,
       status: 1,
       krwAmount: 1,

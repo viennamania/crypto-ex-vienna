@@ -4480,7 +4480,9 @@ const fetchBuyOrders = async () => {
   
                 {/* array of processingBuyOrders store logos */}
                 {processingBuyOrders.length > 0 && (
-                <div className="w-full flex flex-row items-center justify-end gap-2">
+                <div className="w-full
+                  grid grid-cols-2
+                  xl:flex flex-row items-center justify-end gap-2">
                   
                   {processingBuyOrders.slice(0, 5).map((order: BuyOrder, index: number) => (
 
@@ -4510,7 +4512,7 @@ const fetchBuyOrders = async () => {
                       flex flex-row items-center justify-start
                       ">
                         <div className="w-full flex flex-row items-center justify-between gap-2
-                        bg-blue-500 text-white px-2 py-1 rounded-br-lg rounded-tl-lg shadow-lg
+                        bg-green-500 text-white px-2 py-1 rounded-br-lg rounded-tl-lg shadow-lg
                         ">
                           <div className="flex flex-row items-center justify-center gap-1">
                             <Image
@@ -4540,8 +4542,33 @@ const fetchBuyOrders = async () => {
 
                         </div>
                       </div>
+                      
+                      {/* order.seller.nickname positon fixed botton right corner ribbon style */}
+                      {order.status === 'accepted' || order.status === 'paymentRequested' && (
+                        <div className="
+                        absolute bottom-0 right-0
+                        flex flex-row items-center justify-end
+                        ">
+                          <div className="w-full flex flex-row items-center justify-between gap-2
+                          bg-blue-500 text-white px-2 py-1 rounded-tl-lg rounded-br-lg shadow-lg
+                          ">
+                            <div className="flex flex-row items-center justify-center gap-1">
+                              <span className="text-sm font-semibold">
+                                {order.seller.nickname}
+                              </span>
+                              <Image
+                                src="/icon-seller.png"
+                                alt="Seller"
+                                width={20}
+                                height={20}
+                                className="w-6 h-6 rounded-lg object-cover"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
-                      <div className="flex flex-row items-start justify-between gap-2 mt-8">
+                      <div className="flex flex-row items-start justify-between gap-2 mt-8 mb-8">
                         <div className="flex flex-col items-start justify-center gap-2">
                           <Image
                             src={order?.store?.storeLogo || '/logo.png'}
@@ -4554,7 +4581,7 @@ const fetchBuyOrders = async () => {
                           <span className="text-xs text-blue-500 font-semibold capitalize">
                             {order.status === 'ordered' && '매칭대기중'}
                             {order.status === 'accepted' && '결제대기중'}
-                            {order.status === 'paymentRequested' && '결제요청중'}
+                            {order.status === 'paymentRequested' && '입금진행중'}
                           </span>
                         </div>
                         <div className="flex flex-col items-end justify-center ml-2">
@@ -4592,14 +4619,20 @@ const fetchBuyOrders = async () => {
                 </div>
                 )}
 
-                <p className="text-lg text-red-500 font-semibold">
-                  {
-                  totalNumberOfBuyOrders
-                  }
-                </p>
+                {/*
+                <div className="flex flex-row items-center justify-center gap-2">
+
+                  <p className="text-lg text-red-500 font-semibold">
+                    {
+                    totalNumberOfBuyOrders
+                    }
+                  </p>
+
+                </div>
+                */}
 
                 {totalNumberOfBuyOrders > 0 && (
-                  <div className="flex flex-row items-center justify-center gap-2">
+                  <div className="w-28 flex flex-row items-center justify-center gap-2">
                     <Image
                       src="/icon-notification.gif"
                       alt="Notification"
@@ -4610,12 +4643,13 @@ const fetchBuyOrders = async () => {
                     />
                   </div>
                 )}
+
+
               </div>
+
 
           
             </div>
-
-
 
 
           </div>
