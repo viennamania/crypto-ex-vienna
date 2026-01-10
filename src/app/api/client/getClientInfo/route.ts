@@ -1,30 +1,24 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 
-import { chain } from "@/app/config/contractAddresses";
 
-import { getOne } from "@/lib/api/client";
+export async function GEt(request: NextRequest) {
 
-const clientId = process.env.NEXT_PUBLIC_TEMPLATE_CLIENT_ID || "";
+  // get my ip address by fetching from an external service
 
+  // my ip address url
+  const myIpAddressUrl = "https://api.ipify.org?format=json";
+  
+  const response = await fetch(myIpAddressUrl);
+  const data = await response.json();
 
-export async function POST(request: NextRequest) {
+  const ipAddress = data.ip;
 
-
-  const clientInfo = await getOne(clientId || "");
-
-
-
-  const result = {
-    chain,
-    clientId,
-    clientInfo,
-  };
 
   return NextResponse.json({
 
-    result,
+    ipAddress,
     
   });
-  
+
 }
