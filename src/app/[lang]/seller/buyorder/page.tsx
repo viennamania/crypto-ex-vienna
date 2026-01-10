@@ -3618,10 +3618,13 @@ const fetchBuyOrders = async () => {
     }
   };
   useEffect(() => {
+    /*
     if (!address) {
       setSellersBalance([]);
       return;
     }
+    */
+   
     fetchSellersBalance();
     // interval to fetch every 10 seconds
     const interval = setInterval(() => {
@@ -3814,7 +3817,8 @@ const fetchBuyOrders = async () => {
   }, [upbitUsdtToKrwRate]);
 
 
-  if (!address) {
+  //if (!address) {
+  if (false) {
     return (
       <div className="flex flex-col items-center justify-center">
 
