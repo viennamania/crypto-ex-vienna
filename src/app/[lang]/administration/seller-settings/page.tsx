@@ -997,6 +997,30 @@ export default function SettingsPage({ params }: any) {
     };
 
 
+    // toggleAutoProcessDeposit
+    const [togglingAutoProcessDeposit, setTogglingAutoProcessDeposit] = useState(false);
+    const toggleAutoProcessDeposit = async () => {
+        if (!seller) return;
+        const newAutoProcessDeposit = !seller.autoProcessDeposit;
+        setTogglingAutoProcessDeposit(true);
+        await fetch('/api/user/toggleAutoProcessDeposit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                storecode: storecode,
+                walletAddress: address,
+                autoProcessDeposit: newAutoProcessDeposit,
+            }),
+        });
+        setTogglingAutoProcessDeposit(false);
+        setSeller({
+            ...seller,
+            autoProcessDeposit: newAutoProcessDeposit,
+        });
+    };
+
 
     return (
 
@@ -1542,6 +1566,46 @@ export default function SettingsPage({ params }: any) {
                             )}
                             */}
 
+                        </div>
+
+
+                        {/* 입금 자동 처리 시작 / 중지 토글 버튼 */}
+                        <div className='w-full flex flex-row gap-2 items-center justify-between
+                            border-t border-gray-300 pt-4'>
+                            <div className="flex flex-row items-center gap-2">
+                                {/* dot */}
+                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                <span className="text-lg">
+                                    입금 자동 처리 상태
+                                </span>
+                            </div>
+                            {seller?.autoProcessDeposit ? (
+                                <button
+                                    onClick={toggleAutoProcessDeposit}
+                                    className={`
+                                        ${togglingAutoProcessDeposit ? 'bg-gray-300 text-gray-400' : 'bg-green-500 text-zinc-100'}
+                                        flex flex-row items-center gap-2 p-2 rounded-lg
+                                    `}
+                                    disabled={togglingAutoProcessDeposit}
+                                >
+                                    <span className="text-lg font-semibold">
+                                        자동 처리 중
+                                    </span>
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={toggleAutoProcessDeposit}
+                                    className={`
+                                        ${togglingAutoProcessDeposit ? 'bg-gray-300 text-gray-400' : 'bg-gray-300 text-gray-600'}
+                                        flex flex-row items-center gap-2 p-2 rounded-lg
+                                    `}
+                                    disabled={togglingAutoProcessDeposit}
+                                >
+                                    <span className="text-lg font-semibold">
+                                        자동 처리 중지
+                                    </span>
+                                </button>
+                            )}
                         </div>
 
                     </div>

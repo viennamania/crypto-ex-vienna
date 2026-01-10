@@ -2659,7 +2659,7 @@ export async function updateSellerUsdtToKrwRate(
   }
 ) {
 
-  console.log('updateSellerUsdtToKrwRate storecode: ' + storecode + ' walletAddress: ' + walletAddress + ' usdtToKrwRate: ' + usdtToKrwRate);
+  //console.log('updateSellerUsdtToKrwRate storecode: ' + storecode + ' walletAddress: ' + walletAddress + ' usdtToKrwRate: ' + usdtToKrwRate);
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
 
@@ -2677,3 +2677,34 @@ export async function updateSellerUsdtToKrwRate(
   
 }
 
+
+// toggleAutoProcessDeposit
+export async function toggleAutoProcessDeposit(
+  {
+    storecode,
+    walletAddress,
+    autoProcessDeposit,
+  }: {
+    storecode: string;
+    walletAddress: string;
+    autoProcessDeposit: boolean;
+  }
+) {
+
+  //console.log('toggleAutoProcessDeposit storecode: ' + storecode + ' walletAddress: ' + walletAddress + ' autoProcessDeposit: ' + autoProcessDeposit);
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  return await collection.updateOne(
+    {
+      storecode: storecode,
+      walletAddress: walletAddress
+    },
+    {
+      $set: {
+        'seller.autoProcessDeposit': autoProcessDeposit,
+      }
+    }
+  );
+  
+}

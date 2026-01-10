@@ -3638,6 +3638,40 @@ const fetchBuyOrders = async () => {
 
 
 
+  // usdtToKrwRate animation
+  const [usdtKrwRateAnimationArray, setUsdtKrwRateAnimationArray] = useState<number[]>([]);
+  function animateUsdtKrwRate(targetRates: number[]) {
+    const animationDuration = 1000; // 1 second
+    const frameRate = 30; // 30 frames per second
+    const totalFrames = Math.round((animationDuration / 1000) * frameRate);
+    const initialRates = usdtKrwRateAnimationArray.length === targetRates.length
+      ? [...usdtKrwRateAnimationArray]
+      : targetRates.map(() => 0);
+    let frame = 0;
+    const interval = setInterval(() => {
+      frame++;
+      const newRates = targetRates.map((target, index) => {
+        const initial = initialRates[index];
+        const progress = Math.min(frame / totalFrames, 1);
+        return initial + (target - initial) * progress;
+      });
+      setUsdtKrwRateAnimationArray(newRates);
+      if (frame >= totalFrames) {
+        clearInterval(interval);
+      }
+    }, 1000 / frameRate);
+  }
+  useEffect(() => {
+    const targetRates = sellersBalance.map((seller) => seller.seller?.usdtToKrwRate || 0);
+    animateUsdtKrwRate(targetRates);
+  }, [sellersBalance]);
+
+
+
+
+
+
+
 
   // currentUsdtBalance array for animated display
   const [currentUsdtBalanceArray, setCurrentUsdtBalanceArray] = useState<number[]>([]);
@@ -3817,6 +3851,9 @@ const fetchBuyOrders = async () => {
     }, 1000 / frameRate);
     return () => clearInterval(interval);
   }, [upbitUsdtToKrwRate]);
+
+
+
 
 
   //if (!address) {
@@ -4658,7 +4695,7 @@ const fetchBuyOrders = async () => {
                   ))}
 
                   {processingBuyOrders.length > 5 && (
-                    <span className="text-sm text-gray-500">
+                    <span className="text-xl text-gray-500 font-semibold">
                       +{processingBuyOrders.length - 5}
                     </span>
                   )}
@@ -4946,7 +4983,10 @@ const fetchBuyOrders = async () => {
 
                               <span className="text-2xl font-semibold text-yellow-600"
                                 style={{ fontFamily: 'monospace' }}>
-                                {seller.seller?.usdtToKrwRate.toLocaleString()}
+                                {
+                                //seller.seller?.usdtToKrwRate.toLocaleString()
+                                usdtKrwRateAnimationArray[index]?.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                                }
                               </span>
 
                               <div className="w-full flex flex-col items-center justify-center gap-1">
