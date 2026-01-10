@@ -113,6 +113,7 @@ interface BuyOrder {
   _id: string;
   createdAt: string;
   walletAddress: string;
+  isWeb3Wallet: boolean;
   nickname: string;
   avatar: string;
   trades: number;
@@ -4525,6 +4526,15 @@ const fetchBuyOrders = async () => {
                             <span className="text-sm font-semibold">
                               {order.nickname}
                             </span>
+                            {!order.isWeb3Wallet && (
+                              <Image
+                                src="/icon-payment.png"
+                                alt="Web3 Wallet"
+                                width={20}
+                                height={20}
+                                className="w-6 h-6 rounded-lg object-cover"
+                              />
+                            )}
                           </div>
 
                           {/* whe  seller.seller?.totalPaymentConfirmedUsdtAmount > 10, show a badge */}
@@ -4568,7 +4578,8 @@ const fetchBuyOrders = async () => {
                         </div>
                       )}
 
-                      <div className="flex flex-row items-start justify-between gap-2 mt-8 mb-8">
+                      <div className="w-full flex flex-row items-start justify-between gap-2 mt-8 mb-8">
+                        
                         <div className="flex flex-col items-start justify-center gap-2">
                           <Image
                             src={order?.store?.storeLogo || '/logo.png'}
@@ -4578,12 +4589,47 @@ const fetchBuyOrders = async () => {
                             className="w-8 h-8 rounded-lg object-cover"
                           />
                           {/* status */}
-                          <span className="text-xs text-blue-500 font-semibold capitalize">
-                            {order.status === 'ordered' && '매칭대기중'}
-                            {order.status === 'accepted' && '결제대기중'}
-                            {order.status === 'paymentRequested' && '입금진행중'}
-                          </span>
+                          <div className="flex flex-row items-center justify-center gap-1 text-sm font-semibold">
+                            {order.status === 'ordered' && (
+                              <span className="text-red-500 font-semibold">
+                                매칭대기중
+                              </span>
+                            )}
+                            {order.status === 'accepted' && (
+                              <span className="text-blue-500 font-semibold">
+                                결제대기중
+                              </span>
+                            )}
+                            {order.status === 'paymentRequested' && (
+                              <span className="text-yellow-500 font-semibold">
+                                입금진행중
+                              </span>
+                            )}
+                          </div>
+
+                          {order.status === 'ordered' && (
+                            <span className="text-sm text-zinc-600">
+                              {
+                                (new Date().getTime() - new Date(order?.createdAt).getTime()) > 0
+                                ? `${Math.floor((new Date().getTime() - new Date(order?.createdAt).getTime()) / 60000)}분 경과`
+                                : ''
+                              }
+                            </span>
+                          )}
+
+                          {order.status === 'paymentRequested' && (
+                            <span className="text-sm text-zinc-600">
+                              {
+                                (new Date().getTime() - new Date(order?.paymentRequestedAt).getTime()) > 0
+                                ? `${Math.floor((new Date().getTime() - new Date(order?.paymentRequestedAt).getTime()) / 60000)}분 경과`
+                                : ''
+                              }
+                            </span>
+                          )}
+
+
                         </div>
+
                         <div className="flex flex-col items-end justify-center ml-2">
                           <span className="text-sm text-gray-800 font-semibold">
                             {order?.buyer.depositName.length > 1
@@ -4593,10 +4639,10 @@ const fetchBuyOrders = async () => {
                           </span>
                           {/* usdtAmount in green color */}
                           <span className="text-sm text-green-500 font-semibold">
-                            {order?.usdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}{' '}USDT
+                            {order?.usdtAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}{' '}USDT
                           </span>
-                          {/* krwAmount in red color */}
-                          <span className="text-sm text-red-500 font-semibold">
+                          {/* krwAmount in yellow color */}
+                          <span className="text-sm text-yellow-500 font-semibold">
                             {order?.krwAmount.toLocaleString()}{' '}원
                           </span>
                           {/* rate */}
