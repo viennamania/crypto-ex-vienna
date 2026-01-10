@@ -3584,6 +3584,8 @@ export async function acceptBuyOrder(data: any) {
 
   const sellerMobile = user?.mobile || '';
 
+  const autoProcessDeposit = user?.seller?.autoProcessDeposit || false;
+
 
 
 
@@ -3643,6 +3645,7 @@ export async function acceptBuyOrder(data: any) {
         memo: sellerMemo,
         bankInfo: bankInfo,
 
+        autoProcessDeposit: autoProcessDeposit,
       },
 
     } }
