@@ -4929,51 +4929,65 @@ const fetchBuyOrders = async () => {
                         */}
 
                         {seller.seller?.buyOrder?.status === 'paymentRequested' && (
-                          <button
-            
-                            disabled={confirmingPayment[index]}
-                            
-                            className={`
-                              ${confirmingPayment[index]
-                              ? 'text-gray-400 border-gray-400 bg-gray-100 cursor-not-allowed'
-                              : 'text-yellow-600 hover:text-yellow-700 hover:shadow-yellow-500/50 cursor-pointer'
-                              } bg-yellow-100 border border-yellow-600 rounded-lg p-2
-                            `}
-
-                            onClick={() => {
-                              //confirm("수동으로 입금확인을 처리하시겠습니까?") &&
-                              confirmPayment(
-                                index,
-                                seller.seller.buyOrder._id,
-                                //paymentAmounts[index],
-                                //paymentAmountsUsdt[index],
-
-                                seller.seller.buyOrder.krwAmount,
-                                seller.seller.buyOrder.usdtAmount,
+                          <>
+                          
+                            {seller.seller?.autoProcessDeposit ? (
+                              <div className="flex flex-row items-center justify-center gap-2
+                                bg-yellow-100 text-yellow-600 px-2 py-1 rounded-lg
+                                shadow-lg
+                                text-sm
+                                ">
+                                입금확인중...
+                              </div>
+                            ) : (                      
+                              <button
+                
+                                disabled={confirmingPayment[index]}
                                 
-                                seller.seller.buyOrder?.walletAddress,
+                                className={`
+                                  ${confirmingPayment[index]
+                                  ? 'text-gray-400 border-gray-400 bg-gray-100 cursor-not-allowed'
+                                  : 'text-yellow-600 hover:text-yellow-700 hover:shadow-yellow-500/50 cursor-pointer'
+                                  } bg-yellow-100 border border-yellow-600 rounded-lg p-2
+                                `}
 
-                                seller.seller.buyOrder?.paymentMethod,
-                              );
-                            }}
-                          >
-                            <div className="flex flex-row gap-2 items-center justify-center">
-                              { confirmingPayment[index] && (
-                                  <Image
-                                    src="/loading.png"
-                                    alt="Loading"
-                                    width={20}
-                                    height={20}
-                                    className="w-5 h-5
-                                    animate-spin"
-                                  />
-                              )}
-                              <span className="text-sm">
-                                입금완료하기
-                              </span>
-                            </div>
+                                onClick={() => {
+                                  //confirm("수동으로 입금확인을 처리하시겠습니까?") &&
+                                  confirmPayment(
+                                    index,
+                                    seller.seller.buyOrder._id,
+                                    //paymentAmounts[index],
+                                    //paymentAmountsUsdt[index],
 
-                          </button>
+                                    seller.seller.buyOrder.krwAmount,
+                                    seller.seller.buyOrder.usdtAmount,
+                                    
+                                    seller.seller.buyOrder?.walletAddress,
+
+                                    seller.seller.buyOrder?.paymentMethod,
+                                  );
+                                }}
+                              >
+                                <div className="flex flex-row gap-2 items-center justify-center">
+                                  { confirmingPayment[index] && (
+                                      <Image
+                                        src="/loading.png"
+                                        alt="Loading"
+                                        width={20}
+                                        height={20}
+                                        className="w-5 h-5
+                                        animate-spin"
+                                      />
+                                  )}
+                                  <span className="text-sm">
+                                    입금완료하기
+                                  </span>
+                                </div>
+
+                              </button>
+                            )}
+
+                          </>
 
                         )}
 
