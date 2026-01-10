@@ -3364,7 +3364,7 @@ const fetchBuyOrders = async () => {
 
     const data = await response.json();
     
-    console.log('getAllStores data', data);
+    //console.log('getAllStores data', data);
 
 
 
@@ -3375,12 +3375,11 @@ const fetchBuyOrders = async () => {
     return data.result.stores;
   }
   useEffect(() => {
-    if (!address) {
+ 
       setAllStores([]);
-      return;
-    }
+ 
     fetchAllStores();
-  }, [address]); 
+  }, []); 
 
 
 
@@ -3388,6 +3387,7 @@ const fetchBuyOrders = async () => {
   // totalNumberOfBuyOrders
   const [loadingTotalNumberOfBuyOrders, setLoadingTotalNumberOfBuyOrders] = useState(false);
   const [totalNumberOfBuyOrders, setTotalNumberOfBuyOrders] = useState(0);
+  const [processingBuyOrders, setProcessingBuyOrders] = useState([] as BuyOrder[]);
   const [totalNumberOfAudioOnBuyOrders, setTotalNumberOfAudioOnBuyOrders] = useState(0);
 
 
@@ -3409,16 +3409,15 @@ const fetchBuyOrders = async () => {
     const data = await response.json();
     //console.log('getTotalNumberOfBuyOrders data', data);
     setTotalNumberOfBuyOrders(data.result.totalCount);
+    setProcessingBuyOrders(data.result.orders);
     setTotalNumberOfAudioOnBuyOrders(data.result.audioOnCount);
 
     setLoadingTotalNumberOfBuyOrders(false);
   };
 
   useEffect(() => {
-    if (!address) {
-      setTotalNumberOfBuyOrders(0);
-      return;
-    }
+
+    setProcessingBuyOrders([]);
 
     fetchTotalBuyOrders();
 
@@ -3427,7 +3426,7 @@ const fetchBuyOrders = async () => {
     }, 5000);
     return () => clearInterval(interval);
 
-  }, [address]);
+  }, []);
 
       
   /*
@@ -3445,6 +3444,8 @@ const fetchBuyOrders = async () => {
       audio.play();
     }
   }, [totalNumberOfAudioOnBuyOrders, loadingTotalNumberOfBuyOrders]);
+
+
 
 
 
@@ -3911,6 +3912,109 @@ const fetchBuyOrders = async () => {
       />
 
 
+
+
+
+      {/* fixed position right and vertically center */}
+      {/*
+      <div className="
+        flex
+        fixed right-4 top-1/2 transform -translate-y-1/2
+        z-40
+        ">
+
+          <div className="w-full flex flex-col items-end justify-center gap-4">
+
+            <div className="
+              h-20
+              flex flex-row items-center justify-center gap-2
+              bg-white/80
+              p-2 rounded-lg shadow-md
+              backdrop-blur-md
+            ">
+              {loadingTotalNumberOfBuyOrders ? (
+                <Image
+                  src="/loading.png"
+                  alt="Loading"
+                  width={20}
+                  height={20}
+                  className="w-6 h-6 animate-spin"
+                />
+              ) : (
+                <Image
+                  src="/icon-buyorder.png"
+                  alt="Buy Order"
+                  width={35}
+                  height={35}
+                  className="w-6 h-6"
+                />
+              )}
+
+              {processingBuyOrders.length > 0 && (
+              <div className="flex flex-row items-center justify-center gap-1">
+                {processingBuyOrders.slice(0, 3).map((order: BuyOrder, index: number) => (
+
+                  <div className="flex flex-col items-center justify-center
+                  bg-white p-1 rounded-lg shadow-md
+                  "
+                  key={index}>
+                    <Image
+                      src={order?.store?.storeLogo || '/logo.png'}
+                      alt={order?.store?.storeName || 'Store'}
+                      width={20}
+                      height={20}
+                      className="w-5 h-5 rounded-lg object-cover"
+                    />
+                    <span className="text-xs text-gray-500">
+                      {order?.store?.storeName || 'Store'}
+                    </span>
+                    <span className="text-sm text-gray-800 font-semibold">
+                      {order?.buyer.depositName || 'Buyer'}
+                    </span>
+                  </div>
+
+                ))}
+
+                {processingBuyOrders.length > 3 && (
+                  <span className="text-sm text-gray-500">
+                    +{processingBuyOrders.length - 3}
+                  </span>
+                )}
+              </div>
+              )}
+
+              <p className="text-lg text-red-500 font-semibold">
+                {
+                totalNumberOfBuyOrders
+                }
+              </p>
+
+              {totalNumberOfBuyOrders > 0 && (
+                <div className="flex flex-row items-center justify-center gap-2">
+                  <Image
+                    src="/icon-notification.gif"
+                    alt="Notification"
+                    width={50}
+                    height={50}
+                    className="w-15 h-15 object-cover"
+                    
+                  />
+                </div>
+              )}
+            </div>
+
+        
+          </div>
+
+        </div>
+        */}
+
+
+
+
+
+
+
       <div className="py-0 w-full">
 
 
@@ -4130,7 +4234,7 @@ const fetchBuyOrders = async () => {
 
 
 
-
+          {/*
           <div className="w-full flex flex-row items-center justify-end gap-2">
 
             <div className="flex flex-row items-center justify-center gap-2
@@ -4177,8 +4281,6 @@ const fetchBuyOrders = async () => {
               )}
             </div>
 
-
-            {/* Clearance Orders */}
             {version !== 'bangbang' && (
             <div className="hidden flex-row items-center justify-center gap-2
             bg-white/80
@@ -4237,6 +4339,7 @@ const fetchBuyOrders = async () => {
             )}
         
           </div>
+          */}
 
 
 
@@ -4244,65 +4347,68 @@ const fetchBuyOrders = async () => {
           
           {/* 오늘 거래 현황 */}
 
-          <div className="w-full flex flex-col xl:flex-row items-center justify-center gap-4
+          <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-4
           border-t border-b border-zinc-300
           py-4
           ">
 
-            <Image
-              src="/icon-trade.png"
-              alt="Trade"
-              width={50}
-              height={50}
-              className="w-16 h-16 rounded-lg object-cover"
-            />
-
-            <div className="flex flex-col gap-2 items-center">
-              <div className="text-sm">P2P 거래수(건)</div>
-              <div className="text-4xl font-semibold text-zinc-500">
-                {
-                  //buyOrderStats.totalCount?.toLocaleString()
-                  animatedTotalCount
-                }
-              </div>
-            </div>
-
-            <div className="flex flex-row items-center justify-center gap-2">
+            <div className="w-full flex flex-row items-center justify-start gap-2">
+              <Image
+                src="/icon-trade.png"
+                alt="Trade"
+                width={50}
+                height={50}
+                className="w-16 h-16 rounded-lg object-cover"
+              />
 
               <div className="flex flex-col gap-2 items-center">
-                <div className="text-sm">P2P 거래량(USDT)</div>
-                <div className="flex flex-row items-center justify-center gap-1">
-                  <Image
-                    src="/icon-tether.png"
-                    alt="Tether"
-                    width={20}
-                    height={20}
-                    className="w-5 h-5"
-                  />
-                  {/* RGB: 64, 145, 146 */}
-                  <span className="text-4xl font-semibold text-[#409192]"
-                    style={{ fontFamily: 'monospace' }}>
-                    {
-                      //buyOrderStats.totalUsdtAmount
-                      //? buyOrderStats.totalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                      //: '0.000'
-                      animatedTotalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                    }
-                  </span>
+                <div className="text-sm">P2P 거래수(건)</div>
+                <div className="text-4xl font-semibold text-zinc-500">
+                  {
+                    //buyOrderStats.totalCount?.toLocaleString()
+                    animatedTotalCount
+                  }
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 items-center">
-                <div className="text-sm">P2P 거래금액(원)</div>
-                <div className="flex flex-row items-center justify-center gap-1">
-                  <span className="text-4xl font-semibold text-yellow-600"
-                    style={{ fontFamily: 'monospace' }}>
-                    {
-                      //buyOrderStats.totalKrwAmount?.toLocaleString()
-                      animatedTotalKrwAmount.toLocaleString()
-                    }
-                  </span>
+              <div className="flex flex-row items-center justify-center gap-2">
+
+                <div className="flex flex-col gap-2 items-center">
+                  <div className="text-sm">P2P 거래량(USDT)</div>
+                  <div className="flex flex-row items-center justify-center gap-1">
+                    <Image
+                      src="/icon-tether.png"
+                      alt="Tether"
+                      width={20}
+                      height={20}
+                      className="w-5 h-5"
+                    />
+                    {/* RGB: 64, 145, 146 */}
+                    <span className="text-4xl font-semibold text-[#409192]"
+                      style={{ fontFamily: 'monospace' }}>
+                      {
+                        //buyOrderStats.totalUsdtAmount
+                        //? buyOrderStats.totalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                        //: '0.000'
+                        animatedTotalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                      }
+                    </span>
+                  </div>
                 </div>
+
+                <div className="flex flex-col gap-2 items-center">
+                  <div className="text-sm">P2P 거래금액(원)</div>
+                  <div className="flex flex-row items-center justify-center gap-1">
+                    <span className="text-4xl font-semibold text-yellow-600"
+                      style={{ fontFamily: 'monospace' }}>
+                      {
+                        //buyOrderStats.totalKrwAmount?.toLocaleString()
+                        animatedTotalKrwAmount.toLocaleString()
+                      }
+                    </span>
+                  </div>
+                </div>
+
               </div>
 
             </div>
@@ -4310,6 +4416,7 @@ const fetchBuyOrders = async () => {
 
             {/* list of buyOrders when status is 'ordered' or 'accepted' or 'paymentRequested' */}
             {/* traideId, usdtAmount, krwAmount, createdAt */}
+            {/*
             <table className="w-full xl:table-auto border-collapse border border-zinc-300
             bg-white/80
             p-4 rounded-lg shadow-md
@@ -4356,6 +4463,153 @@ const fetchBuyOrders = async () => {
                 ))}
               </tbody>
             </table>
+            */}
+
+
+
+
+            <div className="flex flex-col items-end justify-center gap-4">
+
+              <div className="
+                w-full
+                flex flex-row items-center justify-end gap-2
+                bg-white/80
+                p-2 rounded-lg shadow-md
+                backdrop-blur-md
+              ">
+  
+                {/* array of processingBuyOrders store logos */}
+                {processingBuyOrders.length > 0 && (
+                <div className="w-full flex flex-row items-center justify-end gap-2">
+                  
+                  {processingBuyOrders.slice(0, 5).map((order: BuyOrder, index: number) => (
+
+                    <div className="
+                    w-36
+                    flex flex-row items-center justify-start gap-2
+                    border border-zinc-300 p-2 rounded-lg shadow-md
+                    relative
+                    "
+                    key={index}>
+
+                      {/* top right corner position absolute red dot indicator for status is 'ordered' */}
+                      {order.status === 'ordered' && (
+                        <div className="
+                          absolute top-0 right-0
+                          w-4 h-4
+                          bg-red-500
+                          rounded-full
+                          border-2 border-white
+                        ">
+                        </div>
+                      )}
+
+                      {/* order.nickname position fixed top left corner ribbon style */}
+                      <div className="
+                      absolute top-0 left-0
+                      flex flex-row items-center justify-start
+                      ">
+                        <div className="w-full flex flex-row items-center justify-between gap-2
+                        bg-blue-500 text-white px-2 py-1 rounded-br-lg rounded-tl-lg shadow-lg
+                        ">
+                          <div className="flex flex-row items-center justify-center gap-1">
+                            <Image
+                              src="/icon-buyer.png"
+                              alt="Buyer"
+                              width={20}
+                              height={20}
+                              className="w-6 h-6 rounded-lg object-cover"
+                            />
+                            <span className="text-sm font-semibold">
+                              {order.nickname}
+                            </span>
+                          </div>
+
+                          {/* whe  seller.seller?.totalPaymentConfirmedUsdtAmount > 10, show a badge */}
+                          {/*
+                          {seller.seller?.totalPaymentConfirmedUsdtAmount > 20 && (
+                            <Image
+                              src="/icon-best-seller.png"
+                              alt="Best Seller"
+                              width={30}
+                              height={30}
+                              className="w-6 h-6 rounded-lg object-cover"
+                            />
+                          )}
+                          */}
+
+                        </div>
+                      </div>
+
+                      <div className="flex flex-row items-start justify-between gap-2 mt-8">
+                        <div className="flex flex-col items-start justify-center gap-2">
+                          <Image
+                            src={order?.store?.storeLogo || '/logo.png'}
+                            alt={order?.store?.storeName || 'Store'}
+                            width={30}
+                            height={30}
+                            className="w-8 h-8 rounded-lg object-cover"
+                          />
+                          {/* status */}
+                          <span className="text-xs text-blue-500 font-semibold capitalize">
+                            {order.status === 'ordered' && '매칭대기중'}
+                            {order.status === 'accepted' && '결제대기중'}
+                            {order.status === 'paymentRequested' && '결제요청중'}
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-end justify-center ml-2">
+                          <span className="text-sm text-gray-800 font-semibold">
+                            {order?.buyer.depositName || 'Buyer'}
+                          </span>
+                          {/* krwAmount in red color */}
+                          <span className="text-sm text-red-500 font-semibold">
+                            {order?.krwAmount.toLocaleString()}
+                          </span>
+                          {/* usdtAmount in green color */}
+                          <span className="text-sm text-green-500 font-semibold">
+                            {order?.usdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                          </span>
+
+                        </div>
+                      </div>
+
+                    </div>
+
+                  ))}
+
+                  {processingBuyOrders.length > 5 && (
+                    <span className="text-sm text-gray-500">
+                      +{processingBuyOrders.length - 5}
+                    </span>
+                  )}
+                </div>
+                )}
+
+                <p className="text-lg text-red-500 font-semibold">
+                  {
+                  totalNumberOfBuyOrders
+                  }
+                </p>
+
+                {totalNumberOfBuyOrders > 0 && (
+                  <div className="flex flex-row items-center justify-center gap-2">
+                    <Image
+                      src="/icon-notification.gif"
+                      alt="Notification"
+                      width={50}
+                      height={50}
+                      className="w-15 h-15 object-cover"
+                      
+                    />
+                  </div>
+                )}
+              </div>
+
+          
+            </div>
+
+
+
 
           </div>
 

@@ -7834,7 +7834,11 @@ export async function getTotalNumberOfBuyOrders(
   }: {
     storecode: string;
   }
-): Promise<{ totalCount: number; audioOnCount: number }> {
+): Promise<{
+  totalCount: number;
+  orders: any[];
+  audioOnCount: number
+}> {
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
   // get total number of buy orders
@@ -7848,11 +7852,40 @@ export async function getTotalNumberOfBuyOrders(
       privateSale: { $ne: true },
       //status: 'paymentConfirmed',
       
-      //status: { $in: ['ordered', 'accepted', 'paymentRequested'] },
-      status: { $in: ['ordered', 'accepted',] },
+      status: { $in: ['ordered', 'accepted', 'paymentRequested'] },
+      //status: { $in: ['ordered', 'accepted',] },
 
     }
   );
+
+
+  // project only necessary fields
+  // tradieId, store,
+  const results = await collection.find<any>(
+    {
+      storecode: {
+        $regex: storecode || '', // if storecode is empty, it will match all
+        $options: 'i',
+      },
+      privateSale: { $ne: true },
+      status: { $in: ['ordered', 'accepted', 'paymentRequested'] },
+    },
+    { projection: {
+      tradeId: 1,
+      nickname: 1,
+      avatar: 1,
+      store: 1,
+      buyer: 1,
+      createdAt: 1,
+      status: 1,
+      krwAmount: 1,
+      usdtAmount: 1,
+      rate: 1,
+    } }
+  )
+    .sort({ createdAt: -1 })
+    .toArray();
+
 
 
   // count of audioOn is true
@@ -7873,6 +7906,7 @@ export async function getTotalNumberOfBuyOrders(
 
   return {
     totalCount: totalCount,
+    orders: results,
     audioOnCount: audioOnCount,
   }
 }
