@@ -4485,7 +4485,7 @@ const fetchBuyOrders = async () => {
                   {processingBuyOrders.slice(0, 5).map((order: BuyOrder, index: number) => (
 
                     <div className="
-                    w-36
+                    w-44
                     flex flex-row items-center justify-start gap-2
                     border border-zinc-300 p-2 rounded-lg shadow-md
                     relative
@@ -4559,15 +4559,22 @@ const fetchBuyOrders = async () => {
                         </div>
                         <div className="flex flex-col items-end justify-center ml-2">
                           <span className="text-sm text-gray-800 font-semibold">
-                            {order?.buyer.depositName || 'Buyer'}
-                          </span>
-                          {/* krwAmount in red color */}
-                          <span className="text-sm text-red-500 font-semibold">
-                            {order?.krwAmount.toLocaleString()}
+                            {order?.buyer.depositName.length > 1
+                              ? order?.buyer.depositName.slice(0, 1) + '**'
+                              : order?.buyer.depositName
+                            }
                           </span>
                           {/* usdtAmount in green color */}
                           <span className="text-sm text-green-500 font-semibold">
-                            {order?.usdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            {order?.usdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}{' '}USDT
+                          </span>
+                          {/* krwAmount in red color */}
+                          <span className="text-sm text-red-500 font-semibold">
+                            {order?.krwAmount.toLocaleString()}{' '}원
+                          </span>
+                          {/* rate */}
+                          <span className="text-xs text-gray-500 font-semibold">
+                            {order?.rate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 원/USDT
                           </span>
 
                         </div>
