@@ -6036,7 +6036,7 @@ const fetchBuyOrders = async () => {
                             </span>
 
                             <div className="flex flex-row items-center gap-2
-                            test-xs bg-blue-500 text-white px-3 py-1 rounded-lg">
+                              bg-blue-500 text-white px-3 py-1 rounded-lg">
                             
                               <Image
                                 src="/icon-transfer.png"
@@ -6045,7 +6045,9 @@ const fetchBuyOrders = async () => {
                                 height={20}
                                 className="w-5 h-5 animate-spin"
                               />
-                              <span>{seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 자동 전송중</span>
+                              <span className="text-sm font-semibold">
+                                {seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 자동 전송중
+                              </span>
                             </div>
 
                             {/* USDT 전송이 환료된후에 판매 대기중으로 변경됩니다. */}
