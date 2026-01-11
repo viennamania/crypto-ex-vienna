@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const clientId = process.env.NEXT_PUBLIC_TEMPLATE_CLIENT_ID || "";
     const upbitInfo = await getUpbitInfo(clientId);
 
-    console.log("upbitInfo:", upbitInfo);
+    ///console.log("upbitInfo:", upbitInfo);
 
     return NextResponse.json({
         

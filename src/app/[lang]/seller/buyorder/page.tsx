@@ -5945,7 +5945,9 @@ const fetchBuyOrders = async () => {
                           {/* 판매중 */}
                           <div className="flex flex-row items-center gap-2
                           bg-red-500 text-white px-3 py-1 rounded-lg">
-                            <span>판매중</span>
+                            <span className="text-sm font-semibold">
+                              판매 진행중
+                            </span>
                           </div>
 
                           <div className="w-full flex flex-col items-start justify-center gap-1
