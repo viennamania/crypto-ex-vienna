@@ -2740,3 +2740,34 @@ export async function setPriceSettingMethod(
   );
   
 }
+
+// setMarket
+export async function setMarket(
+  {
+    storecode,
+    walletAddress,
+    market,
+  }: {
+    storecode: string;
+    walletAddress: string;
+    market: string;
+  }
+) {
+
+  //console.log('setMarket storecode: ' + storecode + ' walletAddress: ' + walletAddress + ' market: ' + market);
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  return await collection.updateOne(
+    {
+      storecode: storecode,
+      walletAddress: walletAddress
+    },
+    {
+      $set: {
+        'seller.market': market,
+      }
+    }
+  );
+  
+}

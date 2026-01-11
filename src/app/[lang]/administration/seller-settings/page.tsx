@@ -1798,10 +1798,10 @@ export default function SettingsPage({ params }: any) {
 
                                     }}
                                     className={`
-                                        ${priceSettingMethod === 'market' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
+                                        ${seller?.priceSettingMethod === 'market' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
                                         p-2 rounded-lg text-sm font-semibold
                                     `}
-                                    disabled={priceSettingMethod === 'market'}
+                                    disabled={seller?.priceSettingMethod === 'market'}
                                 >
                                     Market 연동
                                 </button>
@@ -1814,10 +1814,10 @@ export default function SettingsPage({ params }: any) {
 
                                     }}
                                     className={`
-                                        ${priceSettingMethod === 'fixed' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
+                                        ${seller?.priceSettingMethod === 'fixed' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
                                         p-2 rounded-lg text-sm font-semibold
                                     `}
-                                    disabled={priceSettingMethod === 'fixed'}
+                                    disabled={seller?.priceSettingMethod === 'fixed'}
                                 >
                                     고정가
                                 </button>
@@ -1825,7 +1825,7 @@ export default function SettingsPage({ params }: any) {
                             </div>
 
                             {/* priceSettingMethod 가 fixed 일 때만 보이기 */}
-                            {priceSettingMethod === 'fixed' && (
+                            {seller?.priceSettingMethod === 'fixed' && (
 
                                 <div className='w-full flex flex-row gap-2 items-center justify-end'>
 
@@ -1858,7 +1858,7 @@ export default function SettingsPage({ params }: any) {
                             {/* priceSettingMethod 가 market 일 때만 보이기 */}
                             {/* market 중 한개 선택 upbit, bithumb, korbit */}
                             {/* combo box style */}
-                            {priceSettingMethod === 'market' && (
+                            {seller?.priceSettingMethod === 'market' && (
 
 
                                 <div className='w-full flex flex-col gap-2 items-start justify-between'>
@@ -1870,39 +1870,43 @@ export default function SettingsPage({ params }: any) {
 
                                         <button
                                             onClick={() => {
-                                                setMarket('upbit');
+                                                //setMarket('upbit');
+                                                setMarketFunc('upbit');
                                             }}
                                             className={`
-                                                ${market === 'upbit' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
+                                                ${seller?.market === 'upbit' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
                                                 p-2 rounded-lg text-sm font-semibold
                                             `}
-                                            disabled={market === 'upbit'}
+                                            disabled={seller?.market === 'upbit'}
                                         >
                                             Upbit
                                         </button>
 
                                         <button
                                             onClick={() => {
-                                                setMarket('bithumb');
+                                                //setMarket('bithumb');
+                                                setMarketFunc('bithumb');
                                             }}
                                             className={`
-                                                ${market === 'bithumb' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
+                                                ${seller?.market === 'bithumb' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
                                                 p-2 rounded-lg text-sm font-semibold
                                             `}
-                                            disabled={market === 'bithumb'}
+                                            disabled={seller?.market === 'bithumb'}
                                         >
                                             Bithumb
                                         </button>
 
                                         <button
                                             onClick={() => {
-                                                setMarket('korbit');
+                                                //setMarket('korbit');
+                                                setMarketFunc('korbit');
+
                                             }}
                                             className={`
-                                                ${market === 'korbit' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
+                                                ${seller?.market === 'korbit' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
                                                 p-2 rounded-lg text-sm font-semibold
                                             `}
-                                            disabled={market === 'korbit'}
+                                            disabled={seller?.market === 'korbit'}
                                         >
                                             Korbit
                                         </button>
@@ -1910,6 +1914,7 @@ export default function SettingsPage({ params }: any) {
                                     </div>
 
                                     {/* setMarketFunc */}
+                                    {/*
                                     <button
                                         disabled={settingMarket || !market}
                                         onClick={() => {
@@ -1923,6 +1928,7 @@ export default function SettingsPage({ params }: any) {
                                     >
                                         {settingMarket ? '설정중...' : '설정하기'}
                                     </button>
+                                    */}
 
                                 </div>
                                 
