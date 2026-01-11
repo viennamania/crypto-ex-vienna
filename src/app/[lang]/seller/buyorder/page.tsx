@@ -2295,7 +2295,7 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
 
 
 
-
+          
           await fetch('/api/order/getAllBuyOrders', {
             method: 'POST',
             headers: {
@@ -2344,6 +2344,21 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
 
             }
           });
+          
+
+          // update sellersBalance seller.buyOrder.status to 'paymentConfirmed'
+          /*
+          setSellersBalance((prev) =>
+            prev.map((seller) =>
+              seller.walletAddress === address
+                ? { ...seller, seller: { ...seller.seller, buyOrder: { ...seller.seller.buyOrder, status: 'paymentConfirmed' } } }
+                : seller
+
+            )
+          );
+          */
+
+
 
           toast.success(Payment_has_been_confirmed);
           ////playSong();
@@ -5549,7 +5564,8 @@ const fetchBuyOrders = async () => {
                             </span>
 
                             <div className="flex flex-row items-center gap-2
-                            bg-blue-500 text-white px-3 py-1 rounded-lg">
+                            test-xs bg-blue-500 text-white px-3 py-1 rounded-lg">
+                            
                               <Image
                                 src="/icon-transfer.png"
                                 alt="Transfer Auto"
@@ -5557,7 +5573,7 @@ const fetchBuyOrders = async () => {
                                 height={20}
                                 className="w-5 h-5 animate-spin"
                               />
-                              <span>{seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 전송중</span>
+                              <span>{seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 자동 전송중</span>
                             </div>
 
                             {/* USDT 전송이 환료된후에 판매 대기중으로 변경됩니다. */}
