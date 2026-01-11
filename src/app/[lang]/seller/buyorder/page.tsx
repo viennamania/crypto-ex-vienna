@@ -4525,7 +4525,7 @@ const fetchBuyOrders = async () => {
                 </div>
               </div>
 
-              <div className="flex flex-row items-center justify-center gap-2">
+              <div className="flex flex-col xl:flex-row items-center justify-center gap-2">
 
                 <div className="flex flex-col gap-2 items-center">
                   <div className="text-sm">P2P 거래량(USDT)</div>
