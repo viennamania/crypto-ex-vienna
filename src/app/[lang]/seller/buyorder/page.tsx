@@ -4770,46 +4770,106 @@ const fetchBuyOrders = async () => {
 
           
           
-
-
-
-          {/* animatedUpbitUsdtToKrwRate */}
-          {/* logo-upbit.jpg */}
-          {/* upbit usdt to krw rate display */}
-          {/* large font size */}
-          {/* upbitUsdtToKrwRateTimestamp - convert to local time */}
-          <div className="w-full flex flex-row items-center justify-end gap-2
-            mt-2
-            ">
-            <Image
-              src="/icon-upbit.png"
-              alt="Upbit"
-              width={50}
-              height={50}
-              className="w-12 h-12 object-cover"
-            />
-            <div className="flex flex-col items-end justify-center">
-              <span className="text-2xl text-zinc-700 font-semibold">
-                1 USDT = {' '}
-                <span style={{ fontFamily: 'monospace' }}>
-                  {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                </span>
+          <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-4
+          border-t border-b border-zinc-300
+          py-4
+          ">
+            <div className="flex flex-row items-center justify-start gap-2">
+              <span className="text-lg font-bold text-zinc-700">
+                실시간 USDT 환율 정보
               </span>
-              <span className="text-sm text-zinc-500">
-                {
-                  //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
-                
-                  TradeDateKst && TradeTimeKst ? `${TradeDateKst.slice(0,4)}-${TradeDateKst.slice(4,6)}-${TradeDateKst.slice(6,8)} ${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
-                }
-              </span>
+              <Image
+                src="/icon-live.gif"
+                alt="Live"
+                width={30}
+                height={30}
+                className="w-8 h-8 object-cover"
+              />
             </div>
-            <Image
-              src="/icon-live.gif"
-              alt="Live"
-              width={30}
-              height={30}
-              className="w-8 h-8 object-cover"
-            />
+
+            <div className="w-full flex flex-col xl:flex-row items-center justify-end gap-4"> 
+              {/* animatedUpbitUsdtToKrwRate */}
+              {/* logo-upbit.jpg */}
+              {/* upbit usdt to krw rate display */}
+              {/* large font size */}
+              {/* upbitUsdtToKrwRateTimestamp - convert to local time */}
+              <div className="flex flex-row items-center justify-end gap-2 p-2 min-w-[200px]">
+                <Image
+                  src="/icon-market-upbit.png"
+                  alt="Upbit"
+                  width={50}
+                  height={50}
+                  className="w-12 h-12 object-cover"
+                />
+                <div className="flex flex-col items-end justify-center">
+                  <span className="text-2xl text-zinc-700 font-semibold"
+                    style={{ fontFamily: 'monospace' }}>
+                      {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  </span>
+                  <span className="text-sm text-zinc-500"
+                    style={{ fontFamily: 'monospace' }}>
+                    {
+                      //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
+                    
+                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
+                    }
+                  </span>
+                </div>
+              </div>
+
+
+              <div className="flex flex-row items-center justify-end gap-2 p-2 min-w-[200px]">
+                <Image
+                  src="/icon-market-bithumb.png"
+                  alt="Bithumb"
+                  width={50}
+                  height={50}
+                  className="w-12 h-12 object-cover"
+                />
+                <div className="flex flex-col items-end justify-center">
+                  <span className="text-2xl text-zinc-700 font-semibold"
+                    style={{ fontFamily: 'monospace' }}>
+                      {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  </span>
+                  <span className="text-sm text-zinc-500"
+                    style={{ fontFamily: 'monospace' }}>
+                    {
+                      //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
+                    
+                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
+                    }
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-row items-center justify-end gap-2 p-2 min-w-[200px]">
+                <Image
+                  src="/icon-market-korbit.png"
+                  alt="Korbit"
+                  width={50}
+                  height={50}
+                  className="w-12 h-12 object-cover"
+                />
+                <div className="flex flex-col items-end justify-center">
+                  <span className="text-2xl text-zinc-700 font-semibold"
+                    style={{ fontFamily: 'monospace' }}>
+                      {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  </span>
+                  <span className="text-sm text-zinc-500"
+                    style={{ fontFamily: 'monospace' }}>
+                    {
+                      //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
+                    
+                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
+                    }
+                  </span>
+                </div>
+
+              </div>
+
+
+            </div>
+
           </div>
           
           
@@ -4819,7 +4879,7 @@ const fetchBuyOrders = async () => {
           ">
 
             {/* title - 판매주문 */}
-            <h2 className="text-2xl font-bold text-zinc-700">
+            <h2 className="text-lg font-bold text-zinc-700">
               판매자 계정 현황
             </h2>
 
