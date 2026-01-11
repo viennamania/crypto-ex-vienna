@@ -1021,6 +1021,57 @@ export default function SettingsPage({ params }: any) {
         });
     };
 
+    // setPriceSettingMethod
+    const [settingPriceSettingMethod, setSettingPriceSettingMethod] = useState(false);
+    const [priceSettingMethod, setPriceSettingMethod] = useState('fixed');
+    const setPriceSettingMethodFunc = async (method: string) => {
+        if (!seller) return;
+        setSettingPriceSettingMethod(true);
+        await fetch('/api/user/setPriceSettingMethod', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                storecode: storecode,
+                walletAddress: address,
+                priceSettingMethod: method,
+            }),
+        });
+        setSettingPriceSettingMethod(false);
+        setSeller({
+            ...seller,
+            priceSettingMethod: method,
+        });
+    };
+
+    // setMarket
+    // upbit, bithumb, korbit
+    const [settingMarket, setSettingMarket] = useState(false);
+    const [market, setMarket] = useState('upbit');
+    const setMarketFunc = async (market: string) => {
+        if (!seller) return;
+        setSettingMarket(true);
+        await fetch('/api/user/setMarket', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                storecode: storecode,
+                walletAddress: address,
+                market: market,
+            }),
+        });
+        setSettingMarket(false);
+        setSeller({
+            ...seller,
+            market: market,
+        });
+    };
+
+
+
 
     return (
 
@@ -1723,32 +1774,158 @@ export default function SettingsPage({ params }: any) {
                                 </span>
                             </div>
 
-                            <div className='w-full flex flex-row gap-2 items-center justify-end'>
 
-                                <input 
-                                    className="p-2 w-32 text-zinc-100 bg-zinc-800 rounded-lg text-lg font-semibold text-right"
-                                    placeholder="예: 1300"
-                                    value={usdtToKrwRate}
-                                    type='number'
-                                    onChange={(e) => {
-                                        // check if the value is a number
-                                        e.target.value = e.target.value.replace(/[^0-9]/g, '');
-                                        setUsdtToKrwRate(Number(e.target.value));
-                                    }}
-                                />
+                            {/* market 연동 or 고정가 설정 */}
+                            {/* market 연동: upbit or bithumb or korbit */}
+                            {/* market중 하나 선택, 또는 고정가 선택 */}
+                            {/* checkbox style */}
+                            <div className='w-full flex flex-row gap-2 items-center justify-start'>
+
+                                <div className="flex flex-row items-center gap-2">
+                                    <span className="text-lg font-semibold">
+                                        가격 설정 방식:
+                                    </span>
+                                    {' '}
+                                    <span className="text-lg text-zinc-500">
+                                        (현재 설정: {seller?.priceSettingMethod === 'market' ? 'Market 연동' : '고정가'})
+                                    </span>
+                                </div>
 
                                 <button
-                                    disabled={updatingUsdtToKrw}
-                                    onClick={updateUsdtToKrwRate}
+                                    onClick={() => {
+                                        setPriceSettingMethod('market');
+                                    }}
                                     className={`
-                                        ${updatingUsdtToKrw ? 'bg-gray-300 text-gray-400' : 'bg-green-500 text-zinc-100'}
+                                        ${priceSettingMethod === 'market' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
                                         p-2 rounded-lg text-sm font-semibold
                                     `}
+                                    disabled={priceSettingMethod === 'market'}
                                 >
-                                    {updatingUsdtToKrw ? '수정중...' : '수정하기'}
+                                    Market 연동
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        setPriceSettingMethod('fixed');
+                                    }}
+                                    className={`
+                                        ${priceSettingMethod === 'fixed' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
+                                        p-2 rounded-lg text-sm font-semibold
+                                    `}
+                                    disabled={priceSettingMethod === 'fixed'}
+                                >
+                                    고정가
                                 </button>
 
                             </div>
+
+                            {/* priceSettingMethod 가 fixed 일 때만 보이기 */}
+                            {priceSettingMethod === 'fixed' && (
+
+                                <div className='w-full flex flex-row gap-2 items-center justify-end'>
+
+                                    <input 
+                                        className="p-2 w-32 text-zinc-100 bg-zinc-800 rounded-lg text-lg font-semibold text-right"
+                                        placeholder="예: 1300"
+                                        value={usdtToKrwRate}
+                                        type='number'
+                                        onChange={(e) => {
+                                            // check if the value is a number
+                                            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                                            setUsdtToKrwRate(Number(e.target.value));
+                                        }}
+                                    />
+
+                                    <button
+                                        disabled={updatingUsdtToKrw}
+                                        onClick={updateUsdtToKrwRate}
+                                        className={`
+                                            ${updatingUsdtToKrw ? 'bg-gray-300 text-gray-400' : 'bg-green-500 text-zinc-100'}
+                                            p-2 rounded-lg text-sm font-semibold
+                                        `}
+                                    >
+                                        {updatingUsdtToKrw ? '수정중...' : '수정하기'}
+                                    </button>
+
+                                </div>
+                            )}
+
+                            {/* priceSettingMethod 가 market 일 때만 보이기 */}
+                            {/* market 중 한개 선택 upbit, bithumb, korbit */}
+                            {/* combo box style */}
+                            {priceSettingMethod === 'market' && (
+
+
+                                <div className='w-full flex flex-col gap-2 items-start justify-between'>
+
+                                    <span className="text-lg font-semibold">
+                                        연동할 마켓 선택:
+                                    </span>
+                                    <div className='w-full flex flex-row gap-2 items-center justify-end'>
+
+                                        <button
+                                            onClick={() => {
+                                                setMarket('upbit');
+                                            }}
+                                            className={`
+                                                ${market === 'upbit' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
+                                                p-2 rounded-lg text-sm font-semibold
+                                            `}
+                                            disabled={market === 'upbit'}
+                                        >
+                                            Upbit
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                setMarket('bithumb');
+                                            }}
+                                            className={`
+                                                ${market === 'bithumb' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
+                                                p-2 rounded-lg text-sm font-semibold
+                                            `}
+                                            disabled={market === 'bithumb'}
+                                        >
+                                            Bithumb
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                setMarket('korbit');
+                                            }}
+                                            className={`
+                                                ${market === 'korbit' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
+                                                p-2 rounded-lg text-sm font-semibold
+                                            `}
+                                            disabled={market === 'korbit'}
+                                        >
+                                            Korbit
+                                        </button>
+
+                                    </div>
+
+                                    {/* setMarketFunc */}
+                                    <button
+                                        disabled={settingMarket || !market}
+                                        onClick={async () => {
+                                            setMarketFunc(market);
+                                        } }
+
+                                        className={`
+                                            ${settingMarket ? 'bg-gray-300 text-gray-400' : 'bg-green-500 text-zinc-100'}
+                                            p-2 rounded-lg text-sm font-semibold
+                                        `}
+                                    >
+                                        {settingMarket ? '설정중...' : '설정하기'}
+                                    </button>
+
+                                </div>
+                                
+
+
+                            )}
+
+                
 
                         </div>
 

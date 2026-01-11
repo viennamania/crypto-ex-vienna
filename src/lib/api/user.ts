@@ -2708,3 +2708,35 @@ export async function toggleAutoProcessDeposit(
   );
   
 }
+
+
+// setPriceSettingMethod
+export async function setPriceSettingMethod(
+  {
+    storecode,
+    walletAddress,
+    priceSettingMethod,
+  }: {
+    storecode: string;
+    walletAddress: string;
+    priceSettingMethod: string;
+  }
+) {
+
+  //console.log('setPriceSettingMethod storecode: ' + storecode + ' walletAddress: ' + walletAddress + ' priceSettingMethod: ' + priceSettingMethod);
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  return await collection.updateOne(
+    {
+      storecode: storecode,
+      walletAddress: walletAddress
+    },
+    {
+      $set: {
+        'seller.priceSettingMethod': priceSettingMethod,
+      }
+    }
+  );
+  
+}
