@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
         priceSettingMethod
     } = body;
 
-    //console.log("toggleAutoProcessDeposit body:", body);
+    console.log("setPriceSettingMethod body:", body);
 
     const result = await setPriceSettingMethod({
         storecode: storecode,

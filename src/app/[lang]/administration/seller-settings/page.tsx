@@ -1793,7 +1793,9 @@ export default function SettingsPage({ params }: any) {
 
                                 <button
                                     onClick={() => {
-                                        setPriceSettingMethod('market');
+                                        //setPriceSettingMethod('market');
+                                        setPriceSettingMethodFunc('market');
+
                                     }}
                                     className={`
                                         ${priceSettingMethod === 'market' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
@@ -1806,7 +1808,10 @@ export default function SettingsPage({ params }: any) {
 
                                 <button
                                     onClick={() => {
-                                        setPriceSettingMethod('fixed');
+                                        
+                                        //setPriceSettingMethod('fixed');
+                                        setPriceSettingMethodFunc('fixed');
+
                                     }}
                                     className={`
                                         ${priceSettingMethod === 'fixed' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
@@ -1907,7 +1912,7 @@ export default function SettingsPage({ params }: any) {
                                     {/* setMarketFunc */}
                                     <button
                                         disabled={settingMarket || !market}
-                                        onClick={async () => {
+                                        onClick={() => {
                                             setMarketFunc(market);
                                         } }
 
