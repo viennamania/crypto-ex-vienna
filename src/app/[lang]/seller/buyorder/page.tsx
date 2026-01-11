@@ -5857,11 +5857,13 @@ const fetchBuyOrders = async () => {
 
                       {seller.seller?.buyOrder?.status === 'paymentRequested' ? (
                         <div className="flex flex-col items-start justify-center gap-2">
-                          {/* 판매중 */}
+                          {/* 판매 진행 */}
                           <div className="w-full flex flex-row items-center justify-start gap-2">
                             <div className="flex flex-row items-center gap-2
                             bg-red-500 text-white px-3 py-1 rounded-lg">
-                              <span>판매중</span>
+                              <span className="text-sm font-semibold">
+                                판매 진행중
+                              </span>
                             </div>
                             {/*
                             <Image
@@ -5878,6 +5880,73 @@ const fetchBuyOrders = async () => {
                                 }
                               />
                               */}
+
+
+
+
+
+                              {seller.seller?.autoProcessDeposit ? (
+                                <>
+
+                                </>
+                              ) : (                      
+                                <button
+                  
+                                  disabled={confirmingPayment[index]}
+                                  
+                                  className={`
+                                    ${confirmingPayment[index]
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-white hover:text-white hover:shadow-yellow-500/50 cursor-pointer'
+                                    } bg-blue-600 hover:bg-blue-700
+                                    px-3 py-1 rounded-lg
+                                    shadow-lg
+                                  `}
+
+                                  onClick={() => {
+                                    //confirm("수동으로 입금확인을 처리하시겠습니까?") &&
+                                    confirmPayment(
+                                      index,
+                                      seller.seller.buyOrder._id,
+                                      //paymentAmounts[index],
+                                      //paymentAmountsUsdt[index],
+
+                                      seller.seller.buyOrder.krwAmount,
+                                      seller.seller.buyOrder.usdtAmount,
+                                      
+                                      seller.seller.buyOrder?.walletAddress,
+
+                                      seller.seller.buyOrder?.paymentMethod,
+                                    );
+                                  }}
+                                >
+                                  <div className="flex flex-row gap-2 items-center justify-center">
+                                    { confirmingPayment[index] && (
+                                        <Image
+                                          src="/loading.png"
+                                          alt="Loading"
+                                          width={20}
+                                          height={20}
+                                          className="w-5 h-5
+                                          animate-spin"
+                                        />
+                                    )}
+                                    <span className="text-sm">
+                                      입금완료하기
+                                    </span>
+                                  </div>
+
+                                </button>
+                              )}
+
+
+
+
+
+
+
+
+
                           </div>
 
                           <div className="w-full flex flex-col items-start justify-center gap-1
@@ -5942,7 +6011,7 @@ const fetchBuyOrders = async () => {
                       ) : seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
                           (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x') ? (
                         <div className="w-full flex flex-col items-start justify-center gap-2">
-                          {/* 판매중 */}
+                          {/* 판매 진행중 */}
                           <div className="flex flex-row items-center gap-2
                           bg-red-500 text-white px-3 py-1 rounded-lg">
                             <span className="text-sm font-semibold">
