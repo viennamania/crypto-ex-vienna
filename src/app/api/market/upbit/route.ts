@@ -47,6 +47,8 @@ export async function GET(request: NextRequest) {
     const clientId = process.env.NEXT_PUBLIC_TEMPLATE_CLIENT_ID || "";
     const upbitInfo = await getUpbitInfo(clientId);
 
+    console.log("upbitInfo:", upbitInfo);
+
     return NextResponse.json({
         
         result: upbitInfo,
