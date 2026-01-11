@@ -1879,7 +1879,18 @@ export default function SettingsPage({ params }: any) {
                                             `}
                                             disabled={seller?.market === 'upbit'}
                                         >
-                                            Upbit
+                                            <div className='flex flex-row items-center gap-2'>
+                                                <Image
+                                                    src="/icon-market-upbit.png"
+                                                    width={24}
+                                                    height={24}
+                                                    className='w-6 h-6'
+                                                    alt="Upbit"
+                                                />
+                                                <span>
+                                                    Upbit
+                                                </span>
+                                            </div>
                                         </button>
 
                                         <button
@@ -1893,9 +1904,20 @@ export default function SettingsPage({ params }: any) {
                                             `}
                                             disabled={seller?.market === 'bithumb'}
                                         >
-                                            Bithumb
+                                            <div className='flex flex-row items-center gap-2'>
+                                                <Image
+                                                    src="/icon-market-bithumb.png"
+                                                    width={24}
+                                                    height={24}
+                                                    className='w-6 h-6'
+                                                    alt="Bithumb"
+                                                />
+                                                <span>
+                                                    Bithumb
+                                                </span>
+                                            </div>
                                         </button>
-
+                           
                                         <button
                                             onClick={() => {
                                                 //setMarket('korbit');
@@ -1908,8 +1930,20 @@ export default function SettingsPage({ params }: any) {
                                             `}
                                             disabled={seller?.market === 'korbit'}
                                         >
-                                            Korbit
+                                            <div className='flex flex-row items-center gap-2'>
+                                                <Image
+                                                    src="/icon-market-korbit.png"
+                                                    width={24}
+                                                    height={24}
+                                                    className='w-6 h-6'
+                                                    alt="Korbit"
+                                                />
+                                                <span>
+                                                    Korbit
+                                                </span>
+                                            </div>
                                         </button>
+
 
                                     </div>
 
