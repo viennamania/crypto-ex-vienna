@@ -3854,6 +3854,81 @@ const fetchBuyOrders = async () => {
 
 
 
+
+
+
+
+
+  // api/market/bithumb
+  // get bithumb usdt to krw rate every 10 seconds
+  const [bithumbUsdtToKrwRate, setBithumbUsdtToKrwRate] = useState(0);
+  const [bithumbUsdtToKrwRateChange, setBithumbUsdtToKrwRateChange] = useState("");
+  const [bithumbUsdtToKrwRateChangePrice, setBithumbUsdtToKrwRateChangePrice] = useState(0);
+  const [bithumbUsdtToKrwRateChangeRate, setBithumbUsdtToKrwRateChangeRate] = useState(0);
+
+
+  const [bithumbUsdtToKrwRateTimestamp, setBithumbUsdtToKrwRateTimestamp] = useState(0);
+  //const [TradeDateKst, setTradeDateKst] = useState<any>(null);
+  //const [TradeTimeKst, setTradeTimeKst] = useState<string>('');
+  const [loadingBithumbRate, setLoadingBithumbRate] = useState(false);
+
+  useEffect(() => {
+    const fetchBithumbRate = async () => {
+      setLoadingBithumbRate(true);
+      const response = await fetch('/api/market/bithumb', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await response.json();
+      //console.log('bithumb usdt to krw rate data', data);
+      // data.result
+      if (data?.result) {
+        setBithumbUsdtToKrwRate(data.result.trade_price);
+        setBithumbUsdtToKrwRateChange(data.result.change);
+        setBithumbUsdtToKrwRateChangePrice(data.result.change_price);
+        setBithumbUsdtToKrwRateChangeRate(data.result.change_rate);
+        setBithumbUsdtToKrwRateTimestamp(data.result.trade_timestamp);
+        setTradeDateKst(data.result.trade_date_kst);
+        setTradeTimeKst(data.result.trade_time_kst);
+      }
+      setLoadingBithumbRate(false);
+    };
+    fetchBithumbRate();
+    const interval = setInterval(() => {
+      fetchBithumbRate();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+
+  // animate bithumbUsdtToKrwRate
+  const [animatedBithumbUsdtToKrwRate, setAnimatedBithumbUsdtToKrwRate] = useState(0);
+  useEffect(() => {
+    const animationDuration = 1000; // 1 second
+    const frameRate = 30; // 30 frames per second
+    const totalFrames = Math.round((animationDuration / 1000) * frameRate);
+    const initialRate = animatedBithumbUsdtToKrwRate;
+    const targetRate = bithumbUsdtToKrwRate;
+    let frame = 0;
+    const interval = setInterval(() => {
+      frame++;
+      const progress = Math.min(frame / totalFrames, 1);
+      const newRate = initialRate + (targetRate - initialRate) * progress;
+      setAnimatedBithumbUsdtToKrwRate(newRate);
+      if (frame >= totalFrames) {
+        clearInterval(interval);
+      }
+    }, 1000 / frameRate);
+    return () => clearInterval(interval);
+  }, [bithumbUsdtToKrwRate]);
+
+
+
+
+
+
   // /api/user/toggleAutoProcessDeposit
   const [togglingAutoProcessDeposit, setTogglingAutoProcessDeposit] = useState(false);
   const toggleAutoProcessDeposit = async (currentValue: boolean) => {
@@ -4860,7 +4935,7 @@ const fetchBuyOrders = async () => {
 
               </div>
 
-
+              {/* bithumb usdt to krw rate display */}
               <div className="flex flex-row items-center justify-end gap-2 p-2 min-w-[200px]">
                 <Image
                   src="/icon-market-bithumb.png"
@@ -4873,33 +4948,33 @@ const fetchBuyOrders = async () => {
                   <div className="flex flex-row items-center justify-end gap-1">
                     <span className="text-2xl text-zinc-700 font-semibold"
                       style={{ fontFamily: 'monospace' }}>
-                        {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        {animatedBithumbUsdtToKrwRate && animatedBithumbUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     </span>
 
                     <span className={`text-sm font-semibold
                       ${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
+                        bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
+                        bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
                         'text-zinc-500'
                       }
                       `}>
                       {
-                        upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
-                        upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
+                        bithumbUsdtToKrwRateChange === 'RISE' ? `▲ ${bithumbUsdtToKrwRateChangePrice}` :
+                        bithumbUsdtToKrwRateChange === 'FALL' ? `▼ ${bithumbUsdtToKrwRateChangePrice}` :
                         `- 0`
                       }
                     </span>
-                    {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
+                    {/* bithumbUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
                     <span className={`text-sm font-semibold
                       ${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
+                        bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
+                        bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
                         'text-zinc-500'
                       }
                       `}>
                       {
-                        upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                        bithumbUsdtToKrwRateChange === 'RISE' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                        bithumbUsdtToKrwRateChange === 'FALL' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
                         `(0.0000%)`
                       }
                     </span>
@@ -4908,7 +4983,7 @@ const fetchBuyOrders = async () => {
                   <span className="text-sm text-zinc-500"
                     style={{ fontFamily: 'monospace' }}>
                     {
-                      //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
+                      //bithumbUsdtToKrwRateTimestamp ? new Date(bithumbUsdtToKrwRateTimestamp).toLocaleString() : ''
                     
                       TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
                     }

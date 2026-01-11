@@ -78,3 +78,9 @@ export async function getUpbitInfo(clientId: string) {
   const client = await getOne(clientId);
   return client?.upbit || null;
 }
+
+// get bithumb info by clientId
+export async function getBithumbInfo(clientId: string) {
+  const client = await getOne(clientId);
+  return client?.bithumb || null;
+}
