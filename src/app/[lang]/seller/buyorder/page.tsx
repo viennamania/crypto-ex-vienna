@@ -5885,11 +5885,9 @@ const fetchBuyOrders = async () => {
 
 
 
-                              {seller.seller?.autoProcessDeposit ? (
-                                <>
-
-                                </>
-                              ) : (                      
+                              {
+                              seller.walletAddress === address && !seller.seller?.autoProcessDeposit && (
+                      
                                 <button
                   
                                   disabled={confirmingPayment[index]}
@@ -5904,7 +5902,7 @@ const fetchBuyOrders = async () => {
                                   `}
 
                                   onClick={() => {
-                                    //confirm("수동으로 입금확인을 처리하시겠습니까?") &&
+                                    confirm("수동으로 입금확인을 처리하시겠습니까?") &&
                                     confirmPayment(
                                       index,
                                       seller.seller.buyOrder._id,
