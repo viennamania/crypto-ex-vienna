@@ -4522,15 +4522,27 @@ const fetchBuyOrders = async () => {
 
             <div className="w-full flex flex-row items-center justify-start gap-2">
               <Image
-                src="/icon-trade.png"
-                alt="Trade"
+                src="/icon-today.png"
+                alt="Today"
                 width={50}
                 height={50}
                 className="w-16 h-16 rounded-lg object-cover"
               />
 
               <div className="flex flex-col gap-2 items-center">
-                <div className="text-sm">P2P 거래수(건)</div>
+                {/* background color is 파스텔 오렌지  */}
+                <div className="
+                  bg-orange-200/50
+                  px-2 py-1 rounded-full
+                  text-sm font-semibold text-orange-800
+                "
+                >
+                  {/* dot before */}
+                  <div className="inline-block w-2 h-2 bg-orange-800 rounded-full mr-2"></div>
+                  <span className="align-middle">
+                    P2P 거래수(건)
+                  </span>
+                </div>
                 <div className="text-4xl font-semibold text-zinc-500">
                   {
                     //buyOrderStats.totalCount?.toLocaleString()
@@ -4542,7 +4554,17 @@ const fetchBuyOrders = async () => {
               <div className="flex flex-col xl:flex-row items-center justify-center gap-2">
 
                 <div className="flex flex-col gap-2 items-center">
-                  <div className="text-sm">P2P 거래량(USDT)</div>
+                  <div className="
+                    bg-orange-200/50
+                    px-2 py-1 rounded-full
+                    text-sm font-semibold text-orange-800
+                  ">
+                    {/* dot before */}
+                    <div className="inline-block w-2 h-2 bg-orange-800 rounded-full mr-2"></div>
+                    <span className="align-middle">
+                      P2P 거래량(USDT)
+                    </span>
+                  </div>
                   <div className="flex flex-row items-center justify-center gap-1">
                     <Image
                       src="/icon-tether.png"
@@ -4565,7 +4587,17 @@ const fetchBuyOrders = async () => {
                 </div>
 
                 <div className="flex flex-col gap-2 items-center">
-                  <div className="text-sm">P2P 거래금액(원)</div>
+                  <div className="
+                    bg-orange-200/50
+                    px-2 py-1 rounded-full
+                    text-sm font-semibold text-orange-800
+                  ">
+                    {/* dot before */}
+                    <div className="inline-block w-2 h-2 bg-orange-800 rounded-full mr-2"></div>
+                    <span className="align-middle">
+                      P2P 거래금액(원)
+                    </span>
+                  </div>
                   <div className="flex flex-row items-center justify-center gap-1">
                     <span className="text-4xl font-semibold text-yellow-600"
                       style={{ fontFamily: 'monospace' }}>
@@ -4874,8 +4906,15 @@ const fetchBuyOrders = async () => {
           py-4
           ">
             <div className="flex flex-row items-center justify-start gap-2">
+              <Image
+                src="/icon-market.png"
+                alt="Market"
+                width={50}
+                height={50}
+                className="w-16 h-16 rounded-lg object-cover"
+              />
               <span className="text-lg font-bold text-zinc-700">
-                실시간 USDT 환율 정보
+                실시간 환율 정보
               </span>
               <Image
                 src="/icon-live.gif"
@@ -5073,9 +5112,18 @@ const fetchBuyOrders = async () => {
           ">
 
             {/* title - 판매주문 */}
-            <h2 className="text-lg font-bold text-zinc-700">
-              판매자 계정 현황
-            </h2>
+            <div className="flex flex-row items-center justify-start gap-2">
+              <Image
+                src="/icon-sale.png"
+                alt="Sale"
+                width={50}
+                height={50}
+                className="w-16 h-16 rounded-lg object-cover"
+              />
+              <h2 className="text-lg font-bold text-zinc-700">
+                판매 주문 현황
+              </h2>
+            </div>
 
             {sellersBalance.length > 0 && (
               <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
@@ -5477,14 +5525,31 @@ const fetchBuyOrders = async () => {
 
                     
                     <div
+                      /*
                       className={`mt-8
                       w-full
                       flex flex-col items-start justify-center gap-2
                       p-2
                       border border-zinc-300 rounded-lg
+                      
                       ${seller.currentUsdtBalanceChanged ? 'bg-green-100/70 animate-pulse' : ''}
+
                       `}
+                      */
+
+                      // 배경색은 금융 무게감 있는 어두운 색상
+                      className={`mt-8
+                      w-full
+                      flex flex-col items-start justify-center gap-2
+                      
+                      bg-zinc-100 p-2 rounded-lg
+                      `}
+
+
+
                     >
+                    
+
 
 
                       {/* seller.usdtToKrwRate */}
@@ -5643,9 +5708,10 @@ const fetchBuyOrders = async () => {
                       
                       <div className="w-full flex flex-col items-start justify-center gap-2">
 
-                        {/* top right fixed image escrow wallet icon */}
+                        {/* background color 는 무게감 있는 색상 */}
                         <div className="w-full flex flex-col items-start justify-center gap-2
-                        border border-zinc-300 p-2 rounded-lg
+                        bg-zinc-100 p-2 rounded-lg relative
+
                         ">
 
                           {/*}
@@ -5711,7 +5777,7 @@ const fetchBuyOrders = async () => {
 
                           <div className="w-full flex flex-col items-start justify-center gap-1">
 
-                            <div className="w-full flex flex-row items-center justify-between gap-2">
+                            <div className="w-full flex flex-col items-center justify-center gap-2">
 
                               <div className="w-full flex flex-row items-center justify-right gap-2">
                                 <Image
@@ -5721,7 +5787,7 @@ const fetchBuyOrders = async () => {
                                   height={20}
                                   className="w-5 h-5"
                                 />
-                                <span className="text-lg text-[#409192]"
+                                <span className="text-4xl xl:text-2xl text-[#409192] font-semibold"
                                   style={{ fontFamily: 'monospace' }}>
                                   {
                                     //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -5771,12 +5837,18 @@ const fetchBuyOrders = async () => {
                             {/* if balance is less than 10 USDT, show warning */}
                             {currentUsdtBalanceArray[index] < 10 ? (
                               <div className="text-red-600 text-sm">
-                                Warning: Low escrow balance
+                                {/*Warning: Low escrow balance may result in no order assignments. Please recharge USDT. */}
+                                경고: 에스크로 잔액이 부족하면 주문 할당이 이루어지지 않을 수 있습니다. USDT를 충전해주세요.
                               </div>
                             ) : (
-                              <div className="text-green-600 text-sm">
-                                If you deposit more USDT, more orders will be assigned.
-                              </div>
+                              <>
+                              {seller.walletAddress === address && (
+                                <div className="text-green-600 text-sm mt-1">
+                                  {/*If you deposit more USDT, more orders will be assigned. */}
+                                  충전된 USDT가 많을수록 더 많은 주문이 할당됩니다.
+                                </div>
+                              )}
+                              </>
                             )}
 
                           </div>
@@ -5878,7 +5950,7 @@ const fetchBuyOrders = async () => {
                               정상 거래
                             </span>
                             <span className="text-lg">
-                              {seller.seller?.totalPaymentConfirmedCount || 0} 건
+                              {seller.seller?.totalPaymentConfirmedCount || 0}
                             </span>
                           </div>
                           <div className="w-full flex flex-col items-end justify-center gap-1">
@@ -5906,7 +5978,7 @@ const fetchBuyOrders = async () => {
                               중재 거래
                             </span>
                             <span className="text-lg">
-                              {seller.seller?.totalDisputeResolvedCount || 0} 건
+                              {seller.seller?.totalDisputeResolvedCount || 0}
                             </span>
                           </div>
                           <div className="w-full flex flex-col items-end justify-center gap-1">
@@ -6155,17 +6227,27 @@ const fetchBuyOrders = async () => {
                             <Image
                               src="/icon-sale.png"
                               alt="On Sale"
-                              width={100}
-                              height={100}
-                              className="w-24 h-24"
+                              width={50}
+                              height={50}
+                              className="w-16 h-16 object-contain"
                             />
 
                           ) : (
                             <div className="flex flex-row items-center gap-2
                             bg-red-500 text-white px-3 py-1 rounded-lg">
-                              <span className="text-sm font-semibold">
+
+                              {/* /icon-sale.png gray scale */}
+                              <Image
+                                src="/icon-sale.png"
+                                alt="Off Sale"
+                                width={50}
+                                height={50}
+                                className="w-16 h-16 object-contain grayscale"
+                              />
+                              <span className="text-xs font-semibold">
                                 에스크로 잔액 부족
                               </span>
+                            
                             </div>
                           )}
 
@@ -6223,7 +6305,7 @@ const fetchBuyOrders = async () => {
                                   정상 거래
                                 </span>
                                 <span className="text-lg">
-                                  {seller.seller?.totalPaymentConfirmedCount || 0} 건
+                                  {seller.seller?.totalPaymentConfirmedCount || 0}
                                 </span>
                               </div>
                               <div className="w-full flex flex-col items-end justify-center gap-1">
@@ -6251,7 +6333,7 @@ const fetchBuyOrders = async () => {
                                   중재 거래
                                 </span>
                                 <span className="text-lg">
-                                  {seller.seller?.totalDisputeResolvedCount || 0} 건
+                                  {seller.seller?.totalDisputeResolvedCount || 0}
                                 </span>
                               </div>
                               <div className="w-full flex flex-col items-end justify-center gap-1">
