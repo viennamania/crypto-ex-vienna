@@ -6003,7 +6003,9 @@ const fetchBuyOrders = async () => {
                           ) : (
                             <div className="flex flex-row items-center gap-2
                             bg-red-500 text-white px-3 py-1 rounded-lg">
-                              <span>에스크로 잔액 부족</span>
+                              <span className="text-sm font-semibold">
+                                에스크로 잔액 부족
+                              </span>
                             </div>
                           )}
 
