@@ -3880,7 +3880,7 @@ const fetchBuyOrders = async () => {
         setSellersBalance((prev) =>
           prev.map((seller) =>
             seller.walletAddress === address
-              ? { ...seller, autoProcessDeposit: !currentValue }
+              ? { ...seller, seller: { ...seller.seller, autoProcessDeposit: !currentValue } }
               : seller
           )
         );
@@ -4932,13 +4932,17 @@ const fetchBuyOrders = async () => {
                           <>
                           
                             {seller.seller?.autoProcessDeposit ? (
+                              <>
+                              {/*
                               <div className="flex flex-row items-center justify-center gap-2
                                 bg-yellow-100 text-yellow-600 px-2 py-1 rounded-lg
                                 shadow-lg
-                                text-sm
+                                text-xs
                                 ">
                                 입금확인중...
                               </div>
+                              */}
+                              </>
                             ) : (                      
                               <button
                 
@@ -4946,9 +4950,12 @@ const fetchBuyOrders = async () => {
                                 
                                 className={`
                                   ${confirmingPayment[index]
-                                  ? 'text-gray-400 border-gray-400 bg-gray-100 cursor-not-allowed'
-                                  : 'text-yellow-600 hover:text-yellow-700 hover:shadow-yellow-500/50 cursor-pointer'
-                                  } bg-yellow-100 border border-yellow-600 rounded-lg p-2
+                                  ? 'text-gray-400 cursor-not-allowed'
+                                  : 'text-white hover:text-white hover:shadow-yellow-500/50 cursor-pointer'
+                                  } bg-blue-600 hover:bg-blue-700
+                                  px-3 py-1 rounded-lg
+                                  shadow-lg
+                                  text-xs
                                 `}
 
                                 onClick={() => {
@@ -4979,7 +4986,7 @@ const fetchBuyOrders = async () => {
                                         animate-spin"
                                       />
                                   )}
-                                  <span className="text-sm">
+                                  <span className="text-xs">
                                     입금완료하기
                                   </span>
                                 </div>
@@ -5301,13 +5308,29 @@ const fetchBuyOrders = async () => {
                               </span>
                             </div>
 
+
                             {/* seller?.autoProcessDeposit */}
                             {/* toggleAutoProcessDeposit */}
-                            {seller.walletAddress === address ? (
-                              <div className="flex flex-col items-start justify-center ml-4">
-                                <span className="w-full flex text-sm font-semibold">
-                                  자동입금처리
-                                </span>
+                            <div className="flex flex-col items-start justify-center ml-4 gap-1">
+
+                              <span className="w-full flex text-sm font-semibold">
+                                자동입금처리
+                              </span>
+                              {seller.seller?.autoProcessDeposit ? (
+                                <div className="flex text-xs text-green-600
+                                bg-white border border-zinc-300 rounded-lg px-2 py-1 text-center
+                                ">
+                                  활성화 상태
+                                </div>
+                              ) : (
+                                <div className="flex text-xs text-red-600
+                                bg-white border border-zinc-300 rounded-lg px-2 py-1 text-center
+                                ">
+                                  비활성화 상태
+                                </div>
+                              )}
+
+                              {seller.walletAddress === address && (
                                 <button
                                   onClick={() => {
                                       const currentValue = seller?.seller.autoProcessDeposit;
@@ -5315,41 +5338,20 @@ const fetchBuyOrders = async () => {
                                   }}
                                   className={`
                                     ${seller.seller?.autoProcessDeposit
-                                    ? 'bg-green-100 text-green-600 hover:bg-green-200 hover:shadow-green-500/50 cursor-pointer'
-                                    : 'bg-red-100 text-red-600 hover:bg-red-200 hover:shadow-red-500/50 cursor-pointer'
+                                    ? 'bg-red-100 text-red-600 hover:bg-red-200 hover:shadow-red-500/50 cursor-pointer'
+                                    : 'bg-green-100 text-green-600 hover:bg-green-200 hover:shadow-green-500/50 cursor-pointer'
                                     }
-                                    w-full rounded-lg p-2 border h-8 text-xs
+                                    rounded-lg border text-xs px-2 py-1 text-center
                                   `}
                                   disabled={togglingAutoProcessDeposit}
                                 >
-                                  {seller.seller?.autoProcessDeposit ? '활성화' : '비활성화'}
+                                  {seller.seller?.autoProcessDeposit ? '비활성화 하기' : '활성화 하기'}
                                 </button>
-                             </div>
-                            ) : (
-                              <div className="flex flex-col items-start justify-center ml-4">
-                                <span className="w-full flex text-sm font-semibold">
-                                  자동입금처리
-                                </span>
-                                {seller.seller?.autoProcessDeposit ? (
-                                  <div className="w-full flex text-xs text-green-600
-                                  bg-white border border-zinc-300 rounded-lg p-2 h-8
-                                  ">
-                                    활성화
-                                  </div>
-                                ) : (
-                                  <div className="w-full flex text-xs text-red-600
-                                  bg-white border border-zinc-300 rounded-lg p-2 h-8
-                                  ">
-                                    비활성화
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                              )}
+                            </div>
 
                           </div>
                         )}
-
- 
 
                       </div>
 
@@ -5433,6 +5435,7 @@ const fetchBuyOrders = async () => {
                     {/* seller.buyOrder.krwAmount => 구매금액 */}
                     {/* seller.buyOrder.rate => 단가 */}
                     <div className="
+                      mt-8
                       w-56
                       flex flex-col items-start justify-center gap-2">
 
@@ -5444,6 +5447,7 @@ const fetchBuyOrders = async () => {
                             bg-red-500 text-white px-3 py-1 rounded-lg">
                               <span>판매중</span>
                             </div>
+                            {/*
                             <Image
                                 src="/icon-trade.png"
                                 alt="Trade ID"
@@ -5457,6 +5461,7 @@ const fetchBuyOrders = async () => {
                                   }`
                                 }
                               />
+                              */}
                           </div>
 
                           <div className="w-full flex flex-col items-start justify-center gap-1
