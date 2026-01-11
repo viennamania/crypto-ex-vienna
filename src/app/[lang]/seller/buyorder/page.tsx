@@ -3793,47 +3793,22 @@ const fetchBuyOrders = async () => {
       //console.log('upbit usdt to krw rate data', data);
 
       /*
-      data example:
-{
-    "data": [
-        {
-            "market": "KRW-USDT",
-            "trade_date": "20260109",
-            "trade_time": "020734",
-            "trade_date_kst": "20260109",
-            "trade_time_kst": "110734",
-            "trade_timestamp": 1767924454081,
-            "opening_price": 1463,
-            "high_price": 1464,
-            "low_price": 1461,
-            "trade_price": 1462,
-            "prev_closing_price": 1463,
-            "change": "FALL",
-            "change_price": 1,
-            "change_rate": 0.000683527,
-            "signed_change_price": -1,
-            "signed_change_rate": -0.000683527,
-            "trade_volume": 700.95335392,
-            "acc_trade_price": 12173821867.892721,
-            "acc_trade_price_24h": 78247847399.65994,
-            "acc_trade_volume": 8322481.42305814,
-            "acc_trade_volume_24h": 53564845.41172017,
-            "highest_52_week_price": 1655,
-            "highest_52_week_date": "2025-10-10",
-            "lowest_52_week_price": 1339.5,
-            "lowest_52_week_date": "2025-07-11",
-            "timestamp": 1767924454289
-        }
-    ]
-}
-      */
-
       if (data.data && data.data.length > 0) {
         setUpbitUsdtToKrwRate(data.data[0].trade_price);
         setUpbitUsdtToKrwRateTimestamp(data.data[0].trade_timestamp);
         setTradeDateKst(data.data[0].trade_date_kst);
         setTradeTimeKst(data.data[0].trade_time_kst);
       }
+      */
+
+      // data.result
+      if (data?.result) {
+        setUpbitUsdtToKrwRate(data.result.trade_price);
+        setUpbitUsdtToKrwRateTimestamp(data.result.trade_timestamp);
+        setTradeDateKst(data.result.trade_date_kst);
+        setTradeTimeKst(data.result.trade_time_kst);
+      }
+
 
       setLoadingUpbitRate(false);
 
@@ -3841,7 +3816,7 @@ const fetchBuyOrders = async () => {
     fetchUpbitRate();
     const interval = setInterval(() => {
       fetchUpbitRate();
-    }, 10000);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -4813,19 +4788,21 @@ const fetchBuyOrders = async () => {
               height={50}
               className="w-12 h-12 object-cover"
             />
-            <span className="text-xl font-semibold text-zinc-700">
-              USDT to KRW: {' '}
-              <span style={{ fontFamily: 'monospace' }}>
-                {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 원
+            <div className="flex flex-col items-end justify-center">
+              <span className="text-2xl text-zinc-700 font-semibold">
+                1 USDT = {' '}
+                <span style={{ fontFamily: 'monospace' }}>
+                  {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                </span>
               </span>
-            </span>
-            <span className="text-sm text-zinc-500">
-              {
-                //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
-              
-                TradeDateKst && TradeTimeKst ? `${TradeDateKst.slice(0,4)}-${TradeDateKst.slice(4,6)}-${TradeDateKst.slice(6,8)} ${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
-              }
-            </span>
+              <span className="text-sm text-zinc-500">
+                {
+                  //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
+                
+                  TradeDateKst && TradeTimeKst ? `${TradeDateKst.slice(0,4)}-${TradeDateKst.slice(4,6)}-${TradeDateKst.slice(6,8)} ${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
+                }
+              </span>
+            </div>
             <Image
               src="/icon-live.gif"
               alt="Live"

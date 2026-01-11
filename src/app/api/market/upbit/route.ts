@@ -1,14 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
-    acceptBuyOrder,
-} from '@lib/api/order';
+    getUpbitInfo,
+} from '@lib/api/client';
 
 /*
-https://api.upbit.com/v1/ticker?markets=KRW-USDT
 
 
-[
+
   {
     "market": "KRW-USDT",
     "trade_date": "20260109",
@@ -37,29 +36,20 @@ https://api.upbit.com/v1/ticker?markets=KRW-USDT
     "lowest_52_week_date": "2025-07-11",
     "timestamp": 1767923950982
   }
-]
+
 
 */
 
 export async function GET(request: NextRequest) {
 
-    const upbitApiUrl = 'https://api.upbit.com/v1/ticker?markets=KRW-USDT';
-
-    const response = await fetch(upbitApiUrl, {
-        method: 'GET',
-
-        //headers: {
-        //    'Content-Type': 'application/json',
-        //},
-    });
-
-    const data = await response.json();
-
-    //console.log("upbit ticker data:", data);
+    
+    // getUpbitInfo by clientId
+    const clientId = process.env.NEXT_PUBLIC_TEMPLATE_CLIENT_ID || "";
+    const upbitInfo = await getUpbitInfo(clientId);
 
     return NextResponse.json({
-
-        data,
+        
+        result: upbitInfo,
         
     });
 }
