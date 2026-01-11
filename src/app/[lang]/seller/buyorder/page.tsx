@@ -3604,11 +3604,24 @@ const fetchBuyOrders = async () => {
         return 0;
       });
       */
+
+
       const sortedSellers = data.result.users;
+
+      // if walletAddress is address, then order first
+      // and then others is ordered by seller.totalPaymentConfirmedUsdtAmount descending
+
+      /*
       const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
         if (a.walletAddress === address) return -1;
         if (b.walletAddress === address) return 1;
         return a.seller?.usdtToKrwRate - b.seller?.usdtToKrwRate;
+      });
+      */
+      const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
+        if (a.walletAddress === address) return -1;
+        if (b.walletAddress === address) return 1;
+        return b.totalPaymentConfirmedUsdtAmount - a.totalPaymentConfirmedUsdtAmount;
       });
 
 
@@ -3890,8 +3903,9 @@ const fetchBuyOrders = async () => {
         setBithumbUsdtToKrwRateChangePrice(data.result.change_price);
         setBithumbUsdtToKrwRateChangeRate(data.result.change_rate);
         setBithumbUsdtToKrwRateTimestamp(data.result.trade_timestamp);
-        setTradeDateKst(data.result.trade_date_kst);
-        setTradeTimeKst(data.result.trade_time_kst);
+        
+        //setTradeDateKst(data.result.trade_date_kst);
+        //setTradeTimeKst(data.result.trade_time_kst);
       }
       setLoadingBithumbRate(false);
     };
