@@ -3776,6 +3776,11 @@ const fetchBuyOrders = async () => {
   // get upbit usdt to krw rate every 10 seconds
 
   const [upbitUsdtToKrwRate, setUpbitUsdtToKrwRate] = useState(0);
+  const [upbitUsdtToKrwRateChange, setUpbitUsdtToKrwRateChange] = useState("");
+  const [upbitUsdtToKrwRateChangePrice, setUpbitUsdtToKrwRateChangePrice] = useState(0);
+  const [upbitUsdtToKrwRateChangeRate, setUpbitUsdtToKrwRateChangeRate] = useState(0);
+
+
   const [upbitUsdtToKrwRateTimestamp, setUpbitUsdtToKrwRateTimestamp] = useState(0);
   const [TradeDateKst, setTradeDateKst] = useState<any>(null);
   const [TradeTimeKst, setTradeTimeKst] = useState<string>('');
@@ -3804,6 +3809,11 @@ const fetchBuyOrders = async () => {
       // data.result
       if (data?.result) {
         setUpbitUsdtToKrwRate(data.result.trade_price);
+        setUpbitUsdtToKrwRateChange(data.result.change);
+        setUpbitUsdtToKrwRateChangePrice(data.result.change_price);
+        setUpbitUsdtToKrwRateChangeRate(data.result.change_rate);
+
+
         setUpbitUsdtToKrwRateTimestamp(data.result.trade_timestamp);
         setTradeDateKst(data.result.trade_date_kst);
         setTradeTimeKst(data.result.trade_time_kst);
@@ -4801,11 +4811,43 @@ const fetchBuyOrders = async () => {
                   height={50}
                   className="w-12 h-12 object-cover"
                 />
+                
                 <div className="flex flex-col items-end justify-center">
-                  <span className="text-2xl text-zinc-700 font-semibold"
-                    style={{ fontFamily: 'monospace' }}>
-                      {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  </span>
+                  <div className="flex flex-row items-center justify-end gap-1">
+                    <span className="text-2xl text-zinc-700 font-semibold"
+                      style={{ fontFamily: 'monospace' }}>
+                        {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    </span>
+
+                    <span className={`text-sm font-semibold
+                      ${
+                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
+                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
+                        'text-zinc-500'
+                      }
+                      `}>
+                      {
+                        upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
+                        upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
+                        `- 0`
+                      }
+                    </span>
+                    {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
+                    <span className={`text-sm font-semibold
+                      ${
+                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
+                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
+                        'text-zinc-500'
+                      }
+                      `}>
+                      {
+                        upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                        upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                        `(0.0000%)`
+                      }
+                    </span>
+                    
+                  </div>
                   <span className="text-sm text-zinc-500"
                     style={{ fontFamily: 'monospace' }}>
                     {
@@ -4815,6 +4857,7 @@ const fetchBuyOrders = async () => {
                     }
                   </span>
                 </div>
+
               </div>
 
 
@@ -4827,10 +4870,41 @@ const fetchBuyOrders = async () => {
                   className="w-12 h-12 object-cover"
                 />
                 <div className="flex flex-col items-end justify-center">
-                  <span className="text-2xl text-zinc-700 font-semibold"
-                    style={{ fontFamily: 'monospace' }}>
-                      {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  </span>
+                  <div className="flex flex-row items-center justify-end gap-1">
+                    <span className="text-2xl text-zinc-700 font-semibold"
+                      style={{ fontFamily: 'monospace' }}>
+                        {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    </span>
+
+                    <span className={`text-sm font-semibold
+                      ${
+                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
+                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
+                        'text-zinc-500'
+                      }
+                      `}>
+                      {
+                        upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
+                        upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
+                        `- 0`
+                      }
+                    </span>
+                    {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
+                    <span className={`text-sm font-semibold
+                      ${
+                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
+                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
+                        'text-zinc-500'
+                      }
+                      `}>
+                      {
+                        upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                        upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                        `(0.0000%)`
+                      }
+                    </span>
+                    
+                  </div>
                   <span className="text-sm text-zinc-500"
                     style={{ fontFamily: 'monospace' }}>
                     {
@@ -4851,10 +4925,41 @@ const fetchBuyOrders = async () => {
                   className="w-12 h-12 object-cover"
                 />
                 <div className="flex flex-col items-end justify-center">
-                  <span className="text-2xl text-zinc-700 font-semibold"
-                    style={{ fontFamily: 'monospace' }}>
-                      {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  </span>
+                  <div className="flex flex-row items-center justify-end gap-1">
+                    <span className="text-2xl text-zinc-700 font-semibold"
+                      style={{ fontFamily: 'monospace' }}>
+                        {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    </span>
+
+                    <span className={`text-sm font-semibold
+                      ${
+                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
+                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
+                        'text-zinc-500'
+                      }
+                      `}>
+                      {
+                        upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
+                        upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
+                        `- 0`
+                      }
+                    </span>
+                    {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
+                    <span className={`text-sm font-semibold
+                      ${
+                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
+                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
+                        'text-zinc-500'
+                      }
+                      `}>
+                      {
+                        upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                        upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                        `(0.0000%)`
+                      }
+                    </span>
+                    
+                  </div>
                   <span className="text-sm text-zinc-500"
                     style={{ fontFamily: 'monospace' }}>
                     {
