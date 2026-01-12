@@ -2797,7 +2797,8 @@ export async function updatePromotionText(
     },
     {
       $set: {
-        promotionText: promotionText,
+        //promotionText: promotionText,
+        'seller.promotionText': promotionText,
       }
     }
   );

@@ -2002,6 +2002,12 @@ export default function SettingsPage({ params }: any) {
                                         판매 홍보 문구 설정
                                     </span>
                                 </div>
+                                {/* 이미 설정되어 있는 문구가 있으면 보여주기 */}
+                                {seller?.promotionText && (
+                                    <div className="text-zinc-500">
+                                        현재 설정된 문구: {seller?.promotionText}
+                                    </div>
+                                )}
 
                                 <textarea
                                     className="w-full p-2 bg-zinc-800 text-zinc-100 rounded-lg text-lg"
