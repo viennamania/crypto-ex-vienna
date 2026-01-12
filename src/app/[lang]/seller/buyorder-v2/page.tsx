@@ -4604,18 +4604,19 @@ const fetchBuyOrders = async () => {
               <div className="flex flex-col gap-2 items-center">
                 {/* background color is 파스텔 오렌지  */}
                 <div className="
-                  bg-orange-200/50
+                  bg-orange-900/40
                   px-2 py-1 rounded-full
-                  text-sm font-semibold text-orange-800
+                  text-sm font-semibold text-orange-300
+                  border border-orange-700
                 "
                 >
                   {/* dot before */}
-                  <div className="inline-block w-2 h-2 bg-orange-800 rounded-full mr-2"></div>
+                  <div className="inline-block w-2 h-2 bg-orange-300 rounded-full mr-2"></div>
                   <span className="align-middle">
                     거래수(건)
                   </span>
                 </div>
-                <div className="text-4xl font-semibold text-zinc-500">
+                <div className="text-4xl font-semibold text-slate-200">
                   {
                     //buyOrderStats.totalCount?.toLocaleString()
                     animatedTotalCount
@@ -6348,7 +6349,9 @@ const fetchBuyOrders = async () => {
                                 <div className="w-full flex flex-col items-start justify-center gap-1">
                                   <input
                                     type="text"
-                                    className="w-full border border-zinc-300 rounded-lg p-2 text-xs"
+                                    className="w-full border border-slate-600 bg-slate-700 text-slate-200 rounded-lg p-2 text-xs
+                                    placeholder:text-slate-400
+                                    focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="판매 홍보용 문구를 입력하세요."
                                     value={promotionText}
                                     onChange={(e) => {
@@ -6359,7 +6362,7 @@ const fetchBuyOrders = async () => {
                                     disabled={updatingPromotionText}
                                     onClick={updatePromotionText}
                                     className={`
-                                        ${updatingPromotionText ? 'bg-gray-300 text-gray-400' : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-500/50 cursor-pointer'}
+                                        ${updatingPromotionText ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-500/50 cursor-pointer'}
                                         p-2 rounded-lg text-xs w-full
                                     `}
                                   >
@@ -6965,8 +6968,8 @@ const fetchBuyOrders = async () => {
               />
 
               <div className="flex flex-col gap-2 items-center">
-                <div className="text-sm">거래수(건)</div>
-                <div className="text-4xl font-semibold text-zinc-500">
+                <div className="text-sm text-slate-300">거래수(건)</div>
+                <div className="text-4xl font-semibold text-slate-200">
                   {
                     //buyOrderStats.totalCount?.toLocaleString()
                     animatedTotalCount
