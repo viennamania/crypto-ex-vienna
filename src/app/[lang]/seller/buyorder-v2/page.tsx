@@ -4887,7 +4887,7 @@ const fetchBuyOrders = async () => {
                           </div>
 
                           {order.status === 'ordered' && (
-                            <span className="text-sm text-zinc-600">
+                            <span className="text-sm text-slate-400">
                               {
                                 (new Date().getTime() - new Date(order?.createdAt).getTime()) > 0
                                 ? `${Math.floor((new Date().getTime() - new Date(order?.createdAt).getTime()) / 60000)}분 경과`
@@ -4897,7 +4897,7 @@ const fetchBuyOrders = async () => {
                           )}
 
                           {order.status === 'paymentRequested' && (
-                            <span className="text-sm text-zinc-600">
+                            <span className="text-sm text-slate-400">
                               {
                                 (new Date().getTime() - new Date(order?.paymentRequestedAt).getTime()) > 0
                                 ? `${Math.floor((new Date().getTime() - new Date(order?.paymentRequestedAt).getTime()) / 60000)}분 경과`
@@ -4910,7 +4910,7 @@ const fetchBuyOrders = async () => {
                         </div>
 
                         <div className="w-full flex flex-col items-end justify-center gap-1">
-                          <span className="text-sm text-gray-800 font-semibold">
+                          <span className="text-sm text-slate-200 font-semibold">
                             {order?.buyer.depositName.length > 1
                               ? order?.buyer.depositName.slice(0, 1) + '**'
                               : order?.buyer.depositName
@@ -4925,17 +4925,17 @@ const fetchBuyOrders = async () => {
                               height={20}
                               className="w-5 h-5"
                             />
-                            <span className="text-lg text-[#409192] font-semibold"
+                            <span className="text-lg text-emerald-300 font-semibold"
                               style={{ fontFamily: 'monospace' }}>
                               {order?.usdtAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                             </span>
                           </div>
-                          <span className="text-sm text-yellow-600 font-semibold"
+                          <span className="text-sm text-amber-300 font-semibold"
                             style={{ fontFamily: 'monospace' }}>
                             {order?.krwAmount.toLocaleString()}
                           </span>
                           {/* rate */}
-                          <span className="text-xs text-gray-500 font-semibold"
+                          <span className="text-xs text-slate-300 font-semibold"
                             style={{ fontFamily: 'monospace' }}>
                             {order?.rate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 원/USDT
                           </span>
