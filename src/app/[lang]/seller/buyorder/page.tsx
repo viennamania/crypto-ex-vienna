@@ -4540,7 +4540,7 @@ const fetchBuyOrders = async () => {
                   {/* dot before */}
                   <div className="inline-block w-2 h-2 bg-orange-800 rounded-full mr-2"></div>
                   <span className="align-middle">
-                    P2P 거래수(건)
+                    거래수(건)
                   </span>
                 </div>
                 <div className="text-4xl font-semibold text-zinc-500">
@@ -4562,7 +4562,7 @@ const fetchBuyOrders = async () => {
                     {/* dot before */}
                     <div className="inline-block w-2 h-2 bg-orange-800 rounded-full mr-2"></div>
                     <span className="align-middle">
-                      P2P 거래량(USDT)
+                      거래량(USDT)
                     </span>
                   </div>
                   <div className="flex flex-row items-center justify-center gap-1">
@@ -4595,7 +4595,7 @@ const fetchBuyOrders = async () => {
                     {/* dot before */}
                     <div className="inline-block w-2 h-2 bg-orange-800 rounded-full mr-2"></div>
                     <span className="align-middle">
-                      P2P 거래금액(원)
+                      거래금액(원)
                     </span>
                   </div>
                   <div className="flex flex-row items-center justify-center gap-1">
