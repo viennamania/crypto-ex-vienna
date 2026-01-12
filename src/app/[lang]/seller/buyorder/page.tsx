@@ -4009,6 +4009,18 @@ const fetchBuyOrders = async () => {
           //console.log('updatePromotionText data', data);
           if (data.result) {
               toast.success('프로모션 문구가 업데이트되었습니다.');
+
+              // update local state for seller
+              setSellersBalance((prev) =>
+                prev.map((seller) =>
+                  seller.walletAddress === address
+                    ? { ...seller, seller: { ...seller.seller, promotionText: promotionText } }
+                    : seller
+                )
+              );
+              
+
+
           } else {
               toast.error('프로모션 문구 업데이트에 실패했습니다.');
           }
@@ -6376,7 +6388,7 @@ const fetchBuyOrders = async () => {
                                 {/* 판매 홍보용 문구 */}
                                 {seller.seller?.promotionText ? (
                                 <span className="text-xs font-semibold text-green-600">
-                                  거래소보다 더 나은 가격에 USDT를 구매하세요!
+                                  {seller.seller?.promotionText}
                                 </span>
                                 ) : (
                                 <span className="text-xs font-semibold">
@@ -6389,10 +6401,10 @@ const fetchBuyOrders = async () => {
                               {/* 입력창 */}
                               {/* 수정하기 버튼 */}
                               {seller.walletAddress === address && (
-                                <div className="w-full flex flex-col items-start justify-center gap-2">
+                                <div className="w-full flex flex-col items-start justify-center gap-1">
                                   <input
                                     type="text"
-                                    className="w-full border border-zinc-300 rounded-lg p-2 text-sm"
+                                    className="w-full border border-zinc-300 rounded-lg p-2 text-xs"
                                     placeholder="판매 홍보용 문구를 입력하세요."
                                     value={promotionText}
                                     onChange={(e) => {
@@ -6403,8 +6415,8 @@ const fetchBuyOrders = async () => {
                                     disabled={updatingPromotionText}
                                     onClick={updatePromotionText}
                                     className={`
-                                        ${updatingPromotionText ? 'bg-gray-300 text-gray-400' : 'bg-green-500 text-zinc-100'}
-                                        p-2 rounded-lg text-sm font-semibold
+                                        ${updatingPromotionText ? 'bg-gray-300 text-gray-400' : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-500/50 cursor-pointer'}
+                                        p-2 rounded-lg text-xs w-full
                                     `}
                                   >
                                     {updatingPromotionText ? '수정중...' : '수정하기'}
