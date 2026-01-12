@@ -4213,7 +4213,8 @@ const fetchBuyOrders = async () => {
           {address && !loadingUser && (
 
 
-            <div className="w-full flex flex-row items-center justify-end gap-2">
+            <div className="w-full flex flex-col xl:flex-row items-center justify-end gap-2">
+              
               <button
                 onClick={() => {
                   router.push('/' + params.lang + '/administration/profile-settings');
@@ -4241,6 +4242,29 @@ const fetchBuyOrders = async () => {
 
                 </div>
               </button>
+
+              {/* sellerSettings */}
+              {user?.seller && (
+                <button
+                  onClick={() => {
+                    router.push('/' + params.lang + '/administration/seller-settings');
+                  }}
+                  className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                >
+                  <div className="flex flex-row items-center justify-center gap-2">
+                    <Image
+                      src="/icon-seller.png"
+                      alt="Seller"
+                      width={20}
+                      height={20}
+                      className="rounded-lg w-5 h-5"
+                    />
+                    <span className="text-sm text-[#f3f4f6]">
+                      판매자 설정
+                    </span>
+                  </div>
+                </button>
+              )}
 
               {/* opnew new window for admin dashboard */}
               {/* https://payment.orangex.center/ko/administration/buyorder */}
