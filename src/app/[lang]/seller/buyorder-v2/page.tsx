@@ -5027,22 +5027,23 @@ const fetchBuyOrders = async () => {
               {/* large font size */}
               {/* upbitUsdtToKrwRateTimestamp - convert to local time */}
               <div className="w-64   
-                flex flex-row items-center justify-end gap-2 p-2">
+                flex flex-row items-center justify-between gap-2 p-2">
                 <Image
                   src="/icon-market-upbit.png"
                   alt="Upbit"
                   width={50}
                   height={50}
-                  className="w-10 h-10 object-cover"
+                  className="w-12 h-12 object-cover"
                 />
                 
-                <div className="flex flex-col items-end justify-center">
-                  <div className="flex flex-row items-center justify-end gap-1">
-                    <span className="text-2xl text-slate-200 font-semibold"
-                      style={{ fontFamily: 'monospace' }}>
-                        {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    </span>
+                <div className="w-full flex flex-col items-end justify-center">
 
+                  <span className="text-2xl text-slate-200 font-semibold"
+                    style={{ fontFamily: 'monospace' }}>
+                      {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  </span>
+
+                  <div className="flex flex-row items-center justify-end gap-1">
                     <span
                       className={`text-sm font-semibold
                       ${
@@ -5094,21 +5095,22 @@ const fetchBuyOrders = async () => {
 
               {/* bithumb usdt to krw rate display */}
               <div className="w-64
-                flex flex-row items-center justify-end gap-2 p-2">
+                flex flex-row items-center justify-between gap-2 p-2">
                 <Image
                   src="/icon-market-bithumb.png"
                   alt="Bithumb"
                   width={50}
                   height={50}
-                  className="w-10 h-10 object-cover"
+                  className="w-12 h-12 object-cover"
                 />
-                <div className="flex flex-col items-end justify-center">
-                  <div className="flex flex-row items-center justify-end gap-1">
-                    <span className="text-2xl text-slate-200 font-semibold"
-                      style={{ fontFamily: 'monospace' }}>
-                        {animatedBithumbUsdtToKrwRate && animatedBithumbUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    </span>
+                <div className="w-full flex flex-col items-end justify-center">
 
+                  <span className="text-2xl text-slate-200 font-semibold"
+                    style={{ fontFamily: 'monospace' }}>
+                      {animatedBithumbUsdtToKrwRate && animatedBithumbUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  </span>
+
+                  <div className="flex flex-row items-center justify-end gap-1">
                     <span className={`text-sm font-semibold
                       ${
                         bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
@@ -5157,21 +5159,22 @@ const fetchBuyOrders = async () => {
               <div className="w-full xl:h-16 h-full xl:w-0 border border-zinc-300"></div>
 
               <div className="w-64
-                flex flex-row items-center justify-end gap-2 p-2">
+                flex flex-row items-center justify-between gap-2 p-2">
                 <Image
                   src="/icon-market-korbit.png"
                   alt="Korbit"
                   width={50}
                   height={50}
-                  className="w-10 h-10 object-cover"
+                  className="w-12 h-12 object-cover"
                 />
-                <div className="flex flex-col items-end justify-center">
-                  <div className="flex flex-row items-center justify-end gap-1">
-                    <span className="text-2xl text-slate-200 font-semibold"
-                      style={{ fontFamily: 'monospace' }}>
-                        {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    </span>
+                <div className="w-full flex flex-col items-end justify-center">
 
+                  <span className="text-2xl text-slate-200 font-semibold"
+                    style={{ fontFamily: 'monospace' }}>
+                      {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  </span>
+
+                  <div className="flex flex-row items-center justify-end gap-1">
                     <span className={`text-sm font-semibold
                       ${
                         upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
