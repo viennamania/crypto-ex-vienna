@@ -6455,14 +6455,14 @@ const fetchBuyOrders = async () => {
                             <div className="w-full flex flex-col items-start justify-center gap-1
                             border-t border-slate-600 pt-2
                             ">
-                              <span className="text-sm font-semibold">
+                              <span className="text-sm font-semibold text-slate-200">
                                 최근 거래내역
                               </span>
                               <div className="w-full flex flex-row items-center justify-start gap-2">
-                                <span className="text-sm">
+                                <span className="text-sm text-slate-400">
                                   상태:
                                 </span>
-                                <span className="text-sm font-semibold">
+                                <span className="text-sm font-semibold text-slate-200">
                                   {seller.seller?.buyOrder?.status === 'completed' ? '거래완료' :
                                     seller.seller?.buyOrder?.status === 'paymentConfirmed' ? 'USDT전송완료' :
                                     seller.seller?.buyOrder?.status === 'paymentRequested' ? '입금확인중' :
@@ -6472,10 +6472,10 @@ const fetchBuyOrders = async () => {
                                 </span>
                               </div>
                               <div className="w-full flex flex-row items-center justify-start gap-2">
-                                <span className="text-sm">
+                                <span className="text-sm text-slate-400">
                                   거래시간:
                                 </span>
-                                <span className="text-sm font-semibold">
+                                <span className="text-sm font-semibold text-slate-200">
                                   {seller.seller?.buyOrder?.createdAt ? new Date(seller.seller?.buyOrder?.createdAt).toLocaleString() : ''}
                                 </span>
                               </div>
