@@ -4118,7 +4118,7 @@ const fetchBuyOrders = async () => {
 
   return (
 
-    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-slate-950">
 
       <AutoConnect
           client={client}
