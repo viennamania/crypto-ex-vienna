@@ -4759,7 +4759,7 @@ const fetchBuyOrders = async () => {
                   xl:flex-row items-center justify-end gap-2">
                   
                   {/* background dark colors */}
-                  {processingBuyOrders.slice(0, 4).map((order: BuyOrder, index: number) => (
+                  {processingBuyOrders.slice(0, 3).map((order: BuyOrder, index: number) => (
 
                     
                     <div className="
@@ -4947,9 +4947,9 @@ const fetchBuyOrders = async () => {
 
                   ))}
 
-                  {processingBuyOrders.length > 4 && (
-                    <span className="text-xl text-slate-300 font-semibold">
-                      +{processingBuyOrders.length - 4}
+                  {processingBuyOrders.length > 3 && (
+                    <span className="text-4xl text-slate-300 font-semibold">
+                      +{processingBuyOrders.length - 3}
                     </span>
                   )}
                 </div>
