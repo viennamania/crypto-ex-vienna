@@ -3469,6 +3469,7 @@ const fetchBuyOrders = async () => {
 
 
   // totalNumberOfClearanceOrders
+  /*
   const [loadingTotalNumberOfClearanceOrders, setLoadingTotalNumberOfClearanceOrders] = useState(false);
   const [totalNumberOfClearanceOrders, setTotalNumberOfClearanceOrders] = useState(0);
   useEffect(() => {
@@ -3513,8 +3514,7 @@ const fetchBuyOrders = async () => {
       audio.play();
     }
   }, [totalNumberOfClearanceOrders, loadingTotalNumberOfClearanceOrders]);
-
-
+  */
 
 
     // audio notification state
@@ -5468,27 +5468,57 @@ const fetchBuyOrders = async () => {
                                       {
                                       seller.seller?.buyOrder?.status !== 'ordered'
                                       && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
-                                        <button
-                                          onClick={() => {
-                                            updateUsdtToKrwRate(
-                                              index,
-                                              seller.seller._id,
-                                              seller.seller.usdtToKrwRate + 1,
-                                            );
-                                          }}
-                                          disabled={updatingUsdtToKrwRateArray[index]}
-                                          className={`
-                                            ${updatingUsdtToKrwRateArray[index]
-                                            ? 'text-gray-400 cursor-not-allowed'
-                                            : 'text-green-600 hover:text-green-700 hover:shadow-green-500/50 cursor-pointer'
-                                            }
-                                          `}
-                                        >
-                                          ▲
-                                        </button>
+                                        
+                                        <div className="flex flex-row items-center justify-center gap-1">
+
+                                          <div className="flex flex-col items-center justify-center gap-1
+                                          border border-slate-600 bg-slate-700/50 rounded-lg px-2 py-1
+                                          ">
+                                            <span className="text-xs text-slate-300">
+                                              지정가
+                                            </span>
+                                          </div>          
+                                          
+                                          <button
+                                            onClick={() => {
+                                              updateUsdtToKrwRate(
+                                                index,
+                                                seller.seller._id,
+                                                seller.seller.usdtToKrwRate + 1,
+                                              );
+                                            }}
+                                            disabled={updatingUsdtToKrwRateArray[index]}
+                                            className={`
+                                              ${updatingUsdtToKrwRateArray[index]
+                                              ? 'text-gray-400 cursor-not-allowed'
+                                              : 'text-green-600 hover:text-green-700 hover:shadow-green-500/50 cursor-pointer'
+                                              }
+                                            `}
+                                          >
+                                            ▲
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              updateUsdtToKrwRate(
+                                                index,
+                                                seller.seller._id,
+                                                seller.seller.usdtToKrwRate - 1,
+                                              );
+                                            }}
+                                            disabled={updatingUsdtToKrwRateArray[index]}
+                                            className={`
+                                              ${updatingUsdtToKrwRateArray[index]
+                                              ? 'text-gray-400 cursor-not-allowed'
+                                              : 'text-red-600 hover:text-red-700 hover:shadow-red-500/50 cursor-pointer'
+                                              }
+                                            `}
+                                          >
+                                            ▼
+                                          </button>
+                                        </div>
                                       )}
 
-
+                                      {/*
                                       {
                                       seller.seller?.buyOrder?.status !== 'ordered'
                                       && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
@@ -5535,6 +5565,7 @@ const fetchBuyOrders = async () => {
                                           ▼
                                         </button>
                                       )}
+                                      */}
                                     </>
                                   ) : (
                                     <div className="flex flex-col items-center justify-center gap-1
