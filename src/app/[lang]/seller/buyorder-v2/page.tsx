@@ -4744,12 +4744,14 @@ const fetchBuyOrders = async () => {
 
             <div className="flex flex-col items-end justify-center gap-4">
 
+              {/* 구매주문 목록 */}
               <div className="
                 w-full
                 flex flex-row items-center justify-end gap-2
-                bg-white/80
-                p-2 rounded-lg shadow-md
+                bg-slate-900/80
+                p-2 rounded-lg shadow-xl
                 backdrop-blur-md
+                border border-slate-700
               ">
   
                 {/* array of processingBuyOrders store logos */}
@@ -6065,7 +6067,7 @@ const fetchBuyOrders = async () => {
                     {/* seller.buyOrder.krwAmount => 구매금액 */}
                     {/* seller.buyOrder.rate => 단가 */}
                     <div className="
-                      mt-8
+                      mt-10
                       w-full
                       flex flex-col items-start justify-center gap-2">
 
