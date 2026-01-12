@@ -1071,6 +1071,29 @@ export default function SettingsPage({ params }: any) {
     };
 
 
+    // updatingPromotionText
+    const [promotionText, setPromotionText] = useState('');
+    const [updatingPromotionText, setUpdatingPromotionText] = useState(false);
+    const updatePromotionText = async () => {
+        if (!seller) return;
+        setUpdatingPromotionText(true);
+        await fetch('/api/user/updatePromotionText', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                storecode: storecode,
+                walletAddress: address,
+                promotionText: promotionText,
+            }),
+        });
+        setUpdatingPromotionText(false);
+        setSeller({
+            ...seller,
+            promotionText: promotionText,
+        });
+    };
 
 
     return (
@@ -1965,12 +1988,42 @@ export default function SettingsPage({ params }: any) {
                                     */}
 
                                 </div>
-                                
-
 
                             )}
 
                 
+                            {/* 판매 홍보 문구 설정 */}
+                            <div className='w-full flex flex-col gap-2 items-start justify-between mt-4
+                            border-t border-gray-300 pt-4'>
+
+                                <div className="flex flex-row items-center gap-2">
+                                    <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                                    <span className="text-lg">
+                                        판매 홍보 문구 설정
+                                    </span>
+                                </div>
+
+                                <textarea
+                                    className="w-full p-2 bg-zinc-800 text-zinc-100 rounded-lg text-lg"
+                                    placeholder="예: 빠르고 안전한 USDT 구매, 지금 바로 거래하세요!"
+                                    value={promotionText}
+                                    onChange={(e) => {
+                                        setPromotionText(e.target.value);
+                                    }}
+                                    rows={4}
+                                ></textarea>
+
+                                <button
+                                    disabled={updatingPromotionText}
+                                    onClick={updatePromotionText}
+                                    className={`
+                                        ${updatingPromotionText ? 'bg-gray-300 text-gray-400' : 'bg-green-500 text-zinc-100'}
+                                        p-2 rounded-lg text-sm font-semibold
+                                    `}
+                                >
+                                    {updatingPromotionText ? '수정중...' : '수정하기'}
+                                </button>
+                            </div>
 
                         </div>
 

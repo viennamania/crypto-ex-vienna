@@ -2771,3 +2771,35 @@ export async function setMarket(
   );
   
 }
+
+
+// updatePromotionText
+export async function updatePromotionText(
+  {
+    storecode,
+    walletAddress,
+    promotionText,
+  }: {
+    storecode: string;
+    walletAddress: string;
+    promotionText: string;
+  }
+) {
+
+  //console.log('updatePromotionText storecode: ' + storecode + ' walletAddress: ' + walletAddress + ' promotionText: ' + promotionText);
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  return await collection.updateOne(
+    {
+      storecode: storecode,
+      walletAddress: walletAddress
+    },
+    {
+      $set: {
+        promotionText: promotionText,
+      }
+    }
+  );
+  
+}
