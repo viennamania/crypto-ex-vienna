@@ -6326,10 +6326,15 @@ const fetchBuyOrders = async () => {
                                 className="w-16 h-16 object-contain"
                               />
                               {/* 판매 홍보용 문구 */}
-                              {/* 예) 거래소보다 더 나은 가격에 USDT를 구매하세요! */}
+                              {seller.seller?.promotionText ? (
                               <span className="text-xs font-semibold text-green-600">
                                 거래소보다 더 나은 가격에 USDT를 구매하세요!
                               </span>
+                              ) : (
+                              <span className="text-xs font-semibold">
+                                홍보 문구가 설정되지 않았습니다.
+                              </span>
+                              )}
 
 
                             </div>
