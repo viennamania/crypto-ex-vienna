@@ -5026,14 +5026,14 @@ const fetchBuyOrders = async () => {
               {/* upbit usdt to krw rate display */}
               {/* large font size */}
               {/* upbitUsdtToKrwRateTimestamp - convert to local time */}
-              <div className="w-64
+              <div className="w-64   
                 flex flex-row items-center justify-end gap-2 p-2">
                 <Image
                   src="/icon-market-upbit.png"
                   alt="Upbit"
                   width={50}
                   height={50}
-                  className="w-12 h-12 object-cover"
+                  className="w-10 h-10 object-cover"
                 />
                 
                 <div className="flex flex-col items-end justify-center">
@@ -5100,7 +5100,7 @@ const fetchBuyOrders = async () => {
                   alt="Bithumb"
                   width={50}
                   height={50}
-                  className="w-12 h-12 object-cover"
+                  className="w-10 h-10 object-cover"
                 />
                 <div className="flex flex-col items-end justify-center">
                   <div className="flex flex-row items-center justify-end gap-1">
@@ -5163,7 +5163,7 @@ const fetchBuyOrders = async () => {
                   alt="Korbit"
                   width={50}
                   height={50}
-                  className="w-12 h-12 object-cover"
+                  className="w-10 h-10 object-cover"
                 />
                 <div className="flex flex-col items-end justify-center">
                   <div className="flex flex-row items-center justify-end gap-1">
