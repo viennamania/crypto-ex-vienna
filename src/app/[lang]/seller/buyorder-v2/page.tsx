@@ -6357,7 +6357,7 @@ const fetchBuyOrders = async () => {
                                 />
                                 {/* 판매 홍보용 문구 */}
                                 {seller.seller?.promotionText ? (
-                                <span className="text-xs font-semibold text-emerald-400">
+                                <span className="text-sm font-semibold text-slate-200">
                                   {seller.seller?.promotionText}
                                 </span>
                                 ) : (
@@ -6387,11 +6387,32 @@ const fetchBuyOrders = async () => {
                                     disabled={updatingPromotionText}
                                     onClick={updatePromotionText}
                                     className={`
-                                        ${updatingPromotionText ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-500/50 cursor-pointer'}
-                                        p-2 rounded-lg text-xs w-full
+                                        ${updatingPromotionText 
+                                          ? 'bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600' 
+                                          : 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg hover:shadow-emerald-500/50 border-0 transform hover:scale-105 active:scale-95'
+                                        }
+                                        p-2 rounded-lg text-xs w-full font-semibold
+                                        transition-all duration-200 ease-in-out
                                     `}
                                   >
-                                    {updatingPromotionText ? '수정중...' : '수정하기'}
+                                    <span className="flex items-center justify-center gap-2">
+                                      {updatingPromotionText ? (
+                                        <>
+                                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                          </svg>
+                                          수정중...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                          </svg>
+                                          수정하기
+                                        </>
+                                      )}
+                                    </span>
                                   </button>
                                 </div>
                               )}
@@ -6534,7 +6555,7 @@ const fetchBuyOrders = async () => {
                             <div className="w-full flex flex-col items-start justify-center gap-2
                               border-t border-slate-600 pt-2
                               ">
-                              <div className="w-full flex flex-row items-center gap-2">
+                              <div className="w-full flex flex-col items-start justify-center gap-2">
                                 <input
                                   type="number"
                                   min={1}
@@ -6559,14 +6580,23 @@ const fetchBuyOrders = async () => {
                                     */
                                   }}
                                   className={`
-                                    ${address ? 'bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-600 border border-blue-600' :
-                                    'bg-slate-600 text-slate-400 px-4 py-2 rounded-lg cursor-not-allowed border border-slate-600'
+                                    ${address 
+                                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-lg hover:shadow-blue-500/50 border-0' 
+                                      : 'bg-slate-700 text-slate-500 cursor-not-allowed border border-slate-600'
                                     }
+                                    px-4 py-2 rounded-lg font-semibold text-sm
+                                    transition-all duration-200 ease-in-out
+                                    transform hover:scale-105 active:scale-95
                                     w-full
                                   `}
                                   disabled={!address}
                                 >
-                                  구매하기
+                                  <span className="flex items-center justify-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                      <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+                                    </svg>
+                                    구매하기
+                                  </span>
                                 </button>
                               </div>
                               {/* 로그인을 해야 구매할 수 있습니다. */}
