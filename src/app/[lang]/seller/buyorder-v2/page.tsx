@@ -4098,7 +4098,7 @@ const fetchBuyOrders = async () => {
 
   if (address && loadingUser) {
     return (
-      <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto">
+      <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="py-0 w-full flex flex-col items-center justify-center gap-4">
 
           <Image
@@ -4118,7 +4118,7 @@ const fetchBuyOrders = async () => {
 
   return (
 
-    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto">
+    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
 
       <AutoConnect
           client={client}
@@ -4232,14 +4232,14 @@ const fetchBuyOrders = async () => {
       <div className="py-0 w-full">
 
 
-        <div className="w-full flex flex-col xl:flex-row items-center justify-center gap-2 bg-black/10 p-2 rounded-lg mb-4">
+        <div className="w-full flex flex-col xl:flex-row items-center justify-center gap-2 bg-slate-800/90 border border-slate-700 p-2 rounded-lg mb-4 shadow-xl">
             
           <div className="w-full flex flex-row items-center justify-start gap-2">
             <button
               onClick={() => router.push('/' + params.lang + '/administration')}
               className="flex items-center justify-center gap-2
               rounded-lg p-2
-              hover:bg-black/20
+              hover:bg-slate-700/50
               hover:cursor-pointer
               hover:scale-105
               transition-transform duration-200 ease-in-out"
@@ -4277,12 +4277,12 @@ const fetchBuyOrders = async () => {
                         height={20}
                         className="rounded-lg w-5 h-5"
                       />
-                      <span className="text-sm text-[#f3f4f6]">
+                      <span className="text-sm text-slate-100">
                         센터 관리자
                       </span>
                     </div>
                   )}
-                  <span className="text-sm text-[#f3f4f6]">
+                  <span className="text-sm text-slate-100">
                     {user?.nickname || "프로필"}
                   </span>
 
@@ -4295,7 +4295,7 @@ const fetchBuyOrders = async () => {
                   onClick={() => {
                     router.push('/' + params.lang + '/administration/seller-settings');
                   }}
-                  className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                  className="flex bg-slate-700 text-sm text-slate-100 px-4 py-2 rounded-lg hover:bg-slate-600 border border-slate-600 shadow-md"
                 >
                   <div className="flex flex-row items-center justify-center gap-2">
                     <Image
@@ -4305,7 +4305,7 @@ const fetchBuyOrders = async () => {
                       height={20}
                       className="rounded-lg w-5 h-5"
                     />
-                    <span className="text-sm text-[#f3f4f6]">
+                    <span className="text-sm text-slate-100">
                       판매자 설정
                     </span>
                   </div>
@@ -4319,7 +4319,7 @@ const fetchBuyOrders = async () => {
                   onClick={() => {
                     window.open('https://payment.orangex.center/' + params.lang + '/administration/buyorder', '_blank');
                   }}
-                  className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                  className="flex bg-slate-700 text-sm text-slate-100 px-4 py-2 rounded-lg hover:bg-slate-600 border border-slate-600 shadow-md"
                 >
                   <div className="flex flex-row items-center justify-center gap-2">
                     <Image
@@ -4329,7 +4329,7 @@ const fetchBuyOrders = async () => {
                       height={20}
                       className="rounded-lg w-5 h-5"
                     />
-                    <span className="text-sm text-[#f3f4f6]">
+                    <span className="text-sm text-slate-100">
                       관리자 대시보드
                     </span>
                   </div>
@@ -4627,12 +4627,13 @@ const fetchBuyOrders = async () => {
 
                 <div className="flex flex-col gap-2 items-center">
                   <div className="
-                    bg-orange-200/50
+                    bg-slate-700/70
                     px-2 py-1 rounded-full
-                    text-sm font-semibold text-orange-800
+                    text-sm font-semibold text-slate-200
+                    border border-slate-600
                   ">
                     {/* dot before */}
-                    <div className="inline-block w-2 h-2 bg-orange-800 rounded-full mr-2"></div>
+                    <div className="inline-block w-2 h-2 bg-emerald-400 rounded-full mr-2"></div>
                     <span className="align-middle">
                       거래량(USDT)
                     </span>
@@ -4660,12 +4661,13 @@ const fetchBuyOrders = async () => {
 
                 <div className="flex flex-col gap-2 items-center">
                   <div className="
-                    bg-orange-200/50
+                    bg-slate-700/70
                     px-2 py-1 rounded-full
-                    text-sm font-semibold text-orange-800
+                    text-sm font-semibold text-slate-200
+                    border border-slate-600
                   ">
                     {/* dot before */}
-                    <div className="inline-block w-2 h-2 bg-orange-800 rounded-full mr-2"></div>
+                    <div className="inline-block w-2 h-2 bg-amber-400 rounded-full mr-2"></div>
                     <span className="align-middle">
                       거래금액(원)
                     </span>
@@ -4757,7 +4759,7 @@ const fetchBuyOrders = async () => {
                   xl:flex-row items-center justify-end gap-2">
                   
                   {/* background dark colors */}
-                  {processingBuyOrders.slice(0, 3).map((order: BuyOrder, index: number) => (
+                  {processingBuyOrders.slice(0, 4).map((order: BuyOrder, index: number) => (
 
                     
                     <div className="
@@ -4868,17 +4870,17 @@ const fetchBuyOrders = async () => {
                           {/* status */}
                           <div className="flex flex-row items-center justify-center gap-1 text-sm font-semibold">
                             {order.status === 'ordered' && (
-                              <span className="text-red-500 font-semibold">
+                              <span className="text-red-400 font-semibold">
                                 매칭대기중
                               </span>
                             )}
                             {order.status === 'accepted' && (
-                              <span className="text-blue-500 font-semibold">
+                              <span className="text-blue-400 font-semibold">
                                 결제대기중
                               </span>
                             )}
                             {order.status === 'paymentRequested' && (
-                              <span className="text-yellow-500 font-semibold">
+                              <span className="text-amber-400 font-semibold">
                                 입금진행중
                               </span>
                             )}
@@ -4945,9 +4947,9 @@ const fetchBuyOrders = async () => {
 
                   ))}
 
-                  {processingBuyOrders.length > 3 && (
-                    <span className="text-xl xl:text-4xl text-gray-500 font-semibold">
-                      +{processingBuyOrders.length - 3}
+                  {processingBuyOrders.length > 4 && (
+                    <span className="text-xl text-gray-500 font-semibold">
+                      +{processingBuyOrders.length - 4}
                     </span>
                   )}
                 </div>
@@ -5099,16 +5101,16 @@ const fetchBuyOrders = async () => {
                 />
                 <div className="flex flex-col items-end justify-center">
                   <div className="flex flex-row items-center justify-end gap-1">
-                    <span className="text-2xl text-zinc-700 font-semibold"
+                    <span className="text-2xl text-slate-200 font-semibold"
                       style={{ fontFamily: 'monospace' }}>
                         {animatedBithumbUsdtToKrwRate && animatedBithumbUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     </span>
 
                     <span className={`text-sm font-semibold
                       ${
-                        bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                        bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                        'text-zinc-500'
+                        bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
+                        bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
+                        'text-slate-400'
                       }
                       `}
                       style={{ fontFamily: 'monospace' }}
@@ -5122,9 +5124,9 @@ const fetchBuyOrders = async () => {
                     {/* bithumbUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
                     <span className={`text-sm font-semibold
                       ${
-                        bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                        bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                        'text-zinc-500'
+                        bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
+                        bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
+                        'text-slate-400'
                       }
                       `}
                       style={{ fontFamily: 'monospace' }}
@@ -5137,7 +5139,7 @@ const fetchBuyOrders = async () => {
                     </span>
                     
                   </div>
-                  <span className="text-sm text-zinc-500"
+                  <span className="text-sm text-slate-400"
                     style={{ fontFamily: 'monospace' }}>
                     {
                       //bithumbUsdtToKrwRateTimestamp ? new Date(bithumbUsdtToKrwRateTimestamp).toLocaleString() : ''
@@ -5162,16 +5164,16 @@ const fetchBuyOrders = async () => {
                 />
                 <div className="flex flex-col items-end justify-center">
                   <div className="flex flex-row items-center justify-end gap-1">
-                    <span className="text-2xl text-zinc-700 font-semibold"
+                    <span className="text-2xl text-slate-200 font-semibold"
                       style={{ fontFamily: 'monospace' }}>
                         {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     </span>
 
                     <span className={`text-sm font-semibold
                       ${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                        'text-zinc-500'
+                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
+                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
+                        'text-slate-400'
                       }
                       `}
                       style={{ fontFamily: 'monospace' }}
@@ -5185,9 +5187,9 @@ const fetchBuyOrders = async () => {
                     {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
                     <span className={`text-sm font-semibold
                       ${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                        'text-zinc-500'
+                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
+                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
+                        'text-slate-400'
                       }
                       `}
                       style={{ fontFamily: 'monospace' }}
@@ -5313,7 +5315,7 @@ const fetchBuyOrders = async () => {
                         <div
                           className="h-full
                           flex flex-row items-center justify-center gap-2
-                          bg-yellow-400 text-white px-2 py-1 rounded-bl-lg rounded-tr-lg shadow-lg
+                          bg-gradient-to-r from-slate-600 to-slate-700 text-slate-100 px-2 py-1 rounded-bl-lg rounded-tr-lg shadow-xl border border-slate-500
                           ">
                           <span className="text-sm font-semibold">
                             나의 판매자계정
@@ -5899,7 +5901,7 @@ const fetchBuyOrders = async () => {
                                   height={20}
                                   className="w-5 h-5"
                                 />
-                                <span className="text-4xl xl:text-2xl text-[#409192] font-semibold"
+                                <span className="text-4xl xl:text-2xl text-emerald-300 font-semibold"
                                   style={{ fontFamily: 'monospace' }}>
                                   {
                                     //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -5948,14 +5950,14 @@ const fetchBuyOrders = async () => {
 
                             {/* if balance is less than 10 USDT, show warning */}
                             {currentUsdtBalanceArray[index] < 10 ? (
-                              <div className="text-red-600 text-sm">
+                              <div className="text-red-400 text-sm font-medium">
                                 {/*Warning: Low escrow balance may result in no order assignments. Please recharge USDT. */}
                                 경고: 에스크로 잔액이 부족하면 주문 할당이 이루어지지 않을 수 있습니다. USDT를 충전해주세요.
                               </div>
                             ) : (
                               <>
                               {seller.walletAddress === address && (
-                                <div className="text-green-600 text-sm mt-1">
+                                <div className="text-emerald-400 text-sm mt-1 font-medium">
                                   {/*If you deposit more USDT, more orders will be assigned. */}
                                   충전된 USDT가 많을수록 더 많은 주문이 할당됩니다.
                                 </div>
@@ -6908,7 +6910,7 @@ const fetchBuyOrders = async () => {
                     type="date"
                     value={searchToDate}
                     onChange={(e) => setSearchToDate(e.target.value)}
-                    className="w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
+                    className="w-full p-2 bg-slate-700 border border-slate-600 text-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
@@ -6922,7 +6924,7 @@ const fetchBuyOrders = async () => {
                         setSearchFormDate(today.toISOString().split("T")[0]);
                         setSearchToDate(today.toISOString().split("T")[0]);
                       }}
-                      className="text-sm text-zinc-500 underline"
+                      className="text-sm text-slate-400 underline hover:text-slate-200"
                     >
                       오늘
                     </button>
@@ -6936,7 +6938,7 @@ const fetchBuyOrders = async () => {
                         setSearchFormDate(yesterday.toISOString().split("T")[0]);
                         setSearchToDate(yesterday.toISOString().split("T")[0]);
                       }}
-                      className="text-sm text-zinc-500 underline"
+                      className="text-sm text-slate-400 underline hover:text-slate-200"
                     >
                       어제
                     </button>
@@ -9954,7 +9956,7 @@ const fetchBuyOrders = async () => {
                                   disabled={item.settlement.txid === "0x" || !item.settlement.txid}
 
                                   className={`
-                                    ${item.settlement.txid === "0x" || !item.settlement.txid ? "bg-gray-500 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 cursor-pointer hover:shadow-lg hover:shadow-blue-500/50"}
+                                    ${item.settlement.txid === "0x" || !item.settlement.txid ? "bg-slate-600 cursor-not-allowed" : "bg-slate-700 hover:bg-slate-600 cursor-pointer hover:shadow-lg hover:shadow-slate-500/50 border border-slate-500"}
                                     text-sm
                                     text-white px-2 py-1 rounded-md
                                     transition duration-300 ease-in-out
@@ -11409,40 +11411,40 @@ const TradeDetail = (
   
     return (
 
-      <div className="max-w-2xl mx-auto bg-white shadow-lg rounded-lg p-6">
+      <div className="max-w-2xl mx-auto bg-slate-800 shadow-2xl rounded-lg p-6 border border-slate-700">
         <div className="flex items-center">
-          <span className="inline-block w-4 h-4 rounded-full bg-green-500 mr-2"></span>
-          <h2 className="text-lg font-semibold text-black ">Iskan9</h2>
-          <span className="ml-2 text-blue-500 text-sm">318 trades</span>
+          <span className="inline-block w-4 h-4 rounded-full bg-emerald-500 mr-2"></span>
+          <h2 className="text-lg font-semibold text-slate-100 ">Iskan9</h2>
+          <span className="ml-2 text-blue-400 text-sm">318 trades</span>
         </div>
-        <p className="text-gray-600 mt-2">The offer is taken from another source. You can only use chat if the trade is open.</p>
+        <p className="text-slate-400 mt-2">The offer is taken from another source. You can only use chat if the trade is open.</p>
         
         <div className="mt-4">
-          <div className="flex justify-between text-gray-700">
+          <div className="flex justify-between text-slate-300">
             <span>Price</span>
             <span>{price} KRW</span>
           </div>
-          <div className="flex justify-between text-gray-700 mt-2">
+          <div className="flex justify-between text-slate-300 mt-2">
             <span>Limit</span>
             <span>40680.00 KRW - 99002.9 KRW</span>
           </div>
-          <div className="flex justify-between text-gray-700 mt-2">
+          <div className="flex justify-between text-slate-300 mt-2">
             <span>Available</span>
             <span>1085.91 USDT</span>
           </div>
-          <div className="flex justify-between text-gray-700 mt-2">
+          <div className="flex justify-between text-slate-300 mt-2">
             <span>Seller&apos;s payment method</span>
-            <span className="bg-yellow-100 text-yellow-800 px-2 rounded-full">Tinkoff</span>
+            <span className="bg-slate-700 text-amber-400 px-2 rounded-full border border-slate-600">Tinkoff</span>
           </div>
-          <div className="mt-4 text-gray-700">
+          <div className="mt-4 text-slate-300">
             <p>24/7</p>
           </div>
         </div>
   
-        <div className="mt-6 border-t pt-4 text-gray-700">
+        <div className="mt-6 border-t border-slate-700 pt-4 text-slate-300">
           <div className="flex flex-col space-y-4">
             <div>
-              <label className="block text-gray-700">I want to pay</label>
+              <label className="block text-slate-300 font-medium">I want to pay</label>
               <input 
                 type="number"
                 value={amount}
@@ -11450,32 +11452,32 @@ const TradeDetail = (
                     e.target.value === '' ? 0 : parseInt(e.target.value)
                 ) }
 
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               />
             </div>
             <div>
-              <label className="block text-gray-700">I will receive</label>
+              <label className="block text-slate-300 font-medium">I will receive</label>
               <input 
                 type="text"
                 value={`${receiveAmount} USDT`}
                 readOnly
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               />
             </div>
             <div>
-              <label className="block text-gray-700">Commission</label>
+              <label className="block text-slate-300 font-medium">Commission</label>
               <input 
                 type="text"
                 value={`${commission} USDT`}
                 readOnly
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               />
             </div>
           </div>
           
           <div className="mt-6 flex space-x-4">
             <button
-                className="bg-green-500 text-white px-4 py-2 rounded-lg"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg border border-emerald-500 shadow-md"
                 onClick={() => {
                     console.log('Buy USDT');
                     // go to chat
@@ -11488,7 +11490,7 @@ const TradeDetail = (
                 Buy USDT
             </button>
             <button
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg"
+                className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg border border-slate-600 shadow-md"
                 onClick={() => {
                     console.log('Cancel');
                     // close modal
