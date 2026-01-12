@@ -3986,6 +3986,40 @@ const fetchBuyOrders = async () => {
 
 
 
+  // updatingPromotionText
+  // /api/user/updatePromotionText
+  const [promotionText, setPromotionText] = useState('');
+  const [updatingPromotionText, setUpdatingPromotionText] = useState(false);
+  const updatePromotionText = async () => {
+      
+      setUpdatingPromotionText(true);
+      try {
+          const response = await fetch('/api/user/updatePromotionText', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                  storecode: "admin",
+                  walletAddress: address,
+                  promotionText: promotionText,
+              }),
+          });
+          const data = await response.json();
+          //console.log('updatePromotionText data', data);
+          if (data.result) {
+              toast.success('프로모션 문구가 업데이트되었습니다.');
+          } else {
+              toast.error('프로모션 문구 업데이트에 실패했습니다.');
+          }
+      } catch (error) {
+          console.error('Error updating promotion text:', error);
+          toast.error('프로모션 문구 업데이트에 실패했습니다.');
+      }
+      setUpdatingPromotionText(false);
+  };
+
+
   //if (!address) {
   if (false) {
     return (
@@ -4600,7 +4634,7 @@ const fetchBuyOrders = async () => {
                       className="w-5 h-5"
                     />
                     {/* RGB: 64, 145, 146 */}
-                    <span className="text-4xl font-semibold text-[#409192]"
+                    <span className="text-4xl text-[#409192]"
                       style={{ fontFamily: 'monospace' }}>
                       {
                         //buyOrderStats.totalUsdtAmount
@@ -4625,7 +4659,7 @@ const fetchBuyOrders = async () => {
                     </span>
                   </div>
                   <div className="flex flex-row items-center justify-center gap-1">
-                    <span className="text-4xl font-semibold text-yellow-600"
+                    <span className="text-4xl text-yellow-600"
                       style={{ fontFamily: 'monospace' }}>
                       {
                         //buyOrderStats.totalKrwAmount?.toLocaleString()
@@ -4992,13 +5026,16 @@ const fetchBuyOrders = async () => {
                         {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     </span>
 
-                    <span className={`text-sm font-semibold
+                    <span
+                      className={`text-sm font-semibold
                       ${
                         upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
                         upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
                         'text-zinc-500'
                       }
-                      `}>
+                      `}
+                      style={{ fontFamily: 'monospace' }}
+                      >
                       {
                         upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
                         upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
@@ -5012,7 +5049,9 @@ const fetchBuyOrders = async () => {
                         upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
                         'text-zinc-500'
                       }
-                      `}>
+                      `}
+                      style={{ fontFamily: 'monospace' }}
+                    >
                       {
                         upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
                         upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
@@ -5059,7 +5098,9 @@ const fetchBuyOrders = async () => {
                         bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
                         'text-zinc-500'
                       }
-                      `}>
+                      `}
+                      style={{ fontFamily: 'monospace' }}
+                    >
                       {
                         bithumbUsdtToKrwRateChange === 'RISE' ? `▲ ${bithumbUsdtToKrwRateChangePrice}` :
                         bithumbUsdtToKrwRateChange === 'FALL' ? `▼ ${bithumbUsdtToKrwRateChangePrice}` :
@@ -5073,7 +5114,9 @@ const fetchBuyOrders = async () => {
                         bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
                         'text-zinc-500'
                       }
-                      `}>
+                      `}
+                      style={{ fontFamily: 'monospace' }}
+                    >
                       {
                         bithumbUsdtToKrwRateChange === 'RISE' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
                         bithumbUsdtToKrwRateChange === 'FALL' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
@@ -5118,7 +5161,9 @@ const fetchBuyOrders = async () => {
                         upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
                         'text-zinc-500'
                       }
-                      `}>
+                      `}
+                      style={{ fontFamily: 'monospace' }}
+                    >
                       {
                         upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
                         upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
@@ -5132,7 +5177,9 @@ const fetchBuyOrders = async () => {
                         upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
                         'text-zinc-500'
                       }
-                      `}>
+                      `}
+                      style={{ fontFamily: 'monospace' }}
+                    >
                       {
                         upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
                         upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
@@ -5476,7 +5523,7 @@ const fetchBuyOrders = async () => {
                                     border border-zinc-300 rounded-lg px-2 py-1
                                     ">
                                       <span className="text-xs text-zinc-600">
-                                        고정가
+                                        지정가
                                       </span>
                                     </div>
                                   )}
@@ -5743,7 +5790,7 @@ const fetchBuyOrders = async () => {
                                     border border-zinc-300 rounded-lg px-2 py-1
                                     ">
                                       <span className="text-xs text-zinc-600">
-                                        고정가
+                                        지정가
                                       </span>
                                     </div>
                                   )}
@@ -6317,25 +6364,53 @@ const fetchBuyOrders = async () => {
                           {/* if balance is greater than or equal to 10 USDT, show 판매 대기중 */}
                           {currentUsdtBalanceArray[index] >= 10 ? (
 
-                            <div className="w-full flex flex-row items-center justify-start gap-2">
-                              <Image
-                                src="/icon-sale.png"
-                                alt="On Sale"
-                                width={50}
-                                height={50}
-                                className="w-16 h-16 object-contain"
-                              />
-                              {/* 판매 홍보용 문구 */}
-                              {seller.seller?.promotionText ? (
-                              <span className="text-xs font-semibold text-green-600">
-                                거래소보다 더 나은 가격에 USDT를 구매하세요!
-                              </span>
-                              ) : (
-                              <span className="text-xs font-semibold">
-                                홍보 문구가 설정되지 않았습니다.
-                              </span>
-                              )}
+                            <div className="w-full flex flex-col items-start justify-center gap-2">
+                              <div className="w-full flex flex-row items-center justify-start gap-2">
+                                <Image
+                                  src="/icon-sale.png"
+                                  alt="On Sale"
+                                  width={50}
+                                  height={50}
+                                  className="w-16 h-16 object-contain"
+                                />
+                                {/* 판매 홍보용 문구 */}
+                                {seller.seller?.promotionText ? (
+                                <span className="text-xs font-semibold text-green-600">
+                                  거래소보다 더 나은 가격에 USDT를 구매하세요!
+                                </span>
+                                ) : (
+                                <span className="text-xs font-semibold">
+                                  홍보 문구가 설정되지 않았습니다.
+                                </span>
+                                )}
+                                
+                              </div>
 
+                              {/* 입력창 */}
+                              {/* 수정하기 버튼 */}
+                              {seller.walletAddress === address && (
+                                <div className="w-full flex flex-col items-start justify-center gap-2">
+                                  <input
+                                    type="text"
+                                    className="w-full border border-zinc-300 rounded-lg p-2 text-sm"
+                                    placeholder="판매 홍보용 문구를 입력하세요."
+                                    value={promotionText}
+                                    onChange={(e) => {
+                                        setPromotionText(e.target.value);
+                                    }}
+                                  />
+                                  <button
+                                    disabled={updatingPromotionText}
+                                    onClick={updatePromotionText}
+                                    className={`
+                                        ${updatingPromotionText ? 'bg-gray-300 text-gray-400' : 'bg-green-500 text-zinc-100'}
+                                        p-2 rounded-lg text-sm font-semibold
+                                    `}
+                                  >
+                                    {updatingPromotionText ? '수정중...' : '수정하기'}
+                                  </button>
+                                </div>
+                              )}
 
                             </div>
 
@@ -6959,7 +7034,7 @@ const fetchBuyOrders = async () => {
                       className="w-5 h-5"
                     />
                     {/* RGB: 64, 145, 146 */}
-                    <span className="text-4xl font-semibold text-[#409192]"
+                    <span className="text-4xl text-[#409192]"
                       style={{ fontFamily: 'monospace' }}>
                       {
                         //buyOrderStats.totalUsdtAmount
@@ -6974,7 +7049,7 @@ const fetchBuyOrders = async () => {
                 <div className="flex flex-col gap-2 items-center">
                   <div className="text-sm">거래금액(원)</div>
                   <div className="flex flex-row items-center justify-center gap-1">
-                    <span className="text-4xl font-semibold text-yellow-600"
+                    <span className="text-4xl text-yellow-600"
                       style={{ fontFamily: 'monospace' }}>
                       {
                         //buyOrderStats.totalKrwAmount?.toLocaleString()

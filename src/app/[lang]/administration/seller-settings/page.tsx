@@ -1798,9 +1798,9 @@ export default function SettingsPage({ params }: any) {
                             </div>
 
 
-                            {/* market 연동 or 고정가 설정 */}
+                            {/* market 연동 or 지정가 설정 */}
                             {/* market 연동: upbit or bithumb or korbit */}
-                            {/* market중 하나 선택, 또는 고정가 선택 */}
+                            {/* market중 하나 선택, 또는 지정가 선택 */}
                             {/* checkbox style */}
                             <div className='w-full flex flex-row gap-2 items-center justify-start'>
 
@@ -1810,7 +1810,7 @@ export default function SettingsPage({ params }: any) {
                                     </span>
                                     {' '}
                                     <span className="text-lg text-zinc-500">
-                                        (현재 설정: {seller?.priceSettingMethod === 'market' ? 'Market 연동' : '고정가'})
+                                        (현재 설정: {seller?.priceSettingMethod === 'market' ? 'Market 연동' : '지정가'})
                                     </span>
                                 </div>
 
@@ -1842,7 +1842,7 @@ export default function SettingsPage({ params }: any) {
                                     `}
                                     disabled={seller?.priceSettingMethod === 'fixed'}
                                 >
-                                    고정가
+                                    지정가
                                 </button>
 
                             </div>
