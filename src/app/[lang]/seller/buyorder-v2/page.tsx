@@ -5535,9 +5535,9 @@ const fetchBuyOrders = async () => {
                                     </>
                                   ) : (
                                     <div className="flex flex-col items-center justify-center gap-1
-                                    border border-zinc-300 rounded-lg px-2 py-1
+                                    border border-slate-600 bg-slate-700/50 rounded-lg px-2 py-1
                                     ">
-                                      <span className="text-xs text-zinc-600">
+                                      <span className="text-xs text-slate-300">
                                         지정가
                                       </span>
                                     </div>
@@ -6047,75 +6047,6 @@ const fetchBuyOrders = async () => {
 
                       </div>
 
-                      {/* if seller.walletAddress is equal to address, hide this section */}
-                      <div className={
-                        `${seller.walletAddress === address ? 'hidden' : 'w-full flex flex-col items-start justify-center gap-2'}`
-                      }>
-
-                        {/* totalPaymentConfirmedCount
-                        totalPaymentConfirmedUsdtAmount
-                        totalPaymentConfirmedKrwAmount
-                        정상 거래 */}
-                        {/* green color for background */}
-                        <div className="w-full flex flex-row items-center justify-between gap-2 mt-2
-                        p-2 bg-green-100 rounded-lg
-                        ">
-                          <div className="flex flex-col items-start justify-center gap-0">
-                            <span className="text-sm text-zinc-500">
-                              정상 거래
-                            </span>
-                            <span className="text-lg">
-                              {seller.seller?.totalPaymentConfirmedCount || 0}
-                            </span>
-                          </div>
-                          <div className="w-full flex flex-col items-end justify-center gap-1">
-
-                            <span className="text-lg text-[#409192]"
-                              style={{ fontFamily: 'monospace' }}>
-                              {seller.seller?.totalPaymentConfirmedUsdtAmount
-                              && seller.seller?.totalPaymentConfirmedUsdtAmount.toLocaleString()} USDT
-                            </span>
-                            <span className="text-lg text-yellow-600"
-                              style={{ fontFamily: 'monospace' }}>
-                              {seller.seller?.totalPaymentConfirmedKrwAmount
-                              && seller.seller?.totalPaymentConfirmedKrwAmount.toLocaleString()} 원
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* 중재 거래 */}
-                        {/* red color for background */}
-                        <div className="w-full flex flex-row items-center justify-between gap-2
-                        p-2 bg-red-100 rounded-lg
-                        ">
-                          <div className="flex flex-col items-start justify-center gap-0">
-                            <span className="text-sm text-zinc-500">
-                              중재 거래
-                            </span>
-                            <span className="text-lg">
-                              {seller.seller?.totalDisputeResolvedCount || 0}
-                            </span>
-                          </div>
-                          <div className="w-full flex flex-col items-end justify-center gap-1">
-                            <span className="text-lg text-[#409192]"
-                              style={{ fontFamily: 'monospace' }}>
-                              {seller.seller?.totalDisputeResolvedUsdtAmount
-                              ? seller.seller?.totalDisputeResolvedUsdtAmount.toLocaleString()
-                              : '0'
-                              } USDT
-                            </span>
-                            <span className="text-lg text-yellow-600"
-                              style={{ fontFamily: 'monospace' }}>
-                              {seller.seller?.totalDisputeResolvedKrwAmount
-                              ? seller.seller?.totalDisputeResolvedKrwAmount.toLocaleString()
-                              : '0'
-                              } 원
-                            </span>
-                          </div>
-                        </div>
-
-                      </div>
-
                     </div>
 
                     {/* seller.buyOrder.status */}
@@ -6485,10 +6416,7 @@ const fetchBuyOrders = async () => {
 
 
                           {/* if seller.walletAddress is equal to address, show this section */}
-                          <div className={
-                            `${seller.walletAddress === address ? 'w-full flex flex-col items-start justify-center gap-2' : 'hidden'}`
-                          }>
-
+                          <div className={'w-full flex flex-col items-start justify-center gap-2'}>
 
                             {/* totalPaymentConfirmedCount
                             totalPaymentConfirmedUsdtAmount
@@ -6500,7 +6428,7 @@ const fetchBuyOrders = async () => {
                             ">
                               <div className="flex flex-col items-start justify-center gap-0">
                                 <span className="text-sm text-slate-400">
-                                  정상 거래
+                                  정상거래
                                 </span>
                                 <span className="text-lg text-slate-200">
                                   {seller.seller?.totalPaymentConfirmedCount || 0}
@@ -6528,7 +6456,7 @@ const fetchBuyOrders = async () => {
                             ">
                               <div className="flex flex-col items-start justify-center gap-0">
                                 <span className="text-sm text-slate-400">
-                                  중재 거래
+                                  중재거래
                                 </span>
                                 <span className="text-lg text-slate-200">
                                   {seller.seller?.totalDisputeResolvedCount || 0}
