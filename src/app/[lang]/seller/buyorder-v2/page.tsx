@@ -5410,13 +5410,7 @@ const fetchBuyOrders = async () => {
                         <div className="flex flex-col items-start justify-center gap-1">
 
                           <div className="w-full flex flex-row items-center justify-start gap-2">
-                            <Image
-                              src="/icon-price.png"
-                              alt="Price"
-                              width={20}
-                              height={20}
-                              className="w-5 h-5"
-                            />
+
                             <div className="w-full flex flex-row items-center justify-between gap-2">
                               <span className="text-sm text-slate-300">
                                 판매<br/>금액
@@ -5469,7 +5463,7 @@ const fetchBuyOrders = async () => {
                                       seller.seller?.buyOrder?.status !== 'ordered'
                                       && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
                                         
-                                        <div className="flex flex-row items-center justify-center gap-1">
+                                        <div className="flex flex-row items-center justify-center gap-2">
 
                                           <div className="flex flex-col items-center justify-center gap-1
                                           border border-slate-600 bg-slate-700/50 rounded-lg px-2 py-1
