@@ -4592,7 +4592,7 @@ const fetchBuyOrders = async () => {
           py-4
           ">
 
-            <div className="w-full flex flex-row items-center justify-start gap-2">
+            <div className="w-full flex flex-col xl:flex-row items-center justify-start gap-2">
               <Image
                 src="/icon-today.png"
                 alt="Today"
