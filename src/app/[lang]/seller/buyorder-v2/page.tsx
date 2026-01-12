@@ -6426,7 +6426,7 @@ const fetchBuyOrders = async () => {
                             <div className="w-full flex flex-row items-center justify-between gap-2 mt-2
                             p-2 bg-emerald-900/30 border border-emerald-700 rounded-lg
                             ">
-                              <div className="flex flex-col items-start justify-center gap-0">
+                              <div className="w-20 flex flex-col items-start justify-center gap-0">
                                 <span className="text-sm text-slate-400">
                                   정상거래
                                 </span>
@@ -6454,7 +6454,7 @@ const fetchBuyOrders = async () => {
                             <div className="w-full flex flex-row items-center justify-between gap-2
                             p-2 bg-red-900/30 border border-red-700 rounded-lg
                             ">
-                              <div className="flex flex-col items-start justify-center gap-0">
+                              <div className="w-20 flex flex-col items-start justify-center gap-0">
                                 <span className="text-sm text-slate-400">
                                   중재거래
                                 </span>
