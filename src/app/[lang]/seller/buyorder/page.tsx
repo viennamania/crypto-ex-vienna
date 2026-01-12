@@ -6047,6 +6047,7 @@ const fetchBuyOrders = async () => {
                         <div className="w-full flex flex-col items-start justify-center gap-2">
 
                           {/* 판매 진행 */}
+                          {/*
                           <div className="w-full flex flex-row items-center justify-start gap-2">
                             <div className="flex flex-row items-center gap-2
                             bg-red-500 text-white px-3 py-1 rounded-lg">
@@ -6054,29 +6055,39 @@ const fetchBuyOrders = async () => {
                                 판매 진행중
                               </span>
                             </div>
-                            {/*
-                            <Image
-                                src="/icon-trade.png"
-                                alt="Trade ID"
-                                width={20}
-                                height={20}
-                                className={
-                                  `${seller.seller?.buyOrder?.status === 'accepted'
-                                  || seller.seller?.buyOrder?.status === 'paymentRequested'
-                                  ? 'w-5 h-5 animate-spin'
-                                  : 'w-5 h-5'
-                                  }`
-                                }
-                              />
-                              */}
-
 
                           </div>
+                          */}
+                          {/* /icon-trade.png */}
+                          <div className="w-full flex flex-row items-center justify-start gap-2">
+                            <Image
+                              src="/icon-trade.png"
+                              alt="In Trade"
+                              width={50}
+                              height={50}
+                              className="w-16 h-16 object-contain"
+                            />
+                            {/* TID */}
+                            <span className="text-sm">
+                              TID: #<button
+                                  className="text-sm text-zinc-600 underline"
+                                  style={{ fontFamily: 'monospace' }}
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(seller.seller?.buyOrder?.tradeId);
+                                    toast.success('TID가 복사되었습니다.');
+                                  } }
+                                >
+                                  {seller.seller?.buyOrder?.tradeId}
+                                </button>
+                            </span>
+                          </div>
+
 
                           <div className="w-full flex flex-col items-start justify-center gap-1
                             border-t border-zinc-300 pt-2
                             ">
                             {/* TID */}
+                            {/*
                             <div className="flex flex-row items-center justify-start gap-2">
 
                               <span className="text-sm">
@@ -6092,6 +6103,7 @@ const fetchBuyOrders = async () => {
                                   </button>
                               </span>
                             </div>
+                            */}
 
 
                             <div className="w-full flex flex-col items-start justify-center gap-2
@@ -6199,17 +6211,19 @@ const fetchBuyOrders = async () => {
                           (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x') ? (
                         <div className="w-full flex flex-col items-start justify-center gap-2">
                           {/* 판매 진행중 */}
+                          {/*
                           <div className="flex flex-row items-center gap-2
                           bg-red-500 text-white px-3 py-1 rounded-lg">
                             <span className="text-sm font-semibold">
                               판매 진행중
                             </span>
                           </div>
+                          */}
 
                           <div className="w-full flex flex-col items-start justify-center gap-1
                             border-t border-zinc-300 pt-2
                             ">
-                            {/* TID */}
+                            {/*
                             <span className="text-sm">
                               TID: #<button
                                   className="text-sm text-zinc-600 underline"
@@ -6221,6 +6235,7 @@ const fetchBuyOrders = async () => {
                                   {seller.seller?.buyOrder?.tradeId}
                                 </button>
                             </span>
+                            */}
 
                             <div className="flex flex-row items-center gap-2
                               bg-blue-500 text-white px-3 py-1 rounded-lg">
@@ -6252,13 +6267,22 @@ const fetchBuyOrders = async () => {
                           {/* if balance is greater than or equal to 10 USDT, show 판매 대기중 */}
                           {currentUsdtBalanceArray[index] >= 10 ? (
 
-                            <Image
-                              src="/icon-sale.png"
-                              alt="On Sale"
-                              width={50}
-                              height={50}
-                              className="w-16 h-16 object-contain"
-                            />
+                            <div className="w-full flex flex-row items-center justify-start gap-2">
+                              <Image
+                                src="/icon-sale.png"
+                                alt="On Sale"
+                                width={50}
+                                height={50}
+                                className="w-16 h-16 object-contain"
+                              />
+                              {/* 판매 홍보용 문구 */}
+                              {/* 예) 거래소보다 더 나은 가격에 USDT를 구매하세요! */}
+                              <span className="text-xs font-semibold text-green-600">
+                                거래소보다 더 나은 가격에 USDT를 구매하세요!
+                              </span>
+
+
+                            </div>
 
                           ) : (
                             <div className="flex flex-row items-center gap-2
