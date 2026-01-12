@@ -146,7 +146,7 @@ export default function RootLayout({
 
           {/* chain image */}
 
-          <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg shadow-md mb-4">
+          <div className="flex flex-col items-center justify-center p-4 bg-slate-900/80 rounded-lg shadow-xl mb-4 border border-slate-700">
 
             {/* fixed position vertically top */}
             <div className="fixed top-2 right-2 z-50 flex flex-col items-end justify-center">
@@ -177,8 +177,8 @@ export default function RootLayout({
               </button>
 
               <div className={`flex flex-col items-center justify-center
-                ${showChain ? 'bg-white' : 'hidden'}
-                p-4 rounded-lg shadow-md transition-all duration-300 ease-in-out
+                ${showChain ? 'bg-slate-800 border border-slate-700' : 'hidden'}
+                p-4 rounded-lg shadow-xl transition-all duration-300 ease-in-out
               `}>
 
                 {/* Display client ID */}
@@ -212,7 +212,7 @@ export default function RootLayout({
                 </div>
                 */}
 
-                <div className="flex flex-col items-center justify-center gap-4 border-b border-gray-200 pb-4 mb-4">
+                <div className="flex flex-col items-center justify-center gap-4 border-b border-slate-600 pb-4 mb-4">
 
                   {/* current chain */}
                   <div className="flex flex-col items-center justify-center">
@@ -223,15 +223,15 @@ export default function RootLayout({
                       height={50}
                       className="h-12 w-12 rounded-lg object-cover"
                     />
-                    <span className="text-sm text-gray-600">BLOCKCHAIN ID</span>
+                    <span className="text-sm text-slate-400">BLOCKCHAIN ID</span>
                   </div>
 
                   <div className="flex flex-row items-center justify-center gap-4 mb-4">
                     
                     <div className={`
                       w-20 h-20
-                      flex flex-col items-center justify-center gap-1 ${chain === 'ethereum' ? 'border-2 border-blue-500 p-2 rounded' : ''}
-                      hover:bg-blue-500 hover:text-white transition-colors duration-200`}>
+                      flex flex-col items-center justify-center gap-1 ${chain === 'ethereum' ? 'border-2 border-blue-400 bg-blue-900/30 p-2 rounded' : ''}
+                      hover:bg-blue-900/50 hover:text-white transition-colors duration-200`}>
                       <Image
                         src={`/logo-chain-ethereum.png`}
                         alt={`Chain logo for Ethereum`}
@@ -240,9 +240,9 @@ export default function RootLayout({
                         className="h-6 w-6 rounded-full"
                         style={{ objectFit: "cover" }}
                       />
-                      <span className={`
-                        ${chain === 'ethereum' ? 'text-blue-500' : 'text-gray-600'}
-                        hover:text-blue-500
+                      <span className={`text-xs
+                        ${chain === 'ethereum' ? 'text-blue-400' : 'text-slate-400'}
+                        hover:text-blue-400
                       `}>
                         Ethereum
                       </span>
@@ -250,8 +250,8 @@ export default function RootLayout({
 
                     <div className={`
                       w-20 h-20
-                      flex flex-col items-center justify-center gap-1 ${chain === 'polygon' ? 'border-2 border-blue-500 p-2 rounded' : ''}
-                      hover:bg-blue-500 hover:text-white transition-colors duration-200`}>
+                      flex flex-col items-center justify-center gap-1 ${chain === 'polygon' ? 'border-2 border-purple-400 bg-purple-900/30 p-2 rounded' : ''}
+                      hover:bg-purple-900/50 hover:text-white transition-colors duration-200`}>
                       <Image
                         src={`/logo-chain-polygon.png`}
                         alt={`Chain logo for Polygon`}
@@ -260,9 +260,9 @@ export default function RootLayout({
                         className="h-6 w-6 rounded-full"
                         style={{ objectFit: "cover" }}
                       />
-                      <span className={`
-                        ${chain === 'polygon' ? 'text-blue-500' : 'text-gray-600'}
-                        hover:text-blue-500
+                      <span className={`text-xs
+                        ${chain === 'polygon' ? 'text-purple-400' : 'text-slate-400'}
+                        hover:text-purple-400
                       `}>
                         Polygon
                       </span>
@@ -270,8 +270,8 @@ export default function RootLayout({
 
                     <div className={`
                       w-20 h-20
-                      flex flex-col items-center justify-center gap-1 ${chain === 'bsc' ? 'border-2 border-blue-500 p-2 rounded' : ''}
-                      hover:bg-blue-500 hover:text-white transition-colors duration-200`}>
+                      flex flex-col items-center justify-center gap-1 ${chain === 'bsc' ? 'border-2 border-amber-400 bg-amber-900/30 p-2 rounded' : ''}
+                      hover:bg-amber-900/50 hover:text-white transition-colors duration-200`}>
                       <Image
                         src={`/logo-chain-bsc.png`}
                         alt={`Chain logo for BSC`}
@@ -280,9 +280,9 @@ export default function RootLayout({
                         className="h-6 w-6 rounded-full"
                         style={{ objectFit: "cover" }}
                       />
-                      <span className={`
-                        ${chain === 'bsc' ? 'text-blue-500' : 'text-gray-600'}
-                        hover:text-blue-500
+                      <span className={`text-xs
+                        ${chain === 'bsc' ? 'text-amber-400' : 'text-slate-400'}
+                        hover:text-amber-400
                       `}>
                         BSC
                       </span>

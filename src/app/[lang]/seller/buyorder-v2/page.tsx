@@ -5416,7 +5416,7 @@ const fetchBuyOrders = async () => {
                             />
                             <div className="w-full flex flex-row items-center justify-between gap-2">
                               <span className="text-sm text-slate-300">
-                                판매금액
+                                판매<br/>금액
                               </span>
 
                               <span className="text-2xl font-semibold text-amber-400"
@@ -5638,7 +5638,7 @@ const fetchBuyOrders = async () => {
                     )}
                     */}
 
-                    
+                    {/* 판매자 에스크로 잔고, 입금은행정보 */}
                     <div
                       /*
                       className={`mt-8
@@ -5657,10 +5657,8 @@ const fetchBuyOrders = async () => {
                       w-full
                       flex flex-col items-start justify-center gap-2
                       
-                      bg-zinc-100 p-2 rounded-lg
+                      bg-slate-900/80 p-4 rounded-lg border border-slate-700 shadow-xl backdrop-blur-md
                       `}
-
-
 
                     >
                     
@@ -5823,11 +5821,8 @@ const fetchBuyOrders = async () => {
                       
                       <div className="w-full flex flex-col items-start justify-center gap-2">
 
-                        {/* background color 는 무게감 있는 색상 */}
-                        <div className="w-full flex flex-col items-start justify-center gap-2
-                        bg-zinc-100 p-2 rounded-lg relative
-
-                        ">
+              
+                        <div className="w-full flex flex-col items-start justify-center gap-2">
 
                           {/*}
                           <div className="absolute top-2 right-2">
@@ -5853,7 +5848,7 @@ const fetchBuyOrders = async () => {
                                 className="w-5 h-5"
                               />
                               <button
-                                className="text-sm text-zinc-600 underline"
+                                className="text-sm text-slate-300 underline hover:text-slate-200"
                                 onClick={() => {
                                   navigator.clipboard.writeText(seller.seller.escrowWalletAddress);
                                   toast.success(Copied_Wallet_Address);
@@ -5968,13 +5963,12 @@ const fetchBuyOrders = async () => {
 
                           </div>
 
-                          
-
                         </div>
 
                         {/* seller.seller.bankInfo */}
                         {seller.seller?.bankInfo && (
                           <div className="w-full flex flex-row items-center justify-start gap-2">
+                            {/*
                             <Image
                               src="/icon-bank-transfer.png"
                               alt="Bank"
@@ -5982,17 +5976,18 @@ const fetchBuyOrders = async () => {
                               height={20}
                               className="w-5 h-5"
                             />
+                            */}
                             <div className="flex flex-col items-start justify-center gap-0">
-                              <span className="text-sm">
+                              <span className="text-sm text-slate-200 font-semibold">
                                 {seller.seller?.bankInfo?.bankName}
                               </span>
-                              <span className="text-sm">
+                              <span className="text-sm text-slate-300">
                                 {seller.seller?.bankInfo?.accountNumber.length > 5
                                   ? seller.seller?.bankInfo?.accountNumber.substring(0, 5) +'****'
                                   : seller.seller?.bankInfo?.accountNumber
                                 }
                               </span>
-                              <span className="text-sm font-semibold">
+                              <span className="text-sm font-semibold text-slate-200">
                                 {seller.seller?.bankInfo?.accountHolder.length > 2
                                   ? seller.seller?.bankInfo?.accountHolder.substring(0, 1) +'**'
                                   : seller.seller?.bankInfo?.accountHolder
@@ -6005,20 +6000,32 @@ const fetchBuyOrders = async () => {
                             {/* toggleAutoProcessDeposit */}
                             <div className="flex flex-col items-start justify-center ml-4 gap-1">
 
-                              <span className="w-full flex text-sm font-semibold">
+                              <span className="w-full flex text-sm font-semibold text-slate-200">
                                 자동입금처리
                               </span>
                               {seller.seller?.autoProcessDeposit ? (
-                                <div className="flex text-xs text-green-600
-                                bg-white border border-zinc-300 rounded-lg px-2 py-1 text-center
-                                ">
-                                  활성화 상태
+                                <div className="w-full flex flex-col items-center justify-center">
+                                  <div className="flex text-xs text-emerald-300 font-semibold
+                                  bg-emerald-900/30 border border-emerald-700 rounded-lg px-2 py-1 text-center
+                                  ">
+                                    활성화 상태
+                                  </div>
+                                  {/* 설명 */}
+                                  <div className="text-xs text-slate-400 mt-1">
+                                    구매자가 입금을 하면 자동으로 입금확인이 처리됩니다.
+                                  </div>
                                 </div>
                               ) : (
-                                <div className="flex text-xs text-red-600
-                                bg-white border border-zinc-300 rounded-lg px-2 py-1 text-center
-                                ">
-                                  비활성화 상태
+                                <div className="w-full flex flex-col items-center justify-center">
+                                  <div className="flex text-xs text-red-300 font-semibold
+                                  bg-red-900/30 border border-red-700 rounded-lg px-2 py-1 text-center
+                                  ">
+                                    비활성화 상태
+                                  </div>
+                                  {/* 설명 */}
+                                  <div className="text-xs text-slate-400 mt-1">
+                                    구매자가 입금을 하면 판매자가 수동으로 입금확인을 합니다.
+                                  </div>
                                 </div>
                               )}
 
@@ -6030,10 +6037,10 @@ const fetchBuyOrders = async () => {
                                   }}
                                   className={`
                                     ${seller.seller?.autoProcessDeposit
-                                    ? 'bg-red-100 text-red-600 hover:bg-red-200 hover:shadow-red-500/50 cursor-pointer'
-                                    : 'bg-green-100 text-green-600 hover:bg-green-200 hover:shadow-green-500/50 cursor-pointer'
+                                    ? 'bg-red-900/50 text-red-300 hover:bg-red-800/70 border-red-700 hover:shadow-red-500/50 cursor-pointer'
+                                    : 'bg-emerald-900/50 text-emerald-300 hover:bg-emerald-800/70 border-emerald-700 hover:shadow-emerald-500/50 cursor-pointer'
                                     }
-                                    rounded-lg border text-xs px-2 py-1 text-center
+                                    rounded-lg border text-xs px-2 py-1 text-center font-semibold
                                   `}
                                   disabled={togglingAutoProcessDeposit}
                                 >
