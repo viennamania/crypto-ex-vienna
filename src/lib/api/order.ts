@@ -8625,3 +8625,85 @@ export async function buyOrderConfirmPaymentReverted(data: any) {
     success: result.modifiedCount === 1,
   };
 }
+
+
+
+// acceptBuyOrderPrivateSale
+// insertBuyOrder function 을 참조
+export async function acceptBuyOrderPrivateSale(
+  {
+    buyerWalletAddress,
+    sellerWalletAddress,
+    usdtAmount,
+  }: {
+    buyerWalletAddress: string;
+    sellerWalletAddress: string;
+    usdtAmount: number;
+  }): Promise<boolean> {
+
+    // new buyorder for private sale
+    const client = await clientPromise;
+    const collection = client.db(dbName).collection('buyorders');
+
+    // new buyorder document
+    // generate new buyorder tradeId like insertBuyOrder function
+    
+    const tradeId = Math.floor(Math.random() * 900000000) + 100000000 + '';
+
+    // get seller information from users collection
+    // and seller usdtToKrwRate
+    const usersCollection = client.db(dbName).collection('users');
+    const seller = await usersCollection.findOne<any>(
+      { 'seller.walletAddress': sellerWalletAddress },
+      { projection: { seller: 1 } }
+    );
+
+    if (!seller) {
+      console.log('acceptBuyOrderPrivateSale: seller not found for walletAddress: ' + sellerWalletAddress);
+      return false;
+    }
+    const usdtToKrwRate = seller.seller.usdtToKrwRate || 1;
+
+    // get buyer information from users collection
+    const buyer = await usersCollection.findOne<any>(
+      { walletAddress: buyerWalletAddress },
+      { projection: { nickname: 1, avatar: 1, buyer: 1 } }
+    );
+
+    if (!buyer) {
+      console.log('acceptBuyOrderPrivateSale: buyer not found for walletAddress: ' + buyerWalletAddress);
+      return false;
+    }
+
+    const newBuyOrder = {
+      tradeId: tradeId,
+      walletAddress: buyerWalletAddress,
+      isWeb3Wallet: true,
+      nickname: buyer.nickname || '',
+      avatar: buyer.avatar || '',
+      privateSale: true,
+      usdtAmount: usdtAmount,
+      rate: usdtToKrwRate,
+      krwAmount: usdtAmount * usdtToKrwRate,
+      storecode: 'admin',
+      totalAmount: usdtAmount,
+      status: 'accepted',
+      createdAt: new Date().toISOString(),
+      acceptedAt: new Date().toISOString(),
+      buyer: {
+        nickname: buyer.nickname || '',
+        avatar: buyer.avatar || '',
+        walletAddress: buyerWalletAddress,
+        depositName: '',
+        depositCompleted: false,
+      },
+      seller: seller.seller,
+    };
+
+    const result = await collection.insertOne(newBuyOrder);
+    if (result.insertedId) {
+      return true;
+    } else {
+      return false;
+    }
+}
