@@ -2395,9 +2395,9 @@ export default function Index({ params }: any) {
 
                     }}
                     disabled={fetchingAllStores}
-                    className="w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
+                    className="w-full p-2 bg-white text-gray-900 font-semibold border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">전체</option>
+                    <option value="" className="text-gray-900 font-semibold">전체</option>
                     {allStores && allStores.map((item, index) => (
                       <option key={index} value={item.storecode}
                         className="flex flex-row items-center justify-start gap-2"
