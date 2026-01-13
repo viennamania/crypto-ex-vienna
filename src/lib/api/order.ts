@@ -3844,6 +3844,8 @@ export async function buyOrderConfirmPayment(data: any) {
     return null;
   }
 
+  console.log('buyOrderConfirmPayment data: ' + JSON.stringify(data));
+
   const paymentAmount = data.paymentAmount || 0;
 
 
@@ -8643,18 +8645,12 @@ export async function acceptBuyOrderPrivateSale(
 
     // new buyorder for private sale
     const client = await clientPromise;
-    const collection = client.db(dbName).collection('buyorders');
-
-    // new buyorder document
-    // generate new buyorder tradeId like insertBuyOrder function
-    
-    const tradeId = Math.floor(Math.random() * 900000000) + 100000000 + '';
 
     // get seller information from users collection
     // and seller usdtToKrwRate
     const usersCollection = client.db(dbName).collection('users');
     const seller = await usersCollection.findOne<any>(
-      { 'seller.walletAddress': sellerWalletAddress },
+      { walletAddress: sellerWalletAddress },
       { projection: { seller: 1 } }
     );
 
@@ -8662,6 +8658,15 @@ export async function acceptBuyOrderPrivateSale(
       console.log('acceptBuyOrderPrivateSale: seller not found for walletAddress: ' + sellerWalletAddress);
       return false;
     }
+
+    // if seller.buyOrder.status is 'accepted' or 'paymentRequested', return false
+    if (seller.seller.buyOrder &&
+        (seller.seller.buyOrder.status === 'accepted' ||
+         seller.seller.buyOrder.status === 'paymentRequested')) {
+      console.log('acceptBuyOrderPrivateSale: seller already has an active buy order for walletAddress: ' + sellerWalletAddress);
+      return false;
+    }
+
     const usdtToKrwRate = seller.seller.usdtToKrwRate || 1;
 
     // get buyer information from users collection
@@ -8675,6 +8680,17 @@ export async function acceptBuyOrderPrivateSale(
       return false;
     }
 
+
+ 
+    const collection = client.db(dbName).collection('buyorders');
+
+    // new buyorder document
+    // generate new buyorder tradeId like insertBuyOrder function
+    
+    const tradeId = Math.floor(Math.random() * 900000000) + 100000000 + '';
+
+
+
     const newBuyOrder = {
       tradeId: tradeId,
       walletAddress: buyerWalletAddress,
@@ -8687,7 +8703,7 @@ export async function acceptBuyOrderPrivateSale(
       krwAmount: usdtAmount * usdtToKrwRate,
       storecode: 'admin',
       totalAmount: usdtAmount,
-      status: 'accepted',
+      status: 'paymentRequested',
       createdAt: new Date().toISOString(),
       acceptedAt: new Date().toISOString(),
       buyer: {
@@ -8702,6 +8718,16 @@ export async function acceptBuyOrderPrivateSale(
 
     const result = await collection.insertOne(newBuyOrder);
     if (result.insertedId) {
+
+      // seller buyOrder update
+      const updateResult = await usersCollection.updateOne(
+        { walletAddress: sellerWalletAddress },
+        { $set: {
+          'seller.buyOrder': newBuyOrder,
+        } }
+      );
+
+
       return true;
     } else {
       return false;

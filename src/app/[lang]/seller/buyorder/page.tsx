@@ -3452,7 +3452,7 @@ const fetchBuyOrders = async () => {
       audio.play();
     }
   }, [totalNumberOfBuyOrders, loadingTotalNumberOfBuyOrders]);
-  */
+  
 
   useEffect(() => {
     if (totalNumberOfAudioOnBuyOrders > 0 && loadingTotalNumberOfBuyOrders === false) {
@@ -3460,7 +3460,7 @@ const fetchBuyOrders = async () => {
       audio.play();
     }
   }, [totalNumberOfAudioOnBuyOrders, loadingTotalNumberOfBuyOrders]);
-
+  */
 
 
 
