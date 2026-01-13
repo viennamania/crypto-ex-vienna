@@ -2677,6 +2677,7 @@ export default function Index({ params }: any) {
 
                           <td className="
                             p-2">
+                            <div className="text-sm font-semibold text-gray-800">
                             {new Date(item.createdAt).toLocaleDateString('ko-KR', {
                               year: 'numeric',
                               month: '2-digit',
@@ -2688,6 +2689,7 @@ export default function Index({ params }: any) {
                               minute: '2-digit',
                               second: '2-digit',
                             })}
+                            </div>
                           </td>
                         
                           <td className="p-2">
@@ -2695,15 +2697,15 @@ export default function Index({ params }: any) {
                               w-32
                               flex flex-col items-center justify-between gap-2">
                               <span className="
-                                text-lg font-semibold">
+                                text-lg font-bold text-gray-900">
                                 {item.nickname}
                               </span>
                               <span className="
-                                text-lg font-semibold">
+                                text-lg font-bold text-gray-900">
                                 {item.password}
                               </span>
                               <span className="
-                                text-sm text-zinc-500">
+                                text-sm text-gray-700 font-medium">
                                 {item?.store?.storeName}{' '}({item?.store?.storecode})
                               </span>
                             </div>
@@ -2711,11 +2713,11 @@ export default function Index({ params }: any) {
 
                           <td className="p-2">
                             <div className="flex flex-col items-start justify-center gap-2">
-                              <span>{item?.buyer?.depositBankName}</span>
+                              <span className="font-semibold text-gray-800">{item?.buyer?.depositBankName}</span>
                               
-                              <span>{item?.buyer?.depositBankAccountNumber}</span>
+                              <span className="font-semibold text-gray-800">{item?.buyer?.depositBankAccountNumber}</span>
                               
-                              <span>{item?.buyer?.depositName}</span>
+                              <span className="font-semibold text-gray-800">{item?.buyer?.depositName}</span>
 
                               <button
                                 onClick={() => {
@@ -2737,11 +2739,11 @@ export default function Index({ params }: any) {
                             <div className="flex flex-col items-end mr-2 justify-center gap-2">
 
                               {item?.totalPaymentConfirmedCount ? (
-                                <div className="flex flex-row items-center justify-center gap-2">
+                                <div className="flex flex-row items-center justify-center gap-2 font-semibold text-gray-800">
                                   {item?.totalPaymentConfirmedCount}
                                 </div>
                               ) : (
-                                <div className="flex flex-row items-center justify-center gap-2">
+                                <div className="flex flex-row items-center justify-center gap-2 font-semibold text-gray-800">
                                   0 건
                                 </div>
                               )}
@@ -2749,23 +2751,23 @@ export default function Index({ params }: any) {
 
                               {item?.totalPaymentConfirmedKrwAmount ? (
 
-                                <div className="flex flex-row items-center justify-center gap-2">
+                                <div className="flex flex-row items-center justify-center gap-2 font-semibold text-gray-800">
                                   {Number(item?.totalPaymentConfirmedKrwAmount)?.toLocaleString('ko-KR')}
                                   {' '}원
                                 </div>
                               ) : (
-                                <div className="flex flex-row items-center justify-center gap-2">
+                                <div className="flex flex-row items-center justify-center gap-2 font-semibold text-gray-800">
                                   0 원
                                 </div>
                               )}
 
                               {item?.totalPaymentConfirmedUsdtAmount ? (
-                                <div className="flex flex-row items-center justify-center gap-2">
+                                <div className="flex flex-row items-center justify-center gap-2 font-semibold text-gray-800">
                                   {Number(item?.totalPaymentConfirmedUsdtAmount)?.toLocaleString('ko-KR')}
                                   {' '}USDT
                                 </div>
                               ) : (
-                                <div className="flex flex-row items-center justify-center gap-2">
+                                <div className="flex flex-row items-center justify-center gap-2 font-semibold text-gray-800">
                                   0 USDT
                                 </div>
                               )}
@@ -2783,7 +2785,7 @@ export default function Index({ params }: any) {
                                 navigator.clipboard.writeText(item?.walletAddress);
                                 toast.success(Copied_Wallet_Address);
                               } }
-                              className="text-sm text-zinc-500 underline"
+                              className="text-sm text-blue-600 font-semibold underline hover:text-blue-800"
                             >
                             {
                                 item?.walletAddress && (
@@ -2807,7 +2809,7 @@ export default function Index({ params }: any) {
                                   });
                                 }}
                                 placeholder="충전금액"
-                                className="w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
+                                className="w-full p-2 bg-white text-gray-900 font-semibold border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               />
                             </div>
                           </td>
@@ -2886,10 +2888,10 @@ export default function Index({ params }: any) {
 
                           <td className="p-2">
                             <div className="flex flex-col xl:flex-row items-start justify-center gap-2">
-                              <span className="text-sm text-zinc-500">
+                              <span className="text-sm text-gray-800">
                                 {
                                 item?.buyOrderStatus === 'ordered' ? (
-                                  <span className="text-sm text-[#f3f4f6]">
+                                  <span className="text-sm text-white bg-blue-600 px-2 py-1 rounded">
                                     P2P구매
                                   </span>
                                 ) : item?.buyOrderStatus === 'accepted' ? (
@@ -3038,7 +3040,7 @@ export default function Index({ params }: any) {
 
                 }
 
-                className="text-sm bg-zinc-800 text-zinc-200 px-2 py-1 rounded-md"
+                className="text-sm bg-white text-gray-800 border border-gray-300 px-2 py-1 rounded-md"
               >
                 <option value={10}>10</option>
                 <option value={20}>20</option>
@@ -3074,7 +3076,7 @@ export default function Index({ params }: any) {
             </button>
 
 
-            <span className="text-sm text-zinc-500">
+            <span className="text-sm text-gray-800 font-medium">
               {page} / {Math.ceil(Number(totalCount) / Number(limit))}
             </span>
 
