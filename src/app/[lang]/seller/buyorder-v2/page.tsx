@@ -4032,6 +4032,90 @@ const fetchBuyOrders = async () => {
   };
 
 
+
+
+  // 판매자를 정해서 구매주문하기 function
+  // API /api/order/buyOrderPrivateSeller
+
+  // buyAmountInputs
+  const [buyAmountInputs, setBuyAmountInputs] = useState<number[]>([]);
+
+  const [buyOrderingPrivateSellerArray, setBuyOrderingPrivateSellerArray] = useState<boolean[]>([]);
+
+  const buyOrderPrivateSeller = (
+    index: number,
+    sellerWalletAddress: string,
+  ) => {
+    if (!address) {
+      toast.error('지갑을 연결해주세요.');
+      return;
+    }
+
+
+    if (buyOrderingPrivateSellerArray[index]) {
+      return;
+    }
+
+    if (!buyAmountInputs[index] || buyAmountInputs[index] <= 0) {
+      toast.error('구매 금액을 입력해주세요.');
+      return;
+    }
+
+    // if buyAmountInputs[index] is more than currentUsdtBalanceArray[index], show error
+    if (buyAmountInputs[index] > currentUsdtBalanceArray[index]) {
+      toast.error('구매 금액이 판매자의 잔여 USDT 잔고를 초과합니다.');
+      return;
+    }
+
+    setBuyOrderingPrivateSellerArray((prev) => {
+      const newArray = [...prev];
+      newArray[index] = true;
+      return newArray;
+    });
+    fetch('/api/order/buyOrderPrivateSeller', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        buyerWalletAddress: address,
+        sellerWalletAddress: sellerWalletAddress,
+        usdtAmount: buyAmountInputs[index],
+      }),
+    })
+    .then((response) => response.json())
+    .then((data) => {
+      //console.log('buyOrderPrivateSeller data', data);
+      if (data.result) {
+        toast.success('구매 주문이 생성되었습니다.');
+        
+        // update local buyOrders state
+        //setBuyOrders((prev) => [data.result, ...prev]);
+        // refetch buy orders
+        fetchBuyOrders();
+
+      } else {
+        toast.error('구매 주문 생성에 실패했습니다: ' + data.message);
+      }
+      setBuyOrderingPrivateSellerArray((prev) => {
+        const newArray = [...prev];
+        newArray[index] = false;
+        return newArray;
+      });
+    })
+    .catch((error) => {
+      console.error('Error creating buy order for private seller:', error);
+      toast.error('구매 주문 생성에 실패했습니다: ' + error.message);
+      setBuyOrderingPrivateSellerArray((prev) => {
+        const newArray = [...prev];
+        newArray[index] = false;
+        return newArray;
+      });
+    });
+  };
+    
+
+
   //if (!address) {
   if (false) {
     return (
@@ -4113,6 +4197,8 @@ const fetchBuyOrders = async () => {
       </main>
     );
   }
+
+
 
 
 
@@ -6563,27 +6649,28 @@ const fetchBuyOrders = async () => {
                                   type="number"
                                   min={1}
                                   onChange={(e) => {
+                                    const newBuyAmountInputs = [...buyAmountInputs];
+                                    newBuyAmountInputs[index] = Number(e.target.value);
+                                    setBuyAmountInputs(newBuyAmountInputs);
                                   }}
                                   className={`
-                                    ${address ? 'border border-slate-600 bg-slate-700 text-slate-200 rounded-lg p-2 text-sm' :
+                                    ${address && !buyOrderingPrivateSellerArray[index]
+                                    ? 'border border-slate-600 bg-slate-700 text-slate-200 rounded-lg p-2 text-sm' :
                                     'border border-slate-600 bg-slate-800 text-slate-500 rounded-lg p-2 text-sm cursor-not-allowed'
                                     }
                                     w-full focus:outline-none focus:ring-2 focus:ring-blue-500
                                   `}
-                                  disabled={!address}
+                                  disabled={!address || buyOrderingPrivateSellerArray[index]}
                                 />
                                 <button
                                   onClick={() => {
-                                    /*
-                                    initiateBuyOrder(
+                                    buyOrderPrivateSeller(
                                       index,
-                                      seller.seller._id,
-                                      Number(paymentAmounts[index]),
-                                    );
-                                    */
+                                      seller.walletAddress,
+                                    )
                                   }}
                                   className={`
-                                    ${address 
+                                    ${address && !buyOrderingPrivateSellerArray[index]
                                       ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-lg hover:shadow-blue-500/50 border-0' 
                                       : 'bg-slate-700 text-slate-500 cursor-not-allowed border border-slate-600'
                                     }
@@ -6592,7 +6679,7 @@ const fetchBuyOrders = async () => {
                                     transform hover:scale-105 active:scale-95
                                     w-full
                                   `}
-                                  disabled={!address}
+                                  disabled={!address || buyOrderingPrivateSellerArray[index]}
                                 >
                                   <span className="flex items-center justify-center gap-2">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -6606,6 +6693,11 @@ const fetchBuyOrders = async () => {
                               {!address && (
                                 <div className="text-sm text-red-600">
                                   로그인을 해야 구매할 수 있습니다.
+                                </div>
+                              )}
+                              {buyOrderingPrivateSellerArray[index] && (
+                                <div className="text-sm text-emerald-400">
+                                  구매주문 처리중입니다. 잠시만 기다려주세요.
                                 </div>
                               )}
 
