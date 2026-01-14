@@ -695,7 +695,11 @@ export async function cancelBuyOrderByAdmin(
   // find storecode and walletAddress by orderId
   const order = await collection.findOne<any>(
     { _id: new ObjectId(orderId) },
-    { projection: { storecode: 1, walletAddress: 1 } }
+    { projection: {
+      storecode: 1,
+      walletAddress: 1,
+      seller: 1,
+    } }
   );
 
   if (!order) {
