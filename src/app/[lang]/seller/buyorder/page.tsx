@@ -4093,10 +4093,7 @@ const fetchBuyOrders = async () => {
       setSellersBalance((prev) =>
         prev.map((seller, idx) =>
           seller.walletAddress === sellerWalletAddress
-            ? { ...seller, seller: { ...seller.seller, 
-                // add new buy order to the top of buyOrders array
-                buyOrders: [data.result, ...seller.seller.buyOrders],
-              } }
+            ? { ...seller, seller: { ...seller.seller, status: 'paymentRequested', paymentRequestedAt: new Date().toISOString() } }
             : seller
         )
       );
