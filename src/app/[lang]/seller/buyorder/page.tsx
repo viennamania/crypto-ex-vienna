@@ -6747,7 +6747,20 @@ const fetchBuyOrders = async () => {
                       || (seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
                           (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x'))
                       ? (
+                        <>
+
+                        {/*
                         <div className="w-full flex flex-col items-start justify-center gap-2">
+                          */}
+                          {/* if seller.seller.buyOrder.buyer.walletAddress === address, border */}
+                        <div className={`
+                          w-full flex flex-col items-start justify-center gap-2
+                          ${seller.seller?.buyOrder?.buyer?.walletAddress === address
+                          ? 'border-2 border-blue-400 p-2 rounded-lg'
+                          : ''
+                          }
+                          `}>
+
 
                           <div className="w-full flex flex-row items-center justify-start gap-2
                           border-t border-b border-zinc-300 py-2
@@ -6808,7 +6821,7 @@ const fetchBuyOrders = async () => {
                               border-t border-slate-600 pt-2
                               ">
                                 <span className="text-sm font-semibold text-slate-200">
-                                  입금하실 계좌 정보
+                                  아래 계좌로 {seller.seller?.buyOrder.krwAmount.toLocaleString()} 원을 입금해주세요.
                                 </span>
 
                                 <div className="flex flex-col items-start justify-center gap-0">
@@ -6823,6 +6836,11 @@ const fetchBuyOrders = async () => {
                                   </span>
                                 </div>
 
+                                {/* 10분내로 입금하지 않으면 주문이 자동취소됩니다. */}
+                                <span className="text-sm text-red-600 font-semibold">
+                                  10분내로 입금하지 않으면 주문이 자동취소됩니다.
+                                </span>
+
                               </div>
 
 
@@ -6835,6 +6853,7 @@ const fetchBuyOrders = async () => {
                                 </span>
                                 <button
                                   onClick={() => {
+                                    confirm("구매주문을 취소하시겠습니까?") &&
                                     cancelBuyOrderByAdmin(
                                       index,
                                       seller.seller?.buyOrder?._id,
@@ -6919,6 +6938,8 @@ const fetchBuyOrders = async () => {
                           </span>
 
                         </div>
+
+                        </>
                       ) : (
                         <></>
                       )}
