@@ -8711,7 +8711,7 @@ export async function acceptBuyOrderPrivateSale(
       return false;
     }
 
-    if (!buyer?.bankInfo?.accountHolder) {
+    if (!buyer?.buyer?.bankInfo?.accountHolder) {
       console.log('acceptBuyOrderPrivateSale: buyer does not have a accountHolder for walletAddress: ' + buyerWalletAddress);
       return false;
     }
@@ -8745,7 +8745,7 @@ export async function acceptBuyOrderPrivateSale(
         nickname: buyer.nickname || '',
         avatar: buyer.avatar || '',
         walletAddress: buyerWalletAddress,
-        depositName: buyer.bankInfo.accountHolder,
+        depositName: buyer.buyer.bankInfo.accountHolder,
         depositCompleted: false,
       },
       seller: {
