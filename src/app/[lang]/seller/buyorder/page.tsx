@@ -4042,7 +4042,7 @@ const fetchBuyOrders = async () => {
 
   const [buyOrderingPrivateSaleArray, setBuyOrderingPrivateSaleArray] = useState<boolean[]>([]);
 
-  const buyOrderPrivateSale = (
+  const buyOrderPrivateSale = async (
     index: number,
     sellerWalletAddress: string,
   ) => {
@@ -4072,7 +4072,8 @@ const fetchBuyOrders = async () => {
       newArray[index] = true;
       return newArray;
     });
-    fetch('/api/order/buyOrderPrivateSale', {
+
+    const response = await fetch('/api/order/buyOrderPrivateSale', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -4083,6 +4084,26 @@ const fetchBuyOrders = async () => {
         usdtAmount: buyAmountInputs[index],
       }),
     })
+
+    const data = await response.json();
+    if (data.result) {
+      toast.success('구매 주문이 생성되었습니다.');
+      // update local buyOrders state
+      //setBuyOrders((prev) => [data.result, ...prev]);
+      // refetch buy orders
+      fetchBuyOrders();
+    } else {
+      toast.error('구매 주문 생성에 실패했습니다: ' + data.message);
+    }
+    setBuyOrderingPrivateSaleArray((prev) => {
+      const newArray = [...prev];
+      newArray[index] = false;
+      return newArray;
+    });
+
+
+
+    /*
     .then((response) => response.json())
     .then((data) => {
       //console.log('buyOrderPrivateSale data', data);
@@ -4112,6 +4133,9 @@ const fetchBuyOrders = async () => {
         return newArray;
       });
     });
+    */
+
+
   };
     
 
