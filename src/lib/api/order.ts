@@ -8711,6 +8711,10 @@ export async function acceptBuyOrderPrivateSale(
       return false;
     }
 
+    if (!buyer?.bankInfo?.depositName) {
+      console.log('acceptBuyOrderPrivateSale: buyer does not have a depositName for walletAddress: ' + buyerWalletAddress);
+      return false;
+    }
 
  
     const collection = client.db(dbName).collection('buyorders');
@@ -8741,7 +8745,7 @@ export async function acceptBuyOrderPrivateSale(
         nickname: buyer.nickname || '',
         avatar: buyer.avatar || '',
         walletAddress: buyerWalletAddress,
-        depositName: '',
+        depositName: buyer.bankInfo.depositName,
         depositCompleted: false,
       },
       seller: {

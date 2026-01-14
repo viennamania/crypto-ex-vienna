@@ -5387,7 +5387,11 @@ const fetchBuyOrders = async () => {
                     backdrop-blur-md
                     border border-slate-700
                     
-                    ${(seller.seller.buyOrder?.status === 'ordered' || seller.seller.buyOrder?.status === 'paymentRequested') ?
+                    ${(
+                      (seller.seller.buyOrder?.status === 'ordered'
+                      || seller.seller.buyOrder?.status === 'paymentRequested')
+                    && seller.seller.buyOrder?.walletAddress !== address
+                    ) ?
                       'ring-4 ring-red-500/50 animate-pulse' : ''
                     }
                     
@@ -5397,6 +5401,14 @@ const fetchBuyOrders = async () => {
 
                     ${seller.walletAddress === address
                     ? 'ring-4 ring-amber-400/70' : ''
+                    }
+
+                    ${
+                    (
+                      (seller.seller.buyOrder?.status === 'ordered' ||
+                      seller.seller?.buyOrder?.status === 'paymentRequested')
+                    && seller.seller?.buyOrder?.walletAddress === address)
+                    ? 'ring-4 ring-yellow-400/70 animate-pulse' : ''
                     }
 
                     `}
@@ -6239,9 +6251,9 @@ const fetchBuyOrders = async () => {
                             <Image
                               src="/icon-trade.png"
                               alt="In Trade"
-                              width={50}
-                              height={50}
-                              className="w-16 h-16 object-contain"
+                              width={30}
+                              height={30}
+                              className="w-12 h-12 object-contain"
                             />
                             {/* TID */}
                             <span className="text-sm">
@@ -6432,9 +6444,9 @@ const fetchBuyOrders = async () => {
                               <Image
                                 src="/icon-trade.png"
                                 alt="In Trade"
-                                width={50}
-                                height={50}
-                                className="w-16 h-16 object-contain"
+                                width={30}
+                                height={30}
+                                className="w-12 h-12 object-contain"
                               />
                               <span className="text-sm">
                                 TID: #<button
@@ -6481,13 +6493,13 @@ const fetchBuyOrders = async () => {
                           {currentUsdtBalanceArray[index] >= 10 ? (
 
                             <div className="w-full flex flex-col items-start justify-center gap-2">
-                              <div className="w-full flex flex-row items-center justify-start gap-2">
+                              <div className="w-full flex flex-row items-start justify-start gap-2">
                                 <Image
                                   src="/icon-sale.png"
                                   alt="On Sale"
-                                  width={50}
-                                  height={50}
-                                  className="w-16 h-16 object-contain"
+                                  width={30}
+                                  height={30}
+                                  className="w-12 h-12 object-contain"
                                 />
                                 {/* 판매 홍보용 문구 */}
                                 {seller.seller?.promotionText ? (
@@ -6561,9 +6573,9 @@ const fetchBuyOrders = async () => {
                               <Image
                                 src="/icon-sale.png"
                                 alt="Off Sale"
-                                width={50}
-                                height={50}
-                                className="w-16 h-16 object-contain grayscale"
+                                width={30}
+                                height={30}
+                                className="w-12 h-12 object-contain grayscale"
                               />
                               <span className="text-xs font-semibold">
                                 에스크로 잔액 부족
@@ -6699,13 +6711,15 @@ const fetchBuyOrders = async () => {
                                     setBuyAmountInputs(newBuyAmountInputs);
                                   }}
                                   className={`
-                                    ${address && !buyOrderingPrivateSaleArray[index]
+                                    ${address
+                                    && user?.buyer?.bankInfo
+                                    && !buyOrderingPrivateSaleArray[index]
                                     ? 'border border-slate-600 bg-slate-700 text-slate-200 rounded-lg p-2 text-sm' :
                                     'border border-slate-600 bg-slate-800 text-slate-500 rounded-lg p-2 text-sm cursor-not-allowed'
                                     }
                                     w-full focus:outline-none focus:ring-2 focus:ring-blue-500
                                   `}
-                                  disabled={!address || buyOrderingPrivateSaleArray[index]}
+                                  disabled={!address || !user?.buyer?.bankInfo || buyOrderingPrivateSaleArray[index]}
                                 />
                                 <button
                                   onClick={() => {
@@ -6715,7 +6729,7 @@ const fetchBuyOrders = async () => {
                                     )
                                   }}
                                   className={`
-                                    ${address && !buyOrderingPrivateSaleArray[index]
+                                    ${address && user?.buyer?.bankInfo && !buyOrderingPrivateSaleArray[index]
                                       ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-lg hover:shadow-blue-500/50 border-0' 
                                       : 'bg-slate-700 text-slate-500 cursor-not-allowed border border-slate-600'
                                     }
@@ -6724,7 +6738,7 @@ const fetchBuyOrders = async () => {
                                     transform hover:scale-105 active:scale-95
                                     w-full
                                   `}
-                                  disabled={!address || buyOrderingPrivateSaleArray[index]}
+                                  disabled={!address || !user?.buyer?.bankInfo || buyOrderingPrivateSaleArray[index]}
                                 >
                                   <span className="flex items-center justify-center gap-2">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -6740,6 +6754,12 @@ const fetchBuyOrders = async () => {
                                   로그인을 해야 구매할 수 있습니다.
                                 </div>
                               )}
+
+                              {address && !user?.buyer?.bankInfo && (
+                                <div className="text-sm text-red-600">
+                                  은행정보를 등록해야 구매할 수 있습니다.
+                                </div>
+                              )}                              
                               {buyOrderingPrivateSaleArray[index] && (
                                 <div className="text-sm text-emerald-400">
                                   구매주문 처리중입니다. 잠시만 기다려주세요.
