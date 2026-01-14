@@ -6314,7 +6314,7 @@ const fetchBuyOrders = async () => {
                             </div>
 
                           )}
-                          
+
                         </div>
 
                       )}
@@ -6943,7 +6943,12 @@ const fetchBuyOrders = async () => {
 
                           </div>
 
-                          {seller.seller?.buyOrder?.buyer?.walletAddress === address ? (
+
+
+                          {
+                          seller.seller?.buyOrder?.status === 'paymentRequested' &&
+                          seller.seller?.buyOrder?.buyer?.walletAddress === address ? (
+
                             <div className="w-full flex flex-col items-start justify-center gap-1">
                               
                               <div className="w-full flex flex-row items-center justify-start gap-2">
@@ -7015,6 +7020,7 @@ const fetchBuyOrders = async () => {
                               </div>
 
                             </div>
+
                           ) : (<></>)}
 
                           <div className="w-full flex flex-row items-center justify-between gap-2">
