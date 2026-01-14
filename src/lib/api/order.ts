@@ -3918,12 +3918,19 @@ export async function buyOrderConfirmPayment(data: any) {
 
     // update user.seller.buyOrder.transactionHash
     const userCollection = client.db(dbName).collection('users');
+
+
+    
     await userCollection.updateOne(
       { 'seller.buyOrder._id': new ObjectId(data.orderId+'') },
       { $set: {
+          'seller.buyOrder.status': 'paymentConfirmed',
+          'seller.buyOrder.paymentConfirmedAt': new Date().toISOString(),
           'seller.buyOrder.transactionHash': data.transactionHash,
-      } }
+        }
+      }
     );
+    
 
 
     
@@ -8726,7 +8733,9 @@ export async function acceptBuyOrderPrivateSale(
 
       // seller buyOrder update
       const updateResult = await usersCollection.updateOne(
-        { walletAddress: sellerWalletAddress },
+        { 
+          walletAddress: sellerWalletAddress,
+        },
         { $set: {
           'seller.buyOrder': buyOrder,
         } }
