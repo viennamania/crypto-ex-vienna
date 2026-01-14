@@ -6313,56 +6313,68 @@ const fetchBuyOrders = async () => {
                               {/* if seller.walletAddress is equal to address and autoProcessDeposit is false, show 입금완료하기 button */}
                               {
                               seller.walletAddress === address && !seller.seller?.autoProcessDeposit && (
-                      
-                                <button
-                  
-                                  disabled={confirmingPayment[index]}
-                                  
-                                  className={`
-                                    ${confirmingPayment[index]
-                                    ? 'text-slate-400 cursor-not-allowed bg-slate-600'
-                                    : 'text-white hover:text-white hover:shadow-blue-500/50 cursor-pointer bg-blue-700 hover:bg-blue-600'
-                                    }
-                                    px-3 py-1 rounded-lg
-                                    shadow-lg
-                                    w-full
-                                    border border-blue-600
-                                  `}
 
-                                  onClick={() => {
-                                    confirm("수동으로 입금확인을 처리하시겠습니까?") &&
-                                    confirmPayment(
-                                      index,
-                                      seller.seller.buyOrder._id,
-                                      //paymentAmounts[index],
-                                      //paymentAmountsUsdt[index],
+                                <div className="w-full flex flex-col items-center justify-center mt-2">
+                                
+                                  {/* 입금자명과 입금액이 일치하는지 확인 후에 클릭 */}
+                                  <span className="text-xs text-slate-300 mb-1">
+                                    입금자명이 {seller.seller?.buyOrder?.buyer?.depositName || '알수없음'} 으로
+                                    , 입금액이 {seller.seller?.buyOrder.krwAmount.toLocaleString()} 원 으로 일치하는지 확인 후에 클릭하세요.
+                                  </span>
 
-                                      seller.seller.buyOrder.krwAmount,
-                                      seller.seller.buyOrder.usdtAmount,
-                                      
-                                      seller.seller.buyOrder?.walletAddress,
 
-                                      seller.seller.buyOrder?.paymentMethod,
-                                    );
-                                  }}
-                                >
-                                  <div className="flex flex-row gap-2 items-center justify-center">
-                                    { confirmingPayment[index] && (
-                                        <Image
-                                          src="/loading.png"
-                                          alt="Loading"
-                                          width={20}
-                                          height={20}
-                                          className="w-5 h-5
-                                          animate-spin"
-                                        />
-                                    )}
-                                    <span className="text-xs">
-                                      입금완료하기
-                                    </span>
-                                  </div>
+                                  <button
+                    
+                                    disabled={confirmingPayment[index]}
+                                    
+                                    className={`
+                                      ${confirmingPayment[index]
+                                      ? 'text-slate-400 cursor-not-allowed bg-slate-600'
+                                      : 'text-white hover:text-white hover:shadow-blue-500/50 cursor-pointer bg-blue-700 hover:bg-blue-600'
+                                      }
+                                      px-3 py-1 rounded-lg
+                                      shadow-lg
+                                      w-full
+                                      border border-blue-600
+                                    `}
 
-                                </button>
+                                    onClick={() => {
+                                      confirm("수동으로 입금확인을 처리하시겠습니까?") &&
+                                      confirmPayment(
+                                        index,
+                                        seller.seller.buyOrder._id,
+                                        //paymentAmounts[index],
+                                        //paymentAmountsUsdt[index],
+
+                                        seller.seller.buyOrder.krwAmount,
+                                        seller.seller.buyOrder.usdtAmount,
+                                        
+                                        seller.seller.buyOrder?.walletAddress,
+
+                                        seller.seller.buyOrder?.paymentMethod,
+                                      );
+                                    }}
+                                  >
+                                    <div className="flex flex-row gap-2 items-center justify-center">
+                                      { confirmingPayment[index] && (
+                                          <Image
+                                            src="/loading.png"
+                                            alt="Loading"
+                                            width={20}
+                                            height={20}
+                                            className="w-5 h-5
+                                            animate-spin"
+                                          />
+                                      )}
+                                      <span className="text-xs">
+                                        입금완료하기
+                                      </span>
+                                    </div>
+
+                                  </button>
+
+                                </div>
+
                               )}
 
                             </div>
@@ -8706,6 +8718,9 @@ const fetchBuyOrders = async () => {
 
                                     <div className="flex flex-col gap-2 items-center justify-center">
 
+                                      {/* 입금자명과 입금액이 일치하는지 확인 후, 수동으로 입금확인 처리 */}
+                        
+
                                       <div className="flex flex-row gap-2">
                                         
                                         <button
@@ -8720,7 +8735,7 @@ const fetchBuyOrders = async () => {
                                           `}
 
                                           onClick={() => {
-                                            //confirm("수동으로 입금확인을 처리하시겠습니까?") &&
+                                            confirm("수동으로 입금확인을 처리하시겠습니까?") &&
                                             confirmPayment(
                                               index,
                                               item._id,
