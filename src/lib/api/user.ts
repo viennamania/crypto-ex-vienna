@@ -2609,6 +2609,8 @@ export async function updateSellerEnabled(
   
 }
 
+
+
 // updateUserForSeller
 export async function updateUserForSeller(
   {
@@ -2643,6 +2645,39 @@ export async function updateUserForSeller(
   );
   
 }
+
+
+// updateUserForBuyer
+export async function updateUserForBuyer(
+  {
+    storecode,
+    walletAddress,
+  }: {
+    storecode: string;
+    walletAddress: string;
+  }
+) {
+
+  console.log('updateUserForBuyer storecode: ' + storecode + ' walletAddress: ' + walletAddress);
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  return await collection.updateOne(
+    {
+      storecode: storecode,
+      walletAddress: walletAddress
+    },
+    {
+      $set: {
+        buyer: {
+          status: 'confirmed',
+        }
+      }
+    }
+  );
+  
+}
+
 
 
 
