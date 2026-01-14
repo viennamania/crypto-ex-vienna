@@ -8659,7 +8659,12 @@ export async function acceptBuyOrderPrivateSale(
     const usersCollection = client.db(dbName).collection('users');
     const seller = await usersCollection.findOne<any>(
       { walletAddress: sellerWalletAddress },
-      { projection: { seller: 1 } }
+      { projection: {
+        walletAddress: 1,
+        nickname: 1,
+        avatar: 1,
+        seller: 1
+      } }
     );
 
     if (!seller) {
