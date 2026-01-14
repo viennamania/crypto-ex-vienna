@@ -3707,7 +3707,6 @@ const fetchBuyOrders = async () => {
                 height={100}
                 className="h-12 w-12 rounded-full ring-2 ring-blue-500/20 group-hover:ring-blue-500/60 transition-all duration-300"
               />
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">CryptoEx Vienna</span>
             </button>
           </div>
 
