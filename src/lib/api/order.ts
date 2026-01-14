@@ -7864,8 +7864,8 @@ export async function getTotalNumberOfBuyOrders(
       privateSale: { $ne: true },
       //status: 'paymentConfirmed',
       
-      status: { $in: ['ordered', 'accepted', 'paymentRequested'] },
-      //status: { $in: ['ordered', 'accepted',] },
+      ////status: { $in: ['ordered', 'accepted', 'paymentRequested'] },
+      status: { $in: ['ordered', 'accepted',] },
 
     }
   );
@@ -7880,7 +7880,8 @@ export async function getTotalNumberOfBuyOrders(
         $options: 'i',
       },
       privateSale: { $ne: true },
-      status: { $in: ['ordered', 'accepted', 'paymentRequested'] },
+      //////status: { $in: ['ordered', 'accepted', 'paymentRequested'] },
+      status: { $in: ['ordered', 'accepted',] },
     },
     { projection: {
       tradeId: 1,
