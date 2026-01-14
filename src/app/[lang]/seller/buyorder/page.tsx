@@ -6320,6 +6320,26 @@ const fetchBuyOrders = async () => {
                       )}
 
 
+                      {seller.seller?.buyOrder?.status === 'paymentConfirmed'
+                        && (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x') && (
+
+                          <div className="w-full flex flex-row items-center gap-2
+                            bg-blue-500 text-white px-3 py-1 rounded-lg">
+                          
+                            <Image
+                              src="/icon-transfer.png"
+                              alt="Transfer Auto"
+                              width={20}
+                              height={20}
+                              className="w-5 h-5 animate-spin"
+                            />
+                            <span className="text-sm font-semibold">
+                              {seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 자동 전송중
+                            </span>
+                          </div>
+
+                      )}
+
 
 
 
@@ -6570,6 +6590,7 @@ const fetchBuyOrders = async () => {
                               </span>
                             </div>
 
+                            {/*
                             <div className="flex flex-row items-center gap-2
                               bg-blue-500 text-white px-3 py-1 rounded-lg">
                             
@@ -6584,6 +6605,7 @@ const fetchBuyOrders = async () => {
                                 {seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 자동 전송중
                               </span>
                             </div>
+                            */}
 
                             {/* USDT 전송이 환료된후에 판매 대기중으로 변경됩니다. */}
                             <span className="text-sm text-slate-400">
