@@ -8719,11 +8719,16 @@ export async function acceptBuyOrderPrivateSale(
     const result = await collection.insertOne(newBuyOrder);
     if (result.insertedId) {
 
+      // buyOrder for objectid
+      const buyOrder = await collection.findOne<any>(
+        { _id: result.insertedId },
+      );
+
       // seller buyOrder update
       const updateResult = await usersCollection.updateOne(
         { walletAddress: sellerWalletAddress },
         { $set: {
-          'seller.buyOrder': newBuyOrder,
+          'seller.buyOrder': buyOrder,
         } }
       );
 
