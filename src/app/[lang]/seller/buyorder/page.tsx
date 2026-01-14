@@ -6820,6 +6820,7 @@ const fetchBuyOrders = async () => {
                             </div>
 
                             {/* isWeb3Wallet is false, 결제용 지갑 */}
+                            {/*
                             {seller.seller?.buyOrder?.isWeb3Wallet ? (
                               <span className="text-sm">
                                 (Web3 지갑)
@@ -6829,6 +6830,7 @@ const fetchBuyOrders = async () => {
                                 (결제용 지갑)
                               </span>
                             )}
+                            */}
 
 
                           </div>
