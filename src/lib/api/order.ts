@@ -8676,6 +8676,9 @@ export async function acceptBuyOrderPrivateSale(
     }
 
     const usdtToKrwRate = seller.seller.usdtToKrwRate || 1;
+    const sellerEscrowWalletAddress = seller.seller.escrowWalletAddress || '';
+
+
 
     // get buyer information from users collection
     const buyer = await usersCollection.findOne<any>(
@@ -8722,7 +8725,7 @@ export async function acceptBuyOrderPrivateSale(
         depositCompleted: false,
       },
       seller: {
-        walletAddress: sellerWalletAddress,
+        walletAddress: sellerEscrowWalletAddress,
         nickname: seller.nickname || '',
         avatar: seller.avatar || '',
         storecode: seller.storecode || '',
@@ -8739,9 +8742,7 @@ export async function acceptBuyOrderPrivateSale(
 
       // seller buyOrder update
       const updateResult = await usersCollection.updateOne(
-        { 
-          walletAddress: sellerWalletAddress,
-        },
+        { walletAddress: sellerWalletAddress },
         { $set: {
           'seller.buyOrder': buyOrder,
         } }
