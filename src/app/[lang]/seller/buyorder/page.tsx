@@ -4088,10 +4088,22 @@ const fetchBuyOrders = async () => {
     const data = await response.json();
     if (data.result) {
       toast.success('구매 주문이 생성되었습니다.');
-      // update local buyOrders state
-      //setBuyOrders((prev) => [data.result, ...prev]);
+      // update local seller buyOrders state to 'paymentRequested', 'paymentRequestedAt' to now
+      // by finding the seller with sellerWalletAddress
+      setSellersBalance((prev) =>
+        prev.map((seller, idx) =>
+          seller.walletAddress === sellerWalletAddress
+            ? { ...seller, seller: { ...seller.seller, 
+                // add new buy order to the top of buyOrders array
+                buyOrders: [data.result, ...seller.seller.buyOrders],
+              } }
+            : seller
+        )
+      );
+
       // refetch buy orders
       fetchBuyOrders();
+
     } else {
       toast.error('구매 주문 생성에 실패했습니다: ' + data.message);
     }
@@ -6778,6 +6790,74 @@ const fetchBuyOrders = async () => {
 
 
                           </div>
+
+                          {seller.seller?.buyOrder?.buyer?.walletAddress === address ? (
+                            <div className="w-full flex flex-col items-start justify-center gap-1">
+                              
+                              <div className="w-full flex flex-row items-center justify-start gap-2">
+                                <Image
+                                  src="/icon-info.png"
+                                  alt="Info"
+                                  width={20}
+                                  height={20}
+                                  className="w-5 h-5 rounded-lg object-cover"
+                                />
+                                <span className="text-sm text-blue-400">
+                                  해당 구매자의 지갑주소는 본인의 지갑주소입니다.
+                                </span>
+                              </div>
+
+                              <div className="w-full flex flex-col items-start justify-center gap-1
+                              border-t border-slate-600 pt-2
+                              ">
+                                <span className="text-sm font-semibold text-slate-200">
+                                  입금하실 계좌 정보
+                                </span>
+
+                                <div className="flex flex-col items-start justify-center gap-0">
+                                  <span className="text-sm text-slate-200 font-semibold">
+                                    {seller.seller?.bankInfo?.bankName}
+                                  </span>
+                                  <span className="text-sm text-slate-300">
+                                    {seller.seller?.bankInfo?.accountNumber}
+                                  </span>
+                                  <span className="text-sm font-semibold text-slate-200">
+                                    {seller.seller?.bankInfo?.accountHolder}
+                                  </span>
+                                </div>
+
+                              </div>
+
+
+                              {/* 주문취소 버튼 */}
+                              <div className="w-full flex flex-col items-start justify-center gap-1
+                              border-t border-slate-600 pt-2
+                              ">
+                                <span className="text-sm font-semibold text-slate-200">
+                                  입금하기전에 주문을 취소하시려면 아래 버튼을 눌러주세요.
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    cancelBuyOrderByAdmin(
+                                      index,
+                                      seller.seller?.buyOrder?._id,
+                                    );
+                                  }}
+                                  className={`
+                                    ${cancellingBuyOrders[index]
+                                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600'
+                                    : 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white shadow-lg hover:shadow-red-500/50 border-0 transform hover:scale-105 active:scale-95'
+                                    }
+                                    px-3 py-1 rounded-lg text-xs font-semibold w-full
+                                    transition-all duration-200 ease-in-out
+                                  `}
+                                >
+                                  {cancellingBuyOrders[index] ? '주문취소 처리중...' : '주문취소'}
+                                </button>
+                              </div>
+
+                            </div>
+                          ) : (<></>)}
 
                           <div className="w-full flex flex-row items-center justify-between gap-2">
                             <span className="text-sm">

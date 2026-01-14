@@ -724,6 +724,16 @@ export async function cancelBuyOrderByAdmin(
   );
 
 
+  // seller user update
+  await userCollection.updateOne(
+    {'seller.escrowWalletAddress': order.seller.walletAddress },
+    { $set: {
+      'seller.buyOrder.status': 'cancelled',
+      'seller.buyOrder.cancelledAt': new Date().toISOString(),
+    } }
+  );
+
+
 
   return result;
 }
