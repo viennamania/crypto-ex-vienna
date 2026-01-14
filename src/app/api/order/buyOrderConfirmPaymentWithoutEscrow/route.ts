@@ -83,14 +83,20 @@ export async function POST(request: NextRequest) {
     } = order as UserProps;
 
 
-
+    /*
     const sellerWalletAddress = seller.walletAddress;
 
     if (!sellerWalletAddress) {
+
+      console.log("sellerWalletAddress not found", sellerWalletAddress);
+
       return NextResponse.json({
         result: null,
       });
     }
+    */
+
+    
 
     /*
     const user = await getOneByWalletAddress(

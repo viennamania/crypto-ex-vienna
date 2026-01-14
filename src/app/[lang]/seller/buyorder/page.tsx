@@ -6213,7 +6213,7 @@ const fetchBuyOrders = async () => {
                             {/* TID */}
                             <span className="text-sm">
                               TID: #<button
-                                  className="text-sm text-zinc-600 underline"
+                                  className="text-sm underline"
                                   style={{ fontFamily: 'monospace' }}
                                   onClick={() => {
                                     navigator.clipboard.writeText(seller.seller?.buyOrder?.tradeId);
@@ -6391,9 +6391,9 @@ const fetchBuyOrders = async () => {
                                 height={50}
                                 className="w-16 h-16 object-contain"
                               />
-                              <span className="text-sm text-slate-300">
+                              <span className="text-sm">
                                 TID: #<button
-                                    className="text-sm text-slate-400 underline"
+                                    className="underline"
                                     style={{ fontFamily: 'monospace' }}
                                     onClick={() => {
                                       navigator.clipboard.writeText(seller.seller?.buyOrder?.tradeId);
@@ -6731,7 +6731,7 @@ const fetchBuyOrders = async () => {
                                 {seller.seller?.buyOrder?.nickname}
                               </span>
                               <button
-                                className="text-sm text-zinc-600 underline"
+                                className="text-sm underline"
                                 onClick={() => {
                                   navigator.clipboard.writeText(seller.seller?.buyOrder?.walletAddress);
                                   toast.success(Copied_Wallet_Address);
