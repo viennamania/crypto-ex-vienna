@@ -5408,7 +5408,7 @@ const fetchBuyOrders = async () => {
                       (seller.seller.buyOrder?.status === 'ordered' ||
                       seller.seller?.buyOrder?.status === 'paymentRequested')
                     && seller.seller?.buyOrder?.walletAddress === address)
-                    ? 'ring-4 ring-yellow-400/70 animate-pulse' : ''
+                    ? 'ring-4 ring-yellow-400/70' : ''
                     }
 
                     `}
