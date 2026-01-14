@@ -4099,7 +4099,7 @@ const fetchBuyOrders = async () => {
       );
 
       // refetch buy orders
-      fetchBuyOrders();
+      ///fetchBuyOrders();
 
     } else {
       toast.error('구매 주문 생성에 실패했습니다: ' + data.message);

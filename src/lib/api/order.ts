@@ -8672,7 +8672,10 @@ export async function acceptBuyOrderPrivateSale(
     // and seller usdtToKrwRate
     const usersCollection = client.db(dbName).collection('users');
     const seller = await usersCollection.findOne<any>(
-      { walletAddress: sellerWalletAddress },
+      {
+        storecode: 'admin',
+        walletAddress: sellerWalletAddress
+      },
       { projection: { storecode: 1, nickname: 1, avatar: 1, seller: 1 } }
     );
 
@@ -8696,7 +8699,10 @@ export async function acceptBuyOrderPrivateSale(
 
     // get buyer information from users collection
     const buyer = await usersCollection.findOne<any>(
-      { walletAddress: buyerWalletAddress },
+      {
+        storecode: 'admin',
+        walletAddress: buyerWalletAddress
+      },
       { projection: { nickname: 1, avatar: 1, buyer: 1 } }
     );
 
