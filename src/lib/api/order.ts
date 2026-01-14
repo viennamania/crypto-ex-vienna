@@ -8711,8 +8711,8 @@ export async function acceptBuyOrderPrivateSale(
       return false;
     }
 
-    if (!buyer?.bankInfo?.depositName) {
-      console.log('acceptBuyOrderPrivateSale: buyer does not have a depositName for walletAddress: ' + buyerWalletAddress);
+    if (!buyer?.bankInfo?.accountHolder) {
+      console.log('acceptBuyOrderPrivateSale: buyer does not have a accountHolder for walletAddress: ' + buyerWalletAddress);
       return false;
     }
 
@@ -8745,7 +8745,7 @@ export async function acceptBuyOrderPrivateSale(
         nickname: buyer.nickname || '',
         avatar: buyer.avatar || '',
         walletAddress: buyerWalletAddress,
-        depositName: buyer.bankInfo.depositName,
+        depositName: buyer.bankInfo.accountHolder,
         depositCompleted: false,
       },
       seller: {
