@@ -3944,6 +3944,28 @@ export async function buyOrderConfirmPayment(data: any) {
         }
       }
     );
+
+    // user seller update
+    // get seller wallet address from buyorder
+    const orderForSeller = await collection.findOne<UserProps>(
+      { _id: new ObjectId(data.orderId+'') },
+      { projection: {
+        seller: 1,
+      } }
+    );
+
+    if (orderForSeller && orderForSeller.seller?.walletAddress) {
+      await userCollection.updateOne(
+        { 'seller.escrowWalletAddress': orderForSeller.seller.walletAddress },
+        { $set: {
+            'seller.buyOrder.status': 'paymentConfirmed',
+            'seller.buyOrder.paymentConfirmedAt': new Date().toISOString(),
+            'seller.buyOrder.transactionHash': data.transactionHash,
+          }
+        }
+      );
+    }
+    
     
 
 

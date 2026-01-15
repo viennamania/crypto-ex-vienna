@@ -2839,3 +2839,26 @@ export async function updatePromotionText(
   );
   
 }
+
+
+// get seller by sellerWalletAddress
+export async function getSellerBySellerWalletAddress(
+  sellerWalletAddress: string,
+): Promise<UserProps | null> {
+
+  console.log('getSellerBySellerWalletAddress sellerWalletAddress: ' + sellerWalletAddress);
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  const results = await collection.findOne<UserProps>(
+    {
+      'seller.escrowWalletAddress': sellerWalletAddress,
+    },
+  );
+
+  console.log('getSellerBySellerWalletAddress results: ' + results);
+
+  return results;
+
+}
