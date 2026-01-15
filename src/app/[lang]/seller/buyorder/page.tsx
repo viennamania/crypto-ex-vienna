@@ -6380,9 +6380,20 @@ const fetchBuyOrders = async () => {
                                   <span className="text-sm text-slate-200 font-semibold">
                                     {seller.seller?.bankInfo?.bankName}
                                   </span>
-                                  <span className="text-sm text-slate-200 font-semibold">
-                                    {seller.seller?.bankInfo?.accountNumber}
-                                  </span>
+                                  <div className="flex flex-row items-center justify-start gap-2">
+                                    <span className="text-sm text-slate-200 font-semibold">
+                                      {seller.seller?.bankInfo?.accountNumber}
+                                    </span>
+                                    <button
+                                      className="text-sm text-slate-300 underline hover:text-slate-200"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(seller.seller?.bankInfo?.accountNumber || '');
+                                        toast.success("계좌번호가 복사되었습니다.");
+                                      } }
+                                    >
+                                      ⧉
+                                    </button>
+                                  </div>
                                   <span className="text-sm font-semibold text-slate-200">
                                     {seller.seller?.bankInfo?.accountHolder}
                                   </span>
@@ -6548,9 +6559,79 @@ const fetchBuyOrders = async () => {
                           </div>
 
 
+
                           <div className="w-full flex flex-col items-start justify-center gap-1
                             border-t border-zinc-300 pt-2
                             ">
+
+
+                              <div className="w-full flex flex-row items-center justify-between gap-2">
+                                <span className="text-sm">
+                                  주문시간:
+                                </span>
+                                <span className="text-sm">
+                                  {seller.seller?.buyOrder?.createdAt ?
+                                    // format date to day time string YYYY-MM-DD HH:mm
+                                    new Date(seller.seller?.buyOrder?.createdAt).getFullYear() + '-' +
+                                    String(new Date(seller.seller?.buyOrder?.createdAt).getMonth() + 1).padStart(2, '0') + '-' +
+                                    String(new Date(seller.seller?.buyOrder?.createdAt).getDate()).padStart(2, '0') + ' ' +
+                                    String(new Date(seller.seller?.buyOrder?.createdAt).getHours()).padStart(2, '0') + ':' +
+                                    String(new Date(seller.seller?.buyOrder?.createdAt).getMinutes()).padStart(2, '0')
+                                    : ''
+                                  }
+                                </span>
+                              </div>
+
+                              {/* seller.seller.buyOrder.paymentRequestedAt */}
+                              {/* if paymentRequestedAt exists, show the time */}
+                              {seller.seller?.buyOrder?.paymentRequestedAt && (
+                              <div className="w-full flex flex-row items-center justify-between gap-2">
+                                <span className="text-sm">
+                                  입금요청시간:
+                                </span>
+                                <span className="text-sm">
+                                  {new Date(seller.seller?.buyOrder?.paymentRequestedAt).getFullYear() + '-' +
+                                    String(new Date(seller.seller?.buyOrder?.paymentRequestedAt).getMonth() + 1).padStart(2, '0') + '-' +
+                                    String(new Date(seller.seller?.buyOrder?.paymentRequestedAt).getDate()).padStart(2, '0') + ' ' +
+                                    String(new Date(seller.seller?.buyOrder?.paymentRequestedAt).getHours()).padStart(2, '0') + ':' +
+                                    String(new Date(seller.seller?.buyOrder?.paymentRequestedAt).getMinutes()).padStart(2, '0')
+                                  }
+                                </span>
+                              </div>
+                              )}
+
+                              {/* 입금완료시간 */}
+                              {seller.seller?.buyOrder?.paymentConfirmedAt && (
+                              <div className="w-full flex flex-row items-center justify-between gap-2">
+                                <span className="text-sm">
+                                  입금완료시간:
+                                </span>
+                                <span className="text-sm">
+                                  {new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getFullYear() + '-' +
+                                    String(new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getMonth() + 1).padStart(2, '0') + '-' +
+                                    String(new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getDate()).padStart(2, '0') + ' ' +
+                                    String(new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getHours()).padStart(2, '0') + ':' +
+                                    String(new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getMinutes()).padStart(2, '0')
+                                  }
+                                </span>
+                              </div>
+                              )}
+
+                              <span className="text-sm">
+                                {Buy_Amount}(USDT): {seller.seller?.buyOrder?.usdtAmount}
+                              </span>
+                              <span className="text-sm">
+                                {Payment_Amount}(원): {seller.seller?.buyOrder?.krwAmount.toLocaleString()}
+                              </span>
+                              <span className="text-sm">
+                                {Rate}(원): {seller.seller?.buyOrder?.rate.toLocaleString()} 
+                              </span>
+
+
+
+
+
+
                             {/* TID */}
                             {/*
                             <div className="flex flex-row items-center justify-start gap-2">
@@ -6739,6 +6820,9 @@ const fetchBuyOrders = async () => {
                                   </button>
                               </span>
                             </div>
+
+
+                          
 
                             {/*
                             <div className="flex flex-row items-center gap-2
@@ -7129,7 +7213,7 @@ const fetchBuyOrders = async () => {
                                   alt="Info"
                                   width={20}
                                   height={20}
-                                  className="w-5 h-5 object-contain"
+                                  className="w-5 h-5 object-contain bg-white rounded-full"
                                 />
                                 <span className="text-sm text-blue-400">
                                   해당 구매자의 지갑주소가 본인의 지갑주소인지 꼭 확인하시기 바랍니다.
@@ -7137,12 +7221,12 @@ const fetchBuyOrders = async () => {
                               </div>
 
 
-                              {/* 주문취소 버튼 */}
+                              {/* 구매주문취소 버튼 */}
                               <div className="w-full flex flex-col items-start justify-center gap-1
                               border-t border-slate-600 pt-2
                               ">
                                 <span className="text-sm font-semibold text-slate-200">
-                                  입금하기전에 주문을 취소하시려면 아래 버튼을 눌러주세요.
+                                  입금하기전에 구매주문을 취소하시려면 아래 버튼을 눌러주세요.
                                 </span>
                                 <button
                                   onClick={() => {
@@ -7161,7 +7245,7 @@ const fetchBuyOrders = async () => {
                                     transition-all duration-200 ease-in-out
                                   `}
                                 >
-                                  {cancellingBuyOrders[index] ? '주문취소 처리중...' : '주문취소'}
+                                  {cancellingBuyOrders[index] ? '구매주문취소 처리중...' : '구매주문취소'}
                                 </button>
                               </div>
 
@@ -7169,67 +7253,7 @@ const fetchBuyOrders = async () => {
 
                           ) : (<></>)}
 
-                          <div className="w-full flex flex-row items-center justify-between gap-2">
-                            <span className="text-sm">
-                              주문시간:
-                            </span>
-                            <span className="text-sm">
-                              {seller.seller?.buyOrder?.createdAt ?
-                                // format date to day time string YYYY-MM-DD HH:mm
-                                new Date(seller.seller?.buyOrder?.createdAt).getFullYear() + '-' +
-                                String(new Date(seller.seller?.buyOrder?.createdAt).getMonth() + 1).padStart(2, '0') + '-' +
-                                String(new Date(seller.seller?.buyOrder?.createdAt).getDate()).padStart(2, '0') + ' ' +
-                                String(new Date(seller.seller?.buyOrder?.createdAt).getHours()).padStart(2, '0') + ':' +
-                                String(new Date(seller.seller?.buyOrder?.createdAt).getMinutes()).padStart(2, '0')
-                                : ''
-                              }
-                            </span>
-                          </div>
 
-                          {/* seller.seller.buyOrder.paymentRequestedAt */}
-                          {/* if paymentRequestedAt exists, show the time */}
-                          {seller.seller?.buyOrder?.paymentRequestedAt && (
-                          <div className="w-full flex flex-row items-center justify-between gap-2">
-                            <span className="text-sm">
-                              입금요청시간:
-                            </span>
-                            <span className="text-sm">
-                              {new Date(seller.seller?.buyOrder?.paymentRequestedAt).getFullYear() + '-' +
-                                String(new Date(seller.seller?.buyOrder?.paymentRequestedAt).getMonth() + 1).padStart(2, '0') + '-' +
-                                String(new Date(seller.seller?.buyOrder?.paymentRequestedAt).getDate()).padStart(2, '0') + ' ' +
-                                String(new Date(seller.seller?.buyOrder?.paymentRequestedAt).getHours()).padStart(2, '0') + ':' +
-                                String(new Date(seller.seller?.buyOrder?.paymentRequestedAt).getMinutes()).padStart(2, '0')
-                              }
-                            </span>
-                          </div>
-                          )}
-
-                          {/* 입금완료시간 */}
-                          {seller.seller?.buyOrder?.paymentConfirmedAt && (
-                          <div className="w-full flex flex-row items-center justify-between gap-2">
-                            <span className="text-sm">
-                              입금완료시간:
-                            </span>
-                            <span className="text-sm">
-                              {new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getFullYear() + '-' +
-                                String(new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getMonth() + 1).padStart(2, '0') + '-' +
-                                String(new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getDate()).padStart(2, '0') + ' ' +
-                                String(new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getHours()).padStart(2, '0') + ':' +
-                                String(new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getMinutes()).padStart(2, '0')
-                              }
-                            </span>
-                          </div>
-                          )}
-
-                          <span className="text-sm">
-                            {Buy_Amount}(USDT): {seller.seller?.buyOrder?.usdtAmount}
-                          </span>
-                          <span className="text-sm">
-                            {Payment_Amount}(원): {seller.seller?.buyOrder?.krwAmount.toLocaleString()}
-                          </span>
-                          <span className="text-sm">
-                            {Rate}(원): {seller.seller?.buyOrder?.rate.toLocaleString()} 
-                          </span>
 
                         </div>
 
