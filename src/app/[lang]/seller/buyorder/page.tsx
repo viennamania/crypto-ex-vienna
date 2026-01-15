@@ -3664,6 +3664,31 @@ const fetchBuyOrders = async () => {
   }, [address]);
 
 
+  // sellersBalance.reduce((acc, seller) => acc + seller.currentUsdtBalance, 0)
+  // animated totalUsdtBalance
+  const [animatedTotalUsdtBalance, setAnimatedTotalUsdtBalance] = useState(0);
+  function animateTotalUsdtBalance(targetBalance: number) {
+    const animationDuration = 1000; // 1 second
+    const frameRate = 30; // 30 frames per second
+    const totalFrames = Math.round((animationDuration / 1000) * frameRate);
+    const initialBalance = animatedTotalUsdtBalance;
+    let frame = 0;
+    const interval = setInterval(() => {
+      frame++;
+      const progress = Math.min(frame / totalFrames, 1);
+      const newBalance = initialBalance + (targetBalance - initialBalance) * progress;
+      setAnimatedTotalUsdtBalance(newBalance);
+      if (frame >= totalFrames) {
+        clearInterval(interval);
+      }
+    }, 1000 / frameRate);
+  }
+  useEffect(() => {
+    const targetBalance = sellersBalance.reduce((acc, seller) => acc + (seller.currentUsdtBalance || 0), 0);
+    animateTotalUsdtBalance(targetBalance);
+  }, [sellersBalance]);
+
+
 
 
   // usdtToKrwRate animation
@@ -4407,6 +4432,29 @@ const fetchBuyOrders = async () => {
 
                 </div>
               </button>
+
+              {/* 구매자 설정 */}
+              {user?.buyer && (
+                <button
+                  onClick={() => {
+                    router.push('/' + params.lang + '/administration/buyer-settings');
+                  }}
+                  className="flex bg-slate-700 text-sm text-slate-100 px-4 py-2 rounded-lg hover:bg-slate-600 border border-slate-600 shadow-md"
+                >
+                  <div className="flex flex-row items-center justify-center gap-2">
+                    <Image
+                      src="/icon-buyer.png"
+                      alt="Buyer"
+                      width={20}
+                      height={20}
+                      className="rounded-lg w-5 h-5"
+                    />
+                    <span className="text-sm text-slate-100">
+                      구매자 설정
+                    </span>
+                  </div>
+                </button>
+              )}
 
               {/* sellerSettings */}
               {user?.seller && (
@@ -5417,7 +5465,9 @@ const fetchBuyOrders = async () => {
                       style={{ fontFamily: 'monospace' }}>
                       {
                         // sum of sellersBalance.currentUsdtBalance
-                        sellersBalance.reduce((acc, seller) => acc + seller.currentUsdtBalance, 0).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                       // sellersBalance.reduce((acc, seller) => acc + seller.currentUsdtBalance, 0).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+
+                        animatedTotalUsdtBalance.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                       }
                     </span>
                   </div>
@@ -5453,14 +5503,13 @@ const fetchBuyOrders = async () => {
                     ${(
                       (seller.seller.buyOrder?.status === 'ordered'
                       || seller.seller.buyOrder?.status === 'paymentRequested')
-                    && seller.walletAddress !== address
+                    && (seller.walletAddress !== address && seller.seller?.buyOrder?.walletAddress !== address)
                     ) ?
                       'ring-4 ring-red-500/50 animate-pulse' : ''
                     }
                     
-                    ${seller.currentUsdtBalanceChanged
-                    ? 'ring-2 ring-emerald-500/70 animate-pulse' : ''
-                    }
+
+                 
 
                     ${seller.walletAddress === address
                     ? 'ring-4 ring-amber-400/70' : ''
@@ -6298,9 +6347,11 @@ const fetchBuyOrders = async () => {
                             />
                             <div className="flex flex-col items-start justify-center gap-0">
                               <span className="text-sm font-semibold">
-                                {seller.seller?.buyOrder.krwAmount.toLocaleString()} 원 입금확인중
+                                {'판매자가 ' +
+                                seller.seller?.buyOrder.krwAmount.toLocaleString() + ' 원 입금을 기다리고 있습니다.'}
                               </span>
-                              {seller.walletAddress === address ? (
+                              {(seller.walletAddress === address || seller.seller?.buyOrder?.buyer?.walletAddress === address)
+                              ? (
                                 <span className="text-sm">
                                   입금자명: {seller.seller?.buyOrder?.buyer?.depositName || '알수없음'}
                                 </span>
@@ -6311,6 +6362,42 @@ const fetchBuyOrders = async () => {
                               )}
                             </div>
                           </div>
+
+                          {seller.seller?.buyOrder?.buyer?.walletAddress === address && (
+                              <div className="w-full flex flex-col items-start justify-center gap-1
+                              border-t border-slate-600 pt-2
+                              ">
+                                <span className="text-sm font-semibold text-slate-200">
+                                  구매자는 아래 계좌로 {seller.seller?.buyOrder.krwAmount.toLocaleString()} 원을 입금해주세요.
+                                  <br />
+                                  입금자명과 입금액이 일치해야 입금확인이 처리됩니다.
+                                </span>
+
+                                <div className="flex flex-col items-start justify-center
+                                  gap-0 mt-1
+                                ">
+                                
+                                  <span className="text-sm text-slate-200 font-semibold">
+                                    {seller.seller?.bankInfo?.bankName}
+                                  </span>
+                                  <span className="text-sm text-slate-200 font-semibold">
+                                    {seller.seller?.bankInfo?.accountNumber}
+                                  </span>
+                                  <span className="text-sm font-semibold text-slate-200">
+                                    {seller.seller?.bankInfo?.accountHolder}
+                                  </span>
+                                </div>
+
+                                {/* 10분내로 입금하지 않으면 주문이 자동취소됩니다. */}
+                                <span className="text-sm text-slate-300 mt-2">
+                                  10분내로 입금하지 않으면 주문을 취소할 수 있습니다.
+                                </span>
+
+                              </div>
+
+                          )}
+
+
 
                           {
                           seller.walletAddress === address && !seller.seller?.autoProcessDeposit && (
@@ -7042,37 +7129,11 @@ const fetchBuyOrders = async () => {
                                   alt="Info"
                                   width={20}
                                   height={20}
-                                  className="w-5 h-5 rounded-lg object-cover"
+                                  className="w-5 h-5 object-contain"
                                 />
                                 <span className="text-sm text-blue-400">
-                                  해당 구매자의 지갑주소는 본인의 지갑주소입니다.
+                                  해당 구매자의 지갑주소가 본인의 지갑주소인지 꼭 확인하시기 바랍니다.
                                 </span>
-                              </div>
-
-                              <div className="w-full flex flex-col items-start justify-center gap-1
-                              border-t border-slate-600 pt-2
-                              ">
-                                <span className="text-sm font-semibold text-slate-200">
-                                  아래 계좌로 {seller.seller?.buyOrder.krwAmount.toLocaleString()} 원을 입금해주세요.
-                                </span>
-
-                                <div className="flex flex-col items-start justify-center gap-0">
-                                  <span className="text-sm text-slate-200 font-semibold">
-                                    {seller.seller?.bankInfo?.bankName}
-                                  </span>
-                                  <span className="text-sm text-slate-300">
-                                    {seller.seller?.bankInfo?.accountNumber}
-                                  </span>
-                                  <span className="text-sm font-semibold text-slate-200">
-                                    {seller.seller?.bankInfo?.accountHolder}
-                                  </span>
-                                </div>
-
-                                {/* 10분내로 입금하지 않으면 주문이 자동취소됩니다. */}
-                                <span className="text-sm text-red-600 font-semibold">
-                                  10분내로 입금하지 않으면 주문이 자동취소됩니다.
-                                </span>
-
                               </div>
 
 
