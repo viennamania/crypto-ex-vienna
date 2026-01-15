@@ -49,6 +49,8 @@ import {
 import { useRouter }from "next//navigation";
 
 
+import { toast } from "react-hot-toast";
+
 
 
 /*
@@ -70,6 +72,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
+
 
 
   const router = useRouter();
@@ -332,8 +336,9 @@ export default function RootLayout({
                         router.push("/ko/administration/withdraw-usdt");
                         setShowChain(false);
                       }}>
-                      Withdraw USDT
+                      출금하기
                     </button>
+
 
                   </div>
 

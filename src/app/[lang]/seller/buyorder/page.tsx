@@ -4479,6 +4479,24 @@ const fetchBuyOrders = async () => {
                 </button>
               )}
 
+              {activeWallet && (
+
+                <button
+                  className="bg-red-500 hover:bg-red-600 text-sm text-white px-4 py-2 rounded-lg shadow-md" 
+                  onClick={() => {
+                    // Add your disconnect wallet logic here
+                    confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
+                    .then(() => {
+                      toast.success('로그아웃 되었습니다');
+                    });
+                    
+                  }}>
+                  지갑 연결 해제
+                </button>
+
+              )}
+
+
               {/* opnew new window for admin dashboard */}
               {/* https://payment.orangex.center/ko/administration/buyorder */}
               {isAdmin && (
