@@ -4586,27 +4586,6 @@ const fetchBuyOrders = async () => {
 
           <div className="w-full flex flex-row items-between justify-between xl:justify-start gap-2">
             
-            {/*
-            <button
-              onClick={() => {
-                router.push('/' + params.lang + '/seller/buyorder');
-              }}
-              className="flex bg-green-600 text-sm text-white px-4 py-2 rounded-lg hover:bg-green-700 shadow-md"
-            >
-              <div className="flex flex-row items-center justify-center gap-2">
-                <Image
-                  src="/icon-sell-label-color.png"
-                  alt="Sell"
-                  width={20}
-                  height={20}
-                  className="rounded-lg w-5 h-5"
-                />
-                <span className="text-sm text-white">
-                  판매하기
-                </span>
-              </div>
-            </button>
-            */}
             {/* 이페이지가 판매하기 페이지이기 때문에 버튼 대신에 판매하기 표시만 */}
             <div
               className="flex bg-green-600 text-sm text-white px-4 py-2 rounded-lg shadow-md"

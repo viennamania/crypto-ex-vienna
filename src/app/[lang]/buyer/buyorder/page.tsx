@@ -4585,48 +4585,45 @@ const fetchBuyOrders = async () => {
         <div className="flex flex-col items-start justify-center gap-2 mt-4">
 
 
-          {/* 메뉴: 판매하기, 구매하기 */}
-          {/* 판매하기: /{lang}/seller/buyorder */}
-          {/* 구매하기: /{lang}/buyer/buyorder */}
-          <div className="w-full flex flex-row items-center justify-center gap-4">
+          <div className="w-full flex flex-row items-between justify-between xl:justify-start gap-2">
+       
             <button
               onClick={() => {
                 router.push('/' + params.lang + '/seller/buyorder');
               }}
-              className="flex bg-green-600 text-sm text-white px-4 py-2 rounded-lg hover:bg-green-700 shadow-md"
+              className="flex bg-gray-600 text-sm text-white px-4 py-2 rounded-lg hover:bg-gray-700 shadow-md"
             >
               <div className="flex flex-row items-center justify-center gap-2">
                 <Image
                   src="/icon-sell-label-color.png"
                   alt="Sell"
-                  width={20}
-                  height={20}
-                  className="rounded-lg w-5 h-5"
+                  width={50}
+                  height={50}
+                  className="w-10 h-10"
                 />
                 <span className="text-sm text-white">
                   판매하기
                 </span>
               </div>
             </button>
-            <button
-              onClick={() => {
-                router.push('/' + params.lang + '/buyer/buyorder');
-              }}
-              className="flex bg-blue-600 text-sm text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-md"
+
+            <div
+              className="flex bg-blue-600 text-sm text-white px-4 py-2 rounded-lg shadow-md"
             >
               <div className="flex flex-row items-center justify-center gap-2">
                 <Image
                   src="/icon-buy-label-color.png"
                   alt="Buy"
-                  width={20}
-                  height={20}
-                  className="rounded-lg w-5 h-5"
+                  width={50}
+                  height={50}
+                  className="w-10 h-10"
                 />
                 <span className="text-sm text-white">
                   구매하기
                 </span>
               </div>
-            </button>
+            </div>
+
           </div>
 
 
