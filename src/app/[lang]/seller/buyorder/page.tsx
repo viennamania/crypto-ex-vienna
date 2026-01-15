@@ -4394,7 +4394,7 @@ const fetchBuyOrders = async () => {
                 alt="logo"
                 width={100}
                 height={100}
-                className="h-10 w-10 rounded-full"
+                className="w-24 h-8 object-contain"
               />
             </button>
           </div>

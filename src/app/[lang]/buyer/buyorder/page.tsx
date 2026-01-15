@@ -4380,7 +4380,7 @@ const fetchBuyOrders = async () => {
             
           <div className="w-full flex flex-row items-center justify-start gap-2">
             <button
-              onClick={() => router.push('/' + params.lang + '/administration')}
+              onClick={() => router.push('/' + params.lang + '/buyer/buyorder')}
               className="flex items-center justify-center gap-2
               rounded-lg p-2
               hover:bg-slate-700/50
@@ -4394,7 +4394,7 @@ const fetchBuyOrders = async () => {
                 alt="logo"
                 width={100}
                 height={100}
-                className="h-10 w-10 rounded-full"
+                className="w-24 h-8 object-contain"
               />
             </button>
           </div>
