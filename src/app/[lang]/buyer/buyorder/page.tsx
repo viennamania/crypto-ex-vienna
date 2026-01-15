@@ -4630,6 +4630,7 @@ const fetchBuyOrders = async () => {
           </div>
 
 
+
           {/* USDT 가격 binance market price */}
           {/*
           <div
