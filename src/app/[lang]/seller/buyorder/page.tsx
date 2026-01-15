@@ -4582,13 +4582,13 @@ const fetchBuyOrders = async () => {
 
 
 
-        <div className="flex flex-col items-start justify-center gap-2 mt-4">
+        <div className="w-full flex flex-col items-start justify-center gap-2 mt-4">
 
 
           {/* 메뉴: 판매하기, 구매하기 */}
           {/* 판매하기: /{lang}/seller/buyorder */}
           {/* 구매하기: /{lang}/buyer/buyorder */}
-          <div className="w-full flex flex-row items-center justify-center gap-4">
+          <div className="w-full flex flex-row items-between justify-between gap-2">
             <button
               onClick={() => {
                 router.push('/' + params.lang + '/seller/buyorder');
