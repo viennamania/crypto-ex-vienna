@@ -5599,8 +5599,12 @@ const fetchBuyOrders = async () => {
               border border-slate-700
               ">
                 <h3 className="text-md font-bold text-slate-200">
-                  판매자 지정가로 구매주문하기
+                  지정가로 구매주문하기
                 </h3>
+                {/* 설명: 지정가로 구매주문하면 판매자중에서 가장 유리한 환율을 제시한 판매자와 매칭됩니다. */}
+                <p className="text-sm text-slate-400 text-center">
+                  지정가로 구매주문하면 판매자중에서 가장 유리한 환율을 제시한 판매자와 매칭됩니다.
+                </p>
                 <div className="w-full flex flex-col items-center justify-center gap-2">
 
                   <input
