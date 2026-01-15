@@ -4174,6 +4174,50 @@ const fetchBuyOrders = async () => {
     
 
 
+
+
+    // customRate
+  const [customRate, setCustomRate] = useState<number | null>(null);
+
+  // placingCustomBuyOrder
+  const [placingCustomBuyOrder, setPlacingCustomBuyOrder] = useState(false);
+  const placeCustomBuyOrder = async () => {
+    if (!address) {
+      toast.error('지갑을 연결해주세요.');
+      return;
+    }
+    if (!customRate || customRate <= 0) {
+      toast.error('구매 환율을 입력해주세요.');
+      return;
+    }
+    setPlacingCustomBuyOrder(true);
+    const response = await fetch('/api/order/buyOrderCustomRate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        buyerWalletAddress: address,
+        usdtToKrwRate: customRate,
+      }),
+    });
+    const data = await response.json();
+    if (data.result) {
+      toast.success('맞춤형 구매 주문이 생성되었습니다.');
+      // refetch buy orders
+      fetchBuyOrders();
+    } else {
+      toast.error('맞춤형 구매 주문 생성에 실패했습니다: ' + data.message);
+    }
+    setPlacingCustomBuyOrder(false);
+  };
+
+
+
+
+
+
+
   //if (!address) {
   if (false) {
     return (
@@ -4238,6 +4282,11 @@ const fetchBuyOrders = async () => {
   }
 
 
+
+
+
+  
+
   if (address && loadingUser) {
     return (
       <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -4255,7 +4304,6 @@ const fetchBuyOrders = async () => {
       </main>
     );
   }
-
 
 
 
@@ -5541,6 +5589,76 @@ const fetchBuyOrders = async () => {
 
 
             {/* 지정가로 구매주문하기 */}
+            <div className="w-full flex flex-col items-center justify-center">
+              {/* 지정가 입력창 */}
+              <div className="w-full max-w-md
+              flex flex-col items-center justify-center gap-2
+              bg-slate-900/80
+              p-4 rounded-lg shadow-xl
+              backdrop-blur-md
+              border border-slate-700
+              ">
+                <h3 className="text-md font-bold text-slate-200">
+                  판매자 지정가로 구매주문하기
+                </h3>
+                <div className="w-full flex flex-col items-center justify-center gap-2">
+
+                  <input
+                    type="number"
+                    min="1"
+                    
+                    //value={customRate}
+                    value ={customRate && customRate > 0 ? customRate : ''}
+
+                    onChange={(e) => setCustomRate(Number(e.target.value))}
+                    placeholder="지정가(원/USDT)를 입력하세요"
+                    className="w-full
+                    bg-slate-800/90
+                    text-slate-200
+                    placeholder-slate-500
+                    px-4 py-2
+                    rounded-lg
+                    border border-slate-600
+                    focus:outline-none focus:ring-2 focus:ring-blue-500
+                    "
+                  />
+                  
+                  <button
+                    disabled={placingCustomBuyOrder}
+                    className={`
+                      ${placingCustomBuyOrder
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : 'text-white hover:text-white hover:shadow-blue-500/50 cursor-pointer'
+                      } bg-blue-600 hover:bg-blue-700
+                      px-4 py-2 rounded-lg
+                      shadow-lg
+                      `}
+                    onClick={() => {
+                      // place custom buy order
+                      placeCustomBuyOrder();
+                    }}
+                  >
+                    <div className="flex flex-row gap-2 items-center justify-center">
+                      { placingCustomBuyOrder && (
+                          <Image
+                            src="/loading.png"
+                            alt="Loading"
+                            width={20}
+                            height={20}
+                            className="w-5 h-5
+                            animate-spin"
+                          />
+                      )}
+                      <span className="text-md font-semibold">
+                        구매주문하기
+                      </span>
+                    </div>
+
+                  </button>
+
+                </div>
+              </div>
+            </div>
             
 
 
