@@ -140,7 +140,7 @@ export default function Index({ params }: any) {
         name: "GoodTether",
         description: "GoodTether",
         url: "https://gold.goodtether.com",
-        //icons: ["https://gold.goodtether.com/logo.png"],
+        //icons: ["https://gold.goodtether.com/logo-orangex.png"],
       },
       */
 
@@ -742,7 +742,7 @@ export default function Index({ params }: any) {
 
   ///console.log("storeCode", storeCode);
  {/*
-  {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo.png","storeBanner":"https://test.com/banner.png"}
+  {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo-orangex.png","storeBanner":"https://test.com/banner.png"}
   */}
 
 

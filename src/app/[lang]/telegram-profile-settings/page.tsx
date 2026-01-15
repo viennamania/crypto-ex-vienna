@@ -292,7 +292,7 @@ function ProfilePage() {
                     storeUrl: 'https://test.com',
                     storeDescription: '설명입니다.',
                     storeLogo: 'https://t0gqytzvlsa2lapo.public.blob.vercel-storage.com/PRzu522-wjyF9MJYWAGKibxHwqqlUk77VtqG06.png',
-                    storeBanner: 'https://crypto-ex-vienna.vercel.app/logo.png',
+                    storeBanner: 'https://crypto-ex-vienna.vercel.app/logo-orangex.png',
                     createdAt: '2025-08-23T07:22:45.112Z',
                     backgroundColor: 'purple-500',
                     totalBuyerCount: 7,

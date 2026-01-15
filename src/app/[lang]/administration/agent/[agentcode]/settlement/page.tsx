@@ -1867,7 +1867,7 @@ export default function Index({ params }: any) {
                         "storeUrl": "https://test.com",
                         "storeDescription": "설명입니다.",
                         "storeLogo": "https://vzrcy5vcsuuocnf3.public.blob.vercel-storage.com/5M8446y-TT1KF2HDXnBNi0ESO5gFaWcbjJAQHi.png",
-                        "storeBanner": "https://crypto-ex-vienna.vercel.app/logo.png"
+                        "storeBanner": "https://crypto-ex-vienna.vercel.app/logo-orangex.png"
                     }
                 }
             },
@@ -2144,7 +2144,7 @@ const fetchBuyOrders = async () => {
                   connectModal={{
                     size: "wide", 
                     //size: "compact",
-                    titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
+                    titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
                     showThirdwebBranding: false,
                   }}
   

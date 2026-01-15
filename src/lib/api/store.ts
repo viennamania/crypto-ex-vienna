@@ -10,7 +10,7 @@ import { dbName } from '../mongodb';
 export async function insertStore(data: any) {
   //console.log('insertStore data: ' + JSON.stringify(data));
   /*
-  insertStore data: {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo.png","storeBanner":"https://test.com/banner.png"}
+  insertStore data: {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo-orangex.png","storeBanner":"https://test.com/banner.png"}
   */
   if (!data.storecode || !data.storeName || !data.agentcode) {
     

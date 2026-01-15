@@ -1277,7 +1277,7 @@ const fetchBuyOrders = async () => {
             connectModal={{
               size: "wide", 
               //size: "compact",
-              titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
+              titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
               showThirdwebBranding: false,
             }}
 
@@ -1327,7 +1327,7 @@ const fetchBuyOrders = async () => {
 
             >
               <Image
-                src="/logo.png"
+                src="/logo-orangex.png"
                 alt="logo"
                 width={100}
                 height={100}
@@ -1409,7 +1409,7 @@ const fetchBuyOrders = async () => {
               connectModal={{
                 size: "wide", 
                 //size: "compact",
-                titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
+                titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
                 showThirdwebBranding: false,
               }}
 

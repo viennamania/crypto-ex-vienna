@@ -4224,7 +4224,7 @@ const fetchBuyOrders = async () => {
             connectModal={{
               size: "wide", 
               //size: "compact",
-              titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
+              titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
               showThirdwebBranding: false,
             }}
 
@@ -4317,7 +4317,7 @@ const fetchBuyOrders = async () => {
                   "
                   key={index}>
                     <Image
-                      src={order?.store?.storeLogo || '/logo.png'}
+                      src={order?.store?.storeLogo || '/logo-orangex.png'}
                       alt={order?.store?.storeName || 'Store'}
                       width={20}
                       height={20}
@@ -4380,7 +4380,7 @@ const fetchBuyOrders = async () => {
             
           <div className="w-full flex flex-row items-center justify-start gap-2">
             <button
-              onClick={() => router.push('/' + params.lang + '/administration')}
+              onClick={() => router.push('/' + params.lang + '/seller/buyorder')}
               className="flex items-center justify-center gap-2
               rounded-lg p-2
               hover:bg-slate-700/50
@@ -4390,7 +4390,7 @@ const fetchBuyOrders = async () => {
 
             >
               <Image
-                src="/logo.png"
+                src="/logo-orangex.png"
                 alt="logo"
                 width={100}
                 height={100}
@@ -4565,7 +4565,7 @@ const fetchBuyOrders = async () => {
               connectModal={{
                 size: "wide", 
                 //size: "compact",
-                titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
+                titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
                 showThirdwebBranding: false,
               }}
 
@@ -4584,11 +4584,9 @@ const fetchBuyOrders = async () => {
 
         <div className="w-full flex flex-col items-start justify-center gap-2 mt-4">
 
-
-          {/* 메뉴: 판매하기, 구매하기 */}
-          {/* 판매하기: /{lang}/seller/buyorder */}
-          {/* 구매하기: /{lang}/buyer/buyorder */}
-          <div className="w-full flex flex-row items-between justify-between gap-2">
+          <div className="w-full flex flex-row items-between justify-between xl:justify-start gap-2">
+            
+            {/*
             <button
               onClick={() => {
                 router.push('/' + params.lang + '/seller/buyorder');
@@ -4608,19 +4606,40 @@ const fetchBuyOrders = async () => {
                 </span>
               </div>
             </button>
+            */}
+            {/* 이페이지가 판매하기 페이지이기 때문에 버튼 대신에 판매하기 표시만 */}
+            <div
+              className="flex bg-green-600 text-sm text-white px-4 py-2 rounded-lg shadow-md"
+            >
+              <div className="flex flex-row items-center justify-center gap-2">
+                <Image
+                  src="/icon-sell-label-color.png"
+                  alt="Sell"
+                  width={50}
+                  height={50}
+                  className="w-10 h-10"
+                />
+                <span className="text-sm text-white">
+                  판매하기
+                </span>
+              </div>
+            </div>
+
+            {/* 구매하기 버튼 */}
+            {/* 배경색을 그레이로 변경 */}
             <button
               onClick={() => {
                 router.push('/' + params.lang + '/buyer/buyorder');
               }}
-              className="flex bg-blue-600 text-sm text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-md"
+              className="flex bg-gray-600 text-sm text-white px-4 py-2 rounded-lg hover:bg-gray-700 shadow-md"
             >
               <div className="flex flex-row items-center justify-center gap-2">
                 <Image
                   src="/icon-buy-label-color.png"
                   alt="Buy"
-                  width={20}
-                  height={20}
-                  className="rounded-lg w-5 h-5"
+                  width={50}
+                  height={50}
+                  className="w-10 h-10"
                 />
                 <span className="text-sm text-white">
                   구매하기
@@ -5094,7 +5113,7 @@ const fetchBuyOrders = async () => {
                         
                         <div className="w-full flex flex-col items-start justify-center gap-2">
                           <Image
-                            src={order?.store?.storeLogo || '/logo.png'}
+                            src={order?.store?.storeLogo || '/logo-orangex.png'}
                             alt={order?.store?.storeName || 'Store'}
                             width={30}
                             height={30}

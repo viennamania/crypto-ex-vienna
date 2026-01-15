@@ -2677,7 +2677,7 @@ const fetchBuyOrders = async () => {
                 className="flex bg-zinc-100 text-sm text-[#3167b4] px-4 py-2 rounded-lg hover:bg-zinc-200"
               >
                 <Image
-                  src="/logo.png"
+                  src="/logo-orangex.png"
                   alt="logo"
                   width={100}
                   height={100}

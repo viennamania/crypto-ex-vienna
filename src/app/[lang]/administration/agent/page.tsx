@@ -1030,7 +1030,7 @@ export default function Index({ params }: any) {
 
 
   {/*
-  {"agentcode":"testagentcode","agentName":"테스트상점","agentType":"test","agentUrl":"https://test.com","agentDescription":"설명입니다.","agentLogo":"https://test.com/logo.png","agentBanner":"https://test.com/banner.png"}
+  {"agentcode":"testagentcode","agentName":"테스트상점","agentType":"test","agentUrl":"https://test.com","agentDescription":"설명입니다.","agentLogo":"https://test.com/logo-orangex.png","agentBanner":"https://test.com/banner.png"}
   */}
 
 
@@ -1040,8 +1040,8 @@ export default function Index({ params }: any) {
   const [agentType, setAgentType] = useState('test');
   const [agentUrl, setAgentUrl] = useState('https://test.com');
   const [agentDescription, setAgentDescription] = useState('설명입니다.');
-  const [agentLogo, setAgentLogo] = useState('https://crypto-ex-vienna.vercel.app/logo.png');
-  const [agentBanner, setAgentBanner] = useState('https://crypto-ex-vienna.vercel.app/logo.png');
+  const [agentLogo, setAgentLogo] = useState('https://crypto-ex-vienna.vercel.app/logo-orangex.png');
+  const [agentBanner, setAgentBanner] = useState('https://crypto-ex-vienna.vercel.app/logo-orangex.png');
 
 
   const [insertingAgent, setInsertingAgent] = useState(false);
@@ -1275,7 +1275,7 @@ export default function Index({ params }: any) {
             connectModal={{
               size: "wide", 
               //size: "compact",
-              titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
+              titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
               showThirdwebBranding: false,
             }}
 
@@ -1330,7 +1330,7 @@ export default function Index({ params }: any) {
 
              >
                <Image
-                 src="/logo.png"
+                 src="/logo-orangex.png"
                  alt="logo"
                  width={100}
                  height={100}
@@ -1411,7 +1411,7 @@ export default function Index({ params }: any) {
               connectModal={{
                 size: "wide", 
                 //size: "compact",
-                titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
+                titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
                 showThirdwebBranding: false,
               }}
 
@@ -1847,7 +1847,7 @@ export default function Index({ params }: any) {
 
 
               {/*
-              {"agentcode":"testagentcode","agentName":"테스트상점","agentType":"test","agentUrl":"https://test.com","agentDescription":"설명입니다.","agentLogo":"https://test.com/logo.png","agentBanner":"https://test.com/banner.png"}
+              {"agentcode":"testagentcode","agentName":"테스트상점","agentType":"test","agentUrl":"https://test.com","agentDescription":"설명입니다.","agentLogo":"https://test.com/logo-orangex.png","agentBanner":"https://test.com/banner.png"}
               */}
 
               {/* table view is horizontal scroll */}

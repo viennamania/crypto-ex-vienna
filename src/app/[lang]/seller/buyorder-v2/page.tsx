@@ -4166,7 +4166,7 @@ const fetchBuyOrders = async () => {
             connectModal={{
               size: "wide", 
               //size: "compact",
-              titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
+              titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
               showThirdwebBranding: false,
             }}
 
@@ -4259,7 +4259,7 @@ const fetchBuyOrders = async () => {
                   "
                   key={index}>
                     <Image
-                      src={order?.store?.storeLogo || '/logo.png'}
+                      src={order?.store?.storeLogo || '/logo-orangex.png'}
                       alt={order?.store?.storeName || 'Store'}
                       width={20}
                       height={20}
@@ -4332,7 +4332,7 @@ const fetchBuyOrders = async () => {
 
             >
               <Image
-                src="/logo.png"
+                src="/logo-orangex.png"
                 alt="logo"
                 width={100}
                 height={100}
@@ -4466,7 +4466,7 @@ const fetchBuyOrders = async () => {
               connectModal={{
                 size: "wide", 
                 //size: "compact",
-                titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
+                titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
                 showThirdwebBranding: false,
               }}
 
@@ -4950,7 +4950,7 @@ const fetchBuyOrders = async () => {
                         
                         <div className="w-full flex flex-col items-start justify-center gap-2">
                           <Image
-                            src={order?.store?.storeLogo || '/logo.png'}
+                            src={order?.store?.storeLogo || '/logo-orangex.png'}
                             alt={order?.store?.storeName || 'Store'}
                             width={30}
                             height={30}

@@ -1151,7 +1151,7 @@ export default function SendUsdt({ params }: any) {
                 connectModal={{
                     size: "wide", 
                     //size: "compact",
-                    titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
+                    titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
                     showThirdwebBranding: false,
                 }}
 
