@@ -5350,18 +5350,81 @@ const fetchBuyOrders = async () => {
           py-4
           ">
 
-            {/* title - 판매주문 */}
-            <div className="flex flex-row items-center justify-start gap-2">
-              <Image
-                src="/icon-sale.png"
-                alt="Sale"
-                width={50}
-                height={50}
-                className="w-16 h-16 rounded-lg object-cover"
-              />
-              <h2 className="text-lg font-bold text-slate-200">
-                판매 주문 현황
-              </h2>
+            <div className="w-full flex flex-col xl:flex-row items-between justify-between gap-2">
+              {/* title - 판매주문 */}
+              <div className="flex flex-row items-center justify-start gap-2">
+                <Image
+                  src="/icon-sale.png"
+                  alt="Sale"
+                  width={50}
+                  height={50}
+                  className="w-16 h-16 rounded-lg object-cover"
+                />
+                <h2 className="text-lg font-bold text-slate-200">
+                  판매 주문 현황
+                </h2>
+              </div>
+
+              {/* subtitle - 판매자 수: sellersBalance.length, 총 USDT 잔액: sum of sellersBalance.currentUsdtBalance */}
+              
+              <div className="flex flex-col xl:flex-row items-center justify-center gap-2">
+
+                <div className="flex flex-col gap-2 items-center">
+                  <div className="
+                    bg-orange-900/40
+                    px-2 py-1 rounded-full
+                    text-sm font-semibold text-orange-300
+                    border border-orange-700
+                  ">
+                    {/* dot before */}
+                    <div className="inline-block w-2 h-2 bg-orange-300 rounded-full mr-2"></div>
+                    <span className="align-middle">
+                      판매자수(명)
+                    </span>
+                  </div>
+                  <div className="flex flex-row items-center justify-center gap-1">
+                    <span className="text-4xl text-orange-300"
+                      style={{ fontFamily: 'monospace' }}>
+                      {
+                        sellersBalance.length.toLocaleString()
+                      }
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 items-center">
+                  <div className="
+                    bg-slate-700/70
+                    px-2 py-1 rounded-full
+                    text-sm font-semibold text-slate-200
+                    border border-slate-600
+                  ">
+                    {/* dot before */}
+                    <div className="inline-block w-2 h-2 bg-emerald-400 rounded-full mr-2"></div>
+                    <span className="align-middle">
+                      에스크로 총량(USDT)
+                    </span>
+                  </div>
+                  <div className="flex flex-row items-center justify-center gap-1">
+                    <Image
+                      src="/icon-tether.png"
+                      alt="Tether"
+                      width={20}
+                      height={20}
+                      className="w-5 h-5"
+                    />
+                    {/* RGB: 64, 145, 146 */}
+                    <span className="text-4xl text-[#409192]"
+                      style={{ fontFamily: 'monospace' }}>
+                      {
+                        // sum of sellersBalance.currentUsdtBalance
+                        sellersBalance.reduce((acc, seller) => acc + seller.currentUsdtBalance, 0).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                      }
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+
             </div>
 
             {sellersBalance.length > 0 && (
