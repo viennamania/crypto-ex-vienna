@@ -6242,41 +6242,6 @@ const fetchBuyOrders = async () => {
                                 </span>
                               </div>
 
-                              {seller.walletAddress === address && (
-                                <div className="w-28 flex flex-col items-center justify-center gap-1">
-                                  {/* 충전금액 입력 */}
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    placeholder="충전금액"
-                                    className="w-full bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-1 text-xs text-center
-                                    focus:outline-none focus:ring-2 focus:ring-blue-500
-                                    "
-                                  />
-
-                                  {/* 충전하기 버튼 */}
-                                  <button
-                                    onClick={() => {
-                                      /*
-                                      const inputElement = document.querySelectorAll('input')[index];
-                                      const amount = Number(inputElement.value);
-                                      if (amount >= 1) {
-                                        router.push('/' + params.lang + '/seller/deposit-usdt?amount=' + amount);
-                                      } else {
-                                        toast.error('충전금액은 1 USDT 이상이어야 합니다.');
-                                      }
-                                      */
-                                    }}
-                                    className="w-full text-xs text-white bg-blue-700 hover:bg-blue-600 px-2 py-1 rounded-lg
-                                    shadow-md hover:shadow-blue-500/50
-                                    border border-blue-600
-                                    "
-                                  >
-                                    충전하기
-                                  </button>
-                                </div>
-                              )}
-
                             </div>
 
                             {/* if balance is less than 10 USDT, show warning */}
@@ -6938,55 +6903,6 @@ const fetchBuyOrders = async () => {
                                 )}
                                 
                               </div>
-
-                              {/* 입력창 */}
-                              {/* 수정하기 버튼 */}
-                              {seller.walletAddress === address && (
-                                <div className="w-full flex flex-col items-start justify-center gap-1">
-                                  <input
-                                    type="text"
-                                    className="w-full border border-slate-600 bg-slate-700 text-slate-200 rounded-lg p-2 text-xs
-                                    placeholder:text-slate-400
-                                    focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="판매 홍보용 문구를 입력하세요."
-                                    value={promotionText}
-                                    onChange={(e) => {
-                                        setPromotionText(e.target.value);
-                                    }}
-                                  />
-                                  <button
-                                    disabled={updatingPromotionText}
-                                    onClick={updatePromotionText}
-                                    className={`
-                                        ${updatingPromotionText 
-                                          ? 'bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600' 
-                                          : 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg hover:shadow-emerald-500/50 border-0 transform hover:scale-105 active:scale-95'
-                                        }
-                                        p-2 rounded-lg text-xs w-full font-semibold
-                                        transition-all duration-200 ease-in-out
-                                    `}
-                                  >
-                                    <span className="flex items-center justify-center gap-2">
-                                      {updatingPromotionText ? (
-                                        <>
-                                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                          </svg>
-                                          수정중...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                                          </svg>
-                                          수정하기
-                                        </>
-                                      )}
-                                    </span>
-                                  </button>
-                                </div>
-                              )}
 
                             </div>
 
