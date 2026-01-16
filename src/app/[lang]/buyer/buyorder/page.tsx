@@ -6525,10 +6525,22 @@ const fetchBuyOrders = async () => {
                               className="w-5 h-5 animate-spin"
                             />
                             <div className="flex flex-col items-start justify-center gap-0">
-                              <span className="text-sm font-semibold">
-                                {'구매자가 ' +
-                                seller.seller?.buyOrder.krwAmount.toLocaleString() + ' 원 입금을 진행중입니다.'}
-                              </span>
+
+                              {seller.walletAddress === address && (
+                                <span className="text-sm font-semibold">
+                                  {'구매자가 ' +
+                                  seller.seller?.buyOrder.krwAmount.toLocaleString() + ' 원 입금을 진행중입니다.'}
+                                </span>
+                              )}
+
+                              {seller.seller?.buyOrder?.buyer?.walletAddress === address && (
+                                <span className="text-sm font-semibold">
+                                  {'판매자가 ' +
+                                  seller.seller?.buyOrder.krwAmount.toLocaleString() + ' 원 입금을 기다리고 있습니다.'}
+                                </span>
+                              )}
+
+
                               {(seller.walletAddress === address || seller.seller?.buyOrder?.buyer?.walletAddress === address)
                               ? (
                                 <span className="text-sm">
@@ -6664,7 +6676,7 @@ const fetchBuyOrders = async () => {
                         && (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x') && (
 
                           <div className="w-full flex flex-row items-center gap-2
-                            bg-blue-500 text-white px-3 py-1 rounded-lg">
+                          bg-blue-700 text-white px-3 py-1 rounded-lg border border-blue-600 shadow-lg">
                           
                             <Image
                               src="/icon-transfer.png"
@@ -6674,7 +6686,8 @@ const fetchBuyOrders = async () => {
                               className="w-5 h-5 animate-spin"
                             />
                             <span className="text-sm font-semibold">
-                              {seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 자동 전송중
+                              구매자 지갑({seller.seller?.buyOrder?.buyer?.walletAddress.substring(0, 6)}...{seller.seller?.buyOrder?.buyer?.walletAddress.substring(seller.seller?.buyOrder?.buyer?.walletAddress.length - 4)}) 으로
+                              {' '}{seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 자동 전송중입니다.
                             </span>
                           </div>
 
