@@ -4643,7 +4643,7 @@ const fetchBuyOrders = async () => {
             {/* 배경색을 그레이로 변경 */}
             <button
               onClick={() => {
-                router.push('/' + params.lang + '/buyer/buyorder');
+                router.push('/' + params.lang + '/orangex/buy');
               }}
               className="flex bg-gray-600 text-sm text-white px-4 py-2 rounded-lg hover:bg-gray-700 shadow-md"
             >

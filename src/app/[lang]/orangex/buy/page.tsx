@@ -4647,20 +4647,55 @@ const fetchBuyOrders = async () => {
 
           <div className="w-full flex flex-row items-between justify-between xl:justify-start gap-2">
        
+            {/* 홈으로 이동 버튼 */}
+            <button
+              className="flex bg-gray-600 text-sm text-white px-4 py-2 rounded-lg hover:bg-gray-700 shadow-md"
+              onClick={() => {
+                router.push('/' + params.lang + '/orangex');
+              }}
+            >
+              <div className="flex flex-row items-center justify-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                  />
+                </svg>
+                <span className="text-sm text-white">
+                  홈으로
+                </span>
+              </div>
+            </button>
+
             <button
               onClick={() => {
-                router.push('/' + params.lang + '/seller/buyorder');
+                router.push('/' + params.lang + '/orangex/sell');
               }}
               className="flex bg-gray-600 text-sm text-white px-4 py-2 rounded-lg hover:bg-gray-700 shadow-md"
             >
               <div className="flex flex-row items-center justify-center gap-2">
-                <Image
-                  src="/icon-sell-label-color.png"
-                  alt="Sell"
-                  width={50}
-                  height={50}
-                  className="w-10 h-10"
-                />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 10h11M9 21V3m0 0l-6 6m6-6l6 6M13 14h8m-4-4v8m0 0l-4-4m4 4l4 4"
+                  />
+                </svg>
                 <span className="text-sm text-white">
                   판매하기
                 </span>
@@ -4671,13 +4706,20 @@ const fetchBuyOrders = async () => {
               className="flex bg-blue-600 text-sm text-white px-4 py-2 rounded-lg shadow-md"
             >
               <div className="flex flex-row items-center justify-center gap-2">
-                <Image
-                  src="/icon-buy-label-color.png"
-                  alt="Buy"
-                  width={50}
-                  height={50}
-                  className="w-10 h-10"
-                />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9a9 9 0 009-9m-9 9v-8m0 0L5 14m4-3l4 4"
+                  />
+                </svg>
                 <span className="text-sm text-white">
                   구매하기
                 </span>
