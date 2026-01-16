@@ -418,7 +418,7 @@ export default function OrangeXPage() {
 
                             <div className="flex flex-col gap-4 sm:flex-row">
                                 <Link
-                                    href="/ko/buyer/buyorder"
+                                    href="/orangex/buy"
                                     className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[color:var(--accent)] px-8 py-4 text-base font-semibold text-white shadow-[0_18px_45px_-20px_rgba(249,115,22,0.9)] transition hover:bg-[color:var(--accent-deep)] sm:w-auto"
                                 >
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
@@ -429,7 +429,7 @@ export default function OrangeXPage() {
                                     구매하기
                                 </Link>
                                 <Link
-                                    href="/ko/seller/buyorder"
+                                    href="/orangex/sell"
                                     className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-slate-300/80 bg-white/80 px-8 py-4 text-base font-semibold text-slate-900 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)] transition hover:bg-white sm:w-auto"
                                 >
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
@@ -767,7 +767,7 @@ export default function OrangeXPage() {
                         </ol>
 
                         <Link 
-                            href="/ko/buyer/buyorder"
+                            href="/orangex/buy"
                             className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-[color:var(--sea)] px-6 py-4 text-base font-semibold text-white shadow-[0_18px_40px_-20px_rgba(15,118,110,0.8)] transition hover:brightness-110"
                         >
                             지금 구매하기 →
@@ -807,7 +807,7 @@ export default function OrangeXPage() {
                         </ol>
 
                         <Link 
-                            href="/ko/seller/buyorder"
+                            href="/orangex/sell"
                             className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-[color:var(--accent)] px-6 py-4 text-base font-semibold text-white shadow-[0_18px_40px_-20px_rgba(249,115,22,0.8)] transition hover:brightness-110"
                         >
                             지금 판매하기 →
@@ -864,13 +864,13 @@ export default function OrangeXPage() {
                     
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <Link 
-                            href="/ko/buyer/buyorder"
+                            href="/orangex/buy"
                             className="w-full sm:w-auto rounded-full bg-white px-8 py-4 text-base font-semibold text-slate-900 shadow-[0_18px_45px_-25px_rgba(15,23,42,0.8)] transition hover:bg-white/90"
                         >
                             구매하기 →
                         </Link>
                         <Link 
-                            href="/ko/seller/buyorder"
+                            href="/orangex/sell"
                             className="w-full sm:w-auto rounded-full border border-white/70 px-8 py-4 text-base font-semibold text-white transition hover:bg-white/10"
                         >
                             판매하기 →
