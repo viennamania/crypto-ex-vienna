@@ -4407,26 +4407,53 @@ const fetchBuyOrders = async () => {
         ">
 
           <div className="w-full flex flex-row items-center justify-center gap-2">
-            <Image
-              src="/icon-escrow-wallet.webp"
-              alt="Escrow Wallet"
-              width={50}
-              height={50}
-              className="w-8 h-8"
-            />
-            <div className="text-lg font-semibold text-slate-200">
-              판매자 에스크로 지갑
+
+            {/* 홈으로 가기 svg icon button */}
+            <button
+              onClick={() => router.push('/index.html')}
+              className="flex items-center justify-center
+              bg-slate-700 text-sm text-slate-100 p-2 rounded-lg hover:bg-slate-600 border border-slate-600 shadow-md"
+              title="홈으로 가기"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </button>
+
+            <div className="w-full flex flex-col items-center justify-center gap-2">
+
+              <div className="w-full flex flex-row items-center justify-center gap-2">
+                <Image
+                  src="/icon-escrow-wallet.webp"
+                  alt="Escrow Wallet"
+                  width={50}
+                  height={50}
+                  className="w-8 h-8"
+                />
+                <div className="text-lg font-semibold text-slate-200">
+                  판매자 에스크로 지갑
+                </div>
+              </div>
+
+              <button
+                className="text-lg text-slate-400 underline"
+                onClick={() => {
+                  navigator.clipboard.writeText(sellerWalletAddress);
+                  toast.success(Copied_Wallet_Address);
+                } }
+              >
+                {sellerWalletAddress.substring(0, 6)}...{sellerWalletAddress.substring(sellerWalletAddress.length - 4)}
+              </button>
+
             </div>
+
           </div>
-          <button
-            className="text-lg text-slate-400 underline"
-            onClick={() => {
-              navigator.clipboard.writeText(sellerWalletAddress);
-              toast.success(Copied_Wallet_Address);
-            } }
-          >
-            {sellerWalletAddress.substring(0, 6)}...{sellerWalletAddress.substring(sellerWalletAddress.length - 4)}
-          </button>
+
 
         </div>
 
@@ -11808,6 +11835,8 @@ const fetchBuyOrders = async () => {
             />
         </ModalUser>
 
+        {/* Chat Widget - Bottom Left */}
+        <ChatWidget />
 
     </main>
 
@@ -11983,3 +12012,105 @@ const TradeDetail = (
 
 
 
+
+// Chat Widget Component
+const ChatWidget = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState<{text: string; sender: 'buyer' | 'seller'; timestamp: Date}[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
+
+  const sendMessage = () => {
+    if (inputMessage.trim()) {
+      setMessages([...messages, {
+        text: inputMessage,
+        sender: 'buyer', // 현재 사용자
+        timestamp: new Date()
+      }]);
+      setInputMessage('');
+    }
+  };
+
+  return (
+    <>
+      {/* Chat Toggle Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="fixed bottom-6 left-6 z-50 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-4 shadow-lg transition-all duration-300"
+      >
+        {isOpen ? (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        ) : (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        )}
+      </button>
+
+      {/* Chat Window */}
+      {isOpen && (
+        <div className="fixed bottom-24 left-6 z-50 w-96 h-[500px] bg-slate-800 border border-slate-600 rounded-lg shadow-2xl flex flex-col">
+          {/* Header */}
+          <div className="bg-slate-700 p-4 rounded-t-lg border-b border-slate-600">
+            <h3 className="text-white font-semibold">구매자 ↔ 판매자 대화</h3>
+            <p className="text-slate-300 text-sm">실시간 채팅</p>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {messages.length === 0 ? (
+              <div className="text-center text-slate-400 mt-8">
+                <p>아직 메시지가 없습니다.</p>
+                <p className="text-sm mt-2">대화를 시작해보세요!</p>
+              </div>
+            ) : (
+              messages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`flex ${msg.sender === 'buyer' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[70%] rounded-lg p-3 ${
+                      msg.sender === 'buyer'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-700 text-slate-100'
+                    }`}
+                  >
+                    <p className="text-sm">{msg.text}</p>
+                    <p className="text-xs mt-1 opacity-70">
+                      {msg.timestamp.toLocaleTimeString('ko-KR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Input */}
+          <div className="p-4 border-t border-slate-600">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                placeholder="메시지를 입력하세요..."
+                className="flex-1 bg-slate-700 text-white border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400"
+              />
+              <button
+                onClick={sendMessage}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                전송
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
