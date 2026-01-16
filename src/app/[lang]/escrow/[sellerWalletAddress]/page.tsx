@@ -222,6 +222,8 @@ if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
 
 export default function Index({ params }: any) {
 
+  const sellerWalletAddress = params.sellerWalletAddress;
+
   const searchParams = useSearchParams();
  
   ////////const wallet = searchParams.get('wallet');
@@ -3618,7 +3620,7 @@ const fetchBuyOrders = async () => {
         return a.seller?.usdtToKrwRate - b.seller?.usdtToKrwRate;
       });
       */
-
+    
       /*
       const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
         if (a.walletAddress === address) return -1;
@@ -3626,14 +3628,8 @@ const fetchBuyOrders = async () => {
         return b.totalPaymentConfirmedUsdtAmount - a.totalPaymentConfirmedUsdtAmount;
       });
       */
-      // remove walletAddress is a address from sortedSellers
-      const filteredSellers = sortedSellers.filter((seller: any) => seller.walletAddress !== address);
-      // sort filteredSellers by totalPaymentConfirmedUsdtAmount descending
-      filteredSellers.sort((a: any, b: any) => {
-        return b.totalPaymentConfirmedUsdtAmount - a.totalPaymentConfirmedUsdtAmount;
-      });
-
-
+     // find sellerWalletAddress
+      const mySeller = sortedSellers.find((seller: any) => seller.seller.escrowWalletAddress === sellerWalletAddress);
 
 
       /*
@@ -3653,7 +3649,10 @@ const fetchBuyOrders = async () => {
       
 
       //setSellersBalance(finalSortedSellers);
-      setSellersBalance(filteredSellers);
+      setSellersBalance([
+        ...(mySeller ? [mySeller] : [])
+      ]);
+
 
     } else {
       console.error('Error fetching sellers balance');
@@ -4186,50 +4185,6 @@ const fetchBuyOrders = async () => {
     
 
 
-
-
-    // customRate
-  const [customRate, setCustomRate] = useState<number | null>(null);
-
-  // placingCustomBuyOrder
-  const [placingCustomBuyOrder, setPlacingCustomBuyOrder] = useState(false);
-  const placeCustomBuyOrder = async () => {
-    if (!address) {
-      toast.error('지갑을 연결해주세요.');
-      return;
-    }
-    if (!customRate || customRate <= 0) {
-      toast.error('구매 환율을 입력해주세요.');
-      return;
-    }
-    setPlacingCustomBuyOrder(true);
-    const response = await fetch('/api/order/buyOrderCustomRate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        buyerWalletAddress: address,
-        usdtToKrwRate: customRate,
-      }),
-    });
-    const data = await response.json();
-    if (data.result) {
-      toast.success('맞춤형 구매 주문이 생성되었습니다.');
-      // refetch buy orders
-      fetchBuyOrders();
-    } else {
-      toast.error('맞춤형 구매 주문 생성에 실패했습니다: ' + data.message);
-    }
-    setPlacingCustomBuyOrder(false);
-  };
-
-
-
-
-
-
-
   //if (!address) {
   if (false) {
     return (
@@ -4294,11 +4249,6 @@ const fetchBuyOrders = async () => {
   }
 
 
-
-
-
-  
-
   if (address && loadingUser) {
     return (
       <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -4320,9 +4270,10 @@ const fetchBuyOrders = async () => {
 
 
 
+
   return (
 
-    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-slate-950">
+    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-slate-950">
 
       <AutoConnect
           client={client}
@@ -4437,255 +4388,38 @@ const fetchBuyOrders = async () => {
 
 
         <div className="w-full flex flex-col xl:flex-row items-center justify-center gap-2 bg-slate-800/90 border border-slate-700 p-2 rounded-lg mb-4 shadow-xl">
-            
-          <div className="w-full flex flex-row items-center justify-start gap-2">
-            <button
-              onClick={() => router.push('/' + params.lang + '/buyer/buyorder')}
-              className="flex items-center justify-center gap-2
-              rounded-lg p-2
-              hover:bg-slate-700/50
-              hover:cursor-pointer
-              hover:scale-105
-              transition-transform duration-200 ease-in-out"
 
-            >
-              <Image
-                src="/logo-orangex.png"
-                alt="logo"
-                width={100}
-                height={100}
-                className="w-24 h-8 object-contain"
-              />
-            </button>
-          </div>
-
-
-          {address && !loadingUser && (
-
-
-            <div className="w-full flex flex-col xl:flex-row items-center justify-end gap-2">
-              
-              <button
-                onClick={() => {
-                  router.push('/' + params.lang + '/administration/profile-settings');
-                }}
-                className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
-              >
-                <div className="flex flex-row items-center justify-center gap-2">
-                  {isAdmin && (
-                    <div className="flex flex-row items-center justify-center gap-2">
-                      <Image
-                        src="/icon-admin.png"
-                        alt="Admin"
-                        width={20}
-                        height={20}
-                        className="rounded-lg w-5 h-5"
-                      />
-                      <span className="text-sm text-slate-100">
-                        센터 관리자
-                      </span>
-                    </div>
-                  )}
-                  <span className="text-sm text-slate-100">
-                    {user?.nickname || "프로필"}
-                  </span>
-
-                </div>
-              </button>
-
-              {/* 구매자 설정 */}
-              {user?.buyer && (
-                <button
-                  onClick={() => {
-                    router.push('/' + params.lang + '/administration/buyer-settings');
-                  }}
-                  className="flex bg-slate-700 text-sm text-slate-100 px-4 py-2 rounded-lg hover:bg-slate-600 border border-slate-600 shadow-md"
-                >
-                  <div className="flex flex-row items-center justify-center gap-2">
-                    <Image
-                      src="/icon-buyer.png"
-                      alt="Buyer"
-                      width={20}
-                      height={20}
-                      className="rounded-lg w-5 h-5"
-                    />
-                    <span className="text-sm text-slate-100">
-                      구매자 설정
-                    </span>
-                  </div>
-                </button>
-              )}
-
-              {/* sellerSettings */}
-              {user?.seller && (
-                <button
-                  onClick={() => {
-                    router.push('/' + params.lang + '/administration/seller-settings');
-                  }}
-                  className="flex bg-slate-700 text-sm text-slate-100 px-4 py-2 rounded-lg hover:bg-slate-600 border border-slate-600 shadow-md"
-                >
-                  <div className="flex flex-row items-center justify-center gap-2">
-                    <Image
-                      src="/icon-seller.png"
-                      alt="Seller"
-                      width={20}
-                      height={20}
-                      className="rounded-lg w-5 h-5"
-                    />
-                    <span className="text-sm text-slate-100">
-                      판매자 설정
-                    </span>
-                  </div>
-                </button>
-              )}
-
-              {activeWallet && (
-
-                <button
-                  className="bg-red-500 hover:bg-red-600 text-sm text-white px-4 py-2 rounded-lg shadow-md" 
-                  onClick={() => {
-                    // Add your disconnect wallet logic here
-                    confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
-                    .then(() => {
-                      toast.success('로그아웃 되었습니다');
-                    });
-                    
-                  }}>
-                  지갑 연결 해제
-                </button>
-
-              )}
-
-
-              {/* opnew new window for admin dashboard */}
-              {/* https://payment.orangex.center/ko/administration/buyorder */}
-              {isAdmin && (
-                <button
-                  onClick={() => {
-                    window.open('https://payment.orangex.center/' + params.lang + '/administration/buyorder', '_blank');
-                  }}
-                  className="flex bg-slate-700 text-sm text-slate-100 px-4 py-2 rounded-lg hover:bg-slate-600 border border-slate-600 shadow-md"
-                >
-                  <div className="flex flex-row items-center justify-center gap-2">
-                    <Image
-                      src="/icon-dashboard.png"
-                      alt="Dashboard"
-                      width={20}
-                      height={20}
-                      className="rounded-lg w-5 h-5"
-                    />
-                    <span className="text-sm text-slate-100">
-                      관리자 대시보드
-                    </span>
-                  </div>
-                </button>
-              )}
-
-            </div>
-
-          )}
-
-
-          {/*!address && (
-            <ConnectButton
-
-              accountAbstraction={{
-                chain: chain === "ethereum" ? ethereum :
-                        chain === "polygon" ? polygon :
-                        chain === "arbitrum" ? arbitrum :
-                        chain === "bsc" ? bsc : arbitrum,
-                sponsorGas: false
-              }}
-
-              client={client}
-              wallets={wallets}
-
-              chain={chain === "ethereum" ? ethereum :
-                      chain === "polygon" ? polygon :
-                      chain === "arbitrum" ? arbitrum :
-                      chain === "bsc" ? bsc : arbitrum}
-              
-              theme={"light"}
-
-              // button color is dark skyblue convert (49, 103, 180) to hex
-              connectButton={{
-                style: {
-                  backgroundColor: "#0047ab", // cobalt blue
-
-                  color: "#f3f4f6", // gray-300 
-                  padding: "2px 2px",
-                  borderRadius: "10px",
-                  fontSize: "14px",
-                  //width: "40px",
-                  height: "38px",
-                },
-                label: "웹3 로그인",
-              }}
-
-              connectModal={{
-                size: "wide", 
-                //size: "compact",
-                titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
-                showThirdwebBranding: false,
-              }}
-
-              locale={"ko_KR"}
-              //locale={"en_US"}
-            />
-
-          )*/}
-
-
-
+          <h1 className="text-2xl font-bold text-slate-100">
+            판매자 에스크로 지갑 {sellerWalletAddress.substring(0, 6)}...{sellerWalletAddress.substring(sellerWalletAddress.length - 4)}
+          </h1>
 
         </div>
 
 
 
-        <div className="flex flex-col items-start justify-center gap-2 mt-4">
+        <div className="w-full flex flex-col items-start justify-center gap-2 mt-4">
 
-
-          <div className="w-full flex flex-row items-between justify-between xl:justify-start gap-2">
-       
+            {/* 돌아가기 버튼 */}
+            {/* /ko/seller/buyorder */}
+            {/*
             <button
-              onClick={() => {
-                router.push('/' + params.lang + '/seller/buyorder');
-              }}
-              className="flex bg-gray-600 text-sm text-white px-4 py-2 rounded-lg hover:bg-gray-700 shadow-md"
+              onClick={() => router.push('/' + params.lang + '/seller/buyorder')}
+              className="flex items-center justify-center gap-2
+              bg-slate-700 text-sm text-slate-100 px-4 py-2 rounded-lg hover:bg-slate-600 border border-slate-600 shadow-md mb-4"
             >
-              <div className="flex flex-row items-center justify-center gap-2">
-                <Image
-                  src="/icon-sell-label-color.png"
-                  alt="Sell"
-                  width={50}
-                  height={50}
-                  className="w-10 h-10"
-                />
-                <span className="text-sm text-white">
-                  판매하기
-                </span>
-              </div>
+              <svg xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="text-sm text-slate-100">
+                뒤로가기
+              </span>
             </button>
-
-            <div
-              className="flex bg-blue-600 text-sm text-white px-4 py-2 rounded-lg shadow-md"
-            >
-              <div className="flex flex-row items-center justify-center gap-2">
-                <Image
-                  src="/icon-buy-label-color.png"
-                  alt="Buy"
-                  width={50}
-                  height={50}
-                  className="w-10 h-10"
-                />
-                <span className="text-sm text-white">
-                  구매하기
-                </span>
-              </div>
-            </div>
-
-          </div>
-
+            */}
 
 
           {/* USDT 가격 binance market price */}
@@ -5283,7 +5017,7 @@ const fetchBuyOrders = async () => {
 
           
           
-          <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-4
+          <div className="w-full flex flex-col items-center justify-between gap-4
           border-t border-b border-zinc-300
           py-4
           ">
@@ -5293,7 +5027,7 @@ const fetchBuyOrders = async () => {
                 alt="Market"
                 width={50}
                 height={50}
-                className="w-16 h-16 rounded-lg object-cover"
+                className="w-8 h-8 rounded-lg object-cover"
               />
               <span className="text-lg font-bold text-slate-200">
                 실시간 환율 정보
@@ -5307,7 +5041,7 @@ const fetchBuyOrders = async () => {
               />
             </div>
 
-            <div className="w-full flex flex-col xl:flex-row items-center justify-end gap-4"> 
+            <div className="w-full flex flex-row items-center justify-end gap-4"> 
 
               {/* animatedUpbitUsdtToKrwRate */}
               {/* logo-upbit.jpg */}
@@ -5321,7 +5055,7 @@ const fetchBuyOrders = async () => {
                   alt="Upbit"
                   width={50}
                   height={50}
-                  className="w-12 h-12 object-cover"
+                  className="w-8 h-8 object-cover"
                 />
                 
                 <div className="w-full flex flex-col items-end justify-center">
@@ -5389,7 +5123,7 @@ const fetchBuyOrders = async () => {
                   alt="Bithumb"
                   width={50}
                   height={50}
-                  className="w-12 h-12 object-cover"
+                  className="w-8 h-8 object-cover"
                 />
                 <div className="w-full flex flex-col items-end justify-center">
 
@@ -5453,7 +5187,7 @@ const fetchBuyOrders = async () => {
                   alt="Korbit"
                   width={50}
                   height={50}
-                  className="w-12 h-12 object-cover"
+                  className="w-8 h-8 object-cover"
                 />
                 <div className="w-full flex flex-col items-end justify-center">
 
@@ -5519,168 +5253,8 @@ const fetchBuyOrders = async () => {
           py-4
           ">
 
-            <div className="w-full flex flex-col xl:flex-row items-between justify-between gap-2">
-              {/* title - 판매주문 */}
-              <div className="flex flex-row items-center justify-start gap-2">
-                <Image
-                  src="/icon-sale.png"
-                  alt="Sale"
-                  width={50}
-                  height={50}
-                  className="w-16 h-16 rounded-lg object-cover"
-                />
-                <h2 className="text-lg font-bold text-slate-200">
-                  판매 주문 현황
-                </h2>
-              </div>
-
-              {/* subtitle - 판매자 수: sellersBalance.length, 총 USDT 잔액: sum of sellersBalance.currentUsdtBalance */}
-              
-              <div className="flex flex-col xl:flex-row items-center justify-center gap-2">
-
-                <div className="flex flex-col gap-2 items-center">
-                  <div className="
-                    bg-orange-900/40
-                    px-2 py-1 rounded-full
-                    text-sm font-semibold text-orange-300
-                    border border-orange-700
-                  ">
-                    {/* dot before */}
-                    <div className="inline-block w-2 h-2 bg-orange-300 rounded-full mr-2"></div>
-                    <span className="align-middle">
-                      판매자수(명)
-                    </span>
-                  </div>
-                  <div className="flex flex-row items-center justify-center gap-1">
-                    <span className="text-4xl text-orange-300"
-                      style={{ fontFamily: 'monospace' }}>
-                      {
-                        sellersBalance.length.toLocaleString()
-                      }
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 items-center">
-                  <div className="
-                    bg-slate-700/70
-                    px-2 py-1 rounded-full
-                    text-sm font-semibold text-slate-200
-                    border border-slate-600
-                  ">
-                    {/* dot before */}
-                    <div className="inline-block w-2 h-2 bg-emerald-400 rounded-full mr-2"></div>
-                    <span className="align-middle">
-                      에스크로 총량(USDT)
-                    </span>
-                  </div>
-                  <div className="flex flex-row items-center justify-center gap-1">
-                    <Image
-                      src="/icon-tether.png"
-                      alt="Tether"
-                      width={20}
-                      height={20}
-                      className="w-5 h-5"
-                    />
-                    {/* RGB: 64, 145, 146 */}
-                    <span className="text-4xl text-[#409192]"
-                      style={{ fontFamily: 'monospace' }}>
-                      {
-                        // sum of sellersBalance.currentUsdtBalance
-                       // sellersBalance.reduce((acc, seller) => acc + seller.currentUsdtBalance, 0).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-
-                        animatedTotalUsdtBalance.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                      }
-                    </span>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-
-
-            {/* 지정가로 구매주문하기 */}
-            <div className="w-full flex flex-col items-center justify-center">
-              {/* 지정가 입력창 */}
-              <div className="w-full max-w-md
-              flex flex-col items-center justify-center gap-2
-              bg-slate-900/80
-              p-4 rounded-lg shadow-xl
-              backdrop-blur-md
-              border border-slate-700
-              ">
-                <h3 className="text-md font-bold text-slate-200">
-                  지정가로 구매주문하기
-                </h3>
-                {/* 설명: 지정가로 구매주문하면 판매자중에서 가장 유리한 환율을 제시한 판매자와 매칭됩니다. */}
-                <p className="text-sm text-slate-400 text-center">
-                  지정가로 구매주문하면 판매자중에서 가장 유리한 환율을 제시한 판매자와 매칭됩니다.
-                </p>
-                <div className="w-full flex flex-col items-center justify-center gap-2">
-
-                  <input
-                    type="number"
-                    min="1"
-                    
-                    //value={customRate}
-                    value ={customRate && customRate > 0 ? customRate : ''}
-
-                    onChange={(e) => setCustomRate(Number(e.target.value))}
-                    placeholder="지정가(원/USDT)를 입력하세요"
-                    className="w-full
-                    bg-slate-800/90
-                    text-slate-200
-                    placeholder-slate-500
-                    px-4 py-2
-                    rounded-lg
-                    border border-slate-600
-                    focus:outline-none focus:ring-2 focus:ring-blue-500
-                    "
-                  />
-                  
-                  <button
-                    disabled={placingCustomBuyOrder}
-                    className={`
-                      ${placingCustomBuyOrder
-                      ? 'text-gray-400 cursor-not-allowed'
-                      : 'text-white hover:text-white hover:shadow-blue-500/50 cursor-pointer'
-                      } bg-blue-600 hover:bg-blue-700
-                      px-4 py-2 rounded-lg
-                      shadow-lg
-                      `}
-                    onClick={() => {
-                      // place custom buy order
-                      placeCustomBuyOrder();
-                    }}
-                  >
-                    <div className="flex flex-row gap-2 items-center justify-center">
-                      { placingCustomBuyOrder && (
-                          <Image
-                            src="/loading.png"
-                            alt="Loading"
-                            width={20}
-                            height={20}
-                            className="w-5 h-5
-                            animate-spin"
-                          />
-                      )}
-                      <span className="text-md font-semibold">
-                        구매주문하기
-                      </span>
-                    </div>
-
-                  </button>
-
-                </div>
-              </div>
-            </div>
-            
-
-
-
             {sellersBalance.length > 0 && (
-              <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+              <div className="w-full flex flex-col items-center justify-center gap-4">
 
                 {sellersBalance.map((seller, index) => (
                   <div key={index}
@@ -6383,6 +5957,41 @@ const fetchBuyOrders = async () => {
                                 </span>
                               </div>
 
+                              {seller.walletAddress === address && (
+                                <div className="w-28 flex flex-col items-center justify-center gap-1">
+                                  {/* 충전금액 입력 */}
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    placeholder="충전금액"
+                                    className="w-full bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-1 text-xs text-center
+                                    focus:outline-none focus:ring-2 focus:ring-blue-500
+                                    "
+                                  />
+
+                                  {/* 충전하기 버튼 */}
+                                  <button
+                                    onClick={() => {
+                                      /*
+                                      const inputElement = document.querySelectorAll('input')[index];
+                                      const amount = Number(inputElement.value);
+                                      if (amount >= 1) {
+                                        router.push('/' + params.lang + '/seller/deposit-usdt?amount=' + amount);
+                                      } else {
+                                        toast.error('충전금액은 1 USDT 이상이어야 합니다.');
+                                      }
+                                      */
+                                    }}
+                                    className="w-full text-xs text-white bg-blue-700 hover:bg-blue-600 px-2 py-1 rounded-lg
+                                    shadow-md hover:shadow-blue-500/50
+                                    border border-blue-600
+                                    "
+                                  >
+                                    충전하기
+                                  </button>
+                                </div>
+                              )}
+
                             </div>
 
                             {/* if balance is less than 10 USDT, show warning */}
@@ -6525,14 +6134,13 @@ const fetchBuyOrders = async () => {
                               className="w-5 h-5 animate-spin"
                             />
                             <div className="flex flex-col items-start justify-center gap-0">
-
+                              
                               {seller.walletAddress === address && (
                                 <span className="text-sm font-semibold">
                                   {'구매자가 ' +
                                   seller.seller?.buyOrder.krwAmount.toLocaleString() + ' 원 입금을 진행중입니다.'}
                                 </span>
                               )}
-
                               {seller.seller?.buyOrder?.buyer?.walletAddress === address && (
                                 <span className="text-sm font-semibold">
                                   {'판매자가 ' +
@@ -7070,6 +6678,55 @@ const fetchBuyOrders = async () => {
                                 
                               </div>
 
+                              {/* 입력창 */}
+                              {/* 수정하기 버튼 */}
+                              {seller.walletAddress === address && (
+                                <div className="w-full flex flex-col items-start justify-center gap-1">
+                                  <input
+                                    type="text"
+                                    className="w-full border border-slate-600 bg-slate-700 text-slate-200 rounded-lg p-2 text-xs
+                                    placeholder:text-slate-400
+                                    focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="판매 홍보용 문구를 입력하세요."
+                                    value={promotionText}
+                                    onChange={(e) => {
+                                        setPromotionText(e.target.value);
+                                    }}
+                                  />
+                                  <button
+                                    disabled={updatingPromotionText}
+                                    onClick={updatePromotionText}
+                                    className={`
+                                        ${updatingPromotionText 
+                                          ? 'bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600' 
+                                          : 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg hover:shadow-emerald-500/50 border-0 transform hover:scale-105 active:scale-95'
+                                        }
+                                        p-2 rounded-lg text-xs w-full font-semibold
+                                        transition-all duration-200 ease-in-out
+                                    `}
+                                  >
+                                    <span className="flex items-center justify-center gap-2">
+                                      {updatingPromotionText ? (
+                                        <>
+                                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                          </svg>
+                                          수정중...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                          </svg>
+                                          수정하기
+                                        </>
+                                      )}
+                                    </span>
+                                  </button>
+                                </div>
+                              )}
+
                             </div>
 
                           ) : (
@@ -7192,8 +6849,6 @@ const fetchBuyOrders = async () => {
                             </div>
 
                           </div>
-
-
 
 
 
@@ -7375,16 +7030,12 @@ const fetchBuyOrders = async () => {
                               </div>
 
 
-                              {/* 구매주문 취소하기 버튼 */}
+                              {/* 구매주문취소 버튼 */}
                               <div className="w-full flex flex-col items-start justify-center gap-1
                               border-t border-slate-600 pt-2
                               ">
                                 <span className="text-sm font-semibold text-slate-200">
                                   입금하기전에 구매주문을 취소하시려면 아래 버튼을 눌러주세요.
-                                </span>
-                                {/* 구매주문을 취소하면 구매자의 평가가 하락할 수 있습니다. */}
-                                <span className="text-sm text-slate-400">
-                                  구매주문을 취소하면 구매자의 평가가 하락할 수 있습니다.
                                 </span>
                                 <button
                                   onClick={() => {
@@ -7399,17 +7050,11 @@ const fetchBuyOrders = async () => {
                                     ? 'bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600'
                                     : 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white shadow-lg hover:shadow-red-500/50 border-0 transform hover:scale-105 active:scale-95'
                                     }
-                                    px-3 py-1 rounded-lg text-xs font-semibold
+                                    px-3 py-1 rounded-lg text-xs font-semibold w-full
                                     transition-all duration-200 ease-in-out
-                                    w-full flex flex-row items-center justify-center gap-2
                                   `}
                                 >
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L10 10.586 7.707 8.293a1 1 0 00-1.414 1.414l2.999 2.999a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                  </svg>
-                                  <span>
-                                    {cancellingBuyOrders[index] ? '구매주문 취소 처리중...' : '구매주문 취소하기'}
-                                  </span>
+                                  {cancellingBuyOrders[index] ? '구매주문취소 처리중...' : '구매주문취소'}
                                 </button>
                               </div>
 
@@ -8731,9 +8376,6 @@ const fetchBuyOrders = async () => {
                                       animate-spin"
                                     />
                                   )}
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L10 10.586 7.707 8.293a1 1 0 00-1.414 1.414l2.999 2.999a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                  </svg>
                                   <span className="text-sm">
                                     취소하기
                                   </span>
