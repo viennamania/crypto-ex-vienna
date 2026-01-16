@@ -5632,12 +5632,12 @@ const fetchBuyOrders = async () => {
                             <span className="text-sm font-semibold">
                               나의 판매자계정
                             </span>
-                            {/* goto /seller/[sellerWalletAddress] on click */}
+                          
                             {/* setting image icon */}
                             <button
                               title="나의 판매자계정으로 이동"
                               onClick={() => {
-                                router.push(`/seller/${seller.seller.escrowWalletAddress}`);
+                                router.push('/' + params.lang + '/administration/seller-settings');
                               }}
                               className="flex flex-row items-center justify-center gap-1
                               bg-slate-800 hover:bg-slate-700 text-slate-200
