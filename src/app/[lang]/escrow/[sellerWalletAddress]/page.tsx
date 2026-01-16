@@ -6925,7 +6925,7 @@ const fetchBuyOrders = async () => {
                               ">
                               <div className="w-full flex flex-col items-start justify-center gap-2">
                                 
-                                {buyAmountInputs[index] > 0 ? (
+                                {false ? (
                                   <div className="flex flex-col items-start justify-center gap-1 w-full">
                                     {/* buyAmount */}
                                     <span className="text-sm text-slate-400">
@@ -6938,12 +6938,21 @@ const fetchBuyOrders = async () => {
                                       type="number"
                                       min={1}
                                       placeholder="구해할 USDT 수량"
+                                      /*
                                       value={buyAmountInputs[index] || ''}
                                       onChange={(e) => {
                                         const newBuyAmountInputs = [...buyAmountInputs];
                                         newBuyAmountInputs[index] = Number(e.target.value);
                                         setBuyAmountInputs(newBuyAmountInputs);
                                       }}
+                                      */
+                                      onChange={(e) => {
+                                        const newBuyAmountInputs = [...buyAmountInputs];
+                                        newBuyAmountInputs[index] = Math.floor(Number(e.target.value));
+                                        setBuyAmountInputs(newBuyAmountInputs);
+                                      }}
+                                      value={buyAmountInputs[index] || ''}
+
                                       className={`
                                         ${address
                                         && user?.buyer?.bankInfo
