@@ -4387,11 +4387,35 @@ const fetchBuyOrders = async () => {
       <div className="py-0 w-full">
 
 
-        <div className="w-full flex flex-col xl:flex-row items-center justify-center gap-2 bg-slate-800/90 border border-slate-700 p-2 rounded-lg mb-4 shadow-xl">
+        <div className="w-full flex flex-col items-center justify-center gap-2 mb-4
+        p-4
+        bg-slate-800/50
+        border border-slate-700
+        rounded-lg
+        shadow-md
+        ">
 
-          <h1 className="text-2xl font-bold text-slate-100">
-            판매자 에스크로 지갑 {sellerWalletAddress.substring(0, 6)}...{sellerWalletAddress.substring(sellerWalletAddress.length - 4)}
-          </h1>
+          <div className="w-full flex flex-row items-center justify-center gap-2">
+            <Image
+              src="/icon-escrow-wallet.png"
+              alt="Escrow Wallet"
+              width={50}
+              height={50}
+              className="w-8 h-8"
+            />
+            <div className="text-lg font-semibold text-slate-200">
+              판매자 에스크로 지갑
+            </div>
+          </div>
+          <button
+            className="text-lg text-slate-400 underline"
+            onClick={() => {
+              navigator.clipboard.writeText(sellerWalletAddress);
+              toast.success(Copied_Wallet_Address);
+            } }
+          >
+            {sellerWalletAddress.substring(0, 6)}...{sellerWalletAddress.substring(sellerWalletAddress.length - 4)}
+          </button>
 
         </div>
 

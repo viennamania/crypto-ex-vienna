@@ -4379,23 +4379,39 @@ const fetchBuyOrders = async () => {
         */}
 
 
-
-
-
-
-
       <div className="py-0 w-full">
 
+        <div className="w-full flex flex-col items-center justify-center gap-2 mb-4
+        p-4
+        bg-slate-800/50
+        border border-slate-700
+        rounded-lg
+        shadow-md
+        ">
 
-        <div className="w-full flex flex-col xl:flex-row items-center justify-center gap-2 bg-slate-800/90 border border-slate-700 p-2 rounded-lg mb-4 shadow-xl">
-
-          <h1 className="text-2xl font-bold text-slate-100">
-            판매자 에스크로 지갑 {sellerWalletAddress.substring(0, 6)}...{sellerWalletAddress.substring(sellerWalletAddress.length - 4)}
-          </h1>
+          <div className="w-full flex flex-row items-center justify-center gap-2">
+            <Image
+              src="/icon-escrow-wallet.webp"
+              alt="Escrow Wallet"
+              width={50}
+              height={50}
+              className="w-8 h-8"
+            />
+            <div className="text-lg font-semibold text-slate-200">
+              판매자 에스크로 지갑
+            </div>
+          </div>
+          <button
+            className="text-lg text-slate-400 underline"
+            onClick={() => {
+              navigator.clipboard.writeText(sellerWalletAddress);
+              toast.success(Copied_Wallet_Address);
+            } }
+          >
+            {sellerWalletAddress.substring(0, 6)}...{sellerWalletAddress.substring(sellerWalletAddress.length - 4)}
+          </button>
 
         </div>
-
-
 
         <div className="w-full flex flex-col items-start justify-center gap-2 mt-4">
 
@@ -4614,39 +4630,34 @@ const fetchBuyOrders = async () => {
           py-4
           ">
 
-            <div className="w-full flex flex-col xl:flex-row items-center justify-start gap-2">
-              <Image
-                src="/icon-today.png"
-                alt="Today"
-                width={50}
-                height={50}
-                className="w-16 h-16 rounded-lg object-cover"
-              />
+            <div className="w-full flex flex-col items-center justify-start gap-2">
 
-              <div className="flex flex-col gap-2 items-center">
-                {/* background color is 파스텔 오렌지  */}
-                <div className="
-                  bg-orange-900/40
-                  px-2 py-1 rounded-full
-                  text-sm font-semibold text-orange-300
-                  border border-orange-700
-                "
-                >
-                  {/* dot before */}
-                  <div className="inline-block w-2 h-2 bg-orange-300 rounded-full mr-2"></div>
-                  <span className="align-middle">
-                    거래수(건)
-                  </span>
-                </div>
-                <div className="text-4xl font-semibold text-slate-200">
-                  {
-                    //buyOrderStats.totalCount?.toLocaleString()
-                    animatedTotalCount
-                  }
+              <div className="w-full flex flex-row items-center justify-center gap-2">              
+                <div className="flex flex-col gap-2 items-center">
+                  {/* background color is 파스텔 오렌지  */}
+                  <div className="
+                    bg-orange-900/40
+                    px-2 py-1 rounded-full
+                    text-sm font-semibold text-orange-300
+                    border border-orange-700
+                  "
+                  >
+                    {/* dot before */}
+                    <div className="inline-block w-2 h-2 bg-orange-300 rounded-full mr-2"></div>
+                    <span className="align-middle">
+                      거래수(건)
+                    </span>
+                  </div>
+                  <div className="text-4xl font-semibold text-slate-200">
+                    {
+                      //buyOrderStats.totalCount?.toLocaleString()
+                      animatedTotalCount
+                    }
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-col xl:flex-row items-center justify-center gap-2">
+              <div className="flex flex-row items-center justify-center gap-2">
 
                 <div className="flex flex-col gap-2 items-center">
                   <div className="
@@ -5050,15 +5061,18 @@ const fetchBuyOrders = async () => {
               {/* upbitUsdtToKrwRateTimestamp - convert to local time */}
               <div className="w-64   
                 flex flex-row items-center justify-between gap-2 p-2">
-                <Image
-                  src="/icon-market-upbit.png"
-                  alt="Upbit"
-                  width={50}
-                  height={50}
-                  className="w-8 h-8 object-cover"
-                />
+                
+                
+
                 
                 <div className="w-full flex flex-col items-end justify-center">
+                  <Image
+                    src="/icon-market-upbit.png"
+                    alt="Upbit"
+                    width={50}
+                    height={50}
+                    className="w-8 h-8 object-cover"
+                  />
 
                   <span className="text-2xl text-slate-200 font-semibold"
                     style={{ fontFamily: 'monospace' }}>
@@ -5118,15 +5132,15 @@ const fetchBuyOrders = async () => {
               {/* bithumb usdt to krw rate display */}
               <div className="w-64
                 flex flex-row items-center justify-between gap-2 p-2">
-                <Image
-                  src="/icon-market-bithumb.png"
-                  alt="Bithumb"
-                  width={50}
-                  height={50}
-                  className="w-8 h-8 object-cover"
-                />
-                <div className="w-full flex flex-col items-end justify-center">
 
+                <div className="w-full flex flex-col items-end justify-center">
+                  <Image
+                    src="/icon-market-bithumb.png"
+                    alt="Bithumb"
+                    width={50}
+                    height={50}
+                    className="w-8 h-8 object-cover"
+                  />
                   <span className="text-2xl text-slate-200 font-semibold"
                     style={{ fontFamily: 'monospace' }}>
                       {animatedBithumbUsdtToKrwRate && animatedBithumbUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
@@ -5182,15 +5196,15 @@ const fetchBuyOrders = async () => {
 
               <div className="w-64
                 flex flex-row items-center justify-between gap-2 p-2">
-                <Image
-                  src="/icon-market-korbit.png"
-                  alt="Korbit"
-                  width={50}
-                  height={50}
-                  className="w-8 h-8 object-cover"
-                />
-                <div className="w-full flex flex-col items-end justify-center">
 
+                <div className="w-full flex flex-col items-end justify-center">
+                  <Image
+                    src="/icon-market-korbit.png"
+                    alt="Korbit"
+                    width={50}
+                    height={50}
+                    className="w-8 h-8 object-cover"
+                  />
                   <span className="text-2xl text-slate-200 font-semibold"
                     style={{ fontFamily: 'monospace' }}>
                       {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
