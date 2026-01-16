@@ -5777,11 +5777,11 @@ const fetchBuyOrders = async () => {
                           <div className="w-full flex flex-row items-center justify-start gap-2">
 
                             <div className="w-full flex flex-row items-center justify-between gap-2">
-                              <span className="text-sm text-white font-semibold">
+                              <span className="text-sm text-white font-semibold mr-2">
                                 판매<br/>금액
                               </span>
 
-                              <span className="text-2xl font-semibold text-amber-400"
+                              <span className="text-2xl font-semibold text-amber-400 mr-2"
                                 style={{ fontFamily: 'monospace' }}>
                                 {
                                 //seller.seller?.usdtToKrwRate.toLocaleString()
