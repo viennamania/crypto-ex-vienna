@@ -154,7 +154,7 @@ export default function RootLayout({
 
             {/* fixed position vertically top */}
             <div className="
-              hidden
+              flex
               fixed top-2 right-2 z-50 flex-col items-end justify-center">
 
 
