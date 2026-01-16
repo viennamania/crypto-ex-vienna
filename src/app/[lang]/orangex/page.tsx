@@ -519,16 +519,25 @@ export default function OrangeXPage() {
                     </div>
                 </div>
 
-                <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-6 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
+                {/* 스크롤 배너 섹션 */}
+                {/*
+                <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-6 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur overflow-x-hidden">
+                    
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                         <div>
-                            <h2 className="font-[var(--font-display)] text-2xl text-slate-900">제휴 배너</h2>
+                            <div className="flex items-center gap-3">
+                                <span className="inline-flex items-center gap-2 rounded-full border border-amber-200/70 bg-[linear-gradient(135deg,#fff7ed,#fde68a)] px-3 py-1 text-xs font-semibold uppercase leading-none tracking-[0.2em] text-amber-900 shadow-[0_10px_25px_-18px_rgba(217,119,6,0.8)]">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                    Partner
+                                </span>
+                                <h2 className="font-[var(--font-display)] text-2xl text-slate-900">제휴 배너</h2>
+                            </div>
                             <p className="text-sm text-slate-600">좌우로 스와이프하여 확인하세요</p>
                         </div>
                         <span className="text-xs font-semibold text-slate-500">USDT 파트너</span>
                     </div>
                     <div
-                        className="banner-scroll flex gap-4 overflow-x-auto pb-3 pt-1 snap-x snap-mandatory touch-pan-x"
+                        className="banner-scroll flex w-full max-w-full min-w-0 gap-4 overflow-x-auto pb-3 pt-1 snap-x snap-mandatory overscroll-x-contain"
                         aria-label="제휴 배너 스크롤"
                     >
                         {SCROLL_BANNER_ADS.map((ad) => (
@@ -540,11 +549,11 @@ export default function OrangeXPage() {
                                 rel="noreferrer"
                                 aria-label={ad.title}
                             >
-                                <div className="relative h-32 w-64 overflow-hidden rounded-2xl shadow-[0_18px_40px_-30px_rgba(15,23,42,0.6)]">
-                                    <Image
-                                        src={ad.image}
-                                        alt={ad.title}
-                                        fill
+                            <div className="relative w-[70vw] max-w-[240px] aspect-[2/1] overflow-hidden rounded-2xl shadow-[0_18px_40px_-30px_rgba(15,23,42,0.6)] sm:w-60 md:max-w-none md:w-72">
+                                <Image
+                                    src={ad.image}
+                                    alt={ad.title}
+                                    fill
                                         sizes="256px"
                                         className="object-cover"
                                     />
@@ -552,8 +561,12 @@ export default function OrangeXPage() {
                             </a>
                         ))}
                     </div>
-                </div>
 
+                </div>
+                */}
+
+
+                {/* 통계 섹션 */}
                 <div className="grid gap-6 mb-12 md:grid-cols-2">
                     {STAT_ITEMS.map((item, index) => {
                         const style = STAT_CARD_STYLES[index % STAT_CARD_STYLES.length];
@@ -579,7 +592,13 @@ export default function OrangeXPage() {
                 <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
-                            <h2 className="font-[var(--font-display)] text-3xl text-slate-900">USDT/KRW 실시간 시세</h2>
+                            <div className="flex items-center gap-3">
+                                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200/70 bg-[linear-gradient(135deg,#ecfeff,#d1fae5)] px-3 py-1 text-xs font-semibold uppercase leading-none tracking-[0.2em] text-emerald-900 shadow-[0_10px_25px_-18px_rgba(16,185,129,0.8)]">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                    Live
+                                </span>
+                                <h2 className="font-[var(--font-display)] text-3xl text-slate-900">USDT/KRW 실시간 시세</h2>
+                            </div>
                             <p className="text-sm text-slate-600">업비트 · 빗썸 · 코빗 기준</p>
                         </div>
                         <div className="flex items-center gap-3 text-xs font-semibold text-slate-500">
@@ -637,7 +656,13 @@ export default function OrangeXPage() {
                 <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
-                            <h2 className="font-[var(--font-display)] text-3xl text-slate-900">최근 거래내역</h2>
+                            <div className="flex items-center gap-3">
+                                <span className="inline-flex items-center gap-2 rounded-full border border-sky-200/70 bg-[linear-gradient(135deg,#eff6ff,#e0f2fe)] px-3 py-1 text-xs font-semibold uppercase leading-none tracking-[0.2em] text-sky-900 shadow-[0_10px_25px_-18px_rgba(14,165,233,0.8)]">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
+                                    Feed
+                                </span>
+                                <h2 className="font-[var(--font-display)] text-3xl text-slate-900">최근 거래내역</h2>
+                            </div>
                             <p className="text-sm text-slate-600">최근 10건이 순환 표시됩니다</p>
                         </div>
                         <div className="flex items-center gap-4 text-xs font-semibold text-slate-500">
