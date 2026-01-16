@@ -1025,7 +1025,7 @@ export default function Index({ params }: any) {
 
 
   {/*
-  {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo-orangex.png","storeBanner":"https://test.com/banner.png"}
+  {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo.png","storeBanner":"https://test.com/banner.png"}
   */}
 
   // insert buyer user
@@ -1307,7 +1307,7 @@ export default function Index({ params }: any) {
 
              >
                 <Image
-                  src={agent?.agentLogo || "/logo-orangex.png"}
+                  src={agent?.agentLogo || "/logo.png"}
                   alt="logo"
                   width={35}
                   height={35}
@@ -1401,7 +1401,7 @@ export default function Index({ params }: any) {
               connectModal={{
                 size: "wide", 
                 //size: "compact",
-                titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
+                titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
                 showThirdwebBranding: false,
               }}
 
@@ -1739,7 +1739,7 @@ export default function Index({ params }: any) {
 
 
               {/*
-              {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo-orangex.png","storeBanner":"https://test.com/banner.png"}
+              {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo.png","storeBanner":"https://test.com/banner.png"}
               */}
 
               {/* table view is horizontal scroll */}

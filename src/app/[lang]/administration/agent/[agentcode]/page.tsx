@@ -1255,7 +1255,7 @@ export default function Index({ params }: any) {
 
 
   {/*
-  {"agentcode":"testagentcode","agentName":"테스트상점","agentType":"test","agentUrl":"https://test.com","agentDescription":"설명입니다.","agentLogo":"https://test.com/logo-orangex.png","agentBanner":"https://test.com/banner.png"}
+  {"agentcode":"testagentcode","agentName":"테스트상점","agentType":"test","agentUrl":"https://test.com","agentDescription":"설명입니다.","agentLogo":"https://test.com/logo.png","agentBanner":"https://test.com/banner.png"}
   */}
 
 
@@ -1477,7 +1477,7 @@ export default function Index({ params }: any) {
 
                       <td className="px-4 py-2 border">
                         <Image
-                          src={agent.agentLogo || "/logo-orangex.png"}
+                          src={agent.agentLogo || "/logo.png"}
                           alt="Agent Logo"
                           width={50}
                           height={50}
@@ -1551,7 +1551,7 @@ export default function Index({ params }: any) {
               <div className="w-full flex flex-row items-center justify-start gap-2">
                 <div className="flex flex-row items-center justify-start gap-2">
                   <Image
-                    src={agent?.agentLogo || "/logo-orangex.png"}
+                    src={agent?.agentLogo || "/logo.png"}
                     alt="logo"
                     width={50}
                     height={50}
@@ -1729,7 +1729,7 @@ export default function Index({ params }: any) {
 
             <div className="w-full flex flex-row items-center justify-start gap-2">
               <Image
-                src={agent?.agentLogo || "/logo-orangex.png"}
+                src={agent?.agentLogo || "/logo.png"}
                 alt="logo"
                 width={50}
                 height={50}
@@ -1839,7 +1839,7 @@ export default function Index({ params }: any) {
               
             <div className="w-full flex flex-row items-center justify-start gap-2">
               <Image
-                src={agent?.agentLogo || "/logo-orangex.png"}
+                src={agent?.agentLogo || "/logo.png"}
                 alt="logo"
                 width={50}
                 height={50}

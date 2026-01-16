@@ -975,7 +975,7 @@ export default function SettingsPage({ params }: any) {
                             connectModal={{
                                 size: "wide", 
                                 //size: "compact",
-                                titleIcon: "https://loot.menu/logo-orangex.png",                           
+                                titleIcon: "https://loot.menu/logo.png",                           
                                 showThirdwebBranding: false,
                             }}
 

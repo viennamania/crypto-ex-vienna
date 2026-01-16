@@ -1457,7 +1457,7 @@ export default function Index({ params }: any) {
                   connectModal={{
                     size: "wide", 
                     //size: "compact",
-                    titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
+                    titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
                     showThirdwebBranding: false,
                   }}
 

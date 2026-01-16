@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
           agentUrl: 'https://test.com',
           agentDescription: '테스트입니다.',
           agentLogo: 'https://vzrcy5vcsuuocnf3.public.blob.vercel-storage.com/iK9vg4m-tQ1U5qPHkmoG3iPyendGrLbLz4jflx.png',
-          agentBanner: 'https://crypto-ex-vienna.vercel.app/logo-orangex.png',
+          agentBanner: 'https://crypto-ex-vienna.vercel.app/logo.png',
           createdAt: '2025-05-23T16:59:17.883Z',
           adminWalletAddress: '0x880c0E9B2C388a4365c9ba145Cf3355D889731E1',
           agentFeeWalletAddress: '0x80bBe3A61124339780E90e8eB2BF58F26e189312',

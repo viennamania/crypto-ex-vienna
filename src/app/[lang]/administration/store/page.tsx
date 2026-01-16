@@ -1121,7 +1121,7 @@ export default function Index({ params }: any) {
 
 
   {/*
-  {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo-orangex.png","storeBanner":"https://test.com/banner.png"}
+  {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo.png","storeBanner":"https://test.com/banner.png"}
   */}
 
 
@@ -1132,8 +1132,8 @@ export default function Index({ params }: any) {
   const [storeType, setStoreType] = useState('test');
   const [storeUrl, setStoreUrl] = useState('https://test.com');
   const [storeDescription, setStoreDescription] = useState('설명입니다.');
-  const [storeLogo, setStoreLogo] = useState('https://crypto-ex-vienna.vercel.app/logo-orangex.png');
-  const [storeBanner, setStoreBanner] = useState('https://crypto-ex-vienna.vercel.app/logo-orangex.png');
+  const [storeLogo, setStoreLogo] = useState('https://crypto-ex-vienna.vercel.app/logo.png');
+  const [storeBanner, setStoreBanner] = useState('https://crypto-ex-vienna.vercel.app/logo.png');
 
 
   const [insertingStore, setInsertingStore] = useState(false);
@@ -1728,7 +1728,7 @@ export default function Index({ params }: any) {
             connectModal={{
               size: "wide", 
               //size: "compact",
-              titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
+              titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
               showThirdwebBranding: false,
             }}
 
@@ -1780,7 +1780,7 @@ export default function Index({ params }: any) {
 
              >
                <Image
-                 src="/logo-orangex.png"
+                 src="/logo.png"
                  alt="logo"
                  width={100}
                  height={100}
@@ -1861,7 +1861,7 @@ export default function Index({ params }: any) {
               connectModal={{
                 size: "wide", 
                 //size: "compact",
-                titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
+                titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
                 showThirdwebBranding: false,
               }}
 
@@ -2530,7 +2530,7 @@ export default function Index({ params }: any) {
 
 
               {/*
-              {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo-orangex.png","storeBanner":"https://test.com/banner.png"}
+              {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo.png","storeBanner":"https://test.com/banner.png"}
               */}
 
               {/* table view is horizontal scroll */}

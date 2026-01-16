@@ -1209,7 +1209,7 @@ export default function Index({ params }: any) {
 
 
   {/*
-  {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo-orangex.png","storeBanner":"https://test.com/banner.png"}
+  {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo.png","storeBanner":"https://test.com/banner.png"}
   */}
 
 
@@ -1232,8 +1232,8 @@ export default function Index({ params }: any) {
     "storeType": "test",
     "storeUrl": "https://test.com",
     "storeDescription": "설명입니다.",
-    "storeLogo": "https://crypto-ex-vienna.vercel.app/logo-orangex.png",
-    "storeBanner": "https://crypto-ex-vienna.vercel.app/logo-orangex.png",
+    "storeLogo": "https://crypto-ex-vienna.vercel.app/logo.png",
+    "storeBanner": "https://crypto-ex-vienna.vercel.app/logo.png",
     "createdAt": "2025-05-06T04:36:44.683Z"
     "adminWalletAddress": "0x2111b6A49CbFf1C8Cc39d13250eF6bd4e1B59cF6",
   }
@@ -1632,7 +1632,7 @@ export default function Index({ params }: any) {
                     <td className="px-4 py-2">{store.storecode}</td>
                     <td className="px-4 py-2">
                       <Image
-                        src={store.storeLogo || "/logo-orangex.png"}
+                        src={store.storeLogo || "/logo.png"}
                         alt={store.storeName}
                         width={100}
                         height={100}
@@ -1684,7 +1684,7 @@ export default function Index({ params }: any) {
             connectModal={{
               size: "wide", 
               //size: "compact",
-              titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
+              titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
               showThirdwebBranding: false,
             }}
             locale={"ko_KR"}
@@ -1714,7 +1714,7 @@ export default function Index({ params }: any) {
 
                 <div className="flex flex-row items-center gap-2">
                   <Image
-                      src={store?.storeLogo || "/logo-orangex.png"}
+                      src={store?.storeLogo || "/logo.png"}
                       alt="Store"
                       width={35}
                       height={35}
@@ -1776,7 +1776,7 @@ export default function Index({ params }: any) {
                       connectModal={{
                         size: "wide", 
                         //size: "compact",
-                        titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
+                        titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
                         showThirdwebBranding: false,
                       }}
 

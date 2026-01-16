@@ -2030,7 +2030,7 @@ export default function Index({ params }: any) {
           {params.center && (
               <div className="w-full flex flex-row items-center justify-center gap-2 bg-black/10 p-2 rounded-lg mb-4">
                   <Image
-                      src={store?.storeLogo || "/logo-orangex.png"}
+                      src={store?.storeLogo || "/logo.png"}
                       alt="Store"
                       width={35}
                       height={35}
@@ -2131,7 +2131,7 @@ export default function Index({ params }: any) {
                   connectModal={{
                     size: "wide", 
                     //size: "compact",
-                    titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
+                    titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
                     showThirdwebBranding: false,
                   }}
 

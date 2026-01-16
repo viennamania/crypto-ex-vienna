@@ -8,7 +8,7 @@ import { dbName } from '../mongodb';
 export async function insertAgent(data: any) {
   //console.log('insertAgent data: ' + JSON.stringify(data));
   /*
-  insertAgent data: {"agentcode":"testagentcode","agentName":"테스트상점","agentType":"test","agentUrl":"https://test.com","agentDescription":"설명입니다.","agentLogo":"https://test.com/logo-orangex.png","agentBanner":"https://test.com/banner.png"}
+  insertAgent data: {"agentcode":"testagentcode","agentName":"테스트상점","agentType":"test","agentUrl":"https://test.com","agentDescription":"설명입니다.","agentLogo":"https://test.com/logo.png","agentBanner":"https://test.com/banner.png"}
   */
   if (!data.agentcode || !data.agentName) {
     
@@ -113,7 +113,7 @@ export async function getAgentByAgentcode(
 
 getAgentByAgentcode result: {
 "_id":"68308cf1c414d831e724a48b",
-"agentcode":"gjmrclph","agentName":"SM엔터","agentType":"test","agentUrl":"https://test.com","agentDescription":"SM엔터 에이전트","agentLogo":"https://crypto-ex-vienna.vercel.app/logo-orangex.png","agentBanner":"https://crypto-ex-vienna.vercel.app/logo-orangex.png","createdAt":"2025-05-23T14:57:53.503Z","agentFeeWalletAddress":"0x80bBe3A61124339780E90e8eB2BF58F26e189312",
+"agentcode":"gjmrclph","agentName":"SM엔터","agentType":"test","agentUrl":"https://test.com","agentDescription":"SM엔터 에이전트","agentLogo":"https://crypto-ex-vienna.vercel.app/logo.png","agentBanner":"https://crypto-ex-vienna.vercel.app/logo.png","createdAt":"2025-05-23T14:57:53.503Z","agentFeeWalletAddress":"0x80bBe3A61124339780E90e8eB2BF58F26e189312",
 "adminWalletAddress":"0x98773aF65AE660Be4751ddd09C4350906e9D88F3","totalStoreCount":5}
   */
 

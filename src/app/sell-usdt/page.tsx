@@ -536,7 +536,7 @@ const P2PTable = () => {
                             
                             appMetadata={
                             {
-                                logoUrl: "https://gold.goodtether.com/logo-orangex.png",
+                                logoUrl: "https://gold.goodtether.com/logo.png",
                                 name: "Next App",
                                 url: "https://gold.goodtether.com",
                                 description: "This is a Next App.",

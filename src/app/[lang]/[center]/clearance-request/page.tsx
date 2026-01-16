@@ -2924,7 +2924,7 @@ const [tradeSummary, setTradeSummary] = useState({
                     <td className="px-4 py-2">{store.storecode}</td>
                     <td className="px-4 py-2">
                       <Image
-                        src={store.storeLogo || "/logo-orangex.png"}
+                        src={store.storeLogo || "/logo.png"}
                         alt={store.storeName}
                         width={100}
                         height={100}
@@ -2980,7 +2980,7 @@ const [tradeSummary, setTradeSummary] = useState({
 
           <div className="w-full flex flex-row items-center justify-start gap-2">
             <Image
-              src={store?.storeLogo || "/logo-orangex.png"}
+              src={store?.storeLogo || "/logo.png"}
               alt="logo"
               width={35}
               height={35}
@@ -3082,7 +3082,7 @@ const [tradeSummary, setTradeSummary] = useState({
               connectModal={{
                 size: "wide", 
                 //size: "compact",
-                titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
+                titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
                 showThirdwebBranding: false,
               }}
 
@@ -3197,7 +3197,7 @@ const [tradeSummary, setTradeSummary] = useState({
 
         <div className="flex flex-row items-center justify-center gap-2">
           <Image
-            src={store?.storeLogo || "/logo-orangex.png"}
+            src={store?.storeLogo || "/logo.png"}
             alt="logo"
             width={35}
             height={35}
@@ -3258,7 +3258,7 @@ const [tradeSummary, setTradeSummary] = useState({
 
                 <div className="flex flex-row items-center gap-2">
                   <Image
-                      src={store?.storeLogo || "/logo-orangex.png"}
+                      src={store?.storeLogo || "/logo.png"}
                       alt="Store"
                       width={35}
                       height={35}
@@ -3310,7 +3310,7 @@ const [tradeSummary, setTradeSummary] = useState({
                       connectModal={{
                         size: "wide", 
                         //size: "compact",
-                        titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
+                        titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
                         showThirdwebBranding: false,
                       }}
 

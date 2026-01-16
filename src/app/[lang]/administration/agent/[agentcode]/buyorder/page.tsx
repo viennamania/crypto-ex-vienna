@@ -2655,7 +2655,7 @@ const fetchBuyOrders = async () => {
 
                       <td className="px-4 py-2 border">
                         <Image
-                          src={agent.agentLogo || "/logo-orangex.png"}
+                          src={agent.agentLogo || "/logo.png"}
                           alt="Agent Logo"
                           width={50}
                           height={50}
@@ -2724,7 +2724,7 @@ const fetchBuyOrders = async () => {
               <div className="w-full flex flex-row items-center justify-start gap-2">
                 <div className="flex flex-row items-center justify-start gap-2">
                   <Image
-                    src={agent?.agentLogo || "/logo-orangex.png"}
+                    src={agent?.agentLogo || "/logo.png"}
                     alt="logo"
                     width={50}
                     height={50}
@@ -2806,7 +2806,7 @@ const fetchBuyOrders = async () => {
                   connectModal={{
                     size: "wide", 
                     //size: "compact",
-                    titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
+                    titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
                     showThirdwebBranding: false,
                   }}
 
@@ -2944,7 +2944,7 @@ const fetchBuyOrders = async () => {
 
             <div className="w-full flex flex-row items-center justify-start gap-2">
               <Image
-                src={agent?.agentLogo || "/logo-orangex.png"}
+                src={agent?.agentLogo || "/logo.png"}
                 alt="logo"
                 width={50}
                 height={50}
@@ -3035,7 +3035,7 @@ const fetchBuyOrders = async () => {
 
              >
                 <Image
-                  src={agent?.agentLogo || "/logo-orangex.png"}
+                  src={agent?.agentLogo || "/logo.png"}
                   alt="logo"
                   width={35}
                   height={35}
@@ -3129,7 +3129,7 @@ const fetchBuyOrders = async () => {
                 connectModal={{
                   size: "wide", 
                   //size: "compact",
-                  titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
+                  titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
                   showThirdwebBranding: false,
                 }}
 

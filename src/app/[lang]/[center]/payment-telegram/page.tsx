@@ -620,8 +620,8 @@ export default function Index({ params }: any) {
     "storeType": "test",
     "storeUrl": "https://test.com",
     "storeDescription": "설명입니다.",
-    "storeLogo": "https://crypto-ex-vienna.vercel.app/logo-orangex.png",
-    "storeBanner": "https://crypto-ex-vienna.vercel.app/logo-orangex.png",
+    "storeLogo": "https://crypto-ex-vienna.vercel.app/logo.png",
+    "storeBanner": "https://crypto-ex-vienna.vercel.app/logo.png",
     "createdAt": "2025-05-07T10:58:28.019Z"
     }
     */
@@ -2234,7 +2234,7 @@ export default function Index({ params }: any) {
 
             <div className='flex flex-col gap-2 items-center justify-start'>
               <Image
-                src={storeInfo?.storeLogo || '/logo-orangex.png'}
+                src={storeInfo?.storeLogo || '/logo.png'}
                 alt="Store Logo"
                 width={38}
                 height={38}
