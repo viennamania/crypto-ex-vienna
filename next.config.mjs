@@ -32,17 +32,18 @@ const nextConfig = {
   },
   */
 
-  /*
+  
   async redirects() {
     return [
       {
         source: '/',
-        destination: '/ko/administration/homepage',
+        //destination: '/ko/administration/homepage',
+        destination: '/index.html',
         permanent: true,
       },
     ]
   },
-  */
+  
 
 
 
