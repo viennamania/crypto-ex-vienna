@@ -68,20 +68,29 @@ const MARKET_STYLES: Record<
     },
 };
 
-const RECENT_TRADES = [
-    { id: 1, side: 'buy', user: 'mango***', amount: '12,500 USDT', price: '1,342 KRW', time: '방금' },
-    { id: 2, side: 'sell', user: 'river***', amount: '8,200 USDT', price: '1,340 KRW', time: '1분 전' },
-    { id: 3, side: 'buy', user: 'star***', amount: '25,000 USDT', price: '1,345 KRW', time: '3분 전' },
-    { id: 4, side: 'sell', user: 'mint***', amount: '6,400 USDT', price: '1,339 KRW', time: '5분 전' },
-    { id: 5, side: 'buy', user: 'cloud***', amount: '18,750 USDT', price: '1,343 KRW', time: '7분 전' },
-    { id: 6, side: 'sell', user: 'luna***', amount: '9,900 USDT', price: '1,341 KRW', time: '10분 전' },
-    { id: 7, side: 'buy', user: 'zero***', amount: '30,000 USDT', price: '1,346 KRW', time: '12분 전' },
-    { id: 8, side: 'sell', user: 'nova***', amount: '7,300 USDT', price: '1,338 KRW', time: '15분 전' },
-    { id: 9, side: 'buy', user: 'olive***', amount: '14,600 USDT', price: '1,344 KRW', time: '18분 전' },
-    { id: 10, side: 'sell', user: 'stone***', amount: '11,200 USDT', price: '1,340 KRW', time: '22분 전' },
-];
+type TradeTone = 'buy' | 'sell' | 'pending';
+type RecentTrade = {
+    id: string;
+    tone: TradeTone;
+    user: string;
+    amount: string;
+    price: string;
+    time: string;
+    statusLabel: string;
+};
 
-const TRADE_STYLES = {
+const STATUS_LABELS: Record<string, string> = {
+    paymentConfirmed: '완료',
+    cancelled: '취소',
+    paymentRequested: '입금요청',
+    accepted: '수락',
+    ordered: '대기',
+};
+
+const TRADE_STYLES: Record<
+    TradeTone,
+    { label: string; badge: string; accent: string; glow: string }
+> = {
     buy: {
         label: '구매',
         badge: 'border-emerald-200/80 bg-emerald-500/10 text-emerald-700',
@@ -89,16 +98,56 @@ const TRADE_STYLES = {
         glow: 'bg-emerald-400/25',
     },
     sell: {
-        label: '판매',
+        label: '취소',
         badge: 'border-orange-200/80 bg-orange-500/10 text-orange-700',
         accent: 'bg-[linear-gradient(180deg,#f97316,#f59e0b)]',
         glow: 'bg-orange-400/25',
     },
-} as const;
+    pending: {
+        label: '진행',
+        badge: 'border-sky-200/80 bg-sky-500/10 text-sky-700',
+        accent: 'bg-[linear-gradient(180deg,#38bdf8,#0ea5e9)]',
+        glow: 'bg-sky-400/25',
+    },
+};
 
 const numberFormatter = new Intl.NumberFormat('ko-KR');
 const formatKrw = (value: number | null) =>
     value === null ? '--' : `₩${numberFormatter.format(value)}`;
+
+const maskName = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return '익명';
+    }
+    const visible = trimmed.slice(0, Math.min(3, trimmed.length));
+    return `${visible}***`;
+};
+
+const formatRelativeTime = (value?: string) => {
+    if (!value) {
+        return '--';
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return '--';
+    }
+    const diffMs = Date.now() - date.getTime();
+    const diffSeconds = Math.max(0, Math.floor(diffMs / 1000));
+    if (diffSeconds < 60) {
+        return '방금';
+    }
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    if (diffMinutes < 60) {
+        return `${diffMinutes}분 전`;
+    }
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) {
+        return `${diffHours}시간 전`;
+    }
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}일 전`;
+};
 
 export default function OrangeXPage() {
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
@@ -107,6 +156,9 @@ export default function OrangeXPage() {
     const [marketTickers, setMarketTickers] = useState<MarketTicker[]>(() => MARKET_SOURCES);
     const [tickerUpdatedAt, setTickerUpdatedAt] = useState<string | null>(null);
     const [tickerError, setTickerError] = useState<string | null>(null);
+    const [recentTrades, setRecentTrades] = useState<RecentTrade[]>([]);
+    const [recentTradesUpdatedAt, setRecentTradesUpdatedAt] = useState<string | null>(null);
+    const [recentTradesError, setRecentTradesError] = useState<string | null>(null);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -175,6 +227,100 @@ export default function OrangeXPage() {
 
         fetchTickers();
         const intervalId = window.setInterval(fetchTickers, 15000);
+
+        return () => {
+            active = false;
+            window.clearInterval(intervalId);
+        };
+    }, []);
+
+    useEffect(() => {
+        let active = true;
+
+        const fetchRecentTrades = async () => {
+            try {
+                const response = await fetch('/api/order/getAllBuyOrders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        storecode: '',
+                        limit: 10,
+                        page: 1,
+                        walletAddress: '',
+                        searchMyOrders: false,
+                        searchOrderStatusCancelled: false,
+                        searchOrderStatusCompleted: true,
+                        searchStoreName: '',
+                        fromDate: '',
+                        toDate: '',
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load trades');
+                }
+
+                const data = await response.json();
+                const orders = Array.isArray(data?.result?.orders) ? data.result.orders : [];
+                const nextTrades = orders.map((order: any) => {
+                    const status = order?.status ?? 'ordered';
+                    const tone: TradeTone =
+                        status === 'paymentConfirmed'
+                            ? 'buy'
+                            : status === 'cancelled'
+                            ? 'sell'
+                            : 'pending';
+                    const displayName = maskName(
+                        order?.nickname ||
+                            order?.buyer?.nickname ||
+                            order?.buyer?.depositName ||
+                            order?.buyer?.name ||
+                            order?.store?.storeName ||
+                            ''
+                    );
+                    const amount =
+                        typeof order?.usdtAmount === 'number'
+                            ? `${numberFormatter.format(order.usdtAmount)} USDT`
+                            : '--';
+                    const price =
+                        typeof order?.rate === 'number'
+                            ? `${numberFormatter.format(order.rate)} KRW`
+                            : typeof order?.krwAmount === 'number'
+                            ? `${numberFormatter.format(order.krwAmount)} KRW`
+                            : '--';
+                    const time = formatRelativeTime(
+                        order?.paymentConfirmedAt || order?.createdAt || order?.acceptedAt
+                    );
+
+                    return {
+                        id: String(order?._id ?? `${order?.createdAt ?? Date.now()}-${order?.nickname ?? ''}`),
+                        tone,
+                        user: displayName,
+                        amount,
+                        price,
+                        time,
+                        statusLabel: STATUS_LABELS[status] ?? '진행',
+                    } as RecentTrade;
+                });
+
+                if (active) {
+                    setRecentTrades(nextTrades);
+                    setRecentTradesUpdatedAt(new Date().toISOString());
+                    setRecentTradesError(null);
+                }
+            } catch (error) {
+                if (active) {
+                    setRecentTrades([]);
+                    setRecentTradesUpdatedAt(null);
+                    setRecentTradesError('거래내역을 불러오지 못했습니다');
+                }
+            }
+        };
+
+        fetchRecentTrades();
+        const intervalId = window.setInterval(fetchRecentTrades, 20000);
 
         return () => {
             active = false;
@@ -425,50 +571,74 @@ export default function OrangeXPage() {
                                 구매
                             </span>
                             <span className="inline-flex items-center gap-2">
+                                <span className="h-2 w-2 rounded-full bg-sky-500" />
+                                진행
+                            </span>
+                            <span className="inline-flex items-center gap-2">
                                 <span className="h-2 w-2 rounded-full bg-orange-500" />
-                                판매
+                                취소
+                            </span>
+                            <span>
+                                업데이트{' '}
+                                {recentTradesUpdatedAt
+                                    ? new Date(recentTradesUpdatedAt).toLocaleTimeString('ko-KR', {
+                                          hour12: false,
+                                      })
+                                    : '--:--:--'}
                             </span>
                         </div>
                     </div>
 
-                    <div className="ticker relative overflow-hidden">
-                        <div className="ticker-track">
-                            {[0, 1].map((loopIndex) => (
-                                <div key={`trade-loop-${loopIndex}`} className="ticker-group">
-                                    {RECENT_TRADES.map((trade) => {
-                                        const style = TRADE_STYLES[trade.side];
-                                        return (
-                                            <div
-                                                key={`${loopIndex}-${trade.id}`}
-                                                className="relative flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200/70 bg-white/70 px-5 py-4 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.7)] backdrop-blur"
-                                            >
-                                                <span className={`absolute left-0 top-0 h-full w-1.5 ${style.accent}`} />
-                                                <span className={`pointer-events-none absolute right-4 top-3 h-12 w-12 rounded-full ${style.glow} blur-2xl`} />
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-xs font-semibold text-white">
-                                                        {style.label}
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-semibold text-slate-900">{trade.user}</p>
-                                                        <p className="text-xs text-slate-500">{trade.time}</p>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-base font-semibold text-slate-900">{trade.amount}</p>
-                                                    <p className="text-xs text-slate-500">{trade.price}</p>
-                                                </div>
-                                                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${style.badge}`}>
-                                                    {style.label}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ))}
+                    {recentTradesError && (
+                        <p className="mb-4 text-xs font-semibold text-orange-600">{recentTradesError}</p>
+                    )}
+
+                    {recentTrades.length === 0 ? (
+                        <div className="rounded-2xl border border-slate-200/70 bg-white/70 px-5 py-6 text-sm text-slate-600">
+                            거래내역을 불러오는 중입니다.
                         </div>
-                        <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-[color:var(--paper)] to-transparent" />
-                        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[color:var(--paper)] to-transparent" />
-                    </div>
+                    ) : (
+                        <div className="ticker relative overflow-hidden">
+                            <div className="ticker-track">
+                                {[0, 1].map((loopIndex) => (
+                                    <div key={`trade-loop-${loopIndex}`} className="ticker-group">
+                                        {recentTrades.map((trade) => {
+                                            const style = TRADE_STYLES[trade.tone];
+                                            return (
+                                                <div
+                                                    key={`${loopIndex}-${trade.id}`}
+                                                    className="relative flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200/70 bg-white/70 px-5 py-4 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.7)] backdrop-blur"
+                                                >
+                                                    <span className={`absolute left-0 top-0 h-full w-1.5 ${style.accent}`} />
+                                                    <span className={`pointer-events-none absolute right-4 top-3 h-12 w-12 rounded-full ${style.glow} blur-2xl`} />
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-xs font-semibold text-white">
+                                                            {style.label}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-semibold text-slate-900">{trade.user}</p>
+                                                            <p className="text-xs text-slate-500">{trade.time}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-base font-semibold text-slate-900">{trade.amount}</p>
+                                                        <p className="text-xs text-slate-500">{trade.price}</p>
+                                                    </div>
+                                                    <span
+                                                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${style.badge}`}
+                                                    >
+                                                        {trade.statusLabel}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-[color:var(--paper)] to-transparent" />
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[color:var(--paper)] to-transparent" />
+                        </div>
+                    )}
                 </div>
 
                 {/* 주요 기능 소개 */}
