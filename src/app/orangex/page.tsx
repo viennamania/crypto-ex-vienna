@@ -409,8 +409,18 @@ export default function OrangeXPage() {
                             <div className="inline-flex items-center gap-2 rounded-full border border-orange-200/70 bg-orange-50/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-orange-700">
                                 USDT · P2P · Escrow
                             </div>
+                            <div className="flex items-center gap-4">
+                                <Image
+                                    src="/logo-orangex.png"
+                                    alt="OrangeX"
+                                    width={180}
+                                    height={56}
+                                    className="h-12 w-auto"
+                                    priority
+                                />
+                            </div>
                             <h1 className="font-[var(--font-display)] text-4xl leading-tight text-[color:var(--ink)] md:text-6xl">
-                                OrangeX 테더 P2P 마켓
+                                테더 P2P 마켓
                             </h1>
                             <p className="text-lg text-slate-700 md:text-xl">
                                 개인 간 테더(USDT) 구매·판매를 안전하게 연결합니다
