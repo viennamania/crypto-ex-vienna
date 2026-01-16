@@ -889,6 +889,32 @@ export default function OrangeXPage() {
                 </div>
             </main>
 
+            <footer className="relative z-10 border-t border-white/10 bg-[#1f1f1f] px-6 py-14 text-center text-slate-200">
+                <div className="mx-auto flex max-w-3xl flex-col items-center gap-6">
+                    <Image
+                        src="/logo-orangex.png"
+                        alt="OrangeX"
+                        width={180}
+                        height={56}
+                        className="h-10 w-auto"
+                    />
+                    <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-slate-300">
+                        <a href="/terms-of-service" className="hover:text-white">
+                            이용약관
+                        </a>
+                        <span className="text-slate-500">|</span>
+                        <a href="/privacy-policy" className="hover:text-white">
+                            개인정보처리방침
+                        </a>
+                    </div>
+                    <div className="text-sm text-slate-400">
+                        <p>이메일 : help@orangex.center</p>
+                        <p>주소 : 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
+                    </div>
+                    <p className="text-sm text-slate-500">Copyright © OrangeX All Rights Reserved</p>
+                </div>
+            </footer>
+
             <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
                 {chatOpen && (
                     <div
