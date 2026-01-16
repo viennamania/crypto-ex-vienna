@@ -25,6 +25,7 @@ import {
 
 
 import {
+
   getContract,
   sendAndConfirmTransaction,
   sendTransaction,
@@ -37,7 +38,7 @@ import {
 
 
 import {
-  //ConnectButton,
+  ConnectButton,
 
   useActiveAccount,
   useActiveWallet,
@@ -6960,8 +6961,50 @@ const fetchBuyOrders = async () => {
                               </div>
                               {/* 로그인을 해야 구매할 수 있습니다. */}
                               {!address && (
-                                <div className="text-sm text-red-600">
-                                  로그인을 해야 구매할 수 있습니다.
+                                <div className="w-full flex flex-col items-center justify-center mt-2">
+                                  <div className="text-sm text-red-600">
+                                    로그인을 해야 구매할 수 있습니다.
+                                  </div>
+
+                                  <ConnectButton
+                                    client={client}
+                                    wallets={wallets}
+
+                                    /*
+                                    accountAbstraction={{
+                                      chain: arbitrum,
+                                      sponsorGas: false
+                                    }}
+                                    */
+                                    
+                                    theme={"light"}
+
+                                    // button color is dark skyblue convert (49, 103, 180) to hex
+                                    connectButton={{
+                                        style: {
+                                            backgroundColor: "#0047ab", // cobalt blue
+                                            color: "#f3f4f6", // gray-300
+                                            padding: "2px 10px",
+                                            borderRadius: "10px",
+                                            fontSize: "14px",
+                                            width: "60x",
+                                            height: "38px",
+                                        },
+                                        label: "웹3 로그인",
+                                    }}
+
+                                    connectModal={{
+                                      size: "wide", 
+                                      //size: "compact",
+                                      titleIcon: "https://loot.menu/logo-orangex.png",                           
+                                      showThirdwebBranding: false,
+                                    }}
+
+                                    locale={"ko_KR"}
+                                    //locale={"en_US"}
+                                  />
+
+
                                 </div>
                               )}
 
@@ -6999,10 +7042,24 @@ const fetchBuyOrders = async () => {
                               )}
 
                               {address && !user?.buyer?.bankInfo && (
-                                <div className="text-sm text-red-600">
-                                  은행정보를 등록해야 구매할 수 있습니다.
+                                <div className="w-full flex flex-col items-center justify-center mt-2">
+                                  <span className="text-sm text-red-600">
+                                    은행정보를 등록해야 구매할 수 있습니다.
+                                  </span>
+                                  {/* go to bank info page button */}
+                                  {/* /[params.lang]/administration/buyer-settings */}
+                                  <button
+                                    onClick={() => {
+                                      router.push('/' + params.lang + '/administration/buyer-settings');
+                                    }}
+                                    className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80 mt-2"
+                                  >
+                                    은행정보 등록하기
+                                  </button>
+
                                 </div>
-                              )}                              
+                              )}
+
                               {buyOrderingPrivateSaleArray[index] && (
                                 <div className="text-sm text-emerald-400">
                                   구매주문 처리중입니다. 잠시만 기다려주세요.
