@@ -520,50 +520,59 @@ export default function OrangeXPage() {
                 </div>
 
                 {/* 스크롤 배너 섹션 */}
-                {/*
                 <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-6 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur overflow-x-hidden">
-                    
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                         <div>
                             <div className="flex items-center gap-3">
-                                <span className="inline-flex items-center gap-2 rounded-full border border-amber-200/70 bg-[linear-gradient(135deg,#fff7ed,#fde68a)] px-3 py-1 text-xs font-semibold uppercase leading-none tracking-[0.2em] text-amber-900 shadow-[0_10px_25px_-18px_rgba(217,119,6,0.8)]">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                                    Partner
-                                </span>
+                                {/* partner icon */}
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="inline-block">
+                                    <path d="M12 2a5 5 0 0 1 5 5v3a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                    <path d="M19 10h2a2 2 0 0 1 2 2v6a4 4 0 0 1-4 4H5a4 4 0 0 1-4-4v-6a2 2 0 0 1 2-2h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                    <path d="M8 14h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+
                                 <h2 className="font-[var(--font-display)] text-2xl text-slate-900">제휴 배너</h2>
                             </div>
+
                             <p className="text-sm text-slate-600">좌우로 스와이프하여 확인하세요</p>
                         </div>
                         <span className="text-xs font-semibold text-slate-500">USDT 파트너</span>
                     </div>
+                    {/* 스크롤 배너 컨테이너 */}
+
                     <div
-                        className="banner-scroll flex w-full max-w-full min-w-0 gap-4 overflow-x-auto pb-3 pt-1 snap-x snap-mandatory overscroll-x-contain"
+                        className="
+                        md:w-full w-[78vw]
+                        flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 py-2 scrollbar-hide relative
+                        "
                         aria-label="제휴 배너 스크롤"
                     >
+                        <div className="absolute left-0 top-0 h-full w-16 bg-[linear-gradient(90deg,rgba(255,255,255,1),rgba(255,255,255,0))]" />
+                        <div className="absolute right-0 top-0 h-full w-16 bg-[linear-gradient(270deg,rgba(255,255,255,1),rgba(255,255,255,0))]" />
+
                         {SCROLL_BANNER_ADS.map((ad) => (
                             <a
                                 key={ad.id}
                                 href={ad.link}
-                                className="banner-card snap-center"
+                                className="banner-card shrink-0 snap-start"
                                 target="_blank"
                                 rel="noreferrer"
                                 aria-label={ad.title}
                             >
-                            <div className="relative w-[70vw] max-w-[240px] aspect-[2/1] overflow-hidden rounded-2xl shadow-[0_18px_40px_-30px_rgba(15,23,42,0.6)] sm:w-60 md:max-w-none md:w-72">
-                                <Image
-                                    src={ad.image}
-                                    alt={ad.title}
-                                    fill
-                                        sizes="256px"
+                                <div className="relative w-[78vw] max-w-[260px] aspect-[2/1] overflow-hidden rounded-2xl shadow-[0_18px_40px_-30px_rgba(15,23,42,0.6)] sm:w-64 md:max-w-none md:w-72">
+                                    <Image
+                                        src={ad.image}
+                                        alt={ad.title}
+                                        fill
+                                        sizes="(min-width: 768px) 288px, 78vw"
                                         className="object-cover"
                                     />
                                 </div>
                             </a>
                         ))}
+                        
                     </div>
-
                 </div>
-                */}
 
 
                 {/* 통계 섹션 */}
@@ -593,10 +602,11 @@ export default function OrangeXPage() {
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
                             <div className="flex items-center gap-3">
-                                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200/70 bg-[linear-gradient(135deg,#ecfeff,#d1fae5)] px-3 py-1 text-xs font-semibold uppercase leading-none tracking-[0.2em] text-emerald-900 shadow-[0_10px_25px_-18px_rgba(16,185,129,0.8)]">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                    Live
-                                </span>
+                                {/* market icon */}
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="inline-block">
+                                    <path d="M3 3h18v4H3V3zM5 7v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7H5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                    <path d="M8 10h8M8 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
                                 <h2 className="font-[var(--font-display)] text-3xl text-slate-900">USDT/KRW 실시간 시세</h2>
                             </div>
                             <p className="text-sm text-slate-600">업비트 · 빗썸 · 코빗 기준</p>
@@ -628,11 +638,20 @@ export default function OrangeXPage() {
                                     <span className={`absolute left-0 top-0 h-full w-1.5 ${style.accent}`} />
                                     <span className={`pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full ${style.glow} blur-2xl`} />
                                     <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                                                {style.label}
-                                            </p>
-                                            <p className="text-lg font-semibold text-slate-900">{ticker.name}</p>
+                                        <div className="flex items-center gap-3">
+                                            <Image
+                                                src={`/icon-market-${ticker.id}.png`}
+                                                alt={`${ticker.name} 로고`}
+                                                width={40}
+                                                height={40}
+                                                className="h-10 w-10 rounded-full border border-slate-200/70 bg-white object-contain p-1"
+                                            />
+                                            <div>
+                                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                                    {style.label}
+                                                </p>
+                                                <p className="text-lg font-semibold text-slate-900">{ticker.name}</p>
+                                            </div>
                                         </div>
                                         <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${style.badge}`}>
                                             USDT/KRW
@@ -657,10 +676,11 @@ export default function OrangeXPage() {
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
                             <div className="flex items-center gap-3">
-                                <span className="inline-flex items-center gap-2 rounded-full border border-sky-200/70 bg-[linear-gradient(135deg,#eff6ff,#e0f2fe)] px-3 py-1 text-xs font-semibold uppercase leading-none tracking-[0.2em] text-sky-900 shadow-[0_10px_25px_-18px_rgba(14,165,233,0.8)]">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-                                    Feed
-                                </span>
+                                {/* trade icon */}
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="inline-block">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                    <path d="M7 10l5-5 5 5M12 5v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
                                 <h2 className="font-[var(--font-display)] text-3xl text-slate-900">최근 거래내역</h2>
                             </div>
                             <p className="text-sm text-slate-600">최근 10건이 순환 표시됩니다</p>
