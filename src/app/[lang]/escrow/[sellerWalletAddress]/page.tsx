@@ -4078,6 +4078,7 @@ const fetchBuyOrders = async () => {
   // buyAmountInputs
   const [buyAmountInputs, setBuyAmountInputs] = useState<number[]>([]);
 
+  /*
   useEffect(() => {
     // params.buyAmount 으로 모든 input 초기화
     if (params.buyAmount) {
@@ -4090,6 +4091,7 @@ const fetchBuyOrders = async () => {
       );
     }
   }, [params.buyAmount, sellersBalance]);
+  */
 
 
 
@@ -6935,6 +6937,8 @@ const fetchBuyOrders = async () => {
                                     <input
                                       type="number"
                                       min={1}
+                                      placeholder="구해할 USDT 수량"
+                                      value={buyAmountInputs[index] || ''}
                                       onChange={(e) => {
                                         const newBuyAmountInputs = [...buyAmountInputs];
                                         newBuyAmountInputs[index] = Number(e.target.value);
