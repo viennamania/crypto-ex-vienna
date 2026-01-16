@@ -6982,8 +6982,8 @@ const fetchBuyOrders = async () => {
                                     // button color is dark skyblue convert (49, 103, 180) to hex
                                     connectButton={{
                                         style: {
-                                            backgroundColor: "#0047ab", // cobalt blue
-                                            color: "#f3f4f6", // gray-300
+                                            backgroundColor: "#3167b4", // dark skyblue
+                                            color: "#f3f4f6", // light gray
                                             padding: "2px 10px",
                                             borderRadius: "10px",
                                             fontSize: "14px",
@@ -7026,7 +7026,9 @@ const fetchBuyOrders = async () => {
                                     className="
                                       w-32
                                       flex items-center justify-center gap-2
-                                      bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                                      bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg hover:shadow-red-500/50
+                                      transition-all duration-200 ease-in-out
+                                    "
                                 >
                                   <Image
                                     src="/icon-logout.webp"
