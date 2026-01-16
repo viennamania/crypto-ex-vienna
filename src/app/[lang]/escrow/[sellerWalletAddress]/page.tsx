@@ -7050,37 +7050,76 @@ const fetchBuyOrders = async () => {
 
                               {/* 로그아웃 */}
                               {address && (
-                                <button
-                                    onClick={() => {
-                                        confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
-                                        .then(() => {
+                                <div className="w-full flex flex-col items-center justify-center mt-2
+                                bg-slate-800 border border-slate-600 p-2 rounded-lg
+                                "> 
 
-                                            toast.success('로그아웃 되었습니다');
+                                  {/* 구래자 정보 */}
+                                  <div className="w-full flex flex-row items-center justify-start gap-2
+                                  border-b border-slate-600 pb-2 mb-2
+                                  ">
+                                    <Image
+                                      src="/icon-buyer.png"
+                                      alt="Buyer"
+                                      width={20}
+                                      height={20}
+                                      className="w-5 h-5 rounded-lg object-cover"
+                                    />
+                                    <div className="flex flex-col items-start justify-center gap-0">
+                                      <span className="text-sm font-semibold">
+                                        {user?.nickname || 'No Nickname'}
+                                      </span>
+                                      <button
+                                        className="text-sm underline"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(address);
+                                          toast.success(Copied_Wallet_Address);
+                                        } }
+                                      >
+                                        {address.substring(0, 6)}...{address.substring(address.length - 4)}
+                                      </button>
+                                    </div>
+                                  </div>
 
-                                            //router.push(
-                                            //    "/administration/" + params.center
-                                            //);
-                                        });
-                                    } }
+                                  <button
+                                      onClick={() => {
+                                          confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
+                                          .then(() => {
 
-                                    className="
-                                      w-32
-                                      flex items-center justify-center gap-2
-                                      bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg hover:shadow-red-500/50
-                                      transition-all duration-200 ease-in-out
-                                    "
-                                >
-                                  <Image
-                                    src="/icon-logout.webp"
-                                    alt="Logout"
-                                    width={20}
-                                    height={20}
-                                    className="rounded-lg w-5 h-5"
-                                  />
-                                  <span className="text-sm">
-                                    로그아웃
-                                  </span>
-                                </button>
+                                              toast.success('로그아웃 되었습니다');
+
+                                              //router.push(
+                                              //    "/administration/" + params.center
+                                              //);
+                                          });
+                                      } }
+
+                                      className="
+                                        w-full
+                                        flex items-center justify-center gap-2
+                                        bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg hover:shadow-red-500/50
+                                        transition-all duration-200 ease-in-out
+                                      "
+                                  >
+
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="h-5 w-5"
+                                      viewBox="0 0 20 20"
+                                      fill="currentColor"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M3 4.5A1.5 1.5 0 014.5 3h7a1.5 1.5 0 010 3h-7A1.5 1.5 0 013 4.5zm0 6A1.5 1.5 0 014.5 9h7a1.5 1.5 0 010 3h-7A1.5 1.5 0 013 10.5zm1.5 6a1.5 1.5 0 000 3h7a1.5 1.5 0 000-3h-7z"
+                                        clipRule="evenodd"
+                                      />
+                                    </svg>
+                                    <span className="text-sm">
+                                      로그아웃
+                                    </span>
+                                  </button>
+                                </div>
+
                               )}
 
                               {address && !user?.buyer?.bankInfo && (
