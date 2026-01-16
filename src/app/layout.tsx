@@ -150,10 +150,12 @@ export default function RootLayout({
 
           {/* chain image */}
 
-          <div className="flex flex-col items-center justify-center p-4 bg-slate-900/80 rounded-lg shadow-xl mb-4 border border-slate-700">
+          <div className=" flex flex-col items-center justify-center p-4 bg-slate-900/80 rounded-lg shadow-xl mb-4 border border-slate-700">
 
             {/* fixed position vertically top */}
-            <div className="fixed top-2 right-2 z-50 flex flex-col items-end justify-center">
+            <div className="
+              hidden
+              fixed top-2 right-2 z-50 flex-col items-end justify-center">
 
 
               {/* Display the current chain */}
