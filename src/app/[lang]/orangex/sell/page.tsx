@@ -20,7 +20,7 @@ import { toast } from 'react-hot-toast';
 import {
   clientId,
   client
-} from "../../client";
+} from "../../../client";
 
 
 
@@ -69,7 +69,7 @@ import { add } from "thirdweb/extensions/farcaster/keyGateway";
 
 
 import AppBarComponent from "@/components/Appbar/AppBar";
-import { getDictionary } from "../../dictionaries";
+import { getDictionary } from "../../../dictionaries";
 //import Chat from "@/components/Chat";
 import { ClassNames } from "@emotion/react";
 
@@ -81,8 +81,8 @@ import { useSearchParams } from 'next/navigation';
 import { getAllUsersForSettlementOfStore } from "@/lib/api/user";
 
 
-import { paymentUrl } from "../../config/payment";
-import { version } from "../../config/version";
+import { paymentUrl } from "../../../config/payment";
+import { version } from "../../../config/version";
 
 
 import {

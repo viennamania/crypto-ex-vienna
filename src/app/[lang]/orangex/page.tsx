@@ -30,6 +30,17 @@ const STAT_ITEMS = [
     },
 ];
 
+const STAT_CARD_STYLES = [
+    {
+        base: 'bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,237,213,0.88))]',
+        orb: 'bg-[radial-gradient(circle_at_center,var(--sun)_0%,transparent_70%)]',
+    },
+    {
+        base: 'bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(219,234,254,0.88))]',
+        orb: 'bg-[radial-gradient(circle_at_center,var(--sea)_0%,transparent_70%)]',
+    },
+];
+
 type MarketId = 'upbit' | 'bithumb' | 'korbit';
 type MarketTicker = {
     id: MarketId;
@@ -346,18 +357,21 @@ export default function OrangeXPage() {
 
     return (
         <div
-            className={`${bodyFont.variable} ${displayFont.variable} relative min-h-screen overflow-hidden bg-[color:var(--paper)] text-[color:var(--ink)] font-[var(--font-body)]`}
+            className={`${bodyFont.variable} ${displayFont.variable} relative min-h-screen overflow-hidden bg-[linear-gradient(160deg,var(--paper),#f0f9ff_45%,#fff1f2_85%)] text-[color:var(--ink)] font-[var(--font-body)]`}
             style={{
-                '--paper': '#f8f4ee',
+                '--paper': '#fff4ea',
                 '--ink': '#1c1917',
-                '--accent': '#f97316',
-                '--accent-deep': '#c2410c',
-                '--sea': '#0f766e',
-                '--mist': '#e2e8f0',
+                '--accent': '#ff7a1a',
+                '--accent-deep': '#ea580c',
+                '--sea': '#0ea5e9',
+                '--mist': '#f5efe5',
+                '--rose': '#fb7185',
+                '--sun': '#fbbf24',
             } as React.CSSProperties}
         >
             <div className="pointer-events-none absolute -top-32 right-[-10%] h-96 w-96 rounded-full bg-[radial-gradient(circle_at_center,var(--accent)_0%,transparent_70%)] opacity-35 blur-3xl float-slow" />
             <div className="pointer-events-none absolute -bottom-32 left-[-10%] h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(circle_at_center,var(--sea)_0%,transparent_70%)] opacity-30 blur-3xl float-slower" />
+            <div className="pointer-events-none absolute left-[-8%] top-[18%] h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,var(--rose)_0%,transparent_70%)] opacity-25 blur-3xl float-slow" />
             <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[linear-gradient(180deg,rgba(255,255,255,0.8),rgba(255,255,255,0))]" />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.4)_1px,transparent_1px)] [background-size:18px_18px] opacity-20" />
             {/* PC 좌측 광고 배너 */}
@@ -406,7 +420,7 @@ export default function OrangeXPage() {
                     <div className="absolute -bottom-24 left-[-10%] h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,var(--sea)_0%,transparent_70%)] opacity-25" />
                     <div className="relative grid gap-10 p-8 md:grid-cols-[1.1fr_0.9fr] md:p-12">
                         <div className="space-y-6">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-orange-200/70 bg-orange-50/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-orange-700">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-rose-200/70 bg-[linear-gradient(135deg,#fff1f2,#ffedd5)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-rose-700">
                                 USDT · P2P · Escrow
                             </div>
                             <div className="flex items-center gap-4">
@@ -428,7 +442,7 @@ export default function OrangeXPage() {
 
                             <div className="flex flex-col gap-4 sm:flex-row">
                                 <Link
-                                    href="/orangex/buy"
+                                    href="/ko/orangex/buy"
                                     className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-[color:var(--accent)] px-8 py-4 text-base font-semibold text-white shadow-[0_18px_45px_-20px_rgba(249,115,22,0.9)] transition hover:bg-[color:var(--accent-deep)] sm:w-auto"
                                 >
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
@@ -439,7 +453,7 @@ export default function OrangeXPage() {
                                     구매하기
                                 </Link>
                                 <Link
-                                    href="/orangex/sell"
+                                    href="/ko/orangex/sell"
                                     className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-slate-300/80 bg-white/80 px-8 py-4 text-base font-semibold text-slate-900 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)] transition hover:bg-white sm:w-auto"
                                 >
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
@@ -493,12 +507,14 @@ export default function OrangeXPage() {
                 </div>
 
                 <div className="grid gap-6 mb-12 md:grid-cols-2">
-                    {STAT_ITEMS.map((item, index) => (
-                        <div
-                            key={item.label}
-                            className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/80 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur"
-                        >
-                            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.3),transparent_70%)] opacity-40" />
+                    {STAT_ITEMS.map((item, index) => {
+                        const style = STAT_CARD_STYLES[index % STAT_CARD_STYLES.length];
+                        return (
+                            <div
+                                key={item.label}
+                                className={`relative overflow-hidden rounded-2xl border border-slate-200/70 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur ${style.base}`}
+                            >
+                                <div className={`absolute -right-10 -top-10 h-32 w-32 rounded-full ${style.orb} opacity-40`} />
                             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{item.label}</p>
                             <div className="mt-4 flex items-baseline gap-3">
                                 <span className="font-[var(--font-display)] text-4xl text-slate-900 tabular-nums md:text-5xl">
@@ -507,8 +523,9 @@ export default function OrangeXPage() {
                                 <span className="text-sm font-semibold text-slate-500">{item.suffix}</span>
                             </div>
                             <p className="mt-3 text-sm text-slate-600">실시간 누적 지표를 반영합니다</p>
-                        </div>
-                    ))}
+                            </div>
+                        );
+                    })}
                 </div>
 
                 <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
@@ -777,7 +794,7 @@ export default function OrangeXPage() {
                         </ol>
 
                         <Link 
-                            href="/orangex/buy"
+                            href="/ko/orangex/buy"
                             className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-[color:var(--sea)] px-6 py-4 text-base font-semibold text-white shadow-[0_18px_40px_-20px_rgba(15,118,110,0.8)] transition hover:brightness-110"
                         >
                             지금 구매하기 →
@@ -817,7 +834,7 @@ export default function OrangeXPage() {
                         </ol>
 
                         <Link 
-                            href="/orangex/sell"
+                            href="/ko/orangex/sell"
                             className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-[color:var(--accent)] px-6 py-4 text-base font-semibold text-white shadow-[0_18px_40px_-20px_rgba(249,115,22,0.8)] transition hover:brightness-110"
                         >
                             지금 판매하기 →
@@ -865,7 +882,7 @@ export default function OrangeXPage() {
                 </div>
 
                 {/* 최종 CTA */}
-                <div className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(120deg,var(--sea),var(--accent))] p-8 text-center text-white shadow-[0_40px_120px_-60px_rgba(15,23,42,0.8)]">
+                <div className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(120deg,var(--sea),var(--accent),var(--rose))] p-8 text-center text-white shadow-[0_40px_120px_-60px_rgba(15,23,42,0.8)]">
                     <div className="pointer-events-none absolute -right-20 -top-16 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.45),transparent_70%)] opacity-60 blur-3xl" />
                     <h2 className="font-[var(--font-display)] text-3xl mb-4">지금 바로 시작하세요!</h2>
                     <p className="text-lg text-white/90 mb-8">
@@ -874,13 +891,13 @@ export default function OrangeXPage() {
                     
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <Link 
-                            href="/orangex/buy"
+                            href="/ko/orangex/buy"
                             className="w-full sm:w-auto rounded-full bg-white px-8 py-4 text-base font-semibold text-slate-900 shadow-[0_18px_45px_-25px_rgba(15,23,42,0.8)] transition hover:bg-white/90"
                         >
                             구매하기 →
                         </Link>
                         <Link 
-                            href="/orangex/sell"
+                            href="/ko/orangex/sell"
                             className="w-full sm:w-auto rounded-full border border-white/70 px-8 py-4 text-base font-semibold text-white transition hover:bg-white/10"
                         >
                             판매하기 →
