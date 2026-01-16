@@ -6888,18 +6888,11 @@ const fetchBuyOrders = async () => {
                                   구해할 USDT 수량을 입력해주세요.
                                 </span>
                                 <button
-                                  onClick={() => {
-                                    /*
+                                  onClick={() => {                             
                                     buyOrderPrivateSale(
                                       index,
                                       seller.walletAddress,
                                     )
-                                    */
-
-                                    // route to /[lang]/escrow/[sellerWalletAddress]
-                                    // new window
-                                    window.open(`/${params.lang}/escrow/${seller.seller.escrowWalletAddress}?buyAmount=${buyAmountInputs[index] || 0}`, '_blank');
-
                                   }}
                                   className={`
                                     ${address && user?.buyer?.bankInfo && !buyOrderingPrivateSaleArray[index]
