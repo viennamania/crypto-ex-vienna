@@ -30,6 +30,19 @@ const STAT_ITEMS = [
     },
 ];
 
+const SCROLL_BANNER_ADS = [
+    { id: 1, title: 'USDT Gift Cards', image: '/ads/orangex-banner-01.svg', link: '#' },
+    { id: 2, title: 'USDT Travel Pass', image: '/ads/orangex-banner-02.svg', link: '#' },
+    { id: 3, title: 'USDT Food Delivery', image: '/ads/orangex-banner-03.svg', link: '#' },
+    { id: 4, title: 'USDT Gaming', image: '/ads/orangex-banner-04.svg', link: '#' },
+    { id: 5, title: 'USDT Subscriptions', image: '/ads/orangex-banner-05.svg', link: '#' },
+    { id: 6, title: 'USDT Cloud', image: '/ads/orangex-banner-06.svg', link: '#' },
+    { id: 7, title: 'USDT Retail', image: '/ads/orangex-banner-07.svg', link: '#' },
+    { id: 8, title: 'USDT Market', image: '/ads/orangex-banner-08.svg', link: '#' },
+    { id: 9, title: 'USDT Education', image: '/ads/orangex-banner-09.svg', link: '#' },
+    { id: 10, title: 'USDT Utilities', image: '/ads/orangex-banner-10.svg', link: '#' },
+];
+
 const STAT_CARD_STYLES = [
     {
         base: 'bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,237,213,0.88))]',
@@ -503,6 +516,41 @@ export default function OrangeXPage() {
                                 평균 처리 10-30분, 입금 확인 후 자동 전송
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-6 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                        <div>
+                            <h2 className="font-[var(--font-display)] text-2xl text-slate-900">제휴 배너</h2>
+                            <p className="text-sm text-slate-600">좌우로 스와이프하여 확인하세요</p>
+                        </div>
+                        <span className="text-xs font-semibold text-slate-500">USDT 파트너</span>
+                    </div>
+                    <div
+                        className="banner-scroll flex gap-4 overflow-x-auto pb-3 pt-1 snap-x snap-mandatory touch-pan-x"
+                        aria-label="제휴 배너 스크롤"
+                    >
+                        {SCROLL_BANNER_ADS.map((ad) => (
+                            <a
+                                key={ad.id}
+                                href={ad.link}
+                                className="banner-card snap-center"
+                                target="_blank"
+                                rel="noreferrer"
+                                aria-label={ad.title}
+                            >
+                                <div className="relative h-32 w-64 overflow-hidden rounded-2xl shadow-[0_18px_40px_-30px_rgba(15,23,42,0.6)]">
+                                    <Image
+                                        src={ad.image}
+                                        alt={ad.title}
+                                        fill
+                                        sizes="256px"
+                                        className="object-cover"
+                                    />
+                                </div>
+                            </a>
+                        ))}
                     </div>
                 </div>
 
@@ -1051,6 +1099,29 @@ export default function OrangeXPage() {
 
                 .ticker:hover .ticker-track {
                     animation-play-state: paused;
+                }
+
+                .banner-scroll {
+                    scroll-behavior: smooth;
+                    -webkit-overflow-scrolling: touch;
+                }
+
+                .banner-scroll::-webkit-scrollbar {
+                    height: 8px;
+                }
+
+                .banner-scroll::-webkit-scrollbar-thumb {
+                    background: rgba(15, 23, 42, 0.2);
+                    border-radius: 999px;
+                }
+
+                .banner-scroll::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+
+                .banner-card {
+                    scroll-snap-align: center;
+                    flex: 0 0 auto;
                 }
 
                 @keyframes heroFade {
