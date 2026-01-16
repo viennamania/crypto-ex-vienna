@@ -4090,7 +4090,7 @@ const fetchBuyOrders = async () => {
     }
   }, [params.buyAmount, sellersBalance]);
 
-  
+
 
   const [buyOrderingPrivateSaleArray, setBuyOrderingPrivateSaleArray] = useState<boolean[]>([]);
 
@@ -6963,6 +6963,39 @@ const fetchBuyOrders = async () => {
                                 <div className="text-sm text-red-600">
                                   로그인을 해야 구매할 수 있습니다.
                                 </div>
+                              )}
+
+                              {/* 로그아웃 */}
+                              {address && (
+                                <button
+                                    onClick={() => {
+                                        confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
+                                        .then(() => {
+
+                                            toast.success('로그아웃 되었습니다');
+
+                                            //router.push(
+                                            //    "/administration/" + params.center
+                                            //);
+                                        });
+                                    } }
+
+                                    className="
+                                      w-32
+                                      flex items-center justify-center gap-2
+                                      bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                                >
+                                  <Image
+                                    src="/icon-logout.webp"
+                                    alt="Logout"
+                                    width={20}
+                                    height={20}
+                                    className="rounded-lg w-5 h-5"
+                                  />
+                                  <span className="text-sm">
+                                    로그아웃
+                                  </span>
+                                </button>
                               )}
 
                               {address && !user?.buyer?.bankInfo && (

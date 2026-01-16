@@ -32,6 +32,7 @@ const nextConfig = {
   },
   */
 
+  /*
   async redirects() {
     return [
       {
@@ -41,6 +42,7 @@ const nextConfig = {
       },
     ]
   },
+  */
 
 
 
