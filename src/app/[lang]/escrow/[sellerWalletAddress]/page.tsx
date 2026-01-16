@@ -223,6 +223,7 @@ if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
 export default function Index({ params }: any) {
 
   const sellerWalletAddress = params.sellerWalletAddress;
+  const buyAmount = params.buyAmount;
 
   const searchParams = useSearchParams();
  
@@ -4076,6 +4077,21 @@ const fetchBuyOrders = async () => {
   // buyAmountInputs
   const [buyAmountInputs, setBuyAmountInputs] = useState<number[]>([]);
 
+  useEffect(() => {
+    // params.buyAmount 으로 모든 input 초기화
+    if (params.buyAmount) {
+      setBuyAmountInputs(
+        sellersBalance.map(() => parseFloat(params.buyAmount as string))
+      );
+    } else {
+      setBuyAmountInputs(
+        sellersBalance.map(() => 0)
+      );
+    }
+  }, [params.buyAmount, sellersBalance]);
+
+  
+
   const [buyOrderingPrivateSaleArray, setBuyOrderingPrivateSaleArray] = useState<boolean[]>([]);
 
   const buyOrderPrivateSale = async (
@@ -6878,29 +6894,43 @@ const fetchBuyOrders = async () => {
                               border-t border-slate-600 pt-2
                               ">
                               <div className="w-full flex flex-col items-start justify-center gap-2">
-                                <input
-                                  type="number"
-                                  min={1}
-                                  onChange={(e) => {
-                                    const newBuyAmountInputs = [...buyAmountInputs];
-                                    newBuyAmountInputs[index] = Number(e.target.value);
-                                    setBuyAmountInputs(newBuyAmountInputs);
-                                  }}
-                                  className={`
-                                    ${address
-                                    && user?.buyer?.bankInfo
-                                    && !buyOrderingPrivateSaleArray[index]
-                                    ? 'border border-slate-600 bg-slate-700 text-slate-200 rounded-lg p-2 text-sm' :
-                                    'border border-slate-600 bg-slate-800 text-slate-500 rounded-lg p-2 text-sm cursor-not-allowed'
-                                    }
-                                    w-full focus:outline-none focus:ring-2 focus:ring-blue-500
-                                  `}
-                                  disabled={!address || !user?.buyer?.bankInfo || buyOrderingPrivateSaleArray[index]}
-                                />
-                                {/* 구해할 USDT 수량을 입력해주세요. */}
-                                <span className="text-sm text-slate-400">
-                                  구해할 USDT 수량을 입력해주세요.
-                                </span>
+                                
+                                {buyAmountInputs[index] > 0 ? (
+                                  <div className="flex flex-col items-start justify-center gap-1 w-full">
+                                    {/* buyAmount */}
+                                    <span className="text-sm text-slate-400">
+                                      구해할 USDT 수량: {buyAmountInputs[index]} USDT
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col items-start justify-center gap-1 w-full">
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      onChange={(e) => {
+                                        const newBuyAmountInputs = [...buyAmountInputs];
+                                        newBuyAmountInputs[index] = Number(e.target.value);
+                                        setBuyAmountInputs(newBuyAmountInputs);
+                                      }}
+                                      className={`
+                                        ${address
+                                        && user?.buyer?.bankInfo
+                                        && !buyOrderingPrivateSaleArray[index]
+                                        ? 'border border-slate-600 bg-slate-700 text-slate-200 rounded-lg p-2 text-sm' :
+                                        'border border-slate-600 bg-slate-800 text-slate-500 rounded-lg p-2 text-sm cursor-not-allowed'
+                                        }
+                                        w-full focus:outline-none focus:ring-2 focus:ring-blue-500
+                                      `}
+                                      disabled={!address || !user?.buyer?.bankInfo || buyOrderingPrivateSaleArray[index]}
+                                    />
+                                    {/* 구해할 USDT 수량을 입력해주세요. */}
+                                    <span className="text-sm text-slate-400">
+                                      구해할 USDT 수량을 입력해주세요.
+                                    </span>
+                                  </div>
+                                )}
+
+
                                 <button
                                   onClick={() => {                             
                                     buyOrderPrivateSale(
