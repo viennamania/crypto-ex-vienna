@@ -6422,18 +6422,30 @@ const fetchBuyOrders = async () => {
                               <span className="text-sm text-slate-200 font-semibold">
                                 {seller.seller?.bankInfo?.bankName}
                               </span>
-                              <span className="text-sm text-slate-300">
-                                {seller.seller?.bankInfo?.accountNumber.length > 5
-                                  ? seller.seller?.bankInfo?.accountNumber.substring(0, 5) +'****'
-                                  : seller.seller?.bankInfo?.accountNumber
-                                }
-                              </span>
-                              <span className="text-sm font-semibold text-slate-200">
-                                {seller.seller?.bankInfo?.accountHolder.length > 2
-                                  ? seller.seller?.bankInfo?.accountHolder.substring(0, 1) +'**'
-                                  : seller.seller?.bankInfo?.accountHolder
-                                }
-                              </span>
+                              {seller.walletAddress === address ? (
+                                <span className="text-sm text-slate-300">
+                                  {seller.seller?.bankInfo?.accountNumber}
+                                </span>
+                              ) : (
+                                <span className="text-sm text-slate-300">
+                                  {seller.seller?.bankInfo?.accountNumber.length > 5
+                                    ? seller.seller?.bankInfo?.accountNumber.substring(0, 5) +'****'
+                                    : seller.seller?.bankInfo?.accountNumber
+                                  }
+                                </span>
+                              )}
+                              {seller.walletAddress === address ? (
+                                <span className="text-sm font-semibold text-slate-200">
+                                  {seller.seller?.bankInfo?.accountHolder}
+                                </span>
+                              ) : (
+                                <span className="text-sm font-semibold text-slate-200">
+                                  {seller.seller?.bankInfo?.accountHolder.length > 2
+                                    ? seller.seller?.bankInfo?.accountHolder.substring(0, 1) +'**'
+                                    : seller.seller?.bankInfo?.accountHolder
+                                  }
+                                </span>
+                              )}
                             </div>
 
 
@@ -6514,8 +6526,8 @@ const fetchBuyOrders = async () => {
                             />
                             <div className="flex flex-col items-start justify-center gap-0">
                               <span className="text-sm font-semibold">
-                                {'판매자가 ' +
-                                seller.seller?.buyOrder.krwAmount.toLocaleString() + ' 원 입금을 기다리고 있습니다.'}
+                                {'구매자가 ' +
+                                seller.seller?.buyOrder.krwAmount.toLocaleString() + ' 원 입금을 진행중입니다.'}
                               </span>
                               {(seller.walletAddress === address || seller.seller?.buyOrder?.buyer?.walletAddress === address)
                               ? (
