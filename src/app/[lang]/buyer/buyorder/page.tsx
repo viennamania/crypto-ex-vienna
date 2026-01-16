@@ -6022,6 +6022,36 @@ const fetchBuyOrders = async () => {
                                 </div>
                               )}
 
+                              {/* share button to share the seller info */}
+                              {/* copy to clipboard the seller url */}
+                              {/* /[lang]/escrow/[seller.seller.escrowWalletAddress] */}
+                              <div className="flex flex-col items-center justify-center">
+                                <button
+                                  onClick={() => {
+                                    const sellerUrl = `${window.location.origin}/${params.lang}/escrow/${seller.seller.escrowWalletAddress}`;
+                                    navigator.clipboard.writeText(sellerUrl);
+                                    alert('판매자 URL이 클립보드에 복사되었습니다.');
+                                  }}
+                                  className="text-slate-400 hover:text-slate-200"
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-5 w-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9 9-4.03 9-9z"
+                                    />
+                                  </svg>
+                                </button>
+                              </div>
+
+
                             </div>
                           </div>
 
