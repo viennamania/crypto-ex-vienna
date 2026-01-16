@@ -11,25 +11,13 @@ export default function OrangeXPage() {
     // 배너 광고 데이터 (실제로는 API에서 가져올 수 있습니다)
     const bannerAds = [
         {
-            id: 1,
-            title: 'Bitrefill - USDT 결제',
-            image: '/ads/tetherpay-bitrefill.svg',
-            link: 'https://www.bitrefill.com',
-        },
-        {
             id: 2,
-            title: 'Travala - USDT 결제',
-            image: '/ads/tetherpay-travala.svg',
-            link: 'https://www.travala.com',
-        },
-        {
-            id: 3,
             title: 'CoinGate - USDT 결제',
             image: '/ads/tetherpay-coingate.svg',
             link: 'https://coingate.com',
         },
         {
-            id: 4,
+            id: 2,
             title: 'NOWPayments - USDT 결제',
             image: '/ads/tetherpay-nowpayments.svg',
             link: 'https://nowpayments.io',
@@ -356,13 +344,13 @@ export default function OrangeXPage() {
             </main>
 
             {/* 모바일 하단 광고 배너 */}
-            <div className="lg:hidden bg-white border-t border-gray-200 shadow-lg overflow-x-auto">
-                <div className="flex gap-3 p-3 min-w-max">
+            <div className="lg:hidden bg-white border-t border-gray-200 shadow-lg">
+                <div className="flex flex-col gap-3 p-3">
                     {bannerAds.map((ad) => (
                         <a
                             key={`mobile-${ad.id}`}
                             href={ad.link}
-                            className="flex-shrink-0 w-56"
+                            className="w-full"
                             target="_blank"
                             rel="noreferrer"
                         >
