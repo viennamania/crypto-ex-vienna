@@ -7343,12 +7343,16 @@ const fetchBuyOrders = async () => {
                               </div>
 
 
-                              {/* 구매주문취소 버튼 */}
+                              {/* 구매주문 취소하기 버튼 */}
                               <div className="w-full flex flex-col items-start justify-center gap-1
                               border-t border-slate-600 pt-2
                               ">
                                 <span className="text-sm font-semibold text-slate-200">
                                   입금하기전에 구매주문을 취소하시려면 아래 버튼을 눌러주세요.
+                                </span>
+                                {/* 구매주문을 취소하면 구매자의 평가가 하락할 수 있습니다. */}
+                                <span className="text-sm text-slate-400">
+                                  구매주문을 취소하면 구매자의 평가가 하락할 수 있습니다.
                                 </span>
                                 <button
                                   onClick={() => {
@@ -7363,11 +7367,17 @@ const fetchBuyOrders = async () => {
                                     ? 'bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600'
                                     : 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white shadow-lg hover:shadow-red-500/50 border-0 transform hover:scale-105 active:scale-95'
                                     }
-                                    px-3 py-1 rounded-lg text-xs font-semibold w-full
+                                    px-3 py-1 rounded-lg text-xs font-semibold
                                     transition-all duration-200 ease-in-out
+                                    w-full flex flex-row items-center justify-center gap-2
                                   `}
                                 >
-                                  {cancellingBuyOrders[index] ? '구매주문취소 처리중...' : '구매주문취소'}
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L10 10.586 7.707 8.293a1 1 0 00-1.414 1.414l2.999 2.999a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                  </svg>
+                                  <span>
+                                    {cancellingBuyOrders[index] ? '구매주문 취소 처리중...' : '구매주문 취소하기'}
+                                  </span>
                                 </button>
                               </div>
 
@@ -8689,6 +8699,9 @@ const fetchBuyOrders = async () => {
                                       animate-spin"
                                     />
                                   )}
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L10 10.586 7.707 8.293a1 1 0 00-1.414 1.414l2.999 2.999a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                  </svg>
                                   <span className="text-sm">
                                     취소하기
                                   </span>

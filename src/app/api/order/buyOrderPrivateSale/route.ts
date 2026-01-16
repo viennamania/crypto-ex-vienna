@@ -81,11 +81,11 @@ export async function POST(request: NextRequest) {
         const seller = await getSellerBySellerWalletAddress(sellerWalletAddress);
 
         if (!seller) {
-        console.error("Seller not found for wallet address:", sellerWalletAddress);
-        return NextResponse.json({
-            error: "Seller not found for wallet address",
-            sellerWalletAddress: sellerWalletAddress,
-        }, { status: 404 });
+            console.error("Seller not found for wallet address:", sellerWalletAddress);
+            return NextResponse.json({
+                error: "Seller not found for wallet address",
+                sellerWalletAddress: sellerWalletAddress,
+            }, { status: 404 });
         }
 
         const orderId = seller.seller.buyOrder._id;
@@ -110,7 +110,6 @@ export async function POST(request: NextRequest) {
         const mobile = buyOrder?.mobile?.replace(/^\+82/, "0").replace(/-/g, "");
 
 
-        if (payactionApiKey && payactionShopId) {
 
         const tradeId = buyOrder.tradeId;
         
@@ -145,7 +144,7 @@ export async function POST(request: NextRequest) {
             const payactionResult = await payactionResponse.json();
             console.log("buyOrderRequestPayment payactionResult", payactionResult);
     
-
+            /* { status: 'success', response: {} } */
 
             if (payactionResponse.status !== 200) {
             console.error("Payaction API error", payactionResult);
@@ -170,8 +169,8 @@ export async function POST(request: NextRequest) {
             }, { status: 500 });
 
         }
-        
-        }
+    
+
 
     }
 
