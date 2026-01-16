@@ -2853,7 +2853,11 @@ export async function getSellerBySellerWalletAddress(
 
   const results = await collection.findOne<UserProps>(
     {
-      'seller.escrowWalletAddress': sellerWalletAddress,
+      walletAddress: sellerWalletAddress,
+      storecode: 'admin',
+      'seller.status': 'confirmed',
+      'seller.enabled': true,
+      'seller.escrowWalletAddress': { $exists: true, $ne: null },
     },
   );
 
