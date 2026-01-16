@@ -3618,11 +3618,22 @@ const fetchBuyOrders = async () => {
         return a.seller?.usdtToKrwRate - b.seller?.usdtToKrwRate;
       });
       */
+
+      /*
       const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
         if (a.walletAddress === address) return -1;
         if (b.walletAddress === address) return 1;
         return b.totalPaymentConfirmedUsdtAmount - a.totalPaymentConfirmedUsdtAmount;
       });
+      */
+      // remove walletAddress is a address from sortedSellers
+      const filteredSellers = sortedSellers.filter((seller: any) => seller.walletAddress !== address);
+      // sort filteredSellers by totalPaymentConfirmedUsdtAmount descending
+      filteredSellers.sort((a: any, b: any) => {
+        return b.totalPaymentConfirmedUsdtAmount - a.totalPaymentConfirmedUsdtAmount;
+      });
+
+
 
 
       /*
@@ -3641,7 +3652,8 @@ const fetchBuyOrders = async () => {
       */
       
 
-      setSellersBalance(finalSortedSellers);
+      //setSellersBalance(finalSortedSellers);
+      setSellersBalance(filteredSellers);
 
     } else {
       console.error('Error fetching sellers balance');
