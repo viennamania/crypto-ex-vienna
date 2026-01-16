@@ -222,6 +222,8 @@ if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
 
 export default function Index({ params }: any) {
 
+  const sellerWalletAddress = params.sellerWalletAddress;
+
   const searchParams = useSearchParams();
  
   ////////const wallet = searchParams.get('wallet');
@@ -3618,11 +3620,16 @@ const fetchBuyOrders = async () => {
         return a.seller?.usdtToKrwRate - b.seller?.usdtToKrwRate;
       });
       */
+    
+      /*
       const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
         if (a.walletAddress === address) return -1;
         if (b.walletAddress === address) return 1;
         return b.totalPaymentConfirmedUsdtAmount - a.totalPaymentConfirmedUsdtAmount;
       });
+      */
+     // find sellerWalletAddress
+      const mySeller = sortedSellers.find((seller: any) => seller.seller.escrowWalletAddress === sellerWalletAddress);
 
 
       /*
@@ -3641,7 +3648,11 @@ const fetchBuyOrders = async () => {
       */
       
 
-      setSellersBalance(finalSortedSellers);
+      //setSellersBalance(finalSortedSellers);
+      setSellersBalance([
+        ...(mySeller ? [mySeller] : [])
+      ]);
+
 
     } else {
       console.error('Error fetching sellers balance');
@@ -4262,7 +4273,7 @@ const fetchBuyOrders = async () => {
 
   return (
 
-    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-slate-950">
+    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-slate-950">
 
       <AutoConnect
           client={client}
@@ -4377,206 +4388,10 @@ const fetchBuyOrders = async () => {
 
 
         <div className="w-full flex flex-col xl:flex-row items-center justify-center gap-2 bg-slate-800/90 border border-slate-700 p-2 rounded-lg mb-4 shadow-xl">
-            
-          <div className="w-full flex flex-row items-center justify-start gap-2">
-            <button
-              onClick={() => router.push('/' + params.lang + '/seller/buyorder')}
-              className="flex items-center justify-center gap-2
-              rounded-lg p-2
-              hover:bg-slate-700/50
-              hover:cursor-pointer
-              hover:scale-105
-              transition-transform duration-200 ease-in-out"
 
-            >
-              <Image
-                src="/logo-orangex.png"
-                alt="logo"
-                width={100}
-                height={100}
-                className="w-24 h-8 object-contain"
-              />
-            </button>
-          </div>
-
-
-          {address && !loadingUser && (
-
-
-            <div className="w-full flex flex-col xl:flex-row items-center justify-end gap-2">
-              
-              <button
-                onClick={() => {
-                  router.push('/' + params.lang + '/administration/profile-settings');
-                }}
-                className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
-              >
-                <div className="flex flex-row items-center justify-center gap-2">
-                  {isAdmin && (
-                    <div className="flex flex-row items-center justify-center gap-2">
-                      <Image
-                        src="/icon-admin.png"
-                        alt="Admin"
-                        width={20}
-                        height={20}
-                        className="rounded-lg w-5 h-5"
-                      />
-                      <span className="text-sm text-slate-100">
-                        센터 관리자
-                      </span>
-                    </div>
-                  )}
-                  <span className="text-sm text-slate-100">
-                    {user?.nickname || "프로필"}
-                  </span>
-
-                </div>
-              </button>
-
-              {/* 구매자 설정 */}
-              {user?.buyer && (
-                <button
-                  onClick={() => {
-                    router.push('/' + params.lang + '/administration/buyer-settings');
-                  }}
-                  className="flex bg-slate-700 text-sm text-slate-100 px-4 py-2 rounded-lg hover:bg-slate-600 border border-slate-600 shadow-md"
-                >
-                  <div className="flex flex-row items-center justify-center gap-2">
-                    <Image
-                      src="/icon-buyer.png"
-                      alt="Buyer"
-                      width={20}
-                      height={20}
-                      className="rounded-lg w-5 h-5"
-                    />
-                    <span className="text-sm text-slate-100">
-                      구매자 설정
-                    </span>
-                  </div>
-                </button>
-              )}
-
-              {/* sellerSettings */}
-              {user?.seller && (
-                <button
-                  onClick={() => {
-                    router.push('/' + params.lang + '/administration/seller-settings');
-                  }}
-                  className="flex bg-slate-700 text-sm text-slate-100 px-4 py-2 rounded-lg hover:bg-slate-600 border border-slate-600 shadow-md"
-                >
-                  <div className="flex flex-row items-center justify-center gap-2">
-                    <Image
-                      src="/icon-seller.png"
-                      alt="Seller"
-                      width={20}
-                      height={20}
-                      className="rounded-lg w-5 h-5"
-                    />
-                    <span className="text-sm text-slate-100">
-                      판매자 설정
-                    </span>
-                  </div>
-                </button>
-              )}
-
-              {activeWallet && (
-
-                <button
-                  className="bg-red-500 hover:bg-red-600 text-sm text-white px-4 py-2 rounded-lg shadow-md" 
-                  onClick={() => {
-                    // Add your disconnect wallet logic here
-                    confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
-                    .then(() => {
-                      toast.success('로그아웃 되었습니다');
-                    });
-                    
-                  }}>
-                  지갑 연결 해제
-                </button>
-
-              )}
-
-
-              {/* opnew new window for admin dashboard */}
-              {/* https://payment.orangex.center/ko/administration/buyorder */}
-              {isAdmin && (
-                <button
-                  onClick={() => {
-                    window.open('https://payment.orangex.center/' + params.lang + '/administration/buyorder', '_blank');
-                  }}
-                  className="flex bg-slate-700 text-sm text-slate-100 px-4 py-2 rounded-lg hover:bg-slate-600 border border-slate-600 shadow-md"
-                >
-                  <div className="flex flex-row items-center justify-center gap-2">
-                    <Image
-                      src="/icon-dashboard.png"
-                      alt="Dashboard"
-                      width={20}
-                      height={20}
-                      className="rounded-lg w-5 h-5"
-                    />
-                    <span className="text-sm text-slate-100">
-                      관리자 대시보드
-                    </span>
-                  </div>
-                </button>
-              )}
-
-            </div>
-
-          )}
-
-
-          {/*!address && (
-            <ConnectButton
-
-              accountAbstraction={{
-                chain: chain === "ethereum" ? ethereum :
-                        chain === "polygon" ? polygon :
-                        chain === "arbitrum" ? arbitrum :
-                        chain === "bsc" ? bsc : arbitrum,
-                sponsorGas: false
-              }}
-
-              client={client}
-              wallets={wallets}
-
-              chain={chain === "ethereum" ? ethereum :
-                      chain === "polygon" ? polygon :
-                      chain === "arbitrum" ? arbitrum :
-                      chain === "bsc" ? bsc : arbitrum}
-              
-              theme={"light"}
-
-              // button color is dark skyblue convert (49, 103, 180) to hex
-              connectButton={{
-                style: {
-                  backgroundColor: "#0047ab", // cobalt blue
-
-                  color: "#f3f4f6", // gray-300 
-                  padding: "2px 2px",
-                  borderRadius: "10px",
-                  fontSize: "14px",
-                  //width: "40px",
-                  height: "38px",
-                },
-                label: "웹3 로그인",
-              }}
-
-              connectModal={{
-                size: "wide", 
-                //size: "compact",
-                titleIcon: "https://crypto-ex-vienna.vercel.app/logo-orangex.png",                           
-                showThirdwebBranding: false,
-              }}
-
-              locale={"ko_KR"}
-              //locale={"en_US"}
-            />
-
-          )*/}
-
-
-
+          <h1 className="text-2xl font-bold text-slate-100">
+            판매자 에스크로 지갑 {sellerWalletAddress.substring(0, 6)}...{sellerWalletAddress.substring(sellerWalletAddress.length - 4)}
+          </h1>
 
         </div>
 
@@ -4584,48 +4399,25 @@ const fetchBuyOrders = async () => {
 
         <div className="w-full flex flex-col items-start justify-center gap-2 mt-4">
 
-          <div className="w-full flex flex-row items-between justify-between xl:justify-start gap-2">
-            
-            {/* 이페이지가 판매하기 페이지이기 때문에 버튼 대신에 판매하기 표시만 */}
-            <div
-              className="flex bg-green-600 text-sm text-white px-4 py-2 rounded-lg shadow-md"
-            >
-              <div className="flex flex-row items-center justify-center gap-2">
-                <Image
-                  src="/icon-sell-label-color.png"
-                  alt="Sell"
-                  width={50}
-                  height={50}
-                  className="w-10 h-10"
-                />
-                <span className="text-sm text-white">
-                  판매하기
-                </span>
-              </div>
-            </div>
-
-            {/* 구매하기 버튼 */}
-            {/* 배경색을 그레이로 변경 */}
+            {/* 돌아가기 버튼 */}
+            {/* /ko/seller/buyorder */}
             <button
-              onClick={() => {
-                router.push('/' + params.lang + '/buyer/buyorder');
-              }}
-              className="flex bg-gray-600 text-sm text-white px-4 py-2 rounded-lg hover:bg-gray-700 shadow-md"
+              onClick={() => router.push('/' + params.lang + '/seller/buyorder')}
+              className="flex items-center justify-center gap-2
+              bg-slate-700 text-sm text-slate-100 px-4 py-2 rounded-lg hover:bg-slate-600 border border-slate-600 shadow-md mb-4"
             >
-              <div className="flex flex-row items-center justify-center gap-2">
-                <Image
-                  src="/icon-buy-label-color.png"
-                  alt="Buy"
-                  width={50}
-                  height={50}
-                  className="w-10 h-10"
-                />
-                <span className="text-sm text-white">
-                  구매하기
-                </span>
-              </div>
+              <svg xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="text-sm text-slate-100">
+                뒤로가기
+              </span>
             </button>
-          </div>
 
 
           {/* USDT 가격 binance market price */}
@@ -5223,7 +5015,7 @@ const fetchBuyOrders = async () => {
 
           
           
-          <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-4
+          <div className="w-full flex flex-col items-center justify-between gap-4
           border-t border-b border-zinc-300
           py-4
           ">
@@ -5233,7 +5025,7 @@ const fetchBuyOrders = async () => {
                 alt="Market"
                 width={50}
                 height={50}
-                className="w-16 h-16 rounded-lg object-cover"
+                className="w-8 h-8 rounded-lg object-cover"
               />
               <span className="text-lg font-bold text-slate-200">
                 실시간 환율 정보
@@ -5247,7 +5039,7 @@ const fetchBuyOrders = async () => {
               />
             </div>
 
-            <div className="w-full flex flex-col xl:flex-row items-center justify-end gap-4"> 
+            <div className="w-full flex flex-row items-center justify-end gap-4"> 
 
               {/* animatedUpbitUsdtToKrwRate */}
               {/* logo-upbit.jpg */}
@@ -5261,7 +5053,7 @@ const fetchBuyOrders = async () => {
                   alt="Upbit"
                   width={50}
                   height={50}
-                  className="w-12 h-12 object-cover"
+                  className="w-8 h-8 object-cover"
                 />
                 
                 <div className="w-full flex flex-col items-end justify-center">
@@ -5329,7 +5121,7 @@ const fetchBuyOrders = async () => {
                   alt="Bithumb"
                   width={50}
                   height={50}
-                  className="w-12 h-12 object-cover"
+                  className="w-8 h-8 object-cover"
                 />
                 <div className="w-full flex flex-col items-end justify-center">
 
@@ -5393,7 +5185,7 @@ const fetchBuyOrders = async () => {
                   alt="Korbit"
                   width={50}
                   height={50}
-                  className="w-12 h-12 object-cover"
+                  className="w-8 h-8 object-cover"
                 />
                 <div className="w-full flex flex-col items-end justify-center">
 
@@ -5459,87 +5251,8 @@ const fetchBuyOrders = async () => {
           py-4
           ">
 
-            <div className="w-full flex flex-col xl:flex-row items-between justify-between gap-2">
-              {/* title - 판매주문 */}
-              <div className="flex flex-row items-center justify-start gap-2">
-                <Image
-                  src="/icon-sale.png"
-                  alt="Sale"
-                  width={50}
-                  height={50}
-                  className="w-16 h-16 rounded-lg object-cover"
-                />
-                <h2 className="text-lg font-bold text-slate-200">
-                  판매 주문 현황
-                </h2>
-              </div>
-
-              {/* subtitle - 판매자 수: sellersBalance.length, 총 USDT 잔액: sum of sellersBalance.currentUsdtBalance */}
-              
-              <div className="flex flex-col xl:flex-row items-center justify-center gap-2">
-
-                <div className="flex flex-col gap-2 items-center">
-                  <div className="
-                    bg-orange-900/40
-                    px-2 py-1 rounded-full
-                    text-sm font-semibold text-orange-300
-                    border border-orange-700
-                  ">
-                    {/* dot before */}
-                    <div className="inline-block w-2 h-2 bg-orange-300 rounded-full mr-2"></div>
-                    <span className="align-middle">
-                      판매자수(명)
-                    </span>
-                  </div>
-                  <div className="flex flex-row items-center justify-center gap-1">
-                    <span className="text-4xl text-orange-300"
-                      style={{ fontFamily: 'monospace' }}>
-                      {
-                        sellersBalance.length.toLocaleString()
-                      }
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 items-center">
-                  <div className="
-                    bg-slate-700/70
-                    px-2 py-1 rounded-full
-                    text-sm font-semibold text-slate-200
-                    border border-slate-600
-                  ">
-                    {/* dot before */}
-                    <div className="inline-block w-2 h-2 bg-emerald-400 rounded-full mr-2"></div>
-                    <span className="align-middle">
-                      에스크로 총량(USDT)
-                    </span>
-                  </div>
-                  <div className="flex flex-row items-center justify-center gap-1">
-                    <Image
-                      src="/icon-tether.png"
-                      alt="Tether"
-                      width={20}
-                      height={20}
-                      className="w-5 h-5"
-                    />
-                    {/* RGB: 64, 145, 146 */}
-                    <span className="text-4xl text-[#409192]"
-                      style={{ fontFamily: 'monospace' }}>
-                      {
-                        // sum of sellersBalance.currentUsdtBalance
-                       // sellersBalance.reduce((acc, seller) => acc + seller.currentUsdtBalance, 0).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-
-                        animatedTotalUsdtBalance.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                      }
-                    </span>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
             {sellersBalance.length > 0 && (
-              <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+              <div className="w-full flex flex-col items-center justify-center gap-4">
 
                 {sellersBalance.map((seller, index) => (
                   <div key={index}
@@ -5628,26 +5341,9 @@ const fetchBuyOrders = async () => {
                           flex flex-row items-center justify-center gap-2
                           bg-gradient-to-r from-slate-600 to-slate-700 text-slate-100 px-2 py-1 rounded-bl-lg rounded-tr-lg shadow-xl border border-slate-500
                           ">
-                          <div className="flex flex-row items-center justify-center gap-1">
-                            <span className="text-sm font-semibold">
-                              나의 판매자계정
-                            </span>
-                            {/* goto /seller/[sellerWalletAddress] on click */}
-                            {/* setting image icon */}
-                            <button
-                              title="나의 판매자계정으로 이동"
-                              onClick={() => {
-                                router.push(`/seller/${seller.seller.escrowWalletAddress}`);
-                              }}
-                              className="flex flex-row items-center justify-center gap-1
-                              bg-slate-800 hover:bg-slate-700 text-slate-200
-                              px-2 py-1 rounded-lg shadow-md
-                              hover:shadow-slate-500/50
-                              "
-                            >
-                              설정하기
-                            </button>
-                          </div>
+                          <span className="text-sm font-semibold">
+                            나의 판매자계정
+                          </span>
 
                           {/*
                         
