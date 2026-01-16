@@ -48,15 +48,20 @@
     }
 
     .brand{
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      height: 52px;
-      font-weight: 900;
-      font-size: 34px;
-      letter-spacing: -1px;
-      margin-top: 6px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height: 56px;
+    margin-top: 6px;
+    margin-bottom: 4px;
     }
+
+    .logo-img{
+    height: 36px;          /* Uber 로고와 유사한 크기 */
+    width: auto;
+    object-fit: contain;
+    }
+
 
     /* Uber-like search row */
     .searchRow{
@@ -223,7 +228,20 @@
 <body>
   <div class="app">
     <header class="top">
-      <div class="brand">돈벼락</div>
+        <!-- logo-loot.png -->
+        <!-- flow row -->
+        <div class="header-logo" style="display: flex; flex-direction: row; justify-content: center; align-items: center;">
+
+            <!-- image size large -->
+            <img
+                src="/logo-loot.png"
+                alt="돈벼락 로고"
+                class="logo-img"
+                width="200"
+            />
+            <div class="brand">돈벼락</div>
+    
+        </div>
 
       <div class="searchRow">
         <div class="searchPill" role="search">
