@@ -5949,22 +5949,19 @@ const fetchBuyOrders = async () => {
                               ) : (
                                 <div className="flex flex-col items-center justify-center gap-1">
                                   {seller.walletAddress === address ? (
-                                    <>
+                                    <div className="flex flex-row items-center justify-center gap-2">
+                                      <div className="flex flex-col items-center justify-center gap-1
+                                      border border-slate-200 bg-white/70 rounded-lg px-2 py-1
+                                      ">
+                                        <span className="text-xs text-slate-700">
+                                          고정가격
+                                        </span>
+                                      </div>
 
                                       {
                                       seller.seller?.buyOrder?.status !== 'ordered'
                                       && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
-                                        
-                                        <div className="flex flex-row items-center justify-center gap-2">
-
-                                          <div className="flex flex-col items-center justify-center gap-1
-                                          border border-slate-200 bg-white/70 rounded-lg px-2 py-1
-                                          ">
-                                            <span className="text-xs text-slate-700">
-                                              지정가
-                                            </span>
-                                          </div>          
-                                          
+                                        <>
                                           <button
                                             onClick={() => {
                                               updateUsdtToKrwRate(
@@ -6001,7 +5998,7 @@ const fetchBuyOrders = async () => {
                                           >
                                             ▼
                                           </button>
-                                        </div>
+                                        </>
                                       )}
 
                                       {/*
@@ -6052,13 +6049,13 @@ const fetchBuyOrders = async () => {
                                         </button>
                                       )}
                                       */}
-                                    </>
+                                    </div>
                                   ) : (
                                     <div className="flex flex-col items-center justify-center gap-1
                                     border border-slate-200 bg-white/70 rounded-lg px-2 py-1
                                     ">
                                       <span className="text-xs text-slate-700">
-                                        지정가
+                                        고정가격
                                       </span>
                                     </div>
                                   )}
@@ -12299,4 +12296,3 @@ const TradeDetail = (
       </div>
     );
   };
-

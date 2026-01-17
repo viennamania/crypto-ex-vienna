@@ -445,10 +445,9 @@ export default function OrangeXPage() {
     // interval to fetch every 10 seconds
     const interval = setInterval(() => {
       fetchSellersBalance();
-    }, 10000);
+    }, 100000);
     return () => clearInterval(interval);
   }, []);
-
 
 
 
@@ -828,6 +827,9 @@ export default function OrangeXPage() {
                                                 : 0;
                                             const rate = seller?.seller?.usdtToKrwRate;
                                             const sellerWalletAddress = seller?.walletAddress;
+                                            const promotionText = seller?.seller?.promotionText || seller?.promotionText;
+                                            const priceSettingMethod = seller?.seller?.priceSettingMethod;
+                                            const market = seller?.seller?.market;
                                             const balanceTone = getBalanceTone(currentBalance, totalSellerBalance);
                                             return (
                                                 <div
@@ -838,7 +840,7 @@ export default function OrangeXPage() {
                                                         className={`pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full blur-2xl ${balanceTone.glow}`}
                                                     />
                                                     <div className="flex items-center gap-3">
-                                                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200/70 bg-white">
+                                                        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-slate-200/70 bg-white">
                                                             <Image
                                                                 src={
                                                                     seller?.avatar ||
@@ -846,9 +848,9 @@ export default function OrangeXPage() {
                                                                     '/icon-seller.png'
                                                                 }
                                                                 alt="Seller"
-                                                                width={32}
-                                                                height={32}
-                                                                className="h-8 w-8 rounded-xl object-cover"
+                                                                fill
+                                                                sizes="44px"
+                                                                className="object-cover object-center"
                                                             />
                                                         </div>
                                                         <div>
@@ -858,6 +860,18 @@ export default function OrangeXPage() {
                                                             <p className="text-xs text-slate-500">
                                                                 완료 {numberFormatter.format(totalConfirmed)} USDT
                                                             </p>
+                                                            {promotionText && (
+                                                                <p className="promo-text text-xs text-slate-600">
+                                                                    <span className="promo-text-content">
+                                                                        <span className="promo-text-label">
+                                                                            홍보문구:
+                                                                        </span>{' '}
+                                                                        <span className="promo-text-message">
+                                                                            {promotionText}
+                                                                        </span>
+                                                                    </span>
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="flex items-end justify-between gap-4">
@@ -868,13 +882,55 @@ export default function OrangeXPage() {
                                                             </p>
                                                         </div>
                                                         <div className="flex flex-col items-end gap-2">
-                                                            <span
-                                                                className={`rounded-full border px-3 py-1 text-xs font-semibold ${balanceTone.pill}`}
-                                                            >
-                                                                {typeof rate === 'number'
-                                                                    ? `${numberFormatter.format(rate)} KRW`
-                                                                    : '시세 준비중'}
-                                                            </span>
+                                                            <div className="flex flex-col items-end gap-1">
+                                                                <div className="flex items-center justify-end gap-2">
+                                                                    <span className="text-[11px] font-semibold text-slate-500">
+                                                                        판매가격
+                                                                    </span>
+                                                                    {priceSettingMethod === 'market' ? (
+                                                                        <div className="flex items-center gap-1">
+                                                                            {market === 'upbit' && (
+                                                                                <Image
+                                                                                    src="/icon-market-upbit.png"
+                                                                                    alt="Upbit"
+                                                                                    width={18}
+                                                                                    height={18}
+                                                                                    className="h-4 w-4"
+                                                                                />
+                                                                            )}
+                                                                            {market === 'bithumb' && (
+                                                                                <Image
+                                                                                    src="/icon-market-bithumb.png"
+                                                                                    alt="Bithumb"
+                                                                                    width={18}
+                                                                                    height={18}
+                                                                                    className="h-4 w-4"
+                                                                                />
+                                                                            )}
+                                                                            {market === 'korbit' && (
+                                                                                <Image
+                                                                                    src="/icon-market-korbit.png"
+                                                                                    alt="Korbit"
+                                                                                    width={18}
+                                                                                    height={18}
+                                                                                    className="h-4 w-4"
+                                                                                />
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-[11px] font-semibold text-slate-500">
+                                                                            고정가격
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <span
+                                                                    className={`rounded-full border px-4 py-2 text-sm font-semibold ${balanceTone.pill}`}
+                                                                >
+                                                                    {typeof rate === 'number'
+                                                                        ? `${numberFormatter.format(rate)} KRW`
+                                                                        : '시세 준비중'}
+                                                                </span>
+                                                            </div>
                                                             {sellerWalletAddress && (
                                                                 <a
                                                                     href={`/${lang}/escrow/${sellerWalletAddress}`}
@@ -882,6 +938,29 @@ export default function OrangeXPage() {
                                                                     rel="noreferrer"
                                                                     className="inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] px-3 py-1 text-xs font-semibold text-white shadow-[0_10px_25px_-12px_rgba(249,115,22,0.8)] transition hover:bg-[color:var(--accent-deep)]"
                                                                 >
+                                                                    <svg
+                                                                        width="14"
+                                                                        height="14"
+                                                                        viewBox="0 0 24 24"
+                                                                        fill="none"
+                                                                        className="inline-block"
+                                                                        aria-hidden="true"
+                                                                    >
+                                                                        <path
+                                                                            d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z"
+                                                                            stroke="currentColor"
+                                                                            strokeWidth="2"
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                        />
+                                                                        <path
+                                                                            d="M8 10h8M8 14h5"
+                                                                            stroke="currentColor"
+                                                                            strokeWidth="2"
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                        />
+                                                                    </svg>
                                                                     문의하기
                                                                 </a>
                                                             )}
@@ -1390,8 +1469,9 @@ export default function OrangeXPage() {
                 }
 
                 .seller-card {
-                    flex: 0 0 auto;
-                    min-width: 260px;
+                    flex: 0 0 320px;
+                    width: 320px;
+                    max-width: 320px;
                 }
 
                 .seller-ticker:hover .seller-ticker-track {
@@ -1401,6 +1481,56 @@ export default function OrangeXPage() {
                 .banner-scroll {
                     scroll-behavior: smooth;
                     -webkit-overflow-scrolling: touch;
+                }
+
+                .promo-text {
+                    position: relative;
+                    display: inline-block;
+                    max-width: 100%;
+                    margin-top: 6px;
+                    padding: 6px 10px;
+                    border-radius: 12px;
+                    background: rgba(255, 255, 255, 0.92);
+                    border: 1px solid rgba(148, 163, 184, 0.35);
+                    box-shadow: 0 10px 24px -18px rgba(15, 23, 42, 0.4);
+                }
+
+                .promo-text::before {
+                    content: '';
+                    position: absolute;
+                    left: -8px;
+                    top: 10px;
+                    border-width: 8px 8px 8px 0;
+                    border-style: solid;
+                    border-color: transparent rgba(148, 163, 184, 0.35) transparent transparent;
+                }
+
+                .promo-text::after {
+                    content: '';
+                    position: absolute;
+                    left: -6px;
+                    top: 11px;
+                    border-width: 6px 6px 6px 0;
+                    border-style: solid;
+                    border-color: transparent rgba(255, 255, 255, 0.92) transparent transparent;
+                }
+
+                .promo-text-content {
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                    word-break: break-word;
+                }
+
+                .promo-text-label {
+                    font-weight: 600;
+                    color: #475569;
+                }
+
+                .promo-text-message {
+                    font-weight: 600;
+                    color: #1e293b;
                 }
 
                 .banner-scroll::-webkit-scrollbar {
@@ -1466,7 +1596,9 @@ export default function OrangeXPage() {
                     }
 
                     .seller-card {
-                        min-width: 220px;
+                        flex: 0 0 260px;
+                        width: 260px;
+                        max-width: 260px;
                     }
                 }
 
