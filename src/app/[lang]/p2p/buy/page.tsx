@@ -4450,7 +4450,7 @@ const fetchBuyOrders = async () => {
 
             >
               <Image
-                src="/logo.png"
+                src="/logo-orangex.png"
                 alt="logo"
                 width={100}
                 height={100}

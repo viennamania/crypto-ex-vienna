@@ -734,6 +734,7 @@ export default function Index({ params }: any) {
   }, [sellerWalletAddress]);
 
   const [selectedChatChannelUrl, setSelectedChatChannelUrl] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(true);
 
   const [sellerChatItems, setSellerChatItems] = useState<SellerChatItem[]>([]);
   const [sellerChatLoading, setSellerChatLoading] = useState(false);
@@ -5303,7 +5304,10 @@ const fetchBuyOrders = async () => {
             loading={sellerChatLoading}
             errorMessage={sellerChatError}
             selectedChannelUrl={selectedChatChannelUrl}
-            onSelectChannel={(channelUrl) => setSelectedChatChannelUrl(channelUrl)}
+            onSelectChannel={(channelUrl) => {
+              setSelectedChatChannelUrl(channelUrl);
+              setIsChatOpen(true);
+            }}
           />
 
           <div className="w-full flex flex-col items-center justify-between gap-4
@@ -11209,6 +11213,8 @@ const fetchBuyOrders = async () => {
             buyerWalletAddress={address}
             sellerWalletAddress={ownerWalletAddress}
             selectedChannelUrl={selectedChatChannelUrl || undefined}
+            isOpen={isChatOpen}
+            onOpenChange={setIsChatOpen}
         />
 
     </main>
@@ -11390,16 +11396,19 @@ const SendbirdChatEmbed = ({
   buyerWalletAddress,
   sellerWalletAddress,
   selectedChannelUrl,
+  isOpen,
+  onOpenChange,
 }: {
   buyerWalletAddress?: string;
   sellerWalletAddress: string;
   selectedChannelUrl?: string;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
 }) => {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [channelUrl, setChannelUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isChatOpen, setIsChatOpen] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -11414,7 +11423,7 @@ const SendbirdChatEmbed = ({
         return;
       }
 
-      if (buyerWalletAddress === sellerWalletAddress) {
+      if (buyerWalletAddress === sellerWalletAddress && !selectedChannelUrl) {
         setErrorMessage('구매자가 접속하면 채팅이 활성화됩니다.');
         return;
       }
@@ -11495,12 +11504,12 @@ const SendbirdChatEmbed = ({
     }
   }, [selectedChannelUrl]);
 
-  if (!isChatOpen) {
+  if (!isOpen) {
     return (
       <div className="fixed bottom-6 right-6 z-50">
         <button
           type="button"
-          onClick={() => setIsChatOpen(true)}
+          onClick={() => onOpenChange(true)}
           className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-800 shadow-lg"
         >
           채팅 열기
@@ -11520,7 +11529,7 @@ const SendbirdChatEmbed = ({
           {isLoading && <span className="text-xs font-semibold text-slate-500">연결 중...</span>}
           <button
             type="button"
-            onClick={() => setIsChatOpen(false)}
+            onClick={() => onOpenChange(false)}
             className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900"
           >
             닫기
