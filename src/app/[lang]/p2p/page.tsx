@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { Manrope, Playfair_Display } from 'next/font/google';
 
 const displayFont = Playfair_Display({
@@ -139,6 +140,40 @@ const numberFormatter = new Intl.NumberFormat('ko-KR');
 const formatKrw = (value: number | null) =>
     value === null ? '--' : `₩${numberFormatter.format(value)}`;
 
+const getBalanceTone = (balance: number, totalBalance: number) => {
+    const ratio = totalBalance > 0 ? balance / totalBalance : 0;
+    if (ratio >= 0.15) {
+        return {
+            card: 'border-amber-200/80 bg-amber-50/85 shadow-[0_22px_60px_-38px_rgba(251,191,36,0.65)]',
+            glow: 'bg-amber-300/55',
+            amount: 'text-amber-700',
+            pill: 'border-amber-200/80 bg-amber-100/80 text-amber-700',
+        };
+    }
+    if (ratio >= 0.07) {
+        return {
+            card: 'border-sky-200/80 bg-sky-50/85 shadow-[0_22px_60px_-38px_rgba(56,189,248,0.55)]',
+            glow: 'bg-sky-300/45',
+            amount: 'text-sky-700',
+            pill: 'border-sky-200/80 bg-sky-100/80 text-sky-700',
+        };
+    }
+    if (ratio >= 0.03) {
+        return {
+            card: 'border-emerald-200/80 bg-emerald-50/85 shadow-[0_22px_60px_-38px_rgba(16,185,129,0.55)]',
+            glow: 'bg-emerald-300/45',
+            amount: 'text-emerald-700',
+            pill: 'border-emerald-200/80 bg-emerald-100/80 text-emerald-700',
+        };
+    }
+    return {
+        card: 'border-slate-200/70 bg-white/80 shadow-[0_18px_45px_-34px_rgba(15,23,42,0.6)]',
+        glow: 'bg-amber-200/40',
+        amount: 'text-slate-900',
+        pill: 'border-slate-200/70 bg-white/80 text-slate-600',
+    };
+};
+
 const maskName = (value: string) => {
     const trimmed = value.trim();
     if (!trimmed) {
@@ -174,6 +209,8 @@ const formatRelativeTime = (value?: string) => {
 };
 
 export default function OrangeXPage() {
+    const params = useParams<{ lang: string }>();
+    const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang ?? 'ko';
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
     const [animatedStats, setAnimatedStats] = useState(() => STAT_ITEMS.map(() => 0));
     const [chatOpen, setChatOpen] = useState(false);
@@ -367,6 +404,67 @@ export default function OrangeXPage() {
             link: 'https://nowpayments.io',
         },
     ];
+
+
+
+
+
+  // /api/user/getAllSellersForBalance
+  const [sellersBalance, setSellersBalance] = useState([] as any[]);
+  const [sellersBalanceUpdatedAt, setSellersBalanceUpdatedAt] = useState<string | null>(null);
+  const fetchSellersBalance = async () => {
+    const response = await fetch('/api/user/getAllSellersForBalance', {
+      method: 'POST',
+      headers: {
+          'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(
+        {
+          storecode: "admin",
+          limit: 100,
+          page: 1,
+        }
+      )
+    });
+
+    const data = await response.json();
+
+    ///console.log('getAllSellersForBalance data', data);
+
+    if (data.result) {
+      setSellersBalance(data.result.users || []);
+      setSellersBalanceUpdatedAt(new Date().toISOString());
+    } else {
+      console.error('Error fetching sellers balance');
+      setSellersBalanceUpdatedAt(null);
+    }
+  };
+  useEffect(() => {
+
+    fetchSellersBalance();
+    // interval to fetch every 10 seconds
+    const interval = setInterval(() => {
+      fetchSellersBalance();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+
+
+
+
+    const totalSellerBalance = sellersBalance.reduce(
+        (acc, seller) => acc + (Number(seller?.currentUsdtBalance) || 0),
+        0
+    );
+    const bestSellers = [...sellersBalance]
+        .filter((seller) => seller?.walletAddress || seller?.nickname)
+        .sort(
+            (a, b) =>
+                (b?.seller?.totalPaymentConfirmedUsdtAmount || 0) -
+                (a?.seller?.totalPaymentConfirmedUsdtAmount || 0)
+        )
+        .slice(0, 12);
 
     return (
         <div
@@ -670,6 +768,135 @@ export default function OrangeXPage() {
                             );
                         })}
                     </div>
+                </div>
+
+                <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                        <div>
+                            <div className="flex items-center gap-3">
+                                {/* best seller icon */}
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="inline-block">
+                                    <path
+                                        d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.5L12 15.8 7.2 18l.9-5.5L4.2 8.7l5.4-.8L12 3z"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                </svg>
+                                <h2 className="font-[var(--font-display)] text-3xl text-slate-900">베스트 셀러</h2>
+                            </div>
+                            <p className="text-sm text-slate-600">최근 거래 완료량 기준 상위 판매자</p>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs font-semibold text-slate-500">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-amber-200/70 bg-amber-50/80 px-3 py-1 text-amber-700">
+                                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                                TOP
+                            </span>
+                            <span>
+                                업데이트{' '}
+                                {sellersBalanceUpdatedAt
+                                    ? new Date(sellersBalanceUpdatedAt).toLocaleTimeString('ko-KR', {
+                                          hour12: false,
+                                      })
+                                    : '--:--:--'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {bestSellers.length === 0 ? (
+                        <div className="rounded-2xl border border-slate-200/70 bg-white/70 px-5 py-6 text-sm text-slate-600">
+                            베스트 셀러를 불러오는 중입니다.
+                        </div>
+                    ) : (
+                        <div className="seller-ticker relative overflow-hidden">
+                            <div className="seller-ticker-track">
+                                {[0, 1].map((loopIndex) => (
+                                    <div key={`seller-loop-${loopIndex}`} className="seller-ticker-group">
+                                        {bestSellers.map((seller, index) => {
+                                            const displayName = maskName(
+                                                seller?.nickname ||
+                                                    seller?.store?.storeName ||
+                                                    seller?.walletAddress ||
+                                                    '판매자'
+                                            );
+                                            const totalConfirmed =
+                                                seller?.seller?.totalPaymentConfirmedUsdtAmount || 0;
+                                            const currentBalanceRaw = Number(seller?.currentUsdtBalance ?? 0);
+                                            const currentBalance = Number.isFinite(currentBalanceRaw)
+                                                ? currentBalanceRaw
+                                                : 0;
+                                            const rate = seller?.seller?.usdtToKrwRate;
+                                            const sellerWalletAddress = seller?.walletAddress;
+                                            const balanceTone = getBalanceTone(currentBalance, totalSellerBalance);
+                                            return (
+                                                <div
+                                                    key={`${loopIndex}-${seller?.walletAddress || index}`}
+                                                    className={`seller-card relative flex flex-col gap-4 rounded-2xl border p-4 backdrop-blur ${balanceTone.card}`}
+                                                >
+                                                    <span
+                                                        className={`pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full blur-2xl ${balanceTone.glow}`}
+                                                    />
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200/70 bg-white">
+                                                            <Image
+                                                                src={
+                                                                    seller?.avatar ||
+                                                                    seller?.store?.storeLogo ||
+                                                                    '/icon-seller.png'
+                                                                }
+                                                                alt="Seller"
+                                                                width={32}
+                                                                height={32}
+                                                                className="h-8 w-8 rounded-xl object-cover"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-semibold text-slate-900">
+                                                                {displayName}
+                                                            </p>
+                                                            <p className="text-xs text-slate-500">
+                                                                완료 {numberFormatter.format(totalConfirmed)} USDT
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-end justify-between gap-4">
+                                                        <div>
+                                                            <p className="text-xs text-slate-500">보유 잔액</p>
+                                                            <p className={`text-base font-semibold ${balanceTone.amount}`}>
+                                                                {numberFormatter.format(currentBalance)} USDT
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex flex-col items-end gap-2">
+                                                            <span
+                                                                className={`rounded-full border px-3 py-1 text-xs font-semibold ${balanceTone.pill}`}
+                                                            >
+                                                                {typeof rate === 'number'
+                                                                    ? `${numberFormatter.format(rate)} KRW`
+                                                                    : '시세 준비중'}
+                                                            </span>
+                                                            {sellerWalletAddress && (
+                                                                <a
+                                                                    href={`/${lang}/escrow/${sellerWalletAddress}`}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] px-3 py-1 text-xs font-semibold text-white shadow-[0_10px_25px_-12px_rgba(249,115,22,0.8)] transition hover:bg-[color:var(--accent-deep)]"
+                                                                >
+                                                                    문의하기
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-[color:var(--paper)] to-transparent" />
+                            <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[color:var(--paper)] to-transparent" />
+                        </div>
+                    )}
                 </div>
 
                 <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
@@ -1146,6 +1373,31 @@ export default function OrangeXPage() {
                     animation-play-state: paused;
                 }
 
+                .seller-ticker {
+                    width: 100%;
+                }
+
+                .seller-ticker-track {
+                    display: flex;
+                    gap: 16px;
+                    animation: sellerTickerMove 28s linear infinite;
+                    will-change: transform;
+                }
+
+                .seller-ticker-group {
+                    display: flex;
+                    gap: 16px;
+                }
+
+                .seller-card {
+                    flex: 0 0 auto;
+                    min-width: 260px;
+                }
+
+                .seller-ticker:hover .seller-ticker-track {
+                    animation-play-state: paused;
+                }
+
                 .banner-scroll {
                     scroll-behavior: smooth;
                     -webkit-overflow-scrolling: touch;
@@ -1199,14 +1451,30 @@ export default function OrangeXPage() {
                     }
                 }
 
+                @keyframes sellerTickerMove {
+                    from {
+                        transform: translateX(0);
+                    }
+                    to {
+                        transform: translateX(-50%);
+                    }
+                }
+
                 @media (max-width: 640px) {
                     .ticker {
                         height: 280px;
+                    }
+
+                    .seller-card {
+                        min-width: 220px;
                     }
                 }
 
                 @media (prefers-reduced-motion: reduce) {
                     .ticker-track {
+                        animation: none;
+                    }
+                    .seller-ticker-track {
                         animation: none;
                     }
                     .float-slow,
