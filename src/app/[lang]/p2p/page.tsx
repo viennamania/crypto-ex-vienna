@@ -748,7 +748,7 @@ export default function OrangeXPage() {
                 </div>
 
                 {/* 신뢰 강조 섹션 */}
-                
+                {/*
                 <div className="relative mb-12 overflow-hidden rounded-[28px] border border-slate-200/70 bg-white/80 p-8 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
                     <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-[radial-gradient(circle_at_center,var(--sea)_0%,transparent_70%)] opacity-25" />
                     <div className="absolute -bottom-10 left-[-6%] h-32 w-32 rounded-full bg-[radial-gradient(circle_at_center,var(--accent)_0%,transparent_70%)] opacity-20" />
@@ -799,6 +799,7 @@ export default function OrangeXPage() {
                         </div>
                     </div>
                 </div>
+                */}
                 
 
                 {/* 스크롤 배너 섹션 */}
