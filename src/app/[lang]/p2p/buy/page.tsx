@@ -5565,14 +5565,14 @@ const fetchBuyOrders = async () => {
               {/* title - 판매주문 */}
               <div className="flex flex-row items-center justify-start gap-2">
                 <Image
-                  src="/icon-sale.png"
-                  alt="Sale"
+                  src="/icon-seller.png"
+                  alt="Seller"
                   width={50}
                   height={50}
                   className="w-16 h-16 rounded-lg object-cover"
                 />
                 <h2 className="text-lg font-bold text-slate-800">
-                  판매 주문 현황
+                  판매자
                 </h2>
               </div>
 
@@ -5643,8 +5643,9 @@ const fetchBuyOrders = async () => {
 
 
             {/* 지정가로 구매주문하기 */}
+            {/*
             <div className="w-full flex flex-col items-center justify-center">
-              {/* 지정가 입력창 */}
+
               <div className="w-full max-w-md
               flex flex-col items-center justify-center gap-2
               bg-white/90
@@ -5655,7 +5656,7 @@ const fetchBuyOrders = async () => {
                 <h3 className="text-md font-bold text-slate-800">
                   지정가로 구매주문하기
                 </h3>
-                {/* 설명: 지정가로 구매주문하면 판매자중에서 가장 유리한 환율을 제시한 판매자와 매칭됩니다. */}
+
                 <p className="text-sm text-slate-600 text-center">
                   지정가로 구매주문하면 판매자중에서 가장 유리한 환율을 제시한 판매자와 매칭됩니다.
                 </p>
@@ -5717,6 +5718,7 @@ const fetchBuyOrders = async () => {
                 </div>
               </div>
             </div>
+            */}
             
 
 
@@ -7265,6 +7267,31 @@ const fetchBuyOrders = async () => {
 
                           </div>
 
+                          {/* 판매자에게 문의하러 가기 */}
+                          {/* /[lang]/escrow/[sellerWalletAddress] */}
+                          <button
+                            onClick={() => {
+                              // route to /[lang]/escrow/[sellerWalletAddress]
+                              // new window
+                              window.open(`/${params.lang}/escrow/${seller.seller.escrowWalletAddress}`, '_blank');
+                            }}
+                            className={`
+                              bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-lg hover:shadow-blue-500/50 border-0
+                              px-4 py-2 rounded-lg font-semibold text-sm
+                              transition-all duration-200 ease-in-out
+                              transform hover:scale-105 active:scale-95
+                              w-full
+                            `}
+                          >
+                            <span className="flex items-center justify-center gap-2">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                              </svg>
+                              판매자에게 문의하러 가기
+                            </span>
+                          </button>
+
 
 
 
@@ -7273,7 +7300,7 @@ const fetchBuyOrders = async () => {
                           {/* 구래수량(USDT) 입력, 구해하기 버튼 */}
                           {/* 판매 대기중일 경우 */}
                           {/* 나의 판매 계정이 아닐 경우 */}
-                          {
+                          {/*
                             seller.walletAddress !== address &&
                             currentUsdtBalanceArray[index] >= 10 && (
 
@@ -7300,19 +7327,11 @@ const fetchBuyOrders = async () => {
                                   `}
                                   disabled={!address || !user?.buyer?.bankInfo || buyOrderingPrivateSaleArray[index]}
                                 />
-                                {/* 구해할 USDT 수량을 입력해주세요. */}
                                 <span className="text-sm text-slate-600">
                                   구해할 USDT 수량을 입력해주세요.
                                 </span>
                                 <button
                                   onClick={() => {
-                                    /*
-                                    buyOrderPrivateSale(
-                                      index,
-                                      seller.walletAddress,
-                                    )
-                                    */
-
                                     // route to /[lang]/escrow/[sellerWalletAddress]
                                     // new window
                                     window.open(`/${params.lang}/escrow/${seller.seller.escrowWalletAddress}?buyAmount=${buyAmountInputs[index] || 0}`, '_blank');
@@ -7338,7 +7357,6 @@ const fetchBuyOrders = async () => {
                                   </span>
                                 </button>
                               </div>
-                              {/* 로그인을 해야 구매할 수 있습니다. */}
                               {!address && (
                                 <div className="text-sm text-red-600">
                                   로그인을 해야 구매할 수 있습니다.
@@ -7357,7 +7375,7 @@ const fetchBuyOrders = async () => {
                               )}
 
                             </div>
-                          )}
+                          )*/}
 
 
 
