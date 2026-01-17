@@ -12,6 +12,8 @@
 		"@emotion/react": "^11.11.3",
 		"@emotion/styled": "^11.11.0",
 		"@mui/material": "^5.15.4",
+		"@sendbird/chat": "^4.20.5",
+		"@sendbird/uikit-react": "^3.17.7",
 		"@talkjs/react": "^0.1.9",
 		"@tanstack/react-query": "^5.80.7",
 		"@thirdweb-dev/engine": "^0.0.14",

@@ -2866,3 +2866,48 @@ export async function getSellerBySellerWalletAddress(
   return results;
 
 }
+
+
+
+export async function getWalletAddressesByStorecodeAndSellerEscrowWalletAddress(
+  {
+    storecode,
+    escrowWalletAddress,
+    limit,
+    page,
+  }: {
+    storecode: string;
+    escrowWalletAddress: string;
+    limit: number;
+    page: number;
+  }
+): Promise<any> {
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+  // walletAddress is not empty and not null
+  // order by nickname asc
+  // if storecode is empty, return all users
+  const users = await collection
+    .find<UserProps>(
+      {
+        storecode: { $regex: String(storecode), $options: 'i' },
+        walletAddress: { $exists: true, $ne: null },
+        'seller.escrowWalletAddress': escrowWalletAddress,
+        verified: true,
+      },
+      {
+        limit: limit,
+        skip: (page - 1) * limit,
+        projection: {
+          walletAddress: 1,
+        },
+      },
+    )
+    .sort({ nickname: 1 })
+    .toArray();
+
+  return {
+    users,
+  };
+}
