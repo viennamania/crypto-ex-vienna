@@ -4651,7 +4651,7 @@ const fetchBuyOrders = async () => {
             <button
               className="flex bg-gray-100 text-sm text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-200 shadow-md"
               onClick={() => {
-                router.push('/' + params.lang + '/orangex');
+                router.push('/' + params.lang + '/p2p');
               }}
             >
               <div className="flex flex-row items-center justify-center gap-2">
