@@ -219,6 +219,31 @@ if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
     });
 }  
 
+const ESCROW_BANNER_ADS_LEFT = [
+  { id: 'left-1', image: '/ads/orangex-banner-07.svg', link: 'https://orangex.center' },
+  { id: 'left-2', image: '/ads/orangex-banner-03.svg', link: 'https://orangex.center' },
+  { id: 'left-3', image: '/ads/orangex-banner-09.svg', link: 'https://orangex.center' },
+];
+
+const ESCROW_BANNER_ADS_RIGHT = [
+  { id: 'right-1', image: '/ads/orangex-banner-02.svg', link: 'https://orangex.center' },
+  { id: 'right-2', image: '/ads/orangex-banner-08.svg', link: 'https://orangex.center' },
+  { id: 'right-3', image: '/ads/orangex-banner-10.svg', link: 'https://orangex.center' },
+];
+
+const ESCROW_BANNER_ADS_SCROLL = [
+  { id: 'scroll-1', image: '/ads/orangex-banner-01.svg', link: 'https://orangex.center' },
+  { id: 'scroll-2', image: '/ads/orangex-banner-02.svg', link: 'https://orangex.center' },
+  { id: 'scroll-3', image: '/ads/orangex-banner-03.svg', link: 'https://orangex.center' },
+  { id: 'scroll-4', image: '/ads/orangex-banner-04.svg', link: 'https://orangex.center' },
+  { id: 'scroll-5', image: '/ads/orangex-banner-05.svg', link: 'https://orangex.center' },
+  { id: 'scroll-6', image: '/ads/orangex-banner-06.svg', link: 'https://orangex.center' },
+  { id: 'scroll-7', image: '/ads/orangex-banner-07.svg', link: 'https://orangex.center' },
+  { id: 'scroll-8', image: '/ads/orangex-banner-08.svg', link: 'https://orangex.center' },
+  { id: 'scroll-9', image: '/ads/orangex-banner-09.svg', link: 'https://orangex.center' },
+  { id: 'scroll-10', image: '/ads/orangex-banner-10.svg', link: 'https://orangex.center' },
+];
+
 
 
 export default function Index({ params }: any) {
@@ -4292,13 +4317,65 @@ const fetchBuyOrders = async () => {
 
   return (
 
-    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-slate-50">
+    <main className="relative overflow-hidden p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-[radial-gradient(120%_120%_at_0%_0%,#fff7ed_0%,#fef2f2_38%,#eff6ff_78%,#ecfeff_100%)]">
 
       <AutoConnect
           client={client}
           wallets={[wallet]}
       />
 
+      <div className="pointer-events-none absolute -right-24 -top-32 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.25)_0%,transparent_70%)] blur-2xl" />
+      <div className="pointer-events-none absolute -left-24 bottom-[-120px] h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.25)_0%,transparent_70%)] blur-2xl" />
+
+      <aside className="pointer-events-auto hidden xl:flex fixed left-6 top-28 z-20 flex-col gap-4">
+        {ESCROW_BANNER_ADS_LEFT.map((ad) => (
+          <a
+            key={ad.id}
+            href={ad.link}
+            target="_blank"
+            rel="noreferrer"
+            className="group"
+          >
+            <div className="relative h-56 w-40 overflow-hidden rounded-2xl border border-white/80 bg-white/80 shadow-[0_22px_60px_-36px_rgba(15,23,42,0.6)]">
+              <Image
+                src={ad.image}
+                alt="Banner"
+                fill
+                sizes="160px"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/40 opacity-70" />
+              <div className="absolute -bottom-10 -right-10 h-24 w-24 rounded-full bg-amber-300/40 blur-2xl" />
+            </div>
+          </a>
+        ))}
+      </aside>
+
+      <aside className="pointer-events-auto hidden xl:flex fixed right-6 top-28 z-20 flex-col gap-4">
+        {ESCROW_BANNER_ADS_RIGHT.map((ad) => (
+          <a
+            key={ad.id}
+            href={ad.link}
+            target="_blank"
+            rel="noreferrer"
+            className="group"
+          >
+            <div className="relative h-56 w-40 overflow-hidden rounded-2xl border border-white/80 bg-white/80 shadow-[0_22px_60px_-36px_rgba(15,23,42,0.6)]">
+              <Image
+                src={ad.image}
+                alt="Banner"
+                fill
+                sizes="160px"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/40 opacity-70" />
+              <div className="absolute -top-10 -left-10 h-24 w-24 rounded-full bg-sky-300/40 blur-2xl" />
+            </div>
+          </a>
+        ))}
+      </aside>
+
+      <div className="relative z-10 w-full">
 
 
 
@@ -4400,12 +4477,13 @@ const fetchBuyOrders = async () => {
 
       <div className="py-0 w-full">
 
-        <div className="w-full flex flex-col items-center justify-center gap-2 mb-4
-        p-4
-        bg-white/70
-        border border-slate-200
-        rounded-lg
-        shadow-md
+        <div className="w-full flex flex-col items-center justify-center gap-3 mb-6
+        p-5
+        bg-white/80
+        border border-slate-200/70
+        rounded-2xl
+        shadow-[0_24px_60px_-45px_rgba(15,23,42,0.6)]
+        backdrop-blur
         ">
 
           <div className="w-full flex flex-row items-center justify-center gap-2">
@@ -4439,13 +4517,13 @@ const fetchBuyOrders = async () => {
                   height={50}
                   className="w-8 h-8"
                 />
-                <div className="text-lg font-semibold text-slate-800">
+                <div className="text-xl font-semibold text-slate-800">
                   판매자 에스크로 지갑
                 </div>
               </div>
 
               <button
-                className="text-lg text-slate-600 underline"
+                className="rounded-full border border-slate-200/70 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-600 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)] hover:bg-white"
                 onClick={() => {
                   navigator.clipboard.writeText(sellerWalletAddress);
                   toast.success(Copied_Wallet_Address);
@@ -4461,7 +4539,7 @@ const fetchBuyOrders = async () => {
 
         </div>
 
-        <div className="w-full flex flex-col items-start justify-center gap-2 mt-4">
+        <div className="w-full flex flex-col items-start justify-center gap-4 mt-4">
 
             {/* 돌아가기 버튼 */}
             {/* /ko/seller/buyorder */}
@@ -4524,7 +4602,7 @@ const fetchBuyOrders = async () => {
                           className="w-6 h-6"
                       />
                       <button
-                          className="text-lg text-zinc-600 underline"
+                          className="text-lg text-slate-600 underline"
                           onClick={() => {
                               navigator.clipboard.writeText(address);
                               toast.success(Copied_Wallet_Address);
@@ -4674,7 +4752,7 @@ const fetchBuyOrders = async () => {
           {/* 오늘 거래 현황 */}
 
           <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-4
-          border-t border-b border-zinc-300
+          border-t border-b border-slate-200
           py-4
           ">
 
@@ -4773,18 +4851,18 @@ const fetchBuyOrders = async () => {
             {/* list of buyOrders when status is 'ordered' or 'accepted' or 'paymentRequested' */}
             {/* traideId, usdtAmount, krwAmount, createdAt */}
             {/*
-            <table className="w-full xl:table-auto border-collapse border border-zinc-300
+            <table className="w-full xl:table-auto border-collapse border border-slate-200
             bg-white/80
             p-4 rounded-lg shadow-md
             backdrop-blur-md
             ">
               <thead>
-                <tr className="bg-zinc-200 text-zinc-700 text-sm font-semibold">
-                  <th className="border border-zinc-300 px-2 py-1">거래ID</th>
-                  <th className="border border-zinc-300 px-2 py-1">구래량(USDT)</th>
-                  <th className="border border-zinc-300 px-2 py-1">거래금액(원)</th>
-                  <th className="border border-zinc-300 px-2 py-1">생성일시</th>
-                  <th className="border border-zinc-300 px-2 py-1">상태</th>
+                <tr className="bg-slate-100 text-slate-700 text-sm font-semibold">
+                  <th className="border border-slate-200 px-2 py-1">거래ID</th>
+                  <th className="border border-slate-200 px-2 py-1">구래량(USDT)</th>
+                  <th className="border border-slate-200 px-2 py-1">거래금액(원)</th>
+                  <th className="border border-slate-200 px-2 py-1">생성일시</th>
+                  <th className="border border-slate-200 px-2 py-1">상태</th>
                 </tr>
               </thead>
               <tbody>
@@ -4793,24 +4871,24 @@ const fetchBuyOrders = async () => {
                   order.status === 'accepted' ||
                   order.status === 'paymentRequested'
                 ).map((order, index) => (
-                  <tr key={index} className="text-zinc-600 text-sm hover:bg-zinc-100
+                  <tr key={index} className="text-slate-600 text-sm hover:bg-slate-50
                   transition-colors duration-150 ease-in-out
                   ">
-                    <td className="border border-zinc-300 px-2 py-1 text-center">{order.tradeId}</td>
-                    <td className="border border-zinc-300 px-2 py-1 text-center"
+                    <td className="border border-slate-200 px-2 py-1 text-center">{order.tradeId}</td>
+                    <td className="border border-slate-200 px-2 py-1 text-center"
                       style={{ fontFamily: 'monospace' }}
                     >
                       {order.usdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     </td>
-                    <td className="border border-zinc-300 px-2 py-1 text-center"
+                    <td className="border border-slate-200 px-2 py-1 text-center"
                       style={{ fontFamily: 'monospace' }}
                     >
                       {order.krwAmount.toLocaleString()}
                     </td>
-                    <td className="border border-zinc-300 px-2 py-1 text-center">
+                    <td className="border border-slate-200 px-2 py-1 text-center">
                       {new Date(order.createdAt).toLocaleString()}
                     </td>
-                    <td className="border border-zinc-300 px-2 py-1 text-center capitalize">
+                    <td className="border border-slate-200 px-2 py-1 text-center capitalize">
                       {order.status === 'ordered' && '주문접수'}
                       {order.status === 'accepted' && '결제대기'}
                       {order.status === 'paymentRequested' && '결제요청중'}
@@ -5076,29 +5154,72 @@ const fetchBuyOrders = async () => {
 
           
           
+          <div className="w-full">
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/80 p-3 shadow-[0_20px_55px_-40px_rgba(15,23,42,0.6)] backdrop-blur">
+              <div className="flex items-center justify-between gap-3 mb-2 px-1">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                  <span className="inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                  프로모션 배너
+                </div>
+                <span className="text-xs text-slate-500">좌로 자동 스크롤</span>
+              </div>
+              <div className="escrow-banner-marquee">
+                <div className="escrow-banner-track">
+                  {[0, 1].map((loopIndex) => (
+                    <div key={`scroll-loop-${loopIndex}`} className="escrow-banner-group">
+                      {ESCROW_BANNER_ADS_SCROLL.map((ad) => (
+                        <a
+                          key={`${loopIndex}-${ad.id}`}
+                          href={ad.link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="escrow-banner-card"
+                        >
+                          <div className="relative h-20 w-44 overflow-hidden rounded-xl border border-white/80 bg-white/80 shadow-[0_16px_45px_-30px_rgba(15,23,42,0.55)]">
+                            <Image
+                              src={ad.image}
+                              alt="Banner"
+                              fill
+                              sizes="176px"
+                              className="object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/40 opacity-70" />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="w-full flex flex-col items-center justify-between gap-4
-          border-t border-b border-zinc-300
+          border-t border-b border-slate-200
           py-4
           ">
-            <div className="flex flex-row items-center justify-start gap-2">
-              <Image
-                src="/icon-market.png"
-                alt="Market"
-                width={50}
-                height={50}
-                className="w-8 h-8 rounded-lg object-cover"
-              />
-              <span className="text-lg font-bold text-slate-800">
-                실시간 환율 정보
-              </span>
-              <Image
-                src="/icon-live.gif"
-                alt="Live"
-                width={30}
-                height={30}
-                className="w-8 h-8 object-cover"
-              />
-            </div>
+
+            {sellersBalance[0]?.seller?.priceSettingMethod === 'market' && (
+              <div className="flex flex-row items-center justify-start gap-2">
+                <Image
+                  src="/icon-market.png"
+                  alt="Market"
+                  width={50}
+                  height={50}
+                  className="w-8 h-8 rounded-lg object-cover"
+                />
+                <span className="text-lg font-bold text-slate-800">
+                  실시간 환율 정보
+                </span>
+                <Image
+                  src="/icon-live.gif"
+                  alt="Live"
+                  width={30}
+                  height={30}
+                  className="w-8 h-8 object-cover"
+                />
+              </div>
+            )}
 
             <div className="w-full flex flex-row items-center justify-end gap-4"> 
 
@@ -5107,203 +5228,203 @@ const fetchBuyOrders = async () => {
               {/* upbit usdt to krw rate display */}
               {/* large font size */}
               {/* upbitUsdtToKrwRateTimestamp - convert to local time */}
-              <div className="w-64   
-                flex flex-row items-center justify-between gap-2 p-2">
-                
-                
+              
+              
+              {sellersBalance[0]?.seller?.priceSettingMethod === 'market'
+              && sellersBalance[0]?.seller?.market === 'upbit' && (
+                <div className="w-full
+                  flex flex-row items-center justify-between gap-2 p-2">
+              
+                  <div className="w-full flex flex-row items-center justify-center gap-2">
+                    <Image
+                      src="/icon-market-upbit.png"
+                      alt="Upbit"
+                      width={50}
+                      height={50}
+                      className="w-8 h-8 object-cover"
+                    />
 
-                
-                <div className="w-full flex flex-col items-end justify-center">
-                  <Image
-                    src="/icon-market-upbit.png"
-                    alt="Upbit"
-                    width={50}
-                    height={50}
-                    className="w-8 h-8 object-cover"
-                  />
+                    <span className="text-2xl text-slate-800 font-semibold"
+                      style={{ fontFamily: 'monospace' }}>
+                        {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    </span>
 
-                  <span className="text-2xl text-slate-800 font-semibold"
-                    style={{ fontFamily: 'monospace' }}>
-                      {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  </span>
-
-                  <div className="flex flex-row items-center justify-end gap-1">
-                    <span
-                      className={`text-sm font-semibold
-                      ${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
-                        'text-slate-600'
-                      }
-                      `}
-                      style={{ fontFamily: 'monospace' }}
+                    <div className="flex flex-row items-center justify-end gap-1">
+                      <span
+                        className={`text-sm font-semibold
+                        ${
+                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
+                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
+                          'text-slate-600'
+                        }
+                        `}
+                        style={{ fontFamily: 'monospace' }}
+                        >
+                        {
+                          upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
+                          upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
+                          `- 0`
+                        }
+                      </span>
+                      {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
+                      <span className={`text-sm font-semibold
+                        ${
+                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
+                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
+                          'text-slate-600'
+                        }
+                        `}
+                        style={{ fontFamily: 'monospace' }}
                       >
+                        {
+                          upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                          upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                          `(0.0000%)`
+                        }
+                      </span>
+                      
+                    </div>
+                    <span className="text-sm text-slate-600"
+                      style={{ fontFamily: 'monospace' }}>
                       {
-                        upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
-                        upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
-                        `- 0`
+                        //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
+                      
+                        TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
                       }
                     </span>
-                    {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
-                    <span className={`text-sm font-semibold
-                      ${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
-                        'text-slate-600'
-                      }
-                      `}
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {
-                        upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        `(0.0000%)`
-                      }
-                    </span>
-                    
                   </div>
-                  <span className="text-sm text-slate-600"
-                    style={{ fontFamily: 'monospace' }}>
-                    {
-                      //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
-                    
-                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
-                    }
-                  </span>
+
                 </div>
+              )}
 
-              </div>
+              {sellersBalance[0]?.seller?.priceSettingMethod === 'market'
+              && sellersBalance[0]?.seller?.market === 'bithumb' && (
+                <div className="w-full
+                  flex flex-row items-center justify-between gap-2 p-2">
 
-              {/* divider line for row or column for xl */}
-              <div className="w-full xl:h-16 h-full xl:w-0 border border-zinc-300"></div>
+                  <div className="w-full flex flex-row items-center justify-center gap-2">
+                    <Image
+                      src="/icon-market-bithumb.png"
+                      alt="Bithumb"
+                      width={50}
+                      height={50}
+                      className="w-8 h-8 object-cover"
+                    />
+                    <span className="text-2xl text-slate-800 font-semibold"
+                      style={{ fontFamily: 'monospace' }}>
+                        {animatedBithumbUsdtToKrwRate && animatedBithumbUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    </span>
 
-              {/* bithumb usdt to krw rate display */}
-              <div className="w-64
-                flex flex-row items-center justify-between gap-2 p-2">
-
-                <div className="w-full flex flex-col items-end justify-center">
-                  <Image
-                    src="/icon-market-bithumb.png"
-                    alt="Bithumb"
-                    width={50}
-                    height={50}
-                    className="w-8 h-8 object-cover"
-                  />
-                  <span className="text-2xl text-slate-800 font-semibold"
-                    style={{ fontFamily: 'monospace' }}>
-                      {animatedBithumbUsdtToKrwRate && animatedBithumbUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  </span>
-
-                  <div className="flex flex-row items-center justify-end gap-1">
-                    <span className={`text-sm font-semibold
-                      ${
-                        bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
-                        bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
-                        'text-slate-600'
-                      }
-                      `}
-                      style={{ fontFamily: 'monospace' }}
-                    >
+                    <div className="flex flex-row items-center justify-end gap-1">
+                      <span className={`text-sm font-semibold
+                        ${
+                          bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
+                          bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
+                          'text-slate-600'
+                        }
+                        `}
+                        style={{ fontFamily: 'monospace' }}
+                      >
+                        {
+                          bithumbUsdtToKrwRateChange === 'RISE' ? `▲ ${bithumbUsdtToKrwRateChangePrice}` :
+                          bithumbUsdtToKrwRateChange === 'FALL' ? `▼ ${bithumbUsdtToKrwRateChangePrice}` :
+                          `- 0`
+                        }
+                      </span>
+                      {/* bithumbUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
+                      <span className={`text-sm font-semibold
+                        ${
+                          bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
+                          bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
+                          'text-slate-600'
+                        }
+                        `}
+                        style={{ fontFamily: 'monospace' }}
+                      >
+                        {
+                          bithumbUsdtToKrwRateChange === 'RISE' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                          bithumbUsdtToKrwRateChange === 'FALL' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                          `(0.0000%)`
+                        }
+                      </span>
+                      
+                    </div>
+                    <span className="text-sm text-slate-600"
+                      style={{ fontFamily: 'monospace' }}>
                       {
-                        bithumbUsdtToKrwRateChange === 'RISE' ? `▲ ${bithumbUsdtToKrwRateChangePrice}` :
-                        bithumbUsdtToKrwRateChange === 'FALL' ? `▼ ${bithumbUsdtToKrwRateChangePrice}` :
-                        `- 0`
+                        //bithumbUsdtToKrwRateTimestamp ? new Date(bithumbUsdtToKrwRateTimestamp).toLocaleString() : ''
+                      
+                        TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
                       }
                     </span>
-                    {/* bithumbUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
-                    <span className={`text-sm font-semibold
-                      ${
-                        bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
-                        bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
-                        'text-slate-600'
-                      }
-                      `}
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {
-                        bithumbUsdtToKrwRateChange === 'RISE' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        bithumbUsdtToKrwRateChange === 'FALL' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        `(0.0000%)`
-                      }
-                    </span>
-                    
                   </div>
-                  <span className="text-sm text-slate-600"
-                    style={{ fontFamily: 'monospace' }}>
-                    {
-                      //bithumbUsdtToKrwRateTimestamp ? new Date(bithumbUsdtToKrwRateTimestamp).toLocaleString() : ''
-                    
-                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
-                    }
-                  </span>
                 </div>
-              </div>
+              )}
 
-              {/* divider line for row or column for xl */}
-              <div className="w-full xl:h-16 h-full xl:w-0 border border-zinc-300"></div>
+              {sellersBalance[0]?.seller?.priceSettingMethod === 'market'
+              && sellersBalance[0]?.seller?.market === 'korbit' && (
+                <div className="w-full
+                  flex flex-row items-center justify-between gap-2 p-2">
 
-              <div className="w-64
-                flex flex-row items-center justify-between gap-2 p-2">
+                  <div className="w-full flex flex-row items-center justify-center gap-2">
+                    <Image
+                      src="/icon-market-korbit.png"
+                      alt="Korbit"
+                      width={50}
+                      height={50}
+                      className="w-8 h-8 object-cover"
+                    />
+                    <span className="text-2xl text-slate-800 font-semibold"
+                      style={{ fontFamily: 'monospace' }}>
+                        {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    </span>
 
-                <div className="w-full flex flex-col items-end justify-center">
-                  <Image
-                    src="/icon-market-korbit.png"
-                    alt="Korbit"
-                    width={50}
-                    height={50}
-                    className="w-8 h-8 object-cover"
-                  />
-                  <span className="text-2xl text-slate-800 font-semibold"
-                    style={{ fontFamily: 'monospace' }}>
-                      {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  </span>
-
-                  <div className="flex flex-row items-center justify-end gap-1">
-                    <span className={`text-sm font-semibold
-                      ${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
-                        'text-slate-600'
-                      }
-                      `}
-                      style={{ fontFamily: 'monospace' }}
-                    >
+                    <div className="flex flex-row items-center justify-end gap-1">
+                      <span className={`text-sm font-semibold
+                        ${
+                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
+                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
+                          'text-slate-600'
+                        }
+                        `}
+                        style={{ fontFamily: 'monospace' }}
+                      >
+                        {
+                          upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
+                          upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
+                          `- 0`
+                        }
+                      </span>
+                      {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
+                      <span className={`text-sm font-semibold
+                        ${
+                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
+                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
+                          'text-slate-600'
+                        }
+                        `}
+                        style={{ fontFamily: 'monospace' }}
+                      >
+                        {
+                          upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                          upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                          `(0.0000%)`
+                        }
+                      </span>
+                      
+                    </div>
+                    <span className="text-sm text-slate-500"
+                      style={{ fontFamily: 'monospace' }}>
                       {
-                        upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
-                        upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
-                        `- 0`
+                        //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
+                      
+                        TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
                       }
                     </span>
-                    {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
-                    <span className={`text-sm font-semibold
-                      ${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
-                        'text-slate-600'
-                      }
-                      `}
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {
-                        upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        `(0.0000%)`
-                      }
-                    </span>
-                    
                   </div>
-                  <span className="text-sm text-zinc-500"
-                    style={{ fontFamily: 'monospace' }}>
-                    {
-                      //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
-                    
-                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
-                    }
-                  </span>
+
                 </div>
-
-              </div>
-
+              )}
 
             </div>
 
@@ -5311,7 +5432,7 @@ const fetchBuyOrders = async () => {
           
           
           <div className="w-full flex flex-col items-start justify-center gap-2
-          border-t border-b border-zinc-300
+          border-t border-b border-slate-200
           py-4
           ">
 
@@ -5495,9 +5616,9 @@ const fetchBuyOrders = async () => {
 
                           <div className="w-full flex flex-row items-center justify-start gap-2">
 
-                            <div className="w-full flex flex-row items-center justify-between gap-2">
+                            <div className="w-full flex flex-row items-center justify-between gap-4">
                               <span className="text-sm text-slate-700">
-                                판매<br/>금액
+                                판매금액
                               </span>
 
                               <span className="text-2xl font-semibold text-amber-400"
@@ -5677,7 +5798,7 @@ const fetchBuyOrders = async () => {
                         // top right corner ribbon style
                         className="absolute top-0 right-0
                         flex flex-col items-center justify-center
-                        bg-yellow-400 text-zinc-800 px-2 py-1 rounded-bl-lg rounded-tr-lg
+                        bg-yellow-400 text-slate-800 px-2 py-1 rounded-bl-lg rounded-tr-lg
                         shadow-lg
                         ">
                         <span className="text-sm font-semibold">
@@ -5757,7 +5878,7 @@ const fetchBuyOrders = async () => {
                       w-full
                       flex flex-col items-start justify-center gap-2
                       p-2
-                      border border-zinc-300 rounded-lg
+                      border border-slate-200 rounded-lg
                       
                       ${seller.currentUsdtBalanceChanged ? 'bg-green-100/70 animate-pulse' : ''}
 
@@ -5912,9 +6033,9 @@ const fetchBuyOrders = async () => {
                                     </>
                                   ) : (
                                     <div className="flex flex-col items-center justify-center gap-1
-                                    border border-zinc-300 rounded-lg px-2 py-1
+                                    border border-slate-200 rounded-lg px-2 py-1
                                     ">
-                                      <span className="text-xs text-zinc-600">
+                                      <span className="text-xs text-slate-600">
                                         지정가
                                       </span>
                                     </div>
@@ -6423,7 +6544,7 @@ const fetchBuyOrders = async () => {
 
 
                           <div className="w-full flex flex-col items-start justify-center gap-1
-                            border-t border-zinc-300 pt-2
+                            border-t border-slate-200 pt-2
                             ">
 
 
@@ -6500,7 +6621,7 @@ const fetchBuyOrders = async () => {
 
                               <span className="text-sm">
                                 TID: #<button
-                                    className="text-sm text-zinc-600 underline"
+                                    className="text-sm text-slate-600 underline"
                                     style={{ fontFamily: 'monospace' }}
                                     onClick={() => {
                                       navigator.clipboard.writeText(seller.seller?.buyOrder?.tradeId);
@@ -6729,7 +6850,15 @@ const fetchBuyOrders = async () => {
                                 />
                                 {/* 판매 홍보용 문구 */}
                                 {seller.seller?.promotionText ? (
-                                <span className="text-sm font-semibold text-slate-800">
+                                <span className="relative inline-block max-w-[420px] rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-800 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.4)] break-words">
+                                  <span
+                                    className="absolute -left-2 top-1.5 h-0 w-0 border-y-[8px] border-r-[8px] border-y-transparent border-r-slate-200/70"
+                                    aria-hidden="true"
+                                  />
+                                  <span
+                                    className="absolute -left-1.5 top-2 h-0 w-0 border-y-[6px] border-r-[6px] border-y-transparent border-r-white/90"
+                                    aria-hidden="true"
+                                  />
                                   {seller.seller?.promotionText}
                                 </span>
                                 ) : (
@@ -6854,24 +6983,37 @@ const fetchBuyOrders = async () => {
                             정상 거래 */}
                             {/* green color for background */}
                             <div className="w-full flex flex-row items-center justify-between gap-2 mt-2
-                            p-2 bg-emerald-900/30 border border-emerald-700 rounded-lg
+                            p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl
+                            shadow-[0_12px_28px_-20px_rgba(16,185,129,0.45)]
                             ">
-                              <div className="w-20 flex flex-col items-start justify-center gap-0">
-                                <span className="text-sm text-slate-600">
-                                  정상거래
+                              <div className="w-24 flex flex-col items-start justify-center gap-1">
+                                <span className="inline-flex flex-col items-start gap-0.5 rounded-full border border-emerald-200 bg-white/90 px-2 py-1 text-xs font-semibold text-emerald-700 leading-none">
+                                  <span className="inline-flex items-center gap-1">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                      <path
+                                        d="M20 6L9 17l-5-5"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      />
+                                    </svg>
+                                    <span>정상거</span>
+                                  </span>
+                                  <span className="pl-4">래</span>
                                 </span>
-                                <span className="text-lg text-slate-800">
+                                <span className="text-lg font-semibold text-slate-900">
                                   {seller.seller?.totalPaymentConfirmedCount || 0}
                                 </span>
                               </div>
                               <div className="w-full flex flex-col items-end justify-center gap-1">
 
-                                <span className="text-lg text-emerald-300"
+                                <span className="text-lg font-semibold text-emerald-700"
                                   style={{ fontFamily: 'monospace' }}>
                                   {seller.seller?.totalPaymentConfirmedUsdtAmount
                                   && seller.seller?.totalPaymentConfirmedUsdtAmount.toLocaleString()} USDT
                                 </span>
-                                <span className="text-lg text-amber-300"
+                                <span className="text-lg font-semibold text-amber-600"
                                   style={{ fontFamily: 'monospace' }}>
                                   {seller.seller?.totalPaymentConfirmedKrwAmount
                                   && seller.seller?.totalPaymentConfirmedKrwAmount.toLocaleString()} 원
@@ -6882,25 +7024,38 @@ const fetchBuyOrders = async () => {
                             {/* 중재 거래 */}
                             {/* red color for background */}
                             <div className="w-full flex flex-row items-center justify-between gap-2
-                            p-2 bg-red-900/30 border border-red-700 rounded-lg
+                            p-3 bg-rose-50/80 border border-rose-200 rounded-xl
+                            shadow-[0_12px_28px_-20px_rgba(244,63,94,0.35)]
                             ">
-                              <div className="w-20 flex flex-col items-start justify-center gap-0">
-                                <span className="text-sm text-slate-600">
-                                  중재거래
+                              <div className="w-24 flex flex-col items-start justify-center gap-1">
+                                <span className="inline-flex flex-col items-start gap-0.5 rounded-full border border-rose-200 bg-white/90 px-2 py-1 text-xs font-semibold text-rose-700 leading-none">
+                                  <span className="inline-flex items-center gap-1">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                      <path
+                                        d="M12 9v4m0 4h.01M12 3l9 16H3L12 3z"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      />
+                                    </svg>
+                                    <span>중재거</span>
+                                  </span>
+                                  <span className="pl-4">래</span>
                                 </span>
-                                <span className="text-lg text-slate-800">
+                                <span className="text-lg font-semibold text-slate-900">
                                   {seller.seller?.totalDisputeResolvedCount || 0}
                                 </span>
                               </div>
                               <div className="w-full flex flex-col items-end justify-center gap-1">
-                                <span className="text-lg text-emerald-300"
+                                <span className="text-lg font-semibold text-rose-700"
                                   style={{ fontFamily: 'monospace' }}>
                                   {seller.seller?.totalDisputeResolvedUsdtAmount
                                   ? seller.seller?.totalDisputeResolvedUsdtAmount.toLocaleString()
                                   : '0'
                                   } USDT
                                 </span>
-                                <span className="text-lg text-amber-300"
+                                <span className="text-lg font-semibold text-amber-600"
                                   style={{ fontFamily: 'monospace' }}>
                                   {seller.seller?.totalDisputeResolvedKrwAmount
                                   ? seller.seller?.totalDisputeResolvedKrwAmount.toLocaleString()
@@ -7178,7 +7333,7 @@ const fetchBuyOrders = async () => {
 
 
                           <div className="w-full flex flex-row items-center justify-start gap-2
-                          border-t border-b border-zinc-300 py-2
+                          border-t border-b border-slate-200 py-2
                           ">
                             <Image
                               src="/icon-buyer.png"
@@ -7530,7 +7685,7 @@ const fetchBuyOrders = async () => {
                   height={20}
                   className="animate-spin"
                 />
-                <span className="text-sm font-semibold text-zinc-500">
+                <span className="text-sm font-semibold text-slate-500">
                   자동자동입금확인중
                 </span>
               </div>
@@ -7549,7 +7704,7 @@ const fetchBuyOrders = async () => {
                 height={35}
                 className="w-6 h-6"
               />
-              <div className="text-sm text-zinc-500 font-semibold">
+              <div className="text-sm text-slate-500 font-semibold">
                 입금통장정보가 없습니다. 입금통장정보가 없으면 판매가 불가능합니다.
               </div>
             </div>
@@ -7561,7 +7716,7 @@ const fetchBuyOrders = async () => {
           <div className="hidden
             flex-col xl:flex-row items-start justify-between gap-2
             w-full
-            bg-zinc-100/50
+            bg-slate-50/50
             p-4 rounded-lg shadow-md
             ">
 
@@ -7630,8 +7785,8 @@ const fetchBuyOrders = async () => {
 
             {/* divider */}
             {/*
-            <div className="hidden xl:block w-0.5 h-20 bg-zinc-300"></div>
-            <div className="xl:hidden w-full h-0.5 bg-zinc-300"></div>
+            <div className="hidden xl:block w-0.5 h-20 bg-slate-200"></div>
+            <div className="xl:hidden w-full h-0.5 bg-slate-200"></div>
 
             <div className="xl:w-2/3 w-full
               flex flex-col xl:flex-row items-start justify-end gap-4">
@@ -7772,26 +7927,26 @@ const fetchBuyOrders = async () => {
             
             {/* divider */}
             {/*}
-            <div className="hidden xl:block w-0.5 h-10 bg-zinc-300"></div>
-            <div className="xl:hidden w-full h-0.5 bg-zinc-300"></div>
+            <div className="hidden xl:block w-0.5 h-10 bg-slate-200"></div>
+            <div className="xl:hidden w-full h-0.5 bg-slate-200"></div>
 
             <div className="xl:w-1/4 flex flex-row items-center justify-center gap-2">
               <div className="flex flex-col gap-2 items-center">
                 <div className="text-sm">총 청산수(건)</div>
-                <div className="text-xl font-semibold text-zinc-500">
+                <div className="text-xl font-semibold text-slate-500">
                   {tradeSummary.totalClearanceCount?.toLocaleString()}
                 </div>
               </div>
 
               <div className="flex flex-col gap-2 items-center">
                 <div className="text-sm">총 청산금액(원)</div>
-                <div className="text-xl font-semibold text-zinc-500">
+                <div className="text-xl font-semibold text-slate-500">
                   {tradeSummary.totalClearanceAmount?.toLocaleString()} 원
                 </div>
               </div>
               <div className="flex flex-col gap-2 items-center">
                 <div className="text-sm">총 청산수량(USDT)</div>
-                <div className="text-xl font-semibold text-zinc-500">
+                <div className="text-xl font-semibold text-slate-500">
                   {tradeSummary.totalClearanceAmountUSDT?.toLocaleString()} USDT
                 </div>
               </div>
@@ -7808,7 +7963,7 @@ const fetchBuyOrders = async () => {
             grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6
             gap-4
             items-start justify-start
-            border-t border-zinc-300
+            border-t border-slate-200
             py-4
             ">
             {buyOrderStats.totalByBuyerDepositName?.map((item, index) => (
@@ -7833,7 +7988,7 @@ const fetchBuyOrders = async () => {
                   {item._id.length > 1 ? item._id.slice(0, 1) + '*' .repeat(item._id.length - 1) : item._id}  
                 </div>
                 <div className="w-full flex flex-row items-center justify-between gap-1">
-                  <span className="text-sm text-zinc-500">
+                  <span className="text-sm text-slate-500">
                     {item.totalCount?.toLocaleString() || '0'}건
                   </span>
                   ｜
@@ -7871,7 +8026,7 @@ const fetchBuyOrders = async () => {
               hidden
               w-full overflow-x-auto">
 
-              <table className="w-full table-auto border-collapse border border-zinc-800 rounded-md">
+              <table className="w-full table-auto border-collapse border border-slate-300 rounded-md">
 
                 <thead
                   className="bg-[#0047ab] text-white text-sm font-semibold"
@@ -7883,13 +8038,13 @@ const fetchBuyOrders = async () => {
 
                     <th className="p-2 text-start">
                       <div className="flex flex-col items-start justify-center gap-2">
-                        <span className="text-sm text-zinc-50 font-semibold">
+                        <span className="text-sm text-slate-50 font-semibold">
                           가맹점
                         </span>
-                        <span className="text-sm text-zinc-50 font-semibold">
+                        <span className="text-sm text-slate-50 font-semibold">
                           P2P거래번호
                         </span>
-                        <span className="text-sm text-zinc-50 font-semibold">
+                        <span className="text-sm text-slate-50 font-semibold">
                           거래시작시간
                         </span>
                       </div>
@@ -7897,13 +8052,13 @@ const fetchBuyOrders = async () => {
 
                     <th className="p-2 text-start">
                       <div className="flex flex-col items-start justify-center gap-2">
-                        <span className="text-sm text-zinc-50 font-semibold">
+                        <span className="text-sm text-slate-50 font-semibold">
                           구매자 아이디
                         </span>
-                        <span className="text-sm text-zinc-50 font-semibold">
+                        <span className="text-sm text-slate-50 font-semibold">
                           USDT지갑
                         </span>
-                        <span className="text-sm text-zinc-50 font-semibold">
+                        <span className="text-sm text-slate-50 font-semibold">
                           입금자
                         </span>
                       </div>
@@ -7911,13 +8066,13 @@ const fetchBuyOrders = async () => {
                     
                     <th className="p-2 text-end">
                       <div className="flex flex-col items-end justify-center gap-2">
-                        <span className="text-sm text-zinc-50 font-semibold">
+                        <span className="text-sm text-slate-50 font-semibold">
                           {Buy_Amount}(USDT)
                         </span>
-                        <span className="text-sm text-zinc-50 font-semibold">
+                        <span className="text-sm text-slate-50 font-semibold">
                           구매금액(원)
                         </span>
-                        <span className="text-sm text-zinc-50 font-semibold">
+                        <span className="text-sm text-slate-50 font-semibold">
                           단가(원)
                         </span>
                       </div>
@@ -7930,10 +8085,10 @@ const fetchBuyOrders = async () => {
                       <div className="flex flex-col items-start justify-center gap-2">
 
                         <div className="flex flex-col items-start justify-center gap-2">
-                            <span className="text-sm text-zinc-50 font-semibold">
+                            <span className="text-sm text-slate-50 font-semibold">
                               판매자 아이디
                             </span>
-                            <span className="text-sm text-zinc-50 font-semibold">
+                            <span className="text-sm text-slate-50 font-semibold">
                               USDT지갑
                             </span>
                         </div>
@@ -7948,7 +8103,7 @@ const fetchBuyOrders = async () => {
 
                             /*
                             className="
-                            bg-zinc-100 rounded-full
+                            bg-slate-50 rounded-full
                             w-5 h-5 animate-spin"
                             */
                             // if buyOrders.filter((item) => item.status === 'ordered').length > 0, then animate spin
@@ -7959,13 +8114,13 @@ const fetchBuyOrders = async () => {
                           />
 
                           {/* the count of status is ordered */}
-                          <span className="text-sm text-zinc-50 font-semibold">
+                          <span className="text-sm text-slate-50 font-semibold">
                             {
                               buyOrders.filter((item) => item.status === 'ordered').length
                             }
                           </span>
 
-                          <span className="text-sm text-zinc-50 font-semibold">
+                          <span className="text-sm text-slate-50 font-semibold">
                             거래상태
                           </span>
 
@@ -7994,7 +8149,7 @@ const fetchBuyOrders = async () => {
                               ${buyOrders.filter((item) => item.status === 'paymentRequested').length > 0 ? 'animate-spin' : ''}
                             `}
                           />
-                          <span className="text-sm text-zinc-50 font-semibold">
+                          <span className="text-sm text-slate-50 font-semibold">
                             {
                               buyOrders.filter((item) => item.status === 'paymentRequested').length
                             }
@@ -8003,10 +8158,10 @@ const fetchBuyOrders = async () => {
                         </div>
 
                         <div className="w-full flex flex-col items-end justify-center gap-2">
-                          <span className="text-sm text-zinc-50 font-semibold">
+                          <span className="text-sm text-slate-50 font-semibold">
                             입금통장
                           </span>
-                          <span className="text-sm text-zinc-50 font-semibold">
+                          <span className="text-sm text-slate-50 font-semibold">
                             입금액(원)
                           </span>
                         </div>
@@ -8057,7 +8212,7 @@ const fetchBuyOrders = async () => {
                             `}
                           />
 
-                          <span className="text-sm text-zinc-50 font-semibold">
+                          <span className="text-sm text-slate-50 font-semibold">
                             {
                               buyOrders.filter((item) => item.status === 'paymentConfirmed'
                               && item?.settlement?.status !== "paymentSettled"
@@ -8085,7 +8240,7 @@ const fetchBuyOrders = async () => {
                     
                     <tr key={index} className={`
                       ${
-                        index % 2 === 0 ? 'bg-zinc-100' : 'bg-zinc-200'
+                        index % 2 === 0 ? 'bg-slate-50' : 'bg-slate-100'
 
 
                         //item.walletAddress === address ?
@@ -8154,7 +8309,7 @@ const fetchBuyOrders = async () => {
                           </div>
 
 
-                          <span className="text-sm text-zinc-500 font-semibold">
+                          <span className="text-sm text-slate-500 font-semibold">
                           {
                             "#" + item.tradeId
                           }
@@ -8164,7 +8319,7 @@ const fetchBuyOrders = async () => {
 
                             <div className="flex flex-col items-start justify-start">
 
-                              <span className="text-sm text-zinc-800 font-semibold">
+                              <span className="text-sm text-slate-800 font-semibold">
                                 {new Date(item.createdAt).toLocaleTimeString('ko-KR', {
                                   hour: '2-digit',
                                   minute: '2-digit',
@@ -8172,7 +8327,7 @@ const fetchBuyOrders = async () => {
                                 })}
                               </span>
                               {/*
-                              <span className="text-sm text-zinc-500">
+                              <span className="text-sm text-slate-500">
                                 {new Date(item.createdAt).toLocaleDateString('ko-KR', {
                                   year: 'numeric',
                                   month: '2-digit',
@@ -8182,7 +8337,7 @@ const fetchBuyOrders = async () => {
                               */}
 
                               <div className="flex flex-row items-center justify-start gap-1">
-                                <span className="text-sm text-zinc-500 font-semibold">
+                                <span className="text-sm text-slate-500 font-semibold">
                                   {params.lang === 'ko' ? (
                                     <p>{
                                       new Date().getTime() - new Date(item.createdAt).getTime() < 1000 * 60 ? (
@@ -8231,7 +8386,7 @@ const fetchBuyOrders = async () => {
 
                             </div>
                             {/*
-                            <span className="text-sm text-zinc-500 font-semibold">
+                            <span className="text-sm text-slate-500 font-semibold">
                               {params.lang === 'ko' ? (
                                 <p>{
                                   new Date().getTime() - new Date(item.createdAt).getTime() < 1000 * 60 ? (
@@ -8281,7 +8436,7 @@ const fetchBuyOrders = async () => {
                                   objectFit: 'cover',
                                 }}
                               />
-                              <span className="text-lg text-zinc-500 font-semibold">
+                              <span className="text-lg text-slate-500 font-semibold">
                                 {
                                   item?.nickname?.length > 10 ?
                                   item?.nickname?.substring(0, 10) + '...' :
@@ -8348,14 +8503,14 @@ const fetchBuyOrders = async () => {
                           {/* userStats.totalPaymentConfirmedCount */}
                           {/* userStats.totalPaymentConfirmedKrwAmount */}
                           <div className="flex flex-row items-center justify-center gap-2">
-                            <span className="text-sm text-zinc-500">
+                            <span className="text-sm text-slate-500">
                               {
                                 item?.userStats?.totalPaymentConfirmedCount
                                 ? item?.userStats?.totalPaymentConfirmedCount.toLocaleString() + ' 건' :
                                 0 + ' 건'
                               }
                             </span>
-                            <span className="text-sm text-zinc-500">
+                            <span className="text-sm text-slate-500">
                               {
                                 item?.userStats?.totalPaymentConfirmedKrwAmount &&
                                 item?.userStats?.totalPaymentConfirmedKrwAmount.toLocaleString() + ' 원'
@@ -8415,7 +8570,7 @@ const fetchBuyOrders = async () => {
                             </span>
                           </div>
 
-                          <span className="text-sm text-zinc-500"
+                          <span className="text-sm text-slate-500"
                             style={{
                               fontFamily: 'monospace',
                             }}
@@ -8430,10 +8585,10 @@ const fetchBuyOrders = async () => {
                           <div className="flex flex-col items-end justify-end gap-2">
                             
                             <div className="flex flex-row items-center justify-center gap-2">
-                              <span className="text-sm text-zinc-500">
+                              <span className="text-sm text-slate-500">
                                 결제방법
                               </span>
-                              <span className="text-sm text-zinc-500">
+                              <span className="text-sm text-slate-500">
                                 {item.paymentMethod === 'bank' ? '은행'
                                 : item.paymentMethod === 'card' ? '카드'
                                 : item.paymentMethod === 'pg' ? 'PG'
@@ -8497,7 +8652,7 @@ const fetchBuyOrders = async () => {
                                       height={20}
                                       className="w-5 h-5 animate-spin"
                                     />
-                                    <span className="text-sm text-zinc-500">
+                                    <span className="text-sm text-slate-500">
                                       에스크로 진행중...
                                     </span>
                                   </div>
@@ -8531,7 +8686,7 @@ const fetchBuyOrders = async () => {
                                   height={50}
                                   className="w-8 h-8"
                                 />
-                                <span className="text-sm text-zinc-500 font-semibold">
+                                <span className="text-sm text-slate-500 font-semibold">
                                   판매자<br/>매칭중
                                 </span>
                               </div>
@@ -8608,7 +8763,7 @@ const fetchBuyOrders = async () => {
                                     height={20}
                                     className="rounded-full w-5 h-5"
                                   />
-                                  <span className="text-lg font-semibold text-zinc-500">
+                                  <span className="text-lg font-semibold text-slate-500">
                                     {
                                       item.seller?.nickname &&
                                       item.seller.nickname.length > 8 ?
@@ -8765,7 +8920,7 @@ const fetchBuyOrders = async () => {
                                 </span>
                                 */}
 
-                                <div className="text-sm text-zinc-500">
+                                <div className="text-sm text-slate-500">
                                   {
                                     // from now
                                     new Date().getTime() - new Date(item.cancelledAt).getTime() < 1000 * 60 ? (
@@ -8822,7 +8977,7 @@ const fetchBuyOrders = async () => {
                               </a>
 
                               <span
-                                className="text-sm text-zinc-500"
+                                className="text-sm text-slate-500"
                               >{
                                 //item.paymentConfirmedAt && new Date(item.paymentConfirmedAt)?.toLocaleString()
                                 // from now
@@ -8874,7 +9029,7 @@ const fetchBuyOrders = async () => {
                                   height={20}
                                   className="w-5 h-5 rounded-full"
                                 />
-                                <span className="text-sm font-semibold text-zinc-500">
+                                <span className="text-sm font-semibold text-slate-500">
                                   자동입금확인
                                 </span>
                               </div>
@@ -8889,7 +9044,7 @@ const fetchBuyOrders = async () => {
                                   height={20}
                                   className="w-5 h-5 rounded-full"
                                 />
-                                <span className="text-sm font-semibold text-zinc-500">
+                                <span className="text-sm font-semibold text-slate-500">
                                   수동입금확인
                                 </span>
                               </div>
@@ -8898,7 +9053,7 @@ const fetchBuyOrders = async () => {
 
                             {/* seller bank info */}
                             <div className="flex flex-row gap-2 items-center justify-end">
-                              <span className="text-sm text-zinc-500">
+                              <span className="text-sm text-slate-500">
                                 {item.seller?.bankInfo?.bankName}
                               </span>
                               <span className="text-lg text-gray-800 font-bold">
@@ -8999,7 +9154,7 @@ const fetchBuyOrders = async () => {
                                   </div>
                                 </div>
                                 {/*
-                                <div className="flex flex-row items-end justify-start text-sm text-zinc-500">
+                                <div className="flex flex-row items-end justify-start text-sm text-slate-500">
                                   {item.seller?.bankInfo?.accountNumber}
                                 </div>
                                 */}
@@ -9187,7 +9342,7 @@ const fetchBuyOrders = async () => {
                                   height={20}
                                   className="w-5 h-5"
                                 />
-                                <div className="text-lg text-zinc-500 font-semibold">
+                                <div className="text-lg text-slate-500 font-semibold">
                                   {user?.nickname}
                                 </div>
                               </div>
@@ -9313,7 +9468,7 @@ const fetchBuyOrders = async () => {
                                   height={20}
                                   className="w-5 h-5 animate-spin"
                                 />
-                                <span className="text-sm text-zinc-500">
+                                <span className="text-sm text-slate-500">
                                   판매자가 테더(USDT)를 구매자에게 보내는 중
                                 </span>
                               </div>
@@ -9412,7 +9567,7 @@ const fetchBuyOrders = async () => {
                                     }}
                                     placeholder="판매취소사유"
                                     className="w-full h-8
-                                    text-center rounded-md text-sm text-zinc-500 font-semibold bg-zinc-100 border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    text-center rounded-md text-sm text-slate-500 font-semibold bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                   />
                                   <div className="text-xs text-red-500">
                                     취소사유가 없을 경우 판매자 평가에 영향을 미칠 수 있습니다.
@@ -9587,15 +9742,15 @@ const fetchBuyOrders = async () => {
 
                                     <div className="flex flex-col gap-2 items-center justify-center">
                                       <div className="flex flex-row gap-2 items-center justify-center">
-                                        <span className="text-sm text-zinc-500">
+                                        <span className="text-sm text-slate-500">
                                           {item.seller?.bankInfo?.accountHolder}
                                         </span>
-                                        <span className="text-sm text-zinc-500">
+                                        <span className="text-sm text-slate-500">
                                           {item.seller?.bankInfo?.bankName}
                                         </span>
                                       </div>
                                       {/*
-                                      <span className="text-sm text-zinc-500">
+                                      <span className="text-sm text-slate-500">
                                         {
                                           item.seller?.bankInfo?.accountNumber &&
                                           item.seller?.bankInfo?.accountNumber.length > 5 &&
@@ -9747,7 +9902,7 @@ const fetchBuyOrders = async () => {
                                           paymentAmounts.map((item, idx) => idx === index ? Number(e.target.value) : item)
                                         );
                                       }}
-                                      className="w-20 h-8 rounded-md text-right text-lg text-zinc-500 font-semibold bg-zinc-100 border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                      className="w-20 h-8 rounded-md text-right text-lg text-slate-500 font-semibold bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />{' '}원
                                   </div>
 
@@ -9964,7 +10119,7 @@ const fetchBuyOrders = async () => {
                                       {item?.usdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                                     </span>
                                   </div>
-                                  <span className="text-sm text-zinc-500">
+                                  <span className="text-sm text-slate-500">
                                     테더(USDT) 전송내역
                                   </span>
                                 </div>
@@ -10018,7 +10173,7 @@ const fetchBuyOrders = async () => {
                                       {item?.usdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                                     </span>
                                   </div>
-                                  <span className="text-sm text-zinc-500">
+                                  <span className="text-sm text-slate-500">
                                     TXID 저장누락
                                   </span>
                                 </div>
@@ -10107,7 +10262,7 @@ const fetchBuyOrders = async () => {
                       ">
                         <div className="w-full
                           flex flex-col gap-2 items-center justify-center
-                          border border-dashed border-zinc-300 rounded-lg p-2">
+                          border border-dashed border-slate-200 rounded-lg p-2">
 
                           {item.status === "paymentConfirmed" &&
                             (!item?.transactionHash || item?.transactionHash === '0x') &&
@@ -10124,7 +10279,7 @@ const fetchBuyOrders = async () => {
                                   height={30}
                                   className="w-6 h-6 rounded-lg object-cover"
                                 />
-                                <span className="text-sm font-semibold text-zinc-500">
+                                <span className="text-sm font-semibold text-slate-500">
                                   {item?.store?.storeName}{' '}가맹점 자동결제 지갑주소
                                 </span>
                               </div>
@@ -10138,7 +10293,7 @@ const fetchBuyOrders = async () => {
                                   height={16}
                                   className="w-4 h-4 rounded-lg object-cover"
                                 />
-                                <span className="text-sm font-semibold text-zinc-500">
+                                <span className="text-sm font-semibold text-slate-500">
                                   {item.store?.settlementWalletAddress ?
                                     item.store.settlementWalletAddress.slice(0, 5) + '...' + item.store.settlementWalletAddress.slice(-4)
                                     : '없음'}
@@ -10154,7 +10309,7 @@ const fetchBuyOrders = async () => {
                                   height={16}
                                   className="w-4 h-4 rounded-lg object-cover"
                                 />
-                                <span className="text-sm font-semibold text-zinc-500">
+                                <span className="text-sm font-semibold text-slate-500">
                                   P2P 판매완료후 자동으로 결제와 정산을 진행합니다.
                                 </span>
                               </div>
@@ -10180,7 +10335,7 @@ const fetchBuyOrders = async () => {
                                 height={30}
                                 className="w-6 h-6 rounded-lg object-cover"
                               />
-                              <span className="text-sm font-semibold text-zinc-500">
+                              <span className="text-sm font-semibold text-slate-500">
                                 {item?.store?.storeName}{' '}가맹점 결제 및 정산완료
                               </span>
                             </div>
@@ -10196,12 +10351,12 @@ const fetchBuyOrders = async () => {
                                 <div className="w-full flex flex-row gap-2 items-center justify-center">
                                   <span className="
                                   w-14 
-                                  text-xs text-zinc-500">
+                                  text-xs text-slate-500">
                                     가맹점 결제
                                   </span>
                                   <span className="
                                   w-12 text-end
-                                  text-sm text-zinc-500"
+                                  text-sm text-slate-500"
                                     style={{
                                       fontFamily: 'monospace',
                                     }}>
@@ -10218,12 +10373,12 @@ const fetchBuyOrders = async () => {
                                 <div className="w-full flex flex-row gap-2 items-center justify-center">
                                   <span className="
                                   w-14
-                                  text-xs text-zinc-500">
+                                  text-xs text-slate-500">
                                     PG 수수료
                                   </span>
                                   <span className="
                                   w-12 text-end
-                                  text-sm text-zinc-500"
+                                  text-sm text-slate-500"
                                     style={{
                                       fontFamily: 'monospace',
                                     }}>
@@ -10234,12 +10389,12 @@ const fetchBuyOrders = async () => {
                                 <div className="w-full flex flex-row gap-2 items-center justify-center">
                                   <span className="
                                   w-14
-                                  text-xs text-zinc-500">
+                                  text-xs text-slate-500">
                                     센터 수수료
                                   </span>
                                   <span className="
                                   w-12  text-end
-                                  text-sm text-zinc-500"
+                                  text-sm text-slate-500"
                                     style={{
                                       fontFamily: 'monospace',
                                     }}>
@@ -10250,12 +10405,12 @@ const fetchBuyOrders = async () => {
                                 <div className="w-full flex flex-row gap-2 items-center justify-center">
                                   <span className="
                                   w-14
-                                  text-xs text-zinc-500">
+                                  text-xs text-slate-500">
                                     AG 수수료
                                   </span>
                                   <span className="
                                   w-12 text-end
-                                  text-sm text-zinc-500"
+                                  text-sm text-slate-500"
                                     style={{
                                       fontFamily: 'monospace',
                                     }}>
@@ -10368,7 +10523,7 @@ const fetchBuyOrders = async () => {
                                             height={20}
                                             className="animate-spin"
                                           />
-                                          <span className="text-sm font-semibold text-zinc-500">
+                                          <span className="text-sm font-semibold text-slate-500">
                                             가맹점 결제 및 정산중
                                           </span>
                                         </div>
@@ -10381,7 +10536,7 @@ const fetchBuyOrders = async () => {
                                             height={20}
                                             className="rounded-lg w-6 h-6"
                                           />
-                                          <span className="text-sm font-semibold text-zinc-500">
+                                          <span className="text-sm font-semibold text-slate-500">
                                             {item.store?.storeName}
                                           </span>
                                         </div>
@@ -10616,7 +10771,7 @@ const fetchBuyOrders = async () => {
                                       {item.nickname.slice(0, 6)}...
                                     </span>
                                   </div>
-                                  <span className="text-sm text-zinc-500">
+                                  <span className="text-sm text-slate-500">
                                     충전금액(원)
                                   </span>
                                   <span className="text-sm text-blue-600 font-semibold"
@@ -10657,7 +10812,7 @@ const fetchBuyOrders = async () => {
                                             width={30}
                                             height={30}
                                           />
-                                          <span className="text-sm font-semibold text-zinc-500">
+                                          <span className="text-sm font-semibold text-slate-500">
                                             가맹점 결제 및 정산중
                                           </span>
                                         </div>
@@ -10670,7 +10825,7 @@ const fetchBuyOrders = async () => {
                                             height={20}
                                             className="rounded-lg w-6 h-6 object-cover"
                                           />
-                                          <span className="text-sm font-semibold text-zinc-500">
+                                          <span className="text-sm font-semibold text-slate-500">
                                             {item.store?.storeName}
                                           </span>
                                         </div>
@@ -10797,7 +10952,7 @@ const fetchBuyOrders = async () => {
                           w-20
                         flex flex-col gap-2 items-center justify-center">
                           <button
-                            className="text-sm bg-zinc-500 text-white px-2 py-1 rounded-md hover:bg-zinc-600"
+                            className="text-sm bg-slate-500 text-white px-2 py-1 rounded-md hover:bg-slate-600"
 
                             onClick={() => {
                               setSelectedItem(item);
@@ -10812,7 +10967,7 @@ const fetchBuyOrders = async () => {
 
                           {item?.settlement && item?.settlement?.txid && (
                           <button
-                            className="text-sm bg-zinc-500 text-white px-2 py-1 rounded-md hover:bg-zinc-600"
+                            className="text-sm bg-slate-500 text-white px-2 py-1 rounded-md hover:bg-slate-600"
                             onClick={() => {
                               window.open(
                                 `https://arbiscan.io/tx/${item.settlement.txid}`,
@@ -10922,7 +11077,7 @@ const fetchBuyOrders = async () => {
 
                                 {params.lang === 'ko' ? (
 
-                                  <p className="text-sm text-zinc-500">
+                                  <p className="text-sm text-slate-500">
 
                                   
                                     {
@@ -10941,7 +11096,7 @@ const fetchBuyOrders = async () => {
                                   
                                   ) : (
 
-                                    <p className="text-sm text-zinc-500">
+                                    <p className="text-sm text-slate-500">
 
 
                                   
@@ -11000,7 +11155,7 @@ const fetchBuyOrders = async () => {
                                   width={28}
                                   height={28}
                                 />
-                                <p className="text-sm text-zinc-500">{Expires_in} {
+                                <p className="text-sm text-slate-500">{Expires_in} {
 
                                   24 - Math.floor((new Date().getTime() - new Date(item.createdAt).getTime()) / 1000 / 60 / 60) - 1
 
@@ -11020,7 +11175,7 @@ const fetchBuyOrders = async () => {
                                   width={28}
                                   height={28}
                                 />
-                                <p className="text-sm text-zinc-500">Expired</p>
+                                <p className="text-sm text-slate-500">Expired</p>
                                 */}
                               </div>
                             )}
@@ -11038,7 +11193,7 @@ const fetchBuyOrders = async () => {
                         <div className={`
                           ${item.status !== 'cancelled' && 'h-16'}
 
-                          mb-4 flex flex-row items-center bg-zinc-100 border border-zinc-200 px-2 py-1 rounded-md`}>
+                          mb-4 flex flex-row items-center bg-slate-50 border border-slate-200 px-2 py-1 rounded-md`}>
                             <Image
                               src="/icon-trade.png"
                               alt="Trade"
@@ -11052,7 +11207,7 @@ const fetchBuyOrders = async () => {
                             </p>
 
                             {item.status === 'cancelled' ? (
-                              <p className="ml-2 text-sm text-zinc-500">
+                              <p className="ml-2 text-sm text-slate-500">
                                 {new Date(item.acceptedAt)?.toLocaleString()}
                               </p>
                             ) : (
@@ -11060,7 +11215,7 @@ const fetchBuyOrders = async () => {
                               <>
                                 {params.lang === 'ko' ? (
 
-                                  <p className="ml-2 text-sm text-zinc-500">
+                                  <p className="ml-2 text-sm text-slate-500">
 
                                   
                                     {new Date().getTime() - new Date(item.acceptedAt).getTime() < 1000 * 60 ? (
@@ -11079,7 +11234,7 @@ const fetchBuyOrders = async () => {
 
                                 ) : (
 
-                                  <p className="ml-2 text-sm text-zinc-500">
+                                  <p className="ml-2 text-sm text-slate-500">
 
                                     {Trade_Started} {
                                       new Date().getTime() - new Date(item.acceptedAt).getTime() < 1000 * 60 ? (
@@ -11137,7 +11292,7 @@ const fetchBuyOrders = async () => {
                         {/*
                         
                         {item.acceptedAt && (
-                          <p className="mb-2 text-sm text-zinc-500">
+                          <p className="mb-2 text-sm text-slate-500">
                             Trade started at {new Date(item.acceptedAt).toLocaleDateString() + ' ' + new Date(item.acceptedAt).toLocaleTimeString()}
                           </p>
                         )}
@@ -11171,7 +11326,7 @@ const fetchBuyOrders = async () => {
 
 
 
-                          <p className="text-xl text-zinc-500"
+                          <p className="text-xl text-slate-500"
                             style={{ fontFamily: 'monospace' }}>
                             {Price}: {
                               // currency
@@ -11183,10 +11338,10 @@ const fetchBuyOrders = async () => {
 
                           <div className="mt-2 flex flex-row items-start gap-2">
 
-                            <p className="text-xl font-semibold text-zinc-500">
+                            <p className="text-xl font-semibold text-slate-500">
                               {item.usdtAmount}{' '}USDT
                             </p>
-                            <p className="text-lg font-semibold text-zinc-500">{Rate}: {
+                            <p className="text-lg font-semibold text-slate-500">{Rate}: {
 
                               Number(item.krwAmount / item.usdtAmount).toFixed(3)
 
@@ -11363,7 +11518,7 @@ const fetchBuyOrders = async () => {
                                   {Waiting_for_seller_to_deposit} {item.usdtAmount} USDT {to_escrow}...
                                 </span>
 
-                                <span className="text-sm text-zinc-500">
+                                <span className="text-sm text-slate-500">
 
                                   {If_the_seller_does_not_deposit_the_USDT_to_escrow},
 
@@ -11405,7 +11560,7 @@ const fetchBuyOrders = async () => {
                                       );
                                     }}
                                   />
-                                  <label className="text-sm text-zinc-500">
+                                  <label className="text-sm text-slate-500">
                                     {I_agree_to_cancel_the_trade}
                                   </label>
                                 </div>
@@ -11427,7 +11582,7 @@ const fetchBuyOrders = async () => {
                                       {cancellings[index] ? (
                                         <div className="
                                           w-4 h-4
-                                          border-2 border-zinc-800
+                                          border-2 border-slate-300
                                           rounded-full
                                           animate-spin
                                         ">
@@ -11677,7 +11832,7 @@ const fetchBuyOrders = async () => {
                                                   );
                                               }}
                                             />
-                                            <label className="text-sm text-zinc-500">
+                                            <label className="text-sm text-slate-500">
                                               {I_agree_to_the_terms_of_trade}
                                             </label>
                                           </div>
@@ -11689,7 +11844,7 @@ const fetchBuyOrders = async () => {
                                           {address && agreementForTrade[index] && (
                                             <div className="mt-8 flex flex-row items-center justify-start gap-2">
 
-                                              <span className="text-sm text-zinc-500">SMS</span>
+                                              <span className="text-sm text-slate-500">SMS</span>
 
                                               <div className="flex flex-col items-start justify-start">
                                                 <input
@@ -11709,7 +11864,7 @@ const fetchBuyOrders = async () => {
                                           <button
                                             disabled={!address || !agreementForTrade[index]}
                                             className={`m-10 text-lg px-4 py-2 rounded-md
-                                              ${!address || !agreementForTrade[index] ? 'bg-zinc-200 text-slate-700 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600 text-white'}
+                                              ${!address || !agreementForTrade[index] ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600 text-white'}
                                               `}
                                             onClick={() => {
   
@@ -11754,7 +11909,7 @@ const fetchBuyOrders = async () => {
                     {/* status */}
                     {/*
                     <div className="absolute bottom-4 right-4 flex flex-row items-start justify-start">
-                      <div className="text-sm text-zinc-500">
+                      <div className="text-sm text-slate-500">
                         {item.status === 'ordered' ? 'Order opened at ' + new Date(item.createdAt)?.toLocaleString()
                         : item.status === 'accepted' ? 'Trade started at ' + new Date(item.acceptedAt)?.toLocaleString()
                         : item.status === 'paymentRequested' ? 'Payment requested at ' + new Date(item.paymentRequestedAt)?.toLocaleString()
@@ -11802,7 +11957,7 @@ const fetchBuyOrders = async () => {
                 router.push(`/${params.lang}/administration/buyorder?storecode=${searchStorecode}&limit=${Number(e.target.value)}&page=${pageValue}`)
               }
 
-              className="text-sm bg-zinc-100 text-zinc-700 px-2 py-1 rounded-md border border-zinc-200"
+              className="text-sm bg-slate-50 text-slate-700 px-2 py-1 rounded-md border border-slate-200"
             >
               <option value={10}>10</option>
               <option value={20}>20</option>
@@ -11837,7 +11992,7 @@ const fetchBuyOrders = async () => {
           </button>
 
 
-          <span className="text-sm text-zinc-500">
+          <span className="text-sm text-slate-500">
             {pageValue} / {Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue))}
           </span>
 
@@ -11872,6 +12027,8 @@ const fetchBuyOrders = async () => {
           
       </div>
 
+      </div>
+
         {/*
         <Modal isOpen={isModalOpen} onClose={closeModal}>
             <TradeDetail
@@ -11888,6 +12045,48 @@ const fetchBuyOrders = async () => {
                 selectedItem={selectedItem}
             />
         </ModalUser>
+
+        <style jsx>{`
+          .escrow-banner-marquee {
+            overflow: hidden;
+            width: 100%;
+          }
+
+          .escrow-banner-track {
+            display: flex;
+            gap: 12px;
+            animation: escrowBannerMove 24s linear infinite;
+            will-change: transform;
+          }
+
+          .escrow-banner-group {
+            display: flex;
+            gap: 12px;
+          }
+
+          .escrow-banner-card {
+            flex: 0 0 auto;
+          }
+
+          .escrow-banner-marquee:hover .escrow-banner-track {
+            animation-play-state: paused;
+          }
+
+          @keyframes escrowBannerMove {
+            from {
+              transform: translateX(0);
+            }
+            to {
+              transform: translateX(-50%);
+            }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .escrow-banner-track {
+              animation: none;
+            }
+          }
+        `}</style>
 
         {/* Chat Widget - Bottom Left */}
         <ChatWidget />
@@ -11930,7 +12129,7 @@ const UserPaymentPage = (
           
         width="400px"
         height="500px"
-        className="border border-zinc-300 rounded-lg"
+        className="border border-slate-200 rounded-lg"
         title="Page"
       ></iframe>
 

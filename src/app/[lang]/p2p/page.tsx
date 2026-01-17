@@ -864,12 +864,9 @@ export default function OrangeXPage() {
                                                             {promotionText && (
                                                                 <p className="promo-text text-xs text-slate-600">
                                                                     <span className="promo-text-content">
-                                                                        <span className="promo-text-label">
-                                                                            홍보문구:
-                                                                        </span>{' '}
-                                                                        <span className="promo-text-message">
-                                                                            {promotionText}
-                                                                        </span>
+                                                                    <span className="promo-text-message">
+                                                                        {promotionText}
+                                                                    </span>
                                                                     </span>
                                                                 </p>
                                                             )}
@@ -1500,7 +1497,7 @@ export default function OrangeXPage() {
                     content: '';
                     position: absolute;
                     left: -8px;
-                    top: 10px;
+                    top: 6px;
                     border-width: 8px 8px 8px 0;
                     border-style: solid;
                     border-color: transparent rgba(148, 163, 184, 0.35) transparent transparent;
@@ -1510,7 +1507,7 @@ export default function OrangeXPage() {
                     content: '';
                     position: absolute;
                     left: -6px;
-                    top: 11px;
+                    top: 7px;
                     border-width: 6px 6px 6px 0;
                     border-style: solid;
                     border-color: transparent rgba(255, 255, 255, 0.92) transparent transparent;
@@ -1518,7 +1515,7 @@ export default function OrangeXPage() {
 
                 .promo-text-content {
                     display: -webkit-box;
-                    -webkit-line-clamp: 2;
+                    -webkit-line-clamp: 3;
                     -webkit-box-orient: vertical;
                     overflow: hidden;
                     word-break: break-word;
