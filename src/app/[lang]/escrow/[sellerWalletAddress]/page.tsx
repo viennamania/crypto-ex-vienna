@@ -6988,7 +6988,7 @@ const fetchBuyOrders = async () => {
                             ">
                               <div className="w-24 flex flex-col items-start justify-center gap-1">
                                 <span className="inline-flex flex-col items-start gap-0.5 rounded-full border border-emerald-200 bg-white/90 px-2 py-1 text-xs font-semibold text-emerald-700 leading-none">
-                                  <span className="inline-flex items-center gap-1">
+                                  <span className="inline-flex items-center gap-1 whitespace-nowrap">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                       <path
                                         d="M20 6L9 17l-5-5"
@@ -6998,9 +6998,8 @@ const fetchBuyOrders = async () => {
                                         strokeLinejoin="round"
                                       />
                                     </svg>
-                                    <span>정상거</span>
+                                    <span>정상거래</span>
                                   </span>
-                                  <span className="pl-4">래</span>
                                 </span>
                                 <span className="text-lg font-semibold text-slate-900">
                                   {seller.seller?.totalPaymentConfirmedCount || 0}
@@ -7029,7 +7028,7 @@ const fetchBuyOrders = async () => {
                             ">
                               <div className="w-24 flex flex-col items-start justify-center gap-1">
                                 <span className="inline-flex flex-col items-start gap-0.5 rounded-full border border-rose-200 bg-white/90 px-2 py-1 text-xs font-semibold text-rose-700 leading-none">
-                                  <span className="inline-flex items-center gap-1">
+                                  <span className="inline-flex items-center gap-1 whitespace-nowrap">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                       <path
                                         d="M12 9v4m0 4h.01M12 3l9 16H3L12 3z"
@@ -7039,9 +7038,8 @@ const fetchBuyOrders = async () => {
                                         strokeLinejoin="round"
                                       />
                                     </svg>
-                                    <span>중재거</span>
+                                    <span>중재거래</span>
                                   </span>
-                                  <span className="pl-4">래</span>
                                 </span>
                                 <span className="text-lg font-semibold text-slate-900">
                                   {seller.seller?.totalDisputeResolvedCount || 0}

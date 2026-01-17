@@ -44,6 +44,91 @@ const SCROLL_BANNER_ADS = [
     { id: 10, title: 'USDT Utilities', image: '/ads/orangex-banner-10.svg', link: '#' },
 ];
 
+type StablecoinNewsItem = {
+    id: string;
+    title: string;
+    source: string;
+    publishedAt: string;
+    tag: string;
+    url: string;
+    image: string;
+};
+
+const STABLECOIN_NEWS: StablecoinNewsItem[] = [
+    {
+        id: 'stable-news-01',
+        title: 'USDC 투명성 보고서: 준비금 구성 최신 업데이트',
+        source: 'Circle',
+        publishedAt: '2024-02-14T02:00:00.000Z',
+        tag: '리포트',
+        url: 'https://www.circle.com/en/transparency',
+        image: '/icon-vault.png',
+    },
+    {
+        id: 'stable-news-02',
+        title: 'Tether 분기 준비금 인증 보고서 공개',
+        source: 'Tether',
+        publishedAt: '2024-02-13T23:00:00.000Z',
+        tag: '어테스테이션',
+        url: 'https://tether.to/en/transparency/',
+        image: '/logo-tether.png',
+    },
+    {
+        id: 'stable-news-03',
+        title: '미국 스테이블코인 규제 프레임워크 논의 확대',
+        source: 'CoinDesk',
+        publishedAt: '2024-02-13T10:00:00.000Z',
+        tag: '규제',
+        url: 'https://www.coindesk.com/tag/stablecoins/',
+        image: '/icon-shield.png',
+    },
+    {
+        id: 'stable-news-04',
+        title: '유럽 MiCA 시행 이후 스테이블코인 시장 영향 분석',
+        source: 'The Block',
+        publishedAt: '2024-02-13T03:00:00.000Z',
+        tag: '시장',
+        url: 'https://www.theblock.co/search?query=stablecoin',
+        image: '/icon-market.png',
+    },
+    {
+        id: 'stable-news-05',
+        title: 'PayPal USD 확장: 파트너 지갑과 결제 인프라 확대',
+        source: 'PayPal',
+        publishedAt: '2024-02-12T12:00:00.000Z',
+        tag: '확장',
+        url: 'https://www.paypal.com/us/digital-wallet/manage-money/crypto/pyusd',
+        image: '/icon-wallet.png',
+    },
+    {
+        id: 'stable-news-06',
+        title: '신규 체인에서의 스테이블코인 결제 속도 개선 사례',
+        source: 'Messari',
+        publishedAt: '2024-02-12T06:00:00.000Z',
+        tag: '테크',
+        url: 'https://messari.io/report',
+        image: '/icon-blockchain.png',
+    },
+    {
+        id: 'stable-news-07',
+        title: '아시아 결제 네트워크에서의 스테이블코인 활용 증가',
+        source: 'Bloomberg',
+        publishedAt: '2024-02-11T04:00:00.000Z',
+        tag: '결제',
+        url: 'https://www.bloomberg.com/search?query=stablecoin',
+        image: '/icon-payment.png',
+    },
+    {
+        id: 'stable-news-08',
+        title: '스테이블코인 리스크 관리와 준비금 운영 가이드',
+        source: 'IMF',
+        publishedAt: '2024-02-11T01:00:00.000Z',
+        tag: '리스크',
+        url: 'https://www.imf.org/en/Topics/Fintech',
+        image: '/icon-stability.png',
+    },
+];
+
 const STAT_CARD_STYLES = [
     {
         base: 'bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,237,213,0.88))]',
@@ -220,6 +305,9 @@ export default function OrangeXPage() {
     const [recentTrades, setRecentTrades] = useState<RecentTrade[]>([]);
     const [recentTradesUpdatedAt, setRecentTradesUpdatedAt] = useState<string | null>(null);
     const [recentTradesError, setRecentTradesError] = useState<string | null>(null);
+    const [newsItems, setNewsItems] = useState<StablecoinNewsItem[]>(() => STABLECOIN_NEWS);
+    const [newsUpdatedAt, setNewsUpdatedAt] = useState<string | null>(null);
+    const [newsError, setNewsError] = useState<string | null>(null);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -250,6 +338,49 @@ export default function OrangeXPage() {
         frame = window.requestAnimationFrame(tick);
 
         return () => window.cancelAnimationFrame(frame);
+    }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchNews = async () => {
+            try {
+                const response = await fetch('/api/news/stablecoin', {
+                    cache: 'no-store',
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load stablecoin news');
+                }
+
+                const payload = (await response.json()) as {
+                    items: StablecoinNewsItem[];
+                    updatedAt?: string;
+                };
+
+                if (!isMounted) {
+                    return;
+                }
+
+                if (payload.items && payload.items.length > 0) {
+                    setNewsItems(payload.items);
+                    setNewsUpdatedAt(payload.updatedAt ?? null);
+                    setNewsError(null);
+                } else {
+                    setNewsError('뉴스를 불러오지 못했습니다');
+                }
+            } catch (error) {
+                if (isMounted) {
+                    setNewsError('뉴스를 불러오지 못했습니다');
+                }
+            }
+        };
+
+        fetchNews();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     useEffect(() => {
@@ -693,6 +824,100 @@ export default function OrangeXPage() {
                             </div>
                         );
                     })}
+                </div>
+
+                <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                        <div>
+                            <div className="flex items-center gap-3">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="inline-block">
+                                    <path
+                                        d="M4 4h13a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V4z"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                    <path
+                                        d="M8 8h8M8 12h8M8 16h6"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                </svg>
+                                <h2 className="font-[var(--font-display)] text-3xl text-slate-900">스테이블코인 뉴스 피드</h2>
+                            </div>
+                            <p className="text-sm text-slate-600">핵심 이슈를 빠르게 확인하세요</p>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs font-semibold text-slate-500">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-slate-50/80 px-3 py-1 text-slate-600">
+                                <span className="h-2 w-2 rounded-full bg-slate-400" />
+                                STABLECOIN
+                            </span>
+                            <span>
+                                업데이트{' '}
+                                {newsUpdatedAt
+                                    ? new Date(newsUpdatedAt).toLocaleTimeString('ko-KR', { hour12: false })
+                                    : '--:--:--'}
+                            </span>
+                            <span>좌측 자동 스크롤</span>
+                        </div>
+                    </div>
+
+                    {newsError && <p className="mb-4 text-xs font-semibold text-orange-600">{newsError}</p>}
+
+                    <div className="news-ticker relative overflow-hidden">
+                        <div className="pointer-events-none absolute left-0 top-0 h-full w-20 bg-gradient-to-r from-white/95 to-transparent" />
+                        <div className="pointer-events-none absolute right-0 top-0 h-full w-20 bg-gradient-to-l from-white/95 to-transparent" />
+                        <div className="news-ticker-track">
+                            {[0, 1].map((loopIndex) => (
+                                <div key={`news-loop-${loopIndex}`} className="news-ticker-group">
+                                    {newsItems.map((news) => (
+                                        <a
+                                            key={`${news.id}-${loopIndex}`}
+                                            href={news.url}
+                                            target="_blank"
+                                            rel="noreferrer noopener"
+                                            className="news-card group flex flex-col rounded-2xl border border-slate-200/70 bg-white/85 p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.7)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_26px_60px_-38px_rgba(15,23,42,0.7)]"
+                                        >
+                                            <div className="relative h-28 w-full overflow-hidden rounded-xl border border-slate-200/70 bg-gradient-to-br from-slate-100 via-white to-slate-200/70">
+                                                <img
+                                                    src={news.image}
+                                                    alt={news.title}
+                                                    loading="lazy"
+                                                    className={`h-full w-full ${
+                                                        news.image.startsWith('/') ? 'object-contain p-6' : 'object-cover'
+                                                    }`}
+                                                    onError={(event) => {
+                                                        event.currentTarget.onerror = null;
+                                                        event.currentTarget.src = '/icon-market.png';
+                                                        event.currentTarget.className = 'h-full w-full object-contain p-6';
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between text-[11px] text-slate-500">
+                                                <span className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-2 py-1 font-semibold text-slate-600">
+                                                    {news.tag}
+                                                </span>
+                                                <span>{formatRelativeTime(news.publishedAt)}</span>
+                                            </div>
+                                            <p className="mt-3 text-sm font-semibold leading-snug text-slate-900">
+                                                {news.title}
+                                            </p>
+                                            <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
+                                                <span className="font-semibold text-slate-700">{news.source}</span>
+                                                <span className="text-slate-300">•</span>
+                                                <span className="font-semibold text-slate-600 group-hover:text-slate-900">
+                                                    자세히 보기
+                                                </span>
+                                            </div>
+                                        </a>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
                 <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
@@ -1476,6 +1701,32 @@ export default function OrangeXPage() {
                     animation-play-state: paused;
                 }
 
+                .news-ticker {
+                    width: 100%;
+                }
+
+                .news-ticker-track {
+                    display: flex;
+                    gap: 18px;
+                    animation: newsTickerMove 32s linear infinite;
+                    will-change: transform;
+                }
+
+                .news-ticker-group {
+                    display: flex;
+                    gap: 18px;
+                }
+
+                .news-card {
+                    flex: 0 0 280px;
+                    width: 280px;
+                    max-width: 280px;
+                }
+
+                .news-ticker:hover .news-ticker-track {
+                    animation-play-state: paused;
+                }
+
                 .banner-scroll {
                     scroll-behavior: smooth;
                     -webkit-overflow-scrolling: touch;
@@ -1588,6 +1839,15 @@ export default function OrangeXPage() {
                     }
                 }
 
+                @keyframes newsTickerMove {
+                    from {
+                        transform: translateX(0);
+                    }
+                    to {
+                        transform: translateX(-50%);
+                    }
+                }
+
                 @media (max-width: 640px) {
                     .ticker {
                         height: 280px;
@@ -1598,6 +1858,12 @@ export default function OrangeXPage() {
                         width: 260px;
                         max-width: 260px;
                     }
+
+                    .news-card {
+                        flex: 0 0 220px;
+                        width: 220px;
+                        max-width: 220px;
+                    }
                 }
 
                 @media (prefers-reduced-motion: reduce) {
@@ -1605,6 +1871,9 @@ export default function OrangeXPage() {
                         animation: none;
                     }
                     .seller-ticker-track {
+                        animation: none;
+                    }
+                    .news-ticker-track {
                         animation: none;
                     }
                     .float-slow,

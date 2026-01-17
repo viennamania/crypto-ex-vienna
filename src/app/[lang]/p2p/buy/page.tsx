@@ -4322,7 +4322,7 @@ const fetchBuyOrders = async () => {
 
   return (
 
-    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-slate-50">
+    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800 antialiased">
 
       <AutoConnect
           client={client}
@@ -5203,17 +5203,17 @@ const fetchBuyOrders = async () => {
                           {/* status */}
                           <div className="flex flex-row items-center justify-center gap-1 text-sm font-semibold">
                             {order.status === 'ordered' && (
-                              <span className="text-red-400 font-semibold">
+                              <span className="text-red-600 font-semibold">
                                 매칭대기중
                               </span>
                             )}
                             {order.status === 'accepted' && (
-                              <span className="text-blue-400 font-semibold">
+                              <span className="text-blue-600 font-semibold">
                                 결제대기중
                               </span>
                             )}
                             {order.status === 'paymentRequested' && (
-                              <span className="text-amber-400 font-semibold">
+                              <span className="text-amber-600 font-semibold">
                                 입금진행중
                               </span>
                             )}
@@ -5258,12 +5258,12 @@ const fetchBuyOrders = async () => {
                               height={20}
                               className="w-5 h-5"
                             />
-                            <span className="text-lg text-emerald-300 font-semibold"
+                            <span className="text-lg text-emerald-600 font-semibold"
                               style={{ fontFamily: 'monospace' }}>
                               {order?.usdtAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                             </span>
                           </div>
-                          <span className="text-sm text-amber-300 font-semibold"
+                          <span className="text-sm text-amber-600 font-semibold"
                             style={{ fontFamily: 'monospace' }}>
                             {order?.krwAmount.toLocaleString()}
                           </span>
@@ -5741,10 +5741,10 @@ const fetchBuyOrders = async () => {
 
                     // seller.buyOrder.status = 'ordered' or 'paymentRequested' - red border and pulse animation
                     className={`w-full flex flex-col xl:flex-row items-start justify-between gap-4
-                    bg-white/90
+                    bg-white/95
                     p-4 rounded-lg shadow-xl
                     backdrop-blur-md
-                    border border-slate-200
+                    border border-slate-200 text-slate-800
                     
                     ${(
                       (seller.seller.buyOrder?.status === 'ordered'
@@ -5790,7 +5790,7 @@ const fetchBuyOrders = async () => {
                             height={20}
                             className="w-6 h-6 rounded-lg object-cover"
                           />
-                          <span className="text-sm font-semibold">
+                          <span className="text-[13px] font-semibold text-slate-800 tracking-tight">
                             {seller.nickname}
                           </span>
                         </div>
@@ -5813,7 +5813,7 @@ const fetchBuyOrders = async () => {
                           flex flex-row items-center justify-center gap-2
                           bg-gradient-to-r from-slate-200 to-slate-300 text-slate-900 px-2 py-1 rounded-bl-lg rounded-tr-lg shadow-xl border border-slate-300
                           ">
-                          <span className="text-sm font-semibold">
+                          <span className="text-[12px] font-semibold text-slate-700 tracking-tight">
                             나의 판매자계정
                           </span>
 
@@ -5904,11 +5904,11 @@ const fetchBuyOrders = async () => {
                           <div className="w-full flex flex-row items-center justify-start gap-2">
 
                             <div className="w-full flex flex-row items-center justify-between gap-2">
-                              <span className="text-sm text-slate-700 font-semibold mr-2">
-                                판매<br/>금액
+                              <span className="text-xs text-slate-600 font-semibold tracking-tight whitespace-nowrap mr-2">
+                                판매 금액
                               </span>
 
-                              <span className="text-2xl font-semibold text-amber-400 mr-2"
+                              <span className="text-2xl font-semibold text-amber-600 mr-2"
                                 style={{ fontFamily: 'monospace' }}>
                                 {
                                 //seller.seller?.usdtToKrwRate.toLocaleString()
@@ -5953,7 +5953,7 @@ const fetchBuyOrders = async () => {
                                       <div className="flex flex-col items-center justify-center gap-1
                                       border border-slate-200 bg-white/70 rounded-lg px-2 py-1
                                       ">
-                                        <span className="text-xs text-slate-700">
+                                        <span className="text-[11px] text-slate-600 tracking-tight">
                                           고정가격
                                         </span>
                                       </div>
@@ -6054,7 +6054,7 @@ const fetchBuyOrders = async () => {
                                     <div className="flex flex-col items-center justify-center gap-1
                                     border border-slate-200 bg-white/70 rounded-lg px-2 py-1
                                     ">
-                                      <span className="text-xs text-slate-700">
+                                      <span className="text-[11px] text-slate-600 tracking-tight">
                                         고정가격
                                       </span>
                                     </div>
@@ -6444,7 +6444,7 @@ const fetchBuyOrders = async () => {
                                   height={20}
                                   className="w-5 h-5"
                                 />
-                                <span className="text-4xl xl:text-2xl text-emerald-300 font-semibold"
+                                <span className="text-4xl xl:text-2xl text-emerald-600 font-semibold tracking-tight"
                                   style={{ fontFamily: 'monospace' }}>
                                   {
                                     //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -6458,14 +6458,14 @@ const fetchBuyOrders = async () => {
 
                             {/* if balance is less than 10 USDT, show warning */}
                             {currentUsdtBalanceArray[index] < 10 ? (
-                              <div className="text-red-400 text-sm font-medium">
+                              <div className="text-red-600 text-sm font-medium">
                                 {/*Warning: Low escrow balance may result in no order assignments. Please recharge USDT. */}
                                 경고: 에스크로 잔액이 부족하면 주문 할당이 이루어지지 않을 수 있습니다. USDT를 충전해주세요.
                               </div>
                             ) : (
                               <>
                               {seller.walletAddress === address && (
-                                <div className="text-emerald-400 text-sm mt-1 font-medium">
+                                <div className="text-emerald-600 text-sm mt-1 font-medium">
                                   {/*If you deposit more USDT, more orders will be assigned. */}
                                   충전된 USDT가 많을수록 더 많은 주문이 할당됩니다.
                                 </div>
@@ -6529,8 +6529,8 @@ const fetchBuyOrders = async () => {
                               </span>
                               {seller.seller?.autoProcessDeposit ? (
                                 <div className="w-full flex flex-col items-center justify-center">
-                                  <div className="flex text-xs text-emerald-300 font-semibold
-                                  bg-emerald-900/30 border border-emerald-700 rounded-lg px-2 py-1 text-center
+                                  <div className="flex text-xs text-emerald-700 font-semibold
+                                  bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-1 text-center
                                   ">
                                     활성화 상태
                                   </div>
@@ -6541,8 +6541,8 @@ const fetchBuyOrders = async () => {
                                 </div>
                               ) : (
                                 <div className="w-full flex flex-col items-center justify-center">
-                                  <div className="flex text-xs text-red-300 font-semibold
-                                  bg-red-900/30 border border-red-700 rounded-lg px-2 py-1 text-center
+                                  <div className="flex text-xs text-red-700 font-semibold
+                                  bg-red-50 border border-red-200 rounded-lg px-2 py-1 text-center
                                   ">
                                     비활성화 상태
                                   </div>
@@ -6583,7 +6583,7 @@ const fetchBuyOrders = async () => {
                       {seller.seller?.buyOrder?.status === 'paymentRequested' && (
 
                         <div className="w-full flex flex-col items-start justify-center gap-2
-                        bg-amber-700 text-white px-3 py-1 rounded-lg border border-amber-600 shadow-lg">
+                        bg-amber-50 text-amber-900 px-3 py-2 rounded-lg border border-amber-200 shadow-sm">
 
 
 
@@ -6627,7 +6627,7 @@ const fetchBuyOrders = async () => {
 
                           {seller.seller?.buyOrder?.buyer?.walletAddress === address && (
                               <div className="w-full flex flex-col items-start justify-center gap-1
-                              border-t border-slate-200 pt-2
+                              border-t border-amber-200/80 pt-2
                               ">
                                 <span className="text-sm font-semibold text-slate-800">
                                   구매자는 아래 계좌로 {seller.seller?.buyOrder.krwAmount.toLocaleString()} 원을 입금해주세요.
@@ -6747,7 +6747,7 @@ const fetchBuyOrders = async () => {
                         && (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x') && (
 
                           <div className="w-full flex flex-row items-center gap-2
-                          bg-blue-700 text-white px-3 py-1 rounded-lg border border-blue-600 shadow-lg">
+                          bg-blue-50 text-blue-900 px-3 py-2 rounded-lg border border-blue-200 shadow-sm">
                           
                             <Image
                               src="/icon-transfer.png"
@@ -7206,10 +7206,10 @@ const fetchBuyOrders = async () => {
                             정상 거래 */}
                             {/* green color for background */}
                             <div className="w-full flex flex-row items-center justify-between gap-2 mt-2
-                            p-2 bg-emerald-900/30 border border-emerald-700 rounded-lg
+                            p-2 bg-emerald-50 border border-emerald-200 rounded-lg
                             ">
                               <div className="w-20 flex flex-col items-start justify-center gap-0">
-                                <span className="text-sm text-slate-600">
+                                <span className="text-sm text-slate-700">
                                   정상거래
                                 </span>
                                 <span className="text-lg text-slate-800">
@@ -7218,12 +7218,12 @@ const fetchBuyOrders = async () => {
                               </div>
                               <div className="w-full flex flex-col items-end justify-center gap-1">
 
-                                <span className="text-lg text-emerald-300"
+                                <span className="text-lg text-emerald-700"
                                   style={{ fontFamily: 'monospace' }}>
                                   {seller.seller?.totalPaymentConfirmedUsdtAmount
                                   && seller.seller?.totalPaymentConfirmedUsdtAmount.toLocaleString()} USDT
                                 </span>
-                                <span className="text-lg text-amber-300"
+                                <span className="text-lg text-amber-700"
                                   style={{ fontFamily: 'monospace' }}>
                                   {seller.seller?.totalPaymentConfirmedKrwAmount
                                   && seller.seller?.totalPaymentConfirmedKrwAmount.toLocaleString()} 원
@@ -7234,10 +7234,10 @@ const fetchBuyOrders = async () => {
                             {/* 중재 거래 */}
                             {/* red color for background */}
                             <div className="w-full flex flex-row items-center justify-between gap-2
-                            p-2 bg-red-900/30 border border-red-700 rounded-lg
+                            p-2 bg-red-50 border border-red-200 rounded-lg
                             ">
                               <div className="w-20 flex flex-col items-start justify-center gap-0">
-                                <span className="text-sm text-slate-600">
+                                <span className="text-sm text-slate-700">
                                   중재거래
                                 </span>
                                 <span className="text-lg text-slate-800">
@@ -7245,14 +7245,14 @@ const fetchBuyOrders = async () => {
                                 </span>
                               </div>
                               <div className="w-full flex flex-col items-end justify-center gap-1">
-                                <span className="text-lg text-emerald-300"
+                                <span className="text-lg text-emerald-700"
                                   style={{ fontFamily: 'monospace' }}>
                                   {seller.seller?.totalDisputeResolvedUsdtAmount
                                   ? seller.seller?.totalDisputeResolvedUsdtAmount.toLocaleString()
                                   : '0'
                                   } USDT
                                 </span>
-                                <span className="text-lg text-amber-300"
+                                <span className="text-lg text-amber-700"
                                   style={{ fontFamily: 'monospace' }}>
                                   {seller.seller?.totalDisputeResolvedKrwAmount
                                   ? seller.seller?.totalDisputeResolvedKrwAmount.toLocaleString()
