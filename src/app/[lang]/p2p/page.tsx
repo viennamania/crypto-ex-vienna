@@ -826,7 +826,8 @@ export default function OrangeXPage() {
                                                 ? currentBalanceRaw
                                                 : 0;
                                             const rate = seller?.seller?.usdtToKrwRate;
-                                            const sellerWalletAddress = seller?.walletAddress;
+                                            //const sellerWalletAddress = seller?.walletAddress;
+                                            const sellerWalletAddress = seller?.seller?.escrowWalletAddress;
                                             const promotionText = seller?.seller?.promotionText || seller?.promotionText;
                                             const priceSettingMethod = seller?.seller?.priceSettingMethod;
                                             const market = seller?.seller?.market;
