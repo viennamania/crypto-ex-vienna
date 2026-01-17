@@ -4677,7 +4677,7 @@ const fetchBuyOrders = async () => {
 
             <button
               onClick={() => {
-                router.push('/' + params.lang + '/orangex/sell');
+                router.push('/' + params.lang + '/p2p/sell');
               }}
               className="flex bg-gray-100 text-sm text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-200 shadow-md"
             >
@@ -5902,11 +5902,11 @@ const fetchBuyOrders = async () => {
                           <div className="w-full flex flex-row items-center justify-start gap-2">
 
                             <div className="w-full flex flex-row items-center justify-between gap-2">
-                              <span className="text-sm text-slate-700">
+                              <span className="text-sm text-slate-700 font-semibold mr-2">
                                 판매<br/>금액
                               </span>
 
-                              <span className="text-2xl font-semibold text-amber-400"
+                              <span className="text-2xl font-semibold text-amber-400 mr-2"
                                 style={{ fontFamily: 'monospace' }}>
                                 {
                                 //seller.seller?.usdtToKrwRate.toLocaleString()

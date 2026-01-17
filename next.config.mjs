@@ -38,7 +38,7 @@ const nextConfig = {
       {
         source: '/',
         //destination: '/ko/administration/homepage',
-        destination: '/index.html',
+        destination: '/ko/p2p',
         permanent: true,
       },
     ]
