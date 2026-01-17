@@ -654,7 +654,7 @@ export default function OrangeXPage() {
             </aside>
 
             {/* 메인 컨텐츠 */}
-            <main className="container relative z-10 mx-auto max-w-5xl px-4 pb-16 lg:px-8 lg:pb-12">
+            <main className="container relative z-10 mx-auto max-w-5xl overflow-x-hidden px-4 pb-16 lg:px-8 lg:pb-12">
                 {/* 히어로 섹션 */}
                 <div className="hero-fade relative mt-10 mb-14 overflow-hidden rounded-[28px] border border-white/70 bg-white/70 shadow-[0_40px_120px_-60px_rgba(15,23,42,0.6)] backdrop-blur">
                     <div className="absolute -right-16 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(circle_at_center,var(--accent)_0%,transparent_70%)] opacity-30" />
@@ -747,8 +747,63 @@ export default function OrangeXPage() {
                     </div>
                 </div>
 
+                {/* 신뢰 강조 섹션 */}
+                
+                <div className="relative mb-12 overflow-hidden rounded-[28px] border border-slate-200/70 bg-white/80 p-8 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
+                    <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-[radial-gradient(circle_at_center,var(--sea)_0%,transparent_70%)] opacity-25" />
+                    <div className="absolute -bottom-10 left-[-6%] h-32 w-32 rounded-full bg-[radial-gradient(circle_at_center,var(--accent)_0%,transparent_70%)] opacity-20" />
+                    <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="max-w-xl space-y-4">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200/70 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                                VASP 등록 에스크로
+                            </span>
+                            <h2 className="font-[var(--font-display)] text-3xl text-slate-900 md:text-4xl">
+                                국내 VASP 등록 사업자 에스크로로 신뢰를 더한 P2P
+                            </h2>
+                            <p className="text-sm text-slate-600 md:text-base">
+                                OrangeX P2P는 대한민국에 등록된 VASP(가상자산사업자)가 제공하는 에스크로 서비스를 사용합니다.
+                                거래 흐름이 투명하게 관리되어 신뢰할 수 있는 거래 경험을 제공합니다.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-3 lg:w-[520px]">
+                            <div className="flex min-w-[160px] flex-1 items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.6)]">
+                                <Image
+                                    src="/icon-approved.png"
+                                    alt="등록"
+                                    width={36}
+                                    height={36}
+                                    className="h-9 w-9"
+                                />
+                                <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">국내 VASP 등록</span>
+                            </div>
+                            <div className="flex min-w-[160px] flex-1 items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.6)]">
+                                <Image
+                                    src="/icon-escrow-wallet.png"
+                                    alt="에스크로"
+                                    width={36}
+                                    height={36}
+                                    className="h-9 w-9"
+                                />
+                                <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">에스크로 기반</span>
+                            </div>
+                            <div className="flex min-w-[160px] flex-1 items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/90 px-4 py-3 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.6)]">
+                                <Image
+                                    src="/icon-shield.png"
+                                    alt="신뢰"
+                                    width={36}
+                                    height={36}
+                                    className="h-9 w-9"
+                                />
+                                <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">신뢰 강화</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+
                 {/* 스크롤 배너 섹션 */}
-                <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-6 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur overflow-x-hidden">
+                <div className="
+                    rounded-[28px] border border-slate-200/70 bg-white/80 p-6 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur overflow-x-hidden">
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                         <div>
                             <div className="flex items-center gap-3">
@@ -769,10 +824,7 @@ export default function OrangeXPage() {
                     {/* 스크롤 배너 컨테이너 */}
 
                     <div
-                        className="
-                        md:w-full w-[78vw]
-                        flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 py-2 scrollbar-hide relative
-                        "
+                        className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 py-2 scrollbar-hide relative"
                         aria-label="제휴 배너 스크롤"
                     >
                         <div className="absolute left-0 top-0 h-full w-16 bg-[linear-gradient(90deg,rgba(255,255,255,1),rgba(255,255,255,0))]" />
@@ -826,7 +878,10 @@ export default function OrangeXPage() {
                     })}
                 </div>
 
-                <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
+                {/* 뉴스 피드 섹션 */}
+                
+                <div className="
+                    rounded-[28px] border border-slate-200/70 bg-white/80 p-6 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur overflow-x-hidden">
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
                             <div className="flex items-center gap-3">
@@ -867,13 +922,16 @@ export default function OrangeXPage() {
 
                     {newsError && <p className="mb-4 text-xs font-semibold text-orange-600">{newsError}</p>}
 
-                    <div className="news-ticker relative overflow-hidden">
+                    <div className="news-ticker relative overflow-hidden min-w-0">
                         <div className="pointer-events-none absolute left-0 top-0 h-full w-20 bg-gradient-to-r from-white/95 to-transparent" />
                         <div className="pointer-events-none absolute right-0 top-0 h-full w-20 bg-gradient-to-l from-white/95 to-transparent" />
                         <div className="news-ticker-track">
                             {[0, 1].map((loopIndex) => (
                                 <div key={`news-loop-${loopIndex}`} className="news-ticker-group">
-                                    {newsItems.map((news) => (
+                                    {newsItems.map((news) => {
+                                        const imageSrc = news.image || '/icon-market.png';
+                                        const isLocalImage = imageSrc.startsWith('/');
+                                        return (
                                         <a
                                             key={`${news.id}-${loopIndex}`}
                                             href={news.url}
@@ -882,17 +940,21 @@ export default function OrangeXPage() {
                                             className="news-card group flex flex-col rounded-2xl border border-slate-200/70 bg-white/85 p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.7)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_26px_60px_-38px_rgba(15,23,42,0.7)]"
                                         >
                                             <div className="relative h-28 w-full overflow-hidden rounded-xl border border-slate-200/70 bg-gradient-to-br from-slate-100 via-white to-slate-200/70">
-                                                <img
-                                                    src={news.image}
+                                                <Image
+                                                    src={imageSrc}
                                                     alt={news.title}
-                                                    loading="lazy"
-                                                    className={`h-full w-full ${
-                                                        news.image.startsWith('/') ? 'object-contain p-6' : 'object-cover'
+                                                    fill
+                                                    sizes="(min-width: 1024px) 280px, (min-width: 640px) 240px, 70vw"
+                                                    loader={({ src }) => src}
+                                                    unoptimized
+                                                    className={`${
+                                                        isLocalImage ? 'object-contain p-6' : 'object-cover'
                                                     }`}
                                                     onError={(event) => {
-                                                        event.currentTarget.onerror = null;
-                                                        event.currentTarget.src = '/icon-market.png';
-                                                        event.currentTarget.className = 'h-full w-full object-contain p-6';
+                                                        const target = event.currentTarget as HTMLImageElement;
+                                                        target.onerror = null;
+                                                        target.src = '/icon-market.png';
+                                                        target.className = 'object-contain p-6';
                                                     }}
                                                 />
                                             </div>
@@ -913,12 +975,16 @@ export default function OrangeXPage() {
                                                 </span>
                                             </div>
                                         </a>
-                                    ))}
+                                    );
+                                    })}
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
+                
+
+                {/* 마켓 시세 섹션 */}
 
                 <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -1703,6 +1769,8 @@ export default function OrangeXPage() {
 
                 .news-ticker {
                     width: 100%;
+                    max-width: 100%;
+                    min-width: 0;
                 }
 
                 .news-ticker-track {
@@ -1710,6 +1778,8 @@ export default function OrangeXPage() {
                     gap: 18px;
                     animation: newsTickerMove 32s linear infinite;
                     will-change: transform;
+                    max-width: 100%;
+                    min-width: 0;
                 }
 
                 .news-ticker-group {

@@ -16,10 +16,14 @@
 }
 
 @layer base {
+	html {
+		@apply overflow-x-hidden;
+	}
+
 	body {
 		/*@apply bg-zinc-950 text-neutral-200;*/
 		/*@apply bg-[#E7EDF1] text-zinc-500;*/
 		/*@apply bg-green-100 text-neutral-900;*/
-		@apply bg-slate-950 text-slate-200;
+		@apply bg-slate-950 text-slate-200 overflow-x-hidden;
 	}
 }
