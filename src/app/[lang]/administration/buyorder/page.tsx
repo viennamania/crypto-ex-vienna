@@ -925,14 +925,14 @@ export default function Index({ params }: any) {
 
   /*
   // search form date to date
-  const [searchFormDate, setSearchFormDate] = useState("");
+  const [searchFormDate, setSearchFromDate] = useState("");
   // from date is not today, but today - 30 days
   useEffect(() => {
     
     ///from date isAdmin not today, but today - 30 days
     const today = new Date();
     const formattedDate = new Date(today.setDate(today.getDate() - 30)).toISOString().split('T')[0]; // YYYY-MM-DD format
-    setSearchFormDate(formattedDate);
+    setSearchFromDate(formattedDate);
   }, []);
 
 
@@ -976,7 +976,7 @@ export default function Index({ params }: any) {
   const formattedDate = today.toISOString().split('T')[0]; // YYYY-MM-DD format
 
   // search form date to date
-  const [searchFromDate, setSearchFormDate] = useState(formattedDate);
+  const [searchFromDate, setSearchFromDate] = useState(formattedDate);
   const [searchToDate, setSearchToDate] = useState(formattedDate);
 
 
@@ -4111,7 +4111,7 @@ const fetchBuyOrders = async () => {
                   <input
                     type="date"
                     value={searchFromDate}
-                    onChange={(e) => setSearchFormDate(e.target.value)}
+                    onChange={(e) => setSearchFromDate(e.target.value)}
                     className="p-2 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all bg-white text-gray-700 font-medium"
                   />
                 </div>
@@ -4141,7 +4141,7 @@ const fetchBuyOrders = async () => {
                         // korea time
                         const today = new Date();
                         today.setHours(today.getHours() + 9); // Adjust for Korean timezone (UTC+9)
-                        setSearchFormDate(today.toISOString().split("T")[0]);
+                        setSearchFromDate(today.toISOString().split("T")[0]);
                         setSearchToDate(today.toISOString().split("T")[0]);
                       }}
                       className="text-sm text-white font-semibold px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:shadow-md active:scale-95 transition-all duration-200"
@@ -4155,7 +4155,7 @@ const fetchBuyOrders = async () => {
                         today.setHours(today.getHours() + 9); // Adjust for Korean timezone (UTC+9)
                         const yesterday = new Date(today);
                         yesterday.setDate(yesterday.getDate() - 1);
-                        setSearchFormDate(yesterday.toISOString().split("T")[0]);
+                        setSearchFromDate(yesterday.toISOString().split("T")[0]);
                         setSearchToDate(yesterday.toISOString().split("T")[0]);
                       }}
                       className="text-sm text-white font-semibold px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:shadow-md active:scale-95 transition-all duration-200"

@@ -860,7 +860,7 @@ export default function Index({ params }: any) {
 
 
   // search form date to date
-  const [searchFromDate, setSearchFormDate] = useState(formattedDate);
+  const [searchFromDate, setSearchFromDate] = useState(formattedDate);
   const [searchToDate, setSearchToDate] = useState(formattedDate);
 
 
@@ -2921,7 +2921,7 @@ const fetchBuyOrders = async () => {
                 <input
                   type="date"
                   value={searchFromDate}
-                  onChange={(e) => setSearchFormDate(e.target.value)}
+                  onChange={(e) => setSearchFromDate(e.target.value)}
                   className="w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
                 />
               </div>

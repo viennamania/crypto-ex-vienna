@@ -873,7 +873,7 @@ export default function Index({ params }: any) {
   
 
     // search form date to date
-    const [searchFromDate, setSearchFormDate] = useState("");
+    const [searchFromDate, setSearchFromDate] = useState("");
     // set today's date in YYYY-MM-DD format
     useEffect(() => {
       //const today = new Date();
@@ -884,7 +884,7 @@ export default function Index({ params }: any) {
       const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       const formattedDate = firstDayOfMonth.toISOString().split('T')[0]; // YYYY-MM-DD format
 
-      setSearchFormDate(formattedDate);
+      setSearchFromDate(formattedDate);
     }, []);
   
   
@@ -1726,7 +1726,7 @@ export default function Index({ params }: any) {
                     <input
                       type="date"
                       value={searchFromDate}
-                      onChange={(e) => setSearchFormDate(e.target.value)}
+                      onChange={(e) => setSearchFromDate(e.target.value)}
                       className="w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
                     />
                   </div>

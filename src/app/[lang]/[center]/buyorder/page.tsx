@@ -743,7 +743,7 @@ export default function Index({ params }: any) {
   const formattedDate = today.toISOString().split('T')[0]; // YYYY-MM-DD format
 
   // search form date to date
-  const [searchFromDate, setSearchFormDate] = useState(formattedDate);
+  const [searchFromDate, setSearchFromDate] = useState(formattedDate);
   const [searchToDate, setSearchToDate] = useState(formattedDate);
 
  
@@ -4216,7 +4216,7 @@ const fetchBuyOrders = async () => {
                     <input
                       type="date"
                       value={searchFromDate}
-                      onChange={(e) => setSearchFormDate(e.target.value)}
+                      onChange={(e) => setSearchFromDate(e.target.value)}
                       className="w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
                     />
                   </div>
@@ -4246,7 +4246,7 @@ const fetchBuyOrders = async () => {
                           // korea time
                           const today = new Date();
                           today.setHours(today.getHours() + 9); // Adjust for Korean timezone (UTC+9)
-                          setSearchFormDate(today.toISOString().split("T")[0]);
+                          setSearchFromDate(today.toISOString().split("T")[0]);
                           setSearchToDate(today.toISOString().split("T")[0]);
                         }}
                         className="text-sm text-zinc-500 underline"
@@ -4260,7 +4260,7 @@ const fetchBuyOrders = async () => {
                           today.setHours(today.getHours() + 9); // Adjust for Korean timezone (UTC+9)
                           const yesterday = new Date(today);
                           yesterday.setDate(yesterday.getDate() - 1);
-                          setSearchFormDate(yesterday.toISOString().split("T")[0]);
+                          setSearchFromDate(yesterday.toISOString().split("T")[0]);
                           setSearchToDate(yesterday.toISOString().split("T")[0]);
                         }}
                         className="text-sm text-zinc-500 underline"
