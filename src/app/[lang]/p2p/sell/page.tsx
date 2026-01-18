@@ -4479,23 +4479,6 @@ const fetchBuyOrders = async () => {
                 </button>
               )}
 
-              {activeWallet && (
-
-                <button
-                  className="bg-red-500 hover:bg-red-600 text-sm text-white px-4 py-2 rounded-lg shadow-md" 
-                  onClick={() => {
-                    // Add your disconnect wallet logic here
-                    confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
-                    .then(() => {
-                      toast.success('로그아웃 되었습니다');
-                    });
-                    
-                  }}>
-                  지갑 연결 해제
-                </button>
-
-              )}
-
 
               {/* opnew new window for admin dashboard */}
               {/* https://payment.orangex.center/ko/administration/buyorder */}
@@ -6462,7 +6445,8 @@ const fetchBuyOrders = async () => {
                       {seller.seller?.buyOrder?.status === 'paymentRequested' && (
 
                         <div className="w-full flex flex-col items-start justify-center gap-2
-                        bg-amber-700 text-white px-3 py-1 rounded-lg border border-amber-600 shadow-lg">
+                        bg-amber-50/80 text-slate-900 px-4 py-3 rounded-xl
+                        border border-amber-200/70 shadow-[0_18px_40px_-24px_rgba(180,83,9,0.35)]">
 
 
 
@@ -6505,9 +6489,9 @@ const fetchBuyOrders = async () => {
 
                           {seller.seller?.buyOrder?.buyer?.walletAddress === address && (
                               <div className="w-full flex flex-col items-start justify-center gap-1
-                              border-t border-slate-600 pt-2
+                              border-t border-amber-200/70 pt-2
                               ">
-                                <span className="text-sm font-semibold text-slate-200">
+                                <span className="text-sm font-semibold text-slate-700">
                                   구매자는 아래 계좌로 {seller.seller?.buyOrder.krwAmount.toLocaleString()} 원을 입금해주세요.
                                   <br />
                                   입금자명과 입금액이 일치해야 입금확인이 처리됩니다.
@@ -6517,15 +6501,15 @@ const fetchBuyOrders = async () => {
                                   gap-0 mt-1
                                 ">
                                 
-                                  <span className="text-sm text-slate-200 font-semibold">
+                                  <span className="text-sm text-slate-700 font-semibold">
                                     {seller.seller?.bankInfo?.bankName}
                                   </span>
                                   <div className="flex flex-row items-center justify-start gap-2">
-                                    <span className="text-sm text-slate-200 font-semibold">
+                                    <span className="text-sm text-slate-700 font-semibold">
                                       {seller.seller?.bankInfo?.accountNumber}
                                     </span>
                                     <button
-                                      className="text-sm text-slate-300 underline hover:text-slate-200"
+                                      className="text-sm text-amber-700 underline hover:text-amber-800"
                                       onClick={() => {
                                         navigator.clipboard.writeText(seller.seller?.bankInfo?.accountNumber || '');
                                         toast.success("계좌번호가 복사되었습니다.");
@@ -6534,13 +6518,13 @@ const fetchBuyOrders = async () => {
                                       ⧉
                                     </button>
                                   </div>
-                                  <span className="text-sm font-semibold text-slate-200">
+                                  <span className="text-sm font-semibold text-slate-700">
                                     {seller.seller?.bankInfo?.accountHolder}
                                   </span>
                                 </div>
 
                                 {/* 10분내로 입금하지 않으면 주문이 자동취소됩니다. */}
-                                <span className="text-sm text-slate-300 mt-2">
+                                <span className="text-sm text-slate-600 mt-2">
                                   10분내로 입금하지 않으면 주문을 취소할 수 있습니다.
                                 </span>
 
@@ -6556,7 +6540,7 @@ const fetchBuyOrders = async () => {
                             <div className="w-full flex flex-col items-center justify-center mt-2">
                             
                               {/* 입금자명과 입금액이 일치하는지 확인 후에 클릭 */}
-                              <span className="text-xs text-slate-300 mb-1">
+                              <span className="text-xs text-slate-600 mb-1">
                                 입금자명이 {seller.seller?.buyOrder?.buyer?.depositName || '알수없음'} 으로
                                 , 입금액이 {seller.seller?.buyOrder.krwAmount.toLocaleString()} 원 으로 일치하는지 확인 후에 클릭하세요.
                               </span>
