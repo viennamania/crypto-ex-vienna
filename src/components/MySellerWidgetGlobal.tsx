@@ -124,7 +124,7 @@ const MySellerWidgetGlobal = () => {
 
 
   return (
-    <div className="fixed bottom-6 left-6 z-[9999]">
+    <div className="fixed top-20 left-6 z-[9999]">
       <Link
         href={`/${lang}/escrow/${escrowWalletAddress}`}
         className="group inline-flex items-center gap-3 rounded-full border border-amber-200/70 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-900 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.45)] transition hover:-translate-y-0.5 hover:shadow-[0_26px_60px_-32px_rgba(15,23,42,0.55)]"
