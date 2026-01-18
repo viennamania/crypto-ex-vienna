@@ -32,16 +32,10 @@ const STAT_ITEMS = [
 ];
 
 const SCROLL_BANNER_ADS = [
-    { id: 1, title: 'USDT Gift Cards', image: '/ads/orangex-banner-01.svg', link: '#' },
-    { id: 2, title: 'USDT Travel Pass', image: '/ads/orangex-banner-02.svg', link: '#' },
-    { id: 3, title: 'USDT Food Delivery', image: '/ads/orangex-banner-03.svg', link: '#' },
-    { id: 4, title: 'USDT Gaming', image: '/ads/orangex-banner-04.svg', link: '#' },
-    { id: 5, title: 'USDT Subscriptions', image: '/ads/orangex-banner-05.svg', link: '#' },
-    { id: 6, title: 'USDT Cloud', image: '/ads/orangex-banner-06.svg', link: '#' },
-    { id: 7, title: 'USDT Retail', image: '/ads/orangex-banner-07.svg', link: '#' },
-    { id: 8, title: 'USDT Market', image: '/ads/orangex-banner-08.svg', link: '#' },
-    { id: 9, title: 'USDT Education', image: '/ads/orangex-banner-09.svg', link: '#' },
-    { id: 10, title: 'USDT Utilities', image: '/ads/orangex-banner-10.svg', link: '#' },
+    { id: 1, title: 'Binance Pay', image: '/images/binance-pay-logo.png', link: 'https://pay.binance.com' },
+    { id: 2, title: 'CoinPayments', image: '/images/coinpayments-logo.png', link: 'https://www.coinpayments.net' },
+    { id: 3, title: 'NOWPayments', image: '/images/nowpayments-logo.svg', link: 'https://nowpayments.io' },
+    { id: 4, title: 'Crypto.com Pay', image: '/images/crypto-com-pay-logo.svg', link: 'https://pay.crypto.com' },
 ];
 
 type StablecoinNewsItem = {
@@ -703,15 +697,27 @@ export default function OrangeXPage() {
     const bannerAds = [
         {
             id: 1,
-            title: 'CoinGate - USDT 결제',
-            image: '/ads/tetherpay-coingate.svg',
-            link: 'https://coingate.com',
+            title: 'Binance Pay',
+            image: '/images/binance-pay-logo.png',
+            link: 'https://pay.binance.com',
         },
         {
             id: 2,
-            title: 'NOWPayments - USDT 결제',
-            image: '/ads/tetherpay-nowpayments.svg',
+            title: 'CoinPayments',
+            image: '/images/coinpayments-logo.png',
+            link: 'https://www.coinpayments.net',
+        },
+        {
+            id: 3,
+            title: 'NOWPayments',
+            image: '/images/nowpayments-logo.svg',
             link: 'https://nowpayments.io',
+        },
+        {
+            id: 4,
+            title: 'Crypto.com Pay',
+            image: '/images/crypto-com-pay-logo.svg',
+            link: 'https://pay.crypto.com',
         },
     ];
 
