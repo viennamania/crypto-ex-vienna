@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, use, act } from "react";
+import { createPortal } from "react-dom";
 
 import Image from "next/image";
 
@@ -108,6 +109,7 @@ import {
 import { useAnimatedNumber } from "@/components/useAnimatedNumber";
 import SendbirdProvider from "@sendbird/uikit-react/SendbirdProvider";
 import GroupChannel from "@sendbird/uikit-react/GroupChannel";
+import GroupChannelList from "@sendbird/uikit-react/GroupChannelList";
 
 
 
@@ -732,6 +734,12 @@ export default function Index({ params }: any) {
       });
     }
   }, [sellerWalletAddress]);
+
+  const isOwnerSeller = Boolean(
+    address &&
+    ownerWalletAddress &&
+    address.toLowerCase() === ownerWalletAddress.toLowerCase()
+  );
 
   const [selectedChatChannelUrl, setSelectedChatChannelUrl] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(true);
@@ -4865,14 +4873,14 @@ const fetchBuyOrders = async () => {
                 <div className="flex flex-col gap-2 items-center">
                   {/* background color is 파스텔 오렌지  */}
                   <div className="
-                    bg-orange-900/40
+                    bg-orange-100/80
                     px-2 py-1 rounded-full
-                    text-sm font-semibold text-orange-300
-                    border border-orange-700
+                    text-sm font-semibold text-orange-800
+                    border border-orange-200
                   "
                   >
                     {/* dot before */}
-                    <div className="inline-block w-2 h-2 bg-orange-300 rounded-full mr-2"></div>
+                    <div className="inline-block w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
                     <span className="align-middle">
                       거래수(건)
                     </span>
@@ -5260,11 +5268,11 @@ const fetchBuyOrders = async () => {
           <div className="w-full">
             <div className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/80 p-3 shadow-[0_20px_55px_-40px_rgba(15,23,42,0.6)] backdrop-blur">
               <div className="flex items-center justify-between gap-3 mb-2 px-1">
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
                   <span className="inline-flex h-2 w-2 rounded-full bg-amber-500" />
                   프로모션 배너
                 </div>
-                <span className="text-xs text-slate-500">좌로 자동 스크롤</span>
+                <span className="text-xs text-slate-600">좌로 자동 스크롤</span>
               </div>
               <div className="escrow-banner-marquee">
                 <div className="escrow-banner-track">
@@ -5298,17 +5306,21 @@ const fetchBuyOrders = async () => {
           </div>
 
           {/* 판매자 대화목록 섹션 */}
-          <SellerChatList
-            ownerWalletAddress={ownerWalletAddress}
-            items={sellerChatItems}
-            loading={sellerChatLoading}
-            errorMessage={sellerChatError}
-            selectedChannelUrl={selectedChatChannelUrl}
-            onSelectChannel={(channelUrl) => {
-              setSelectedChatChannelUrl(channelUrl);
-              setIsChatOpen(true);
-            }}
-          />
+          {isOwnerSeller ? (
+            <SellerSendbirdWidget ownerWalletAddress={ownerWalletAddress} />
+          ) : (
+            <SellerChatList
+              ownerWalletAddress={ownerWalletAddress}
+              items={sellerChatItems}
+              loading={sellerChatLoading}
+              errorMessage={sellerChatError}
+              selectedChannelUrl={selectedChatChannelUrl}
+              onSelectChannel={(channelUrl) => {
+                setSelectedChatChannelUrl(channelUrl);
+                setIsChatOpen(true);
+              }}
+            />
+          )}
 
           <div className="w-full flex flex-col items-center justify-between gap-4
           border-t border-b border-slate-200
@@ -5369,9 +5381,9 @@ const fetchBuyOrders = async () => {
                       <span
                         className={`text-sm font-semibold
                         ${
-                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
-                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
-                          'text-slate-600'
+                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
+                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
+                          'text-slate-700'
                         }
                         `}
                         style={{ fontFamily: 'monospace' }}
@@ -5385,9 +5397,9 @@ const fetchBuyOrders = async () => {
                       {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
                       <span className={`text-sm font-semibold
                         ${
-                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
-                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
-                          'text-slate-600'
+                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
+                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
+                          'text-slate-700'
                         }
                         `}
                         style={{ fontFamily: 'monospace' }}
@@ -5400,7 +5412,7 @@ const fetchBuyOrders = async () => {
                       </span>
                       
                     </div>
-                    <span className="text-sm text-slate-600"
+                    <span className="text-sm text-slate-700"
                       style={{ fontFamily: 'monospace' }}>
                       {
                         //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
@@ -5434,9 +5446,9 @@ const fetchBuyOrders = async () => {
                     <div className="flex flex-row items-center justify-end gap-1">
                       <span className={`text-sm font-semibold
                         ${
-                          bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
-                          bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
-                          'text-slate-600'
+                          bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
+                          bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
+                          'text-slate-700'
                         }
                         `}
                         style={{ fontFamily: 'monospace' }}
@@ -5450,9 +5462,9 @@ const fetchBuyOrders = async () => {
                       {/* bithumbUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
                       <span className={`text-sm font-semibold
                         ${
-                          bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
-                          bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
-                          'text-slate-600'
+                          bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
+                          bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
+                          'text-slate-700'
                         }
                         `}
                         style={{ fontFamily: 'monospace' }}
@@ -5465,7 +5477,7 @@ const fetchBuyOrders = async () => {
                       </span>
                       
                     </div>
-                    <span className="text-sm text-slate-600"
+                    <span className="text-sm text-slate-700"
                       style={{ fontFamily: 'monospace' }}>
                       {
                         //bithumbUsdtToKrwRateTimestamp ? new Date(bithumbUsdtToKrwRateTimestamp).toLocaleString() : ''
@@ -5495,12 +5507,12 @@ const fetchBuyOrders = async () => {
                         {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     </span>
 
-                    <div className="flex flex-row items-center justify-end gap-1">
+                  <div className="flex flex-row items-center justify-end gap-1">
                       <span className={`text-sm font-semibold
                         ${
-                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
-                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
-                          'text-slate-600'
+                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
+                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
+                          'text-slate-700'
                         }
                         `}
                         style={{ fontFamily: 'monospace' }}
@@ -5514,9 +5526,9 @@ const fetchBuyOrders = async () => {
                       {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
                       <span className={`text-sm font-semibold
                         ${
-                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-400' :
-                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-400' :
-                          'text-slate-600'
+                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
+                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
+                          'text-slate-700'
                         }
                         `}
                         style={{ fontFamily: 'monospace' }}
@@ -5529,7 +5541,7 @@ const fetchBuyOrders = async () => {
                       </span>
                       
                     </div>
-                    <span className="text-sm text-slate-500"
+                    <span className="text-sm text-slate-700"
                       style={{ fontFamily: 'monospace' }}>
                       {
                         //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
@@ -6246,7 +6258,7 @@ const fetchBuyOrders = async () => {
                                   height={20}
                                   className="w-5 h-5"
                                 />
-                                <span className="text-4xl xl:text-2xl text-emerald-300 font-semibold"
+                                <span className="text-4xl xl:text-2xl text-emerald-600 font-semibold"
                                   style={{ fontFamily: 'monospace' }}>
                                   {
                                     //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -6256,9 +6268,9 @@ const fetchBuyOrders = async () => {
                                 </span>
                               </div>
 
+                              {/*
                               {seller.walletAddress === address && (
                                 <div className="w-28 flex flex-col items-center justify-center gap-1">
-                                  {/* 충전금액 입력 */}
                                   <input
                                     type="number"
                                     min="1"
@@ -6267,19 +6279,16 @@ const fetchBuyOrders = async () => {
                                     focus:outline-none focus:ring-2 focus:ring-blue-500
                                     "
                                   />
-
-                                  {/* 충전하기 버튼 */}
                                   <button
                                     onClick={() => {
-                                      /*
-                                      const inputElement = document.querySelectorAll('input')[index];
-                                      const amount = Number(inputElement.value);
-                                      if (amount >= 1) {
-                                        router.push('/' + params.lang + '/seller/deposit-usdt?amount=' + amount);
-                                      } else {
-                                        toast.error('충전금액은 1 USDT 이상이어야 합니다.');
-                                      }
-                                      */
+                                      
+                                      //const inputElement = document.querySelectorAll('input')[index];
+                                      //const amount = Number(inputElement.value);
+                                      //if (amount >= 1) {
+                                      //  router.push('/' + params.lang + '/seller/deposit-usdt?amount=' + amount);
+                                      //} else {
+                                      //  toast.error('충전금액은 1 USDT 이상이어야 합니다.');
+                                      //}
                                     }}
                                     className="w-full text-xs text-white bg-blue-700 hover:bg-blue-600 px-2 py-1 rounded-lg
                                     shadow-md hover:shadow-blue-500/50
@@ -6290,19 +6299,20 @@ const fetchBuyOrders = async () => {
                                   </button>
                                 </div>
                               )}
+                              */}
 
                             </div>
 
                             {/* if balance is less than 10 USDT, show warning */}
                             {currentUsdtBalanceArray[index] < 10 ? (
-                              <div className="text-red-400 text-sm font-medium">
+                              <div className="text-red-600 text-sm font-medium">
                                 {/*Warning: Low escrow balance may result in no order assignments. Please recharge USDT. */}
                                 경고: 에스크로 잔액이 부족하면 주문 할당이 이루어지지 않을 수 있습니다. USDT를 충전해주세요.
                               </div>
                             ) : (
                               <>
                               {seller.walletAddress === address && (
-                                <div className="text-emerald-400 text-sm mt-1 font-medium">
+                                <div className="text-emerald-600 text-sm mt-1 font-medium">
                                   {/*If you deposit more USDT, more orders will be assigned. */}
                                   충전된 USDT가 많을수록 더 많은 주문이 할당됩니다.
                                 </div>
@@ -6366,25 +6376,25 @@ const fetchBuyOrders = async () => {
                               </span>
                               {seller.seller?.autoProcessDeposit ? (
                                 <div className="w-full flex flex-col items-center justify-center">
-                                  <div className="flex text-xs text-emerald-300 font-semibold
-                                  bg-emerald-900/30 border border-emerald-700 rounded-lg px-2 py-1 text-center
+                                  <div className="flex text-xs text-emerald-800 font-semibold
+                                  bg-emerald-100/90 border border-emerald-200 rounded-lg px-2 py-1 text-center
                                   ">
                                     활성화 상태
                                   </div>
                                   {/* 설명 */}
-                                  <div className="text-xs text-slate-600 mt-1">
+                                  <div className="text-xs text-slate-700 mt-1">
                                     구매자가 입금을 하면 자동으로 입금확인이 처리됩니다.
                                   </div>
                                 </div>
                               ) : (
                                 <div className="w-full flex flex-col items-center justify-center">
-                                  <div className="flex text-xs text-red-300 font-semibold
-                                  bg-red-900/30 border border-red-700 rounded-lg px-2 py-1 text-center
+                                  <div className="flex text-xs text-red-700 font-semibold
+                                  bg-red-100/90 border border-red-200 rounded-lg px-2 py-1 text-center
                                   ">
                                     비활성화 상태
                                   </div>
                                   {/* 설명 */}
-                                  <div className="text-xs text-slate-600 mt-1">
+                                  <div className="text-xs text-slate-700 mt-1">
                                     구매자가 입금을 하면 판매자가 수동으로 입금확인을 합니다.
                                   </div>
                                 </div>
@@ -6987,6 +6997,7 @@ const fetchBuyOrders = async () => {
 
                               {/* 입력창 */}
                               {/* 수정하기 버튼 */}
+                              {/*
                               {seller.walletAddress === address && (
                                 <div className="w-full flex flex-col items-start justify-center gap-1">
                                   <input
@@ -7033,6 +7044,7 @@ const fetchBuyOrders = async () => {
                                   </button>
                                 </div>
                               )}
+                              */}
 
                             </div>
 
@@ -11647,5 +11659,178 @@ const SellerChatList = ({
         </div>
       )}
     </div>
+  );
+};
+
+const SellerSendbirdWidget = ({
+  ownerWalletAddress,
+}: {
+  ownerWalletAddress: string;
+}) => {
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [selectedChannelUrl, setSelectedChannelUrl] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [view, setView] = useState<'list' | 'chat'>('list');
+  const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchSessionToken = async () => {
+      if (!ownerWalletAddress) {
+        if (isMounted) {
+          setSessionToken(null);
+          setSelectedChannelUrl(null);
+          setErrorMessage(null);
+        }
+        return;
+      }
+
+      setIsLoading(true);
+      setErrorMessage(null);
+
+      try {
+        const response = await fetch('/api/sendbird/session-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: ownerWalletAddress,
+            nickname: `${ownerWalletAddress.slice(0, 6)}...`,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => null);
+          throw new Error(error?.error || '세션 토큰을 발급하지 못했습니다.');
+        }
+
+        const data = (await response.json()) as { sessionToken?: string };
+        if (!data.sessionToken) {
+          throw new Error('세션 토큰이 비어 있습니다.');
+        }
+
+        if (isMounted) {
+          setSessionToken(data.sessionToken);
+        }
+      } catch (error) {
+        if (isMounted) {
+          const message = error instanceof Error ? error.message : '채팅을 불러오지 못했습니다.';
+          setErrorMessage(message);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchSessionToken();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [ownerWalletAddress]);
+
+  if (!isMounted) {
+    return null;
+  }
+
+  return createPortal(
+    <>
+      <div className="fixed bottom-6 left-6 z-[9999]">
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-800 shadow-lg"
+        >
+          {isOpen ? '채팅목록 닫기' : '채팅목록 열기'}
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="fixed bottom-20 left-6 z-[9999] w-[340px] max-w-[90vw] md:w-[420px] md:max-w-[70vw] lg:w-[520px] lg:max-w-[50vw]">
+          <div className="rounded-2xl border border-slate-200/70 bg-white/95 p-4 shadow-[0_20px_55px_-40px_rgba(15,23,42,0.6)] backdrop-blur">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                {view === 'chat' && (
+                  <button
+                    type="button"
+                    onClick={() => setView('list')}
+                    className="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600"
+                  >
+                    목록
+                  </button>
+                )}
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-900">판매자 채팅</h4>
+                  <p className="text-xs text-slate-500">Sendbird 대화목록</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {isLoading && <span className="text-xs text-slate-500">불러오는 중...</span>}
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600"
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+
+            {errorMessage ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                {errorMessage}
+              </div>
+            ) : !sessionToken ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
+                채팅을 준비 중입니다.
+              </div>
+            ) : (
+              <SendbirdProvider
+                appId={SENDBIRD_APP_ID}
+                userId={ownerWalletAddress}
+                accessToken={sessionToken}
+                theme="light"
+              >
+                {view === 'list' ? (
+                  <div className="h-[360px] overflow-hidden rounded-xl border border-slate-200 bg-white md:h-[480px] lg:h-[560px]">
+                    <GroupChannelList
+                      onChannelSelect={(channel) => {
+                        setSelectedChannelUrl(channel?.url ?? null);
+                        setView('chat');
+                      }}
+                      onChannelCreated={(channel) => {
+                        setSelectedChannelUrl(channel?.url ?? null);
+                        setView('chat');
+                      }}
+                      selectedChannelUrl={selectedChannelUrl ?? undefined}
+                      disableAutoSelect
+                    />
+                  </div>
+                ) : (
+                  <div className="h-[360px] overflow-hidden rounded-xl border border-slate-200 bg-white md:h-[480px] lg:h-[560px]">
+                    {selectedChannelUrl ? (
+                      <GroupChannel channelUrl={selectedChannelUrl} />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                        대화를 선택하세요.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </SendbirdProvider>
+            )}
+          </div>
+        </div>
+      )}
+    </>,
+    document.body
   );
 };
