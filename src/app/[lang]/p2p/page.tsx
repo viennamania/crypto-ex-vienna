@@ -331,7 +331,8 @@ export default function OrangeXPage() {
     const sellerTickerPauseUntilRef = useRef(0);
     const sellerTickerOffsetRef = useRef(0);
     const sellerTickerDraggingRef = useRef(false);
-    const sellerTickerDragTimeoutRef = useRef<number | null>(null);
+    const sellerTickerLastUserScrollRef = useRef(0);
+    const sellerTickerAutoScrollRef = useRef(false);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -451,46 +452,40 @@ export default function OrangeXPage() {
             sellerTickerPauseUntilRef.current = Date.now() + ms;
         };
 
-        const clearDragTimeout = () => {
-            if (sellerTickerDragTimeoutRef.current !== null) {
-                window.clearTimeout(sellerTickerDragTimeoutRef.current);
-                sellerTickerDragTimeoutRef.current = null;
-            }
-        };
-
-        const scheduleDragRelease = (delayMs: number) => {
-            clearDragTimeout();
-            sellerTickerDragTimeoutRef.current = window.setTimeout(() => {
-                sellerTickerDraggingRef.current = false;
-                sellerTickerDragTimeoutRef.current = null;
-            }, delayMs);
+        const markUserScroll = () => {
+            sellerTickerLastUserScrollRef.current = Date.now();
         };
 
         const handlePointerEnter = () => pauseFor(1500);
         const handlePointerDown = () => {
             sellerTickerDraggingRef.current = true;
+            markUserScroll();
             pauseFor(3000);
-            clearDragTimeout();
         };
         const handlePointerUp = () => {
+            sellerTickerDraggingRef.current = false;
+            markUserScroll();
             pauseFor(1800);
-            scheduleDragRelease(600);
         };
         const handleTouchStart = () => {
             sellerTickerDraggingRef.current = true;
+            markUserScroll();
             pauseFor(3000);
-            clearDragTimeout();
         };
         const handleTouchEnd = () => {
+            sellerTickerDraggingRef.current = false;
+            markUserScroll();
             pauseFor(2000);
-            scheduleDragRelease(800);
         };
         const handleWheel = () => pauseFor(2000);
         const handleScroll = () => {
+            if (sellerTickerAutoScrollRef.current) {
+                sellerTickerAutoScrollRef.current = false;
+                return;
+            }
+            markUserScroll();
             pauseFor(1200);
             sellerTickerOffsetRef.current = ticker.scrollLeft;
-            sellerTickerDraggingRef.current = true;
-            scheduleDragRelease(700);
         };
 
         ticker.addEventListener('pointerenter', handlePointerEnter);
@@ -515,7 +510,6 @@ export default function OrangeXPage() {
             ticker.removeEventListener('touchcancel', handleTouchEnd);
             ticker.removeEventListener('wheel', handleWheel);
             ticker.removeEventListener('scroll', handleScroll);
-            clearDragTimeout();
         };
     }, []);
 
@@ -808,15 +802,18 @@ export default function OrangeXPage() {
 
         const tick = () => {
             const maxScroll = Math.max(0, ticker.scrollWidth - ticker.clientWidth);
+            const idleMs = Date.now() - sellerTickerLastUserScrollRef.current;
             if (
                 Date.now() >= sellerTickerPauseUntilRef.current &&
                 maxScroll > 0 &&
-                !sellerTickerDraggingRef.current
+                !sellerTickerDraggingRef.current &&
+                idleMs > 900
             ) {
                 sellerTickerOffsetRef.current += speed;
                 if (sellerTickerOffsetRef.current >= maxScroll) {
                     sellerTickerOffsetRef.current = 0;
                 }
+                sellerTickerAutoScrollRef.current = true;
                 ticker.scrollLeft = Math.floor(sellerTickerOffsetRef.current);
             }
             frame = window.requestAnimationFrame(tick);
@@ -1476,7 +1473,7 @@ export default function OrangeXPage() {
                     ) : (
                         <div
                             ref={sellerTickerRef}
-                            className="seller-ticker relative overflow-x-auto min-w-0 snap-x snap-proximity"
+                            className="seller-ticker relative overflow-x-auto min-w-0"
                             aria-label="베스트 셀러 목록"
                         >
                             <div className="seller-ticker-track">
@@ -1503,7 +1500,7 @@ export default function OrangeXPage() {
                                         return (
                                             <div
                                                 key={`${seller?.walletAddress || index}`}
-                                                className={`seller-card relative flex flex-col gap-4 rounded-2xl border p-4 backdrop-blur ${balanceTone.card} snap-start`}
+                                                className={`seller-card relative flex flex-col gap-4 rounded-2xl border p-4 backdrop-blur ${balanceTone.card}`}
                                             >
                                                 <span
                                                     className={`pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full blur-2xl ${balanceTone.glow}`}
