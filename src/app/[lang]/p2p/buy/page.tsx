@@ -4440,7 +4440,7 @@ const fetchBuyOrders = async () => {
             
           <div className="w-full flex flex-row items-center justify-start gap-2">
             <button
-              onClick={() => router.push('/' + params.lang + '/buyer/buyorder')}
+              onClick={() => router.push('/' + params.lang + '/p2p')}
               className="flex items-center justify-center gap-2
               rounded-lg p-2
               hover:bg-white/70

@@ -4380,7 +4380,7 @@ const fetchBuyOrders = async () => {
             
           <div className="w-full flex flex-row items-center justify-start gap-2">
             <button
-              onClick={() => router.push('/' + params.lang + '/seller/buyorder')}
+              onClick={() => router.push('/' + params.lang + '/p2p')}
               className="flex items-center justify-center gap-2
               rounded-lg p-2
               hover:bg-slate-700/50
@@ -4390,7 +4390,7 @@ const fetchBuyOrders = async () => {
 
             >
               <Image
-                src="/logo.png"
+                src="/logo-orangex.png"
                 alt="logo"
                 width={100}
                 height={100}
@@ -7407,7 +7407,7 @@ const fetchBuyOrders = async () => {
 
                       // storecode parameter is passed to fetchBuyOrders
                       onChange={(e) => {
-                        router.push('/' + params.lang + '/administration/buyorder?storecode=' + e.target.value);
+                        router.push('/' + params.lang + '/p2p/sell?storecode=' + e.target.value);
                       }}
 
 
@@ -11842,7 +11842,7 @@ const fetchBuyOrders = async () => {
             <select
               value={limitValue}
               onChange={(e) =>
-                router.push(`/${params.lang}/administration/buyorder?storecode=${searchStorecode}&limit=${Number(e.target.value)}&page=${pageValue}`)
+                router.push(`/${params.lang}/p2p/sell?storecode=${searchStorecode}&limit=${Number(e.target.value)}&page=${pageValue}`)
               }
 
               className="text-sm bg-zinc-800 text-zinc-200 px-2 py-1 rounded-md"
@@ -11859,7 +11859,7 @@ const fetchBuyOrders = async () => {
             disabled={Number(pageValue) <= 1}
             className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) <= 1 ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
             onClick={() => {
-              router.push(`/${params.lang}/administration/buyorder?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=1`)
+              router.push(`/${params.lang}/p2p/sell?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=1`)
             }}
           >
             처음으로
@@ -11871,7 +11871,7 @@ const fetchBuyOrders = async () => {
             className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) <= 1 ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
             onClick={() => {
 
-              router.push(`/${params.lang}/administration/buyorder?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Number(pageValue) - 1}`)
+              router.push(`/${params.lang}/p2p/sell?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Number(pageValue) - 1}`)
 
 
             }}
@@ -11890,7 +11890,7 @@ const fetchBuyOrders = async () => {
             className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) >= Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue)) ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
             onClick={() => {
 
-              router.push(`/${params.lang}/administration/buyorder?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Number(pageValue) + 1}`)
+              router.push(`/${params.lang}/p2p/sell?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Number(pageValue) + 1}`)
 
             }}
           >
@@ -11903,7 +11903,7 @@ const fetchBuyOrders = async () => {
             className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) >= Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue)) ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
             onClick={() => {
 
-              router.push(`/${params.lang}/administration/buyorder?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue))}`)
+              router.push(`/${params.lang}/p2p/sell?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue))}`)
 
             }}
           >
