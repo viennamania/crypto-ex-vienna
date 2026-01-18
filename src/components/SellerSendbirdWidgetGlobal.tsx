@@ -192,7 +192,12 @@ const SellerSendbirdWidgetGlobal = () => {
 
   return createPortal(
     <div className="fixed left-6 top-1/2 z-[9999] flex -translate-y-1/2 items-center gap-4">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col items-center gap-2">
+        {unreadCount > 0 && (
+          <span className="seller-chat-unread min-w-[30px] rounded-full border px-2.5 py-1 text-center text-xs font-extrabold tabular-nums">
+            {unreadCount}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
@@ -221,11 +226,6 @@ const SellerSendbirdWidgetGlobal = () => {
             </svg>
           </span>
         </button>
-        {unreadCount > 0 && (
-          <span className="seller-chat-unread min-w-[30px] rounded-full border px-2.5 py-1 text-center text-xs font-extrabold tabular-nums">
-            {unreadCount}
-          </span>
-        )}
       </div>
 
       {isOpen && (

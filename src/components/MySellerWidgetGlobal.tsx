@@ -84,6 +84,7 @@ const MySellerWidgetGlobal = () => {
           throw new Error('Failed to fetch seller info');
         }
 
+
         const data = (await response.json()) as {
           result?: { seller?: { escrowWalletAddress?: string } };
         };
@@ -121,6 +122,7 @@ const MySellerWidgetGlobal = () => {
     return null;
   }
 
+
   return (
     <div className="fixed bottom-6 left-6 z-[9999]">
       <Link
@@ -141,7 +143,7 @@ const MySellerWidgetGlobal = () => {
             />
           </svg>
         </span>
-        나의 판매
+        나의 판매계정
       </Link>
     </div>
   );

@@ -232,28 +232,28 @@ if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
 const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
 
 const ESCROW_BANNER_ADS_LEFT = [
-  { id: 'left-1', image: '/ads/orangex-banner-07.svg', link: 'https://orangex.center' },
-  { id: 'left-2', image: '/ads/orangex-banner-03.svg', link: 'https://orangex.center' },
-  { id: 'left-3', image: '/ads/orangex-banner-09.svg', link: 'https://orangex.center' },
+  { id: 'left-1', image: '/images/ad-2.gif', link: 'https://orangex.center' },
+  { id: 'left-2', image: '/images/ad-3.gif', link: 'https://orangex.center' },
+  { id: 'left-3', image: '/images/ad-4.gif', link: 'https://orangex.center' },
 ];
 
 const ESCROW_BANNER_ADS_RIGHT = [
-  { id: 'right-1', image: '/ads/orangex-banner-02.svg', link: 'https://orangex.center' },
-  { id: 'right-2', image: '/ads/orangex-banner-08.svg', link: 'https://orangex.center' },
-  { id: 'right-3', image: '/ads/orangex-banner-10.svg', link: 'https://orangex.center' },
+  { id: 'right-1', image: '/images/ad-5.gif', link: 'https://orangex.center' },
+  { id: 'right-2', image: '/images/ad-6.gif', link: 'https://orangex.center' },
+  { id: 'right-3', image: '/images/ad-2.gif', link: 'https://orangex.center' },
 ];
 
 const ESCROW_BANNER_ADS_SCROLL = [
-  { id: 'scroll-1', image: '/ads/orangex-banner-01.svg', link: 'https://orangex.center' },
-  { id: 'scroll-2', image: '/ads/orangex-banner-02.svg', link: 'https://orangex.center' },
-  { id: 'scroll-3', image: '/ads/orangex-banner-03.svg', link: 'https://orangex.center' },
-  { id: 'scroll-4', image: '/ads/orangex-banner-04.svg', link: 'https://orangex.center' },
-  { id: 'scroll-5', image: '/ads/orangex-banner-05.svg', link: 'https://orangex.center' },
-  { id: 'scroll-6', image: '/ads/orangex-banner-06.svg', link: 'https://orangex.center' },
-  { id: 'scroll-7', image: '/ads/orangex-banner-07.svg', link: 'https://orangex.center' },
-  { id: 'scroll-8', image: '/ads/orangex-banner-08.svg', link: 'https://orangex.center' },
-  { id: 'scroll-9', image: '/ads/orangex-banner-09.svg', link: 'https://orangex.center' },
-  { id: 'scroll-10', image: '/ads/orangex-banner-10.svg', link: 'https://orangex.center' },
+  { id: 'scroll-1', image: '/images/ad-6.gif', link: 'https://orangex.center' },
+  { id: 'scroll-2', image: '/images/ad-2.gif', link: 'https://orangex.center' },
+  { id: 'scroll-3', image: '/images/ad-3.gif', link: 'https://orangex.center' },
+  { id: 'scroll-4', image: '/images/ad-4.gif', link: 'https://orangex.center' },
+  { id: 'scroll-5', image: '/images/ad-5.gif', link: 'https://orangex.center' },
+  { id: 'scroll-6', image: '/images/ad-6.gif', link: 'https://orangex.center' },
+  { id: 'scroll-7', image: '/images/ad-1.gif', link: 'https://orangex.center' },
+  { id: 'scroll-8', image: '/images/ad-2.gif', link: 'https://orangex.center' },
+  { id: 'scroll-9', image: '/images/ad-3.gif', link: 'https://orangex.center' },
+  { id: 'scroll-10', image: '/images/ad-4.gif', link: 'https://orangex.center' },
 ];
 
 
@@ -4595,6 +4595,30 @@ const fetchBuyOrders = async () => {
 
 
       <div className="py-0 w-full">
+        <div className="mb-4 flex w-full justify-end">
+          <button
+            type="button"
+            onClick={() => router.push(`/${params.lang}/p2p/sell`)}
+            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-2 text-sm font-semibold text-white shadow-[0_18px_45px_-25px_rgba(249,115,22,0.8)] transition hover:-translate-y-0.5 hover:shadow-[0_26px_60px_-32px_rgba(249,115,22,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M5 12h14M13 6l6 6-6 6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            다른 판매자 보러가기
+          </button>
+        </div>
 
         <div className="w-full flex flex-col items-center justify-center gap-3 mb-6
         p-5
@@ -5314,6 +5338,7 @@ const fetchBuyOrders = async () => {
           </div>
 
           {/* 판매자 대화목록 섹션 */}
+          {/*
           {!isOwnerSeller && (
             <SellerChatList
               ownerWalletAddress={ownerWalletAddress}
@@ -5327,6 +5352,20 @@ const fetchBuyOrders = async () => {
               }}
             />
           )}
+          */}
+          <SellerChatList
+            ownerWalletAddress={ownerWalletAddress}
+            items={sellerChatItems}
+            loading={sellerChatLoading}
+            errorMessage={sellerChatError}
+            selectedChannelUrl={selectedChatChannelUrl}
+            onSelectChannel={(channelUrl) => {
+              setSelectedChatChannelUrl(channelUrl);
+              setIsChatOpen(true);
+            }}
+          />
+
+
 
           <div className="w-full flex flex-col items-center justify-between gap-4
           border-t border-b border-slate-200
@@ -5653,85 +5692,6 @@ const fetchBuyOrders = async () => {
                           />
                         )}
                       </div>
-
-                      {seller.walletAddress === address && (
-                        <div
-                          className="h-full
-                          flex flex-row items-center justify-center gap-2
-                          bg-gradient-to-r from-slate-200 to-slate-300 text-slate-900 px-2 py-1 rounded-bl-lg rounded-tr-lg shadow-xl border border-slate-300
-                          ">
-                          <span className="text-sm font-semibold">
-                            나의 판매자계정
-                          </span>
-
-                          {/*
-                        
-                          {seller.seller?.buyOrder?.status === 'paymentRequested' && (
-                            <>
-                            
-                              {seller.seller?.autoProcessDeposit ? (
-                                <>
-
-                                </>
-                              ) : (                      
-                                <button
-                  
-                                  disabled={confirmingPayment[index]}
-                                  
-                                  className={`
-                                    ${confirmingPayment[index]
-                                    ? 'text-gray-400 cursor-not-allowed'
-                                    : 'text-white hover:text-white hover:shadow-yellow-500/50 cursor-pointer'
-                                    } bg-blue-600 hover:bg-blue-700
-                                    px-3 py-1 rounded-lg
-                                    shadow-lg
-                                    text-xs
-                                  `}
-
-                                  onClick={() => {
-                                    //confirm("수동으로 입금확인을 처리하시겠습니까?") &&
-                                    confirmPayment(
-                                      index,
-                                      seller.seller.buyOrder._id,
-                                      //paymentAmounts[index],
-                                      //paymentAmountsUsdt[index],
-
-                                      seller.seller.buyOrder.krwAmount,
-                                      seller.seller.buyOrder.usdtAmount,
-                                      
-                                      seller.seller.buyOrder?.walletAddress,
-
-                                      seller.seller.buyOrder?.paymentMethod,
-                                    );
-                                  }}
-                                >
-                                  <div className="flex flex-row gap-2 items-center justify-center">
-                                    { confirmingPayment[index] && (
-                                        <Image
-                                          src="/loading.png"
-                                          alt="Loading"
-                                          width={20}
-                                          height={20}
-                                          className="w-5 h-5
-                                          animate-spin"
-                                        />
-                                    )}
-                                    <span className="text-xs">
-                                      입금완료하기
-                                    </span>
-                                  </div>
-
-                                </button>
-                              )}
-
-                            </>
-
-                          )}
-                          */}
-
-                        </div>
-                      )}
-
 
                     </div>
 
@@ -11163,6 +11123,31 @@ const fetchBuyOrders = async () => {
 
         </div>
 
+        <div className="mt-10 space-y-4 xl:hidden">
+          {[...ESCROW_BANNER_ADS_LEFT, ...ESCROW_BANNER_ADS_RIGHT].map((ad) => (
+            <a
+              key={`mobile-${ad.id}`}
+              href={ad.link}
+              target="_blank"
+              rel="noreferrer"
+              className="block"
+            >
+              <div className="relative overflow-hidden rounded-2xl bg-white/90 shadow-[0_20px_55px_-40px_rgba(15,23,42,0.6)]">
+                <div className="relative aspect-[2/1] w-full overflow-hidden">
+                  <Image
+                    src={ad.image}
+                    alt="Banner"
+                    fill
+                    sizes="(min-width: 640px) 520px, 90vw"
+                    className="object-cover"
+                  />
+                </div>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/35 opacity-70" />
+              </div>
+            </a>
+          ))}
+        </div>
+
           
       </div>
 
@@ -11636,7 +11621,9 @@ const SellerChatList = ({
             return (
               <div
                 key={item.channelUrl}
-                onClick={() => onSelectChannel(item.channelUrl)}
+                
+                //onClick={() => onSelectChannel(item.channelUrl)}
+
                 className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-3 py-2 transition ${
                   isActive
                     ? 'border-emerald-300 bg-emerald-50/80 shadow-[0_12px_30px_-24px_rgba(16,185,129,0.7)]'
