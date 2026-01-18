@@ -366,6 +366,7 @@ export default function OrangeXPage() {
     const sellerTickerLastUserScrollRef = useRef(0);
     const sellerTickerAutoScrollRef = useRef(false);
     const supportConnectingRef = useRef(false);
+    const pageRef = useRef<HTMLDivElement | null>(null);
 
     const supportStatusMessage =
         supportPhase === 'session'
@@ -516,6 +517,83 @@ export default function OrangeXPage() {
             activeController?.abort();
         };
     }, [chatOpen, supportUserId, supportSessionToken, supportChannelUrl]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        const root = pageRef.current;
+        if (!root) {
+            return;
+        }
+
+        let frame = 0;
+        const update = () => {
+            const scrollTop = window.scrollY || window.pageYOffset || 0;
+            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            const progress = maxScroll > 0 ? Math.min(1, Math.max(0, scrollTop / maxScroll)) : 0;
+            root.style.setProperty('--scroll-progress', progress.toString());
+            root.style.setProperty('--scroll-y', `${scrollTop}px`);
+            frame = 0;
+        };
+
+        const onScroll = () => {
+            if (frame) {
+                return;
+            }
+            frame = window.requestAnimationFrame(update);
+        };
+
+        update();
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', onScroll);
+
+        return () => {
+            window.removeEventListener('scroll', onScroll);
+            window.removeEventListener('resize', onScroll);
+            if (frame) {
+                window.cancelAnimationFrame(frame);
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        const elements = Array.from(document.querySelectorAll('[data-reveal]'));
+        if (elements.length === 0) {
+            return;
+        }
+
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reducedMotion) {
+            elements.forEach((element) => element.classList.add('is-visible'));
+            return;
+        }
+        if (typeof IntersectionObserver === 'undefined') {
+            elements.forEach((element) => element.classList.add('is-visible'));
+            return;
+        }
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            },
+            { threshold: 0.2, rootMargin: '0px 0px -12% 0px' }
+        );
+
+        elements.forEach((element) => observer.observe(element));
+
+        return () => {
+            observer.disconnect();
+        };
+    }, []);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -1068,6 +1146,7 @@ export default function OrangeXPage() {
 
     return (
         <div
+            ref={pageRef}
             className={`${bodyFont.variable} ${displayFont.variable} relative min-h-screen overflow-hidden bg-[linear-gradient(160deg,var(--paper),#f0f9ff_45%,#fff1f2_85%)] text-[color:var(--ink)] font-[var(--font-body)]`}
             style={{
                 '--paper': '#fff4ea',
@@ -1078,6 +1157,8 @@ export default function OrangeXPage() {
                 '--mist': '#f5efe5',
                 '--rose': '#fb7185',
                 '--sun': '#fbbf24',
+                '--scroll-progress': '0',
+                '--scroll-y': '0px',
             } as React.CSSProperties}
         >
             <div className="pointer-events-none absolute -top-32 right-[-10%] h-96 w-96 rounded-full bg-[radial-gradient(circle_at_center,var(--accent)_0%,transparent_70%)] opacity-35 blur-3xl float-slow" />
@@ -1085,6 +1166,8 @@ export default function OrangeXPage() {
             <div className="pointer-events-none absolute left-[-8%] top-[18%] h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,var(--rose)_0%,transparent_70%)] opacity-25 blur-3xl float-slow" />
             <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[linear-gradient(180deg,rgba(255,255,255,0.8),rgba(255,255,255,0))]" />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.4)_1px,transparent_1px)] [background-size:18px_18px] opacity-20" />
+            <div className="pointer-events-none absolute left-[6%] top-[12%] h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(250,204,21,0.35),transparent_70%)] opacity-40 blur-3xl scroll-aurora" />
+            <div className="pointer-events-none absolute right-[8%] top-[42%] h-80 w-80 rounded-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.35),transparent_70%)] opacity-30 blur-3xl scroll-aurora-alt" />
             {/* PC 좌측 광고 배너 */}
             <aside className="hidden lg:block fixed left-6 top-20 z-10 w-56 h-[calc(100vh-5rem)] overflow-y-auto p-4 space-y-4">
                 {bannerAds.map((ad) => (
@@ -1284,8 +1367,10 @@ export default function OrangeXPage() {
                 
 
                 {/* 스크롤 배너 섹션 */}
-                <div className="
-                    rounded-[28px] border border-slate-200/70 bg-white/80 p-6 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur overflow-x-hidden">
+                <div
+                    data-reveal
+                    className="glam-card rounded-[28px] border border-slate-200/70 bg-white/80 p-6 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur overflow-x-hidden"
+                >
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                         <div>
                             <div className="flex items-center gap-3">
@@ -1344,7 +1429,9 @@ export default function OrangeXPage() {
                         return (
                             <div
                                 key={item.label}
-                                className={`relative overflow-hidden rounded-2xl border border-slate-200/70 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur ${style.base}`}
+                                data-reveal
+                                style={{ '--reveal-delay': `${index * 0.08}s` } as React.CSSProperties}
+                                className={`glam-card relative overflow-hidden rounded-2xl border border-slate-200/70 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur ${style.base}`}
                             >
                                 <div className={`absolute -right-10 -top-10 h-32 w-32 rounded-full ${style.orb} opacity-40`} />
                             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{item.label}</p>
@@ -1362,8 +1449,10 @@ export default function OrangeXPage() {
 
                 {/* 뉴스 피드 섹션 */}
                 
-                <div className="
-                    rounded-[28px] border border-slate-200/70 bg-white/80 p-6 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur overflow-x-hidden">
+                <div
+                    data-reveal
+                    className="glam-card rounded-[28px] border border-slate-200/70 bg-white/80 p-6 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur overflow-x-hidden"
+                >
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
                             <div className="flex items-center gap-3">
@@ -1478,7 +1567,10 @@ export default function OrangeXPage() {
 
                 {/* 마켓 시세 섹션 */}
 
-                <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
+                <div
+                    data-reveal
+                    className="glam-card rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur"
+                >
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
                             <div className="flex items-center gap-3">
@@ -1508,12 +1600,14 @@ export default function OrangeXPage() {
                     {tickerError && <p className="mb-4 text-xs font-semibold text-orange-600">{tickerError}</p>}
 
                     <div className="grid gap-4 md:grid-cols-3">
-                        {marketTickers.map((ticker) => {
+                        {marketTickers.map((ticker, index) => {
                             const style = MARKET_STYLES[ticker.id];
                             return (
                                 <div
                                     key={ticker.id}
-                                    className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 p-5 shadow-[0_24px_60px_-45px_rgba(15,23,42,0.7)] backdrop-blur"
+                                    data-reveal
+                                    style={{ '--reveal-delay': `${index * 0.06}s` } as React.CSSProperties}
+                                    className="glam-card relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 p-5 shadow-[0_24px_60px_-45px_rgba(15,23,42,0.7)] backdrop-blur"
                                 >
                                     <span className={`absolute left-0 top-0 h-full w-1.5 ${style.accent}`} />
                                     <span className={`pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full ${style.glow} blur-2xl`} />
@@ -1552,7 +1646,10 @@ export default function OrangeXPage() {
                     </div>
                 </div>
 
-                <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
+                <div
+                    data-reveal
+                    className="glam-card rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur"
+                >
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
                             <div className="flex items-center gap-3">
@@ -1822,7 +1919,10 @@ export default function OrangeXPage() {
                     
                 </div>
 
-                <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
+                <div
+                    data-reveal
+                    className="glam-card rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur"
+                >
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div>
                             <div className="flex items-center gap-3">
@@ -1913,7 +2013,11 @@ export default function OrangeXPage() {
 
                 {/* 주요 기능 소개 */}
                 <div className="grid gap-6 mb-12 md:grid-cols-3">
-                    <div className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_40px_90px_-60px_rgba(15,23,42,0.8)]">
+                <div
+                    data-reveal
+                    style={{ '--reveal-delay': '0s' } as React.CSSProperties}
+                    className="glam-card group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_40px_90px_-60px_rgba(15,23,42,0.8)]"
+                >
                         <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[color:var(--sea)] text-white shadow-[0_12px_30px_-18px_rgba(15,118,110,0.8)]">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1925,7 +2029,11 @@ export default function OrangeXPage() {
                         </p>
                     </div>
 
-                    <div className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_40px_90px_-60px_rgba(15,23,42,0.8)]">
+                <div
+                    data-reveal
+                    style={{ '--reveal-delay': '0.08s' } as React.CSSProperties}
+                    className="glam-card group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_40px_90px_-60px_rgba(15,23,42,0.8)]"
+                >
                         <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[color:var(--accent)] text-white shadow-[0_12px_30px_-18px_rgba(249,115,22,0.8)]">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1937,7 +2045,11 @@ export default function OrangeXPage() {
                         </p>
                     </div>
 
-                    <div className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_40px_90px_-60px_rgba(15,23,42,0.8)]">
+                <div
+                    data-reveal
+                    style={{ '--reveal-delay': '0.16s' } as React.CSSProperties}
+                    className="glam-card group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_40px_90px_-60px_rgba(15,23,42,0.8)]"
+                >
                         <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-[0_12px_30px_-18px_rgba(15,23,42,0.8)]">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1953,7 +2065,10 @@ export default function OrangeXPage() {
                 </div>
 
                 {/* 에스크로 시스템 설명 */}
-                <div className="relative overflow-hidden rounded-[28px] border border-slate-800/70 bg-[linear-gradient(140deg,#0f172a,#134e4a)] p-8 md:p-12 mb-12 text-white shadow-[0_40px_120px_-60px_rgba(2,6,23,0.9)]">
+                <div
+                    data-reveal="pop"
+                    className="glam-card relative overflow-hidden rounded-[28px] border border-slate-800/70 bg-[linear-gradient(140deg,#0f172a,#134e4a)] p-8 md:p-12 mb-12 text-white shadow-[0_40px_120px_-60px_rgba(2,6,23,0.9)]"
+                >
                     <div className="pointer-events-none absolute right-[-10%] top-[-20%] h-64 w-64 rounded-full bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.5),transparent_70%)] opacity-40 blur-3xl" />
                     <h2 className="font-[var(--font-display)] text-2xl sm:text-3xl md:text-4xl text-center mb-8">
                         🔒 에스크로 시스템이란?
@@ -2005,7 +2120,11 @@ export default function OrangeXPage() {
                 {/* 거래 방법 */}
                 <div className="grid gap-8 mb-12 md:grid-cols-2">
                     {/* 구매 방법 */}
-                    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-8 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
+                    <div
+                        data-reveal
+                        style={{ '--reveal-delay': '0s' } as React.CSSProperties}
+                        className="glam-card rounded-2xl border border-slate-200/70 bg-white/80 p-8 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur"
+                    >
                         <div className="flex items-center gap-3 mb-6">
                             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--sea)] text-white font-bold text-xl">
                                 구매
@@ -2045,7 +2164,11 @@ export default function OrangeXPage() {
                     </div>
 
                     {/* 판매 방법 */}
-                    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-8 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
+                    <div
+                        data-reveal
+                        style={{ '--reveal-delay': '0.1s' } as React.CSSProperties}
+                        className="glam-card rounded-2xl border border-slate-200/70 bg-white/80 p-8 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur"
+                    >
                         <div className="flex items-center gap-3 mb-6">
                             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--accent)] text-white font-bold text-xl">
                                 판매
@@ -2086,7 +2209,10 @@ export default function OrangeXPage() {
                 </div>
 
                 {/* FAQ */}
-                <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
+                <div
+                    data-reveal
+                    className="glam-card rounded-2xl border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur"
+                >
                     <h2 className="font-[var(--font-display)] text-2xl text-center mb-8 text-slate-900 sm:text-3xl">자주 묻는 질문</h2>
                     
                     <div className="space-y-6 max-w-3xl mx-auto">
@@ -2125,7 +2251,10 @@ export default function OrangeXPage() {
                 </div>
 
                 {/* 최종 CTA */}
-                <div className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(120deg,var(--sea),var(--accent),var(--rose))] p-8 text-center text-white shadow-[0_40px_120px_-60px_rgba(15,23,42,0.8)]">
+                <div
+                    data-reveal="pop"
+                    className="glam-card relative overflow-hidden rounded-[28px] bg-[linear-gradient(120deg,var(--sea),var(--accent),var(--rose))] p-8 text-center text-white shadow-[0_40px_120px_-60px_rgba(15,23,42,0.8)]"
+                >
                     <div className="pointer-events-none absolute -right-20 -top-16 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.45),transparent_70%)] opacity-60 blur-3xl" />
                     <h2 className="font-[var(--font-display)] text-2xl mb-4 sm:text-3xl">지금 바로 시작하세요!</h2>
                     <p className="text-lg text-white/90 mb-8">
@@ -2272,6 +2401,96 @@ export default function OrangeXPage() {
 
                 .float-slower {
                     animation: floatSlow 16s ease-in-out infinite;
+                }
+
+                [data-reveal] {
+                    opacity: 0;
+                    transform: translateY(28px) scale(0.985);
+                    filter: saturate(0.95);
+                    transition:
+                        opacity 0.7s ease,
+                        transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
+                        filter 0.7s ease;
+                    transition-delay: var(--reveal-delay, 0s);
+                    will-change: transform, opacity;
+                }
+
+                [data-reveal='left'] {
+                    transform: translateX(-32px) scale(0.985);
+                }
+
+                [data-reveal='right'] {
+                    transform: translateX(32px) scale(0.985);
+                }
+
+                [data-reveal='pop'] {
+                    transform: translateY(18px) scale(0.96);
+                }
+
+                [data-reveal].is-visible {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                    filter: saturate(1.08);
+                }
+
+                .glam-card {
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .glam-card::before {
+                    content: '';
+                    position: absolute;
+                    inset: -1px;
+                    border-radius: inherit;
+                    background: linear-gradient(
+                        135deg,
+                        rgba(255, 255, 255, 0.55),
+                        rgba(255, 122, 26, 0.25),
+                        rgba(14, 165, 233, 0.25),
+                        rgba(251, 113, 133, 0.2)
+                    );
+                    opacity: 0;
+                    mix-blend-mode: screen;
+                    transition: opacity 0.6s ease;
+                    pointer-events: none;
+                }
+
+                .glam-card::after {
+                    content: '';
+                    position: absolute;
+                    top: -40%;
+                    left: -20%;
+                    width: 140%;
+                    height: 60%;
+                    background: linear-gradient(
+                        90deg,
+                        transparent,
+                        rgba(255, 255, 255, 0.45),
+                        transparent
+                    );
+                    opacity: 0;
+                    transform: translateX(-60%) rotate(2deg);
+                    pointer-events: none;
+                }
+
+                [data-reveal].is-visible.glam-card::before {
+                    opacity: 0.45;
+                }
+
+                [data-reveal].is-visible.glam-card::after {
+                    opacity: 1;
+                    animation: sheenMove 1.6s ease 0.2s both;
+                }
+
+                .scroll-aurora {
+                    transform: translateY(calc(var(--scroll-progress, 0) * 120px));
+                    transition: transform 0.25s ease-out;
+                }
+
+                .scroll-aurora-alt {
+                    transform: translateY(calc(var(--scroll-progress, 0) * -160px));
+                    transition: transform 0.3s ease-out;
                 }
 
                 .ticker {
@@ -2457,6 +2676,15 @@ export default function OrangeXPage() {
                     }
                 }
 
+                @keyframes sheenMove {
+                    from {
+                        transform: translateX(-60%) rotate(2deg);
+                    }
+                    to {
+                        transform: translateX(60%) rotate(2deg);
+                    }
+                }
+
                 @keyframes floatSlow {
                     0%,
                     100% {
@@ -2526,6 +2754,22 @@ export default function OrangeXPage() {
                     .float-slower,
                     .hero-fade {
                         animation: none;
+                    }
+                    [data-reveal] {
+                        opacity: 1;
+                        transform: none;
+                        filter: none;
+                        transition: none;
+                    }
+                    .glam-card::before,
+                    .glam-card::after {
+                        animation: none;
+                        opacity: 0;
+                    }
+                    .scroll-aurora,
+                    .scroll-aurora-alt {
+                        transform: none;
+                        transition: none;
                     }
                 }
             `}</style>
