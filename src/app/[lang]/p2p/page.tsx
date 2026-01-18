@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -330,6 +330,14 @@ export default function OrangeXPage() {
     const [sellerChatUpdatedAt, setSellerChatUpdatedAt] = useState<string | null>(null);
     const [sellerChatLoading, setSellerChatLoading] = useState(false);
     const [sellerChatError, setSellerChatError] = useState<string | null>(null);
+    const newsTickerRef = useRef<HTMLDivElement | null>(null);
+    const newsTickerPauseUntilRef = useRef(0);
+    const newsTickerOffsetRef = useRef(0);
+    const sellerTickerRef = useRef<HTMLDivElement | null>(null);
+    const sellerTickerPauseUntilRef = useRef(0);
+    const sellerTickerOffsetRef = useRef(0);
+    const sellerTickerDraggingRef = useRef(false);
+    const sellerTickerDragTimeoutRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -404,6 +412,155 @@ export default function OrangeXPage() {
             isMounted = false;
         };
     }, []);
+
+    useEffect(() => {
+        const ticker = newsTickerRef.current;
+        if (!ticker) {
+            return;
+        }
+
+        const pauseFor = (ms: number) => {
+            newsTickerPauseUntilRef.current = Date.now() + ms;
+        };
+
+        const handlePointerEnter = () => pauseFor(1500);
+        const handlePointerDown = () => pauseFor(2500);
+        const handleTouchStart = () => pauseFor(3000);
+        const handleWheel = () => pauseFor(2000);
+        const handleScroll = () => {
+            pauseFor(1200);
+            newsTickerOffsetRef.current = ticker.scrollLeft;
+        };
+
+        ticker.addEventListener('pointerenter', handlePointerEnter);
+        ticker.addEventListener('pointerdown', handlePointerDown);
+        ticker.addEventListener('touchstart', handleTouchStart, { passive: true });
+        ticker.addEventListener('wheel', handleWheel, { passive: true });
+        ticker.addEventListener('scroll', handleScroll, { passive: true });
+
+        return () => {
+            ticker.removeEventListener('pointerenter', handlePointerEnter);
+            ticker.removeEventListener('pointerdown', handlePointerDown);
+            ticker.removeEventListener('touchstart', handleTouchStart);
+            ticker.removeEventListener('wheel', handleWheel);
+            ticker.removeEventListener('scroll', handleScroll);
+        };
+    }, []);
+
+    useEffect(() => {
+        const ticker = sellerTickerRef.current;
+        if (!ticker) {
+            return;
+        }
+
+        const pauseFor = (ms: number) => {
+            sellerTickerPauseUntilRef.current = Date.now() + ms;
+        };
+
+        const clearDragTimeout = () => {
+            if (sellerTickerDragTimeoutRef.current !== null) {
+                window.clearTimeout(sellerTickerDragTimeoutRef.current);
+                sellerTickerDragTimeoutRef.current = null;
+            }
+        };
+
+        const scheduleDragRelease = (delayMs: number) => {
+            clearDragTimeout();
+            sellerTickerDragTimeoutRef.current = window.setTimeout(() => {
+                sellerTickerDraggingRef.current = false;
+                sellerTickerDragTimeoutRef.current = null;
+            }, delayMs);
+        };
+
+        const handlePointerEnter = () => pauseFor(1500);
+        const handlePointerDown = () => {
+            sellerTickerDraggingRef.current = true;
+            pauseFor(3000);
+            clearDragTimeout();
+        };
+        const handlePointerUp = () => {
+            pauseFor(1800);
+            scheduleDragRelease(600);
+        };
+        const handleTouchStart = () => {
+            sellerTickerDraggingRef.current = true;
+            pauseFor(3000);
+            clearDragTimeout();
+        };
+        const handleTouchEnd = () => {
+            pauseFor(2000);
+            scheduleDragRelease(800);
+        };
+        const handleWheel = () => pauseFor(2000);
+        const handleScroll = () => {
+            pauseFor(1200);
+            sellerTickerOffsetRef.current = ticker.scrollLeft;
+            sellerTickerDraggingRef.current = true;
+            scheduleDragRelease(700);
+        };
+
+        ticker.addEventListener('pointerenter', handlePointerEnter);
+        ticker.addEventListener('pointerdown', handlePointerDown);
+        ticker.addEventListener('pointerup', handlePointerUp);
+        ticker.addEventListener('pointercancel', handlePointerUp);
+        ticker.addEventListener('pointerleave', handlePointerUp);
+        ticker.addEventListener('touchstart', handleTouchStart, { passive: true });
+        ticker.addEventListener('touchend', handleTouchEnd, { passive: true });
+        ticker.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+        ticker.addEventListener('wheel', handleWheel, { passive: true });
+        ticker.addEventListener('scroll', handleScroll, { passive: true });
+
+        return () => {
+            ticker.removeEventListener('pointerenter', handlePointerEnter);
+            ticker.removeEventListener('pointerdown', handlePointerDown);
+            ticker.removeEventListener('pointerup', handlePointerUp);
+            ticker.removeEventListener('pointercancel', handlePointerUp);
+            ticker.removeEventListener('pointerleave', handlePointerUp);
+            ticker.removeEventListener('touchstart', handleTouchStart);
+            ticker.removeEventListener('touchend', handleTouchEnd);
+            ticker.removeEventListener('touchcancel', handleTouchEnd);
+            ticker.removeEventListener('wheel', handleWheel);
+            ticker.removeEventListener('scroll', handleScroll);
+            clearDragTimeout();
+        };
+    }, []);
+
+    useEffect(() => {
+        const ticker = newsTickerRef.current;
+        if (!ticker || typeof window === 'undefined') {
+            return;
+        }
+
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            return;
+        }
+
+        let frame = 0;
+        const speed = 0.8;
+        newsTickerOffsetRef.current = ticker.scrollLeft;
+
+        const tick = () => {
+            const maxScroll = ticker.scrollWidth / 2;
+            if (
+                Date.now() >= newsTickerPauseUntilRef.current &&
+                maxScroll > 0 &&
+                ticker.scrollWidth > ticker.clientWidth
+            ) {
+                newsTickerOffsetRef.current += speed;
+                if (newsTickerOffsetRef.current >= maxScroll) {
+                    newsTickerOffsetRef.current -= maxScroll;
+                }
+                ticker.scrollLeft = Math.floor(newsTickerOffsetRef.current);
+            }
+            frame = window.requestAnimationFrame(tick);
+        };
+
+        frame = window.requestAnimationFrame(tick);
+
+        return () => {
+            window.cancelAnimationFrame(frame);
+        };
+    }, [newsItems]);
 
     useEffect(() => {
         let active = true;
@@ -628,6 +785,43 @@ export default function OrangeXPage() {
                   '판매자'
           )
         : '판매자';
+
+    useEffect(() => {
+        const ticker = sellerTickerRef.current;
+        if (!ticker || typeof window === 'undefined') {
+            return;
+        }
+
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            return;
+        }
+
+        let frame = 0;
+        const speed = 0.6;
+        sellerTickerOffsetRef.current = ticker.scrollLeft;
+
+        const tick = () => {
+            const maxScroll = Math.max(0, ticker.scrollWidth - ticker.clientWidth);
+            if (
+                Date.now() >= sellerTickerPauseUntilRef.current &&
+                maxScroll > 0 &&
+                !sellerTickerDraggingRef.current
+            ) {
+                sellerTickerOffsetRef.current += speed;
+                if (sellerTickerOffsetRef.current >= maxScroll) {
+                    sellerTickerOffsetRef.current = 0;
+                }
+                ticker.scrollLeft = Math.floor(sellerTickerOffsetRef.current);
+            }
+            frame = window.requestAnimationFrame(tick);
+        };
+
+        frame = window.requestAnimationFrame(tick);
+
+        return () => {
+            window.cancelAnimationFrame(frame);
+        };
+    }, [bestSellers.length]);
 
     useEffect(() => {
         let isMounted = true;
@@ -1024,60 +1218,69 @@ export default function OrangeXPage() {
 
                     {newsError && <p className="mb-4 text-xs font-semibold text-orange-600">{newsError}</p>}
 
-                    <div className="news-ticker relative overflow-hidden min-w-0">
+                    <div
+                        ref={newsTickerRef}
+                        className="news-ticker relative overflow-x-auto min-w-0 snap-x snap-mandatory"
+                        aria-label="스테이블코인 뉴스 피드"
+                    >
                         <div className="pointer-events-none absolute left-0 top-0 h-full w-20 bg-gradient-to-r from-white/95 to-transparent" />
                         <div className="pointer-events-none absolute right-0 top-0 h-full w-20 bg-gradient-to-l from-white/95 to-transparent" />
                         <div className="news-ticker-track">
                             {[0, 1].map((loopIndex) => (
-                                <div key={`news-loop-${loopIndex}`} className="news-ticker-group">
+                                <div
+                                    key={`news-loop-${loopIndex}`}
+                                    className="news-ticker-group"
+                                    aria-hidden={loopIndex === 1}
+                                >
                                     {newsItems.map((news) => {
                                         const imageSrc = news.image || '/icon-market.png';
                                         const isLocalImage = imageSrc.startsWith('/');
                                         return (
-                                        <a
-                                            key={`${news.id}-${loopIndex}`}
-                                            href={news.url}
-                                            target="_blank"
-                                            rel="noreferrer noopener"
-                                            className="news-card group flex flex-col rounded-2xl border border-slate-200/70 bg-white/85 p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.7)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_26px_60px_-38px_rgba(15,23,42,0.7)]"
-                                        >
-                                            <div className="relative h-28 w-full overflow-hidden rounded-xl border border-slate-200/70 bg-gradient-to-br from-slate-100 via-white to-slate-200/70">
-                                                <Image
-                                                    src={imageSrc}
-                                                    alt={news.title}
-                                                    fill
-                                                    sizes="(min-width: 1024px) 280px, (min-width: 640px) 240px, 70vw"
-                                                    loader={({ src }) => src}
-                                                    unoptimized
-                                                    className={`${
-                                                        isLocalImage ? 'object-contain p-6' : 'object-cover'
-                                                    }`}
-                                                    onError={(event) => {
-                                                        const target = event.currentTarget as HTMLImageElement;
-                                                        target.onerror = null;
-                                                        target.src = '/icon-market.png';
-                                                        target.className = 'object-contain p-6';
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between text-[11px] text-slate-500">
-                                                <span className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-2 py-1 font-semibold text-slate-600">
-                                                    {news.tag}
-                                                </span>
-                                                <span>{formatRelativeTime(news.publishedAt)}</span>
-                                            </div>
-                                            <p className="mt-3 text-sm font-semibold leading-snug text-slate-900">
-                                                {news.title}
-                                            </p>
-                                            <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
-                                                <span className="font-semibold text-slate-700">{news.source}</span>
-                                                <span className="text-slate-300">•</span>
-                                                <span className="font-semibold text-slate-600 group-hover:text-slate-900">
-                                                    자세히 보기
-                                                </span>
-                                            </div>
-                                        </a>
-                                    );
+                                            <a
+                                                key={`${news.id}-${loopIndex}`}
+                                                href={news.url}
+                                                target="_blank"
+                                                rel="noreferrer noopener"
+                                                tabIndex={loopIndex === 1 ? -1 : undefined}
+                                                className="news-card group flex flex-col rounded-2xl border border-slate-200/70 bg-white/85 p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.7)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_26px_60px_-38px_rgba(15,23,42,0.7)] snap-start"
+                                            >
+                                                <div className="relative h-28 w-full overflow-hidden rounded-xl border border-slate-200/70 bg-gradient-to-br from-slate-100 via-white to-slate-200/70">
+                                                    <Image
+                                                        src={imageSrc}
+                                                        alt={news.title}
+                                                        fill
+                                                        sizes="(min-width: 1024px) 280px, (min-width: 640px) 240px, 70vw"
+                                                        loader={({ src }) => src}
+                                                        unoptimized
+                                                        className={`${
+                                                            isLocalImage ? 'object-contain p-6' : 'object-cover'
+                                                        }`}
+                                                        onError={(event) => {
+                                                            const target = event.currentTarget as HTMLImageElement;
+                                                            target.onerror = null;
+                                                            target.src = '/icon-market.png';
+                                                            target.className = 'object-contain p-6';
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                                                    <span className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-2 py-1 font-semibold text-slate-600">
+                                                        {news.tag}
+                                                    </span>
+                                                    <span>{formatRelativeTime(news.publishedAt)}</span>
+                                                </div>
+                                                <p className="mt-3 text-sm font-semibold leading-snug text-slate-900">
+                                                    {news.title}
+                                                </p>
+                                                <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
+                                                    <span className="font-semibold text-slate-700">{news.source}</span>
+                                                    <span className="text-slate-300">•</span>
+                                                    <span className="font-semibold text-slate-600 group-hover:text-slate-900">
+                                                        자세히 보기
+                                                    </span>
+                                                </div>
+                                            </a>
+                                        );
                                     })}
                                 </div>
                             ))}
@@ -1265,167 +1468,166 @@ export default function OrangeXPage() {
                             베스트 셀러를 불러오는 중입니다.
                         </div>
                     ) : (
-                        <div className="seller-ticker relative overflow-hidden">
+                        <div
+                            ref={sellerTickerRef}
+                            className="seller-ticker relative overflow-x-auto min-w-0 snap-x snap-proximity"
+                            aria-label="베스트 셀러 목록"
+                        >
                             <div className="seller-ticker-track">
-                                {[0, 1].map((loopIndex) => (
-                                    <div key={`seller-loop-${loopIndex}`} className="seller-ticker-group">
-                                        {bestSellers.map((seller, index) => {
-                                            const displayName = maskName(
-                                                seller?.nickname ||
-                                                    seller?.store?.storeName ||
-                                                    seller?.walletAddress ||
-                                                    '판매자'
-                                            );
-                                            const totalConfirmed =
-                                                seller?.seller?.totalPaymentConfirmedUsdtAmount || 0;
-                                            const currentBalanceRaw = Number(seller?.currentUsdtBalance ?? 0);
-                                            const currentBalance = Number.isFinite(currentBalanceRaw)
-                                                ? currentBalanceRaw
-                                                : 0;
-                                            const rate = seller?.seller?.usdtToKrwRate;
-                                            //const sellerWalletAddress = seller?.walletAddress;
-                                            const sellerWalletAddress = seller?.seller?.escrowWalletAddress;
-                                            const promotionText = seller?.seller?.promotionText || seller?.promotionText;
-                                            const priceSettingMethod = seller?.seller?.priceSettingMethod;
-                                            const market = seller?.seller?.market;
-                                            const balanceTone = getBalanceTone(currentBalance, totalSellerBalance);
-                                            return (
-                                                <div
-                                                    key={`${loopIndex}-${seller?.walletAddress || index}`}
-                                                    className={`seller-card relative flex flex-col gap-4 rounded-2xl border p-4 backdrop-blur ${balanceTone.card}`}
-                                                >
-                                                    <span
-                                                        className={`pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full blur-2xl ${balanceTone.glow}`}
-                                                    />
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-slate-200/70 bg-white">
-                                                            <Image
-                                                                src={
-                                                                    seller?.avatar ||
-                                                                    seller?.store?.storeLogo ||
-                                                                    '/icon-seller.png'
-                                                                }
-                                                                alt="Seller"
-                                                                fill
-                                                                sizes="44px"
-                                                                className="object-cover object-center"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-semibold text-slate-900">
-                                                                {displayName}
-                                                            </p>
-                                                            <p className="text-xs text-slate-500">
-                                                                완료 {numberFormatter.format(totalConfirmed)} USDT
-                                                            </p>
-                                                            {promotionText && (
-                                                                <p className="promo-text text-xs text-slate-600">
-                                                                    <span className="promo-text-content">
+                                <div className="seller-ticker-group">
+                                    {bestSellers.map((seller, index) => {
+                                        const displayName = maskName(
+                                            seller?.nickname ||
+                                                seller?.store?.storeName ||
+                                                seller?.walletAddress ||
+                                                '판매자'
+                                        );
+                                        const totalConfirmed = seller?.seller?.totalPaymentConfirmedUsdtAmount || 0;
+                                        const currentBalanceRaw = Number(seller?.currentUsdtBalance ?? 0);
+                                        const currentBalance = Number.isFinite(currentBalanceRaw)
+                                            ? currentBalanceRaw
+                                            : 0;
+                                        const rate = seller?.seller?.usdtToKrwRate;
+                                        //const sellerWalletAddress = seller?.walletAddress;
+                                        const sellerWalletAddress = seller?.seller?.escrowWalletAddress;
+                                        const promotionText = seller?.seller?.promotionText || seller?.promotionText;
+                                        const priceSettingMethod = seller?.seller?.priceSettingMethod;
+                                        const market = seller?.seller?.market;
+                                        const balanceTone = getBalanceTone(currentBalance, totalSellerBalance);
+                                        return (
+                                            <div
+                                                key={`${seller?.walletAddress || index}`}
+                                                className={`seller-card relative flex flex-col gap-4 rounded-2xl border p-4 backdrop-blur ${balanceTone.card} snap-start`}
+                                            >
+                                                <span
+                                                    className={`pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full blur-2xl ${balanceTone.glow}`}
+                                                />
+                                                <div className="flex items-center gap-3">
+                                                    <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-slate-200/70 bg-white">
+                                                        <Image
+                                                            src={
+                                                                seller?.avatar ||
+                                                                seller?.store?.storeLogo ||
+                                                                '/icon-seller.png'
+                                                            }
+                                                            alt="Seller"
+                                                            fill
+                                                            sizes="44px"
+                                                            className="object-cover object-center"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-slate-900">{displayName}</p>
+                                                        <p className="text-xs text-slate-500">
+                                                            완료 {numberFormatter.format(totalConfirmed)} USDT
+                                                        </p>
+                                                        {promotionText && (
+                                                            <p className="promo-text text-xs text-slate-600">
+                                                                <span className="promo-text-content">
                                                                     <span className="promo-text-message">
                                                                         {promotionText}
                                                                     </span>
-                                                                    </span>
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-end justify-between gap-4">
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">보유 잔액</p>
-                                                            <p className={`text-base font-semibold ${balanceTone.amount}`}>
-                                                                {numberFormatter.format(currentBalance)} USDT
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex flex-col items-end gap-2">
-                                                            <div className="flex flex-col items-end gap-1">
-                                                                <div className="flex items-center justify-end gap-2">
-                                                                    <span className="text-[11px] font-semibold text-slate-500">
-                                                                        판매가격
-                                                                    </span>
-                                                                    {priceSettingMethod === 'market' ? (
-                                                                        <div className="flex items-center gap-1">
-                                                                            {market === 'upbit' && (
-                                                                                <Image
-                                                                                    src="/icon-market-upbit.png"
-                                                                                    alt="Upbit"
-                                                                                    width={18}
-                                                                                    height={18}
-                                                                                    className="h-4 w-4"
-                                                                                />
-                                                                            )}
-                                                                            {market === 'bithumb' && (
-                                                                                <Image
-                                                                                    src="/icon-market-bithumb.png"
-                                                                                    alt="Bithumb"
-                                                                                    width={18}
-                                                                                    height={18}
-                                                                                    className="h-4 w-4"
-                                                                                />
-                                                                            )}
-                                                                            {market === 'korbit' && (
-                                                                                <Image
-                                                                                    src="/icon-market-korbit.png"
-                                                                                    alt="Korbit"
-                                                                                    width={18}
-                                                                                    height={18}
-                                                                                    className="h-4 w-4"
-                                                                                />
-                                                                            )}
-                                                                        </div>
-                                                                    ) : (
-                                                                        <span className="text-[11px] font-semibold text-slate-500">
-                                                                            고정가격
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <span
-                                                                    className={`rounded-full border px-4 py-2 text-sm font-semibold ${balanceTone.pill}`}
-                                                                >
-                                                                    {typeof rate === 'number'
-                                                                        ? `${numberFormatter.format(rate)} KRW`
-                                                                        : '시세 준비중'}
                                                                 </span>
-                                                            </div>
-                                                            {sellerWalletAddress && (
-                                                                <a
-                                                                    href={`/${lang}/escrow/${sellerWalletAddress}`}
-                                                                    target="_blank"
-                                                                    rel="noreferrer"
-                                                                    className="inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] px-3 py-1 text-xs font-semibold text-white shadow-[0_10px_25px_-12px_rgba(249,115,22,0.8)] transition hover:bg-[color:var(--accent-deep)]"
-                                                                >
-                                                                    <svg
-                                                                        width="14"
-                                                                        height="14"
-                                                                        viewBox="0 0 24 24"
-                                                                        fill="none"
-                                                                        className="inline-block"
-                                                                        aria-hidden="true"
-                                                                    >
-                                                                        <path
-                                                                            d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z"
-                                                                            stroke="currentColor"
-                                                                            strokeWidth="2"
-                                                                            strokeLinecap="round"
-                                                                            strokeLinejoin="round"
-                                                                        />
-                                                                        <path
-                                                                            d="M8 10h8M8 14h5"
-                                                                            stroke="currentColor"
-                                                                            strokeWidth="2"
-                                                                            strokeLinecap="round"
-                                                                            strokeLinejoin="round"
-                                                                        />
-                                                                    </svg>
-                                                                    문의하기
-                                                                </a>
-                                                            )}
-                                                        </div>
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                ))}
+                                                <div className="flex items-end justify-between gap-4">
+                                                    <div>
+                                                        <p className="text-xs text-slate-500">보유 잔액</p>
+                                                        <p className={`text-base font-semibold ${balanceTone.amount}`}>
+                                                            {numberFormatter.format(currentBalance)} USDT
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <span className="text-[11px] font-semibold text-slate-500">
+                                                                    판매가격
+                                                                </span>
+                                                                {priceSettingMethod === 'market' ? (
+                                                                    <div className="flex items-center gap-1">
+                                                                        {market === 'upbit' && (
+                                                                            <Image
+                                                                                src="/icon-market-upbit.png"
+                                                                                alt="Upbit"
+                                                                                width={18}
+                                                                                height={18}
+                                                                                className="h-4 w-4"
+                                                                            />
+                                                                        )}
+                                                                        {market === 'bithumb' && (
+                                                                            <Image
+                                                                                src="/icon-market-bithumb.png"
+                                                                                alt="Bithumb"
+                                                                                width={18}
+                                                                                height={18}
+                                                                                className="h-4 w-4"
+                                                                            />
+                                                                        )}
+                                                                        {market === 'korbit' && (
+                                                                            <Image
+                                                                                src="/icon-market-korbit.png"
+                                                                                alt="Korbit"
+                                                                                width={18}
+                                                                                height={18}
+                                                                                className="h-4 w-4"
+                                                                            />
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-[11px] font-semibold text-slate-500">
+                                                                        고정가격
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <span
+                                                                className={`rounded-full border px-4 py-2 text-sm font-semibold ${balanceTone.pill}`}
+                                                            >
+                                                                {typeof rate === 'number'
+                                                                    ? `${numberFormatter.format(rate)} KRW`
+                                                                    : '시세 준비중'}
+                                                            </span>
+                                                        </div>
+                                                        {sellerWalletAddress && (
+                                                            <a
+                                                                href={`/${lang}/escrow/${sellerWalletAddress}`}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] px-3 py-1 text-xs font-semibold text-white shadow-[0_10px_25px_-12px_rgba(249,115,22,0.8)] transition hover:bg-[color:var(--accent-deep)]"
+                                                            >
+                                                                <svg
+                                                                    width="14"
+                                                                    height="14"
+                                                                    viewBox="0 0 24 24"
+                                                                    fill="none"
+                                                                    className="inline-block"
+                                                                    aria-hidden="true"
+                                                                >
+                                                                    <path
+                                                                        d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z"
+                                                                        stroke="currentColor"
+                                                                        strokeWidth="2"
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                    />
+                                                                    <path
+                                                                        d="M8 10h8M8 14h5"
+                                                                        stroke="currentColor"
+                                                                        strokeWidth="2"
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                    />
+                                                                </svg>
+                                                                문의하기
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                             <div className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-[color:var(--paper)] to-transparent" />
                             <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[color:var(--paper)] to-transparent" />
@@ -1910,18 +2112,22 @@ export default function OrangeXPage() {
 
                 .seller-ticker {
                     width: 100%;
+                    max-width: 100%;
+                    min-width: 0;
+                    -webkit-overflow-scrolling: touch;
                 }
 
                 .seller-ticker-track {
                     display: flex;
                     gap: 16px;
-                    animation: sellerTickerMove 28s linear infinite;
-                    will-change: transform;
+                    max-width: 100%;
+                    min-width: 0;
                 }
 
                 .seller-ticker-group {
                     display: flex;
                     gap: 16px;
+                    width: max-content;
                 }
 
                 .seller-card {
@@ -1938,13 +2144,12 @@ export default function OrangeXPage() {
                     width: 100%;
                     max-width: 100%;
                     min-width: 0;
+                    -webkit-overflow-scrolling: touch;
                 }
 
                 .news-ticker-track {
                     display: flex;
                     gap: 18px;
-                    animation: newsTickerMove 32s linear infinite;
-                    will-change: transform;
                     max-width: 100%;
                     min-width: 0;
                 }
@@ -1952,6 +2157,7 @@ export default function OrangeXPage() {
                 .news-ticker-group {
                     display: flex;
                     gap: 18px;
+                    width: max-content;
                 }
 
                 .news-card {
