@@ -219,9 +219,9 @@ export default function RootLayout({
                 </div>
                 */}
 
+                {/*
                 <div className="flex flex-col items-center justify-center gap-4 border-b border-slate-600 pb-4 mb-4">
 
-                  {/* current chain */}
                   <div className="flex flex-col items-center justify-center">
                     <Image
                       src={`/icon-blockchain.png`}
@@ -318,12 +318,13 @@ export default function RootLayout({
                   </div>
 
                 </div>
+                */}
 
 
                 {/* my wallet */}
-                <div className="flex flex-col items-start justify-center">
+                <div className="w-fullflex flex-col items-start justify-center">
 
-                  <div className="flex flex-row items-center gap-2 mb-2">
+                  <div className="w-full flex flex-row items-center gap-2 mb-2">
                     <h2 className="text-sm font-semibold text-gray-800">
                       My Wallet
                     </h2>
@@ -331,7 +332,9 @@ export default function RootLayout({
                     {/* button for router to /ko/administration/withdraw-usdt */}
 
                     <button
-                      className="bg-blue-500 text-white rounded-md px-2 py-1 text-xs hover:bg-blue-600 transition-colors duration-200"
+                      className="ml-auto text-xs text-white bg-red-700 hover:bg-red-600 px-2 py-1 rounded-lg
+                      shadow-md hover:shadow-red-500/50
+                      "
                       
                       //onClick={() => router.push("/ko/administration/withdraw-usdt")}
                       /* router and hide button for withdraw USDT */
@@ -339,7 +342,15 @@ export default function RootLayout({
                         router.push("/ko/administration/withdraw-usdt");
                         setShowChain(false);
                       }}>
-                      출금하기
+                        <div className="flex flex-row items-center gap-1">
+                          <Image
+                            src={`/icon-withdraw.png`}
+                            alt={`Withdraw icon`}
+                            width={16}
+                            height={16}
+                          />
+                          <div>Withdraw USDT</div>
+                        </div>
                     </button>
 
 
