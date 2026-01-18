@@ -56,10 +56,10 @@ const STAT_ITEMS = [
 ];
 
 const SCROLL_BANNER_ADS = [
-    { id: 1, title: 'Binance Pay', image: '/images/binance-pay-logo.png', link: 'https://pay.binance.com' },
-    { id: 2, title: 'CoinPayments', image: '/images/coinpayments-logo.png', link: 'https://www.coinpayments.net' },
-    { id: 3, title: 'NOWPayments', image: '/images/nowpayments-logo.svg', link: 'https://nowpayments.io' },
-    { id: 4, title: 'Crypto.com Pay', image: '/images/crypto-com-pay-logo.svg', link: 'https://pay.crypto.com' },
+    { id: 1, title: 'Binance Pay', image: '/images/crypto-1218x350-1.gif', link: 'https://pay.binance.com' },
+    { id: 2, title: 'CoinPayments', image: '/images/ad-2.gif', link: 'https://www.coinpayments.net' },
+    { id: 3, title: 'NOWPayments', image: '/images/ad-3.gif', link: 'https://nowpayments.io' },
+    { id: 4, title: 'Crypto.com Pay', image: '/images/ad-4.gif', link: 'https://pay.crypto.com' },
 ];
 
 type StablecoinNewsItem = {
@@ -875,25 +875,25 @@ export default function OrangeXPage() {
         {
             id: 1,
             title: 'Binance Pay',
-            image: '/images/binance-pay-logo.png',
+            image: '/images/crypto-1218x350-1.gif',
             link: 'https://pay.binance.com',
         },
         {
             id: 2,
             title: 'CoinPayments',
-            image: '/images/coinpayments-logo.png',
+            image: '/images/ad-4.gif',
             link: 'https://www.coinpayments.net',
         },
         {
             id: 3,
             title: 'NOWPayments',
-            image: '/images/nowpayments-logo.svg',
+            image: '/images/ad-5.gif',
             link: 'https://nowpayments.io',
         },
         {
             id: 4,
             title: 'Crypto.com Pay',
-            image: '/images/crypto-com-pay-logo.svg',
+            image: '/images/ad-6.gif',
             link: 'https://pay.crypto.com',
         },
     ];
@@ -1086,40 +1086,40 @@ export default function OrangeXPage() {
             <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[linear-gradient(180deg,rgba(255,255,255,0.8),rgba(255,255,255,0))]" />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.4)_1px,transparent_1px)] [background-size:18px_18px] opacity-20" />
             {/* PC 좌측 광고 배너 */}
-            <aside className="hidden lg:block fixed left-0 top-20 z-10 w-56 h-[calc(100vh-5rem)] overflow-y-auto p-4 space-y-4">
+            <aside className="hidden lg:block fixed left-6 top-20 z-10 w-56 h-[calc(100vh-5rem)] overflow-y-auto p-4 space-y-4">
                 {bannerAds.map((ad) => (
                     <a key={`left-${ad.id}`} href={ad.link} className="block" target="_blank" rel="noreferrer">
-                        <div className="rounded-2xl border border-white/80 bg-white/70 p-2 shadow-[0_16px_45px_-32px_rgba(15,23,42,0.6)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_26px_60px_-36px_rgba(15,23,42,0.6)]">
-                            <div className="relative aspect-[2/1] rounded-lg overflow-hidden bg-[#f1eee7]">
+                        <div className="overflow-hidden rounded-2xl shadow-[0_16px_45px_-32px_rgba(15,23,42,0.6)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_26px_60px_-36px_rgba(15,23,42,0.6)]">
+                            <div className="relative aspect-[2/1] overflow-hidden bg-[#f1eee7]">
                                 <Image
                                     src={ad.image}
                                     alt={ad.title}
                                     fill
-                                    sizes="(min-width: 1024px) 224px, 50vw"
-                                    className="object-contain"
-                                />
+                                        sizes="(min-width: 1024px) 224px, 50vw"
+                                        className="object-cover"
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    </a>
+                        </a>
                 ))}
             </aside>
 
             {/* PC 우측 광고 배너 */}
-            <aside className="hidden lg:block fixed right-0 top-20 z-10 w-56 h-[calc(100vh-5rem)] overflow-y-auto p-4 space-y-4">
+            <aside className="hidden lg:block fixed right-6 top-20 z-10 w-56 h-[calc(100vh-5rem)] overflow-y-auto p-4 space-y-4">
                 {bannerAds.map((ad) => (
                     <a key={`right-${ad.id}`} href={ad.link} className="block" target="_blank" rel="noreferrer">
-                        <div className="rounded-2xl border border-white/80 bg-white/70 p-2 shadow-[0_16px_45px_-32px_rgba(15,23,42,0.6)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_26px_60px_-36px_rgba(15,23,42,0.6)]">
-                            <div className="relative aspect-[2/1] rounded-lg overflow-hidden bg-[#f1eee7]">
+                        <div className="overflow-hidden rounded-2xl shadow-[0_16px_45px_-32px_rgba(15,23,42,0.6)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_26px_60px_-36px_rgba(15,23,42,0.6)]">
+                            <div className="relative aspect-[2/1] overflow-hidden bg-[#f1eee7]">
                                 <Image
                                     src={ad.image}
                                     alt={ad.title}
                                     fill
-                                    sizes="(min-width: 1024px) 224px, 50vw"
-                                    className="object-contain"
-                                />
+                                        sizes="(min-width: 1024px) 224px, 50vw"
+                                        className="object-cover"
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    </a>
+                        </a>
                 ))}
             </aside>
 
@@ -2245,14 +2245,14 @@ export default function OrangeXPage() {
                             target="_blank"
                             rel="noreferrer"
                         >
-                            <div className="rounded-2xl border border-white/80 bg-white/70 p-2 shadow-[0_16px_45px_-32px_rgba(15,23,42,0.6)] transition hover:shadow-[0_26px_60px_-36px_rgba(15,23,42,0.6)]">
-                                <div className="relative aspect-[2/1] rounded-lg overflow-hidden bg-[#f1eee7]">
+                            <div className="overflow-hidden rounded-2xl shadow-[0_16px_45px_-32px_rgba(15,23,42,0.6)] transition hover:shadow-[0_26px_60px_-36px_rgba(15,23,42,0.6)]">
+                                <div className="relative aspect-[2/1] overflow-hidden bg-[#f1eee7]">
                                     <Image
                                         src={ad.image}
                                         alt={ad.title}
                                         fill
                                         sizes="(min-width: 1024px) 224px, 60vw"
-                                        className="object-contain"
+                                        className="object-cover"
                                     />
                                 </div>
                             </div>
