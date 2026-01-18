@@ -18,6 +18,10 @@ const readOwnerWalletAddress = () => {
   return window.localStorage.getItem(OWNER_WALLET_STORAGE_KEY) || '';
 };
 
+type UserChannelItem = {
+  unreadMessageCount?: number;
+};
+
 const SellerSendbirdWidgetGlobal = () => {
   const activeAccount = useActiveAccount();
   const address = activeAccount?.address;
@@ -28,6 +32,7 @@ const SellerSendbirdWidgetGlobal = () => {
   const [view, setView] = useState<'list' | 'chat'>('list');
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -132,24 +137,102 @@ const SellerSendbirdWidgetGlobal = () => {
     }
   }, [canShow]);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const fetchUnreadCount = async () => {
+      if (!canShow || !ownerWalletAddress) {
+        if (isActive) {
+          setUnreadCount(0);
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/sendbird/user-channels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: ownerWalletAddress, limit: 20 }),
+        });
+
+        if (!response.ok) {
+          throw new Error('채팅 카운트를 불러오지 못했습니다.');
+        }
+
+        const data = (await response.json()) as { items?: UserChannelItem[] };
+        const total = Array.isArray(data.items)
+          ? data.items.reduce(
+              (sum, item) => sum + (item?.unreadMessageCount ?? 0),
+              0
+            )
+          : 0;
+
+        if (isActive) {
+          setUnreadCount(total);
+        }
+      } catch {
+        if (isActive) {
+          setUnreadCount(0);
+        }
+      }
+    };
+
+    fetchUnreadCount();
+    const intervalId = window.setInterval(fetchUnreadCount, 15000);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(intervalId);
+    };
+  }, [canShow, ownerWalletAddress]);
+
   if (!isMounted || !canShow) {
     return null;
   }
 
   return createPortal(
-    <>
-      <div className="fixed bottom-6 left-6 z-[9999]">
+    <div className="fixed left-6 top-1/2 z-[9999] flex -translate-y-1/2 items-center gap-4">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-800 shadow-lg"
+          aria-expanded={isOpen}
+          aria-controls="seller-chat-list"
+          className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 text-sm font-semibold shadow-lg transition hover:-translate-y-0.5 ${
+            isOpen
+              ? 'border-emerald-600 bg-emerald-600 text-white shadow-[0_18px_40px_-25px_rgba(16,185,129,0.7)]'
+              : 'border-emerald-200/80 bg-emerald-50/95 text-emerald-900'
+          }`}
         >
+          <span
+            className={`flex h-9 w-9 items-center justify-center rounded-full ${
+              isOpen ? 'bg-white/20 text-white' : 'bg-emerald-600 text-white'
+            }`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
           {isOpen ? '채팅목록 닫기' : '채팅목록 열기'}
         </button>
+        {unreadCount > 0 && (
+          <span className="min-w-[28px] rounded-full border border-red-200 bg-red-50 px-2 py-1 text-center text-xs font-semibold text-red-600">
+            {unreadCount}
+          </span>
+        )}
       </div>
 
       {isOpen && (
-        <div className="fixed bottom-20 left-6 z-[9999] w-[340px] max-w-[90vw] md:w-[420px] md:max-w-[70vw] lg:w-[520px] lg:max-w-[50vw]">
+        <div
+          id="seller-chat-list"
+          className="w-[340px] max-w-[calc(100vw-8rem)] md:w-[420px] md:max-w-[70vw] lg:w-[520px] lg:max-w-[50vw]"
+        >
           <div className="rounded-2xl border border-slate-200/70 bg-white/95 p-4 shadow-[0_20px_55px_-40px_rgba(15,23,42,0.6)] backdrop-blur">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
@@ -225,7 +308,7 @@ const SellerSendbirdWidgetGlobal = () => {
           </div>
         </div>
       )}
-    </>,
+    </div>,
     document.body
   );
 };
