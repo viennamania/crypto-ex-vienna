@@ -68,7 +68,7 @@ const SellerSendbirdWidgetGlobal = () => {
   const canShow = Boolean(
     address &&
       ownerWalletAddress &&
-      address.toLowerCase() === ownerWalletAddress.toLowerCase()
+      address === ownerWalletAddress
   );
 
   useEffect(() => {

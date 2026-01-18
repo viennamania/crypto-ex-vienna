@@ -8,6 +8,7 @@ import { Manrope, Playfair_Display } from 'next/font/google';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 
+
 const displayFont = Playfair_Display({
     subsets: ['latin'],
     weight: ['600', '700'],

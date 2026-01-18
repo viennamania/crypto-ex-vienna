@@ -47,7 +47,7 @@ const getLangFromPath = (pathname: string) => {
 
 const MySellerWidgetGlobal = () => {
   const activeAccount = useActiveAccount();
-  const address = activeAccount?.address?.toLowerCase() || '';
+  const address = activeAccount?.address || '';
   const pathname = usePathname();
   const lang = useMemo(() => getLangFromPath(pathname), [pathname]);
   const [escrowWalletAddress, setEscrowWalletAddress] = useState<string | null>(null);
@@ -63,7 +63,7 @@ const MySellerWidgetGlobal = () => {
     const cached = readCache();
     if (
       cached &&
-      cached.walletAddress.toLowerCase() === address &&
+      cached.walletAddress === address &&
       Date.now() - cached.updatedAt < SELLER_CACHE_TTL_MS
     ) {
       setEscrowWalletAddress(cached.escrowWalletAddress || null);
@@ -114,6 +114,8 @@ const MySellerWidgetGlobal = () => {
       isMounted = false;
     };
   }, [address]);
+
+  console.log('MySellerWidgetGlobal render', { address, escrowWalletAddress });
 
   if (!address || !escrowWalletAddress) {
     return null;

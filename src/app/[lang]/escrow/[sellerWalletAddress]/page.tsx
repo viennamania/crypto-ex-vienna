@@ -737,7 +737,7 @@ export default function Index({ params }: any) {
   const isOwnerSeller = Boolean(
     address &&
     ownerWalletAddress &&
-    address.toLowerCase() === ownerWalletAddress.toLowerCase()
+    address === ownerWalletAddress
   );
 
   useEffect(() => {
