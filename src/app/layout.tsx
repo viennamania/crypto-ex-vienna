@@ -37,6 +37,7 @@ import Image from "next/image";
 
 // import components
 import StabilityConsole from '@/components/StabilityConsole';
+import SellerSendbirdWidgetGlobal from '@/components/SellerSendbirdWidgetGlobal';
 
 
 
@@ -368,6 +369,7 @@ export default function RootLayout({
             <QueryClientProvider client={queryClient}>
               {children}
             </QueryClientProvider>
+            <SellerSendbirdWidgetGlobal />
             
 
           </div>

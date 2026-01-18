@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, use, act } from "react";
-import { createPortal } from "react-dom";
 
 import Image from "next/image";
 
@@ -17,6 +16,9 @@ import { useRouter }from "next//navigation";
 
 
 import { toast } from 'react-hot-toast';
+
+import SendbirdProvider from "@sendbird/uikit-react/SendbirdProvider";
+import GroupChannel from "@sendbird/uikit-react/GroupChannel";
 
 import {
   clientId,
@@ -107,9 +109,6 @@ import {
 
 
 import { useAnimatedNumber } from "@/components/useAnimatedNumber";
-import SendbirdProvider from "@sendbird/uikit-react/SendbirdProvider";
-import GroupChannel from "@sendbird/uikit-react/GroupChannel";
-import GroupChannelList from "@sendbird/uikit-react/GroupChannelList";
 
 
 
@@ -740,6 +739,15 @@ export default function Index({ params }: any) {
     ownerWalletAddress &&
     address.toLowerCase() === ownerWalletAddress.toLowerCase()
   );
+
+  useEffect(() => {
+    if (!ownerWalletAddress || typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem('sellerOwnerWalletAddress', ownerWalletAddress);
+    window.dispatchEvent(new Event('seller-owner-wallet-address'));
+  }, [ownerWalletAddress]);
 
   const [selectedChatChannelUrl, setSelectedChatChannelUrl] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(true);
@@ -5306,9 +5314,7 @@ const fetchBuyOrders = async () => {
           </div>
 
           {/* 판매자 대화목록 섹션 */}
-          {isOwnerSeller ? (
-            <SellerSendbirdWidget ownerWalletAddress={ownerWalletAddress} />
-          ) : (
+          {!isOwnerSeller && (
             <SellerChatList
               ownerWalletAddress={ownerWalletAddress}
               items={sellerChatItems}
@@ -6653,9 +6659,9 @@ const fetchBuyOrders = async () => {
                               className="w-12 h-12 object-contain"
                             />
                             {/* TID */}
-                            <span className="text-sm">
+                            <span className="text-sm text-slate-700">
                               TID: #<button
-                                  className="text-sm underline"
+                                  className="text-sm text-slate-800 underline"
                                   style={{ fontFamily: 'monospace' }}
                                   onClick={() => {
                                     navigator.clipboard.writeText(seller.seller?.buyOrder?.tradeId);
@@ -6675,10 +6681,10 @@ const fetchBuyOrders = async () => {
 
 
                               <div className="w-full flex flex-row items-center justify-between gap-2">
-                                <span className="text-sm">
+                                <span className="text-sm text-slate-600">
                                   주문시간:
                                 </span>
-                                <span className="text-sm">
+                                <span className="text-sm text-slate-800">
                                   {seller.seller?.buyOrder?.createdAt ?
                                     // format date to day time string YYYY-MM-DD HH:mm
                                     new Date(seller.seller?.buyOrder?.createdAt).getFullYear() + '-' +
@@ -6695,10 +6701,10 @@ const fetchBuyOrders = async () => {
                               {/* if paymentRequestedAt exists, show the time */}
                               {seller.seller?.buyOrder?.paymentRequestedAt && (
                               <div className="w-full flex flex-row items-center justify-between gap-2">
-                                <span className="text-sm">
+                                <span className="text-sm text-slate-600">
                                   입금요청시간:
                                 </span>
-                                <span className="text-sm">
+                                <span className="text-sm text-slate-800">
                                   {new Date(seller.seller?.buyOrder?.paymentRequestedAt).getFullYear() + '-' +
                                     String(new Date(seller.seller?.buyOrder?.paymentRequestedAt).getMonth() + 1).padStart(2, '0') + '-' +
                                     String(new Date(seller.seller?.buyOrder?.paymentRequestedAt).getDate()).padStart(2, '0') + ' ' +
@@ -6712,10 +6718,10 @@ const fetchBuyOrders = async () => {
                               {/* 입금완료시간 */}
                               {seller.seller?.buyOrder?.paymentConfirmedAt && (
                               <div className="w-full flex flex-row items-center justify-between gap-2">
-                                <span className="text-sm">
+                                <span className="text-sm text-slate-600">
                                   입금완료시간:
                                 </span>
-                                <span className="text-sm">
+                                <span className="text-sm text-slate-800">
                                   {new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getFullYear() + '-' +
                                     String(new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getMonth() + 1).padStart(2, '0') + '-' +
                                     String(new Date(seller.seller?.buyOrder?.paymentConfirmedAt).getDate()).padStart(2, '0') + ' ' +
@@ -6726,13 +6732,13 @@ const fetchBuyOrders = async () => {
                               </div>
                               )}
 
-                              <span className="text-sm">
+                              <span className="text-sm text-slate-700">
                                 {Buy_Amount}(USDT): {seller.seller?.buyOrder?.usdtAmount}
                               </span>
-                              <span className="text-sm">
+                              <span className="text-sm text-slate-700">
                                 {Payment_Amount}(원): {seller.seller?.buyOrder?.krwAmount.toLocaleString()}
                               </span>
-                              <span className="text-sm">
+                              <span className="text-sm text-slate-700">
                                 {Rate}(원): {seller.seller?.buyOrder?.rate.toLocaleString()} 
                               </span>
 
@@ -6916,9 +6922,9 @@ const fetchBuyOrders = async () => {
                                 height={30}
                                 className="w-12 h-12 object-contain"
                               />
-                              <span className="text-sm">
+                              <span className="text-sm text-slate-700">
                                 TID: #<button
-                                    className="underline"
+                                    className="text-sm text-slate-800 underline"
                                     style={{ fontFamily: 'monospace' }}
                                     onClick={() => {
                                       navigator.clipboard.writeText(seller.seller?.buyOrder?.tradeId);
@@ -11659,178 +11665,5 @@ const SellerChatList = ({
         </div>
       )}
     </div>
-  );
-};
-
-const SellerSendbirdWidget = ({
-  ownerWalletAddress,
-}: {
-  ownerWalletAddress: string;
-}) => {
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
-  const [selectedChannelUrl, setSelectedChannelUrl] = useState<string | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [view, setView] = useState<'list' | 'chat'>('list');
-  const [isMounted, setIsMounted] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchSessionToken = async () => {
-      if (!ownerWalletAddress) {
-        if (isMounted) {
-          setSessionToken(null);
-          setSelectedChannelUrl(null);
-          setErrorMessage(null);
-        }
-        return;
-      }
-
-      setIsLoading(true);
-      setErrorMessage(null);
-
-      try {
-        const response = await fetch('/api/sendbird/session-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: ownerWalletAddress,
-            nickname: `${ownerWalletAddress.slice(0, 6)}...`,
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json().catch(() => null);
-          throw new Error(error?.error || '세션 토큰을 발급하지 못했습니다.');
-        }
-
-        const data = (await response.json()) as { sessionToken?: string };
-        if (!data.sessionToken) {
-          throw new Error('세션 토큰이 비어 있습니다.');
-        }
-
-        if (isMounted) {
-          setSessionToken(data.sessionToken);
-        }
-      } catch (error) {
-        if (isMounted) {
-          const message = error instanceof Error ? error.message : '채팅을 불러오지 못했습니다.';
-          setErrorMessage(message);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchSessionToken();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [ownerWalletAddress]);
-
-  if (!isMounted) {
-    return null;
-  }
-
-  return createPortal(
-    <>
-      <div className="fixed bottom-6 left-6 z-[9999]">
-        <button
-          type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
-          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-800 shadow-lg"
-        >
-          {isOpen ? '채팅목록 닫기' : '채팅목록 열기'}
-        </button>
-      </div>
-
-      {isOpen && (
-        <div className="fixed bottom-20 left-6 z-[9999] w-[340px] max-w-[90vw] md:w-[420px] md:max-w-[70vw] lg:w-[520px] lg:max-w-[50vw]">
-          <div className="rounded-2xl border border-slate-200/70 bg-white/95 p-4 shadow-[0_20px_55px_-40px_rgba(15,23,42,0.6)] backdrop-blur">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                {view === 'chat' && (
-                  <button
-                    type="button"
-                    onClick={() => setView('list')}
-                    className="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600"
-                  >
-                    목록
-                  </button>
-                )}
-                <div>
-                  <h4 className="text-sm font-semibold text-slate-900">판매자 채팅</h4>
-                  <p className="text-xs text-slate-500">Sendbird 대화목록</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {isLoading && <span className="text-xs text-slate-500">불러오는 중...</span>}
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  className="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600"
-                >
-                  닫기
-                </button>
-              </div>
-            </div>
-
-            {errorMessage ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                {errorMessage}
-              </div>
-            ) : !sessionToken ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
-                채팅을 준비 중입니다.
-              </div>
-            ) : (
-              <SendbirdProvider
-                appId={SENDBIRD_APP_ID}
-                userId={ownerWalletAddress}
-                accessToken={sessionToken}
-                theme="light"
-              >
-                {view === 'list' ? (
-                  <div className="h-[360px] overflow-hidden rounded-xl border border-slate-200 bg-white md:h-[480px] lg:h-[560px]">
-                    <GroupChannelList
-                      onChannelSelect={(channel) => {
-                        setSelectedChannelUrl(channel?.url ?? null);
-                        setView('chat');
-                      }}
-                      onChannelCreated={(channel) => {
-                        setSelectedChannelUrl(channel?.url ?? null);
-                        setView('chat');
-                      }}
-                      selectedChannelUrl={selectedChannelUrl ?? undefined}
-                      disableAutoSelect
-                    />
-                  </div>
-                ) : (
-                  <div className="h-[360px] overflow-hidden rounded-xl border border-slate-200 bg-white md:h-[480px] lg:h-[560px]">
-                    {selectedChannelUrl ? (
-                      <GroupChannel channelUrl={selectedChannelUrl} />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                        대화를 선택하세요.
-                      </div>
-                    )}
-                  </div>
-                )}
-              </SendbirdProvider>
-            )}
-          </div>
-        </div>
-      )}
-    </>,
-    document.body
   );
 };
