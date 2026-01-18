@@ -324,39 +324,8 @@ export default function RootLayout({
 
 
                 {/* my wallet */}
+                
                 <div className="w-fullflex flex-col items-start justify-center">
-
-                  <div className="w-full flex flex-row items-center gap-2 mb-2">
-                    <h2 className="text-sm font-semibold text-gray-800">
-                      My Wallet
-                    </h2>
-
-                    {/* button for router to /ko/administration/withdraw-usdt */}
-
-                    <button
-                      className="ml-auto text-xs text-white bg-red-700 hover:bg-red-600 px-2 py-1 rounded-lg
-                      shadow-md hover:shadow-red-500/50
-                      "
-                      
-                      //onClick={() => router.push("/ko/administration/withdraw-usdt")}
-                      /* router and hide button for withdraw USDT */
-                      onClick={() => {
-                        router.push("/ko/administration/withdraw-usdt");
-                        setShowChain(false);
-                      }}>
-                        <div className="flex flex-row items-center gap-1">
-                          <Image
-                            src={`/icon-withdraw.png`}
-                            alt={`Withdraw icon`}
-                            width={16}
-                            height={16}
-                          />
-                          <div>Withdraw USDT</div>
-                        </div>
-                    </button>
-
-
-                  </div>
 
                   <StabilityConsole />
 
