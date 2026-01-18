@@ -198,6 +198,7 @@ const SellerSendbirdWidgetGlobal = () => {
           onClick={() => setIsOpen((prev) => !prev)}
           aria-expanded={isOpen}
           aria-controls="seller-chat-list"
+          aria-label={isOpen ? '채팅목록 닫기' : '채팅목록 열기'}
           className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 text-sm font-semibold shadow-lg transition hover:-translate-y-0.5 ${
             isOpen
               ? 'border-emerald-600 bg-emerald-600 text-white shadow-[0_18px_40px_-25px_rgba(16,185,129,0.7)]'
@@ -219,10 +220,9 @@ const SellerSendbirdWidgetGlobal = () => {
               />
             </svg>
           </span>
-          {isOpen ? '채팅목록 닫기' : '채팅목록 열기'}
         </button>
         {unreadCount > 0 && (
-          <span className="min-w-[28px] rounded-full border border-red-200 bg-red-50 px-2 py-1 text-center text-xs font-semibold text-red-600">
+          <span className="seller-chat-unread min-w-[30px] rounded-full border px-2.5 py-1 text-center text-xs font-extrabold tabular-nums">
             {unreadCount}
           </span>
         )}
@@ -308,6 +308,29 @@ const SellerSendbirdWidgetGlobal = () => {
           </div>
         </div>
       )}
+      <style jsx global>{`
+        @keyframes sellerUnreadBlink {
+          0%,
+          100% {
+            opacity: 1;
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.65);
+          }
+          50% {
+            opacity: 0.25;
+            transform: scale(1.12);
+            box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+          }
+        }
+
+        .seller-chat-unread {
+          background: #dc2626;
+          border-color: #991b1b;
+          color: #ffffff;
+          animation: sellerUnreadBlink 0.85s ease-in-out infinite;
+          text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+        }
+      `}</style>
     </div>,
     document.body
   );

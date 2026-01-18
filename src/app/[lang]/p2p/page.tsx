@@ -5,6 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Manrope, Playfair_Display } from 'next/font/google';
+import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
+import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 
 const displayFont = Playfair_Display({
     subsets: ['latin'],
@@ -17,6 +19,28 @@ const bodyFont = Manrope({
     weight: ['400', '500', '600', '700'],
     variable: '--font-body',
 });
+
+const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
+const SUPPORT_ADMIN_ID = '0xB185b18f6C93aC0a51FB374B73312829d64edd93';
+const SUPPORT_USER_STORAGE_KEY = 'orangex-support-chat-user-id';
+const SUPPORT_REQUEST_TIMEOUT_MS = 12000;
+
+const readSupportUserId = () => {
+    if (typeof window === 'undefined') {
+        return '';
+    }
+    const stored = window.localStorage.getItem(SUPPORT_USER_STORAGE_KEY);
+    if (stored) {
+        return stored;
+    }
+    const randomPart =
+        typeof window.crypto?.randomUUID === 'function'
+            ? window.crypto.randomUUID()
+            : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+    const userId = `support-${randomPart}`;
+    window.localStorage.setItem(SUPPORT_USER_STORAGE_KEY, userId);
+    return userId;
+};
 
 const STAT_ITEMS = [
     {
@@ -311,6 +335,14 @@ export default function OrangeXPage() {
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
     const [animatedStats, setAnimatedStats] = useState(() => STAT_ITEMS.map(() => 0));
     const [chatOpen, setChatOpen] = useState(false);
+    const [supportUserId, setSupportUserId] = useState<string | null>(null);
+    const [supportSessionToken, setSupportSessionToken] = useState<string | null>(null);
+    const [supportChannelUrl, setSupportChannelUrl] = useState<string | null>(null);
+    const [supportPhase, setSupportPhase] = useState<'idle' | 'session' | 'channel' | 'ready'>(
+        'idle'
+    );
+    const [supportLoading, setSupportLoading] = useState(false);
+    const [supportError, setSupportError] = useState<string | null>(null);
     const [marketTickers, setMarketTickers] = useState<MarketTicker[]>(() => MARKET_SOURCES);
     const [tickerUpdatedAt, setTickerUpdatedAt] = useState<string | null>(null);
     const [tickerError, setTickerError] = useState<string | null>(null);
@@ -333,6 +365,157 @@ export default function OrangeXPage() {
     const sellerTickerDraggingRef = useRef(false);
     const sellerTickerLastUserScrollRef = useRef(0);
     const sellerTickerAutoScrollRef = useRef(false);
+    const supportConnectingRef = useRef(false);
+
+    const supportStatusMessage =
+        supportPhase === 'session'
+            ? '세션 연결 중입니다.'
+            : supportPhase === 'channel'
+            ? '관리자 채널을 만드는 중입니다.'
+            : supportLoading
+            ? '관리자 채팅을 여는 중입니다.'
+            : '채팅을 준비 중입니다.';
+
+    useEffect(() => {
+        const userId = readSupportUserId();
+        if (userId) {
+            setSupportUserId(userId);
+        }
+    }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+        let activeController: AbortController | null = null;
+
+        const clearTimeoutId = () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+        };
+
+        const startTimeout = () => {
+            clearTimeoutId();
+            if (activeController) {
+                timeoutId = window.setTimeout(() => {
+                    activeController?.abort();
+                }, SUPPORT_REQUEST_TIMEOUT_MS);
+            }
+        };
+
+        const connectSupportChat = async () => {
+            if (!chatOpen || !supportUserId) {
+                if (isMounted) {
+                    setSupportLoading(false);
+                    if (!supportSessionToken || !supportChannelUrl) {
+                        setSupportPhase('idle');
+                    }
+                }
+                return;
+            }
+            if (supportSessionToken && supportChannelUrl) {
+                if (isMounted) {
+                    setSupportPhase('ready');
+                    setSupportLoading(false);
+                    setSupportError(null);
+                }
+                return;
+            }
+            if (supportConnectingRef.current) {
+                return;
+            }
+
+            supportConnectingRef.current = true;
+            setSupportLoading(true);
+            setSupportError(null);
+            let currentPhase: 'session' | 'channel' = 'session';
+
+            try {
+                activeController = new AbortController();
+                setSupportPhase('session');
+                startTimeout();
+                const sessionResponse = await fetch('/api/sendbird/session-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: supportUserId,
+                        nickname: `익명-${supportUserId.slice(-4)}`,
+                    }),
+                    signal: activeController.signal,
+                });
+
+                if (!sessionResponse.ok) {
+                    const error = await sessionResponse.json().catch(() => null);
+                    throw new Error(error?.error || '세션 토큰을 발급하지 못했습니다.');
+                }
+
+                const sessionData = (await sessionResponse.json()) as { sessionToken?: string };
+                if (!sessionData.sessionToken) {
+                    throw new Error('세션 토큰이 비어 있습니다.');
+                }
+
+                if (isMounted) {
+                    setSupportSessionToken(sessionData.sessionToken);
+                }
+
+                clearTimeoutId();
+                currentPhase = 'channel';
+                setSupportPhase('channel');
+                startTimeout();
+                const channelResponse = await fetch('/api/sendbird/group-channel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        buyerId: supportUserId,
+                        sellerId: SUPPORT_ADMIN_ID,
+                    }),
+                    signal: activeController.signal,
+                });
+
+                if (!channelResponse.ok) {
+                    const error = await channelResponse.json().catch(() => null);
+                    throw new Error(error?.error || '관리자 채팅을 생성하지 못했습니다.');
+                }
+
+                const channelData = (await channelResponse.json()) as { channelUrl?: string };
+                if (isMounted) {
+                    setSupportChannelUrl(channelData.channelUrl || null);
+                    setSupportPhase('ready');
+                }
+            } catch (error) {
+                const isTimeout =
+                    error instanceof DOMException && error.name === 'AbortError';
+                if (isMounted) {
+                    const message =
+                        isTimeout && currentPhase === 'channel'
+                            ? '관리자 채널 생성 요청이 시간 초과되었습니다.'
+                            : isTimeout
+                            ? '세션 연결 요청이 시간 초과되었습니다.'
+                            : error instanceof Error
+                            ? error.message
+                            : '채팅을 불러오지 못했습니다.';
+                    setSupportError(message);
+                    setSupportPhase('idle');
+                }
+            } finally {
+                supportConnectingRef.current = false;
+                clearTimeoutId();
+                activeController = null;
+                if (isMounted) {
+                    setSupportLoading(false);
+                }
+            }
+        };
+
+        connectSupportChat();
+
+        return () => {
+            isMounted = false;
+            clearTimeoutId();
+            activeController?.abort();
+        };
+    }, [chatOpen, supportUserId, supportSessionToken, supportChannelUrl]);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -2003,35 +2186,34 @@ export default function OrangeXPage() {
                         <div className="flex items-center justify-between border-b border-slate-200/70 bg-white/80 px-4 py-3">
                             <div>
                                 <p className="text-sm font-semibold text-slate-900">문의하기</p>
-                                <p className="text-xs text-slate-500">평균 응답 2-5분</p>
+                                <p className="text-xs text-slate-500">익명으로 관리자와 바로 연결됩니다</p>
                             </div>
                             <span className="flex items-center gap-2 text-xs font-semibold text-emerald-600">
                                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                                 상담 가능
                             </span>
                         </div>
-                        <div className="space-y-4 px-4 py-4 text-sm text-slate-700">
-                            <div className="rounded-xl bg-slate-100/80 px-4 py-3">
-                                안녕하세요! OrangeX 상담원입니다. 무엇을 도와드릴까요?
-                            </div>
-                            <div className="rounded-xl bg-orange-50/70 px-4 py-3 text-orange-900">
-                                테더 구매/판매, 입금 확인, 에스크로 문의 모두 가능합니다.
-                            </div>
-                        </div>
-                        <div className="border-t border-slate-200/70 bg-white/85 px-4 py-3">
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="text"
-                                    placeholder="메시지를 입력하세요"
-                                    className="h-11 flex-1 rounded-full border border-slate-200/80 bg-white px-4 text-sm text-slate-900 outline-none focus:border-orange-300"
-                                />
-                                <button
-                                    type="button"
-                                    className="h-11 rounded-full bg-[color:var(--accent)] px-4 text-sm font-semibold text-white transition hover:bg-[color:var(--accent-deep)]"
-                                >
-                                    전송
-                                </button>
-                            </div>
+                        <div className="px-4 py-4 text-sm text-slate-700">
+                            {supportError ? (
+                                <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-3 text-xs text-amber-700">
+                                    {supportError}
+                                </div>
+                            ) : supportSessionToken && supportChannelUrl && supportUserId ? (
+                                <div className="h-[420px] max-h-[60vh] overflow-hidden rounded-xl border border-slate-200 bg-white">
+                                    <SendbirdProvider
+                                        appId={SENDBIRD_APP_ID}
+                                        userId={supportUserId}
+                                        accessToken={supportSessionToken}
+                                        theme="light"
+                                    >
+                                        <GroupChannel channelUrl={supportChannelUrl} />
+                                    </SendbirdProvider>
+                                </div>
+                            ) : (
+                                <div className="rounded-xl border border-slate-200/70 bg-white/85 px-3 py-3 text-xs text-slate-600">
+                                    {supportStatusMessage}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
