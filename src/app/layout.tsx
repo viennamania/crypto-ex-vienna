@@ -151,7 +151,7 @@ export default function RootLayout({
 
           {/* chain image */}
 
-          <div className=" flex flex-col items-center justify-center p-4 bg-slate-900/80 rounded-lg shadow-xl mb-4 border border-slate-700">
+          <div className="flex w-full flex-col items-stretch p-4 bg-slate-900/80 rounded-lg shadow-xl mb-4 border border-slate-700">
 
             {/* fixed position vertically top */}
             <div className="

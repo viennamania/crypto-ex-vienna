@@ -54,6 +54,14 @@ type StablecoinNewsItem = {
     image: string;
 };
 
+type SellerChatItem = {
+    channelUrl: string;
+    members: { userId: string; nickname?: string; profileUrl?: string }[];
+    lastMessage?: string;
+    updatedAt?: number;
+    unreadMessageCount?: number;
+};
+
 const STABLECOIN_NEWS: StablecoinNewsItem[] = [
     {
         id: 'stable-news-01',
@@ -268,6 +276,9 @@ const maskName = (value: string) => {
     return `${visible}***`;
 };
 
+const formatWalletShort = (value: string) =>
+    value.length > 10 ? `${value.slice(0, 6)}...${value.slice(-4)}` : value;
+
 const formatRelativeTime = (value?: string) => {
     if (!value) {
         return '--';
@@ -293,6 +304,13 @@ const formatRelativeTime = (value?: string) => {
     return `${diffDays}일 전`;
 };
 
+const formatRelativeTimeFromMs = (value?: number) => {
+    if (!value) {
+        return '--';
+    }
+    return formatRelativeTime(new Date(value).toISOString());
+};
+
 export default function OrangeXPage() {
     const params = useParams<{ lang: string }>();
     const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang ?? 'ko';
@@ -308,6 +326,10 @@ export default function OrangeXPage() {
     const [newsItems, setNewsItems] = useState<StablecoinNewsItem[]>(() => STABLECOIN_NEWS);
     const [newsUpdatedAt, setNewsUpdatedAt] = useState<string | null>(null);
     const [newsError, setNewsError] = useState<string | null>(null);
+    const [sellerChatItems, setSellerChatItems] = useState<SellerChatItem[]>([]);
+    const [sellerChatUpdatedAt, setSellerChatUpdatedAt] = useState<string | null>(null);
+    const [sellerChatLoading, setSellerChatLoading] = useState(false);
+    const [sellerChatError, setSellerChatError] = useState<string | null>(null);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -596,6 +618,74 @@ export default function OrangeXPage() {
         )
         .slice(0, 12);
 
+    const chatTargetSeller = bestSellers.find((seller) => seller?.walletAddress) ?? null;
+    const chatTargetWalletAddress = chatTargetSeller?.walletAddress || '';
+    const chatTargetName = chatTargetSeller
+        ? maskName(
+              chatTargetSeller?.nickname ||
+                  chatTargetSeller?.store?.storeName ||
+                  chatTargetSeller?.walletAddress ||
+                  '판매자'
+          )
+        : '판매자';
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchSellerChats = async () => {
+            if (!chatTargetWalletAddress) {
+                if (isMounted) {
+                    setSellerChatItems([]);
+                    setSellerChatUpdatedAt(null);
+                    setSellerChatError(null);
+                }
+                return;
+            }
+
+            setSellerChatLoading(true);
+            setSellerChatError(null);
+
+            try {
+                const response = await fetch('/api/sendbird/user-channels', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: chatTargetWalletAddress,
+                        limit: 10,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => null);
+                    throw new Error(error?.error || '대화목록을 불러오지 못했습니다.');
+                }
+
+                const data = (await response.json()) as { items?: SellerChatItem[] };
+                if (isMounted) {
+                    setSellerChatItems(Array.isArray(data.items) ? data.items : []);
+                    setSellerChatUpdatedAt(new Date().toISOString());
+                }
+            } catch (error) {
+                if (isMounted) {
+                    const message = error instanceof Error ? error.message : '대화목록을 불러오지 못했습니다.';
+                    setSellerChatError(message);
+                }
+            } finally {
+                if (isMounted) {
+                    setSellerChatLoading(false);
+                }
+            }
+        };
+
+        fetchSellerChats();
+        const intervalId = window.setInterval(fetchSellerChats, 20000);
+
+        return () => {
+            isMounted = false;
+            window.clearInterval(intervalId);
+        };
+    }, [chatTargetWalletAddress]);
+
     return (
         <div
             className={`${bodyFont.variable} ${displayFont.variable} relative min-h-screen overflow-hidden bg-[linear-gradient(160deg,var(--paper),#f0f9ff_45%,#fff1f2_85%)] text-[color:var(--ink)] font-[var(--font-body)]`}
@@ -674,9 +764,20 @@ export default function OrangeXPage() {
                                     priority
                                 />
                             </div>
-                            <h1 className="font-[var(--font-display)] text-4xl leading-tight text-[color:var(--ink)] md:text-6xl">
-                                테더 P2P 마켓
-                            </h1>
+                            <div className="flex flex-wrap items-center gap-3">
+                                <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/90 shadow-[0_10px_25px_-15px_rgba(15,23,42,0.6)] md:h-14 md:w-14">
+                                    <Image
+                                        src="/logo-tether.png"
+                                        alt="Tether"
+                                        width={40}
+                                        height={40}
+                                        className="h-8 w-8 object-contain md:h-10 md:w-10"
+                                    />
+                                </span>
+                                <h1 className="font-[var(--font-display)] text-3xl leading-tight text-[color:var(--ink)] sm:text-4xl md:text-6xl">
+                                    테더 P2P 마켓
+                                </h1>
+                            </div>
                             <p className="text-lg text-slate-700 md:text-xl">
                                 개인 간 테더(USDT) 구매·판매를 안전하게 연결합니다
                             </p>
@@ -757,7 +858,7 @@ export default function OrangeXPage() {
                             <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200/70 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
                                 VASP 등록 에스크로
                             </span>
-                            <h2 className="font-[var(--font-display)] text-3xl text-slate-900 md:text-4xl">
+                            <h2 className="font-[var(--font-display)] text-2xl text-slate-900 sm:text-3xl md:text-4xl">
                                 국내 VASP 등록 사업자 에스크로로 신뢰를 더한 P2P
                             </h2>
                             <p className="text-sm text-slate-600 md:text-base">
@@ -868,7 +969,7 @@ export default function OrangeXPage() {
                                 <div className={`absolute -right-10 -top-10 h-32 w-32 rounded-full ${style.orb} opacity-40`} />
                             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{item.label}</p>
                             <div className="mt-4 flex items-baseline gap-3">
-                                <span className="font-[var(--font-display)] text-4xl text-slate-900 tabular-nums md:text-5xl">
+                                <span className="font-[var(--font-display)] text-3xl text-slate-900 tabular-nums sm:text-4xl md:text-5xl">
                                     {numberFormatter.format(animatedStats[index])}
                                 </span>
                                 <span className="text-sm font-semibold text-slate-500">{item.suffix}</span>
@@ -902,11 +1003,11 @@ export default function OrangeXPage() {
                                         strokeLinejoin="round"
                                     />
                                 </svg>
-                                <h2 className="font-[var(--font-display)] text-3xl text-slate-900">스테이블코인 뉴스 피드</h2>
+                                <h2 className="font-[var(--font-display)] text-2xl text-slate-900 sm:text-3xl">스테이블코인 뉴스 피드</h2>
                             </div>
                             <p className="text-sm text-slate-600">핵심 이슈를 빠르게 확인하세요</p>
                         </div>
-                        <div className="flex items-center gap-3 text-xs font-semibold text-slate-500">
+                        <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-500 sm:flex-nowrap">
                             <span className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-slate-50/80 px-3 py-1 text-slate-600">
                                 <span className="h-2 w-2 rounded-full bg-slate-400" />
                                 STABLECOIN
@@ -984,6 +1085,7 @@ export default function OrangeXPage() {
                     </div>
                 </div>
                 
+                
 
                 {/* 마켓 시세 섹션 */}
 
@@ -996,7 +1098,7 @@ export default function OrangeXPage() {
                                     <path d="M3 3h18v4H3V3zM5 7v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7H5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                     <path d="M8 10h8M8 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
-                                <h2 className="font-[var(--font-display)] text-3xl text-slate-900">USDT/KRW 실시간 시세</h2>
+                                <h2 className="font-[var(--font-display)] text-2xl text-slate-900 sm:text-3xl">USDT/KRW 실시간 시세</h2>
                             </div>
                             <p className="text-sm text-slate-600">업비트 · 빗썸 · 코빗 기준</p>
                         </div>
@@ -1047,7 +1149,7 @@ export default function OrangeXPage() {
                                         </span>
                                     </div>
                                     <div className="mt-4 flex items-baseline gap-2">
-                                        <span className="font-[var(--font-display)] text-3xl text-slate-900 tabular-nums">
+                                        <span className="font-[var(--font-display)] text-2xl text-slate-900 tabular-nums sm:text-3xl">
                                             {formatKrw(ticker.price)}
                                         </span>
                                         {ticker.price === null && (
@@ -1075,7 +1177,7 @@ export default function OrangeXPage() {
                                         strokeLinejoin="round"
                                     />
                                 </svg>
-                                <h2 className="font-[var(--font-display)] text-3xl text-slate-900">베스트 셀러</h2>
+                                <h2 className="font-[var(--font-display)] text-2xl text-slate-900 sm:text-3xl">베스트 셀러</h2>
                             </div>
                             <p className="text-sm text-slate-600">최근 거래 완료량 기준 상위 판매자</p>
                         </div>
@@ -1095,6 +1197,69 @@ export default function OrangeXPage() {
                         </div>
                     </div>
 
+                    <div className="mb-6 rounded-2xl border border-slate-200/70 bg-white/75 p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.6)] backdrop-blur">
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
+                                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-700">
+                                    Q
+                                </span>
+                                구매자 문의
+                                <span className="rounded-full border border-slate-200/70 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                                    {chatTargetName}
+                                </span>
+                            </div>
+                            <span className="text-[11px] font-semibold text-slate-400">
+                                {sellerChatLoading
+                                    ? '불러오는 중...'
+                                    : sellerChatUpdatedAt
+                                    ? `업데이트 ${new Date(sellerChatUpdatedAt).toLocaleTimeString('ko-KR', {
+                                          hour12: false,
+                                      })}`
+                                    : '최근 5건'}
+                            </span>
+                        </div>
+                        {sellerChatError ? (
+                            <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-700">
+                                {sellerChatError}
+                            </div>
+                        ) : sellerChatItems.length === 0 ? (
+                            <div className="rounded-xl border border-slate-200/70 bg-white/85 px-3 py-3 text-xs text-slate-600">
+                                최근 문의가 없습니다.
+                            </div>
+                        ) : (
+                            <div className="chat-preview-list space-y-2 pr-1">
+                                {sellerChatItems.map((chat) => {
+                                    const otherMember =
+                                        chat.members.find((member) => member.userId !== chatTargetWalletAddress) ||
+                                        chat.members[0];
+                                    const buyerLabel = otherMember?.nickname
+                                        ? maskName(otherMember.nickname)
+                                        : formatWalletShort(otherMember?.userId || '구매자');
+                                    return (
+                                        <div
+                                            key={chat.channelUrl}
+                                            className="flex items-center justify-between gap-3 rounded-xl border border-slate-200/70 bg-white/85 px-3 py-2 text-xs"
+                                        >
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                                                    {buyerLabel}
+                                                </span>
+                                                <span className="truncate text-slate-700">
+                                                    {chat.lastMessage || '최근 메시지가 없습니다.'}
+                                                </span>
+                                            </div>
+                                            <span className="shrink-0 text-[11px] font-semibold text-slate-400">
+                                                {formatRelativeTimeFromMs(chat.updatedAt)}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 베스트 셀러 티커 */}
+                    
                     {bestSellers.length === 0 ? (
                         <div className="rounded-2xl border border-slate-200/70 bg-white/70 px-5 py-6 text-sm text-slate-600">
                             베스트 셀러를 불러오는 중입니다.
@@ -1266,6 +1431,7 @@ export default function OrangeXPage() {
                             <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[color:var(--paper)] to-transparent" />
                         </div>
                     )}
+                    
                 </div>
 
                 <div className="rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
@@ -1277,7 +1443,7 @@ export default function OrangeXPage() {
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                     <path d="M7 10l5-5 5 5M12 5v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
-                                <h2 className="font-[var(--font-display)] text-3xl text-slate-900">최근 거래내역</h2>
+                                <h2 className="font-[var(--font-display)] text-2xl text-slate-900 sm:text-3xl">최근 거래내역</h2>
                             </div>
                             <p className="text-sm text-slate-600">최근 10건이 순환 표시됩니다</p>
                         </div>
@@ -1401,14 +1567,14 @@ export default function OrangeXPage() {
                 {/* 에스크로 시스템 설명 */}
                 <div className="relative overflow-hidden rounded-[28px] border border-slate-800/70 bg-[linear-gradient(140deg,#0f172a,#134e4a)] p-8 md:p-12 mb-12 text-white shadow-[0_40px_120px_-60px_rgba(2,6,23,0.9)]">
                     <div className="pointer-events-none absolute right-[-10%] top-[-20%] h-64 w-64 rounded-full bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.5),transparent_70%)] opacity-40 blur-3xl" />
-                    <h2 className="font-[var(--font-display)] text-3xl md:text-4xl text-center mb-8">
+                    <h2 className="font-[var(--font-display)] text-2xl sm:text-3xl md:text-4xl text-center mb-8">
                         🔒 에스크로 시스템이란?
                     </h2>
                     
                     <div className="max-w-4xl mx-auto">
                         <div className="grid md:grid-cols-2 gap-8 mb-8">
                             <div className="rounded-2xl border border-white/10 bg-white/10 p-6 backdrop-blur">
-                                <div className="text-4xl mb-4">1️⃣</div>
+                                <div className="text-3xl sm:text-4xl mb-4">1️⃣</div>
                                 <h3 className="text-xl font-bold mb-3">구매자가 주문</h3>
                                 <p className="text-slate-100">
                                     구매자가 원하는 금액으로 테더 구매 주문을 생성합니다
@@ -1416,7 +1582,7 @@ export default function OrangeXPage() {
                             </div>
                             
                             <div className="rounded-2xl border border-white/10 bg-white/10 p-6 backdrop-blur">
-                                <div className="text-4xl mb-4">2️⃣</div>
+                                <div className="text-3xl sm:text-4xl mb-4">2️⃣</div>
                                 <h3 className="text-xl font-bold mb-3">판매자가 에스크로에 입금</h3>
                                 <p className="text-slate-100">
                                     판매자가 테더를 에스크로 지갑에 안전하게 예치합니다
@@ -1424,7 +1590,7 @@ export default function OrangeXPage() {
                             </div>
                             
                             <div className="rounded-2xl border border-white/10 bg-white/10 p-6 backdrop-blur">
-                                <div className="text-4xl mb-4">3️⃣</div>
+                                <div className="text-3xl sm:text-4xl mb-4">3️⃣</div>
                                 <h3 className="text-xl font-bold mb-3">구매자가 원화 송금</h3>
                                 <p className="text-slate-100">
                                     구매자가 판매자 계좌로 원화를 송금하고 송금 완료 버튼을 클릭합니다
@@ -1432,7 +1598,7 @@ export default function OrangeXPage() {
                             </div>
                             
                             <div className="rounded-2xl border border-white/10 bg-white/10 p-6 backdrop-blur">
-                                <div className="text-4xl mb-4">4️⃣</div>
+                                <div className="text-3xl sm:text-4xl mb-4">4️⃣</div>
                                 <h3 className="text-xl font-bold mb-3">판매자 확인 후 전송</h3>
                                 <p className="text-slate-100">
                                     판매자가 입금을 확인하면 에스크로에서 구매자에게 테더가 자동 전송됩니다
@@ -1533,7 +1699,7 @@ export default function OrangeXPage() {
 
                 {/* FAQ */}
                 <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
-                    <h2 className="font-[var(--font-display)] text-3xl text-center mb-8 text-slate-900">자주 묻는 질문</h2>
+                    <h2 className="font-[var(--font-display)] text-2xl text-center mb-8 text-slate-900 sm:text-3xl">자주 묻는 질문</h2>
                     
                     <div className="space-y-6 max-w-3xl mx-auto">
                         <div className="border-b border-slate-200/70 pb-4">
@@ -1573,7 +1739,7 @@ export default function OrangeXPage() {
                 {/* 최종 CTA */}
                 <div className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(120deg,var(--sea),var(--accent),var(--rose))] p-8 text-center text-white shadow-[0_40px_120px_-60px_rgba(15,23,42,0.8)]">
                     <div className="pointer-events-none absolute -right-20 -top-16 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.45),transparent_70%)] opacity-60 blur-3xl" />
-                    <h2 className="font-[var(--font-display)] text-3xl mb-4">지금 바로 시작하세요!</h2>
+                    <h2 className="font-[var(--font-display)] text-2xl mb-4 sm:text-3xl">지금 바로 시작하세요!</h2>
                     <p className="text-lg text-white/90 mb-8">
                         개인 간 테더 거래를 쉽고 안전하게
                     </p>
@@ -1796,6 +1962,24 @@ export default function OrangeXPage() {
 
                 .news-ticker:hover .news-ticker-track {
                     animation-play-state: paused;
+                }
+
+                .chat-preview-list {
+                    max-height: 220px;
+                    overflow-y: auto;
+                }
+
+                .chat-preview-list::-webkit-scrollbar {
+                    width: 6px;
+                }
+
+                .chat-preview-list::-webkit-scrollbar-thumb {
+                    background: rgba(15, 23, 42, 0.18);
+                    border-radius: 999px;
+                }
+
+                .chat-preview-list::-webkit-scrollbar-track {
+                    background: transparent;
                 }
 
                 .banner-scroll {
