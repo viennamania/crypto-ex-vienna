@@ -4272,42 +4272,85 @@ const fetchBuyOrders = async () => {
       return newArray;
     });
 
-    const response = await fetch('/api/order/buyOrderPrivateSale', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        buyerWalletAddress: address,
-        sellerWalletAddress: sellerWalletAddress,
-        usdtAmount: buyAmountInputs[index],
-      }),
-    })
+    try {
+      const response = await fetch('/api/order/buyOrderPrivateSale', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          buyerWalletAddress: address,
+          sellerWalletAddress: sellerWalletAddress,
+          usdtAmount: buyAmountInputs[index],
+        }),
+      });
 
-    const data = await response.json();
-    if (data.result) {
-      toast.success('구매 주문이 생성되었습니다.');
-      // update local seller buyOrders state to 'paymentRequested', 'paymentRequestedAt' to now
-      // by finding the seller with sellerWalletAddress
-      setSellersBalance((prev) =>
-        prev.map((seller, idx) =>
-          seller.walletAddress === sellerWalletAddress
-            ? { ...seller, seller: { ...seller.seller, status: 'paymentRequested', paymentRequestedAt: new Date().toISOString() } }
-            : seller
-        )
-      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || '구매 주문 생성에 실패했습니다.');
+      }
 
-      // refetch buy orders
-      ///fetchBuyOrders();
+      if (data.result) {
+        toast.success('구매 주문이 생성되었습니다.');
+        const nowIso = new Date().toISOString();
+        const targetSeller = sellersBalance.find(
+          (seller) => seller.walletAddress === sellerWalletAddress
+        );
+        const rate = targetSeller?.seller?.usdtToKrwRate || 0;
+        const usdtAmount = buyAmountInputs[index];
+        const krwAmount = Math.floor(usdtAmount * rate);
 
-    } else {
-      toast.error('구매 주문 생성에 실패했습니다: ' + data.message);
+        setSellersBalance((prev) =>
+          prev.map((seller) =>
+            seller.walletAddress === sellerWalletAddress
+              ? {
+                    ...seller,
+                    seller: {
+                      ...seller.seller,
+                      buyOrder: {
+                        ...(seller.seller?.buyOrder ?? {}),
+                        tradeId:
+                          seller.seller?.buyOrder?.tradeId ||
+                          `PENDING-${Date.now().toString().slice(-6)}`,
+                        walletAddress: address,
+                        isWeb3Wallet: true,
+                        usdtAmount,
+                        rate,
+                        krwAmount,
+                        status: 'paymentRequested',
+                        createdAt: nowIso,
+                        acceptedAt: nowIso,
+                        paymentRequestedAt: nowIso,
+                        buyer: {
+                          nickname: user?.nickname || '',
+                          walletAddress: address,
+                          depositName:
+                            user?.buyer?.bankInfo?.accountHolder ||
+                            user?.buyer?.depositName ||
+                            '',
+                        },
+                      },
+                    },
+                }
+              : seller
+          )
+        );
+
+        fetchSellersBalance();
+      } else {
+        toast.error('구매 주문 생성에 실패했습니다: ' + data.message);
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : '구매 주문 생성에 실패했습니다.';
+      toast.error(message);
+    } finally {
+      setBuyOrderingPrivateSaleArray((prev) => {
+        const newArray = [...prev];
+        newArray[index] = false;
+        return newArray;
+      });
     }
-    setBuyOrderingPrivateSaleArray((prev) => {
-      const newArray = [...prev];
-      newArray[index] = false;
-      return newArray;
-    });
 
 
 
@@ -7305,7 +7348,7 @@ const fetchBuyOrders = async () => {
 
                                   {/* 구래자 정보 */}
                                   <div className="w-full flex flex-row items-center justify-start gap-2
-                                  border-b border-slate-200 pb-2 mb-2
+                                  border-b border-slate-200 pb-2 mb-2 text-slate-800
                                   ">
                                     <Image
                                       src="/icon-buyer.png"
@@ -7315,11 +7358,11 @@ const fetchBuyOrders = async () => {
                                       className="w-5 h-5 rounded-lg object-cover"
                                     />
                                     <div className="flex flex-col items-start justify-center gap-0">
-                                      <span className="text-sm font-semibold">
+                                      <span className="text-sm font-semibold text-slate-900">
                                         {user?.nickname || 'No Nickname'}
                                       </span>
                                       <button
-                                        className="text-sm underline"
+                                        className="text-sm font-medium text-slate-600 underline underline-offset-2 transition hover:text-slate-900"
                                         onClick={() => {
                                           navigator.clipboard.writeText(address);
                                           toast.success(Copied_Wallet_Address);
