@@ -385,7 +385,7 @@ export default function OrangeXPage() {
 
     useEffect(() => {
         let isMounted = true;
-        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+        let timeoutId: number | null = null;
         let activeController: AbortController | null = null;
 
         const clearTimeoutId = () => {
