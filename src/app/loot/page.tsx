@@ -166,7 +166,7 @@ export default function LootPage() {
           {/* CTA Buttons */}
           <div className="mt-6 text-center">
             <a
-              href="https://payment.orangex.center/ko/buyer/buyorder"
+              href="https://orangex.center/ko/buyer/buyorder"
               className="inline-flex items-center px-6 py-3.5 bg-[#111] text-white rounded-full font-extrabold text-base no-underline"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="mr-2">
@@ -181,7 +181,7 @@ export default function LootPage() {
 
           <div className="mt-4 text-center">
             <a
-              href="https://payment.orangex.center/ko/seller/buyorder"
+              href="https://orangex.center/ko/seller/buyorder"
               className="inline-flex items-center px-6 py-3.5 bg-white text-[#111] border-2 border-[#111] rounded-full font-extrabold text-base no-underline"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="mr-2">

@@ -4484,11 +4484,11 @@ const fetchBuyOrders = async () => {
 
 
               {/* opnew new window for admin dashboard */}
-              {/* https://payment.orangex.center/ko/administration/buyorder */}
+              {/* https://orangex.center/ko/administration/buyorder */}
               {isAdmin && (
                 <button
                   onClick={() => {
-                    window.open('https://payment.orangex.center/' + params.lang + '/administration/buyorder', '_blank');
+                    window.open('https://orangex.center/' + params.lang + '/administration/buyorder', '_blank');
                   }}
                   className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90
                   px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"

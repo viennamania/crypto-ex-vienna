@@ -3785,10 +3785,10 @@ const fetchBuyOrders = async () => {
               </button>
 
               {/* opnew new window for admin dashboard */}
-              {/* https://payment.orangex.center/ko/administration/buyorder */}
+              {/* https://orangex.center/ko/administration/buyorder */}
               <button
                 onClick={() => {
-                  window.open('https://payment.orangex.center/' + params.lang + '/administration/buyorder', '_blank');
+                  window.open('https://orangex.center/' + params.lang + '/administration/buyorder', '_blank');
                 }}
                 className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
               >
