@@ -4473,6 +4473,14 @@ const fetchBuyOrders = async () => {
     );
   }
 
+  const activeSeller = sellersBalance[0];
+  const saleRateValue = usdtKrwRateAnimationArray[0] ?? activeSeller?.seller?.usdtToKrwRate;
+  const isSellerVerified = Boolean(
+    activeSeller?.verified ??
+    activeSeller?.seller?.verified ??
+    (activeSeller?.seller?.status === 'confirmed')
+  );
+
 
 
 
@@ -4696,7 +4704,6 @@ const fetchBuyOrders = async () => {
         ">
 
           <div className="w-full flex flex-row items-center justify-center gap-2">
-
             {/* 홈으로 가기 svg icon button */}
             {/*
             <button
@@ -4716,8 +4723,7 @@ const fetchBuyOrders = async () => {
             </button>
             */}
 
-            <div className="w-full flex flex-col items-center justify-center gap-3">
-
+            <div className="w-full flex flex-col gap-4">
               <div className="w-full flex items-center justify-between">
                 <span
                   className={`rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700
@@ -4758,35 +4764,466 @@ const fetchBuyOrders = async () => {
                 </button>
               </div>
 
-              <div className="w-full flex flex-row items-center justify-center gap-2">
-                <Image
-                  src="/icon-escrow-wallet.webp"
-                  alt="Escrow Wallet"
-                  width={50}
-                  height={50}
-                  className="w-8 h-8"
-                />
-                <div className="text-xl font-semibold text-slate-800">
-                  판매자 에스크로 지갑
+              <div className="w-full flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
+                    <Image
+                      src="/icon-seller.png"
+                      alt="Seller"
+                      width={40}
+                      height={40}
+                      className="h-9 w-9"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      판매자
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-lg font-semibold text-slate-900">
+                        {activeSeller?.nickname || '판매자'}
+                      </span>
+                      {activeSeller && (
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                            isSellerVerified
+                              ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-600'
+                              : 'border-rose-400/40 bg-rose-400/10 text-rose-600'
+                          }`}
+                        >
+                          {isSellerVerified ? (
+                            <Image
+                              src="/verified.png"
+                              alt="Verified"
+                              width={14}
+                              height={14}
+                              className="h-3.5 w-3.5"
+                            />
+                          ) : (
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="M12 8v5"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                              />
+                              <circle
+                                cx="12"
+                                cy="16"
+                                r="1"
+                                fill="currentColor"
+                              />
+                              <circle
+                                cx="12"
+                                cy="12"
+                                r="9"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              />
+                            </svg>
+                          )}
+                          {isSellerVerified ? '인증됨' : '미인증'}
+                        </span>
+                      )}
+                      {activeSeller?.seller?.totalPaymentConfirmedUsdtAmount > 20 && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600">
+                          <Image
+                            src="/icon-best-seller.png"
+                            alt="Best Seller"
+                            width={14}
+                            height={14}
+                            className="h-3.5 w-3.5"
+                          />
+                          베스트셀러
+                        </span>
+                      )}
+                    </div>
+                    {activeSeller?.walletAddress && (
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <span className="font-medium text-slate-600">
+                          지갑 {activeSeller.walletAddress.substring(0, 6)}...{activeSeller.walletAddress.substring(activeSeller.walletAddress.length - 4)}
+                        </span>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-full border border-slate-200/80 bg-white/80 px-2 py-0.5 text-[11px] font-semibold text-slate-600 hover:bg-white"
+                          onClick={() => {
+                            navigator.clipboard.writeText(activeSeller.walletAddress);
+                            toast.success(Copied_Wallet_Address);
+                          }}
+                        >
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M9 9h10a2 2 0 012 2v8a2 2 0 01-2 2H9a2 2 0 01-2-2v-8a2 2 0 012-2z"
+                              stroke="currentColor"
+                              strokeWidth="1.6"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <path
+                              d="M5 15H4a2 2 0 01-2-2V5a2 2 0 012-2h8a2 2 0 012 2v1"
+                              stroke="currentColor"
+                              strokeWidth="1.6"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          지갑복사
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-start gap-2 sm:items-end">
+                  <div className="flex items-center gap-2">
+                    <Image
+                      src="/icon-escrow-wallet.webp"
+                      alt="Escrow Wallet"
+                      width={50}
+                      height={50}
+                      className="w-8 h-8"
+                    />
+                    <div className="text-lg font-semibold text-slate-800">
+                      판매자 에스크로 지갑
+                    </div>
+                  </div>
+
+                  <button
+                    className="rounded-full border border-slate-200/70 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-600 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)] hover:bg-white"
+                    onClick={() => {
+                      navigator.clipboard.writeText(sellerWalletAddress);
+                      toast.success(Copied_Wallet_Address);
+                    } }
+                  >
+                    {sellerWalletAddress.substring(0, 6)}...{sellerWalletAddress.substring(sellerWalletAddress.length - 4)}
+                  </button>
                 </div>
               </div>
-
-              <button
-                className="rounded-full border border-slate-200/70 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-600 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)] hover:bg-white"
-                onClick={() => {
-                  navigator.clipboard.writeText(sellerWalletAddress);
-                  toast.success(Copied_Wallet_Address);
-                } }
-              >
-                {sellerWalletAddress.substring(0, 6)}...{sellerWalletAddress.substring(sellerWalletAddress.length - 4)}
-              </button>
-
             </div>
-
           </div>
 
 
         </div>
+
+        <div className="w-full rounded-2xl border border-slate-800/70 bg-slate-950/90 p-4 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.9)] backdrop-blur">
+          {sellersBalance[0]?.seller?.priceSettingMethod === 'market' && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/70 pb-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                실시간 환율 정보
+                <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
+                  LIVE
+                </span>
+              </div>
+              <span className="text-xs text-slate-400">USDT/KRW</span>
+            </div>
+          )}
+
+          <div className="mt-3 space-y-2">
+            {sellersBalance[0]?.seller?.priceSettingMethod === 'market'
+            && sellersBalance[0]?.seller?.market === 'upbit' && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800/70 bg-slate-900/60 px-3 py-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+                  <Image
+                    src="/icon-market-upbit.png"
+                    alt="Upbit"
+                    width={50}
+                    height={50}
+                    className="h-7 w-7 rounded-lg border border-slate-800/80 bg-slate-900/80 object-contain p-1"
+                  />
+                  <span>업비트</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-lg font-semibold text-white tabular-nums sm:text-xl"
+                    style={{ fontFamily: 'monospace' }}>
+                    {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  </span>
+                  <div className="flex items-center gap-2 text-xs font-semibold">
+                    <span
+                      className={`${
+                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-emerald-300' :
+                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-rose-300' :
+                        'text-slate-300'
+                      }`}
+                      style={{ fontFamily: 'monospace' }}
+                    >
+                      {
+                        upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
+                        upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
+                        `- 0`
+                      }
+                    </span>
+                    <span
+                      className={`${
+                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-emerald-300' :
+                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-rose-300' :
+                        'text-slate-300'
+                      }`}
+                      style={{ fontFamily: 'monospace' }}
+                    >
+                      {
+                        upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                        upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                        `(0.0000%)`
+                      }
+                    </span>
+                  </div>
+                  <span className="text-xs text-slate-400"
+                    style={{ fontFamily: 'monospace' }}>
+                    {
+                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
+                    }
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {sellersBalance[0]?.seller?.priceSettingMethod === 'market'
+            && sellersBalance[0]?.seller?.market === 'bithumb' && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800/70 bg-slate-900/60 px-3 py-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+                  <Image
+                    src="/icon-market-bithumb.png"
+                    alt="Bithumb"
+                    width={50}
+                    height={50}
+                    className="h-7 w-7 rounded-lg border border-slate-800/80 bg-slate-900/80 object-contain p-1"
+                  />
+                  <span>빗썸</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-lg font-semibold text-white tabular-nums sm:text-xl"
+                    style={{ fontFamily: 'monospace' }}>
+                    {animatedBithumbUsdtToKrwRate && animatedBithumbUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  </span>
+                  <div className="flex items-center gap-2 text-xs font-semibold">
+                    <span
+                      className={`${
+                        bithumbUsdtToKrwRateChange === 'RISE' ? 'text-emerald-300' :
+                        bithumbUsdtToKrwRateChange === 'FALL' ? 'text-rose-300' :
+                        'text-slate-300'
+                      }`}
+                      style={{ fontFamily: 'monospace' }}
+                    >
+                      {
+                        bithumbUsdtToKrwRateChange === 'RISE' ? `▲ ${bithumbUsdtToKrwRateChangePrice}` :
+                        bithumbUsdtToKrwRateChange === 'FALL' ? `▼ ${bithumbUsdtToKrwRateChangePrice}` :
+                        `- 0`
+                      }
+                    </span>
+                    <span
+                      className={`${
+                        bithumbUsdtToKrwRateChange === 'RISE' ? 'text-emerald-300' :
+                        bithumbUsdtToKrwRateChange === 'FALL' ? 'text-rose-300' :
+                        'text-slate-300'
+                      }`}
+                      style={{ fontFamily: 'monospace' }}
+                    >
+                      {
+                        bithumbUsdtToKrwRateChange === 'RISE' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                        bithumbUsdtToKrwRateChange === 'FALL' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                        `(0.0000%)`
+                      }
+                    </span>
+                  </div>
+                  <span className="text-xs text-slate-400"
+                    style={{ fontFamily: 'monospace' }}>
+                    {
+                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
+                    }
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {sellersBalance[0]?.seller?.priceSettingMethod === 'market'
+            && sellersBalance[0]?.seller?.market === 'korbit' && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800/70 bg-slate-900/60 px-3 py-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+                  <Image
+                    src="/icon-market-korbit.png"
+                    alt="Korbit"
+                    width={50}
+                    height={50}
+                    className="h-7 w-7 rounded-lg border border-slate-800/80 bg-slate-900/80 object-contain p-1"
+                  />
+                  <span>코빗</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-lg font-semibold text-white tabular-nums sm:text-xl"
+                    style={{ fontFamily: 'monospace' }}>
+                    {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  </span>
+                  <div className="flex items-center gap-2 text-xs font-semibold">
+                    <span
+                      className={`${
+                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-emerald-300' :
+                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-rose-300' :
+                        'text-slate-300'
+                      }`}
+                      style={{ fontFamily: 'monospace' }}
+                    >
+                      {
+                        upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
+                        upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
+                        `- 0`
+                      }
+                    </span>
+                    <span
+                      className={`${
+                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-emerald-300' :
+                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-rose-300' :
+                        'text-slate-300'
+                      }`}
+                      style={{ fontFamily: 'monospace' }}
+                    >
+                      {
+                        upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                        upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
+                        `(0.0000%)`
+                      }
+                    </span>
+                  </div>
+                  <span className="text-xs text-slate-400"
+                    style={{ fontFamily: 'monospace' }}>
+                    {
+                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
+                    }
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {activeSeller?.seller && saleRateValue != null && (
+          <div className="mt-4 w-full rounded-2xl border border-amber-400/70 bg-gradient-to-r from-amber-500/90 via-amber-400/80 to-orange-500/90 p-[1px] shadow-[0_22px_60px_-25px_rgba(245,158,11,0.85)]">
+            <div className="rounded-2xl bg-slate-950/95 px-4 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-400/20 pb-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-amber-100">
+                  <span className="inline-flex h-2 w-2 rounded-full bg-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.85)]" />
+                  판매금액
+                  <span className="rounded-full border border-amber-300/40 bg-amber-300/10 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
+                    핵심정보
+                  </span>
+                </div>
+                <span className="text-xs text-amber-200">원/USDT</span>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
+                <div className="flex items-end gap-2">
+                  <span
+                    className="text-4xl font-semibold text-amber-200 drop-shadow-[0_6px_18px_rgba(251,191,36,0.5)] sm:text-5xl"
+                    style={{ fontFamily: 'monospace' }}
+                  >
+                    {saleRateValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  </span>
+                  <span className="text-sm font-semibold text-amber-100">KRW</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-amber-100">
+                  {activeSeller.seller.priceSettingMethod === 'market' ? (
+                    <>
+                      <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-1 text-[11px] text-emerald-200">
+                        시장가
+                      </span>
+                      {activeSeller.seller.market === 'upbit' && (
+                        <Image
+                          src="/icon-market-upbit.png"
+                          alt="Upbit"
+                          width={20}
+                          height={20}
+                          className="h-5 w-5 rounded-md border border-slate-800/70 bg-slate-900/70 object-contain p-0.5"
+                        />
+                      )}
+                      {activeSeller.seller.market === 'bithumb' && (
+                        <Image
+                          src="/icon-market-bithumb.png"
+                          alt="Bithumb"
+                          width={20}
+                          height={20}
+                          className="h-5 w-5 rounded-md border border-slate-800/70 bg-slate-900/70 object-contain p-0.5"
+                        />
+                      )}
+                      {activeSeller.seller.market === 'korbit' && (
+                        <Image
+                          src="/icon-market-korbit.png"
+                          alt="Korbit"
+                          width={20}
+                          height={20}
+                          className="h-5 w-5 rounded-md border border-slate-800/70 bg-slate-900/70 object-contain p-0.5"
+                        />
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-amber-300/40 bg-amber-300/10 px-2 py-1 text-[11px] text-amber-200">
+                        지정가
+                      </span>
+                      {activeSeller.walletAddress === address
+                      && activeSeller.seller?.buyOrder?.status !== 'ordered'
+                      && activeSeller.seller?.buyOrder?.status !== 'paymentRequested' && (
+                        <>
+                          <button
+                            onClick={() => {
+                              updateUsdtToKrwRate(
+                                0,
+                                activeSeller.seller._id,
+                                activeSeller.seller.usdtToKrwRate + 1,
+                              );
+                            }}
+                            disabled={updatingUsdtToKrwRateArray[0]}
+                            className={`
+                              h-7 w-7 rounded-full border border-emerald-300/40 text-emerald-200 transition
+                              ${updatingUsdtToKrwRateArray[0]
+                              ? 'cursor-not-allowed text-slate-500'
+                              : 'hover:bg-emerald-400/20 hover:shadow-[0_0_12px_rgba(16,185,129,0.35)]'}
+                            `}
+                          >
+                            ▲
+                          </button>
+                          <button
+                            onClick={() => {
+                              updateUsdtToKrwRate(
+                                0,
+                                activeSeller.seller._id,
+                                activeSeller.seller.usdtToKrwRate - 1,
+                              );
+                            }}
+                            disabled={updatingUsdtToKrwRateArray[0]}
+                            className={`
+                              h-7 w-7 rounded-full border border-rose-300/40 text-rose-200 transition
+                              ${updatingUsdtToKrwRateArray[0]
+                              ? 'cursor-not-allowed text-slate-500'
+                              : 'hover:bg-rose-400/20 hover:shadow-[0_0_12px_rgba(244,63,94,0.35)]'}
+                            `}
+                          >
+                            ▼
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-amber-200/80">
+                <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-1">
+                  구매자가 가장 먼저 확인해야 하는 핵심 금액
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="w-full flex flex-col items-start justify-center gap-4 mt-4">
 
@@ -5470,246 +5907,6 @@ const fetchBuyOrders = async () => {
               setIsChatOpen(true);
             }}
           />
-
-
-
-          <div className="w-full flex flex-col items-center justify-between gap-4
-          border-t border-b border-slate-200
-          py-4
-          ">
-
-            {sellersBalance[0]?.seller?.priceSettingMethod === 'market' && (
-              <div className="flex flex-row items-center justify-start gap-2">
-                <Image
-                  src="/icon-market.png"
-                  alt="Market"
-                  width={50}
-                  height={50}
-                  className="w-8 h-8 rounded-lg object-cover"
-                />
-                <span className="text-lg font-bold text-slate-800">
-                  실시간 환율 정보
-                </span>
-                <Image
-                  src="/icon-live.gif"
-                  alt="Live"
-                  width={30}
-                  height={30}
-                  className="w-8 h-8 object-cover"
-                />
-              </div>
-            )}
-
-            <div className="w-full flex flex-row items-center justify-end gap-4"> 
-
-              {/* animatedUpbitUsdtToKrwRate */}
-              {/* logo-upbit.jpg */}
-              {/* upbit usdt to krw rate display */}
-              {/* large font size */}
-              {/* upbitUsdtToKrwRateTimestamp - convert to local time */}
-              
-              
-              {sellersBalance[0]?.seller?.priceSettingMethod === 'market'
-              && sellersBalance[0]?.seller?.market === 'upbit' && (
-                <div className="w-full
-                  flex flex-row items-center justify-between gap-2 p-2">
-              
-                  <div className="w-full flex flex-row items-center justify-center gap-2">
-                    <Image
-                      src="/icon-market-upbit.png"
-                      alt="Upbit"
-                      width={50}
-                      height={50}
-                      className="w-8 h-8 object-cover"
-                    />
-
-                    <span className="text-2xl text-slate-800 font-semibold"
-                      style={{ fontFamily: 'monospace' }}>
-                        {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    </span>
-
-                    <div className="flex flex-row items-center justify-end gap-1">
-                      <span
-                        className={`text-sm font-semibold
-                        ${
-                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                          'text-slate-700'
-                        }
-                        `}
-                        style={{ fontFamily: 'monospace' }}
-                        >
-                        {
-                          upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
-                          upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
-                          `- 0`
-                        }
-                      </span>
-                      {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
-                      <span className={`text-sm font-semibold
-                        ${
-                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                          'text-slate-700'
-                        }
-                        `}
-                        style={{ fontFamily: 'monospace' }}
-                      >
-                        {
-                          upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                          upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                          `(0.0000%)`
-                        }
-                      </span>
-                      
-                    </div>
-                    <span className="text-sm text-slate-700"
-                      style={{ fontFamily: 'monospace' }}>
-                      {
-                        //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
-                      
-                        TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
-                      }
-                    </span>
-                  </div>
-
-                </div>
-              )}
-
-              {sellersBalance[0]?.seller?.priceSettingMethod === 'market'
-              && sellersBalance[0]?.seller?.market === 'bithumb' && (
-                <div className="w-full
-                  flex flex-row items-center justify-between gap-2 p-2">
-
-                  <div className="w-full flex flex-row items-center justify-center gap-2">
-                    <Image
-                      src="/icon-market-bithumb.png"
-                      alt="Bithumb"
-                      width={50}
-                      height={50}
-                      className="w-8 h-8 object-cover"
-                    />
-                    <span className="text-2xl text-slate-800 font-semibold"
-                      style={{ fontFamily: 'monospace' }}>
-                        {animatedBithumbUsdtToKrwRate && animatedBithumbUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    </span>
-
-                    <div className="flex flex-row items-center justify-end gap-1">
-                      <span className={`text-sm font-semibold
-                        ${
-                          bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                          bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                          'text-slate-700'
-                        }
-                        `}
-                        style={{ fontFamily: 'monospace' }}
-                      >
-                        {
-                          bithumbUsdtToKrwRateChange === 'RISE' ? `▲ ${bithumbUsdtToKrwRateChangePrice}` :
-                          bithumbUsdtToKrwRateChange === 'FALL' ? `▼ ${bithumbUsdtToKrwRateChangePrice}` :
-                          `- 0`
-                        }
-                      </span>
-                      {/* bithumbUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
-                      <span className={`text-sm font-semibold
-                        ${
-                          bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                          bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                          'text-slate-700'
-                        }
-                        `}
-                        style={{ fontFamily: 'monospace' }}
-                      >
-                        {
-                          bithumbUsdtToKrwRateChange === 'RISE' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                          bithumbUsdtToKrwRateChange === 'FALL' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                          `(0.0000%)`
-                        }
-                      </span>
-                      
-                    </div>
-                    <span className="text-sm text-slate-700"
-                      style={{ fontFamily: 'monospace' }}>
-                      {
-                        //bithumbUsdtToKrwRateTimestamp ? new Date(bithumbUsdtToKrwRateTimestamp).toLocaleString() : ''
-                      
-                        TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
-                      }
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {sellersBalance[0]?.seller?.priceSettingMethod === 'market'
-              && sellersBalance[0]?.seller?.market === 'korbit' && (
-                <div className="w-full
-                  flex flex-row items-center justify-between gap-2 p-2">
-
-                  <div className="w-full flex flex-row items-center justify-center gap-2">
-                    <Image
-                      src="/icon-market-korbit.png"
-                      alt="Korbit"
-                      width={50}
-                      height={50}
-                      className="w-8 h-8 object-cover"
-                    />
-                    <span className="text-2xl text-slate-800 font-semibold"
-                      style={{ fontFamily: 'monospace' }}>
-                        {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    </span>
-
-                  <div className="flex flex-row items-center justify-end gap-1">
-                      <span className={`text-sm font-semibold
-                        ${
-                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                          'text-slate-700'
-                        }
-                        `}
-                        style={{ fontFamily: 'monospace' }}
-                      >
-                        {
-                          upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
-                          upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
-                          `- 0`
-                        }
-                      </span>
-                      {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
-                      <span className={`text-sm font-semibold
-                        ${
-                          upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                          upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                          'text-slate-700'
-                        }
-                        `}
-                        style={{ fontFamily: 'monospace' }}
-                      >
-                        {
-                          upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                          upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                          `(0.0000%)`
-                        }
-                      </span>
-                      
-                    </div>
-                    <span className="text-sm text-slate-700"
-                      style={{ fontFamily: 'monospace' }}>
-                      {
-                        //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
-                      
-                        TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
-                      }
-                    </span>
-                  </div>
-
-                </div>
-              )}
-
-            </div>
-
-          </div>
-          
-          
           <div className="w-full flex flex-col items-start justify-center gap-2
           border-t border-b border-slate-200
           py-4
@@ -5763,237 +5960,6 @@ const fetchBuyOrders = async () => {
 
                     `}
                   >
-
-                    {/* seller.nickanme position fixed top left corner ribbon style */}
-                    <div className="
-                    absolute top-0 left-0
-                    flex flex-row items-center justify-start
-                    h-10  
-                    ">
-                      <div className="h-full
-                      flex flex-row items-center justify-between gap-2
-                      bg-slate-100 text-slate-900 px-2 py-1 rounded-br-lg rounded-tl-lg shadow-xl border border-slate-200
-                      ">
-                        <div className="flex flex-row items-center justify-center gap-1">
-                          <Image
-                            src="/icon-seller.png"
-                            alt="Seller"
-                            width={20}
-                            height={20}
-                            className="w-6 h-6 rounded-lg object-cover"
-                          />
-                          <span className="text-sm font-semibold">
-                            {seller.nickname}
-                          </span>
-                          {seller.walletAddress === address && (
-                            <span className="ml-1 rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm">
-                              마이페이지
-                            </span>
-                          )}
-                        </div>
-
-                        {/* whe  seller.seller?.totalPaymentConfirmedUsdtAmount > 10, show a badge */}
-                        {seller.seller?.totalPaymentConfirmedUsdtAmount > 20 && (
-                          <Image
-                            src="/icon-best-seller.png"
-                            alt="Best Seller"
-                            width={30}
-                            height={30}
-                            className="w-6 h-6 rounded-lg object-cover"
-                          />
-                        )}
-                      </div>
-
-                    </div>
-
-
-
-                    {/* seller.seller?.usdtToKrwRate top right corner ribbon style */}
-                    <div className="absolute top-0 right-0
-                    flex flex-col items-center justify-center gap-1
-                    bg-white/90 border border-slate-200 px-2 py-1 rounded-bl-lg rounded-tr-lg
-                    shadow-xl
-                    ">
-                                          
-                      {seller.seller?.usdtToKrwRate && (
-
-                        <div className="flex flex-col items-start justify-center gap-1">
-
-                          <div className="w-full flex flex-row items-center justify-start gap-2">
-
-                            <div className="w-full flex flex-row items-center justify-between gap-4">
-                              <span className="text-sm text-slate-700">
-                                판매금액
-                              </span>
-
-                              <span className="text-2xl font-semibold text-amber-400"
-                                style={{ fontFamily: 'monospace' }}>
-                                {
-                                //seller.seller?.usdtToKrwRate.toLocaleString()
-                                usdtKrwRateAnimationArray[index]?.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                                }
-                              </span>
-
-                              {seller.seller?.priceSettingMethod === 'market' ? (
-                                <div className="flex flex-col items-center justify-center gap-1">
-                                  {seller.seller?.market === 'upbit' && (
-                                    <Image
-                                      src="/icon-market-upbit.png"
-                                      alt="Upbit"
-                                      width={20}
-                                      height={20}
-                                      className="w-5 h-5"
-                                    />
-                                  )}
-                                  {seller.seller?.market === 'bithumb' && (
-                                    <Image
-                                      src="/icon-market-bithumb.png"
-                                      alt="Bithumb"
-                                      width={20}
-                                      height={20}
-                                      className="w-5 h-5"
-                                    />
-                                  )}
-                                  {seller.seller?.market === 'korbit' && (
-                                    <Image
-                                      src="/icon-market-korbit.png"
-                                      alt="Korbit"
-                                      width={20}
-                                      height={20}
-                                      className="w-5 h-5"
-                                    />
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="flex flex-col items-center justify-center gap-1">
-                                  {seller.walletAddress === address ? (
-                                    <>
-
-                                      {
-                                      seller.seller?.buyOrder?.status !== 'ordered'
-                                      && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
-                                        
-                                        <div className="flex flex-row items-center justify-center gap-2">
-
-                                          <div className="flex flex-col items-center justify-center gap-1
-                                          border border-slate-200 bg-white/70 rounded-lg px-2 py-1
-                                          ">
-                                            <span className="text-xs text-slate-700">
-                                              지정가
-                                            </span>
-                                          </div>          
-                                          
-                                          <button
-                                            onClick={() => {
-                                              updateUsdtToKrwRate(
-                                                index,
-                                                seller.seller._id,
-                                                seller.seller.usdtToKrwRate + 1,
-                                              );
-                                            }}
-                                            disabled={updatingUsdtToKrwRateArray[index]}
-                                            className={`
-                                              ${updatingUsdtToKrwRateArray[index]
-                                              ? 'text-gray-400 cursor-not-allowed'
-                                              : 'text-green-600 hover:text-green-700 hover:shadow-green-500/50 cursor-pointer'
-                                              }
-                                            `}
-                                          >
-                                            ▲
-                                          </button>
-                                          <button
-                                            onClick={() => {
-                                              updateUsdtToKrwRate(
-                                                index,
-                                                seller.seller._id,
-                                                seller.seller.usdtToKrwRate - 1,
-                                              );
-                                            }}
-                                            disabled={updatingUsdtToKrwRateArray[index]}
-                                            className={`
-                                              ${updatingUsdtToKrwRateArray[index]
-                                              ? 'text-gray-400 cursor-not-allowed'
-                                              : 'text-red-600 hover:text-red-700 hover:shadow-red-500/50 cursor-pointer'
-                                              }
-                                            `}
-                                          >
-                                            ▼
-                                          </button>
-                                        </div>
-                                      )}
-
-                                      {/*
-                                      {
-                                      seller.seller?.buyOrder?.status !== 'ordered'
-                                      && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
-                                        <button
-                                          onClick={() => {
-                                            updateUsdtToKrwRate(
-                                              index,
-                                              seller.seller._id,
-                                              Math.round(upbitUsdtToKrwRate),
-                                            );
-                                          }}
-                                          disabled={updatingUsdtToKrwRateArray[index]}
-                                          className={`
-                                            ${updatingUsdtToKrwRateArray[index]
-                                            ? 'text-gray-400 cursor-not-allowed'
-                                            : 'text-blue-600 hover:text-blue-700 hover:shadow-blue-500/50 cursor-pointer'
-                                            }
-                                          `}
-                                        >
-                                          ⬤
-                                        </button>
-                                      )}
-
-
-                                      {
-                                      seller.seller?.buyOrder?.status !== 'ordered'
-                                      && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
-                                        <button
-                                          onClick={() => {
-                                            updateUsdtToKrwRate(
-                                              index,
-                                              seller.seller._id,
-                                              seller.seller.usdtToKrwRate - 1,
-                                            );
-                                          }}
-                                          disabled={updatingUsdtToKrwRateArray[index]}
-                                          className={`
-                                            ${updatingUsdtToKrwRateArray[index]
-                                            ? 'text-gray-400 cursor-not-allowed'
-                                            : 'text-red-600 hover:text-red-700 hover:shadow-red-500/50 cursor-pointer'
-                                            }
-                                          `}
-                                        >
-                                          ▼
-                                        </button>
-                                      )}
-                                      */}
-                                    </>
-                                  ) : (
-                                    <div className="flex flex-col items-center justify-center gap-1
-                                    border border-slate-200 bg-white/70 rounded-lg px-2 py-1
-                                    ">
-                                      <span className="text-xs text-slate-700">
-                                        지정가
-                                      </span>
-                                    </div>
-                                  )}
-
-                                </div>
-                              )}
-
-                            </div>
-                          </div>
-
-                        </div>
-
-                      )}
-
-                    </div>
-
-
 
                     {/* if seller.walletAddress is equal to address, fixed position notice for my seller account */}
                     {/*
