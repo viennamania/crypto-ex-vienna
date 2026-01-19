@@ -4628,7 +4628,7 @@ const fetchBuyOrders = async () => {
 
 
           <div className="relative w-full">
-            <div className="fixed left-0 right-0 bottom-4 z-50 px-4 pb-[env(safe-area-inset-bottom)]">
+            <div className="fixed left-0 right-0 bottom-4 z-30 px-4 pb-[env(safe-area-inset-bottom)]">
               <div className="mx-auto w-full max-w-screen-2xl">
                 <div className="w-full rounded-2xl border border-slate-200/70 bg-white/85 p-2 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.7)] backdrop-blur">
                   <div className="grid w-full grid-cols-3 gap-2">

@@ -151,22 +151,26 @@ export default function RootLayout({
 
           <Toaster />
 
-          {/* chain image */}
-
           <div className="flex w-full flex-col items-stretch p-4 bg-slate-900/80 rounded-lg shadow-xl mb-4 border border-slate-700">
 
             {/* fixed position vertically top */}
             <div className="
               flex
-              fixed top-2 right-2 z-50 flex-col items-end justify-center">
+              fixed top-2 right-2
+              z-[9999]
+              flex-col items-end justify-center">
 
 
               {/* Display the current chain */}
               {/* show and hide button to toggle chain display */}
               {/* button bg is transparent black */}
               <button
-                className="
-                mb-2 px-4 py-2 bg-black bg-opacity-50 text-white rounded hover:bg-opacity-75"
+                className={`group mb-2 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold
+                shadow-[0_16px_40px_-24px_rgba(15,23,42,0.8)] transition-all duration-200 backdrop-blur
+                ${showChain
+                  ? 'border-emerald-300/60 bg-emerald-500/15 text-emerald-50 hover:bg-emerald-500/25'
+                  : 'border-slate-700/80 bg-slate-900/70 text-slate-100 hover:bg-slate-900/90'}
+                `}
                 onClick={() => setShowChain(!showChain)}
               >
                 <div className="flex flex-row items-center justify-center gap-2">
@@ -176,18 +180,22 @@ export default function RootLayout({
                     alt={`System Stability`}
                     width={16}
                     height={16}
+                    className={`transition-transform duration-200 ${showChain ? 'scale-110' : 'scale-100'}`}
                   />
 
-                  <span className="w-20 text-sm text-white">
+                  <span className="text-sm tracking-tight">
                     {showChain ? '내 지갑 닫기' : '내 지갑 열기'}
                   </span>
 
                 </div>
               </button>
 
+              {/* z order above all other elements */}
+              {/* 나의 지갑 정보 표시 */}
               <div className={`flex flex-col items-center justify-center
-                ${showChain ? 'bg-slate-800 border border-slate-700' : 'hidden'}
-                p-4 rounded-lg shadow-xl transition-all duration-300 ease-in-out
+                ${showChain ? 'bg-slate-900/80 border border-slate-700/70 ring-1 ring-white/10' : 'hidden'}
+                p-4 rounded-2xl shadow-[0_24px_60px_-36px_rgba(15,23,42,0.8)]
+                backdrop-blur-md transition-all duration-300 ease-in-out
               `}>
 
                 {/* Display client ID */}
