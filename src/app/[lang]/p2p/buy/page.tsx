@@ -7208,7 +7208,7 @@ const fetchBuyOrders = async () => {
                                   disabled={!address || !user?.buyer?.bankInfo || buyOrderingPrivateSaleArray[index]}
                                 />
                                 <span className="text-sm text-slate-600">
-                                  구해할 USDT 수량을 입력해주세요.
+                                  구매할 USDT 수량을 입력해주세요.
                                 </span>
                                 <button
                                   onClick={() => {

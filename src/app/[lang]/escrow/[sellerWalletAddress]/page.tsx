@@ -4900,15 +4900,49 @@ const fetchBuyOrders = async () => {
                     </div>
                   </div>
 
-                  <button
-                    className="rounded-full border border-slate-200/70 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-600 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)] hover:bg-white"
-                    onClick={() => {
-                      navigator.clipboard.writeText(sellerWalletAddress);
-                      toast.success(Copied_Wallet_Address);
-                    } }
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  className="rounded-full border border-slate-200/70 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-600 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)] hover:bg-white"
+                  onClick={() => {
+                    navigator.clipboard.writeText(sellerWalletAddress);
+                    toast.success(Copied_Wallet_Address);
+                  } }
+                >
+                  {sellerWalletAddress.substring(0, 6)}...{sellerWalletAddress.substring(sellerWalletAddress.length - 4)}
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-full border border-slate-200/70 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:bg-white"
+                  onClick={() => {
+                    navigator.clipboard.writeText(sellerWalletAddress);
+                    toast.success(Copied_Wallet_Address);
+                  }}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
                   >
-                    {sellerWalletAddress.substring(0, 6)}...{sellerWalletAddress.substring(sellerWalletAddress.length - 4)}
-                  </button>
+                    <path
+                      d="M9 9h10a2 2 0 012 2v8a2 2 0 01-2 2H9a2 2 0 01-2-2v-8a2 2 0 012-2z"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M5 15H4a2 2 0 01-2-2V5a2 2 0 012-2h8a2 2 0 012 2v1"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  지갑복사
+                </button>
+              </div>
                 </div>
               </div>
             </div>
@@ -7256,44 +7290,44 @@ const fetchBuyOrders = async () => {
                                   <div className="flex flex-col items-start justify-center gap-1 w-full">
                                     {/* buyAmount */}
                                     <span className="text-sm text-slate-600">
-                                      구해할 USDT 수량: {buyAmountInputs[index]} USDT
+                                      구매할 USDT 수량: {buyAmountInputs[index]} USDT
                                     </span>
                                   </div>
                                 ) : (
                                   <div className="flex flex-col items-start justify-center gap-1 w-full">
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      placeholder="구해할 USDT 수량"
-                                      /*
-                                      value={buyAmountInputs[index] || ''}
-                                      onChange={(e) => {
-                                        const newBuyAmountInputs = [...buyAmountInputs];
-                                        newBuyAmountInputs[index] = Number(e.target.value);
-                                        setBuyAmountInputs(newBuyAmountInputs);
-                                      }}
-                                      */
-                                      onChange={(e) => {
-                                        const newBuyAmountInputs = [...buyAmountInputs];
-                                        newBuyAmountInputs[index] = Math.floor(Number(e.target.value));
-                                        setBuyAmountInputs(newBuyAmountInputs);
-                                      }}
-                                      value={buyAmountInputs[index] || ''}
-
-                                      className={`
-                                        ${address
-                                        && user?.buyer?.bankInfo
-                                        && !buyOrderingPrivateSaleArray[index]
-                                        ? 'border border-slate-200 bg-slate-100 text-slate-800 rounded-lg p-2 text-sm' :
-                                        'border border-slate-200 bg-white text-slate-500 rounded-lg p-2 text-sm cursor-not-allowed'
-                                        }
-                                        w-full focus:outline-none focus:ring-2 focus:ring-blue-500
-                                      `}
-                                      disabled={!address || !user?.buyer?.bankInfo || buyOrderingPrivateSaleArray[index]}
-                                    />
-                                    {/* 구해할 USDT 수량을 입력해주세요. */}
+                                    <div className="relative w-full">
+                                      <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        placeholder="구매할 USDT 수량"
+                                        onChange={(e) => {
+                                          const rawValue = e.target.value.replace(/[^\d]/g, '');
+                                          const newBuyAmountInputs = [...buyAmountInputs];
+                                          newBuyAmountInputs[index] = rawValue ? Math.floor(Number(rawValue)) : 0;
+                                          setBuyAmountInputs(newBuyAmountInputs);
+                                        }}
+                                        value={buyAmountInputs[index]
+                                          ? buyAmountInputs[index].toLocaleString()
+                                          : ''}
+                                        className={`
+                                          ${address
+                                          && user?.buyer?.bankInfo
+                                          && !buyOrderingPrivateSaleArray[index]
+                                          ? 'border border-slate-200 bg-white text-slate-900'
+                                          : 'border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                                          }
+                                          w-full rounded-2xl px-5 py-4 pr-16 text-right text-2xl font-semibold tracking-tight shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)] placeholder:text-left placeholder:text-lg placeholder:font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500
+                                        `}
+                                        disabled={!address || !user?.buyer?.bankInfo || buyOrderingPrivateSaleArray[index]}
+                                      />
+                                      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
+                                        USDT
+                                      </span>
+                                    </div>
+                                    {/* 구매할 USDT 수량을 입력해주세요. */}
                                     <span className="text-sm text-slate-600">
-                                      구해할 USDT 수량을 입력해주세요.
+                                      구매할 USDT 수량을 입력해주세요.
                                     </span>
                                   </div>
                                 )}
