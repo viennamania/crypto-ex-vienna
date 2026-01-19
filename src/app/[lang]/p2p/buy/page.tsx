@@ -4683,7 +4683,7 @@ const fetchBuyOrders = async () => {
                   <span className="text-[11px] font-semibold text-slate-700">판매하기</span>
                 </button>
 
-                <div className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-blue-400/40 bg-gradient-to-br from-blue-600 to-blue-500 px-2 py-2 text-white shadow-[0_16px_40px_-28px_rgba(37,99,235,0.8)]">
+                <div className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-orange-400/40 bg-gradient-to-br from-orange-600 to-amber-500 px-2 py-2 text-white shadow-[0_16px_40px_-28px_rgba(249,115,22,0.8)]">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
