@@ -7,6 +7,7 @@ import { useParams } from 'next/navigation';
 import { Manrope, Playfair_Display } from 'next/font/google';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
+import { useActiveAccount } from 'thirdweb/react';
 
 
 const displayFont = Playfair_Display({
@@ -23,25 +24,7 @@ const bodyFont = Manrope({
 
 const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
 const SUPPORT_ADMIN_ID = '0xB185b18f6C93aC0a51FB374B73312829d64edd93';
-const SUPPORT_USER_STORAGE_KEY = 'orangex-support-chat-user-id';
 const SUPPORT_REQUEST_TIMEOUT_MS = 12000;
-
-const readSupportUserId = () => {
-    if (typeof window === 'undefined') {
-        return '';
-    }
-    const stored = window.localStorage.getItem(SUPPORT_USER_STORAGE_KEY);
-    if (stored) {
-        return stored;
-    }
-    const randomPart =
-        typeof window.crypto?.randomUUID === 'function'
-            ? window.crypto.randomUUID()
-            : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
-    const userId = `support-${randomPart}`;
-    window.localStorage.setItem(SUPPORT_USER_STORAGE_KEY, userId);
-    return userId;
-};
 
 const STAT_ITEMS = [
     {
@@ -160,10 +143,12 @@ const STAT_CARD_STYLES = [
     {
         base: 'bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,237,213,0.88))]',
         orb: 'bg-[radial-gradient(circle_at_center,var(--sun)_0%,transparent_70%)]',
+        value: 'text-amber-700',
     },
     {
         base: 'bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(219,234,254,0.88))]',
         orb: 'bg-[radial-gradient(circle_at_center,var(--sea)_0%,transparent_70%)]',
+        value: 'text-sky-700',
     },
 ];
 
@@ -187,21 +172,21 @@ const MARKET_STYLES: Record<
 > = {
     upbit: {
         label: 'Upbit',
-        badge: 'border-emerald-200/80 bg-emerald-500/10 text-emerald-700',
+        badge: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-200',
         accent: 'bg-[linear-gradient(135deg,#10b981,#22d3ee)]',
-        glow: 'bg-emerald-400/25',
+        glow: 'bg-emerald-400/30',
     },
     bithumb: {
         label: 'Bithumb',
-        badge: 'border-sky-200/80 bg-sky-500/10 text-sky-700',
+        badge: 'border-sky-400/40 bg-sky-400/10 text-sky-200',
         accent: 'bg-[linear-gradient(135deg,#38bdf8,#0ea5e9)]',
-        glow: 'bg-sky-400/25',
+        glow: 'bg-sky-400/30',
     },
     korbit: {
         label: 'Korbit',
-        badge: 'border-amber-200/80 bg-amber-500/10 text-amber-700',
+        badge: 'border-amber-400/40 bg-amber-400/10 text-amber-200',
         accent: 'bg-[linear-gradient(135deg,#f59e0b,#f97316)]',
-        glow: 'bg-amber-400/25',
+        glow: 'bg-amber-400/30',
     },
 };
 
@@ -333,6 +318,9 @@ const formatRelativeTimeFromMs = (value?: number) => {
 export default function OrangeXPage() {
     const params = useParams<{ lang: string }>();
     const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang ?? 'ko';
+    const activeAccount = useActiveAccount();
+    const walletAddress = activeAccount?.address ?? '';
+    const isSupportEligible = Boolean(walletAddress);
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
     const [animatedStats, setAnimatedStats] = useState(() => STAT_ITEMS.map(() => 0));
     const [chatOpen, setChatOpen] = useState(false);
@@ -369,21 +357,37 @@ export default function OrangeXPage() {
     const supportConnectingRef = useRef(false);
     const pageRef = useRef<HTMLDivElement | null>(null);
 
-    const supportStatusMessage =
-        supportPhase === 'session'
-            ? '세션 연결 중입니다.'
-            : supportPhase === 'channel'
-            ? '관리자 채널을 만드는 중입니다.'
-            : supportLoading
-            ? '관리자 채팅을 여는 중입니다.'
-            : '채팅을 준비 중입니다.';
+    const supportStatusMessage = !isSupportEligible
+        ? '익명은 문의할 수 없습니다. 지갑을 연결해 주세요.'
+        : supportPhase === 'session'
+        ? '세션 연결 중입니다.'
+        : supportPhase === 'channel'
+        ? '관리자 채널을 만드는 중입니다.'
+        : supportLoading
+        ? '관리자 채팅을 여는 중입니다.'
+        : '채팅을 준비 중입니다.';
+    const supportNickname = supportUserId
+        ? `지갑-${supportUserId.slice(0, 6)}...${supportUserId.slice(-4)}`
+        : '회원';
 
     useEffect(() => {
-        const userId = readSupportUserId();
-        if (userId) {
-            setSupportUserId(userId);
+        if (!walletAddress) {
+            setSupportUserId(null);
+            setSupportSessionToken(null);
+            setSupportChannelUrl(null);
+            setSupportPhase('idle');
+            setSupportError(null);
+            setSupportLoading(false);
+            return;
         }
-    }, []);
+        if (supportUserId !== walletAddress) {
+            setSupportUserId(walletAddress);
+            setSupportSessionToken(null);
+            setSupportChannelUrl(null);
+            setSupportPhase('idle');
+            setSupportError(null);
+        }
+    }, [walletAddress, supportUserId]);
 
     useEffect(() => {
         let isMounted = true;
@@ -407,12 +411,20 @@ export default function OrangeXPage() {
         };
 
         const connectSupportChat = async () => {
-            if (!chatOpen || !supportUserId) {
+            if (!chatOpen) {
                 if (isMounted) {
                     setSupportLoading(false);
                     if (!supportSessionToken || !supportChannelUrl) {
                         setSupportPhase('idle');
                     }
+                }
+                return;
+            }
+            if (!isSupportEligible || !supportUserId) {
+                if (isMounted) {
+                    setSupportLoading(false);
+                    setSupportPhase('idle');
+                    setSupportError(null);
                 }
                 return;
             }
@@ -442,7 +454,7 @@ export default function OrangeXPage() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         userId: supportUserId,
-                        nickname: `익명-${supportUserId.slice(-4)}`,
+                        nickname: supportNickname,
                     }),
                     signal: activeController.signal,
                 });
@@ -517,7 +529,7 @@ export default function OrangeXPage() {
             clearTimeoutId();
             activeController?.abort();
         };
-    }, [chatOpen, supportUserId, supportSessionToken, supportChannelUrl]);
+    }, [chatOpen, isSupportEligible, supportUserId, supportSessionToken, supportChannelUrl, supportNickname]);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -1367,6 +1379,90 @@ export default function OrangeXPage() {
                 */}
                 
 
+                {/* 마켓 시세 섹션 */}
+                <div
+                    data-reveal
+                    className="glam-card relative overflow-hidden rounded-[32px] border border-slate-900/70 bg-[linear-gradient(135deg,#0b1220,#111827_55%,#0b1220)] p-8 mb-12 shadow-[0_50px_120px_-70px_rgba(15,23,42,0.9)]"
+                >
+                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.08)_1px,transparent_1px)] bg-[size:32px_32px]" />
+                    <div className="pointer-events-none absolute -left-16 -top-20 h-48 w-48 rounded-full bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.22),transparent_70%)] blur-3xl" />
+                    <div className="pointer-events-none absolute -right-12 -bottom-20 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.25),transparent_70%)] blur-3xl" />
+                    <div className="relative flex flex-wrap items-center justify-between gap-4 mb-6">
+                        <div>
+                            <div className="flex items-center gap-3">
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" className="inline-block text-emerald-300">
+                                    <path d="M3 3h18v4H3V3zM5 7v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7H5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                    <path d="M8 10h8M8 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                                <h2 className="font-[var(--font-display)] text-2xl text-white whitespace-nowrap tracking-tight sm:text-4xl">
+                                    USDT/KRW 실시간 시세
+                                </h2>
+                            </div>
+                            <p className="text-sm text-slate-300">업비트 · 빗썸 · 코빗 기준</p>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs font-semibold text-slate-200">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 text-emerald-200 shadow-[0_12px_30px_-18px_rgba(16,185,129,0.6)]">
+                                <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
+                                LIVE
+                            </span>
+                            <span className="rounded-full border border-slate-500/40 bg-slate-900/70 px-3 py-1 text-slate-200 shadow-sm">
+                                업데이트{' '}
+                                {tickerUpdatedAt
+                                    ? new Date(tickerUpdatedAt).toLocaleTimeString('ko-KR', { hour12: false })
+                                    : '--:--:--'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {tickerError && <p className="mb-4 text-xs font-semibold text-rose-300">{tickerError}</p>}
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                        {marketTickers.map((ticker, index) => {
+                            const style = MARKET_STYLES[ticker.id];
+                            return (
+                                <div
+                                    key={ticker.id}
+                                    data-reveal
+                                    style={{ '--reveal-delay': `${index * 0.06}s` } as React.CSSProperties}
+                                    className="glam-card relative overflow-hidden rounded-2xl border border-slate-700/70 bg-slate-900/60 p-5 shadow-[0_24px_60px_-45px_rgba(15,23,42,0.7)] backdrop-blur transition hover:-translate-y-1 hover:border-slate-500/70"
+                                >
+                                    <span className={`absolute left-0 top-0 h-full w-1.5 ${style.accent}`} />
+                                    <span className={`pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full ${style.glow} blur-2xl`} />
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <Image
+                                                src={`/icon-market-${ticker.id}.png`}
+                                                alt={`${ticker.name} 로고`}
+                                                width={40}
+                                                height={40}
+                                                className="h-10 w-10 rounded-full border border-slate-700/70 bg-slate-800/80 object-contain p-1"
+                                            />
+                                            <div>
+                                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                                                    {style.label}
+                                                </p>
+                                                <p className="text-lg font-semibold text-white">{ticker.name}</p>
+                                            </div>
+                                        </div>
+                                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${style.badge}`}>
+                                            USDT/KRW
+                                        </span>
+                                    </div>
+                                    <div className="mt-4 flex items-baseline gap-2">
+                                        <span className="font-[var(--font-display)] text-3xl text-white tabular-nums sm:text-4xl">
+                                            {formatKrw(ticker.price)}
+                                        </span>
+                                        {ticker.price === null && (
+                                            <span className="text-xs text-slate-400">불러오는 중</span>
+                                        )}
+                                    </div>
+                                    <p className="mt-2 text-xs text-slate-400">공개 API 기준</p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
                 {/* 스크롤 배너 섹션 */}
                 <div
                     data-reveal
@@ -1435,14 +1531,21 @@ export default function OrangeXPage() {
                                 className={`glam-card relative overflow-hidden rounded-2xl border border-slate-200/70 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur ${style.base}`}
                             >
                                 <div className={`absolute -right-10 -top-10 h-32 w-32 rounded-full ${style.orb} opacity-40`} />
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{item.label}</p>
-                            <div className="mt-4 flex items-baseline gap-3">
-                                <span className="font-[var(--font-display)] text-3xl text-slate-900 tabular-nums sm:text-4xl md:text-5xl">
+                            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-200/70 bg-white/80 text-emerald-600">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M20 7L9 18l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </span>
+                                {item.label}
+                            </p>
+                            <div className="mt-4 grid grid-cols-[1fr_auto] items-baseline gap-3">
+                                <span className={`text-right font-[var(--font-display)] text-3xl font-bold tracking-tight tabular-nums sm:text-4xl md:text-5xl ${style.value}`}>
                                     {numberFormatter.format(animatedStats[index])}
                                 </span>
-                                <span className="text-sm font-semibold text-slate-500">{item.suffix}</span>
+                                <span className="w-14 text-sm font-semibold text-slate-500">{item.suffix}</span>
                             </div>
-                            <p className="mt-3 text-sm text-slate-600">실시간 누적 지표를 반영합니다</p>
+                            <p className="mt-3 text-right text-sm text-slate-600">실시간 누적 지표를 반영합니다</p>
                             </div>
                         );
                     })}
@@ -1565,87 +1668,6 @@ export default function OrangeXPage() {
                 </div>
                 
                 
-
-                {/* 마켓 시세 섹션 */}
-
-                <div
-                    data-reveal
-                    className="glam-card rounded-[28px] border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur"
-                >
-                    <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                        <div>
-                            <div className="flex items-center gap-3">
-                                {/* market icon */}
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="inline-block">
-                                    <path d="M3 3h18v4H3V3zM5 7v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7H5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                    <path d="M8 10h8M8 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                                <h2 className="font-[var(--font-display)] text-2xl text-slate-900 sm:text-3xl">USDT/KRW 실시간 시세</h2>
-                            </div>
-                            <p className="text-sm text-slate-600">업비트 · 빗썸 · 코빗 기준</p>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs font-semibold text-slate-500">
-                            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200/70 bg-emerald-50/80 px-3 py-1 text-emerald-700">
-                                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                                LIVE
-                            </span>
-                            <span>
-                                업데이트{' '}
-                                {tickerUpdatedAt
-                                    ? new Date(tickerUpdatedAt).toLocaleTimeString('ko-KR', { hour12: false })
-                                    : '--:--:--'}
-                            </span>
-                        </div>
-                    </div>
-
-                    {tickerError && <p className="mb-4 text-xs font-semibold text-orange-600">{tickerError}</p>}
-
-                    <div className="grid gap-4 md:grid-cols-3">
-                        {marketTickers.map((ticker, index) => {
-                            const style = MARKET_STYLES[ticker.id];
-                            return (
-                                <div
-                                    key={ticker.id}
-                                    data-reveal
-                                    style={{ '--reveal-delay': `${index * 0.06}s` } as React.CSSProperties}
-                                    className="glam-card relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/75 p-5 shadow-[0_24px_60px_-45px_rgba(15,23,42,0.7)] backdrop-blur"
-                                >
-                                    <span className={`absolute left-0 top-0 h-full w-1.5 ${style.accent}`} />
-                                    <span className={`pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full ${style.glow} blur-2xl`} />
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex items-center gap-3">
-                                            <Image
-                                                src={`/icon-market-${ticker.id}.png`}
-                                                alt={`${ticker.name} 로고`}
-                                                width={40}
-                                                height={40}
-                                                className="h-10 w-10 rounded-full border border-slate-200/70 bg-white object-contain p-1"
-                                            />
-                                            <div>
-                                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                                                    {style.label}
-                                                </p>
-                                                <p className="text-lg font-semibold text-slate-900">{ticker.name}</p>
-                                            </div>
-                                        </div>
-                                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${style.badge}`}>
-                                            USDT/KRW
-                                        </span>
-                                    </div>
-                                    <div className="mt-4 flex items-baseline gap-2">
-                                        <span className="font-[var(--font-display)] text-2xl text-slate-900 tabular-nums sm:text-3xl">
-                                            {formatKrw(ticker.price)}
-                                        </span>
-                                        {ticker.price === null && (
-                                            <span className="text-xs text-slate-500">불러오는 중</span>
-                                        )}
-                                    </div>
-                                    <p className="mt-2 text-xs text-slate-500">공개 API 기준</p>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
 
                 <div
                     data-reveal
@@ -2316,15 +2338,29 @@ export default function OrangeXPage() {
                         <div className="flex items-center justify-between border-b border-slate-200/70 bg-white/80 px-4 py-3">
                             <div>
                                 <p className="text-sm font-semibold text-slate-900">문의하기</p>
-                                <p className="text-xs text-slate-500">익명으로 관리자와 바로 연결됩니다</p>
+                                <p className="text-xs text-slate-500">
+                                    {isSupportEligible ? '지갑 연결 회원 전용 상담입니다' : '지갑 연결 후 문의할 수 있습니다'}
+                                </p>
                             </div>
-                            <span className="flex items-center gap-2 text-xs font-semibold text-emerald-600">
-                                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                                상담 가능
+                            <span
+                                className={`flex items-center gap-2 text-xs font-semibold ${
+                                    isSupportEligible ? 'text-emerald-600' : 'text-amber-600'
+                                }`}
+                            >
+                                <span
+                                    className={`h-2 w-2 rounded-full ${
+                                        isSupportEligible ? 'bg-emerald-500' : 'bg-amber-500'
+                                    }`}
+                                />
+                                {isSupportEligible ? '상담 가능' : '지갑 연결 필요'}
                             </span>
                         </div>
                         <div className="px-4 py-4 text-sm text-slate-700">
-                            {supportError ? (
+                            {!isSupportEligible ? (
+                                <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-3 text-xs text-amber-700">
+                                    익명 사용자는 문의할 수 없습니다. 지갑을 연결한 후 상담을 시작해 주세요.
+                                </div>
+                            ) : supportError ? (
                                 <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-3 text-xs text-amber-700">
                                     {supportError}
                                 </div>
