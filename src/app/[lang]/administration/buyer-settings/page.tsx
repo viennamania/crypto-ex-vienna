@@ -1027,7 +1027,7 @@ export default function SettingsPage({ params }: any) {
 
 
                 {!loadingUserData && buyer?.status && (
-
+                    <>
                     <div className='w-full flex flex-col gap-4 items-center justify-between rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm'>
 
                         {/* image and title */}
@@ -1388,6 +1388,51 @@ export default function SettingsPage({ params }: any) {
                         </div>
 
                     </div>
+
+                    <div className="mt-4 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
+                        <div className="flex w-full flex-row items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                                    <Image
+                                        src="/icon-kyc.png"
+                                        alt="KYC"
+                                        width={24}
+                                        height={24}
+                                        className="h-6 w-6"
+                                    />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-semibold text-slate-900">신분증 인증 (KYC)</span>
+                                    <span className="text-xs text-slate-500">주민증/운전면허증/여권 중 1장 업로드</span>
+                                </div>
+                            </div>
+                            <span className="inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                                심사중
+                            </span>
+                        </div>
+
+                        <div className="mt-4 flex flex-col gap-3">
+                            <label
+                                htmlFor="kyc-id-upload-buyer"
+                                className="cursor-pointer rounded-xl border border-dashed border-slate-200/80 bg-slate-50/80 px-4 py-4 text-center shadow-sm transition hover:border-slate-300"
+                            >
+                                <input
+                                    id="kyc-id-upload-buyer"
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                />
+                                <div className="flex flex-col items-center gap-1">
+                                    <span className="text-sm font-semibold text-slate-700">신분증 사진 업로드</span>
+                                    <span className="text-xs text-slate-500">JPG/PNG, 10MB 이하</span>
+                                </div>
+                            </label>
+                            <p className="text-xs text-slate-500">
+                                업로드 후 심사까지 영업일 기준 1-2일 소요될 수 있습니다.
+                            </p>
+                        </div>
+                    </div>
+                    </>
                 )}
 
 
