@@ -1006,7 +1006,7 @@ export default function Index({ params }: any) {
               onClick={() => {
                 router.push('/' + params.lang + '/administration/profile-settings?telegramId=' + telegramId);
               }}
-              className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+              className="flex bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800"
             >
               회원가입하러 가기
             </button>
@@ -1023,7 +1023,7 @@ export default function Index({ params }: any) {
   return (
 
 
-    <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto">
+    <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
 
 
       <AutoConnect
@@ -1035,7 +1035,7 @@ export default function Index({ params }: any) {
       <div className="py-0 w-full">
 
 
-        <div className="w-full flex flex-col xl:flex-row items-center justify-center gap-2 bg-black/10 p-2 rounded-lg mb-4">
+        <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-3 rounded-2xl border border-slate-200/70 bg-white/90 p-3 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.25)] backdrop-blur mb-4">
             
           <div className="w-full flex flex-row items-center justify-start gap-2">
             <Image
@@ -1058,7 +1058,7 @@ export default function Index({ params }: any) {
                 onClick={() => {
                   router.push('/' + params.lang + '/administration/profile-settings');
                 }}
-                className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                className="group inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_-26px_rgba(15,23,42,0.6)] transition hover:bg-slate-800"
               >
                 <div className="flex flex-row items-center justify-center gap-2">
                   {isAdmin && (
@@ -1070,12 +1070,12 @@ export default function Index({ params }: any) {
                         height={20}
                         className="rounded-lg w-5 h-5"
                       />
-                      <span className="text-sm text-[#f3f4f6]">
+                      <span className="text-sm text-white/90">
                         센터 관리자
                       </span>
                     </div>
                   )}
-                  <span className="text-sm text-[#f3f4f6]">
+                  <span className="text-sm text-white">
                     {user?.nickname || "프로필"}
                   </span>
 
@@ -1163,10 +1163,7 @@ export default function Index({ params }: any) {
           {/* right space */}
           {/* background transparent */}
           <select
-            //className="p-2 text-sm bg-zinc-800 text-white rounded"
-
-
-            className="p-2 text-sm bg-white border border-gray-300 text-zinc-800 rounded shadow-sm"
+            className="rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm"
             value={params.lang}
             onChange={(e) => {
               const lang = e.target.value;
@@ -1236,7 +1233,7 @@ export default function Index({ params }: any) {
 
        
             {/* total number of trades, total buy amount krw, total usdt amount */}
-            <div className="w-full flex flex-col items-start justify-start gap-2  bg-white shadow-md rounded-lg p-4">
+            <div className="w-full flex flex-col items-start justify-start gap-2  bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
 
               <div className="w-full flex flex-col xl:flex-row items-center justify-start gap-2">
 
@@ -1248,7 +1245,7 @@ export default function Index({ params }: any) {
                     height={35}
                     className="w-6 h-6"
                   />
-                  <h2 className="text-lg font-bold text-gray-900">P2P구매</h2>
+                  <h2 className="text-lg font-bold text-slate-900">P2P구매</h2>
                   <p className="text-lg text-red-600 font-bold">
                     {totalSummary.totalNumberOfBuyOrders}
                   </p>
@@ -1278,7 +1275,7 @@ export default function Index({ params }: any) {
                     onClick={() => {
                       router.push('/' + params.lang + '/administration/buyorder');
                     }}
-                    className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                    className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800"
                   >
                     P2P구매관리
                   </button>
@@ -1293,20 +1290,20 @@ export default function Index({ params }: any) {
                 <div className="w-full mt-4">
                   <div className="flex flex-row items-center justify-start gap-2">
                     {/* dot */}
-                    <div className="w-2 h-2 bg-[#0047ab] rounded-full"></div>
-                    <h2 className="text-lg font-bold text-gray-900">최근 P2P구매</h2>
+                    <div className="w-2 h-2 bg-slate-900 rounded-full"></div>
+                    <h2 className="text-lg font-bold text-slate-900">최근 P2P구매</h2>
                   </div>
 
                   <table className="min-w-full min-h-[400px] align-top
                     border-collapse
-                    border border-gray-300
+                    border border-slate-200
                     rounded-lg
                     overflow-hidden
-                    shadow-md
+                    shadow-sm
                   ">
                     <thead
-                      className="bg-gray-100
-                        text-gray-800
+                      className="bg-slate-50
+                        text-slate-700
                         text-sm
                         font-bold
                         uppercase
@@ -1336,8 +1333,8 @@ export default function Index({ params }: any) {
                     </thead>
                     <tbody className="align-top">
                       {totalSummary.latestBuyOrders.map((trade, index) => (
-                        <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
-                          <td className="px-4 py-2 text-gray-900 font-medium">
+                        <tr key={index} className="border-b border-slate-200 hover:bg-slate-50">
+                          <td className="px-4 py-2 text-slate-900 font-medium">
                             #{trade.tradeId}
                             <br/>
                             {
@@ -1352,7 +1349,7 @@ export default function Index({ params }: any) {
                             }
                           </td>
 
-                          <td className="px-4 py-2 text-gray-900 font-medium">
+                          <td className="px-4 py-2 text-slate-900 font-medium">
                             {trade?.nickname}({trade?.buyer?.depositName})
                             <br/>
                             {trade?.store?.storeName}
@@ -1379,7 +1376,7 @@ export default function Index({ params }: any) {
                               >
                                 {Number(trade.krwAmount).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                               </span>
-                              <span className="text-lg text-gray-900 font-bold"
+                              <span className="text-lg text-slate-900 font-bold"
                                 style={{ fontFamily: "monospace" }}
                               >
                                 {Number(trade.rate).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -1404,9 +1401,9 @@ export default function Index({ params }: any) {
                                 }}
                                 className={`
                                   text-sm font-semibold
-                                  bg-[#0047ab] text-white
+                                  bg-slate-900 text-white
                                   px-2 py-1 rounded-lg
-                                  hover:bg-[#0047ab]/80
+                                  hover:bg-slate-800
                                   ${trade.status === "ordered" ? "bg-red-500" : ""}
                                   ${trade.status === "accepted" ? "bg-green-500" : ""}
                                   ${trade.status === "paymentRequested" ? "bg-yellow-500" : ""}
@@ -1439,7 +1436,7 @@ export default function Index({ params }: any) {
 
                           <td className="
                             hidden xl:table-cell
-                            px-4 py-2 text-gray-900 font-medium">
+                            px-4 py-2 text-slate-900 font-medium">
                             {trade?.seller?.nickname.length > 10 ? trade?.seller?.nickname.slice(0, 10) + "..." : trade?.seller?.nickname}
                             <br/>
                             {trade?.store?.bankInfo?.bankName}
@@ -1461,7 +1458,7 @@ export default function Index({ params }: any) {
 
             
             {version !== 'bangbang' && (
-            <div className="hidden w-full flex-col items-start justify-start gap-2  bg-white shadow-md rounded-lg p-4">
+            <div className="hidden w-full flex-col items-start justify-start gap-2  bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
 
               <div className="w-full flex flex-col xl:flex-row items-center justify-start gap-2">
 
@@ -1474,7 +1471,7 @@ export default function Index({ params }: any) {
                     className="w-6 h-6"
                   />
                   <h2 className="text-lg font-semibold">청산주문</h2>
-                  <p className="text-lg text-gray-700 font-semibold">
+                  <p className="text-lg text-slate-600 font-semibold">
                     {totalSummary.totalNumberOfSellOrders}
                   </p>
                   {loadingSummary && (
@@ -1493,7 +1490,7 @@ export default function Index({ params }: any) {
                     onClick={() => {
                       router.push('/' + params.lang + '/administration/clearance-history');
                     }}
-                    className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                    className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800"
                   >
                     청산관리
                   </button>
@@ -1508,20 +1505,20 @@ export default function Index({ params }: any) {
                 <div className="w-full mt-4">
                   <div className="flex flex-row items-center justify-start gap-2">
                     {/* dot */}
-                    <div className="w-2 h-2 bg-[#0047ab] rounded-full"></div>
+                    <div className="w-2 h-2 bg-slate-900 rounded-full"></div>
                     <h2 className="text-lg font-semibold">최근 청산주문</h2>
                   </div>
 
                   <table className="min-w-full
                     border-collapse
-                    border border-gray-300
+                    border border-slate-200
                     rounded-lg
                     overflow-hidden
-                    shadow-md
+                    shadow-sm
                   ">
                     <thead
-                      className="bg-gray-100
-                        text-gray-600
+                      className="bg-slate-50
+                        text-slate-500
                         text-sm
                         font-semibold
                         uppercase
@@ -1581,9 +1578,9 @@ export default function Index({ params }: any) {
                               }}
                               className={`
                                 text-sm font-semibold
-                                bg-[#0047ab] text-white
+                                bg-slate-900 text-white
                                 px-2 py-1 rounded-lg
-                                hover:bg-[#0047ab]/80
+                                hover:bg-slate-800
                                 ${trade.status === "ordered" ? "bg-red-500" : ""}
                                 ${trade.status === "accepted" ? "bg-green-500" : ""}
                                 ${trade.status === "paymentRequested" ? "bg-yellow-500" : ""}
@@ -1627,7 +1624,7 @@ export default function Index({ params }: any) {
 
 
             {/* total number of trades, total buy amount krw, total usdt amount */}
-            <div className="w-full flex flex-col items-start justify-start gap-2  bg-white shadow-md rounded-lg p-4">
+            <div className="w-full flex flex-col items-start justify-start gap-2  bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
 
               <div className="w-full flex flex-col xl:flex-row items-center justify-start gap-2">
 
@@ -1639,7 +1636,7 @@ export default function Index({ params }: any) {
                     height={35}
                     className="w-6 h-6"
                   />
-                  <h2 className="text-lg font-bold text-gray-900">거래내역</h2>
+                  <h2 className="text-lg font-bold text-slate-900">거래내역</h2>
                 </div>
 
                 <div className="w-full flex flex-row items-center justify-end gap-2">
@@ -1647,7 +1644,7 @@ export default function Index({ params }: any) {
                     onClick={() => {
                       router.push('/' + params.lang + '/administration/trade-history');
                     }}
-                    className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                    className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800"
                   >
                     거래내역관리
                   </button>
@@ -1656,11 +1653,11 @@ export default function Index({ params }: any) {
               </div>
 
               <div className="w-full flex flex-row items-center justify-center gap-2
-                bg-white shadow-md rounded-lg p-4 mt-4">
+                bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm mt-4">
 
                 <div className="flex flex-col xl:flex-row items-center justify-center gap-2">
                   <div className="flex flex-col items-center justify-center gap-2">
-                    <h2 className="text-lg font-bold text-gray-900">총 거래금액(원)</h2>
+                    <h2 className="text-lg font-bold text-slate-900">총 거래금액(원)</h2>
                     <p className="text-lg text-amber-700 font-bold"
                       style={{ fontFamily: "monospace" }}
                     >
@@ -1671,7 +1668,7 @@ export default function Index({ params }: any) {
                   </div>
 
                   <div className="flex flex-col items-center justify-center gap-2">
-                    <h2 className="text-lg font-bold text-gray-900">총 거래량(USDT)</h2>
+                    <h2 className="text-lg font-bold text-slate-900">총 거래량(USDT)</h2>
                     <div className="flex flex-row items-center justify-center gap-1">
                       <Image
                         src="/token-usdt-icon.png"
@@ -1690,12 +1687,12 @@ export default function Index({ params }: any) {
                 </div>
 
                 {/* divider */}
-                <div className="w-0.5 h-10 bg-gray-300 mx-2"></div>
+                <div className="w-0.5 h-10 bg-slate-200 mx-2"></div>
 
                 <div className="flex flex-col xl:flex-row items-center justify-center gap-2">
                 
                   <div className="flex flex-col items-center justify-center gap-2">
-                    <h2 className="text-lg font-bold text-gray-900">총 결제금액(원)</h2>
+                    <h2 className="text-lg font-bold text-slate-900">총 결제금액(원)</h2>
                     <p className="text-lg text-amber-700 font-bold"
                       style={{ fontFamily: "monospace" }}
                     >
@@ -1705,7 +1702,7 @@ export default function Index({ params }: any) {
                     </p>
                   </div>
                   <div className="flex flex-col items-center justify-center gap-2">
-                    <h2 className="text-lg font-bold text-gray-900">총 결제량(USDT)</h2>
+                    <h2 className="text-lg font-bold text-slate-900">총 결제량(USDT)</h2>
                     <div className="flex flex-row items-center justify-center gap-1">
                       <Image
                         src="/token-usdt-icon.png"
@@ -1735,8 +1732,8 @@ export default function Index({ params }: any) {
                 <div className="w-full mt-4">
                   <div className="flex flex-row items-center justify-start gap-2">
                     {/* dot */}
-                    <div className="w-2 h-2 bg-[#0047ab] rounded-full"></div>
-                    <h2 className="text-lg font-bold text-gray-900">총 거래수</h2>
+                    <div className="w-2 h-2 bg-slate-900 rounded-full"></div>
+                    <h2 className="text-lg font-bold text-slate-900">총 거래수</h2>
                     <p className="text-lg text-red-600 font-bold">
                       {totalSummary.totalNumberOfTrades}
                     </p>
@@ -1753,14 +1750,14 @@ export default function Index({ params }: any) {
 
                   <table className="min-w-full
                     border-collapse
-                    border border-gray-300
+                    border border-slate-200
                     rounded-lg
                     overflow-hidden
-                    shadow-md
+                    shadow-sm
                   ">
                     <thead
-                      className="bg-gray-100
-                        text-gray-600
+                      className="bg-slate-50
+                        text-slate-500
                         text-sm
                         font-semibold
                         uppercase
@@ -1801,8 +1798,8 @@ export default function Index({ params }: any) {
                     </thead>
                     <tbody>
                       {totalSummary.latestTrades.map((trade, index) => (
-                        <tr key={index} className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-2 text-gray-900 font-medium">
+                        <tr key={index} className="border-b hover:bg-slate-50">
+                          <td className="px-4 py-2 text-slate-900 font-medium">
                             #{trade.tradeId}
                             <br/>
                             {
@@ -1818,7 +1815,7 @@ export default function Index({ params }: any) {
                           </td>
                           <td className="
                             hidden xl:block
-                            px-4 py-2 text-gray-900 font-medium">
+                            px-4 py-2 text-slate-900 font-medium">
                             <div className="flex flex-col items-start">
                               {trade.nickname}({trade?.buyer?.depositName})
                               <br />
@@ -1851,7 +1848,7 @@ export default function Index({ params }: any) {
 
                           <td className="
                             hidden xl:block
-                            px-4 py-2 text-gray-900 font-medium">
+                            px-4 py-2 text-slate-900 font-medium">
                             {trade?.seller?.nickname.length > 10 ? trade?.seller?.nickname.slice(0, 10) + "..." : trade?.seller?.nickname}
                             <br/>
                             {trade?.store?.bankInfo?.bankName}
@@ -1906,7 +1903,7 @@ export default function Index({ params }: any) {
                   onClick={() => {
                     router.push('/' + params.lang + '/administration/trade-history');
                   }}
-                  className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                  className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800"
                 >
                   거래내역
                 </button>
@@ -1921,7 +1918,7 @@ export default function Index({ params }: any) {
 
             {/* total number of trades, total buy amount krw, total usdt amount */}
             {version !== 'bangbang' && (
-            <div className="hidden w-full flex-col items-start justify-start gap-2  bg-white shadow-md rounded-lg p-4">
+            <div className="hidden w-full flex-col items-start justify-start gap-2  bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
 
               <div className="w-full flex flex-col xl:flex-row items-center justify-start gap-2">
 
@@ -1941,7 +1938,7 @@ export default function Index({ params }: any) {
                     onClick={() => {
                       router.push('/' + params.lang + '/administration/clearance-history');
                     }}
-                    className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                    className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800"
                   >
                     청산관리
                   </button>
@@ -1950,7 +1947,7 @@ export default function Index({ params }: any) {
               </div>
 
               <div className="w-full flex flex-row items-center justify-center gap-2
-                bg-white shadow-md rounded-lg p-4 mt-4">
+                bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm mt-4">
 
                 <div className="flex flex-col xl:flex-row items-center justify-center gap-2">
                   <div className="flex flex-col items-center justify-center gap-2">
@@ -1985,9 +1982,9 @@ export default function Index({ params }: any) {
                 <div className="w-full mt-4">
                   <div className="flex flex-row items-center justify-start gap-2">
                     {/* dot */}
-                    <div className="w-2 h-2 bg-[#0047ab] rounded-full"></div>
+                    <div className="w-2 h-2 bg-slate-900 rounded-full"></div>
                     <h2 className="text-lg font-semibold">총 거래수</h2>
-                    <p className="text-lg text-gray-700 font-semibold">
+                    <p className="text-lg text-slate-600 font-semibold">
                       {totalSummary.totalNumberOfClearances}
                     </p>
                     {loadingSummary && (
@@ -2003,14 +2000,14 @@ export default function Index({ params }: any) {
 
                   <table className="min-w-full
                     border-collapse
-                    border border-gray-300
+                    border border-slate-200
                     rounded-lg
                     overflow-hidden
-                    shadow-md
+                    shadow-sm
                   ">
                     <thead
-                      className="bg-gray-100
-                        text-gray-600
+                      className="bg-slate-50
+                        text-slate-500
                         text-sm
                         font-semibold
                         uppercase
@@ -2106,7 +2103,7 @@ export default function Index({ params }: any) {
                   onClick={() => {
                     router.push('/' + params.lang + '/administration/trade-history');
                   }}
-                  className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                  className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800"
                 >
                   거래내역
                 </button>
@@ -2122,7 +2119,7 @@ export default function Index({ params }: any) {
 
             
             {/* store */}
-            <div className="w-full flex flex-col items-start justify-start gap-2  bg-white shadow-md rounded-lg p-4">
+            <div className="w-full flex flex-col items-start justify-start gap-2  bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
               
               <div className="w-full flex flex-col xl:flex-row items-center justify-start gap-2">
 
@@ -2134,7 +2131,7 @@ export default function Index({ params }: any) {
                     height={35}
                     className="w-7 h-7"
                   />
-                  <h2 className="text-lg font-bold text-gray-900">가맹점</h2>
+                  <h2 className="text-lg font-bold text-slate-900">가맹점</h2>
 
                 </div>
 
@@ -2143,7 +2140,7 @@ export default function Index({ params }: any) {
                     onClick={() => {
                       router.push('/' + params.lang + '/administration/store');
                     }}
-                    className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                    className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800"
                   >
                     가맹점관리
                   </button>
@@ -2157,9 +2154,9 @@ export default function Index({ params }: any) {
                 
                 <div className="flex flex-row items-center justify-start gap-2">
                   {/* dot */}
-                  <div className="w-2 h-2 bg-[#0047ab] rounded-full"></div>
-                  <h2 className="text-lg font-bold text-gray-900">총 가맹점수</h2>
-                  <p className="text-lg text-gray-700 font-bold">
+                  <div className="w-2 h-2 bg-slate-900 rounded-full"></div>
+                  <h2 className="text-lg font-bold text-slate-900">총 가맹점수</h2>
+                  <p className="text-lg text-slate-600 font-bold">
                     {totalSummary.totalNumberOfStores} 개
                   </p>
                   {loadingSummary && (
@@ -2175,14 +2172,14 @@ export default function Index({ params }: any) {
 
                 <table className="min-w-full
                   border-collapse
-                  border border-gray-300
+                  border border-slate-200
                   rounded-lg
                   overflow-hidden
-                  shadow-md
+                  shadow-sm
                 ">
                   <thead 
-                    className="bg-gray-100
-                      text-gray-800
+                    className="bg-slate-50
+                      text-slate-700
                       text-sm
                       font-bold
                       uppercase
@@ -2209,9 +2206,9 @@ export default function Index({ params }: any) {
                   </thead>
                   <tbody>
                     {totalSummary.latestStores.map((store, index) => (
-                      <tr key={index} className="border-b hover:bg-gray-50">
+                      <tr key={index} className="border-b hover:bg-slate-50">
                         <td className="
-                          px-4 py-2 text-gray-900 font-medium">
+                          px-4 py-2 text-slate-900 font-medium">
                             <div className="flex flex-col xl:flex-row items-center justify-start gap-2">
                               <Image
                                 src={store.storeLogo || "/profile-default.png"}
@@ -2229,7 +2226,7 @@ export default function Index({ params }: any) {
                                 >
                                   {store.storeName}
                                 </button>
-                                <span className="text-sm text-gray-600 font-medium">
+                                <span className="text-sm text-slate-500 font-medium">
                                   {store?.agentName || store?.agentcode}
                                 </span>
                               </div>
@@ -2238,7 +2235,7 @@ export default function Index({ params }: any) {
                         
                         <td className="
                           hidden xl:block
-                          px-4 py-2 text-gray-900 font-medium"
+                          px-4 py-2 text-slate-900 font-medium"
                         >
                           {store.totalBuyerCount > 0 ? Number(store.totalBuyerCount)?.toLocaleString() : 0} 명
                           <br/>
@@ -2249,24 +2246,24 @@ export default function Index({ params }: any) {
                           <span className="text-lg text-amber-700 font-bold">
                             {store.totalKrwAmount > 0 ? Number(store.totalKrwAmount)?.toLocaleString() : 0}
                           </span>
-                          <span className="text-gray-900 font-medium"> 원</span>
+                          <span className="text-slate-900 font-medium"> 원</span>
                           <br/>
                           <span className="text-lg text-teal-700 font-bold">
                             {store.totalUsdtAmount > 0 ? Number(store.totalUsdtAmount)?.toLocaleString() : 0}
                           </span>
-                          <span className="text-gray-900 font-medium"> USDT</span>
+                          <span className="text-slate-900 font-medium"> USDT</span>
                         </td>
 
                         <td className="px-4 py-2">
                           <span className="text-lg text-amber-700 font-bold">
                             {store.totalSettlementAmountKRW > 0 ? Number(store.totalSettlementAmountKRW)?.toLocaleString() : 0}
                           </span>
-                          <span className="text-gray-900 font-medium"> 원</span>
+                          <span className="text-slate-900 font-medium"> 원</span>
                           <br/>
                           <span className="text-lg text-teal-700 font-bold">
                             {store.totalSettlementAmount > 0 ? Number(store.totalSettlementAmount)?.toLocaleString() : 0}
                           </span>
-                          <span className="text-gray-900 font-medium"> USDT</span>
+                          <span className="text-slate-900 font-medium"> USDT</span>
                         </td>
                         {/*
                         <td className="px-4 py-2">{new Date(store.createdAt).toLocaleDateString()}</td>
@@ -2281,7 +2278,7 @@ export default function Index({ params }: any) {
             </div>
             
             
-            <div className="w-full flex flex-col items-start justify-start gap-2  bg-white shadow-md rounded-lg p-4">
+            <div className="w-full flex flex-col items-start justify-start gap-2  bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
               
 
               <div className="w-full flex flex-col xl:flex-row items-center justify-start gap-2">
@@ -2294,7 +2291,7 @@ export default function Index({ params }: any) {
                     height={35}
                     className="w-6 h-6"
                   />
-                  <h2 className="text-lg font-bold text-gray-900">구매회원</h2>
+                  <h2 className="text-lg font-bold text-slate-900">구매회원</h2>
                 </div>
 
                 <div className="w-full flex flex-row items-center justify-end gap-2">
@@ -2302,7 +2299,7 @@ export default function Index({ params }: any) {
                     onClick={() => {
                       router.push('/' + params.lang + '/administration/member');
                     }}
-                    className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                    className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800"
                   >
                     회원관리
                   </button>
@@ -2317,9 +2314,9 @@ export default function Index({ params }: any) {
               <div className="w-full mt-4">
                 <div className="flex flex-row items-center justify-start gap-2">
                   {/* dot */}
-                  <div className="w-2 h-2 bg-[#0047ab] rounded-full"></div>
-                  <h2 className="text-lg font-bold text-gray-900">총 회원수</h2>
-                  <p className="text-lg text-gray-700 font-bold">
+                  <div className="w-2 h-2 bg-slate-900 rounded-full"></div>
+                  <h2 className="text-lg font-bold text-slate-900">총 회원수</h2>
+                  <p className="text-lg text-slate-600 font-bold">
                     {totalSummary.totalNumberOfBuyers} 명
                   </p>
                   {loadingSummary && (
@@ -2335,14 +2332,14 @@ export default function Index({ params }: any) {
                 </div>
                 <table className="min-w-full
                   border-collapse
-                  border border-gray-300
+                  border border-slate-200
                   rounded-lg
                   overflow-hidden
-                  shadow-md
+                  shadow-sm
                 ">
                   <thead
-                    className="bg-gray-100
-                      text-gray-800
+                    className="bg-slate-50
+                      text-slate-700
                       text-sm
                       font-bold
                       uppercase
@@ -2371,16 +2368,16 @@ export default function Index({ params }: any) {
                       </tr>
                     )}
                     {totalSummary.latestBuyers.map((buyer, index) => (
-                      <tr key={index} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-2 text-gray-900 font-medium">{buyer.nickname}</td>
-                        <td className="px-4 py-2 text-gray-900 font-medium">
+                      <tr key={index} className="border-b hover:bg-slate-50">
+                        <td className="px-4 py-2 text-slate-900 font-medium">{buyer.nickname}</td>
+                        <td className="px-4 py-2 text-slate-900 font-medium">
                           {buyer?.store?.storeName}
                         </td>
                         
-                        <td className="px-4 py-2 text-gray-900 font-medium">{buyer?.buyer.depositName}</td>
+                        <td className="px-4 py-2 text-slate-900 font-medium">{buyer?.buyer.depositName}</td>
                         <td className="
                           hidden xl:block
-                          px-4 py-2 text-gray-900 font-medium">
+                          px-4 py-2 text-slate-900 font-medium">
                           {buyer?.buyer.depositBankName}
                         </td>
                         {/*
@@ -2410,11 +2407,10 @@ export default function Index({ params }: any) {
         <div className="
           w-full
           flex flex-col items-center justify-center mt-10 mb-10
-          bg-white shadow-lg rounded-lg p-6
-          border border-gray-200
+          bg-white/95 border border-slate-200/80 rounded-2xl p-6 shadow-sm
           ">
 
-          <div className="text-sm text-gray-600 mt-2">
+          <div className="text-sm text-slate-500 mt-2">
             © 2025 GoodTether. All rights reserved.
           </div>
 
