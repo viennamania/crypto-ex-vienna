@@ -4638,7 +4638,30 @@ const fetchBuyOrders = async () => {
 
 
       <div className="py-0 w-full">
-        <div className="mb-4 flex w-full justify-end">
+        <div className="mb-4 flex w-full items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => router.push(`/${params.lang}/p2p`)}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M3 12l9-9 9 9M6 10v10a1 1 0 001 1h3m6-11v11a1 1 0 01-1 1h-3"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            홈으로
+          </button>
+
           <button
             type="button"
             onClick={() => router.push(`/${params.lang}/p2p/buy`)}
