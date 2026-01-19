@@ -2409,12 +2409,11 @@ const fetchBuyOrders = async () => {
             
             theme={"light"}
 
-            // button color is dark skyblue convert (49, 103, 180) to hex
+            // button color is slate-900
             connectButton={{
               style: {
-                backgroundColor: "#0047ab", // cobalt blue
-
-                color: "#f3f4f6", // gray-300 
+                backgroundColor: "#0f172a", // slate-900
+                color: "#f8fafc", // slate-50
                 padding: "2px 2px",
                 borderRadius: "10px",
                 fontSize: "14px",
@@ -2446,7 +2445,7 @@ const fetchBuyOrders = async () => {
 
         <h1 className="text-2xl font-bold">접근권한을 확인중입니다...</h1>
         <p className="text-lg">이 페이지에 접근할 권한이 없습니다.</p>
-        <div className="text-lg text-gray-500">{address}</div>
+        <div className="text-lg text-slate-500">{address}</div>
 
 
 
@@ -2460,22 +2459,17 @@ const fetchBuyOrders = async () => {
 
   return (
 
-    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto">
+    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
 
 
       <div className="py-0 w-full">
 
-        <div className="w-full flex flex-col xl:flex-row items-center justify-center gap-2 bg-black/10 p-2 rounded-lg mb-4">
+        <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-3 rounded-2xl border border-slate-200/70 bg-white/90 p-3 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.25)] backdrop-blur mb-4">
             
           <div className="w-full flex flex-row items-center justify-start gap-2">
             <button
               onClick={() => router.push('/' + params.lang + '/administration')}
-              className="flex items-center justify-center gap-2
-              rounded-lg p-2
-              hover:bg-black/20
-              hover:cursor-pointer
-              hover:scale-105
-              transition-transform duration-200 ease-in-out"
+              className="flex items-center justify-center gap-2 rounded-full border border-slate-200/70 bg-white/90 p-2 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
 
             >
               <Image
@@ -2497,7 +2491,7 @@ const fetchBuyOrders = async () => {
                 onClick={() => {
                   router.push('/' + params.lang + '/administration/profile-settings');
                 }}
-                className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                className="group inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_-26px_rgba(15,23,42,0.6)] transition hover:bg-slate-800"
               >
                 <div className="flex flex-row items-center justify-center gap-2">
                   {isAdmin && (
@@ -2509,12 +2503,12 @@ const fetchBuyOrders = async () => {
                         height={20}
                         className="rounded-lg w-5 h-5"
                       />
-                      <span className="text-sm text-[#f3f4f6]">
+                      <span className="text-sm text-white/90">
                         센터 관리자
                       </span>
                     </div>
                   )}
-                  <span className="text-sm text-[#f3f4f6]">
+                  <span className="text-sm text-white">
                     {user?.nickname || "프로필"}
                   </span>
 
@@ -2544,12 +2538,11 @@ const fetchBuyOrders = async () => {
               
               theme={"light"}
 
-              // button color is dark skyblue convert (49, 103, 180) to hex
+              // button color is slate-900
               connectButton={{
                 style: {
-                  backgroundColor: "#0047ab", // cobalt blue
-
-                  color: "#f3f4f6", // gray-300 
+                  backgroundColor: "#0f172a", // slate-900
+                  color: "#f8fafc", // slate-50
                   padding: "2px 2px",
                   borderRadius: "10px",
                   fontSize: "14px",
@@ -2611,55 +2604,38 @@ const fetchBuyOrders = async () => {
 
           {/* 홈 / 가맹점관리 / 회원관리 / P2P구매관리 */}
           {/* memnu buttons same width left side */}
-          <div className="grid grid-cols-3 xl:grid-cols-6 gap-2 items-center justify-start mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 items-center justify-start mb-4">
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/store')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#0047ab]/80
-                  hover:cursor-pointer
-                  hover:scale-105
-                  transition-transform duration-200 ease-in-out
-                  ">
+                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
+                  >
                   가맹점관리
               </button>
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/agent')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#0047ab]/80
-                  hover:cursor-pointer
-                  hover:scale-105
-                  transition-transform duration-200 ease-in-out
-                  ">
+                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
+                  >
                   에이전트관리
               </button>
 
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/member')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#0047ab]/80
-                  hover:cursor-pointer
-                  hover:scale-105
-                  transition-transform duration-200 ease-in-out
-                  ">
+                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
+                  >
                   회원관리
               </button>
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/buyorder')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#0047ab]/80
-                  hover:cursor-pointer
-                  hover:scale-105
-                  transition-transform duration-200 ease-in-out
-                  ">
+                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
+                  >
                   P2P구매관리
               </button>
 
-              <div className='flex w-32 items-center justify-center gap-2
-              bg-yellow-500 text-[#3167b4] text-sm rounded-lg p-2'>
+              <div className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-900/80 bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-[0_16px_40px_-28px_rgba(15,23,42,0.6)]">
                 <Image
                   src="/icon-trade.png"
                   alt="Trade"
@@ -2667,7 +2643,7 @@ const fetchBuyOrders = async () => {
                   height={35}
                   className="w-4 h-4"
                 />
-                <div className="text-sm font-semibold">
+                <div className="text-xs font-semibold">
                   거래내역
                 </div>
               </div>
@@ -2689,23 +2665,15 @@ const fetchBuyOrders = async () => {
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/trade-history-daily')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#0047ab]/80
-                  hover:cursor-pointer
-                  hover:scale-105
-                  transition-transform duration-200 ease-in-out
-                  ">
+                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
+                  >
                   통계(가맹)
               </button>
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/trade-history-daily-agent')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#0047ab]/80
-                  hover:cursor-pointer
-                  hover:scale-105
-                  transition-transform duration-200 ease-in-out
-                  ">
+                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
+                  >
                   통계(AG)
               </button>
 
@@ -2727,61 +2695,32 @@ const fetchBuyOrders = async () => {
           </div>
 
 
-          <div className='flex flex-row items-center space-x-4'>
-            <Image
-              src="/icon-trade.png"
-              alt="Trade"
-              width={35}
-              height={35}
-              className="w-6 h-6"
-            />
+          <div className="w-full flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Image
+                src="/icon-trade.png"
+                alt="Trade"
+                width={35}
+                height={35}
+                className="w-6 h-6"
+              />
 
-            <div className="text-xl font-semibold">
-              거래내역
+              <div className="text-lg font-semibold text-slate-900">
+                거래내역
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                {Total}
+              </span>
+              <span className="text-2xl font-semibold text-slate-900 tabular-nums">
+                {totalCount || 0}
+              </span>
             </div>
           </div>
 
 
-
-          <div className="w-full flex flex-row items-center justify-end gap-2">
-
-
-
-            {/*}
-            <div className="flex flex-col gap-2 items-center">
-              <div className="text-sm">
-                {Buy_Order_Accept}
-              </div>
-              <div className="text-xl font-semibold text-white">
-                {buyOrders.filter((item) => item.status === 'accepted').length}
-              </div>
-            </div>
-            */}
-            {/*
-            <div className="flex flex-col gap-2 items-center">
-              <div className="text-sm">{Trades}</div>
-              <div className="text-xl font-semibold text-zinc-500">
-
-                {
-                  buyOrders.filter((item) => item.status === 'accepted' || item.status === 'paymentRequested').length
-
-                }
-
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2 items-center">
-              <div className="text-sm">전체</div>
-              <div className="text-xl font-semibold text-zinc-500">
-                {totalCount}
-              </div>
-            </div>
-            */}
-
-          </div>
-
-
-          <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-3">
+          <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm">
 
 
             {/* select storecode */}
@@ -2795,9 +2734,7 @@ const fetchBuyOrders = async () => {
                   className="rounded-lg w-5 h-5"
                 />
 
-                <span className="
-                  w-32
-                  text-sm font-semibold">
+                <span className="w-32 text-sm font-semibold text-slate-700">
                   가맹점선택
                 </span>
 
@@ -2814,7 +2751,7 @@ const fetchBuyOrders = async () => {
 
 
 
-                  className="w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
+                  className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                 >
                   <option value="">전체</option>
 
@@ -2856,7 +2793,7 @@ const fetchBuyOrders = async () => {
                   type="date"
                   value={searchFromDate}
                   onChange={(e) => setSearchFromDate(e.target.value)}
-                  className="w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
+                  className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                 />
               </div>
 
@@ -2872,7 +2809,7 @@ const fetchBuyOrders = async () => {
                   type="date"
                   value={searchToDate}
                   onChange={(e) => setSearchToDate(e.target.value)}
-                  className="w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
+                  className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                 />
               </div>
             </div>
@@ -2890,7 +2827,7 @@ const fetchBuyOrders = async () => {
                     value={searchBuyer}
                     onChange={(e) => setSearchBuyer(e.target.value)}
                     placeholder="회원 아이디"
-                    className="w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
+                    className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                   />
                 </div>
 
@@ -2900,7 +2837,7 @@ const fetchBuyOrders = async () => {
                     value={searchDepositName}
                     onChange={(e) => setSearchDepositName(e.target.value)}
                     placeholder="입금자명"
-                    className="w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
+                    className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                   />
                 </div>
 
@@ -2911,7 +2848,7 @@ const fetchBuyOrders = async () => {
                     value={searchStoreBankAccountNumber}
                     onChange={(e) => setSearchStoreBankAccountNumber(e.target.value)}
                     placeholder="입금통장번호"
-                    className="w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
+                    className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                   /> 
                 </div>
 
@@ -2921,9 +2858,7 @@ const fetchBuyOrders = async () => {
 
 
                 {/* 검색 버튼 */}
-                <div className="
-                  w-28  
-                  flex flex-row items-center gap-2">
+                <div className="w-28 flex flex-row items-center gap-2">
                   <button
                     onClick={() => {
                       setPageValue(1);
@@ -2932,15 +2867,9 @@ const fetchBuyOrders = async () => {
 
                       getTradeSummary();
                     }}
-                    //className="bg-[#0047ab] text-white px-4 py-2 rounded-lg w-full"
-                    className={`${
-                      fetchingBuyOrders ? 'bg-gray-400' : 'bg-[#0047ab]'
-                    }
-                    text-white px-4 py-2 rounded-lg w-full
-                    hover:bg-[#0047ab]/80
-                    hover:cursor-pointer
-                    hover:scale-105
-                    transition-transform duration-200 ease-in-out`}
+                    className={`w-full rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm transition ${
+                      fetchingBuyOrders ? 'bg-slate-200 text-slate-400' : 'bg-slate-900 hover:bg-slate-800'
+                    }`}
                     title="검색"
 
                     disabled={fetchingBuyOrders}
@@ -2974,24 +2903,20 @@ const fetchBuyOrders = async () => {
 
           {/* trade summary */}
 
-          <div className="flex flex-col xl:flex-row items-center justify-between gap-2
-            w-full
-            bg-zinc-100/50
-            p-4 rounded-lg shadow-md
-            ">
+          <div className="flex flex-col xl:flex-row items-center justify-between gap-4 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm">
 
             <div className="xl:w-1/4 flex flex-row items-center justify-between gap-2">
               <div className="flex flex-col gap-2 items-center">
-                <div className="text-sm">총 P2P 거래수(건)</div>
-                <div className="text-xl font-semibold text-zinc-500">
+                <div className="text-sm text-slate-500">총 P2P 거래수(건)</div>
+                <div className="text-xl font-semibold text-slate-900 tabular-nums">
                   {tradeSummary.totalCount?.toLocaleString()}
                 </div>
               </div>
 
               <div className="flex flex-col gap-2 items-center">
-                <div className="text-sm">총 P2P 거래금액(원)</div>
+                <div className="text-sm text-slate-500">총 P2P 거래금액(원)</div>
                 <div className="flex flex-row items-center justify-center gap-1">
-                  <span className="text-xl font-semibold text-yellow-600">
+                  <span className="text-xl font-semibold text-amber-600 tabular-nums">
                     {tradeSummary.totalKrwAmount?.toLocaleString()}
                   </span>
                   
@@ -2999,7 +2924,7 @@ const fetchBuyOrders = async () => {
               </div>
 
               <div className="flex flex-col gap-2 items-center">
-                <div className="text-sm">총 P2P 거래량(USDT)</div>
+                <div className="text-sm text-slate-500">총 P2P 거래량(USDT)</div>
                 <div className="flex flex-row items-center justify-center gap-1">
                   <Image
                     src="/icon-tether.png"
@@ -3008,7 +2933,7 @@ const fetchBuyOrders = async () => {
                     height={20}
                     className="w-5 h-5"
                   />
-                  <span className="text-xl font-semibold text-[#409192]">
+                  <span className="text-xl font-semibold text-emerald-600 tabular-nums">
                     {tradeSummary.totalUsdtAmount
                       ? tradeSummary.totalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                       : '0.000'}
@@ -3018,29 +2943,29 @@ const fetchBuyOrders = async () => {
             </div>
 
             {/* divider */}
-            <div className="hidden xl:block w-0.5 h-10 bg-zinc-300"></div>
-            <div className="xl:hidden w-full h-0.5 bg-zinc-300"></div>
+            <div className="hidden xl:block w-0.5 h-10 bg-slate-200"></div>
+            <div className="xl:hidden w-full h-0.5 bg-slate-200"></div>
 
             <div className="xl:w-1/2
               flex flex-row items-center justify-between gap-2">
               <div className="flex flex-col gap-2 items-center">
-                <div className="text-sm">총 결제수(건)</div>
-                  <span className="text-xl font-semibold text-zinc-500">
+                <div className="text-sm text-slate-500">총 결제수(건)</div>
+                  <span className="text-xl font-semibold text-slate-900 tabular-nums">
                     {tradeSummary.totalSettlementCount?.toLocaleString()}
                   </span>
               </div>
 
               <div className="flex flex-col gap-2 items-center">
-                <div className="text-sm">총 결제금액(원)</div>
+                <div className="text-sm text-slate-500">총 결제금액(원)</div>
                 <div className="flex flex-row items-center justify-center gap-1">
-                  <span className="text-xl font-semibold text-yellow-600">
+                  <span className="text-xl font-semibold text-amber-600 tabular-nums">
                     {tradeSummary.totalSettlementAmountKRW?.toLocaleString()}
                   </span>
                   
                 </div>
               </div>
               <div className="flex flex-col gap-2 items-center">
-                <div className="text-sm">총 결제량(USDT)</div>
+                <div className="text-sm text-slate-500">총 결제량(USDT)</div>
                 <div className="flex flex-row items-center justify-center gap-1">
                   <Image
                     src="/icon-tether.png"
@@ -3049,7 +2974,7 @@ const fetchBuyOrders = async () => {
                     height={20}
                     className="w-5 h-5"
                   />
-                  <span className="text-xl font-semibold text-[#409192]">
+                  <span className="text-xl font-semibold text-emerald-600 tabular-nums">
                     {tradeSummary.totalSettlementAmount
                       ? tradeSummary.totalSettlementAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                       : '0.000'}
@@ -3062,9 +2987,9 @@ const fetchBuyOrders = async () => {
                 <div className="flex flex-row gap-2 items-center">
                   
                   <div className="flex flex-col gap-2 items-center">
-                    <div className="text-sm">총 센터 수수료(원)</div>
+                    <div className="text-sm text-slate-500">총 센터 수수료(원)</div>
                     <div className="w-full flex flex-row items-center justify-end gap-1">
-                      <span className="text-xl font-semibold text-yellow-600">
+                      <span className="text-xl font-semibold text-amber-600 tabular-nums">
                         {tradeSummary.totalFeeAmountKRW
                           ? tradeSummary.totalFeeAmountKRW.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                           : '0'}
@@ -3074,7 +2999,7 @@ const fetchBuyOrders = async () => {
                   </div>
 
                   <div className="flex flex-col gap-2 items-center">
-                    <div className="text-sm">총 센터 수수료(USDT)</div>
+                    <div className="text-sm text-slate-500">총 센터 수수료(USDT)</div>
                     <div className="w-full flex flex-row items-center justify-end gap-1">
                       <Image
                         src="/icon-tether.png"
@@ -3083,7 +3008,7 @@ const fetchBuyOrders = async () => {
                         height={20}
                         className="w-5 h-5"
                       />
-                      <span className="text-xl font-semibold text-[#409192]">
+                      <span className="text-xl font-semibold text-emerald-600 tabular-nums">
                         {tradeSummary.totalFeeAmount
                           ? tradeSummary.totalFeeAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                           : '0.000'}
@@ -3094,9 +3019,9 @@ const fetchBuyOrders = async () => {
 
                 <div className="flex flex-row gap-2 items-center">
                   <div className="flex flex-col gap-2 items-center">
-                    <div className="text-sm">총 AG 수수료(원)</div>
+                    <div className="text-sm text-slate-500">총 AG 수수료(원)</div>
                     <div className="w-full flex flex-row items-center justify-end gap-1">
-                      <span className="text-xl font-semibold text-yellow-600">
+                      <span className="text-xl font-semibold text-amber-600 tabular-nums">
                         {tradeSummary.totalAgentFeeAmountKRW
                           ? tradeSummary.totalAgentFeeAmountKRW.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                           : '0'}
@@ -3105,7 +3030,7 @@ const fetchBuyOrders = async () => {
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 items-center">
-                    <div className="text-sm">총 AG 수수료(USDT)</div>
+                    <div className="text-sm text-slate-500">총 AG 수수료(USDT)</div>
                     <div className="w-full flex flex-row items-center justify-end gap-1">
                       <Image
                         src="/icon-tether.png"
@@ -3114,7 +3039,7 @@ const fetchBuyOrders = async () => {
                         height={20}
                         className="w-5 h-5"
                       />
-                      <span className="text-xl font-semibold text-[#409192]">
+                      <span className="text-xl font-semibold text-emerald-600 tabular-nums">
                         {tradeSummary.totalAgentFeeAmount
                           ? tradeSummary.totalAgentFeeAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                           : '0.000'}
@@ -3136,20 +3061,20 @@ const fetchBuyOrders = async () => {
             <div className="xl:w-1/4 flex flex-row items-center justify-center gap-2">
               <div className="flex flex-col gap-2 items-center">
                 <div className="text-sm">총 청산수(건)</div>
-                <div className="text-xl font-semibold text-zinc-500">
+                <div className="text-xl font-semibold text-slate-600">
                   {tradeSummary.totalClearanceCount?.toLocaleString()}
                 </div>
               </div>
 
               <div className="flex flex-col gap-2 items-center">
                 <div className="text-sm">총 청산금액(원)</div>
-                <div className="text-xl font-semibold text-zinc-500">
+                <div className="text-xl font-semibold text-slate-600">
                   {tradeSummary.totalClearanceAmount?.toLocaleString()} 원
                 </div>
               </div>
               <div className="flex flex-col gap-2 items-center">
                 <div className="text-sm">총 청산수량(USDT)</div>
-                <div className="text-xl font-semibold text-zinc-500">
+                <div className="text-xl font-semibold text-slate-600">
                   {tradeSummary.totalClearanceAmountUSDT?.toLocaleString()} USDT
                 </div>
               </div>
@@ -3161,11 +3086,7 @@ const fetchBuyOrders = async () => {
 
           <div className="w-full flex flex-row items-center justify-end gap-2">
 
-            <div className="flex flex-row items-center justify-center gap-2
-            bg-white/80
-            p-2 rounded-lg shadow-md
-            backdrop-blur-md
-            ">
+            <div className="flex flex-row items-center justify-center gap-2 bg-white/90 p-3 rounded-2xl border border-slate-200/80 shadow-sm backdrop-blur">
               {loadingTotalNumberOfBuyOrders ? (
                 <Image
                   src="/icon-loading.png"
@@ -3185,7 +3106,7 @@ const fetchBuyOrders = async () => {
               )}
 
 
-              <p className="text-lg text-red-500 font-semibold">
+              <p className="text-lg text-rose-600 font-semibold tabular-nums">
                 {
                 totalNumberOfBuyOrders
                 }
@@ -3205,8 +3126,7 @@ const fetchBuyOrders = async () => {
                     onClick={() => {
                       router.push('/' + params.lang + '/administration/buyorder');
                     }}
-                    className="flex items-center justify-center gap-2
-                    bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                    className="flex items-center justify-center gap-2 bg-slate-900 text-sm text-white px-4 py-2 rounded-full hover:bg-slate-800"
                   >
                     <span className="text-sm">
                       P2P구매관리
@@ -3219,11 +3139,7 @@ const fetchBuyOrders = async () => {
 
             {/* Clearance Orders */}
             {version !== 'bangbang' && (
-            <div className="hidden flex-row items-center justify-center gap-2
-            bg-white/80
-            p-2 rounded-lg shadow-md
-            backdrop-blur-md
-            ">
+            <div className="hidden flex-row items-center justify-center gap-2 bg-white/90 p-3 rounded-2xl border border-slate-200/80 shadow-sm backdrop-blur">
 
               {loadingTotalNumberOfClearanceOrders ? (
                 <Image
@@ -3243,7 +3159,7 @@ const fetchBuyOrders = async () => {
                 />
               )}
 
-              <p className="text-lg text-yellow-500 font-semibold">
+              <p className="text-lg text-amber-600 font-semibold tabular-nums">
                 {
                 totalNumberOfClearanceOrders
                 }
@@ -3263,8 +3179,7 @@ const fetchBuyOrders = async () => {
                     onClick={() => {
                       router.push('/' + params.lang + '/administration/clearance-history');
                     }}
-                    className="flex items-center justify-center gap-2
-                    bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                    className="flex items-center justify-center gap-2 bg-slate-900 text-sm text-white px-4 py-2 rounded-full hover:bg-slate-800"
                   >
                     <span className="text-sm">
                       청산관리
@@ -3287,10 +3202,10 @@ const fetchBuyOrders = async () => {
 
             <div className="w-full overflow-x-auto">
 
-              <table className="w-full table-auto border-collapse border border-zinc-800 rounded-md">
+              <table className="w-full table-auto border-collapse border border-slate-200/80 rounded-2xl overflow-hidden bg-white/95 shadow-sm">
 
                 <thead
-                  className="bg-[#0047ab] text-white text-sm font-semibold"
+                  className="bg-slate-900 text-white text-xs font-semibold uppercase tracking-wide"
                   //style={{
                   //  backgroundColor: 'rgba(0, 0, 0, 0.5)',
                   //}}
@@ -3364,7 +3279,7 @@ const fetchBuyOrders = async () => {
 
                   {!fetchingBuyOrders && buyOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="p-4 text-center text-zinc-500">
+                      <td colSpan={10} className="p-4 text-center text-slate-500">
                         <span>거래내역이 없습니다.</span>
                       </td>
                     </tr>
@@ -3376,7 +3291,7 @@ const fetchBuyOrders = async () => {
                       
                       <tr key={index} className={`
                         ${
-                          index % 2 === 0 ? 'bg-zinc-100' : 'bg-zinc-200'
+                          index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'
 
 
                           //item.walletAddress === address ?
@@ -3395,7 +3310,7 @@ const fetchBuyOrders = async () => {
 
 
                             <div className="flex flex-col gap-2 items-center justify-center">
-                              <span className="text-sm text-zinc-500">
+                              <span className="text-sm text-slate-600">
                                 {item?.createdAt && new Date(item.createdAt)?.toLocaleString('ko-KR', {
                                   year: 'numeric',
                                   month: '2-digit',
@@ -3403,7 +3318,7 @@ const fetchBuyOrders = async () => {
                                 })}
                               </span>
                               
-                              <span className="text-sm text-zinc-500">
+                              <span className="text-sm text-slate-600">
                                 {item?.createdAt && new Date(item.createdAt)?.toLocaleString('en-US', {
                                   hour: '2-digit',
                                   minute: '2-digit',
@@ -3413,7 +3328,7 @@ const fetchBuyOrders = async () => {
                               
                             </div>
 
-                            <span className="text-sm text-zinc-500 font-semibold">
+                            <span className="text-sm text-slate-600 font-semibold">
                               {params.lang === 'ko' ? (
                                 <p>{
                                   new Date().getTime() - new Date(item.createdAt).getTime() < 1000 * 60 ? (
@@ -3445,8 +3360,8 @@ const fetchBuyOrders = async () => {
                                 navigator.clipboard.writeText(item.tradeId);
                                 toast.success('거래번호가 복사되었습니다.');
                               }}
-                              className="text-sm text-zinc-500 font-semibold
-                                hover:text-blue-600 cursor-pointer
+                              className="text-sm text-slate-600 font-semibold
+                                hover:text-slate-900 cursor-pointer
                                 hover:underline"
                               title="거래번호 복사"
                             >
@@ -3458,7 +3373,7 @@ const fetchBuyOrders = async () => {
                           </div>
                         </td>
 
-                        <td className="text-zinc-500 p-2">
+                        <td className="text-slate-600 p-2">
                           
 
                           <div className="
@@ -3473,12 +3388,12 @@ const fetchBuyOrders = async () => {
                               className="w-8 h-8 object-cover"
                             />
                             <div className="flex flex-col items-start justify-start">
-                              <span className="text-sm text-zinc-500 font-bold">
+                              <span className="text-sm text-slate-600 font-bold">
                                 {
                                   item?.store?.storeName
                                 }
                               </span>
-                              <span className="text-sm text-zinc-500">
+                              <span className="text-sm text-slate-600">
                                 {
                                   item?.agent.agentName
                                 }
@@ -3495,7 +3410,7 @@ const fetchBuyOrders = async () => {
                             
                             <div className="flex flex-col gap-2 items-center">
 
-                              <div className="text-lg text-blue-600 font-semibold">
+                              <div className="text-lg text-slate-900 font-semibold">
                                 {item?.nickname}
                               </div>
 
@@ -3505,8 +3420,8 @@ const fetchBuyOrders = async () => {
                                   navigator.clipboard.writeText(item.walletAddress);
                                   toast.success('지갑주소가 복사되었습니다.');
                                 }}
-                                className="text-sm text-zinc-500 font-semibold
-                                hover:text-blue-600 cursor-pointer
+                                className="text-sm text-slate-600 font-semibold
+                                hover:text-slate-900 cursor-pointer
                                 hover:underline"
                                 title="지갑주소 복사"
                               >
@@ -3526,20 +3441,20 @@ const fetchBuyOrders = async () => {
                             
                             <div className="flex flex-col gap-2 items-center">
 
-                              <div className="text-sm text-yellow-600 font-semibold">
+                              <div className="text-sm text-amber-600 font-semibold">
                                 {
                                   item?.buyer?.depositName
 
                                 }
                               </div>
-                              <div className="text-sm text-zinc-500 font-semibold">
+                              <div className="text-sm text-slate-600 font-semibold">
                                 {
                                   item?.buyer?.depositBankName
 
                                 }
                               </div>
 
-                              <div className="text-sm text-zinc-500 font-semibold">
+                              <div className="text-sm text-slate-600 font-semibold">
                                 {
                                   item?.buyer?.depositBankAccountNumber &&
                                   item?.buyer?.depositBankAccountNumber.slice(0, 5) + '...'
@@ -3560,14 +3475,14 @@ const fetchBuyOrders = async () => {
                             flex flex-col gap-2 items-end justify-center">
 
                             <div className="flex flex-row items-center justify-end gap-1">
-                              <span className="text-lg text-yellow-600 font-semibold"
+                              <span className="text-lg text-amber-600 font-semibold"
                                 style={{
                                   fontFamily: 'monospace',
                                 }}
                               >
                                 {Number(item.krwAmount)?.toLocaleString()}
                               </span>
-                              <span className="text-sm text-zinc-500">
+                              <span className="text-sm text-slate-600">
                                 원
                               </span>
                             </div>
@@ -3580,7 +3495,7 @@ const fetchBuyOrders = async () => {
                                 height={20}
                                 className="w-5 h-5"
                               />
-                              <span className="text-lg text-[#409192] font-semibold"
+                              <span className="text-lg text-emerald-600 font-semibold"
                                 style={{
                                   fontFamily: 'monospace',
                                   }}
@@ -3591,7 +3506,7 @@ const fetchBuyOrders = async () => {
 
                         
 
-                            <span className="text-sm text-zinc-500"
+                            <span className="text-sm text-slate-600"
                               style={{
                                 fontFamily: 'monospace',
                               }}
@@ -3606,19 +3521,19 @@ const fetchBuyOrders = async () => {
                         </td>
 
 
-                        <td className="text-zinc-500 p-2">
+                        <td className="text-slate-600 p-2">
                           <div className="
                             w-32
                             flex flex-col gap-2 items-center justify-center">
-                            <span className="text-lg font-semibold text-blue-600">
+                            <span className="text-lg font-semibold text-slate-900">
                               {
                                 item.seller?.nickname
                               }
                             </span>
                             {/* seller.walletAddress */}
                             <button
-                              className="text-sm text-zinc-500 font-semibold
-                                hover:text-blue-500
+                              className="text-sm text-slate-600 font-semibold
+                                hover:text-slate-900
                                 hover:underline
                                 cursor-pointer
                                 "
@@ -3648,7 +3563,7 @@ const fetchBuyOrders = async () => {
 
                         <td className="p-2">
                           <div className="flex flex-col gap-2 items-center justify-center">
-                            <div className="text-sm font-semibold text-zinc-500">
+                            <div className="text-sm font-semibold text-slate-600">
                               {item?.store?.bankInfo?.bankName}
                             </div>
 
@@ -3658,15 +3573,15 @@ const fetchBuyOrders = async () => {
                                 navigator.clipboard.writeText(item?.store?.bankInfo?.accountNumber);
                                 toast.success('입금통장번호가 복사되었습니다.');
                               }}
-                              className="text-sm text-zinc-500 font-semibold
-                                hover:text-blue-600 cursor-pointer
+                              className="text-sm text-slate-600 font-semibold
+                                hover:text-slate-900 cursor-pointer
                                 hover:underline"
                               title="입금통장번호 복사"
                             >
                               {item?.store?.bankInfo?.accountNumber}
                             </button>
 
-                            <div className="text-sm font-semibold text-zinc-500">
+                            <div className="text-sm font-semibold text-slate-600">
                               {item?.store?.bankInfo?.accountHolder}
                             </div>
                           </div>
@@ -3679,17 +3594,17 @@ const fetchBuyOrders = async () => {
                             flex flex-col mr-2 items-center justify-end gap-2">
 
                               {item?.autoConfirmPayment === true ? (
-                                <span className="text-sm text-green-500 font-semibold">
+                                <span className="text-sm text-emerald-600 font-semibold">
                                   자동입금처리
                                 </span>
                               ) : (
-                                <span className="text-sm text-red-500 font-semibold">
+                                <span className="text-sm text-rose-600 font-semibold">
                                   수동입금처리
                                 </span>
                               )}
 
                               <div className="flex flex-row items-center justify-end gap-1">
-                                <span className=" text-yellow-600 text-lg font-semibold"
+                                <span className=" text-amber-600 text-lg font-semibold"
                                   style={{
                                     fontFamily: 'monospace',
                                   }}
@@ -3699,7 +3614,7 @@ const fetchBuyOrders = async () => {
                                     item?.paymentAmount?.toLocaleString()
                                   }
                                 </span>
-                                <span className="text-sm text-zinc-500">
+                                <span className="text-sm text-slate-600">
                                   원
                                 </span>
                               </div>
@@ -3716,7 +3631,7 @@ const fetchBuyOrders = async () => {
                             <div className="flex flex-row items-center gap-2">
                               {/* status */}
                               {item.status === 'ordered' && (
-                                <div className="text-sm text-yellow-500 font-semibold">
+                                <div className="text-sm text-amber-600 font-semibold">
                                   {Buy_Order_Opened}
                                 </div>
                               )}
@@ -3725,7 +3640,7 @@ const fetchBuyOrders = async () => {
                               {item.status === 'accepted' && (
 
                                 <div className="flex flex-row gap-2 items-center justify-center">
-                                  <div className="text-sm text-green-500">
+                                  <div className="text-sm text-emerald-600">
                                     {Trade_Started}
                                   </div>
                                   {/*
@@ -3733,7 +3648,7 @@ const fetchBuyOrders = async () => {
                                     {item.seller?.nickname}
                                   </div>
                                   */}
-                                  <div className="text-sm text-zinc-500">
+                                  <div className="text-sm text-slate-600">
 
                                     {params.lang === 'ko' ? (
                                       <p>{
@@ -3767,7 +3682,7 @@ const fetchBuyOrders = async () => {
 
                               {item.status === 'paymentRequested' && (
                                 <div className="flex flex-row gap-1 items-start justify-start">
-                                  <div className="text-sm text-green-500">
+                                  <div className="text-sm text-emerald-600">
                                     {/*Waiting_for_seller_to_deposit*/}
 
                                     {Escrow_Completed}
@@ -3781,7 +3696,7 @@ const fetchBuyOrders = async () => {
                                   </div>
                                   */}
 
-                                  <div className="text-sm text-zinc-500">
+                                  <div className="text-sm text-slate-600">
                                     {/* from now */}
                                     {
                                       new Date().getTime() - new Date(item.paymentRequestedAt).getTime() < 1000 * 60 ? (
@@ -3801,7 +3716,7 @@ const fetchBuyOrders = async () => {
                               {item.status === 'cancelled' && (
                                 <div className="flex flex-row gap-1 items-start justify-start">
 
-                                    <div className="text-sm text-red-600">
+                                    <div className="text-sm text-rose-600">
                                       {
                                         Cancelled_at
                                       }
@@ -3812,7 +3727,7 @@ const fetchBuyOrders = async () => {
                                     </span>
                                     */}
 
-                                    <div className="text-sm text-zinc-500">
+                                    <div className="text-sm text-slate-600">
                                       {
                                         // from now
                                         new Date().getTime() - new Date(item.cancelledAt).getTime() < 1000 * 60 ? (
@@ -3836,22 +3751,12 @@ const fetchBuyOrders = async () => {
                                   flex flex-row gap-1 items-start justify-start">
 
                                   {/*
-                                  <span className="text-sm font-semibold text-green-500">
+                                  <span className="text-sm font-semibold text-emerald-600">
                                     {Completed}
                                   </span>
                                   */}
                                   <button
-                                    className="text-sm text-green-500 font-semibold
-                                      border border-green-500 rounded-lg p-2
-                                      bg-green-100
-                                      w-full text-center
-                                      hover:bg-green-200
-                                      cursor-pointer
-                                      transition-all duration-200 ease-in-out
-                                      hover:scale-105
-                                      hover:shadow-lg
-                                      hover:shadow-green-500/50
-                                    "
+                                    className="w-full rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-100"
                                     onClick={() => {
                                       // new window to complete trade
                                       // {`https://www.cryptoss.beauty/ko/${item?.storecode}/pay-usdt-reverse/${item?._id}`}
@@ -3875,7 +3780,7 @@ const fetchBuyOrders = async () => {
                                   <span
                                     className="
                                       w-28 
-                                      text-sm text-zinc-500"
+                                      text-sm text-slate-600"
                                   >{
                                     //item.paymentConfirmedAt && new Date(item.paymentConfirmedAt)?.toLocaleString()
                                     // from now
@@ -3898,11 +3803,11 @@ const fetchBuyOrders = async () => {
 
                               {item.status === 'completed' && (
                                 <div className="flex flex-row gap-1 items-start justify-start">
-                                  <div className="text-sm text-green-500">
+                                  <div className="text-sm text-emerald-600">
                                     {Completed_at}
                                   </div>
                                   {/* paymentConfirmedAt */}
-                                  <div className="text-sm text-zinc-500">
+                                  <div className="text-sm text-slate-600">
                                     {
                                       new Date().getTime() - new Date(item.paymentConfirmedAt).getTime() < 1000 * 60 ? (
                                         ' ' + Math.floor((new Date().getTime() - new Date(item.paymentConfirmedAt).getTime()) / 1000) + ' ' + seconds_ago
@@ -3923,19 +3828,7 @@ const fetchBuyOrders = async () => {
                             && item?.transactionHash !== '0x'
                             && (
                                 <button
-                                  className="
-                                    flex flex-row gap-2 items-center justify-between
-                                    text-sm text-[#409192] font-semibold
-                                    border border-[#409192] rounded-lg p-2
-                                    bg-blue-100
-                                    text-center
-                                    hover:bg-blue-200
-                                    cursor-pointer
-                                    transition-all duration-200 ease-in-out
-                                    hover:scale-105
-                                    hover:shadow-lg
-                                    hover:shadow-blue-500/50
-                                  "
+                                  className="flex flex-row gap-2 items-center justify-between text-sm font-semibold text-emerald-700 border border-emerald-200/80 rounded-2xl p-2 bg-emerald-50/70 text-center shadow-sm transition hover:bg-emerald-100"
                                   onClick={() => {
                                     let url = '';
                                     if (chain === "ethereum") {
@@ -3966,14 +3859,14 @@ const fetchBuyOrders = async () => {
                                             height={20}
                                             className="w-5 h-5"
                                           />
-                                          <span className="text-lg text-[#409192] font-semibold"
+                                          <span className="text-lg text-emerald-600 font-semibold"
                                             style={{
                                               fontFamily: 'monospace',
                                             }}>
                                             {item?.usdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                                           </span>
                                         </div>
-                                        <span className="text-sm text-zinc-500">
+                                        <span className="text-sm text-slate-600">
                                           테더(USDT) 전송내역
                                         </span>
                                       </div>
@@ -4279,21 +4172,7 @@ const fetchBuyOrders = async () => {
 
 
                             <button
-                              className="
-                              w-full
-                              flex flex-col gap-2 items-center justify-center
-                              bg-purple-500 text-white px-2 py-1 rounded-md hover:bg-purple-600
-                              text-sm
-                              transition duration-300 ease-in-out
-                              transform hover:scale-105
-                              hover:shadow-lg
-                              hover:shadow-purple-500/50
-                              hover:cursor-pointer
-                              hover:transition-transform
-                              hover:duration-300
-                              hover:ease-in-out
-
-                              "
+                              className="w-full flex flex-col gap-2 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
 
                               onClick={() => {
                                 if (item.settlement.txid === "0x" || !item.settlement.txid) {
@@ -4382,7 +4261,7 @@ const fetchBuyOrders = async () => {
                                         height={20}
                                         className="animate-spin"
                                       />
-                                      <span className="text-sm font-semibold text-zinc-500">
+                                      <span className="text-sm font-semibold text-slate-600">
                                         가맹점 결제중...
                                       </span>
                                     </div>
@@ -4427,9 +4306,7 @@ const fetchBuyOrders = async () => {
 
 
                     {item.status === 'ordered' && (new Date().getTime() - new Date(item.createdAt).getTime() > 1000 * 60 * 60 * 24) && (
-                      <div className="absolute inset-0 flex justify-center items-center z-10
-                        bg-black bg-opacity-50
-                      ">
+                      <div className="absolute inset-0 flex justify-center items-center z-10 bg-slate-900/50">
                         <Image
                           src="/icon-expired.png"
                           alt="Expired"
@@ -4441,9 +4318,7 @@ const fetchBuyOrders = async () => {
                     )}
 
                     {item.status === 'cancelled' && (
-                      <div className="absolute inset-0 flex justify-center items-center z-10
-                        bg-black bg-opacity-50
-                      ">
+                      <div className="absolute inset-0 flex justify-center items-center z-10 bg-slate-900/50">
                         <Image
                           src="/icon-cancelled.png"
                           alt="Cancelled"
@@ -4458,11 +4333,11 @@ const fetchBuyOrders = async () => {
                     <article
                         //key={index}
                         className={` w-96 xl:w-full h-full relative
-                          ${item.walletAddress === address ? 'border-green-500' : 'border-gray-200'}
+                          ${item.walletAddress === address ? 'border-emerald-500/60' : 'border-slate-200/80'}
 
-                          ${item.status === 'accepted' || item.status === 'paymentRequested' ? 'border-red-600' : 'border-gray-200'}
+                          ${item.status === 'accepted' || item.status === 'paymentRequested' ? 'border-rose-500/60' : 'border-slate-200/80'}
 
-                          p-4 rounded-md border bg-black bg-opacity-50
+                          p-4 rounded-2xl border bg-white/95 shadow-sm
                       `}
                     >
 
@@ -4497,7 +4372,7 @@ const fetchBuyOrders = async () => {
 
                                 {params.lang === 'ko' ? (
 
-                                  <p className="text-sm text-zinc-500">
+                                  <p className="text-sm text-slate-600">
 
                                   
                                     {
@@ -4516,7 +4391,7 @@ const fetchBuyOrders = async () => {
                                   
                                   ) : (
 
-                                    <p className="text-sm text-zinc-500">
+                                    <p className="text-sm text-slate-600">
 
 
                                   
@@ -4575,7 +4450,7 @@ const fetchBuyOrders = async () => {
                                   width={28}
                                   height={28}
                                 />
-                                <p className="text-sm text-zinc-500">{Expires_in} {
+                                <p className="text-sm text-slate-600">{Expires_in} {
 
                                   24 - Math.floor((new Date().getTime() - new Date(item.createdAt).getTime()) / 1000 / 60 / 60) - 1
 
@@ -4595,7 +4470,7 @@ const fetchBuyOrders = async () => {
                                   width={28}
                                   height={28}
                                 />
-                                <p className="text-sm text-zinc-500">Expired</p>
+                                <p className="text-sm text-slate-600">Expired</p>
                                 */}
                               </div>
                             )}
@@ -4613,7 +4488,7 @@ const fetchBuyOrders = async () => {
                         <div className={`
                           ${item.status !== 'cancelled' && 'h-16'}
 
-                          mb-4 flex flex-row items-center bg-zinc-800 px-2 py-1 rounded-md`}>
+                          mb-4 flex flex-row items-center bg-slate-900/90 px-3 py-2 rounded-full shadow-sm`}>
                             <Image
                               src="/icon-trade.png"
                               alt="Trade"
@@ -4622,12 +4497,12 @@ const fetchBuyOrders = async () => {
                             />
 
 
-                            <p className="text-sm font-semibold text-green-500 ">
+                            <p className="text-sm font-semibold text-emerald-600 ">
                               {item.tradeId}
                             </p>
 
                             {item.status === 'cancelled' ? (
-                              <p className="ml-2 text-sm text-zinc-500">
+                              <p className="ml-2 text-sm text-slate-600">
                                 {new Date(item.acceptedAt)?.toLocaleString()}
                               </p>
                             ) : (
@@ -4635,7 +4510,7 @@ const fetchBuyOrders = async () => {
                               <>
                                 {params.lang === 'ko' ? (
 
-                                  <p className="ml-2 text-sm text-zinc-500">
+                                  <p className="ml-2 text-sm text-slate-600">
 
                                   
                                     {new Date().getTime() - new Date(item.acceptedAt).getTime() < 1000 * 60 ? (
@@ -4654,7 +4529,7 @@ const fetchBuyOrders = async () => {
 
                                 ) : (
 
-                                  <p className="ml-2 text-sm text-zinc-500">
+                                  <p className="ml-2 text-sm text-slate-600">
 
                                     {Trade_Started} {
                                       new Date().getTime() - new Date(item.acceptedAt).getTime() < 1000 * 60 ? (
@@ -4682,7 +4557,7 @@ const fetchBuyOrders = async () => {
 
                               {/* share button */}
                               <button
-                                className="ml-5 text-sm bg-blue-500 text-white px-2 py-1 rounded-md hover:bg-blue-600"
+                                className="ml-5 rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
                                 onClick={() => {
 
                                   //window.open(`https://gold.goodtether.com/${params.lang}/${params.center}/sell-usdt/${item._id}`, '_blank');
@@ -4712,7 +4587,7 @@ const fetchBuyOrders = async () => {
                         {/*
                         
                         {item.acceptedAt && (
-                          <p className="mb-2 text-sm text-zinc-500">
+                          <p className="mb-2 text-sm text-slate-600">
                             Trade started at {new Date(item.acceptedAt).toLocaleDateString() + ' ' + new Date(item.acceptedAt).toLocaleTimeString()}
                           </p>
                         )}
@@ -4729,7 +4604,7 @@ const fetchBuyOrders = async () => {
                               width={20}
                               height={20}
                             />
-                            <p className="text-sm text-red-500">
+                            <p className="text-sm text-rose-600">
                               {Cancelled_at} {
                                 new Date(item.cancelledAt).toLocaleDateString() + ' ' + new Date(item.cancelledAt).toLocaleTimeString()
                               }
@@ -4746,7 +4621,7 @@ const fetchBuyOrders = async () => {
 
 
 
-                          <p className="text-2xl text-zinc-500">
+                          <p className="text-2xl font-semibold text-slate-900 tabular-nums">
                             {Price}: {
                               // currency
                             
@@ -4760,10 +4635,10 @@ const fetchBuyOrders = async () => {
 
                           <div className="mt-2 flex flex-row items-start gap-2">
 
-                            <p className="text-xl font-semibold text-zinc-500">
+                            <p className="text-xl font-semibold text-emerald-600 tabular-nums">
                               {item.usdtAmount}{' '}USDT
                             </p>
-                            <p className="text-lg font-semibold text-zinc-500">{Rate}: {
+                            <p className="text-sm font-semibold text-slate-500">{Rate}: {
 
                               Number(item.krwAmount / item.usdtAmount).toFixed(3)
 
@@ -4804,7 +4679,7 @@ const fetchBuyOrders = async () => {
                               <div className="text-sm font-semibold">
                                 {item.nickname}
                               </div>
-                              <div className="text-lg text-green-500">
+                              <div className="text-lg text-emerald-600">
                                 {item.buyer?.depositName}
                               </div>
                             </div>
@@ -4830,7 +4705,7 @@ const fetchBuyOrders = async () => {
 
                           {address && item.walletAddress !== address && item?.buyer && item?.buyer?.walletAddress === address && (
                             <button
-                              className="bg-green-500 text-white px-4 py-2 rounded-lg"
+                              className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
                               onClick={() => {
                                   //console.log('Buy USDT');
                                   // go to chat
@@ -4869,7 +4744,7 @@ const fetchBuyOrders = async () => {
                                     height: '32px',
                                 }}
                               />
-                              <p className="text-sm text-red-500 font-semibold">
+                              <p className="text-sm text-rose-600 font-semibold">
                                 {Buyer}: {
                                   address && item?.buyer?.nickname ? item?.buyer?.nickname : Anonymous
                                 }
@@ -4899,7 +4774,7 @@ const fetchBuyOrders = async () => {
                                   height: '32px',
                               }}
                             />
-                            <p className="text-xl text-green-500 font-semibold">
+                            <p className="text-xl text-emerald-600 font-semibold">
                               {Seller}: {
                                 item.seller?.nickname
                               }
@@ -4940,7 +4815,7 @@ const fetchBuyOrders = async () => {
                                   {Waiting_for_seller_to_deposit} {item.usdtAmount} USDT {to_escrow}...
                                 </span>
 
-                                <span className="text-sm text-zinc-500">
+                                <span className="text-sm text-slate-600">
 
                                   {If_the_seller_does_not_deposit_the_USDT_to_escrow},
 
@@ -4982,7 +4857,7 @@ const fetchBuyOrders = async () => {
                                       );
                                     }}
                                   />
-                                  <label className="text-sm text-zinc-500">
+                                  <label className="text-sm text-slate-600">
                                     {I_agree_to_cancel_the_trade}
                                   </label>
                                 </div>
@@ -4992,7 +4867,7 @@ const fetchBuyOrders = async () => {
 
                                   <button
                                     disabled={cancellings[index] || !agreementForCancelTrade[index]}
-                                    className={`text-sm bg-red-500 text-white px-2 py-1 rounded-md ${cancellings[index] || !agreementForCancelTrade[index] ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'}`}
+                                    className={`rounded-full bg-rose-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition ${cancellings[index] || !agreementForCancelTrade[index] ? 'opacity-50 cursor-not-allowed' : 'hover:bg-rose-700'}`}
                                     onClick={() => {
 
                                       cancelTrade(item._id, index);
@@ -5004,7 +4879,7 @@ const fetchBuyOrders = async () => {
                                       {cancellings[index] ? (
                                         <div className="
                                           w-4 h-4
-                                          border-2 border-zinc-800
+                                          border-2 border-slate-300
                                           rounded-full
                                           animate-spin
                                         ">
@@ -5043,7 +4918,7 @@ const fetchBuyOrders = async () => {
                         {/* if status is accepted, show payment request button */}
                         {item.status === 'paymentConfirmed' && (
                           <div className="flex flex-col gap-1">
-                            <span className="text-sm font-semibold text-green-500">
+                            <span className="text-sm font-semibold text-emerald-600">
                               {Completed}
                             </span>
                             <span>{
@@ -5077,7 +4952,11 @@ const fetchBuyOrders = async () => {
                             <button
                               disabled={escrowing[index] || requestingPayment[index] || !requestPaymentCheck[index]}
                               
-                              className={`flex flex-row gap-1 text-sm text-white px-2 py-1 rounded-md ${escrowing[index] || requestingPayment[index] || !requestPaymentCheck[index] ? 'bg-gray-500' : 'bg-green-500'}`}
+                              className={`flex flex-row items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold shadow-sm transition ${
+                                escrowing[index] || requestingPayment[index] || !requestPaymentCheck[index]
+                                  ? 'bg-slate-200 text-slate-400'
+                                  : 'bg-slate-900 text-white hover:bg-slate-800'
+                              }`}
                               onClick={() => {
 
                                 requestPayment(
@@ -5118,7 +4997,7 @@ const fetchBuyOrders = async () => {
                                 />
                                 <div>{Escrow}: {item.usdtAmount} USDT</div>
                                 <button
-                                  className="bg-white text-black px-2 py-2 rounded-md"
+                                  className="rounded-full border border-slate-200/80 bg-white px-2 py-2 text-slate-700 shadow-sm transition hover:bg-slate-50"
                                   onClick={() => {
                         
                                       params.center === 'arbitrum' ? window.open(`https://arbiscan.io/tx/${item.escrowTransactionHash}`) : window.open(`https://arbiscan.io/tx/${item.escrowTransactionHash}`);
@@ -5241,7 +5120,7 @@ const fetchBuyOrders = async () => {
                                                   );
                                               }}
                                             />
-                                            <label className="text-sm text-zinc-500">
+                                            <label className="text-sm text-slate-600">
                                               {I_agree_to_the_terms_of_trade}
                                             </label>
                                           </div>
@@ -5253,14 +5132,14 @@ const fetchBuyOrders = async () => {
                                           {address && agreementForTrade[index] && (
                                             <div className="mt-8 flex flex-row items-center justify-start gap-2">
 
-                                              <span className="text-sm text-zinc-500">SMS</span>
+                                              <span className="text-sm text-slate-600">SMS</span>
 
                                               <div className="flex flex-col items-start justify-start">
                                                 <input
                                                   disabled={!address || !agreementForTrade[index]}
                                                   type="text"
                                                   placeholder="SMS Receiver Mobile Number"
-                                                  className={`w-full px-4 py-2 rounded-md text-black`}
+                                                  className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                                                   value={smsReceiverMobileNumber}
                                                   onChange={(e) => {
                                                       setSmsReceiverMobileNumber(e.target.value);
@@ -5272,9 +5151,11 @@ const fetchBuyOrders = async () => {
 
                                           <button
                                             disabled={!address || !agreementForTrade[index]}
-                                            className={`m-10 text-lg text-white px-4 py-2 rounded-md
-                                              ${!address || !agreementForTrade[index] ? 'bg-zinc-800' : 'bg-green-500 hover:bg-green-600'}
-                                              `}
+                                            className={`m-10 rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                                              !address || !agreementForTrade[index]
+                                                ? 'bg-slate-200 text-slate-400'
+                                                : 'bg-slate-900 text-white hover:bg-slate-800'
+                                            }`}
                                             onClick={() => {
   
                                                 acceptBuyOrder(index, item._id, smsReceiverMobileNumber);
@@ -5318,7 +5199,7 @@ const fetchBuyOrders = async () => {
                     {/* status */}
                     {/*
                     <div className="absolute bottom-4 right-4 flex flex-row items-start justify-start">
-                      <div className="text-sm text-zinc-500">
+                      <div className="text-sm text-slate-600">
                         {item.status === 'ordered' ? 'Order opened at ' + new Date(item.createdAt)?.toLocaleString()
                         : item.status === 'accepted' ? 'Trade started at ' + new Date(item.acceptedAt)?.toLocaleString()
                         : item.status === 'paymentRequested' ? 'Payment requested at ' + new Date(item.paymentRequestedAt)?.toLocaleString()
@@ -5349,7 +5230,7 @@ const fetchBuyOrders = async () => {
 
       
 
-          <div className="mt-4 flex flex-row items-center justify-center gap-4">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm">
 
 
             <div className="flex flex-row items-center gap-2">
@@ -5360,7 +5241,7 @@ const fetchBuyOrders = async () => {
                   router.push(`/${params.lang}/administration/trade-history?storecode=${searchStorecode}&limit=${Number(e.target.value)}&page=${page}`)
                 }
 
-                className="text-sm bg-zinc-800 text-zinc-200 px-2 py-1 rounded-md"
+                className="rounded-full border border-slate-200/80 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm"
               >
                 <option value={10}>10</option>
                 <option value={20}>20</option>
@@ -5372,7 +5253,11 @@ const fetchBuyOrders = async () => {
             {/* 처음으로 */}
             <button
               disabled={Number(page) <= 1}
-              className={`text-sm text-white px-4 py-2 rounded-md ${Number(page) <= 1 ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                Number(page) <= 1
+                  ? 'bg-slate-200 text-slate-400'
+                  : 'bg-slate-900 text-white hover:bg-slate-800'
+              }`}
               onClick={() => {
                 router.push(`/${params.lang}/administration/trade-history?storecode=${searchStorecode}&limit=${Number(limit)}&page=1`)
               }}
@@ -5383,7 +5268,11 @@ const fetchBuyOrders = async () => {
 
             <button
               disabled={Number(page) <= 1}
-              className={`text-sm text-white px-4 py-2 rounded-md ${Number(page) <= 1 ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                Number(page) <= 1
+                  ? 'bg-slate-200 text-slate-400'
+                  : 'bg-slate-900 text-white hover:bg-slate-800'
+              }`}
               onClick={() => {
                 
                 router.push(`/${params.lang}/administration/trade-history?storecode=${searchStorecode}&limit=${Number(limit)}&page=${Number(page) - 1}`)
@@ -5395,14 +5284,18 @@ const fetchBuyOrders = async () => {
             </button>
 
 
-            <span className="text-sm text-zinc-500">
+            <span className="text-sm font-semibold text-slate-600">
               {page} / {Math.ceil(Number(totalCount) / Number(limit))}
             </span>
 
 
             <button
               disabled={Number(page) >= Math.ceil(Number(totalCount) / Number(limit))}
-              className={`text-sm text-white px-4 py-2 rounded-md ${Number(page) >= Math.ceil(Number(totalCount) / Number(limit)) ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                Number(page) >= Math.ceil(Number(totalCount) / Number(limit))
+                  ? 'bg-slate-200 text-slate-400'
+                  : 'bg-slate-900 text-white hover:bg-slate-800'
+              }`}
               onClick={() => {
                 
                 router.push(`/${params.lang}/administration/trade-history?storecode=${searchStorecode}&limit=${Number(limit)}&page=${Number(page) + 1}`)
@@ -5415,7 +5308,11 @@ const fetchBuyOrders = async () => {
             {/* 마지막으로 */}
             <button
               disabled={Number(page) >= Math.ceil(Number(totalCount) / Number(limit))}
-              className={`text-sm text-white px-4 py-2 rounded-md ${Number(page) >= Math.ceil(Number(totalCount) / Number(limit)) ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                Number(page) >= Math.ceil(Number(totalCount) / Number(limit))
+                  ? 'bg-slate-200 text-slate-400'
+                  : 'bg-slate-900 text-white hover:bg-slate-800'
+              }`}
               onClick={() => {
                 
                 router.push(`/${params.lang}/administration/trade-history?storecode=${searchStorecode}&limit=${Number(limit)}&page=${Math.ceil(Number(totalCount) / Number(limit))}`)
@@ -5476,40 +5373,40 @@ const TradeDetail = (
   
     return (
 
-      <div className="max-w-2xl mx-auto bg-white shadow-lg rounded-lg p-6">
+      <div className="max-w-2xl mx-auto bg-white/95 border border-slate-200/80 shadow-sm rounded-2xl p-6">
         <div className="flex items-center">
-          <span className="inline-block w-4 h-4 rounded-full bg-green-500 mr-2"></span>
-          <h2 className="text-lg font-semibold text-black ">Iskan9</h2>
-          <span className="ml-2 text-blue-500 text-sm">318 trades</span>
+          <span className="inline-block w-4 h-4 rounded-full bg-emerald-500 mr-2"></span>
+          <h2 className="text-lg font-semibold text-slate-900">Iskan9</h2>
+          <span className="ml-2 text-slate-500 text-sm">318 trades</span>
         </div>
-        <p className="text-gray-600 mt-2">The offer is taken from another source. You can only use chat if the trade is open.</p>
+        <p className="text-slate-600 mt-2">The offer is taken from another source. You can only use chat if the trade is open.</p>
         
         <div className="mt-4">
-          <div className="flex justify-between text-gray-700">
+          <div className="flex justify-between text-slate-700">
             <span>Price</span>
             <span>{price} KRW</span>
           </div>
-          <div className="flex justify-between text-gray-700 mt-2">
+          <div className="flex justify-between text-slate-700 mt-2">
             <span>Limit</span>
             <span>40680.00 KRW - 99002.9 KRW</span>
           </div>
-          <div className="flex justify-between text-gray-700 mt-2">
+          <div className="flex justify-between text-slate-700 mt-2">
             <span>Available</span>
             <span>1085.91 USDT</span>
           </div>
-          <div className="flex justify-between text-gray-700 mt-2">
+          <div className="flex justify-between text-slate-700 mt-2">
             <span>Seller&apos;s payment method</span>
-            <span className="bg-yellow-100 text-yellow-800 px-2 rounded-full">Tinkoff</span>
+            <span className="bg-amber-100 text-amber-700 border border-amber-200/80 px-2 rounded-full text-xs font-semibold">Tinkoff</span>
           </div>
-          <div className="mt-4 text-gray-700">
+          <div className="mt-4 text-slate-700">
             <p>24/7</p>
           </div>
         </div>
   
-        <div className="mt-6 border-t pt-4 text-gray-700">
+        <div className="mt-6 border-t border-slate-200/80 pt-4 text-slate-700">
           <div className="flex flex-col space-y-4">
             <div>
-              <label className="block text-gray-700">I want to pay</label>
+              <label className="block text-slate-700">I want to pay</label>
               <input 
                 type="number"
                 value={amount}
@@ -5517,32 +5414,32 @@ const TradeDetail = (
                     e.target.value === '' ? 0 : parseInt(e.target.value)
                 ) }
 
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
               />
             </div>
             <div>
-              <label className="block text-gray-700">I will receive</label>
+              <label className="block text-slate-700">I will receive</label>
               <input 
                 type="text"
                 value={`${receiveAmount} USDT`}
                 readOnly
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
               />
             </div>
             <div>
-              <label className="block text-gray-700">Commission</label>
+              <label className="block text-slate-700">Commission</label>
               <input 
                 type="text"
                 value={`${commission} USDT`}
                 readOnly
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
               />
             </div>
           </div>
           
-          <div className="mt-6 flex space-x-4">
+          <div className="mt-6 flex flex-col sm:flex-row gap-3">
             <button
-                className="bg-green-500 text-white px-4 py-2 rounded-lg"
+                className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
                 onClick={() => {
                     console.log('Buy USDT');
                     // go to chat
@@ -5555,7 +5452,7 @@ const TradeDetail = (
                 Buy USDT
             </button>
             <button
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg"
+                className="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-300"
                 onClick={() => {
                     console.log('Cancel');
                     // close modal
@@ -5572,6 +5469,3 @@ const TradeDetail = (
       </div>
     );
   };
-
-
-
