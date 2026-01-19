@@ -1098,7 +1098,7 @@ export default function SettingsPage({ params }: any) {
 
     return (
 
-        <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+        <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
 
             <div className="py-0 w-full">
         
@@ -1543,13 +1543,8 @@ export default function SettingsPage({ params }: any) {
                                     className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                                     placeholder={Enter_your_account_number}
                                     value={accountNumber}
-                                    type='number'
+                                    type='text'
                                     onChange={(e) => {
-
-                                        // check if the value is a number
-
-                                        e.target.value = e.target.value.replace(/[^0-9]/g, '');
-
                                         setAccountNumber(e.target.value);
                                     }}
                                 />
@@ -2094,6 +2089,48 @@ export default function SettingsPage({ params }: any) {
 
 
 
+            </div>
+
+            <div className="fixed left-0 right-0 bottom-4 z-30 px-4 pb-[env(safe-area-inset-bottom)]">
+                <div className="mx-auto w-full max-w-screen-sm">
+                    <div className="w-full rounded-2xl border border-slate-200/80 bg-white/90 p-2 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.25)] backdrop-blur">
+                        <div className="grid w-full grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => router.push('/' + params.lang + '/administration/profile-settings')}
+                                className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white/90 px-3 py-2 text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-md"
+                            >
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                                    <Image
+                                        src="/icon-user.png"
+                                        alt="Profile Settings"
+                                        width={20}
+                                        height={20}
+                                        className="h-5 w-5"
+                                    />
+                                </div>
+                                <span className="text-[11px] font-semibold">프로필 설정</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => router.push('/' + params.lang + '/administration/seller-settings')}
+                                className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-slate-900/80 bg-slate-900 px-3 py-2 text-white shadow-[0_16px_40px_-28px_rgba(15,23,42,0.6)] transition hover:-translate-y-0.5 hover:bg-slate-800"
+                            >
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white">
+                                    <Image
+                                        src="/icon-seller.png"
+                                        alt="Seller Settings"
+                                        width={20}
+                                        height={20}
+                                        className="h-5 w-5"
+                                    />
+                                </div>
+                                <span className="text-[11px] font-semibold">판매자 설정</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </main>
