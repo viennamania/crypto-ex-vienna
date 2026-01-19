@@ -56,14 +56,6 @@ type StablecoinNewsItem = {
     image: string;
 };
 
-type SellerChatItem = {
-    channelUrl: string;
-    members: { userId: string; nickname?: string; profileUrl?: string }[];
-    lastMessage?: string;
-    updatedAt?: number;
-    unreadMessageCount?: number;
-};
-
 const STABLECOIN_NEWS: StablecoinNewsItem[] = [
     {
         id: 'stable-news-01',
@@ -241,7 +233,7 @@ const getBalanceTone = (balance: number, totalBalance: number) => {
     const ratio = totalBalance > 0 ? balance / totalBalance : 0;
     if (ratio >= 0.15) {
         return {
-            card: 'border-amber-200/80 bg-amber-50/85 shadow-[0_22px_60px_-38px_rgba(251,191,36,0.65)]',
+            card: 'border-amber-200/80 bg-amber-50 shadow-[0_22px_60px_-38px_rgba(251,191,36,0.65)]',
             glow: 'bg-amber-300/55',
             amount: 'text-amber-700',
             pill: 'border-amber-200/80 bg-amber-100/80 text-amber-700',
@@ -249,7 +241,7 @@ const getBalanceTone = (balance: number, totalBalance: number) => {
     }
     if (ratio >= 0.07) {
         return {
-            card: 'border-sky-200/80 bg-sky-50/85 shadow-[0_22px_60px_-38px_rgba(56,189,248,0.55)]',
+            card: 'border-sky-200/80 bg-sky-50 shadow-[0_22px_60px_-38px_rgba(56,189,248,0.55)]',
             glow: 'bg-sky-300/45',
             amount: 'text-sky-700',
             pill: 'border-sky-200/80 bg-sky-100/80 text-sky-700',
@@ -257,14 +249,14 @@ const getBalanceTone = (balance: number, totalBalance: number) => {
     }
     if (ratio >= 0.03) {
         return {
-            card: 'border-emerald-200/80 bg-emerald-50/85 shadow-[0_22px_60px_-38px_rgba(16,185,129,0.55)]',
+            card: 'border-emerald-200/80 bg-emerald-50 shadow-[0_22px_60px_-38px_rgba(16,185,129,0.55)]',
             glow: 'bg-emerald-300/45',
             amount: 'text-emerald-700',
             pill: 'border-emerald-200/80 bg-emerald-100/80 text-emerald-700',
         };
     }
     return {
-        card: 'border-slate-200/70 bg-white/80 shadow-[0_18px_45px_-34px_rgba(15,23,42,0.6)]',
+        card: 'border-slate-200/70 bg-white shadow-[0_18px_45px_-34px_rgba(15,23,42,0.6)]',
         glow: 'bg-amber-200/40',
         amount: 'text-slate-900',
         pill: 'border-slate-200/70 bg-white/80 text-slate-600',
@@ -279,9 +271,6 @@ const maskName = (value: string) => {
     const visible = trimmed.slice(0, Math.min(3, trimmed.length));
     return `${visible}***`;
 };
-
-const formatWalletShort = (value: string) =>
-    value.length > 10 ? `${value.slice(0, 6)}...${value.slice(-4)}` : value;
 
 const formatRelativeTime = (value?: string) => {
     if (!value) {
@@ -306,13 +295,6 @@ const formatRelativeTime = (value?: string) => {
     }
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays}일 전`;
-};
-
-const formatRelativeTimeFromMs = (value?: number) => {
-    if (!value) {
-        return '--';
-    }
-    return formatRelativeTime(new Date(value).toISOString());
 };
 
 export default function OrangeXPage() {
@@ -341,10 +323,6 @@ export default function OrangeXPage() {
     const [newsItems, setNewsItems] = useState<StablecoinNewsItem[]>(() => STABLECOIN_NEWS);
     const [newsUpdatedAt, setNewsUpdatedAt] = useState<string | null>(null);
     const [newsError, setNewsError] = useState<string | null>(null);
-    const [sellerChatItems, setSellerChatItems] = useState<SellerChatItem[]>([]);
-    const [sellerChatUpdatedAt, setSellerChatUpdatedAt] = useState<string | null>(null);
-    const [sellerChatLoading, setSellerChatLoading] = useState(false);
-    const [sellerChatError, setSellerChatError] = useState<string | null>(null);
     const newsTickerRef = useRef<HTMLDivElement | null>(null);
     const newsTickerPauseUntilRef = useRef(0);
     const newsTickerOffsetRef = useRef(0);
@@ -1049,17 +1027,6 @@ export default function OrangeXPage() {
         )
         .slice(0, 12);
 
-    const chatTargetSeller = bestSellers.find((seller) => seller?.walletAddress) ?? null;
-    const chatTargetWalletAddress = chatTargetSeller?.walletAddress || '';
-    const chatTargetName = chatTargetSeller
-        ? maskName(
-              chatTargetSeller?.nickname ||
-                  chatTargetSeller?.store?.storeName ||
-                  chatTargetSeller?.walletAddress ||
-                  '판매자'
-          )
-        : '판매자';
-
     useEffect(() => {
         const ticker = sellerTickerRef.current;
         if (!ticker || typeof window === 'undefined') {
@@ -1099,63 +1066,6 @@ export default function OrangeXPage() {
             window.cancelAnimationFrame(frame);
         };
     }, [bestSellers.length]);
-
-    useEffect(() => {
-        let isMounted = true;
-
-        const fetchSellerChats = async () => {
-            if (!chatTargetWalletAddress) {
-                if (isMounted) {
-                    setSellerChatItems([]);
-                    setSellerChatUpdatedAt(null);
-                    setSellerChatError(null);
-                }
-                return;
-            }
-
-            setSellerChatLoading(true);
-            setSellerChatError(null);
-
-            try {
-                const response = await fetch('/api/sendbird/user-channels', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: chatTargetWalletAddress,
-                        limit: 10,
-                    }),
-                });
-
-                if (!response.ok) {
-                    const error = await response.json().catch(() => null);
-                    throw new Error(error?.error || '대화목록을 불러오지 못했습니다.');
-                }
-
-                const data = (await response.json()) as { items?: SellerChatItem[] };
-                if (isMounted) {
-                    setSellerChatItems(Array.isArray(data.items) ? data.items : []);
-                    setSellerChatUpdatedAt(new Date().toISOString());
-                }
-            } catch (error) {
-                if (isMounted) {
-                    const message = error instanceof Error ? error.message : '대화목록을 불러오지 못했습니다.';
-                    setSellerChatError(message);
-                }
-            } finally {
-                if (isMounted) {
-                    setSellerChatLoading(false);
-                }
-            }
-        };
-
-        fetchSellerChats();
-        const intervalId = window.setInterval(fetchSellerChats, 20000);
-
-        return () => {
-            isMounted = false;
-            window.clearInterval(intervalId);
-        };
-    }, [chatTargetWalletAddress]);
 
     return (
         <div
@@ -1706,67 +1616,6 @@ export default function OrangeXPage() {
                         </div>
                     </div>
 
-                    <div className="mb-6 rounded-2xl border border-slate-200/70 bg-white/75 p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.6)] backdrop-blur">
-                        <div className="flex items-center justify-between gap-3 mb-3">
-                            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
-                                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-700">
-                                    Q
-                                </span>
-                                구매자 문의
-                                <span className="rounded-full border border-slate-200/70 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                                    {chatTargetName}
-                                </span>
-                            </div>
-                            <span className="text-[11px] font-semibold text-slate-400">
-                                {sellerChatLoading
-                                    ? '불러오는 중...'
-                                    : sellerChatUpdatedAt
-                                    ? `업데이트 ${new Date(sellerChatUpdatedAt).toLocaleTimeString('ko-KR', {
-                                          hour12: false,
-                                      })}`
-                                    : '최근 5건'}
-                            </span>
-                        </div>
-                        {sellerChatError ? (
-                            <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-700">
-                                {sellerChatError}
-                            </div>
-                        ) : sellerChatItems.length === 0 ? (
-                            <div className="rounded-xl border border-slate-200/70 bg-white/85 px-3 py-3 text-xs text-slate-600">
-                                최근 문의가 없습니다.
-                            </div>
-                        ) : (
-                            <div className="chat-preview-list space-y-2 pr-1">
-                                {sellerChatItems.map((chat) => {
-                                    const otherMember =
-                                        chat.members.find((member) => member.userId !== chatTargetWalletAddress) ||
-                                        chat.members[0];
-                                    const buyerLabel = otherMember?.nickname
-                                        ? maskName(otherMember.nickname)
-                                        : formatWalletShort(otherMember?.userId || '구매자');
-                                    return (
-                                        <div
-                                            key={chat.channelUrl}
-                                            className="flex items-center justify-between gap-3 rounded-xl border border-slate-200/70 bg-white/85 px-3 py-2 text-xs"
-                                        >
-                                            <div className="flex min-w-0 items-center gap-2">
-                                                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                                                    {buyerLabel}
-                                                </span>
-                                                <span className="truncate text-slate-700">
-                                                    {chat.lastMessage || '최근 메시지가 없습니다.'}
-                                                </span>
-                                            </div>
-                                            <span className="shrink-0 text-[11px] font-semibold text-slate-400">
-                                                {formatRelativeTimeFromMs(chat.updatedAt)}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-
                     {/* 베스트 셀러 티커 */}
                     
                     {bestSellers.length === 0 ? (
@@ -1803,7 +1652,7 @@ export default function OrangeXPage() {
                                         return (
                                             <div
                                                 key={`${seller?.walletAddress || index}`}
-                                                className={`seller-card relative flex flex-col gap-4 rounded-2xl border p-4 backdrop-blur ${balanceTone.card}`}
+                                                className={`seller-card relative flex flex-col gap-4 rounded-2xl border p-4 ${balanceTone.card}`}
                                             >
                                                 <span
                                                     className={`pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full blur-2xl ${balanceTone.glow}`}

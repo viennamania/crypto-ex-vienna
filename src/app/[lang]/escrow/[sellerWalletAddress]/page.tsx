@@ -4220,7 +4220,9 @@ const fetchBuyOrders = async () => {
   // API /api/order/buyOrderPrivateSale
 
   // buyAmountInputs
+  const MAX_BUY_AMOUNT = 100000;
   const [buyAmountInputs, setBuyAmountInputs] = useState<number[]>([]);
+  const [buyAmountOverLimitArray, setBuyAmountOverLimitArray] = useState<boolean[]>([]);
 
   /*
   useEffect(() => {
@@ -4257,6 +4259,11 @@ const fetchBuyOrders = async () => {
 
     if (!buyAmountInputs[index] || buyAmountInputs[index] <= 0) {
       toast.error('구매 금액을 입력해주세요.');
+      return;
+    }
+
+    if (buyAmountInputs[index] > MAX_BUY_AMOUNT) {
+      toast.error('구매 수량은 100,000 USDT 이하로 입력해주세요.');
       return;
     }
 
@@ -7305,9 +7312,14 @@ const fetchBuyOrders = async () => {
                                         placeholder="구매할 USDT 수량"
                                         onChange={(e) => {
                                           const rawValue = e.target.value.replace(/[^\d]/g, '');
+                                          const numericValue = rawValue ? Math.floor(Number(rawValue)) : 0;
+                                          const isOverLimit = numericValue > MAX_BUY_AMOUNT;
                                           const newBuyAmountInputs = [...buyAmountInputs];
-                                          newBuyAmountInputs[index] = rawValue ? Math.floor(Number(rawValue)) : 0;
+                                          newBuyAmountInputs[index] = Math.min(numericValue, MAX_BUY_AMOUNT);
                                           setBuyAmountInputs(newBuyAmountInputs);
+                                          const newBuyAmountOverLimitArray = [...buyAmountOverLimitArray];
+                                          newBuyAmountOverLimitArray[index] = isOverLimit;
+                                          setBuyAmountOverLimitArray(newBuyAmountOverLimitArray);
                                         }}
                                         value={buyAmountInputs[index]
                                           ? buyAmountInputs[index].toLocaleString()
@@ -7319,7 +7331,7 @@ const fetchBuyOrders = async () => {
                                           ? 'border border-slate-200 bg-white text-slate-900'
                                           : 'border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
                                           }
-                                          w-full rounded-2xl px-5 py-4 pr-16 text-right text-2xl font-semibold tracking-tight shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)] placeholder:text-left placeholder:text-lg placeholder:font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500
+                                          w-full rounded-2xl px-5 py-4 pr-16 text-right text-4xl font-extrabold tracking-tight shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)] placeholder:text-left placeholder:text-xl placeholder:font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500
                                         `}
                                         disabled={!address || !user?.buyer?.bankInfo || buyOrderingPrivateSaleArray[index]}
                                       />
@@ -7327,6 +7339,11 @@ const fetchBuyOrders = async () => {
                                         USDT
                                       </span>
                                     </div>
+                                    {buyAmountOverLimitArray[index] && (
+                                      <span className="text-sm font-semibold text-rose-600">
+                                        100,000 USDT 이하만 입력할 수 있습니다.
+                                      </span>
+                                    )}
                                     {/* 구매할 USDT 수량을 입력해주세요. */}
                                     <span className="text-sm text-slate-600">
                                       구매할 USDT 수량을 입력해주세요.
