@@ -1257,12 +1257,11 @@ export default function Index({ params }: any) {
             
             theme={"light"}
 
-            // button color is dark skyblue convert (49, 103, 180) to hex
+            // button color is slate-900
             connectButton={{
               style: {
-                backgroundColor: "#0047ab", // cobalt blue
-
-                color: "#f3f4f6", // gray-300 
+                backgroundColor: "#0f172a", // slate-900
+                color: "#f8fafc", // slate-50
                 padding: "2px 2px",
                 borderRadius: "10px",
                 fontSize: "14px",
@@ -1294,7 +1293,7 @@ export default function Index({ params }: any) {
 
         <h1 className="text-2xl font-bold">접근권한을 확인중입니다...</h1>
         <p className="text-lg">이 페이지에 접근할 권한이 없습니다.</p>
-        <div className="text-lg text-gray-500">{address}</div>
+        <div className="text-lg text-slate-500">{address}</div>
 
 
 
@@ -1310,23 +1309,18 @@ export default function Index({ params }: any) {
 
   return (
 
-    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto">
+    <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
 
 
       <div className="py-0 w-full">
 
 
-        <div className="w-full flex flex-col xl:flex-row items-center justify-center gap-2 bg-black/10 p-2 rounded-lg mb-4">
+        <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-3 rounded-2xl border border-slate-200/70 bg-white/90 p-3 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.25)] backdrop-blur mb-4">
             
            <div className="w-full flex flex-row items-center justify-start gap-2">
              <button
                onClick={() => router.push('/' + params.lang + '/administration')}
-               className="flex items-center justify-center gap-2
-                rounded-lg p-2
-                hover:bg-black/20
-                hover:cursor-pointer
-                hover:scale-105
-                transition-transform duration-200 ease-in-out"
+               className="flex items-center justify-center gap-2 rounded-full border border-slate-200/70 bg-white/90 p-2 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
 
              >
                <Image
@@ -1348,7 +1342,7 @@ export default function Index({ params }: any) {
                 onClick={() => {
                   router.push('/' + params.lang + '/administration/profile-settings');
                 }}
-                className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                className="group inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_-26px_rgba(15,23,42,0.6)] transition hover:bg-slate-800"
               >
                 <div className="flex flex-row items-center justify-center gap-2">
                   {isAdmin && (
@@ -1360,12 +1354,12 @@ export default function Index({ params }: any) {
                         height={20}
                         className="rounded-lg w-5 h-5"
                       />
-                      <span className="text-sm text-[#f3f4f6]">
+                      <span className="text-sm text-white/90">
                         센터 관리자
                       </span>
                     </div>
                   )}
-                  <span className="text-sm text-[#f3f4f6]">
+                  <span className="text-sm text-white">
                     {user?.nickname || "프로필"}
                   </span>
 
@@ -1393,12 +1387,11 @@ export default function Index({ params }: any) {
               
               theme={"light"}
 
-              // button color is dark skyblue convert (49, 103, 180) to hex
+              // button color is slate-900
               connectButton={{
                 style: {
-                  backgroundColor: "#0047ab", // cobalt blue
-
-                  color: "#f3f4f6", // gray-300 
+                  backgroundColor: "#0f172a", // slate-900
+                  color: "#f8fafc", // slate-50
                   padding: "2px 2px",
                   borderRadius: "10px",
                   fontSize: "14px",
@@ -1434,7 +1427,7 @@ export default function Index({ params }: any) {
 
 
 
-        <div className="mt-4 flex flex-col items-start justify-center gap-2 w-full">
+        <div className="flex flex-col items-start justify-center gap-2 mt-4">
 
 
 
@@ -1466,21 +1459,16 @@ export default function Index({ params }: any) {
 
             {/* 홈 / 가맹점관리 / 에이전트관리 / 회원관리 / P2P구매관리 */}
             {/* memnu buttons same width left side */}
-            <div className="grid grid-cols-3 xl:grid-cols-6 gap-2 items-center justify-start mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 items-center justify-start mb-4">
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/store')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#0047ab]/80
-                  hover:cursor-pointer
-                  hover:scale-105
-                  transition-transform duration-200 ease-in-out
-                  ">
+                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
+                  >
                   가맹점관리
               </button>
 
-              <div className='flex w-32 items-center justify-center gap-2
-              bg-yellow-500 text-[#3167b4] text-sm rounded-lg p-2'>
+              <div className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-900/80 bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-[0_16px_40px_-28px_rgba(15,23,42,0.6)]">
                 <Image
                   src="/icon-agent.png"
                   alt="Agent"
@@ -1488,41 +1476,29 @@ export default function Index({ params }: any) {
                   height={35}
                   className="w-4 h-4"
                 />
-                <div className="text-sm font-semibold">
+                <div className="text-xs font-semibold">
                   에이전트관리
                 </div>
               </div>
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/member')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#0047ab]/80
-                  hover:cursor-pointer
-                  hover:scale-105
-                  transition-transform duration-200 ease-in-out
-                  ">
+                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
+                  >
                   회원관리
               </button>
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/buyorder')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#0047ab]/80
-                  hover:cursor-pointer
-                  hover:scale-105
-                  transition-transform duration-200 ease-in-out
-                  ">
+                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
+                  >
                   P2P구매관리
               </button>
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/trade-history')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#0047ab]/80
-                  hover:cursor-pointer
-                  hover:scale-105
-                  transition-transform duration-200 ease-in-out
-                  ">
+                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
+                  >
                   거래내역
               </button>
 
@@ -1543,23 +1519,15 @@ export default function Index({ params }: any) {
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/trade-history-daily')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#0047ab]/80
-                  hover:cursor-pointer
-                  hover:scale-105
-                  transition-transform duration-200 ease-in-out
-                  ">
+                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
+                  >
                   통계(가맹)
               </button>
 
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/trade-history-daily-agent')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#0047ab]/80
-                  hover:cursor-pointer
-                  hover:scale-105
-                  transition-transform duration-200 ease-in-out
-                  ">
+                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
+                  >
                   통계(AG)
               </button>
 
@@ -1567,8 +1535,8 @@ export default function Index({ params }: any) {
               {version !== 'bangbang' && (
               <button
                   onClick={() => router.push('/' + params.lang + '/administration/escrow-history')}
-                  className="flex w-32 bg-[#0047ab] text-[#f3f4f6] text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-[#0047ab]/80
+                  className="flex w-32 bg-slate-900 text-white text-sm rounded-lg p-2 items-center justify-center
+                  hover:bg-slate-900/80
                   hover:cursor-pointer
                   hover:scale-105
                   transition-transform duration-200 ease-in-out
@@ -1582,7 +1550,8 @@ export default function Index({ params }: any) {
 
 
 
-            <div className='flex flex-row items-center gap-2 justify-start w-full'>
+            <div className="w-full flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-3">
                 <Image
                   src="/icon-agent.png"
                   alt="Agent"
@@ -1591,136 +1560,119 @@ export default function Index({ params }: any) {
                   className="w-6 h-6"
                 />
 
-                <div className="text-xl font-semibold">
+                <div className="text-lg font-semibold text-slate-900">
                   에이전트관리
                 </div>
-
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {Total}
+                </span>
+                <span className="text-2xl font-semibold text-slate-900 tabular-nums">
+                  {totalCount || 0}
+                </span>
+              </div>
             </div>
 
-
-
-
-              <div className="w-full flex flex-row items-center justify-end gap-2">
-
-
-                <div className="flex flex-col gap-2 items-center">
-                  <div className="text-sm">전체수량</div>
-                  <div className="flex flex-row items-center gap-2">
-                    {
-  
-                        totalCount || 0
-                    
-                    }
-                  </div>
-                </div>
-
-
-                <div className="flex flex-col gap-2 items-center">
-                  <div className="text-sm">검색수량</div>
-                  <div className="flex flex-row items-center gap-2">
-                    {
-   
-                        searchCount || 0
-
-                    }
-                  </div>
-                </div>
-
-              </div>
-
-              <div className="w-full flex flex-col xl:flex-row items-start justify-between gap-5">
+              <div className="w-full flex flex-col xl:flex-row items-start justify-between gap-3">
 
                 {/* 에이전트 추가 input and button */}
-                <div className="flex flex-row items-center gap-2">
-                  <input
+                <div className="w-full flex flex-col items-start justify-center gap-3 rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
+                    <span className="text-sm font-semibold text-slate-700">신규 에이전트 등록</span>
+                  </div>
+                  <div className="w-full flex flex-col xl:flex-row items-center gap-2">
+                    <input
+                      disabled={!isAdmin || insertingAgent}
+                      type="text"
+                      value={agentCode}
+                      onChange={(e) => {
+
+                        setAgentCode(e.target.value)
+
+                      } }
+                      placeholder="에이전트 코드"
+                      className="hidden w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    />
+                    <input
+                      disabled={!isAdmin || insertingAgent}
+                      type="text"
+                      value={agentName}
+                      onChange={(e) => {
+
+                        setAgentName(e.target.value)
+
+                      } }
+                      placeholder="에이전트 이름"
+                      className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    />
                     
-                    
-                    disabled={!isAdmin || insertingAgent}
+                    <button
+                      disabled={!isAdmin || insertingAgent}
+                      onClick={() => {
 
+                        // check if agent code already exists
+                        if (allAgent?.find((item) => item.agentcode === agentCode)) {
+                          toast.error('에이전트 코드가 이미 존재합니다.');
+                          return;
+                        }
 
-                    type="text"
-                    value={agentCode}
-                    onChange={(e) => {
+                        // check if agent name length is less than 2
+                        if (agentName.length < 2) {
+                          toast.error('에이전트 이름은 2자 이상이어야 합니다.');
+                          return;
+                        }
+                        // check if agent name length is less than 20
+                        if (agentName.length > 10) {
+                          toast.error('에이전트 이름은 10자 이하여야 합니다.');
+                          return;
+                        }
 
-                      setAgentCode(e.target.value)
-
-                    } }
-                    placeholder="에이전트 코드"
-                    className="hidden w-full p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <input
-                    disabled={!isAdmin || insertingAgent}
-                    type="text"
-                    value={agentName}
-                    onChange={(e) => {
-
-                      setAgentName(e.target.value)
-
-                    } }
-                    placeholder="에이전트 이름"
-                    className="w-52 p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  
-                  <button
-                    disabled={!isAdmin || insertingAgent}
-                    onClick={() => {
-
-                      // check if agent code already exists
-                      if (allAgent?.find((item) => item.agentcode === agentCode)) {
-                        toast.error('에이전트 코드가 이미 존재합니다.');
-                        return;
-                      }
-
-                      // check if agent name length is less than 2
-                      if (agentName.length < 2) {
-                        toast.error('에이전트 이름은 2자 이상이어야 합니다.');
-                        return;
-                      }
-                      // check if agent name length is less than 20
-                      if (agentName.length > 10) {
-                        toast.error('에이전트 이름은 10자 이하여야 합니다.');
-                        return;
-                      }
-
-                      insertAgent();
-                    }}
-                    className={`bg-[#0047ab] text-white px-4 py-2 rounded-lg w-full
-                      ${!isAdmin || insertingAgent ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    {insertingAgent ? '에이전트 추가 중...' : '에이전트 추가'}
-                  </button>
+                        insertAgent();
+                      }}
+                      className={`w-full rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800
+                        ${!isAdmin || insertingAgent ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {insertingAgent ? '에이전트 추가 중...' : '에이전트 추가'}
+                    </button>
+                  </div>
                 </div>
 
                 {/* search bar */}
                 {/* searchAgent */}
-                <div className="flex flex-row items-center gap-2">
-                  <input
-                    disabled={!isAdmin || fetchingAllAgent}
-                    type="text"
-                    value={searchAgent}
-                    onChange={(e) => setSearchAgentcode(e.target.value)}
-                    placeholder="에이전트 코드, 이름"
-                    className="w-48 p-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3167b4]"
-                  />
+                <div className="w-full flex flex-col items-start justify-center gap-3 rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-slate-900"></div>
+                    <span className="text-sm font-semibold text-slate-700">에이전트 검색</span>
+                  </div>
+                  <div className="w-full flex flex-col xl:flex-row items-center gap-2">
+                    <input
+                      disabled={!isAdmin || fetchingAllAgent}
+                      type="text"
+                      value={searchAgent}
+                      onChange={(e) => setSearchAgentcode(e.target.value)}
+                      placeholder="에이전트 코드, 이름"
+                      className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    />
 
-                  <button
-                    onClick={() => {
-                      setPageValue(1);
-                      fetchAllAgent();
-                    }}
-                    //className="bg-[#0047ab] text-white px-4 py-2 rounded-lg w-full"
-                    className={`
-                      w-32
-                      bg-[#0047ab] text-white px-4 py-2 rounded-lg
-                      ${!isAdmin || fetchingAllAgent ? 'opacity-50 cursor-not-allowed' : ''}
-                    `}
-                    
+                    <button
+                      onClick={() => {
+                        setPageValue(1);
+                        fetchAllAgent();
+                      }}
+                      className={`
+                        w-full rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800
+                        ${!isAdmin || fetchingAllAgent ? 'opacity-50 cursor-not-allowed' : ''}
+                      `}
+                      
 
-                    disabled={!isAdmin || fetchingAllAgent}
-                  >
-                    {fetchingAllAgent ? '검색중...' : '검색'}
-                  </button>
+                      disabled={!isAdmin || fetchingAllAgent}
+                    >
+                      {fetchingAllAgent ? '검색중...' : '검색'}
+                    </button>
 
+                  </div>
                 </div>
 
               </div>
@@ -1728,11 +1680,7 @@ export default function Index({ params }: any) {
 
               <div className="w-full flex flex-row items-center justify-end gap-2">
 
-                <div className="flex flex-row items-center justify-center gap-2
-                bg-white/80
-                p-2 rounded-lg shadow-md
-                backdrop-blur-md
-                ">
+                <div className="flex flex-row items-center justify-center gap-2 bg-white/90 p-3 rounded-2xl border border-slate-200/80 shadow-sm backdrop-blur">
                   {loadingTotalNumberOfBuyOrders ? (
                     <Image
                       src="/icon-loading.png"
@@ -1752,7 +1700,7 @@ export default function Index({ params }: any) {
                   )}
 
 
-                  <p className="text-lg text-red-500 font-semibold">
+                  <p className="text-lg text-rose-600 font-semibold tabular-nums">
                     {
                     totalNumberOfBuyOrders
                     }
@@ -1772,8 +1720,7 @@ export default function Index({ params }: any) {
                         onClick={() => {
                           router.push('/' + params.lang + '/administration/buyorder');
                         }}
-                        className="flex items-center justify-center gap-2
-                        bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                        className="flex items-center justify-center gap-2 bg-slate-900 text-sm text-white px-4 py-2 rounded-full hover:bg-slate-800"
                       >
                         <span className="text-sm">
                           P2P구매관리
@@ -1787,9 +1734,9 @@ export default function Index({ params }: any) {
                 {/* Clearance Orders */}
                 {version !== 'bangbang' && (
                 <div className="hidden flex-row items-center justify-center gap-2
-                bg-white/80
-                p-2 rounded-lg shadow-md
-                backdrop-blur-md
+                bg-white/90
+                p-3 rounded-2xl border border-slate-200/80 shadow-sm
+                backdrop-blur
                 ">
 
                   {loadingTotalNumberOfClearanceOrders ? (
@@ -1810,7 +1757,7 @@ export default function Index({ params }: any) {
                     />
                   )}
 
-                  <p className="text-lg text-yellow-500 font-semibold">
+                  <p className="text-lg text-amber-600 font-semibold tabular-nums">
                     {
                     totalNumberOfClearanceOrders
                     }
@@ -1830,8 +1777,7 @@ export default function Index({ params }: any) {
                         onClick={() => {
                           router.push('/' + params.lang + '/administration/clearance-history');
                         }}
-                        className="flex items-center justify-center gap-2
-                        bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+                        className="flex items-center justify-center gap-2 bg-slate-900 text-sm text-white px-4 py-2 rounded-full hover:bg-slate-800"
                       >
                         <span className="text-sm">
                           청산관리
@@ -1855,10 +1801,10 @@ export default function Index({ params }: any) {
 
                 <div className="w-full overflow-x-auto">
 
-                  <table className="w-full table-auto border-collapse border border-zinc-800 rounded-md">
+                  <table className="w-full table-auto border-collapse border border-slate-200/80 rounded-2xl overflow-hidden bg-white/95 shadow-sm">
 
                     <thead
-                      className="bg-[#0047ab] text-white text-sm font-semibold"
+                      className="bg-slate-900 text-white text-xs font-semibold uppercase tracking-wide"
                       //style={{
                       //  backgroundColor: 'rgba(0, 0, 0, 0.5)',
                       //}}
@@ -1899,9 +1845,7 @@ export default function Index({ params }: any) {
 
                         
                         <tr key={index} className={`
-                          ${
-                            index % 2 === 0 ? 'bg-zinc-100' : 'bg-zinc-200'
-                          }
+                          ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}
                         `}>
 
                           <td className="p-2">
@@ -1922,12 +1866,12 @@ export default function Index({ params }: any) {
                                   "
                                 />
                                 <div className="flex flex-col items-start justify-center">
-                                  <span className="text-lg font-semibold">
+                                  <span className="text-base font-semibold text-slate-800">
                                   {item.agentName.length > 8 ? item.agentName.slice(0, 8) + '...' : item.agentName}
                                   </span>
                                   
                                   {/*
-                                  <span className="text-sm text-gray-500">
+                                  <span className="text-sm text-slate-500">
                                     {item.agentcode}
                                   </span>
                                   */}
@@ -1938,8 +1882,7 @@ export default function Index({ params }: any) {
                                       ///toast.success('에이전트 코드가 복사되었습니다.');
                                       alert('에이전트 코드가 복사되었습니다:\n' + item.agentcode);
                                     }}
-                                    className="text-sm text-gray-500 hover:text-blue-500
-                                    hover:underline"
+                                    className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
                                   >
                                     {item.agentcode}
                                   </button>
@@ -1959,13 +1902,13 @@ export default function Index({ params }: any) {
                                   }}
                                   className={`${
                                     !isAdmin ? 'opacity-50 cursor-not-allowed' : ''
-                                  } bg-[#0047ab] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#0047ab]/80
+                                  } bg-slate-900 text-xs font-semibold text-white px-3 py-1 rounded-full
+                                  hover:bg-slate-800
                                   w-full
                                   `}
                                     
-                                  //className="w-full bg-[#0047ab] text-sm text-white px-2 py-1 rounded-lg
-                                  //hover:bg-[#0047ab]/80"
+                                  //className="w-full bg-slate-900 text-sm text-white px-2 py-1 rounded-lg
+                                  //hover:bg-slate-900/80"
                                 >
                                   설정하기
                                 </button>
@@ -1989,14 +1932,13 @@ export default function Index({ params }: any) {
                                       ///toast.success('관리자 지갑주소가 복사되었습니다.');
                                       alert('관리자 지갑주소가 복사되었습니다:\n' + item.adminWalletAddress);
                                     }}
-                                    className="text-sm text-gray-500 hover:text-blue-500
-                                    hover:underline"
+                                    className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
                                   >
                                       {item.adminWalletAddress.slice(0, 8) + '...' + item.adminWalletAddress.slice(-8)}
 
                                   </button>
                                 ) : (
-                                  <span className="text-red-500">
+                                  <span className="text-rose-600 text-sm font-semibold">
                                     관리자 지갑주소가 없습니다.
                                   </span>
                                 )}
@@ -2007,8 +1949,7 @@ export default function Index({ params }: any) {
                                       navigator.clipboard.writeText(item?.agentFeeWalletAddress || '');
                                       toast.success('수수료 수납용 USDT지갑 주소가 복사되었습니다.');
                                     }}
-                                    className="text-sm text-gray-500 hover:text-blue-500
-                                    hover:underline"
+                                    className="text-sm text-slate-600 hover:text-slate-900 hover:underline"
                                   >
                                     {item.agentFeeWalletAddress.slice(0, 8) + '...' + item.agentFeeWalletAddress.slice(-8)}
 
@@ -2016,7 +1957,7 @@ export default function Index({ params }: any) {
                                 ) : (                 
 
 
-                                  <span className="text-red-500">
+                                  <span className="text-rose-600 text-sm font-semibold">
                                     수수료 수납용 USDT지갑 주소가 없습니다.
                                   </span>
                                 )}
@@ -2049,8 +1990,7 @@ export default function Index({ params }: any) {
                                             '_blank'
                                         );
                                     }}
-                                    className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
-                                    hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
+                                    className="bg-white text-xs font-semibold text-slate-700 px-3 py-1 rounded-full hover:bg-slate-50 flex flex-row items-center gap-2 border border-slate-200/80 shadow-sm"
                                 >
                                     <Image
                                         src="/icon-telegram.png"
@@ -2079,8 +2019,7 @@ export default function Index({ params }: any) {
                                     //toast.success('복사되었습니다');
                                     alert('복사되었습니다.');
                                   }}
-                                  className="bg-white text-sm text-blue-500 px-2 py-1 rounded-lg
-                                  hover:bg-gray-100 flex flex-row items-center gap-2 border border-gray-300"
+                                  className="bg-white text-xs font-semibold text-slate-700 px-3 py-1 rounded-full hover:bg-slate-50 flex flex-row items-center gap-2 border border-slate-200/80 shadow-sm"
                                 >
                                   <Image
                                     src="/icon-telegram.png"
@@ -2099,7 +2038,7 @@ export default function Index({ params }: any) {
                           
                           <td className="p-2">
                             <div className="flex flex-col items-center justify-center gap-2">
-                              <span className="text-sm text-gray-500">
+                              <span className="text-sm text-slate-600">
                                 {item.totalStoreCount ? item.totalStoreCount : 0}개
                               </span>
                               {/* 가맹점 관리 버튼 */}
@@ -2109,8 +2048,8 @@ export default function Index({ params }: any) {
                                     '/' + params.lang + '/administration/store?agentcode=' + item.agentcode
                                   );
                                 }}
-                                className="bg-[#0047ab] text-sm text-white px-2 py-1 rounded-lg
-                                hover:bg-[#0047ab]/80"
+                                className="bg-slate-900 text-xs font-semibold text-white px-3 py-1 rounded-full
+                                hover:bg-slate-800"
                               >
                                 가맹점 관리
                               </button>
@@ -2120,7 +2059,7 @@ export default function Index({ params }: any) {
                           {/*
                           <td className="p-2">
                             <div className="flex flex-col items-center gap-2">
-                              <span className="text-sm text-gray-500">
+                              <span className="text-sm text-slate-500">
                                 {
                                   item.totalBankAccountCount ? item.totalBankAccountCount : 0
                                 }{' '}개
@@ -2131,8 +2070,8 @@ export default function Index({ params }: any) {
                                     '/' + params.lang + '/administration/agent/' + item.agentcode + '/bank'
                                   );
                                 }}
-                                className="bg-[#0047ab] text-sm text-white px-2 py-1 rounded-lg
-                                hover:bg-[#0047ab]/80"
+                                className="bg-slate-900 text-sm text-white px-2 py-1 rounded-lg
+                                hover:bg-slate-900/80"
                               >
                                 통장관리
                               </button>
@@ -2147,7 +2086,7 @@ export default function Index({ params }: any) {
 
 
                                 <div className="flex flex-row items-start gap-2">
-                                  <span className="text-sm text-gray-500">
+                                  <span className="text-sm text-slate-600">
                                     {
                                       item.totalPaymentConfirmedCount ? item.totalPaymentConfirmedCount : 0
                                     }{' '}건
@@ -2156,7 +2095,7 @@ export default function Index({ params }: any) {
 
                                 <div className="flex flex-col items-start gap-2">
 
-                                  <span className="text-lg text-gray-500 font-semibold"
+                                  <span className="text-lg text-slate-700 font-semibold tabular-nums"
                                     style={{ fontFamily: 'monospace' }}
                                   >
                                     {
@@ -2164,7 +2103,7 @@ export default function Index({ params }: any) {
                                       ?.toLocaleString('ko-KR')
                                     }{' '}원
                                   </span>
-                                  <span className="text-lg text-gray-500 font-semibold"
+                                  <span className="text-lg text-slate-700 font-semibold tabular-nums"
                                     style={{ fontFamily: 'monospace' }}
                                   >
                                     {
@@ -2185,8 +2124,8 @@ export default function Index({ params }: any) {
                                       '/' + params.lang + '/administration/agent/' + item.agentcode + '/trade'
                                     );
                                   }}
-                                  className="bg-[#0047ab] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#0047ab]/80"
+                                  className="bg-slate-900 text-sm text-white px-2 py-1 rounded-lg
+                                  hover:bg-slate-900/80"
                                 >
                                   P2P구매관리
                                 </button>
@@ -2196,8 +2135,8 @@ export default function Index({ params }: any) {
                                       '/' + params.lang + '/administration/agent/' + item.agentcode + '/trade-history'
                                     );
                                   }}
-                                  className="bg-[#0047ab] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#0047ab]/80"
+                                  className="bg-slate-900 text-sm text-white px-2 py-1 rounded-lg
+                                  hover:bg-slate-900/80"
                                 >
                                   거래내역
                                 </button>
@@ -2217,7 +2156,7 @@ export default function Index({ params }: any) {
                               <div className="flex flex-col items-center  justify-center gap-2">
 
                                 <div className="flex flex-row items-start gap-2">
-                                  <span className="text-sm text-gray-500">
+                                  <span className="text-sm text-slate-600">
                                     {
                                       item.totalSettlementCount ? item.totalSettlementCount : 0
                                     }{' '}건
@@ -2226,7 +2165,7 @@ export default function Index({ params }: any) {
 
                                 <div className="flex flex-col items-start gap-2">
 
-                                  <span className="text-lg text-gray-500 font-semibold"
+                                  <span className="text-lg text-slate-700 font-semibold tabular-nums"
                                     style={{ fontFamily: 'monospace' }}
                                   >
                                     {
@@ -2234,7 +2173,7 @@ export default function Index({ params }: any) {
                                         ?.toLocaleString('ko-KR')
                                     }{' '}원
                                   </span>
-                                  <span className="text-lg text-gray-500 font-semibold"
+                                  <span className="text-lg text-slate-700 font-semibold tabular-nums"
                                     style={{ fontFamily: 'monospace' }}
                                   >
                                     {
@@ -2259,7 +2198,7 @@ export default function Index({ params }: any) {
                               <div className="flex flex-col items-start gap-2">
 
                                 <div className="flex flex-row items-start gap-2">
-                                  <span className="text-sm text-gray-500">
+                                  <span className="text-sm text-slate-500">
                                     {
                                       item.totalPaymentConfirmedClearanceCount ? item.totalPaymentConfirmedClearanceCount : 0
                                     }{' '}건
@@ -2267,7 +2206,7 @@ export default function Index({ params }: any) {
                                 </div>
 
                                 <div className="flex flex-col items-start gap-2">
-                                  <span className="text-lg text-gray-500 font-semibold"
+                                  <span className="text-lg text-slate-500 font-semibold"
                                     style={{ fontFamily: 'monospace' }}
                                   >
                                     {
@@ -2275,7 +2214,7 @@ export default function Index({ params }: any) {
                                         ?.toLocaleString('ko-KR')
                                     }{' '}원
                                   </span>
-                                  <span className="text-lg text-gray-500 font-semibold"
+                                  <span className="text-lg text-slate-500 font-semibold"
                                     style={{ fontFamily: 'monospace' }}
                                   >
                                     {
@@ -2297,10 +2236,10 @@ export default function Index({ params }: any) {
                                   }}
                                   className={`${
                                     !isAdmin ? 'opacity-50 cursor-not-allowed' : ''
-                                  } bg-[#0047ab] text-sm text-white px-2 py-1 rounded-lg
-                                  hover:bg-[#0047ab]/80`}
-                                  //className="bg-[#0047ab] text-sm text-white px-2 py-1 rounded-lg
-                                  //hover:bg-[#0047ab]/80"  
+                                  } bg-slate-900 text-sm text-white px-2 py-1 rounded-lg
+                                  hover:bg-slate-900/80`}
+                                  //className="bg-slate-900 text-sm text-white px-2 py-1 rounded-lg
+                                  //hover:bg-slate-900/80"  
                                 >
                                   청산관리
                                 </button>
@@ -2335,9 +2274,9 @@ export default function Index({ params }: any) {
                 <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
                   {allAgent?.map((item, index) => (
-                    <div key={index} className="bg-white shadow-md rounded-lg p-4">
-                      <h2 className="text-lg font-semibold">{item.agentName}</h2>
-                      <p className="text-sm text-gray-500">{item.agentDescription}</p>
+                    <div key={index} className="bg-white/95 border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+                      <h2 className="text-lg font-semibold text-slate-900">{item.agentName}</h2>
+                      <p className="text-sm text-slate-600">{item.agentDescription}</p>
                     </div>
                   ))}
 
@@ -2357,7 +2296,7 @@ export default function Index({ params }: any) {
           {/* ?limit=10&page=1 */}
           {/* submit button */}
           {/* totalPage = Math.ceil(totalCount / limit) */}
-          <div className="mt-4 flex flex-row items-center justify-center gap-4">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm">
 
 
             <div className="flex flex-row items-center gap-2">
@@ -2369,7 +2308,7 @@ export default function Index({ params }: any) {
 
                   }
 
-                  className="text-sm bg-zinc-800 text-zinc-200 px-2 py-1 rounded-md"
+                  className="rounded-full border border-slate-200/80 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm"
                 >
                   <option value={10}>10</option>
                   <option value={20}>20</option>
@@ -2381,7 +2320,28 @@ export default function Index({ params }: any) {
 
             <button
               disabled={Number(page) <= 1}
-              className={`text-sm text-white px-4 py-2 rounded-md ${Number(page) <= 1 ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                Number(page) <= 1
+                  ? 'bg-slate-200 text-slate-400'
+                  : 'bg-slate-900 text-white hover:bg-slate-800'
+              }`}
+              onClick={() => {
+                
+                router.push(`/${params.lang}/administration/agent?limit=${Number(limit)}&page=1`);
+
+              }
+            }
+            >
+              처음
+            </button>
+
+            <button
+              disabled={Number(page) <= 1}
+              className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                Number(page) <= 1
+                  ? 'bg-slate-200 text-slate-400'
+                  : 'bg-slate-900 text-white hover:bg-slate-800'
+              }`}
               onClick={() => {
                 
                 router.push(`/${params.lang}/administration/agent?limit=${Number(limit)}&page=${Number(page) - 1}`);
@@ -2392,14 +2352,18 @@ export default function Index({ params }: any) {
             </button>
 
 
-            <span className="text-sm text-zinc-500">
+            <span className="text-sm font-semibold text-slate-600">
               {page} / {Math.ceil(Number(totalCount) / Number(limit))}
             </span>
 
 
             <button
               disabled={Number(page) >= Math.ceil(Number(totalCount) / Number(limit))}
-              className={`text-sm text-white px-4 py-2 rounded-md ${Number(page) >= Math.ceil(Number(totalCount) / Number(limit)) ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                Number(page) >= Math.ceil(Number(totalCount) / Number(limit))
+                  ? 'bg-slate-200 text-slate-400'
+                  : 'bg-slate-900 text-white hover:bg-slate-800'
+              }`}
               onClick={() => {
                 
                 router.push(`/${params.lang}/administration/agent?limit=${Number(limit)}&page=${Number(page) + 1}`);
@@ -2407,6 +2371,23 @@ export default function Index({ params }: any) {
               }}
             >
               다음
+            </button>
+
+            <button
+              disabled={Number(page) >= Math.ceil(Number(totalCount) / Number(limit))}
+              className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                Number(page) >= Math.ceil(Number(totalCount) / Number(limit))
+                  ? 'bg-slate-200 text-slate-400'
+                  : 'bg-slate-900 text-white hover:bg-slate-800'
+              }`}
+              onClick={() => {
+                
+                router.push(`/${params.lang}/administration/agent?limit=${Number(limit)}&page=${Math.ceil(Number(totalCount) / Number(limit))}`);
+
+              }
+            }
+            >
+              마지막
             </button>
 
           </div>
@@ -2460,40 +2441,40 @@ const TradeDetail = (
   
     return (
 
-      <div className="max-w-2xl mx-auto bg-white shadow-lg rounded-lg p-6">
+      <div className="max-w-2xl mx-auto bg-white/95 border border-slate-200/80 shadow-sm rounded-2xl p-6">
         <div className="flex items-center">
-          <span className="inline-block w-4 h-4 rounded-full bg-green-500 mr-2"></span>
-          <h2 className="text-lg font-semibold text-black ">Iskan9</h2>
-          <span className="ml-2 text-blue-500 text-sm">318 trades</span>
+          <span className="inline-block w-4 h-4 rounded-full bg-emerald-500 mr-2"></span>
+          <h2 className="text-lg font-semibold text-slate-900">Iskan9</h2>
+          <span className="ml-2 text-slate-500 text-sm">318 trades</span>
         </div>
-        <p className="text-gray-600 mt-2">The offer is taken from another source. You can only use chat if the trade is open.</p>
+        <p className="text-slate-600 mt-2">The offer is taken from another source. You can only use chat if the trade is open.</p>
         
         <div className="mt-4">
-          <div className="flex justify-between text-gray-700">
+          <div className="flex justify-between text-slate-700">
             <span>Price</span>
             <span>{price} KRW</span>
           </div>
-          <div className="flex justify-between text-gray-700 mt-2">
+          <div className="flex justify-between text-slate-700 mt-2">
             <span>Limit</span>
             <span>40680.00 KRW - 99002.9 KRW</span>
           </div>
-          <div className="flex justify-between text-gray-700 mt-2">
+          <div className="flex justify-between text-slate-700 mt-2">
             <span>Available</span>
             <span>1085.91 USDT</span>
           </div>
-          <div className="flex justify-between text-gray-700 mt-2">
+          <div className="flex justify-between text-slate-700 mt-2">
             <span>Seller&apos;s payment method</span>
-            <span className="bg-yellow-100 text-yellow-800 px-2 rounded-full">Tinkoff</span>
+            <span className="bg-amber-100 text-amber-700 border border-amber-200/80 px-2 rounded-full text-xs font-semibold">Tinkoff</span>
           </div>
-          <div className="mt-4 text-gray-700">
+          <div className="mt-4 text-slate-700">
             <p>24/7</p>
           </div>
         </div>
   
-        <div className="mt-6 border-t pt-4 text-gray-700">
+        <div className="mt-6 border-t border-slate-200/80 pt-4 text-slate-700">
           <div className="flex flex-col space-y-4">
             <div>
-              <label className="block text-gray-700">I want to pay</label>
+              <label className="block text-slate-700">I want to pay</label>
               <input 
                 type="number"
                 value={amount}
@@ -2501,32 +2482,32 @@ const TradeDetail = (
                     e.target.value === '' ? 0 : parseInt(e.target.value)
                 ) }
 
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
               />
             </div>
             <div>
-              <label className="block text-gray-700">I will receive</label>
+              <label className="block text-slate-700">I will receive</label>
               <input 
                 type="text"
                 value={`${receiveAmount} USDT`}
                 readOnly
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
               />
             </div>
             <div>
-              <label className="block text-gray-700">Commission</label>
+              <label className="block text-slate-700">Commission</label>
               <input 
                 type="text"
                 value={`${commission} USDT`}
                 readOnly
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
               />
             </div>
           </div>
           
-          <div className="mt-6 flex space-x-4">
+          <div className="mt-6 flex flex-col sm:flex-row gap-3">
             <button
-                className="bg-green-500 text-white px-4 py-2 rounded-lg"
+                className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
                 onClick={() => {
                     console.log('Buy USDT');
                     // go to chat
@@ -2539,7 +2520,7 @@ const TradeDetail = (
                 Buy USDT
             </button>
             <button
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg"
+                className="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-300"
                 onClick={() => {
                     console.log('Cancel');
                     // close modal
@@ -2556,6 +2537,3 @@ const TradeDetail = (
       </div>
     );
   };
-
-
-
