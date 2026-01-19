@@ -4641,7 +4641,7 @@ const fetchBuyOrders = async () => {
         <div className="mb-4 flex w-full justify-end">
           <button
             type="button"
-            onClick={() => router.push(`/${params.lang}/p2p/sell`)}
+            onClick={() => router.push(`/${params.lang}/p2p/buy`)}
             className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-2 text-sm font-semibold text-white shadow-[0_18px_45px_-25px_rgba(249,115,22,0.8)] transition hover:-translate-y-0.5 hover:shadow-[0_26px_60px_-32px_rgba(249,115,22,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60"
           >
             <svg
