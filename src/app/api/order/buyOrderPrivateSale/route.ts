@@ -163,10 +163,12 @@ export async function POST(request: NextRequest) {
             // Error calling Payaction API
             console.error("Error calling Payaction API", error);
             
+            /*
             return NextResponse.json({
             error: "Error calling Payaction API",
             details: error instanceof Error ? error.message : "Unknown error",
             }, { status: 500 });
+            */
 
         }
     

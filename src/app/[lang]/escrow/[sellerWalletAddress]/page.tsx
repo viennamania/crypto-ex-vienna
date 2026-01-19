@@ -6275,8 +6275,7 @@ const fetchBuyOrders = async () => {
                           */}
 
 
-                          <div className="w-full flex flex-row items-center justify-between gap-2">    
-
+                          <div className="w-full flex flex-row items-center justify-between gap-2">
                             <div className="flex flex-row items-center justify-center gap-2">
                               <Image
                                 src="/icon-escrow-wallet.webp"
@@ -6285,65 +6284,52 @@ const fetchBuyOrders = async () => {
                                 height={20}
                                 className="w-5 h-5"
                               />
-                              <button
-                                className="text-sm text-slate-700 underline hover:text-slate-800"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(seller.seller.escrowWalletAddress);
-                                  toast.success(Copied_Wallet_Address);
-                                } }
-                              >
-                                {
-                                  seller.seller.escrowWalletAddress.substring(0, 6)}...{seller.seller.escrowWalletAddress.substring(seller.seller.escrowWalletAddress.length - 4)
-                                }
-                              </button>
+                              <span className="text-sm font-semibold text-slate-700">
+                                에스크로 잔고
+                              </span>
                             </div>
-
-                            {/* https://polygonscan.com/token/0xc2132d05d31c914a87c6611c10748aeb04b58e8f?a=0x07385f5149Eb1dE0D17739fBc395B560cb7fFE44 */}
-                            {/* open new window to polygonscan escrow wallet address */}
-                            {/* logo-polygon.png */}
-                            <button
-                              className="flex items-center justify-center gap-2
-                              rounded-lg p-1
-                              hover:bg-black/10
-                              hover:cursor-pointer
-                              hover:scale-105
-                              transition-transform duration-200 ease-in-out"
-                              onClick={() => {
-                                window.open(`https://polygonscan.com/token/0xc2132d05d31c914a87c6611c10748aeb04b58e8f?a=${seller.seller.escrowWalletAddress}`, '_blank');
-                              }}
-                            >
-                              <Image
-                                src="/logo-polygon.png"
-                                alt="Polygon"
-                                width={20}
-                                height={20}
-                                className="w-5 h-5"
-                              />
-                            </button>
-
                           </div>
 
                           <div className="w-full flex flex-col items-start justify-center gap-1">
 
                             <div className="w-full flex flex-col items-center justify-center gap-2">
 
-                              <div className="w-full flex flex-row items-center justify-right gap-2">
-                                <Image
-                                  src="/icon-tether.png"
-                                  alt="USDT"
-                                  width={20}
-                                  height={20}
-                                  className="w-5 h-5"
-                                />
-                                <span className="text-4xl xl:text-2xl text-emerald-600 font-semibold"
+                              <div className="w-full rounded-xl border border-emerald-200 bg-emerald-50/90 px-4 py-3
+                              shadow-[0_12px_30px_-20px_rgba(16,185,129,0.5)]">
+                                <div className="flex flex-row items-center gap-2 text-sm font-semibold text-emerald-700">
+                                  <Image
+                                    src="/icon-tether.png"
+                                    alt="USDT"
+                                    width={20}
+                                    height={20}
+                                    className="w-5 h-5"
+                                  />
+                                  <span>USDT</span>
+                                </div>
+                                <div className="mt-1 text-4xl sm:text-5xl text-emerald-700 font-semibold tracking-tight tabular-nums"
                                   style={{ fontFamily: 'monospace' }}>
                                   {
                                     //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                                     currentUsdtBalanceArray[index]?.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 
                                   }
-                                </span>
+                                </div>
                               </div>
+                              <a
+                                className="flex items-center gap-2 text-xs text-slate-600 hover:text-slate-800"
+                                href={`https://polygonscan.com/token/0xc2132d05d31c914a87c6611c10748aeb04b58e8f?a=${seller.seller.escrowWalletAddress}`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <Image
+                                  src="/logo-polygon.png"
+                                  alt="Polygonscan"
+                                  width={16}
+                                  height={16}
+                                  className="h-4 w-4"
+                                />
+                                <span>폴리스캔에서 USDT 잔고 보기</span>
+                              </a>
 
                               {/*
                               {seller.walletAddress === address && (
