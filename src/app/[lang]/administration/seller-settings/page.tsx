@@ -1098,26 +1098,26 @@ export default function SettingsPage({ params }: any) {
 
     return (
 
-        <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto">
+        <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
 
             <div className="py-0 w-full">
         
 
                 {storecode && (
-                    <div className="w-full flex flex-row items-center justify-center gap-2 bg-black/10 p-2 rounded-lg mb-4">
-                        <span className="text-sm text-zinc-500">
+                    <div className="w-full flex flex-row items-center justify-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 shadow-sm backdrop-blur mb-4">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                         {storecode}
                         </span>
                     </div>
                 )}
         
-                <div className="w-full flex flex-row gap-2 items-center justify-start text-zinc-500 text-lg"
+                <div className="w-full flex flex-row gap-2 items-center justify-start text-slate-600 text-sm"
                 >
                     {/* go back button */}
                     <div className="w-full flex justify-start items-center gap-2">
                         <button
                             onClick={() => window.history.back()}
-                            className="flex items-center justify-center bg-gray-200 rounded-full p-2">
+                            className="flex items-center justify-center rounded-full border border-slate-200/70 bg-white/90 p-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                             <Image
                                 src="/icon-back.png"
                                 alt="Back"
@@ -1127,7 +1127,7 @@ export default function SettingsPage({ params }: any) {
                             />
                         </button>
                         {/* title */}
-                        <span className="text-sm text-gray-500 font-semibold">
+                        <span className="text-sm text-slate-600 font-semibold">
                             돌아가기
                         </span>
                     </div>
@@ -1137,8 +1137,8 @@ export default function SettingsPage({ params }: any) {
                 </div>
 
                 {!address && (
-                    <div className="w-full flex flex-col items-center justify-center gap-4 mt-8">
-                        <div className="text-lg text-zinc-500">
+                    <div className="w-full flex flex-col items-center justify-center gap-4 mt-8 rounded-2xl border border-slate-200/70 bg-white/90 p-6 shadow-sm">
+                        <div className="text-base text-slate-600">
                             {Please_connect_your_wallet_first}
                         </div>
                     </div>
@@ -1146,12 +1146,12 @@ export default function SettingsPage({ params }: any) {
 
 
                 {address && (
-                    <div className="w-full flex flex-col items-end justify-center gap-2">
+                    <div className="w-full flex flex-col items-end justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
 
                         <div className="flex flex-row items-center justify-center gap-2">
 
                             <button
-                                className="text-lg text-zinc-600 underline"
+                                className="text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 transition hover:text-slate-900"
                                 onClick={() => {
                                     navigator.clipboard.writeText(address);
                                     toast.success(Copied_Wallet_Address);
@@ -1171,7 +1171,7 @@ export default function SettingsPage({ params }: any) {
                         </div>
 
                         <div className="flex flex-row items-center justify-end  gap-2">
-                            <span className="text-2xl xl:text-4xl font-semibold text-[#409192]"
+                            <span className="text-2xl xl:text-4xl font-semibold text-emerald-700 tabular-nums tracking-tight"
                                 style={{ fontFamily: 'monospace' }}
                             >
                                 {Number(balance).toFixed(2)}
@@ -1182,13 +1182,13 @@ export default function SettingsPage({ params }: any) {
                 )}
 
                 {loadingUserData && (
-                    <div>Loading user data...</div>
+                    <div className="text-sm text-slate-500">Loading user data...</div>
                 )}
 
                 {!loadingUserData && !nickname && (
-                    <div className='w-full flex flex-col gap-2 items-center justify-center border border-gray-300 p-4 rounded-lg'>
+                    <div className='w-full flex flex-col gap-2 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm'>
 
-                        <span className="text-lg font-semibold">
+                        <span className="text-base font-semibold text-slate-800">
                             회원이 아닙니다.
                         </span>
 
@@ -1196,7 +1196,7 @@ export default function SettingsPage({ params }: any) {
                             onClick={() => {
                                 router.push('/' + params.lang + '/administration/profile-settings');
                             }}
-                            className="bg-blue-500 text-zinc-100 px-4 py-2 rounded"
+                            className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
                         >
                             회원가입하기
                         </button>
@@ -1205,23 +1205,23 @@ export default function SettingsPage({ params }: any) {
                 )}
 
                 {!loadingUserData && nickname && !seller && (
-                    <div className='w-full flex flex-col gap-2 items-center justify-center border border-gray-300 p-4 rounded-lg'>
+                    <div className='w-full flex flex-col gap-3 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm'>
 
                         {/* nickname */}
                         <div className='w-full flex flex-row gap-2 items-center justify-between'>
                             <div className="flex flex-row items-center gap-2">
                                 {/* dot */}
-                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                                <span className="text-lg">
+                                <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                <span className="text-sm font-semibold text-slate-600">
                                     회원아이디
                                 </span>
                             </div>
-                            <span className="text-4xl font-semibold text-[#409192]">
+                            <span className="text-2xl font-semibold text-emerald-700">
                                 {nickname}
                             </span>
                         </div>
 
-                        <span className="text-lg font-semibold">
+                        <span className="text-base font-semibold text-slate-700">
                             판매자가 아닙니다.
                         </span>
 
@@ -1230,7 +1230,8 @@ export default function SettingsPage({ params }: any) {
                                 applySeller();
                             }}
                             className={`
-                                ${applyingSeller ? 'bg-gray-400' : 'bg-blue-500'} text-zinc-100 px-4 py-2 rounded
+                                ${applyingSeller ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-500'}
+                                px-5 py-2 rounded-full text-sm font-semibold shadow-sm transition
                             `}
                             disabled={applyingSeller}
                         >
@@ -1243,7 +1244,7 @@ export default function SettingsPage({ params }: any) {
 
                 {!loadingUserData && seller && (
 
-                    <div className='w-full flex flex-col gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
+                    <div className='w-full flex flex-col gap-4 items-center justify-between rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm'>
 
                         {/* image and title */}
                         <div className='w-full flex flex-row gap-2 items-center justify-start'>
@@ -1254,7 +1255,7 @@ export default function SettingsPage({ params }: any) {
                                 height={50}
                                 className='w-10 h-10'
                             />
-                            <span className="text-2xl font-semibold">
+                            <span className="text-xl font-semibold text-slate-900">
                                 {Seller} 설정
                             </span>
                         </div>
@@ -1264,12 +1265,12 @@ export default function SettingsPage({ params }: any) {
                         <div className='w-full flex flex-row gap-2 items-center justify-between'>
                             <div className="flex flex-row items-center gap-2">
                                 {/* dot */}
-                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                                <span className="text-lg">
+                                <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                <span className="text-sm font-semibold text-slate-600">
                                     회원아이디
                                 </span>
                             </div>
-                            <span className="text-4xl font-semibold text-[#409192]">
+                            <span className="text-2xl font-semibold text-emerald-700">
                                 {nickname}
                             </span>
                         </div>
@@ -1277,32 +1278,32 @@ export default function SettingsPage({ params }: any) {
                         {/* seller?.status */}
                         {/* status: pending, confirmed, rejected */}
                         <div className='w-full flex flex-row gap-2 items-center justify-between
-                            border-t border-gray-300 pt-4'>
+                            border-t border-slate-200/80 pt-4'>
                             <div className="flex flex-row items-center gap-2">
                                 {/* dot */}
-                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                                <span className="text-lg">
+                                <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                <span className="text-sm font-semibold text-slate-600">
                                     판매자 상태
                                 </span>
                             </div>
                             {seller?.status === 'pending' ? (
                                 <div className="flex flex-row items-center gap-2
-                                    bg-yellow-200 text-yellow-800 p-2 rounded-lg">
-                                    <span className="text-lg font-semibold">
+                                    bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full border border-amber-200/80 shadow-sm">
+                                    <span className="text-sm font-semibold">
                                         승인대기중
                                     </span>
                                 </div>
                             ) : seller?.status === 'confirmed' ? (
                                 <div className="flex flex-row items-center gap-2
-                                    bg-green-200 text-green-800 p-2 rounded-lg">
-                                    <span className="text-lg font-semibold">
+                                    bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-200/80 shadow-sm">
+                                    <span className="text-sm font-semibold">
                                         승인완료
                                     </span>
                                 </div>
                             ) : seller?.status === 'rejected' ? (
                                 <div className="flex flex-row items-center gap-2
-                                    bg-red-200 text-red-800 p-2 rounded-lg">
-                                    <span className="text-lg font-semibold">
+                                    bg-rose-50 text-rose-700 px-3 py-1.5 rounded-full border border-rose-200/80 shadow-sm">
+                                    <span className="text-sm font-semibold">
                                         승인거절
                                     </span>
                                 </div>
@@ -1314,11 +1315,11 @@ export default function SettingsPage({ params }: any) {
                         {/* 판매시작 여부 */}
                         {/* toggle seller enabled */}
                         <div className='w-full flex flex-row gap-2 items-center justify-between
-                            border-t border-gray-300 pt-4'>
+                            border-t border-slate-200/80 pt-4'>
                             <div className="flex flex-row items-center gap-2">
                                 {/* dot */}
-                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                                <span className="text-lg">
+                                <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                <span className="text-sm font-semibold text-slate-600">
                                     판매자 활동 상태
                                 </span>
                             </div>
@@ -1326,9 +1327,9 @@ export default function SettingsPage({ params }: any) {
                                 <button
                                     onClick={toggleSellerEnabled}
                                     className="flex flex-row items-center gap-2
-                                        bg-green-500 text-zinc-100 p-2 rounded-lg"
+                                        bg-emerald-600 text-white px-4 py-1.5 rounded-full shadow-sm transition hover:bg-emerald-500"
                                 >
-                                    <span className="text-lg font-semibold">
+                                    <span className="text-sm font-semibold">
                                         판매중
                                     </span>
                                 </button>
@@ -1336,9 +1337,9 @@ export default function SettingsPage({ params }: any) {
                                 <button
                                     onClick={toggleSellerEnabled}
                                     className="flex flex-row items-center gap-2
-                                        bg-gray-300 text-gray-600 p-2 rounded-lg"
+                                        bg-slate-200 text-slate-600 px-4 py-1.5 rounded-full shadow-sm transition hover:bg-slate-300"
                                 >
-                                    <span className="text-lg font-semibold">
+                                    <span className="text-sm font-semibold">
                                         판매중지
                                     </span>
                                 </button>
@@ -1350,11 +1351,11 @@ export default function SettingsPage({ params }: any) {
                         {/* bank info */}
 
                         <div className='w-full flex flex-row gap-2 items-center justify-between
-                            border-t border-gray-300 pt-4'>
+                            border-t border-slate-200/80 pt-4'>
                             <div className="flex flex-row items-center gap-2">
                                 {/* dot */}
-                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                                <span className="text-lg">
+                                <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                <span className="text-sm font-semibold text-slate-600">
                                     입금받을 계좌 정보
                                 </span>
                             </div>
@@ -1362,14 +1363,14 @@ export default function SettingsPage({ params }: any) {
 
                             <div className="flex flex-col xl:flex-row p-2 gap-2">
                                 
-                                <span className="text-lg text-zinc-500 font-semibold">
+                                <span className="text-sm text-slate-600 font-semibold">
                                     {seller?.bankInfo?.bankName}
                                 </span>
 
-                                <span className="text-lg text-zinc-500 font-semibold">
+                                <span className="text-sm text-slate-600 font-semibold">
                                     {seller?.bankInfo?.accountNumber}
                                 </span>
-                                <span className="text-lg text-zinc-500 font-semibold">
+                                <span className="text-sm text-slate-600 font-semibold">
                                     {seller?.bankInfo?.accountHolder}
                                 </span>
 
@@ -1390,25 +1391,25 @@ export default function SettingsPage({ params }: any) {
                         </div>
 
 
-                        <div className='mt-4 flex flex-col gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
+                        <div className='mt-4 w-full flex flex-col gap-4 items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4'>
                             
                             <div className='w-full flex flex-row gap-2 items-center justify-between'>
 
                                 <div className="flex flex-row items-center gap-2">
-                                    <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                                    <span className="text-lg">
+                                    <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                    <span className="text-sm font-semibold text-slate-600">
                                         입금받을 계좌 정보 수정
                                     </span>
                                 </div>
 
                                 {!seller && (
-                                    <div className="text-lg text-zinc-500">
+                                    <div className="text-sm text-slate-500">
                                         {Not_a_seller}
                                     </div>
                                 )}
 
                                 {applying ? (
-                                    <div className="p-2 bg-zinc-800 rounded text-zinc-100 text-xl font-semibold">
+                                    <div className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm">
                                         {Applying}...
                                     </div>
                                 ) : (
@@ -1425,10 +1426,9 @@ export default function SettingsPage({ params }: any) {
 
                                         }}
                                         className={`
-                                            ${!verifiedOtp ? 'bg-gray-300 text-gray-400'
-                                            : 'bg-green-500 text-zinc-100'}
-
-                                            p-2 rounded-lg text-sm font-semibold
+                                            ${!verifiedOtp ? 'bg-slate-200 text-slate-400'
+                                            : 'bg-emerald-600 text-white hover:bg-emerald-500'}
+                                            px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition
                                         `}
                                     >
                                         {Apply}
@@ -1456,8 +1456,8 @@ export default function SettingsPage({ params }: any) {
 
                                 <select
                                     disabled={!address}
-                                    className="p-2 w-full text-lg text-center bg-zinc-800 rounded-lg text-zinc-100
-                                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                                    className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm
+                                    focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                                     value={bankName}
                                     onChange={(e) => {
                                         setBankName(e.target.value);
@@ -1540,7 +1540,7 @@ export default function SettingsPage({ params }: any) {
                                 
                                 <input 
                                     disabled={applying}
-                                    className="p-2 w-64 text-zinc-100 bg-zinc-800 rounded-lg text-lg"
+                                    className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                                     placeholder={Enter_your_account_number}
                                     value={accountNumber}
                                     type='number'
@@ -1555,7 +1555,7 @@ export default function SettingsPage({ params }: any) {
                                 />
                                 <input 
                                     disabled={applying}
-                                    className="p-2 w-64 text-zinc-100 bg-zinc-800 rounded-lg text-lg"
+                                    className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                                     placeholder={Enter_your_account_holder}
                                     value={accountHolder}
                                     type='text'
@@ -1644,10 +1644,10 @@ export default function SettingsPage({ params }: any) {
 
 
                         {/* 입금 자동 처리 시작 / 중지 토글 버튼 */}
+                        {/*
                         <div className='w-full flex flex-row gap-2 items-center justify-between
                             border-t border-gray-300 pt-4'>
                             <div className="flex flex-row items-center gap-2">
-                                {/* dot */}
                                 <div className='w-2 h-2 bg-green-500 rounded-full'></div>
                                 <span className="text-lg">
                                     입금 자동 처리 상태
@@ -1681,6 +1681,7 @@ export default function SettingsPage({ params }: any) {
                                 </button>
                             )}
                         </div>
+                        */}
 
                     </div>
                 )}
@@ -1688,7 +1689,7 @@ export default function SettingsPage({ params }: any) {
 
                 {!loadingUserData && seller?.escrowWalletAddress && (
                     
-                    <div className='w-full flex flex-col gap-2 items-start justify-between mt-4 p-4 border border-gray-300 rounded-lg'>
+                    <div className='w-full flex flex-col gap-3 items-start justify-between mt-4 rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm'>
 
                         <div className='w-full flex flex-row gap-2 items-center justify-start mb-2'>
                             <Image
@@ -1698,19 +1699,19 @@ export default function SettingsPage({ params }: any) {
                                 height={50}
                                 className='w-10 h-10'
                             />
-                            <span className="text-2xl font-semibold">
+                            <span className="text-xl font-semibold text-slate-900">
                                 에스크로 지갑 정보
                             </span>
                         </div>
                         {/* 설명 */}
                         {/* 에스크로 지갑에 잔액이 있어야 구매주문을 자동으로 처리할 수 있습니다. */}
-                        <div className="text-zinc-500 mb-4">
+                        <div className="text-sm text-slate-600 mb-4">
                             에스크로 지갑에 잔액이 있어야 구매주문을 자동으로 처리할 수 있습니다.
                         </div>
 
                         <div className="flex flex-row items-center gap-2">
-                            <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                            <span className="text-lg">
+                            <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                            <span className="text-sm font-semibold text-slate-600">
                                 에스크로 지갑 주소
                             </span>
                         </div>
@@ -1725,7 +1726,7 @@ export default function SettingsPage({ params }: any) {
                                     className='w-8 h-8'
                                 />
                                 <button
-                                    className="text-lg text-zinc-600 underline"
+                                    className="text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 transition hover:text-slate-900"
                                     onClick={() => {
                                         navigator.clipboard.writeText(seller?.escrowWalletAddress || "");
                                         toast.success("에스크로 지갑 주소가 복사되었습니다" );
@@ -1739,15 +1740,15 @@ export default function SettingsPage({ params }: any) {
                         </div>
 
                         <div className='w-full flex flex-row gap-2 items-center justify-between mt-4
-                        border-t border-gray-300 pt-4'>
+                        border-t border-slate-200/80 pt-4'>
                             <div className="flex flex-row items-center gap-2">
-                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                                <span className="text-lg">
+                                <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                <span className="text-sm font-semibold text-slate-600">
                                     에스크로 잔액
                                 </span>
                             </div>
                             <div className='flex flex-row items-center gap-2 mb-2'>
-                                <span className="text-2xl xl:text-4xl font-semibold text-[#409192]"
+                                <span className="text-2xl xl:text-4xl font-semibold text-emerald-700 tabular-nums tracking-tight"
                                     style={{ fontFamily: 'monospace' }}
                                 >
                                     {escrowBalance.toFixed(2)}
@@ -1763,7 +1764,7 @@ export default function SettingsPage({ params }: any) {
                                 onClick={() => {
                                     //router.push('/' + params.lang + '/wallet/deposit?storecode=' + storecode + '&to=' + (seller?.escrowWalletAddress || ''));
                                 }}
-                                className="bg-blue-500 text-zinc-100 px-4 py-2 rounded-lg"
+                                className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
                             >
                                 충전하기
                             </button>
@@ -1773,7 +1774,7 @@ export default function SettingsPage({ params }: any) {
                                     // open transfer escrow balance modal
                                     //setIsOpenTransferEscrowBalanceModal(true);
                                 }}
-                                className="bg-red-500 text-zinc-100 px-4 py-2 rounded-lg"
+                                className="rounded-full bg-rose-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-500"
                             >
                                 회수하기
                             </button>
@@ -1783,16 +1784,16 @@ export default function SettingsPage({ params }: any) {
 
                         {/* 판매금액(원) 설정 */}
                         <div className='w-full flex flex-col gap-2 items-start justify-between mt-4
-                        border-t border-gray-300 pt-4'>
+                        border-t border-slate-200/80 pt-4'>
 
                             <div className="flex flex-row items-center gap-2">
-                                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                                <span className="text-lg">
+                                <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                <span className="text-sm font-semibold text-slate-600">
                                     1 USDT 당 판매금액(원) 설정
                                 </span>
 
                                 {/* seller.usdtToKrwRate */}
-                                <span className="text-lg text-zinc-500">
+                                <span className="text-sm text-slate-500">
                                     (현재 설정: {seller?.usdtToKrwRate || 0} 원)
                                 </span>
                             </div>
@@ -1805,11 +1806,11 @@ export default function SettingsPage({ params }: any) {
                             <div className='w-full flex flex-row gap-2 items-center justify-start'>
 
                                 <div className="flex flex-row items-center gap-2">
-                                    <span className="text-lg font-semibold">
+                                    <span className="text-sm font-semibold text-slate-700">
                                         가격 설정 방식:
                                     </span>
                                     {' '}
-                                    <span className="text-lg text-zinc-500">
+                                    <span className="text-sm text-slate-500">
                                         (현재 설정: {seller?.priceSettingMethod === 'market' ? 'Market 연동' : '지정가'})
                                     </span>
                                 </div>
@@ -1821,8 +1822,10 @@ export default function SettingsPage({ params }: any) {
 
                                     }}
                                     className={`
-                                        ${seller?.priceSettingMethod === 'market' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
-                                        p-2 rounded-lg text-sm font-semibold
+                                        ${seller?.priceSettingMethod === 'market'
+                                            ? 'bg-slate-900 text-white'
+                                            : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}
+                                        px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm transition
                                     `}
                                     disabled={seller?.priceSettingMethod === 'market'}
                                 >
@@ -1837,8 +1840,10 @@ export default function SettingsPage({ params }: any) {
 
                                     }}
                                     className={`
-                                        ${seller?.priceSettingMethod === 'fixed' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
-                                        p-2 rounded-lg text-sm font-semibold
+                                        ${seller?.priceSettingMethod === 'fixed'
+                                            ? 'bg-slate-900 text-white'
+                                            : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}
+                                        px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm transition
                                     `}
                                     disabled={seller?.priceSettingMethod === 'fixed'}
                                 >
@@ -1853,7 +1858,7 @@ export default function SettingsPage({ params }: any) {
                                 <div className='w-full flex flex-row gap-2 items-center justify-end'>
 
                                     <input 
-                                        className="p-2 w-32 text-zinc-100 bg-zinc-800 rounded-lg text-lg font-semibold text-right"
+                                        className="w-36 rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                                         placeholder="예: 1300"
                                         value={usdtToKrwRate}
                                         type='number'
@@ -1868,8 +1873,8 @@ export default function SettingsPage({ params }: any) {
                                         disabled={updatingUsdtToKrw}
                                         onClick={updateUsdtToKrwRate}
                                         className={`
-                                            ${updatingUsdtToKrw ? 'bg-gray-300 text-gray-400' : 'bg-green-500 text-zinc-100'}
-                                            p-2 rounded-lg text-sm font-semibold
+                                            ${updatingUsdtToKrw ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-500'}
+                                            px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition
                                         `}
                                     >
                                         {updatingUsdtToKrw ? '수정중...' : '수정하기'}
@@ -1886,7 +1891,7 @@ export default function SettingsPage({ params }: any) {
 
                                 <div className='w-full flex flex-col gap-2 items-start justify-between'>
 
-                                    <span className="text-lg font-semibold">
+                                    <span className="text-sm font-semibold text-slate-700">
                                         연동할 마켓 선택:
                                     </span>
                                     <div className='w-full flex flex-row gap-2 items-center justify-end'>
@@ -1897,8 +1902,10 @@ export default function SettingsPage({ params }: any) {
                                                 setMarketFunc('upbit');
                                             }}
                                             className={`
-                                                ${seller?.market === 'upbit' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
-                                                p-2 rounded-lg text-sm font-semibold
+                                                ${seller?.market === 'upbit'
+                                                    ? 'bg-slate-900 text-white'
+                                                    : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}
+                                                px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm transition
                                             `}
                                             disabled={seller?.market === 'upbit'}
                                         >
@@ -1922,8 +1929,10 @@ export default function SettingsPage({ params }: any) {
                                                 setMarketFunc('bithumb');
                                             }}
                                             className={`
-                                                ${seller?.market === 'bithumb' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
-                                                p-2 rounded-lg text-sm font-semibold
+                                                ${seller?.market === 'bithumb'
+                                                    ? 'bg-slate-900 text-white'
+                                                    : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}
+                                                px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm transition
                                             `}
                                             disabled={seller?.market === 'bithumb'}
                                         >
@@ -1948,8 +1957,10 @@ export default function SettingsPage({ params }: any) {
 
                                             }}
                                             className={`
-                                                ${seller?.market === 'korbit' ? 'bg-blue-500 text-zinc-100' : 'bg-gray-300 text-gray-600'}
-                                                p-2 rounded-lg text-sm font-semibold
+                                                ${seller?.market === 'korbit'
+                                                    ? 'bg-slate-900 text-white'
+                                                    : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}
+                                                px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm transition
                                             `}
                                             disabled={seller?.market === 'korbit'}
                                         >
@@ -1994,23 +2005,23 @@ export default function SettingsPage({ params }: any) {
                 
                             {/* 판매 홍보 문구 설정 */}
                             <div className='w-full flex flex-col gap-2 items-start justify-between mt-4
-                            border-t border-gray-300 pt-4'>
+                            border-t border-slate-200/80 pt-4'>
 
                                 <div className="flex flex-row items-center gap-2">
-                                    <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                                    <span className="text-lg">
+                                    <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                    <span className="text-sm font-semibold text-slate-600">
                                         판매 홍보 문구 설정
                                     </span>
                                 </div>
                                 {/* 이미 설정되어 있는 문구가 있으면 보여주기 */}
                                 {seller?.promotionText && (
-                                    <div className="text-zinc-500">
+                                    <div className="text-sm text-slate-500">
                                         현재 설정된 문구: {seller?.promotionText}
                                     </div>
                                 )}
 
                                 <textarea
-                                    className="w-full p-2 bg-zinc-800 text-zinc-100 rounded-lg text-lg"
+                                    className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                                     placeholder="예: 빠르고 안전한 USDT 구매, 지금 바로 거래하세요!"
                                     value={promotionText}
                                     onChange={(e) => {
@@ -2023,8 +2034,8 @@ export default function SettingsPage({ params }: any) {
                                     disabled={updatingPromotionText}
                                     onClick={updatePromotionText}
                                     className={`
-                                        ${updatingPromotionText ? 'bg-gray-300 text-gray-400' : 'bg-green-500 text-zinc-100'}
-                                        p-2 rounded-lg text-sm font-semibold
+                                        ${updatingPromotionText ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-500'}
+                                        px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition
                                     `}
                                 >
                                     {updatingPromotionText ? '수정중...' : '수정하기'}
