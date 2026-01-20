@@ -6268,12 +6268,17 @@ const fetchBuyOrders = async () => {
                       // 배경색은 금융 무게감 있는 어두운 색상
                       className={`mt-8
                       w-full
-                      flex flex-col items-start justify-center gap-2
-                      relative
-                      bg-blue-50/80 p-4 rounded-lg border border-slate-200 shadow-xl backdrop-blur-md
+                      flex flex-col items-start justify-center gap-4
+                      relative overflow-visible
+                      rounded-2xl border border-slate-200/70
+                      bg-white/90 p-5
+                      shadow-[0_24px_70px_-40px_rgba(15,23,42,0.45)]
+                      backdrop-blur-md
                       `}
 
                     >
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_120%_at_0%_0%,rgba(59,130,246,0.12)_0%,transparent_55%)]" />
+                      <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-emerald-200/30 blur-3xl" />
                       <div className="absolute -left-2 -top-2 z-10">
                         <Image
                           src="/icon-sale.png"
@@ -6441,10 +6446,10 @@ const fetchBuyOrders = async () => {
                       )}
                       */}
                       
-                      <div className="w-full flex flex-col items-start justify-center gap-2">
+                      <div className="relative w-full flex flex-col items-start justify-center gap-4">
 
               
-                        <div className="w-full flex flex-col items-start justify-center gap-2">
+                        <div className="w-full flex flex-col items-start justify-center gap-3">
 
                           {/*}
                           <div className="absolute top-2 right-2">
@@ -6461,25 +6466,30 @@ const fetchBuyOrders = async () => {
 
                           <div className="w-full flex flex-row items-center justify-between gap-2 pl-8">
                             <div className="flex flex-row items-center justify-center gap-2">
-                              <Image
-                                src="/icon-escrow-wallet.webp"
-                                alt="Escrow Wallet"
-                                width={20}
-                                height={20}
-                                className="w-5 h-5"
-                              />
-                              <span className="text-sm font-semibold text-slate-700">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full border border-blue-200/60 bg-blue-50 shadow-sm">
+                                <Image
+                                  src="/icon-escrow-wallet.webp"
+                                  alt="Escrow Wallet"
+                                  width={20}
+                                  height={20}
+                                  className="w-5 h-5"
+                                />
+                              </div>
+                              <span className="text-sm font-semibold text-slate-800">
                                 에스크로 잔고
                               </span>
                             </div>
+                            <span className="rounded-full border border-emerald-200/70 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700">
+                              USDT
+                            </span>
                           </div>
 
-                          <div className="w-full flex flex-col items-start justify-center gap-1">
+                          <div className="w-full flex flex-col items-start justify-center gap-3">
 
-                            <div className="w-full flex flex-col items-center justify-center gap-2">
+                            <div className="w-full flex flex-col items-center justify-center gap-3">
 
-                              <div className="w-full rounded-xl border border-emerald-200 bg-emerald-50/90 px-4 py-3
-                              shadow-[0_12px_30px_-20px_rgba(16,185,129,0.5)]">
+                              <div className="w-full rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 via-emerald-50/80 to-white px-5 py-4
+                              shadow-[0_18px_45px_-28px_rgba(16,185,129,0.65)]">
                                 <div className="flex flex-row items-center gap-2 text-sm font-semibold text-emerald-700">
                                   <Image
                                     src="/icon-tether.png"
@@ -6500,7 +6510,7 @@ const fetchBuyOrders = async () => {
                                 </div>
                               </div>
                               <a
-                                className="flex items-center gap-2 text-xs text-slate-600 hover:text-slate-800"
+                                className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm hover:text-slate-800 hover:shadow-md"
                                 href={`https://polygonscan.com/token/0xc2132d05d31c914a87c6611c10748aeb04b58e8f?a=${seller.seller.escrowWalletAddress}`}
                                 target="_blank"
                                 rel="noreferrer"
@@ -6551,21 +6561,21 @@ const fetchBuyOrders = async () => {
                             </div>
 
                             {/* if balance is less than 10 USDT, show warning */}
-                            {currentUsdtBalanceArray[index] < 10 ? (
-                              <div className="text-red-600 text-sm font-medium">
-                                {/*Warning: Low escrow balance may result in no order assignments. Please recharge USDT. */}
-                                경고: 에스크로 잔액이 부족하면 주문 할당이 이루어지지 않을 수 있습니다. USDT를 충전해주세요.
-                              </div>
-                            ) : (
-                              <>
-                              {seller.walletAddress === address && (
-                                <div className="text-emerald-600 text-sm mt-1 font-medium">
-                                  {/*If you deposit more USDT, more orders will be assigned. */}
-                                  충전된 USDT가 많을수록 더 많은 주문이 할당됩니다.
+                              {currentUsdtBalanceArray[index] < 10 ? (
+                                <div className="w-full rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">
+                                  {/*Warning: Low escrow balance may result in no order assignments. Please recharge USDT. */}
+                                  경고: 에스크로 잔액이 부족하면 주문 할당이 이루어지지 않을 수 있습니다. USDT를 충전해주세요.
                                 </div>
+                              ) : (
+                                <>
+                                  {seller.walletAddress === address && (
+                                    <div className="w-full rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-xs font-semibold text-emerald-700">
+                                      {/*If you deposit more USDT, more orders will be assigned. */}
+                                      충전된 USDT가 많을수록 더 많은 주문이 할당됩니다.
+                                    </div>
+                                  )}
+                                </>
                               )}
-                              </>
-                            )}
 
                             {!(
                               seller.seller?.buyOrder?.status === 'paymentRequested' ||
