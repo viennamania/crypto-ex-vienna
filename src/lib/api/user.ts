@@ -2547,6 +2547,7 @@ export async function getAllSellersForBalanceInquiry(
         projection: {
           id: 1,
           nickname: 1,
+          avatar: 1,
           walletAddress: 1,
           seller: 1,
         },

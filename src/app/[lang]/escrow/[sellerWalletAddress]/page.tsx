@@ -3809,89 +3809,96 @@ const fetchBuyOrders = async () => {
 
   // /api/user/getAllSellersForBalance
   const [sellersBalance, setSellersBalance] = useState([] as any[]);
+  const [sellerProfileLoaded, setSellerProfileLoaded] = useState(false);
   const fetchSellersBalance = async () => {
-    const response = await fetch('/api/user/getAllSellersForBalance', {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(
-        {
-          storecode: "admin",
-          limit: 100,
-          page: 1,
-        }
-      )
-    });
+    try {
+      const response = await fetch('/api/user/getAllSellersForBalance', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(
+          {
+            storecode: "admin",
+            limit: 100,
+            page: 1,
+          }
+        )
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    ///console.log('getAllSellersForBalance data', data);
+      ///console.log('getAllSellersForBalance data', data);
 
-    if (data.result) {
+      if (data.result) {
+        
+        //setSellersBalance(data.result.users);
+
+        // if seller.walletAddress of data.result.users is address,
+        // then order first
+        // and others is ordered by seller.usdtToKrwRate ascending
+        /*
+        const sortedSellers = data.result.users.sort((a: any, b: any) => {
+          if (a.walletAddress === address) return -1;
+          if (b.walletAddress === address) return 1;
+          return 0;
+        });
+        */
+
+
+        const sortedSellers = data.result.users;
+
+        // if walletAddress is address, then order first
+        // and then others is ordered by seller.totalPaymentConfirmedUsdtAmount descending
+
+        /*
+        const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
+          if (a.walletAddress === address) return -1;
+          if (b.walletAddress === address) return 1;
+          return a.seller?.usdtToKrwRate - b.seller?.usdtToKrwRate;
+        });
+        */
       
-      //setSellersBalance(data.result.users);
-
-      // if seller.walletAddress of data.result.users is address,
-      // then order first
-      // and others is ordered by seller.usdtToKrwRate ascending
-      /*
-      const sortedSellers = data.result.users.sort((a: any, b: any) => {
-        if (a.walletAddress === address) return -1;
-        if (b.walletAddress === address) return 1;
-        return 0;
-      });
-      */
+        /*
+        const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
+          if (a.walletAddress === address) return -1;
+          if (b.walletAddress === address) return 1;
+          return b.totalPaymentConfirmedUsdtAmount - a.totalPaymentConfirmedUsdtAmount;
+        });
+        */
+      // find sellerWalletAddress
+        const mySeller = sortedSellers.find((seller: any) => seller.seller.escrowWalletAddress === sellerWalletAddress);
 
 
-      const sortedSellers = data.result.users;
+        /*
+        // reorder status is 'accepted' first, then 'paymentRequested', then 'paymentConfirmed', then 'cancelled'
+        const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
+          const statusOrder = ['accepted', 'paymentRequested', 'paymentConfirmed', 'cancelled'];
+          const aStatusIndex = statusOrder.indexOf(a.status);
+          const bStatusIndex = statusOrder.indexOf(b.status);
+          return aStatusIndex - bStatusIndex;
+        });
 
-      // if walletAddress is address, then order first
-      // and then others is ordered by seller.totalPaymentConfirmedUsdtAmount descending
+        // usdtToKrwRate ascending
+        finalSortedSellers.sort((a: any, b: any) => {
+          return a.usdtToKrwRate - b.usdtToKrwRate;
+        });
+        */
+        
 
-      /*
-      const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
-        if (a.walletAddress === address) return -1;
-        if (b.walletAddress === address) return 1;
-        return a.seller?.usdtToKrwRate - b.seller?.usdtToKrwRate;
-      });
-      */
-    
-      /*
-      const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
-        if (a.walletAddress === address) return -1;
-        if (b.walletAddress === address) return 1;
-        return b.totalPaymentConfirmedUsdtAmount - a.totalPaymentConfirmedUsdtAmount;
-      });
-      */
-     // find sellerWalletAddress
-      const mySeller = sortedSellers.find((seller: any) => seller.seller.escrowWalletAddress === sellerWalletAddress);
+        //setSellersBalance(finalSortedSellers);
+        setSellersBalance([
+          ...(mySeller ? [mySeller] : [])
+        ]);
 
 
-      /*
-      // reorder status is 'accepted' first, then 'paymentRequested', then 'paymentConfirmed', then 'cancelled'
-      const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
-        const statusOrder = ['accepted', 'paymentRequested', 'paymentConfirmed', 'cancelled'];
-        const aStatusIndex = statusOrder.indexOf(a.status);
-        const bStatusIndex = statusOrder.indexOf(b.status);
-        return aStatusIndex - bStatusIndex;
-      });
-
-      // usdtToKrwRate ascending
-      finalSortedSellers.sort((a: any, b: any) => {
-        return a.usdtToKrwRate - b.usdtToKrwRate;
-      });
-      */
-      
-
-      //setSellersBalance(finalSortedSellers);
-      setSellersBalance([
-        ...(mySeller ? [mySeller] : [])
-      ]);
-
-
-    } else {
-      console.error('Error fetching sellers balance');
+      } else {
+        console.error('Error fetching sellers balance');
+      }
+    } catch (error) {
+      console.error('Error fetching sellers balance', error);
+    } finally {
+      setSellerProfileLoaded(true);
     }
   };
   useEffect(() => {
@@ -4618,6 +4625,9 @@ const fetchBuyOrders = async () => {
     activeSeller?.seller?.verified ??
     (activeSeller?.seller?.status === 'confirmed')
   );
+  const shareLabel = !sellerProfileLoaded
+    ? '... 판매자 공유하기'
+    : (activeSeller?.nickname ? `${activeSeller.nickname} 판매자 공유하기` : null);
 
 
 
@@ -4880,37 +4890,39 @@ const fetchBuyOrders = async () => {
                     </button>
                   )}
                 </div>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm hover:bg-white"
-                  onClick={() => {
-                    navigator.clipboard.writeText(window.location.href);
-                    toast.success("링크가 복사되었습니다.");
-                  }}
-                >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
+                {shareLabel && (
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm hover:bg-white"
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.href);
+                      toast.success("링크가 복사되었습니다.");
+                    }}
                   >
-                    <path
-                      d="M15 8a3 3 0 10-6 0v1H7a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-2V8z"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M12 5v6"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  공유하기
-                </button>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M15 8a3 3 0 10-6 0v1H7a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-2V8z"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M12 5v6"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    {shareLabel}
+                  </button>
+                )}
               </div>
 
               <div className="w-full flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -5895,7 +5907,16 @@ const fetchBuyOrders = async () => {
 
                       <div className="w-full flex flex-row items-start justify-between gap-2 mt-8 mb-8">
                         
-                        <div className="w-full flex flex-col items-start justify-center gap-2">
+                        <div className="w-full flex flex-col items-start justify-center gap-2 relative">
+                          <div className="absolute -left-2 -top-2">
+                            <Image
+                              src="/icon-sale.png"
+                              alt="Status Badge"
+                              width={40}
+                              height={40}
+                              className="w-9 h-9 object-contain drop-shadow"
+                            />
+                          </div>
                           <Image
                             src={order?.store?.storeLogo || '/logo.png'}
                             alt={order?.store?.storeName || 'Store'}
@@ -6248,11 +6269,20 @@ const fetchBuyOrders = async () => {
                       className={`mt-8
                       w-full
                       flex flex-col items-start justify-center gap-2
-                      
+                      relative
                       bg-blue-50/80 p-4 rounded-lg border border-slate-200 shadow-xl backdrop-blur-md
                       `}
 
                     >
+                      <div className="absolute -left-2 -top-2 z-10">
+                        <Image
+                          src="/icon-sale.png"
+                          alt="Status Badge"
+                          width={44}
+                          height={44}
+                          className="w-11 h-11 object-contain drop-shadow"
+                        />
+                      </div>
                     
 
 
@@ -6429,7 +6459,7 @@ const fetchBuyOrders = async () => {
                           */}
 
 
-                          <div className="w-full flex flex-row items-center justify-between gap-2">
+                          <div className="w-full flex flex-row items-center justify-between gap-2 pl-8">
                             <div className="flex flex-row items-center justify-center gap-2">
                               <Image
                                 src="/icon-escrow-wallet.webp"
@@ -6550,11 +6580,11 @@ const fetchBuyOrders = async () => {
                                   <div className="w-full flex flex-col items-start justify-center gap-2">
                                     <div className="w-full flex flex-row items-start justify-start gap-2">
                                       <Image
-                                        src="/icon-sale.png"
-                                        alt="On Sale"
-                                        width={30}
-                                        height={30}
-                                        className="w-12 h-12 object-contain"
+                                        src={seller.avatar || seller.seller?.avatar || "/icon-seller.png"}
+                                        alt="Seller Avatar"
+                                        width={44}
+                                        height={44}
+                                        className="w-11 h-11 rounded-full object-cover border border-slate-200 bg-white"
                                       />
                                       {/* 판매 홍보용 문구 */}
                                       {seller.seller?.promotionText ? (
