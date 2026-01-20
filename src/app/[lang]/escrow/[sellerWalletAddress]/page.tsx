@@ -4628,6 +4628,41 @@ const fetchBuyOrders = async () => {
   const shareLabel = !sellerProfileLoaded
     ? '... 판매자 공유하기'
     : (activeSeller?.nickname ? `${activeSeller.nickname} 판매자 공유하기` : null);
+  const dailyTradeHistory = [
+    { day: '월', value: 58 },
+    { day: '화', value: 92 },
+    { day: '수', value: 74 },
+    { day: '목', value: 126 },
+    { day: '금', value: 98 },
+    { day: '토', value: 140 },
+    { day: '일', value: 112 },
+  ];
+  const dailyTradeMax = Math.max(...dailyTradeHistory.map((item) => item.value), 1);
+  const dailyTradeChartWidth = 320;
+  const dailyTradeChartHeight = 96;
+  const dailyTradeChartInset = 8;
+  const dailyTradeChartStep =
+    dailyTradeHistory.length > 1
+      ? dailyTradeChartWidth / (dailyTradeHistory.length - 1)
+      : dailyTradeChartWidth;
+  const dailyTradePoints = dailyTradeHistory.map((item, index) => {
+    const x = Math.round(index * dailyTradeChartStep);
+    const y =
+      dailyTradeChartInset +
+      Math.round(
+        (1 - item.value / dailyTradeMax) *
+          (dailyTradeChartHeight - dailyTradeChartInset * 2)
+      );
+    return { x, y };
+  });
+  const dailyTradeLinePath = dailyTradePoints.length
+    ? `M ${dailyTradePoints.map((point) => `${point.x},${point.y}`).join(' ')}`
+    : '';
+  const dailyTradeAreaPath = dailyTradePoints.length
+    ? `M 0 ${dailyTradeChartHeight} L ${dailyTradePoints
+        .map((point) => `${point.x},${point.y}`)
+        .join(' ')} L ${dailyTradeChartWidth} ${dailyTradeChartHeight} Z`
+    : '';
 
 
 
@@ -5657,7 +5692,7 @@ const fetchBuyOrders = async () => {
                     {/* dot before */}
                     <div className="inline-block w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
                     <span className="align-middle">
-                      거래수(건)
+                      오늘 거래량
                     </span>
                   </div>
                   <div className="text-4xl font-semibold text-slate-800">
@@ -5666,6 +5701,56 @@ const fetchBuyOrders = async () => {
                       animatedTotalCount
                     }
                   </div>
+                </div>
+              </div>
+
+              <div className="w-full max-w-xl rounded-2xl border border-slate-200/70 bg-white/80 px-4 py-3 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.35)] backdrop-blur-sm">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+                  <span>일별 거래 이력</span>
+                  <span className="text-slate-400">최근 7일</span>
+                </div>
+                <div className="mt-3 h-24 w-full">
+                  <svg
+                    viewBox={`0 0 ${dailyTradeChartWidth} ${dailyTradeChartHeight}`}
+                    preserveAspectRatio="none"
+                    className="h-full w-full"
+                  >
+                    <defs>
+                      <linearGradient id="dailyTradeAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#fb923c" stopOpacity="0.35" />
+                        <stop offset="100%" stopColor="#fb923c" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    {dailyTradeAreaPath && (
+                      <path d={dailyTradeAreaPath} fill="url(#dailyTradeAreaGradient)" />
+                    )}
+                    {dailyTradeLinePath && (
+                      <path
+                        d={dailyTradeLinePath}
+                        fill="none"
+                        stroke="#f97316"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    )}
+                    {dailyTradePoints.map((point, index) => (
+                      <circle
+                        key={`${dailyTradeHistory[index]?.day}-${point.x}`}
+                        cx={point.x}
+                        cy={point.y}
+                        r="3.5"
+                        fill="#fff7ed"
+                        stroke="#f97316"
+                        strokeWidth="2"
+                      />
+                    ))}
+                  </svg>
+                </div>
+                <div className="mt-2 flex w-full items-center justify-between text-[10px] font-semibold text-slate-500">
+                  {dailyTradeHistory.map((item) => (
+                    <span key={item.day}>{item.day}</span>
+                  ))}
                 </div>
               </div>
 
@@ -6500,7 +6585,7 @@ const fetchBuyOrders = async () => {
                                   />
                                   <span>USDT</span>
                                 </div>
-                                <div className="mt-1 text-4xl sm:text-5xl text-emerald-700 font-semibold tracking-tight tabular-nums"
+                                <div className="mt-1 text-4xl sm:text-5xl text-emerald-700 font-semibold tracking-tight tabular-nums text-right"
                                   style={{ fontFamily: 'monospace' }}>
                                   {
                                     //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -7679,43 +7764,52 @@ const fetchBuyOrders = async () => {
                                     로그인을 해야 구매할 수 있습니다.
                                   </div>
 
-                                  <ConnectButton
-                                    client={client}
-                                    wallets={wallets}
+                                  <div className="relative mt-3 inline-flex items-center justify-center">
+                                    <span className="login-cta-glow" aria-hidden="true" />
+                                    <span className="login-cta-ring" aria-hidden="true" />
+                                    <div className="relative z-10 login-cta-bounce">
+                                      <ConnectButton
+                                        client={client}
+                                        wallets={wallets}
 
-                                    /*
-                                    accountAbstraction={{
-                                      chain: arbitrum,
-                                      sponsorGas: false
-                                    }}
-                                    */
-                                    
-                                    theme={"light"}
+                                        /*
+                                        accountAbstraction={{
+                                          chain: arbitrum,
+                                          sponsorGas: false
+                                        }}
+                                        */
+                                        
+                                        theme={"light"}
 
-                                    // button color is dark skyblue convert (49, 103, 180) to hex
-                                    connectButton={{
-                                        style: {
-                                            backgroundColor: "#3167b4", // dark skyblue
-                                            color: "#f3f4f6", // light gray
-                                            padding: "2px 10px",
-                                            borderRadius: "10px",
-                                            fontSize: "14px",
-                                            width: "60x",
-                                            height: "38px",
-                                        },
-                                        label: "웹3 로그인",
-                                    }}
+                                        // button color is dark skyblue convert (49, 103, 180) to hex
+                                        connectButton={{
+                                            style: {
+                                                backgroundColor: "#3167b4", // dark skyblue
+                                                color: "#f3f4f6", // light gray
+                                                padding: "2px 10px",
+                                                borderRadius: "10px",
+                                                fontSize: "14px",
+                                                fontWeight: 700,
+                                                width: "60x",
+                                                height: "38px",
+                                                boxShadow: "0 18px 32px -16px rgba(49, 103, 180, 0.9)",
+                                                letterSpacing: "0.02em",
+                                            },
+                                            label: "웹3 로그인",
+                                        }}
 
-                                    connectModal={{
-                                      size: "wide", 
-                                      //size: "compact",
-                                      titleIcon: "https://loot.menu/logo.png",                           
-                                      showThirdwebBranding: false,
-                                    }}
+                                        connectModal={{
+                                          size: "wide", 
+                                          //size: "compact",
+                                          titleIcon: "https://loot.menu/logo.png",                           
+                                          showThirdwebBranding: false,
+                                        }}
 
-                                    locale={"ko_KR"}
-                                    //locale={"en_US"}
-                                  />
+                                        locale={"ko_KR"}
+                                        //locale={"en_US"}
+                                      />
+                                    </div>
+                                  </div>
 
 
                                 </div>
@@ -9933,6 +10027,31 @@ const fetchBuyOrders = async () => {
             mix-blend-mode: screen;
           }
 
+          .login-cta-glow {
+            position: absolute;
+            inset: -14px -18px;
+            border-radius: 16px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.45) 0%, transparent 65%);
+            filter: blur(14px);
+            opacity: 0.75;
+            animation: loginGlow 1.7s ease-in-out infinite;
+            pointer-events: none;
+          }
+
+          .login-cta-ring {
+            position: absolute;
+            inset: -6px -10px;
+            border-radius: 14px;
+            border: 2px solid rgba(59, 130, 246, 0.55);
+            animation: loginRing 1.7s ease-out infinite;
+            pointer-events: none;
+          }
+
+          .login-cta-bounce {
+            animation: loginBounce 2.3s ease-in-out infinite;
+            will-change: transform;
+          }
+
           @keyframes escrowBannerMove {
             from {
               transform: translateX(0);
@@ -9961,6 +10080,42 @@ const fetchBuyOrders = async () => {
             }
             100% {
               transform: translateX(140%);
+            }
+          }
+
+          @keyframes loginGlow {
+            0%,
+            100% {
+              opacity: 0.45;
+              transform: scale(0.98);
+            }
+            50% {
+              opacity: 1;
+              transform: scale(1.05);
+            }
+          }
+
+          @keyframes loginRing {
+            0% {
+              opacity: 0;
+              transform: scale(0.92);
+            }
+            30% {
+              opacity: 1;
+            }
+            100% {
+              opacity: 0;
+              transform: scale(1.12);
+            }
+          }
+
+          @keyframes loginBounce {
+            0%,
+            100% {
+              transform: translateY(0) scale(1);
+            }
+            50% {
+              transform: translateY(-2px) scale(1.03);
             }
           }
 
@@ -10005,6 +10160,11 @@ const fetchBuyOrders = async () => {
             .buy-cta-animated,
             .buy-cta-animated::before,
             .buy-cta-animated::after {
+              animation: none;
+            }
+            .login-cta-glow,
+            .login-cta-ring,
+            .login-cta-bounce {
               animation: none;
             }
           }
