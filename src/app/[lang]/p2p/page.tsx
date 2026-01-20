@@ -1421,7 +1421,7 @@ export default function OrangeXPage() {
                                 </div>
                             </div>
 
-                            <p className="text-sm text-slate-600">좌우로 스와이프하여 확인하세요</p>
+                            <p className="mt-1 text-sm text-slate-600 leading-relaxed">좌우로 스와이프하여 확인하세요</p>
                         </div>
                         <span className="text-xs font-semibold text-slate-500">USDT 파트너</span>
                     </div>
