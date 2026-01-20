@@ -256,6 +256,96 @@ const ESCROW_BANNER_ADS_SCROLL = [
   { id: 'scroll-10', image: '/images/ad-4.gif', link: 'https://orangex.center' },
 ];
 
+const TypingText = ({
+  text,
+  speed = 60,
+  pause = 2200,
+  className,
+  cursorClassName = 'typing-cursor',
+}: {
+  text: string;
+  speed?: number;
+  pause?: number;
+  className?: string;
+  cursorClassName?: string;
+}) => {
+  const [displayText, setDisplayText] = useState('');
+  const [phase, setPhase] = useState<'typing' | 'pause'>('typing');
+
+  useEffect(() => {
+    if (!text) {
+      setDisplayText('');
+      setPhase('typing');
+      return;
+    }
+
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      setDisplayText(text);
+      setPhase('pause');
+      return;
+    }
+
+    setDisplayText('');
+    setPhase('typing');
+  }, [text]);
+
+  useEffect(() => {
+    if (!text) {
+      return;
+    }
+
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return;
+    }
+
+    let timeoutId: number | undefined;
+
+    if (phase === 'typing') {
+      if (displayText.length < text.length) {
+        timeoutId = window.setTimeout(() => {
+          const nextLength = displayText.length + 1;
+          setDisplayText(text.slice(0, nextLength));
+          if (nextLength === text.length) {
+            setPhase('pause');
+          }
+        }, speed);
+      }
+    } else if (phase === 'pause' && displayText.length > 0) {
+      timeoutId = window.setTimeout(() => {
+        setDisplayText('');
+        setPhase('typing');
+      }, pause);
+    }
+
+    return () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [displayText, pause, phase, speed, text]);
+
+  const isPaused = phase === 'pause' && displayText.length === text.length;
+  const showCursor = displayText.length > 0;
+  const combinedClassName = `${className ?? ''}${isPaused ? ' typing-flash' : ''}`;
+
+  return (
+    <span className={combinedClassName}>
+      {displayText}
+      {showCursor && (
+        <span className={cursorClassName} aria-hidden="true">
+          |
+        </span>
+      )}
+    </span>
+  );
+};
+
 
 
 export default function Index({ params }: any) {
@@ -4221,8 +4311,49 @@ const fetchBuyOrders = async () => {
 
   // buyAmountInputs
   const MAX_BUY_AMOUNT = 100000;
+  const MAX_KRW_AMOUNT = 100000000;
+
+  const formatNumberWithCommas = (value: string) => {
+    if (!value) {
+      return '';
+    }
+    const hasDecimal = value.includes('.');
+    const [integerPart, decimalPart = ''] = value.split('.');
+    const normalizedInteger = integerPart.replace(/^0+(?=\d)/, '') || '0';
+    const integerWithCommas = normalizedInteger.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return hasDecimal ? `${integerWithCommas}.${decimalPart}` : integerWithCommas;
+  };
+
+  const formatUsdtValue = (value: number) => {
+    if (!value || Number.isNaN(value)) {
+      return '';
+    }
+    const fixed = (Math.floor(value * 100) / 100).toFixed(2);
+    const trimmed = fixed.replace(/\.?0+$/, '');
+    return formatNumberWithCommas(trimmed);
+  };
+
+  const normalizeUsdtInput = (value: string) => {
+    const cleaned = value.replace(/,/g, '').replace(/[^\d.]/g, '');
+    if (!cleaned) {
+      return '';
+    }
+    const parts = cleaned.split('.');
+    const integerPart = parts[0] ?? '';
+    const decimalPart = parts.slice(1).join('');
+    const trimmedDecimal = decimalPart.slice(0, 2);
+    const normalizedInteger = integerPart.replace(/^0+(?=\d)/, '');
+    if (cleaned.includes('.')) {
+      return `${normalizedInteger || '0'}.${trimmedDecimal}`;
+    }
+    return normalizedInteger;
+  };
+
   const [buyAmountInputs, setBuyAmountInputs] = useState<number[]>([]);
+  const [buyAmountKrwInputs, setBuyAmountKrwInputs] = useState<number[]>([]);
+  const [buyAmountInputTexts, setBuyAmountInputTexts] = useState<string[]>([]);
   const [buyAmountOverLimitArray, setBuyAmountOverLimitArray] = useState<boolean[]>([]);
+  const [buyAmountKrwOverLimitArray, setBuyAmountKrwOverLimitArray] = useState<boolean[]>([]);
 
   /*
   useEffect(() => {
@@ -6406,6 +6537,120 @@ const fetchBuyOrders = async () => {
                               </>
                             )}
 
+                            {!(
+                              seller.seller?.buyOrder?.status === 'paymentRequested' ||
+                              (seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
+                                (!seller.seller?.buyOrder?.transactionHash ||
+                                  seller.seller?.buyOrder?.transactionHash === '0x'))
+                            ) && (
+                              <>
+                                {/* if balance is greater than or equal to 10 USDT, show 판매 대기중 */}
+                                {currentUsdtBalanceArray[index] >= 10 ? (
+
+                                  <div className="w-full flex flex-col items-start justify-center gap-2">
+                                    <div className="w-full flex flex-row items-start justify-start gap-2">
+                                      <Image
+                                        src="/icon-sale.png"
+                                        alt="On Sale"
+                                        width={30}
+                                        height={30}
+                                        className="w-12 h-12 object-contain"
+                                      />
+                                      {/* 판매 홍보용 문구 */}
+                                      {seller.seller?.promotionText ? (
+                                      <span className="relative inline-flex min-h-[160px] flex-1 min-w-0 max-w-[420px] items-start rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-800 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.4)] break-words">
+                                        <span
+                                          className="absolute -left-2 top-3 h-0 w-0 border-y-[8px] border-r-[8px] border-y-transparent border-r-slate-200/70"
+                                          aria-hidden="true"
+                                        />
+                                        <span
+                                          className="absolute -left-1.5 top-3.5 h-0 w-0 border-y-[6px] border-r-[6px] border-y-transparent border-r-white/90"
+                                          aria-hidden="true"
+                                        />
+                                        <TypingText text={seller.seller?.promotionText || ''} className="typing-text" />
+                                      </span>
+                                      ) : (
+                                      <span className="text-xs font-semibold text-slate-600">
+                                        홍보 문구가 설정되지 않았습니다.
+                                      </span>
+                                      )}
+                                      
+                                    </div>
+
+                                    {/* 입력창 */}
+                                    {/* 수정하기 버튼 */}
+                                    {/*
+                                    {seller.walletAddress === address && (
+                                      <div className="w-full flex flex-col items-start justify-center gap-1">
+                                        <input
+                                          type="text"
+                                          className="w-full border border-slate-200 bg-slate-100 text-slate-800 rounded-lg p-2 text-xs
+                                          placeholder:text-slate-600
+                                          focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          placeholder="판매 홍보용 문구를 입력하세요."
+                                          value={promotionText}
+                                          onChange={(e) => {
+                                              setPromotionText(e.target.value);
+                                          }}
+                                        />
+                                        <button
+                                          disabled={updatingPromotionText}
+                                          onClick={updatePromotionText}
+                                          className={`
+                                              ${updatingPromotionText 
+                                                ? 'bg-slate-100 text-slate-600 cursor-not-allowed border border-slate-200' 
+                                                : 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg hover:shadow-emerald-500/50 border-0 transform hover:scale-105 active:scale-95'
+                                              }
+                                              p-2 rounded-lg text-xs w-full font-semibold
+                                              transition-all duration-200 ease-in-out
+                                          `}
+                                        >
+                                          <span className="flex items-center justify-center gap-2">
+                                            {updatingPromotionText ? (
+                                              <>
+                                                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                수정중...
+                                              </>
+                                            ) : (
+                                              <>
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                                </svg>
+                                                수정하기
+                                              </>
+                                            )}
+                                          </span>
+                                        </button>
+                                      </div>
+                                    )}
+                                    */}
+
+                                  </div>
+
+                                ) : (
+                                  <div className="flex flex-row items-center gap-2
+                                  bg-red-500 text-white px-3 py-1 rounded-lg">
+
+                                    {/* /icon-sale.png gray scale */}
+                                    <Image
+                                      src="/icon-sale.png"
+                                      alt="Off Sale"
+                                      width={30}
+                                      height={30}
+                                      className="w-12 h-12 object-contain grayscale"
+                                    />
+                                    <span className="text-xs font-semibold">
+                                      에스크로 잔액 부족
+                                    </span>
+                                  
+                                  </div>
+                                )}
+                              </>
+                            )}
+
                           </div>
 
                         </div>
@@ -7049,111 +7294,6 @@ const fetchBuyOrders = async () => {
                       ) : (
                         <div className="w-full flex flex-col items-start justify-center gap-2">
                           
-                          {/* if balance is greater than or equal to 10 USDT, show 판매 대기중 */}
-                          {currentUsdtBalanceArray[index] >= 10 ? (
-
-                            <div className="w-full flex flex-col items-start justify-center gap-2">
-                              <div className="w-full flex flex-row items-start justify-start gap-2">
-                                <Image
-                                  src="/icon-sale.png"
-                                  alt="On Sale"
-                                  width={30}
-                                  height={30}
-                                  className="w-12 h-12 object-contain"
-                                />
-                                {/* 판매 홍보용 문구 */}
-                                {seller.seller?.promotionText ? (
-                                <span className="relative inline-block max-w-[420px] rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-800 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.4)] break-words">
-                                  <span
-                                    className="absolute -left-2 top-1.5 h-0 w-0 border-y-[8px] border-r-[8px] border-y-transparent border-r-slate-200/70"
-                                    aria-hidden="true"
-                                  />
-                                  <span
-                                    className="absolute -left-1.5 top-2 h-0 w-0 border-y-[6px] border-r-[6px] border-y-transparent border-r-white/90"
-                                    aria-hidden="true"
-                                  />
-                                  {seller.seller?.promotionText}
-                                </span>
-                                ) : (
-                                <span className="text-xs font-semibold text-slate-600">
-                                  홍보 문구가 설정되지 않았습니다.
-                                </span>
-                                )}
-                                
-                              </div>
-
-                              {/* 입력창 */}
-                              {/* 수정하기 버튼 */}
-                              {/*
-                              {seller.walletAddress === address && (
-                                <div className="w-full flex flex-col items-start justify-center gap-1">
-                                  <input
-                                    type="text"
-                                    className="w-full border border-slate-200 bg-slate-100 text-slate-800 rounded-lg p-2 text-xs
-                                    placeholder:text-slate-600
-                                    focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="판매 홍보용 문구를 입력하세요."
-                                    value={promotionText}
-                                    onChange={(e) => {
-                                        setPromotionText(e.target.value);
-                                    }}
-                                  />
-                                  <button
-                                    disabled={updatingPromotionText}
-                                    onClick={updatePromotionText}
-                                    className={`
-                                        ${updatingPromotionText 
-                                          ? 'bg-slate-100 text-slate-600 cursor-not-allowed border border-slate-200' 
-                                          : 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg hover:shadow-emerald-500/50 border-0 transform hover:scale-105 active:scale-95'
-                                        }
-                                        p-2 rounded-lg text-xs w-full font-semibold
-                                        transition-all duration-200 ease-in-out
-                                    `}
-                                  >
-                                    <span className="flex items-center justify-center gap-2">
-                                      {updatingPromotionText ? (
-                                        <>
-                                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                          </svg>
-                                          수정중...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                                          </svg>
-                                          수정하기
-                                        </>
-                                      )}
-                                    </span>
-                                  </button>
-                                </div>
-                              )}
-                              */}
-
-                            </div>
-
-                          ) : (
-                            <div className="flex flex-row items-center gap-2
-                            bg-red-500 text-white px-3 py-1 rounded-lg">
-
-                              {/* /icon-sale.png gray scale */}
-                              <Image
-                                src="/icon-sale.png"
-                                alt="Off Sale"
-                                width={30}
-                                height={30}
-                                className="w-12 h-12 object-contain grayscale"
-                              />
-                              <span className="text-xs font-semibold">
-                                에스크로 잔액 부족
-                              </span>
-                            
-                            </div>
-                          )}
-
                           {/* 최근 거래내역 */}
                           {/* seller?.buyOrder */}
                           {seller.seller?.buyOrder && (
@@ -7309,20 +7449,42 @@ const fetchBuyOrders = async () => {
                                         type="text"
                                         inputMode="numeric"
                                         pattern="[0-9]*"
-                                        placeholder="구매할 USDT 수량"
+                                        placeholder="결제할 원화금액"
                                         onChange={(e) => {
                                           const rawValue = e.target.value.replace(/[^\d]/g, '');
                                           const numericValue = rawValue ? Math.floor(Number(rawValue)) : 0;
-                                          const isOverLimit = numericValue > MAX_BUY_AMOUNT;
+                                          const rate = seller.seller?.usdtToKrwRate || 0;
+                                          const isOverKrwLimit = numericValue > MAX_KRW_AMOUNT;
+                                          let krwValue = Math.min(numericValue, MAX_KRW_AMOUNT);
+                                          let usdtValue = rate > 0 ? Math.floor((krwValue / rate) * 100) / 100 : 0;
+                                          const isOverUsdtLimit = usdtValue > MAX_BUY_AMOUNT;
+                                          if (isOverUsdtLimit) {
+                                            usdtValue = MAX_BUY_AMOUNT;
+                                            krwValue = rate > 0 ? Math.floor(usdtValue * rate) : krwValue;
+                                          }
+
                                           const newBuyAmountInputs = [...buyAmountInputs];
-                                          newBuyAmountInputs[index] = Math.min(numericValue, MAX_BUY_AMOUNT);
+                                          newBuyAmountInputs[index] = usdtValue;
                                           setBuyAmountInputs(newBuyAmountInputs);
+
+                                          const newBuyAmountKrwInputs = [...buyAmountKrwInputs];
+                                          newBuyAmountKrwInputs[index] = krwValue;
+                                          setBuyAmountKrwInputs(newBuyAmountKrwInputs);
+
+                                          const newBuyAmountInputTexts = [...buyAmountInputTexts];
+                                          newBuyAmountInputTexts[index] = formatUsdtValue(usdtValue);
+                                          setBuyAmountInputTexts(newBuyAmountInputTexts);
+
                                           const newBuyAmountOverLimitArray = [...buyAmountOverLimitArray];
-                                          newBuyAmountOverLimitArray[index] = isOverLimit;
+                                          newBuyAmountOverLimitArray[index] = isOverUsdtLimit;
                                           setBuyAmountOverLimitArray(newBuyAmountOverLimitArray);
+
+                                          const newBuyAmountKrwOverLimitArray = [...buyAmountKrwOverLimitArray];
+                                          newBuyAmountKrwOverLimitArray[index] = isOverKrwLimit;
+                                          setBuyAmountKrwOverLimitArray(newBuyAmountKrwOverLimitArray);
                                         }}
-                                        value={buyAmountInputs[index]
-                                          ? buyAmountInputs[index].toLocaleString()
+                                        value={buyAmountKrwInputs[index]
+                                          ? buyAmountKrwInputs[index].toLocaleString()
                                           : ''}
                                         className={`
                                           ${address
@@ -7331,7 +7493,83 @@ const fetchBuyOrders = async () => {
                                           ? 'border border-slate-200 bg-white text-slate-900'
                                           : 'border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
                                           }
+                                          w-full rounded-2xl px-5 py-4 pr-16 text-right text-3xl font-bold tracking-tight shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)] placeholder:text-left placeholder:text-lg placeholder:font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500
+                                          ${Number.isFinite(currentUsdtBalanceArray[index])
+                                            && buyAmountInputs[index] > currentUsdtBalanceArray[index]
+                                            ? 'border-rose-500 focus:ring-rose-500'
+                                            : ''}
+                                        `}
+                                        disabled={!address || !user?.buyer?.bankInfo || buyOrderingPrivateSaleArray[index]}
+                                      />
+                                      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
+                                        KRW
+                                      </span>
+                                    </div>
+                                    {buyAmountKrwOverLimitArray[index] && (
+                                      <span className="text-sm font-semibold text-rose-600">
+                                        1억 원 이하만 입력할 수 있습니다.
+                                      </span>
+                                    )}
+                                    <div className="relative w-full">
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        pattern="^\\d*(\\.\\d{0,2})?$"
+                                        placeholder="구매할 USDT 수량"
+                                        onChange={(e) => {
+                                          const normalizedValue = normalizeUsdtInput(e.target.value);
+                                          const numericValue = normalizedValue ? Number(normalizedValue) : 0;
+                                          const rate = seller.seller?.usdtToKrwRate || 0;
+                                          const isOverUsdtLimit = numericValue > MAX_BUY_AMOUNT;
+                                          let usdtValue = Math.min(numericValue, MAX_BUY_AMOUNT);
+                                          usdtValue = Math.floor(usdtValue * 100) / 100;
+                                          const rawKrwValue = rate > 0 ? Math.floor(usdtValue * rate) : 0;
+                                          const isOverKrwLimit = rawKrwValue > MAX_KRW_AMOUNT;
+                                          if (isOverKrwLimit && rate > 0) {
+                                            usdtValue = Math.floor((MAX_KRW_AMOUNT / rate) * 100) / 100;
+                                          }
+                                          const krwValue = rate > 0 ? Math.floor(usdtValue * rate) : 0;
+                                          const newBuyAmountInputs = [...buyAmountInputs];
+                                          newBuyAmountInputs[index] = usdtValue;
+                                          setBuyAmountInputs(newBuyAmountInputs);
+                                          const newBuyAmountOverLimitArray = [...buyAmountOverLimitArray];
+                                          newBuyAmountOverLimitArray[index] = isOverUsdtLimit;
+                                          setBuyAmountOverLimitArray(newBuyAmountOverLimitArray);
+
+                                          const newBuyAmountKrwInputs = [...buyAmountKrwInputs];
+                                          newBuyAmountKrwInputs[index] = Math.min(krwValue, MAX_KRW_AMOUNT);
+                                          setBuyAmountKrwInputs(newBuyAmountKrwInputs);
+
+                                          const newBuyAmountKrwOverLimitArray = [...buyAmountKrwOverLimitArray];
+                                          newBuyAmountKrwOverLimitArray[index] = isOverKrwLimit;
+                                          setBuyAmountKrwOverLimitArray(newBuyAmountKrwOverLimitArray);
+
+                                          const newBuyAmountInputTexts = [...buyAmountInputTexts];
+                                          const displayValue =
+                                            isOverUsdtLimit || isOverKrwLimit
+                                              ? formatUsdtValue(usdtValue)
+                                              : formatNumberWithCommas(normalizedValue);
+                                          newBuyAmountInputTexts[index] = displayValue;
+                                          setBuyAmountInputTexts(newBuyAmountInputTexts);
+                                        }}
+                                        value={
+                                          buyAmountInputTexts[index] ??
+                                          (buyAmountInputs[index]
+                                            ? formatUsdtValue(buyAmountInputs[index])
+                                            : '')
+                                        }
+                                        className={`
+                                          ${address
+                                          && user?.buyer?.bankInfo
+                                          && !buyOrderingPrivateSaleArray[index]
+                                          ? 'border border-slate-200 bg-white text-slate-900'
+                                          : 'border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                                          }
                                           w-full rounded-2xl px-5 py-4 pr-16 text-right text-4xl font-extrabold tracking-tight shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)] placeholder:text-left placeholder:text-xl placeholder:font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500
+                                          ${Number.isFinite(currentUsdtBalanceArray[index])
+                                            && buyAmountInputs[index] > currentUsdtBalanceArray[index]
+                                            ? 'border-rose-500 focus:ring-rose-500'
+                                            : ''}
                                         `}
                                         disabled={!address || !user?.buyer?.bankInfo || buyOrderingPrivateSaleArray[index]}
                                       />
@@ -7344,10 +7582,17 @@ const fetchBuyOrders = async () => {
                                         100,000 USDT 이하만 입력할 수 있습니다.
                                       </span>
                                     )}
-                                    {/* 구매할 USDT 수량을 입력해주세요. */}
-                                    <span className="text-sm text-slate-600">
-                                      구매할 USDT 수량을 입력해주세요.
-                                    </span>
+                                    {buyAmountInputs[index] > 0 && buyAmountInputs[index] < 1 && (
+                                      <span className="text-sm font-semibold text-rose-600">
+                                        최소 1 USDT 이상 입력해주세요.
+                                      </span>
+                                    )}
+                                    {Number.isFinite(currentUsdtBalanceArray[index])
+                                      && buyAmountInputs[index] > currentUsdtBalanceArray[index] && (
+                                      <span className="text-sm font-semibold text-rose-600">
+                                        에스크로 잔액보다 큰 수량은 구매할 수 없습니다.
+                                      </span>
+                                    )}
                                   </div>
                                 )}
 
@@ -7360,8 +7605,12 @@ const fetchBuyOrders = async () => {
                                     )
                                   }}
                                   className={`
-                                    ${address && user?.buyer?.bankInfo && !buyOrderingPrivateSaleArray[index]
-                                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-lg hover:shadow-blue-500/50 border-0' 
+                                    ${address
+                                    && user?.buyer?.bankInfo
+                                    && !buyOrderingPrivateSaleArray[index]
+                                    && buyAmountInputs[index] >= 1
+                                    && buyAmountInputs[index] <= (currentUsdtBalanceArray[index] ?? 0)
+                                      ? 'buy-cta-animated bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white border-0 ring-1 ring-blue-300/40 shadow-[0_18px_45px_-16px_rgba(37,99,235,0.65)] hover:shadow-[0_28px_60px_-18px_rgba(37,99,235,0.85)] hover:-translate-y-0.5' 
                                       : 'bg-slate-100 text-slate-500 cursor-not-allowed border border-slate-200'
                                     }
                                     px-4 py-2 rounded-lg font-semibold text-sm
@@ -7369,7 +7618,11 @@ const fetchBuyOrders = async () => {
                                     transform hover:scale-105 active:scale-95
                                     w-full
                                   `}
-                                  disabled={!address || !user?.buyer?.bankInfo || buyOrderingPrivateSaleArray[index]}
+                                  disabled={!address
+                                    || !user?.buyer?.bankInfo
+                                    || buyOrderingPrivateSaleArray[index]
+                                    || buyAmountInputs[index] < 1
+                                    || buyAmountInputs[index] > (currentUsdtBalanceArray[index] ?? 0)}
                                 >
                                   <span className="flex items-center justify-center gap-2">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -9598,6 +9851,48 @@ const fetchBuyOrders = async () => {
             animation-play-state: paused;
           }
 
+          .typing-text {
+            white-space: pre-wrap;
+            word-break: break-word;
+          }
+
+          .typing-flash {
+            animation: typingFlash 0.7s ease-in-out infinite;
+          }
+
+          .typing-cursor {
+            display: inline-block;
+            margin-left: 2px;
+            color: #94a3b8;
+            animation: typingBlink 0.8s steps(2, start) infinite;
+          }
+
+          .buy-cta-animated {
+            position: relative;
+            overflow: hidden;
+          }
+
+          .buy-cta-animated::before {
+            content: '';
+            position: absolute;
+            inset: -50% -20%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.65) 0%, transparent 60%);
+            opacity: 0.6;
+            animation: buyCtaGlow 1.2s ease-in-out infinite;
+            pointer-events: none;
+          }
+
+          .buy-cta-animated::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.65) 45%, transparent 90%);
+            transform: translateX(-120%);
+            animation: buyCtaSheen 1.4s ease-in-out infinite;
+            pointer-events: none;
+            mix-blend-mode: screen;
+          }
+
           @keyframes escrowBannerMove {
             from {
               transform: translateX(0);
@@ -9607,8 +9902,69 @@ const fetchBuyOrders = async () => {
             }
           }
 
+          @keyframes buyCtaGlow {
+            0%,
+            100% {
+              opacity: 0.35;
+            }
+            50% {
+              opacity: 0.9;
+            }
+          }
+
+          @keyframes buyCtaSheen {
+            0% {
+              transform: translateX(-140%);
+            }
+            60% {
+              transform: translateX(140%);
+            }
+            100% {
+              transform: translateX(140%);
+            }
+          }
+
+          @keyframes typingBlink {
+            0%,
+            49% {
+              opacity: 1;
+            }
+            50%,
+            100% {
+              opacity: 0;
+            }
+          }
+
+          @keyframes typingFlash {
+            0%,
+            100% {
+              text-shadow: 0 0 0 rgba(37, 99, 235, 0);
+              color: inherit;
+            }
+            50% {
+              text-shadow:
+                0 0 6px rgba(59, 130, 246, 0.9),
+                0 0 14px rgba(59, 130, 246, 0.9),
+                0 0 28px rgba(59, 130, 246, 0.85),
+                0 0 42px rgba(59, 130, 246, 0.7);
+              color: #0ea5e9;
+            }
+          }
+
           @media (prefers-reduced-motion: reduce) {
             .escrow-banner-track {
+              animation: none;
+            }
+            .typing-flash {
+              animation: none;
+              text-shadow: none;
+            }
+            .typing-cursor {
+              animation: none;
+            }
+            .buy-cta-animated,
+            .buy-cta-animated::before,
+            .buy-cta-animated::after {
               animation: none;
             }
           }
