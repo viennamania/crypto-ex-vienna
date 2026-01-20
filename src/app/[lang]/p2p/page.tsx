@@ -1388,7 +1388,37 @@ export default function OrangeXPage() {
                                     <path d="M8 14h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
 
-                                <h2 className="font-[var(--font-display)] text-2xl text-slate-900">제휴 배너</h2>
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                    <h2 className="font-[var(--font-display)] text-2xl text-slate-900">제휴 배너</h2>
+                                    <a
+                                        href="mailto:support@orangex.center"
+                                        className="group inline-flex items-center gap-2 rounded-full border border-rose-200/70 bg-[linear-gradient(120deg,rgba(255,255,255,0.95),rgba(254,242,242,0.95))] px-3 py-1 text-sm font-semibold text-rose-600 shadow-[0_14px_32px_-20px_rgba(244,63,94,0.65)] ring-1 ring-rose-200/60 transition hover:-translate-y-0.5 hover:text-rose-700 hover:shadow-[0_20px_45px_-20px_rgba(244,63,94,0.75)]"
+                                        aria-label="제휴 신청 이메일 보내기"
+                                    >
+                                        <span className="flex h-7 w-7 items-center justify-center rounded-full border border-rose-200/70 bg-rose-100 text-rose-600">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                <path
+                                                    d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"
+                                                    stroke="currentColor"
+                                                    strokeWidth="1.6"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                />
+                                                <path
+                                                    d="m4 8 8 5 8-5"
+                                                    stroke="currentColor"
+                                                    strokeWidth="1.6"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                />
+                                            </svg>
+                                        </span>
+                                        <span className="tracking-tight">제휴 신청을 받습니다</span>
+                                        <span className="rounded-full border border-rose-200/70 bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-rose-600 shadow-sm transition group-hover:border-rose-300 group-hover:text-rose-700">
+                                            support@orangex.center
+                                        </span>
+                                    </a>
+                                </div>
                             </div>
 
                             <p className="text-sm text-slate-600">좌우로 스와이프하여 확인하세요</p>

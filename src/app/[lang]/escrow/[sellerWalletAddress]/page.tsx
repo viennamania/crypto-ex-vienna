@@ -1391,8 +1391,8 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
     if (cancellingBuyOrders[index]) {
       return;
     }
-    setCancellingBuyOrders(
-      cancellingBuyOrders.map((item, idx) => idx === index ? true : item)
+    setCancellingBuyOrders((prev) =>
+      prev.map((item, idx) => idx === index ? true : item)
     );
     fetch('/api/order/cancelBuyOrderByAdmin', {
       method: 'POST',
@@ -1409,16 +1409,45 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
       console.log('cancelBuyOrder data', data);
       if (data.result) {
         toast.success('Buy order has been cancelled');
-        setBuyOrders(
-          buyOrders.filter((item, idx) => idx !== index)
+        const cancelledAt = new Date().toISOString();
+        setBuyOrders((prev) =>
+          prev.map((item) =>
+            item._id === orderId
+              ? {
+                  ...item,
+                  status: 'cancelled',
+                  cancelledAt,
+                  cancelTradeReason: '관리자에 의한 취소',
+                  canceller: 'admin',
+                }
+              : item
+          )
+        );
+        setSellersBalance((prev) =>
+          prev.map((seller) =>
+            seller?.seller?.buyOrder?._id === orderId
+              ? {
+                  ...seller,
+                  seller: {
+                    ...seller.seller,
+                    buyOrder: {
+                      ...seller.seller.buyOrder,
+                      status: 'cancelled',
+                      cancelledAt,
+                      cancelTradeReason: '관리자에 의한 취소',
+                    },
+                  },
+                }
+              : seller
+          )
         );
       } else {
         toast.error('Failed to cancel buy order');
       }
     })
     .finally(() => {
-      setCancellingBuyOrders(
-        cancellingBuyOrders.map((item, idx) => idx === index ? false : item)
+      setCancellingBuyOrders((prev) =>
+        prev.map((item, idx) => idx === index ? false : item)
       );
     });
   }
@@ -7437,6 +7466,7 @@ const fetchBuyOrders = async () => {
                                     seller.seller?.buyOrder?.status === 'paymentConfirmed' ? 'USDT전송완료' :
                                     seller.seller?.buyOrder?.status === 'paymentRequested' ? '입금확인중' :
                                     seller.seller?.buyOrder?.status === 'ordered' ? '입금대기중' :
+                                    seller.seller?.buyOrder?.status === 'cancelled' ? '취소됨' :
                                     '알수없음'
                                   }
                                 </span>
@@ -8013,6 +8043,37 @@ const fetchBuyOrders = async () => {
                                 <span className="text-sm font-semibold text-slate-700">
                                   입금하기전에 구매주문을 취소하시려면 아래 버튼을 눌러주세요.
                                 </span>
+                                <div className="w-full flex items-start gap-2 rounded-lg border border-amber-200/70 bg-amber-50/80 px-3 py-2 text-xs font-semibold text-amber-700">
+                                  <svg
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    aria-hidden="true"
+                                    className="mt-0.5"
+                                  >
+                                    <path
+                                      d="M12 9v4"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                    />
+                                    <circle
+                                      cx="12"
+                                      cy="16.5"
+                                      r="1"
+                                      fill="currentColor"
+                                    />
+                                    <path
+                                      d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"
+                                      stroke="currentColor"
+                                      strokeWidth="1.6"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                  구매주문을 취소하면 구매자 평점에 불리한 영향이 있을 수 있습니다.
+                                </div>
                                 <button
                                   onClick={() => {
                                     confirm("구매주문을 취소하시겠습니까?") &&
