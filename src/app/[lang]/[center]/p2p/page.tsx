@@ -77,6 +77,7 @@ import { ClassNames } from "@emotion/react";
 import useSound from 'use-sound';
 
 import { useSearchParams } from 'next/navigation';
+import { useClientWallets } from "@/lib/useClientWallets";
 
 import { getAllUsersForSettlementOfStore } from "@/lib/api/user";
 
@@ -190,38 +191,14 @@ interface BuyOrder {
 
 
 
-const wallets = [
-  inAppWallet({
-    auth: {
-      options: [
-        "google",
-        "email",
-      ],
-    },
-  }),
-];
-
-
-
-let wallet: ReturnType<typeof inAppWallet>;
-
-// NEXT_PUBLIC_SMART_ACCOUNT=no
-if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
-    wallet = inAppWallet();
-} else {
-    wallet = inAppWallet({
-        smartAccount: {    
-            sponsorGas: false,
-            chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
-        }
-    });
-}  
+const walletAuthOptions = ["google", "email"];
 
 
 
 export default function Index({ params }: any) {
 
   const searchParams = useSearchParams();
+  const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
  
   ////////const wallet = searchParams.get('wallet');
 
@@ -9273,6 +9250,5 @@ const TradeDetail = (
       </div>
     );
   };
-
 
 

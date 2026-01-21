@@ -691,6 +691,7 @@ export default function SettingsPage({ params }: any) {
 
     const [clientName, setClientName] = useState("");
     const [clientDescription, setClientDescription] = useState("");
+    const [smartAccountEnabled, setSmartAccountEnabled] = useState(false);
 
     // exchange rate USDT to USD
     // exchange rate USDT to KRW
@@ -738,6 +739,7 @@ export default function SettingsPage({ params }: any) {
 
                 setClientName(data.result.clientInfo?.name || "");
                 setClientDescription(data.result.clientInfo?.description || "");
+                setSmartAccountEnabled(Boolean(data.result.clientInfo?.smartAccountEnabled));
 
                 setExchangeRateUSDT(data.result.clientInfo?.exchangeRateUSDT || {
                     USD: 0,
@@ -759,6 +761,13 @@ export default function SettingsPage({ params }: any) {
 
     const [updatingClientInfo, setUpdatingClientInfo] = useState(false);
     const [updatingNetwork, setUpdatingNetwork] = useState(false);
+    const [updatingSmartAccount, setUpdatingSmartAccount] = useState(false);
+
+    const notifySettingsUpdated = () => {
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event("client-settings-updated"));
+        }
+    };
 
     const updateNetwork = async (nextChain: NetworkKey) => {
         if (updatingNetwork || nextChain === chain) {
@@ -790,6 +799,7 @@ export default function SettingsPage({ params }: any) {
                     chain: nextChain,
                 }));
                 toast.success("네트워크가 변경되었습니다.");
+                notifySettingsUpdated();
             } else {
                 setChain(previousChain);
                 toast.error("네트워크 변경에 실패했습니다.");
@@ -799,6 +809,49 @@ export default function SettingsPage({ params }: any) {
             toast.error("네트워크 변경에 실패했습니다.");
         } finally {
             setUpdatingNetwork(false);
+        }
+    };
+
+    const updateSmartAccount = async (nextValue: boolean) => {
+        if (updatingSmartAccount || nextValue === smartAccountEnabled) {
+            return;
+        }
+
+        const previousValue = smartAccountEnabled;
+        setSmartAccountEnabled(nextValue);
+        setUpdatingSmartAccount(true);
+
+        try {
+            const response = await fetch("/api/client/setClientInfo", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    data: {
+                        smartAccountEnabled: nextValue,
+                    },
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.result) {
+                setClientInfo((prev: any) => ({
+                    ...(prev || {}),
+                    smartAccountEnabled: nextValue,
+                }));
+                toast.success("스마트 어카운트 설정이 변경되었습니다.");
+                notifySettingsUpdated();
+            } else {
+                setSmartAccountEnabled(previousValue);
+                toast.error("스마트 어카운트 설정 변경에 실패했습니다.");
+            }
+        } catch (error) {
+            setSmartAccountEnabled(previousValue);
+            toast.error("스마트 어카운트 설정 변경에 실패했습니다.");
+        } finally {
+            setUpdatingSmartAccount(false);
         }
     };
 
@@ -820,6 +873,7 @@ export default function SettingsPage({ params }: any) {
                     description: clientDescription,
 
                     exchangeRateUSDT: exchangeRateUSDT,
+                    smartAccountEnabled: smartAccountEnabled,
                 }
             }),
         });
@@ -835,8 +889,10 @@ export default function SettingsPage({ params }: any) {
                 name: clientName,
                 description: clientDescription,
                 exchangeRateUSDT: exchangeRateUSDT,
+                smartAccountEnabled: smartAccountEnabled,
             }));
             toast.success('Client info updated');
+            notifySettingsUpdated();
         } else {
             toast.error('Failed to update client info');
         }
@@ -966,6 +1022,62 @@ export default function SettingsPage({ params }: any) {
                                 {updatingNetwork && (
                                     <p className="mt-3 text-xs font-semibold text-slate-400">
                                         네트워크 변경 중...
+                                    </p>
+                                )}
+                            </section>
+
+                            <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.5)]">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                                            회원 지갑 설정
+                                        </span>
+                                        <h3 className="text-lg font-semibold text-slate-900">
+                                            스마트 어카운트 사용
+                                        </h3>
+                                        <p className="text-xs text-slate-500">
+                                            true/false 설정은 즉시 적용됩니다.
+                                        </p>
+                                    </div>
+                                    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                                        smartAccountEnabled
+                                            ? 'border-emerald-200/70 bg-emerald-50 text-emerald-700'
+                                            : 'border-slate-200/70 bg-slate-100 text-slate-600'
+                                    }`}>
+                                        {smartAccountEnabled ? "true" : "false"}
+                                    </span>
+                                </div>
+                                <div className="mt-4 grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        disabled={updatingSmartAccount}
+                                        onClick={() => updateSmartAccount(true)}
+                                        className={`group flex flex-col items-start gap-1 rounded-2xl border px-3 py-3 text-left transition ${
+                                            smartAccountEnabled
+                                                ? 'border-emerald-300/80 bg-emerald-50/70 shadow-[0_12px_30px_-24px_rgba(16,185,129,0.4)]'
+                                                : 'border-slate-200 bg-white hover:border-slate-300'
+                                        } ${updatingSmartAccount ? 'cursor-not-allowed opacity-60' : ''}`}
+                                    >
+                                        <span className="text-sm font-semibold text-slate-900">true</span>
+                                        <span className="text-xs text-slate-500">스마트 어카운트 사용</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={updatingSmartAccount}
+                                        onClick={() => updateSmartAccount(false)}
+                                        className={`group flex flex-col items-start gap-1 rounded-2xl border px-3 py-3 text-left transition ${
+                                            !smartAccountEnabled
+                                                ? 'border-slate-300 bg-slate-50 shadow-[0_12px_30px_-24px_rgba(148,163,184,0.5)]'
+                                                : 'border-slate-200 bg-white hover:border-slate-300'
+                                        } ${updatingSmartAccount ? 'cursor-not-allowed opacity-60' : ''}`}
+                                    >
+                                        <span className="text-sm font-semibold text-slate-900">false</span>
+                                        <span className="text-xs text-slate-500">일반 지갑 사용</span>
+                                    </button>
+                                </div>
+                                {updatingSmartAccount && (
+                                    <p className="mt-3 text-xs font-semibold text-slate-400">
+                                        스마트 어카운트 설정 변경 중...
                                     </p>
                                 )}
                             </section>

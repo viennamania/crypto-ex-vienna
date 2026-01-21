@@ -54,6 +54,7 @@ import Image from 'next/image';
 
 import AppBarComponent from "@/components/Appbar/AppBar";
 import { getDictionary } from "../../../dictionaries";
+import { useClientWallets } from "@/lib/useClientWallets";
 
 
 
@@ -76,28 +77,7 @@ import {
 
 
 
-const wallets = [
-  inAppWallet({
-    auth: {
-      options: ["phone", "email"],
-    },
-  }),
-];
-
-
-let wallet: ReturnType<typeof inAppWallet>;
-
-// NEXT_PUBLIC_SMART_ACCOUNT=no
-if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
-    wallet = inAppWallet();
-} else {
-    wallet = inAppWallet({
-        smartAccount: {    
-            sponsorGas: false,
-            chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
-        }
-    });
-}  
+const walletAuthOptions = ["phone", "email"];
 
 
 const contractAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"; // USDT on Polygon
@@ -186,6 +166,7 @@ import path from 'path';
 
 
 export default function SendUsdt({ params }: any) {
+  const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
 
 
   //console.log("params", params);

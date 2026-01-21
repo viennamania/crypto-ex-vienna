@@ -66,6 +66,7 @@ import {
   useSearchParams
 }from "next//navigation";
 import { add } from "thirdweb/extensions/farcaster/keyGateway";
+import { useClientWallets } from "@/lib/useClientWallets";
 
 
 import { getOwnedNFTs } from "thirdweb/extensions/erc721";
@@ -106,36 +107,11 @@ import { version } from "../../config/version";
 const storecode = "admin";
 
 
-const wallets = [
-  inAppWallet({
-    auth: {
-      options: [
-        "google",
-        "email",
-      ],
-    },
-  }),
-];
-
-
-
-
-let wallet: ReturnType<typeof inAppWallet>;
-
-// NEXT_PUBLIC_SMART_ACCOUNT=no
-if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
-    wallet = inAppWallet();
-} else {
-    wallet = inAppWallet({
-        smartAccount: {    
-            sponsorGas: false,
-            chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
-        }
-    });
-}
+const walletAuthOptions = ["google", "email"];
 
 
 export default function Index({ params }: any) {
+  const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
 
 
 

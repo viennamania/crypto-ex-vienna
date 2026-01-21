@@ -36,33 +36,10 @@ import {
 
   bscContractAddressMKRW,
 } from "@/app/config/contractAddresses";
-
-
-let wallet: ReturnType<typeof inAppWallet>;
-
-// NEXT_PUBLIC_SMART_ACCOUNT=no
-if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
-
-    wallet = inAppWallet();
-    
-} else {
-
-    wallet = inAppWallet({
-        smartAccount: {
-            
-            ///sponsorGas: false,
-            sponsorGas: false,
-
-            chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
-        }
-    });
-
-}
-
-
-
+import { useClientWallets } from "@/lib/useClientWallets";
 function TelegramLoginContent() {
     const searchParams = useSearchParams();
+    const { wallet } = useClientWallets();
 
     //console.log('Search params:', searchParams);
 

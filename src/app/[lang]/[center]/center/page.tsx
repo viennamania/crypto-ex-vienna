@@ -78,6 +78,7 @@ import useSound from 'use-sound';
 
 
 import { useSearchParams } from 'next/navigation';
+import { useClientWallets } from "@/lib/useClientWallets";
 
 
 
@@ -145,47 +146,7 @@ interface BuyOrder {
 }
 
 
-const wallets = [
-  inAppWallet({
-    auth: {
-      options: [
-        "google",
-        "email",
-      ],
-    },
-  }),
-];
-
-
-
-/*
-const wallets = [
-    inAppWallet({
-      auth: {
-        options: [
-          "google",
-        ],
-      },
-    }),
-  ];
-*/
-  
-
-
-
-let wallet: ReturnType<typeof inAppWallet>;
-
-// NEXT_PUBLIC_SMART_ACCOUNT=no
-if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
-    wallet = inAppWallet();
-} else {
-    wallet = inAppWallet({
-        smartAccount: {    
-            sponsorGas: false,
-            chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
-        }
-    });
-}
+const walletAuthOptions = ["google", "email"];
 
 
 // get escrow wallet address
@@ -197,6 +158,7 @@ if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
 
 
 export default function Index({ params }: any) {
+  const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
 
 
 
@@ -2912,7 +2874,6 @@ export default function Index({ params }: any) {
 
 
 };
-
 
 
 

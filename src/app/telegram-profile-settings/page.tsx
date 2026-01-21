@@ -80,33 +80,14 @@ import {
     useRouter,
     useSearchParams,
 } from "next//navigation";
-
-
-
-
-
-
-let wallet: ReturnType<typeof inAppWallet>;
-
-// NEXT_PUBLIC_SMART_ACCOUNT=no
-if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
-    wallet = inAppWallet();
-} else {
-    wallet = inAppWallet({
-        smartAccount: {    
-            sponsorGas: false,
-            chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
-        }
-    });
-}
-
-
+import { useClientWallets } from "@/lib/useClientWallets";
 
 
 //const contractAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"; // USDT on Polygon
 
 
 function ProfilePage() {
+    const { wallet } = useClientWallets();
 
     const searchParams = useSearchParams();
 

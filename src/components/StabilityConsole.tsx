@@ -105,19 +105,10 @@ import { add } from "thirdweb/extensions/farcaster/keyGateway";
 
 import { useQRCode } from 'next-qrcode';
 import { Connect } from "twilio/lib/twiml/VoiceResponse";
+import { useClientWallets } from "@/lib/useClientWallets";
 
 
-const wallets = [
-  inAppWallet({
-    auth: {
-      options: [
-        "google",
-        "email",
-        "phone",
-      ],
-    },
-  }),
-];
+const walletAuthOptions = ["google", "email", "phone"];
 
 type NetworkKey = "ethereum" | "polygon" | "arbitrum" | "bsc";
 
@@ -128,28 +119,12 @@ const resolveNetwork = (value?: string | null): NetworkKey | null => {
   return null;
 };
 
-
-let wallet: ReturnType<typeof inAppWallet>;
-
-// NEXT_PUBLIC_SMART_ACCOUNT=no
-if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
-    wallet = inAppWallet();
-} else {
-    wallet = inAppWallet({
-        smartAccount: {    
-            sponsorGas: false,
-            chain: envChain === "bsc" ? bsc : envChain === "polygon" ? polygon : envChain === "arbitrum" ? arbitrum : ethereum,
-        }
-    });
-}  
-
-
-
 const StabilityConsole = () => {
 
   const { Canvas } = useQRCode();
 
   const router = useRouter();
+  const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
 
 
   /*

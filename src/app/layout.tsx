@@ -39,6 +39,7 @@ import Image from "next/image";
 import StabilityConsole from '@/components/StabilityConsole';
 import SellerSendbirdWidgetGlobal from '@/components/SellerSendbirdWidgetGlobal';
 import MySellerWidgetGlobal from '@/components/MySellerWidgetGlobal';
+import { ClientSettingsProvider } from '@/components/ClientSettingsProvider';
 
 
 
@@ -148,10 +149,10 @@ export default function RootLayout({
 
 
         <ThirdwebProvider>
+          <ClientSettingsProvider>
+            <Toaster />
 
-          <Toaster />
-
-          <div className="flex w-full flex-col items-stretch p-4 bg-slate-900/80 rounded-lg shadow-xl mb-4 border border-slate-700">
+            <div className="flex w-full flex-col items-stretch p-4 bg-slate-900/80 rounded-lg shadow-xl mb-4 border border-slate-700">
 
             {/* fixed position vertically top */}
             <div className="
@@ -344,18 +345,16 @@ export default function RootLayout({
             </div>
 
 
-            <QueryClientProvider client={queryClient}>
-              {children}
-            </QueryClientProvider>
-            <SellerSendbirdWidgetGlobal />
-            <MySellerWidgetGlobal />
-            
+              <QueryClientProvider client={queryClient}>
+                {children}
+              </QueryClientProvider>
+              <SellerSendbirdWidgetGlobal />
+              <MySellerWidgetGlobal />
+            </div>
 
-          </div>
-
-          <Analytics />
-          <SpeedInsights />
-
+            <Analytics />
+            <SpeedInsights />
+          </ClientSettingsProvider>
         </ThirdwebProvider>
 
       </body>
