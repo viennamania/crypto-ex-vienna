@@ -152,9 +152,9 @@ export default function RootLayout({
 
           {/* Client Settings Provider */}
           {/* Provides client settings context to the app */}
-          {/*
+          
           <ClientSettingsProvider>
-          */}
+          
 
             <Toaster />
 
@@ -361,9 +361,9 @@ export default function RootLayout({
             <Analytics />
             <SpeedInsights />
           {/*</ClientSettingsProvider>*/}
-          {/*
+          
           </ClientSettingsProvider>
-          */}
+          
         </ThirdwebProvider>
 
       </body>

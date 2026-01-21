@@ -320,9 +320,10 @@ const StabilityConsole = () => {
       style={{ fontFamily: '"Space Grotesk", "Avenir Next", "Segoe UI", sans-serif' }}
     >
 
+      {/* sponsor gas auto connect */}
       <AutoConnect
         client={client}
-        /////////////wallets={[wallet]}
+        wallets={[wallet]}
       />
 
       <div className="pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full
