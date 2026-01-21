@@ -1214,7 +1214,11 @@ export default function SettingsPage({ params }: any) {
 
 
                 {address && (
-                    <div className="w-full flex flex-col items-end justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
+                    <div className="w-full flex flex-col items-end justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm mb-6">
+
+                        <span className="text-sm font-semibold text-slate-600 self-start">
+                            {My_Balance}
+                        </span>
 
                         <div className="flex flex-row items-center justify-center gap-2">
 
