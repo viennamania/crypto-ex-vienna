@@ -162,6 +162,26 @@ const StabilityConsole = () => {
 
   const address = activeAccount?.address;
 
+  const networkLabel = chain === "ethereum"
+    ? "Ethereum"
+    : chain === "polygon"
+    ? "Polygon"
+    : chain === "arbitrum"
+    ? "Arbitrum"
+    : chain === "bsc"
+    ? "BSC"
+    : "Unknown";
+
+  const networkTone = chain === "ethereum"
+    ? "border-indigo-200/70 bg-indigo-50 text-indigo-700"
+    : chain === "polygon"
+    ? "border-violet-200/70 bg-violet-50 text-violet-700"
+    : chain === "arbitrum"
+    ? "border-sky-200/70 bg-sky-50 text-sky-700"
+    : chain === "bsc"
+    ? "border-amber-200/70 bg-amber-50 text-amber-700"
+    : "border-slate-200/70 bg-slate-50 text-slate-600";
+
 
 
   const contract = getContract({
@@ -432,6 +452,23 @@ const StabilityConsole = () => {
                     chain === "polygon" ? "POL" :
                     chain === "arbitrum" ? "ETH" :
                     chain === "bsc" ? "BNB" : ""}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={`console-row w-full rounded-2xl border px-4 py-3 ${networkTone}`}
+              style={{ animationDelay: "0.2s" }}
+            >
+              <div className="flex w-full items-center justify-between">
+                <span className="text-[12px] font-semibold uppercase tracking-[0.2em]">
+                  현재 네트워크
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold">{networkLabel}</span>
+                  <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm">
+                    {chain}
                   </span>
                 </div>
               </div>
