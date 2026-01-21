@@ -1004,7 +1004,7 @@ export default function Index({ params }: any) {
 
       <AutoConnect
           client={client}
-          wallets={[wallet]}
+          /////////wallets={[wallet]}
       />
 
 

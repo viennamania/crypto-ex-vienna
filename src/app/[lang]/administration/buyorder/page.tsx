@@ -3553,7 +3553,7 @@ const fetchBuyOrders = async () => {
 
         <AutoConnect
             client={client}
-            wallets={[wallet]}
+            ///wallets={[wallet]}
         />
 
 
