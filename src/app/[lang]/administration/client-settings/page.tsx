@@ -56,6 +56,46 @@ import { getDictionary } from "../../../dictionaries";
 
 const storecode = "admin";
 
+type NetworkKey = "ethereum" | "polygon" | "arbitrum" | "bsc";
+const NETWORK_OPTIONS: Array<{
+    id: NetworkKey;
+    label: string;
+    subtitle: string;
+    logo: string;
+}> = [
+    {
+        id: "ethereum",
+        label: "Ethereum",
+        subtitle: "Mainnet",
+        logo: "/logo-chain-ethereum.png",
+    },
+    {
+        id: "polygon",
+        label: "Polygon",
+        subtitle: "PoS Chain",
+        logo: "/logo-chain-polygon.png",
+    },
+    {
+        id: "arbitrum",
+        label: "Arbitrum",
+        subtitle: "One",
+        logo: "/logo-chain-arbitrum.png",
+    },
+    {
+        id: "bsc",
+        label: "BSC",
+        subtitle: "BNB Chain",
+        logo: "/logo-chain-bsc.png",
+    },
+];
+
+const resolveChain = (value?: string): NetworkKey => {
+    if (value === "ethereum" || value === "polygon" || value === "arbitrum" || value === "bsc") {
+        return value;
+    }
+    return "polygon";
+};
+
 
 
 const wallets = [
@@ -646,7 +686,8 @@ export default function SettingsPage({ params }: any) {
 
 
 
-    const [chain, setChain] = useState("polygon");
+    const [chain, setChain] = useState<NetworkKey>("polygon");
+    const activeNetwork = NETWORK_OPTIONS.find((option) => option.id === chain);
 
     const [clientName, setClientName] = useState("");
     const [clientDescription, setClientDescription] = useState("");
@@ -685,11 +726,15 @@ export default function SettingsPage({ params }: any) {
 
             if (data.result) {
 
-                setChain(data.result.chain || "polygon");
+                const resolvedChain = resolveChain(data.result.clientInfo?.chain || data.result.chain);
+                setChain(resolvedChain);
 
                 setClientId(data.result.clientId || "");
 
-                setClientInfo(data.result.clientInfo);
+                setClientInfo({
+                    ...data.result.clientInfo,
+                    chain: resolvedChain,
+                });
 
                 setClientName(data.result.clientInfo?.name || "");
                 setClientDescription(data.result.clientInfo?.description || "");
@@ -713,6 +758,49 @@ export default function SettingsPage({ params }: any) {
     // /api/client/setClientInfo
 
     const [updatingClientInfo, setUpdatingClientInfo] = useState(false);
+    const [updatingNetwork, setUpdatingNetwork] = useState(false);
+
+    const updateNetwork = async (nextChain: NetworkKey) => {
+        if (updatingNetwork || nextChain === chain) {
+            return;
+        }
+
+        const previousChain = chain;
+        setChain(nextChain);
+        setUpdatingNetwork(true);
+
+        try {
+            const response = await fetch("/api/client/setClientInfo", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    data: {
+                        chain: nextChain,
+                    },
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.result) {
+                setClientInfo((prev: any) => ({
+                    ...(prev || {}),
+                    chain: nextChain,
+                }));
+                toast.success("네트워크가 변경되었습니다.");
+            } else {
+                setChain(previousChain);
+                toast.error("네트워크 변경에 실패했습니다.");
+            }
+        } catch (error) {
+            setChain(previousChain);
+            toast.error("네트워크 변경에 실패했습니다.");
+        } finally {
+            setUpdatingNetwork(false);
+        }
+    };
 
     const updateClientInfo = async () => {
         if (updatingClientInfo) {
@@ -727,6 +815,7 @@ export default function SettingsPage({ params }: any) {
             },
             body: JSON.stringify({
                 data: {
+                    chain: chain,
                     name: clientName,
                     description: clientDescription,
 
@@ -740,12 +829,13 @@ export default function SettingsPage({ params }: any) {
         //console.log("setClientInfo", data);
 
         if (data.result) {
-            setClientInfo({
-                ...clientInfo,
+            setClientInfo((prev: any) => ({
+                ...(prev || {}),
+                chain: chain,
                 name: clientName,
                 description: clientDescription,
                 exchangeRateUSDT: exchangeRateUSDT,
-            });
+            }));
             toast.success('Client info updated');
         } else {
             toast.error('Failed to update client info');
@@ -761,305 +851,255 @@ export default function SettingsPage({ params }: any) {
 
     return (
 
-        <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto">
-
-            <div className="py-0 w-full">
-        
-
-                {storecode && (
-                    <div className="w-full flex flex-row items-center justify-center gap-2 bg-black/10 p-2 rounded-lg mb-4">
-                        <span className="text-sm text-zinc-500">
-                        {storecode}
-                        </span>
-                    </div>
-                )}
-        
-                <div className="w-full flex flex-row gap-2 items-center justify-between text-zinc-500 text-lg"
-                >
-                    {/* go back button */}
-                    <div className="flex justify-start items-center gap-2">
+        <main className="min-h-[100vh] bg-[radial-gradient(120%_120%_at_0%_0%,#fff7ed_0%,#fef2f2_38%,#eff6ff_78%,#f8fafc_100%)] px-4 py-8">
+            <div className="w-full max-w-screen-md mx-auto">
+                <div className="rounded-[32px] border border-slate-200/70 bg-white/85 p-6 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                         <button
                             onClick={() => window.history.back()}
-                            className="flex items-center justify-center bg-gray-200 rounded-full p-2">
-                            <Image
-                                src="/icon-back.png"
-                                alt="Back"
-                                width={20}
-                                height={20}
-                                className="rounded-full"
-                            />
-                        </button>
-                        {/* title */}
-                        <span className="text-sm text-gray-500 font-semibold">
+                            className="group inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+                        >
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-100">
+                                <Image
+                                    src="/icon-back.png"
+                                    alt="Back"
+                                    width={18}
+                                    height={18}
+                                    className="rounded-full"
+                                />
+                            </span>
                             돌아가기
-                        </span>
+                        </button>
+                        {storecode && (
+                            <span className="rounded-full border border-slate-200/70 bg-slate-100/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                {storecode}
+                            </span>
+                        )}
                     </div>
 
-                </div>
-
-
-
-                <div className="mt-5 flex flex-col items-start justify-center space-y-4">
-
-                    <div className='flex flex-row items-center space-x-4'>
-                        <Image
-                            src={"/icon-gear.png"}
-                            alt="Settings"
-                            width={20}
-                            height={20}
-                            className="rounded-full"
-                        />
-                        <div className="text-xl font-semibold">
-                            센터 설정
+                    <div className="mt-4 flex flex-col gap-2">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+                                <Image
+                                    src="/icon-gear.png"
+                                    alt="Settings"
+                                    width={20}
+                                    height={20}
+                                    className="rounded-full"
+                                />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                                    Backoffice Center Settings
+                                </span>
+                                <span className="text-2xl font-semibold text-slate-900">
+                                    센터 설정
+                                </span>
+                            </div>
+                            <span className="ml-auto rounded-full border border-slate-200/70 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-500">
+                                CLIENTID: {clientId || 'Loading...'}
+                            </span>
                         </div>
-
-                        {/* clientInfo?.clientId */}
-                        <span className="text-sm text-gray-500">
-                            CLIENTID: {clientId || 'Loading...'}
-                        </span>
-
+                        <p className="text-sm text-slate-500">
+                            서비스 전체 운영 정보를 관리합니다.
+                        </p>
                     </div>
 
-
-                    {/* clientInfo */}
-                    {true ? (
-                        <div className="w-full flex flex-col items-start justify-start space-y-4">
-
-
-
-
-                            <div className="w-full flex flex-col items-start justify-start space-y-2">
-                                <span className="text-sm text-gray-500 font-semibold">
-                                    현재 체인
-                                </span>
-
-                                <div className="flex flex-row items-center justify-center gap-4 mb-4">
-                                    
-                                    <div className={`
-                                    w-20 h-20
-                                    flex flex-col items-center justify-center gap-1 ${chain === 'ethereum' ? 'border-2 border-blue-500 p-2 rounded' : ''}
-                                    hover:bg-blue-500 hover:text-white transition-colors duration-200`}>
-                                    <Image
-                                        src={`/logo-chain-ethereum.png`}
-                                        alt={`Chain logo for Ethereum`}
-                                        width={25}
-                                        height={25}
-                                        className="h-6 w-6 rounded-full"
-                                        style={{ objectFit: "cover" }}
-                                    />
-                                    <span className={`
-                                        ${chain === 'ethereum' ? 'text-blue-500' : 'text-gray-600'}
-                                        hover:text-blue-500
-                                    `}>
-                                        Ethereum
-                                    </span>
+                    {clientInfo ? (
+                        <div className="mt-6 flex flex-col gap-5">
+                            <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.5)]">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                                            서비스 네트워크
+                                        </span>
+                                        <h3 className="text-lg font-semibold text-slate-900">
+                                            운영 체인 선택
+                                        </h3>
+                                        <p className="text-xs text-slate-500">
+                                            네트워크 변경 시 즉시 적용됩니다.
+                                        </p>
                                     </div>
-
-                                    <div className={`
-                                    w-20 h-20
-                                    flex flex-col items-center justify-center gap-1 ${chain === 'polygon' ? 'border-2 border-blue-500 p-2 rounded' : ''}
-                                    hover:bg-blue-500 hover:text-white transition-colors duration-200`}>
-                                    <Image
-                                        src={`/logo-chain-polygon.png`}
-                                        alt={`Chain logo for Polygon`}
-                                        width={25}
-                                        height={25}
-                                        className="h-6 w-6 rounded-full"
-                                        style={{ objectFit: "cover" }}
-                                    />
-                                    <span className={`
-                                        ${chain === 'polygon' ? 'text-blue-500' : 'text-gray-600'}
-                                        hover:text-blue-500
-                                    `}>
-                                        Polygon
+                                    <span className="rounded-full border border-emerald-200/70 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                        {activeNetwork?.label || chain}
                                     </span>
-                                    </div>
-
-                                    <div className={`
-                                    w-20 h-20
-                                    flex flex-col items-center justify-center gap-1 ${chain === 'bsc' ? 'border-2 border-blue-500 p-2 rounded' : ''}
-                                    hover:bg-blue-500 hover:text-white transition-colors duration-200`}>
-                                    <Image
-                                        src={`/logo-chain-bsc.png`}
-                                        alt={`Chain logo for BSC`}
-                                        width={25}
-                                        height={25}
-                                        className="h-6 w-6 rounded-full"
-                                        style={{ objectFit: "cover" }}
-                                    />
-                                    <span className={`
-                                        ${chain === 'bsc' ? 'text-blue-500' : 'text-gray-600'}
-                                        hover:text-blue-500
-                                    `}>
-                                        BSC
-                                    </span>
-                                    </div>
-
-                                    <div className={`
-                                    w-20 h-20
-                                    flex flex-col items-center justify-center gap-1 ${chain === 'arbitrum' ? 'border-2 border-blue-500 p-2 rounded' : ''}
-                                    hover:bg-blue-500 hover:text-white transition-colors duration-200`}>
-                                    <Image
-                                        src={`/logo-chain-arbitrum.png`}
-                                        alt={`Chain logo for Arbitrum`}
-                                        width={25}
-                                        height={25}
-                                        className="h-6 w-6 rounded-full"
-                                        style={{ objectFit: "cover" }}
-                                    />
-                                    <span className={`
-                                        ${chain === 'arbitrum' ? 'text-blue-500' : 'text-gray-600'}
-                                        hover:text-blue-500
-                                    `}>
-                                        Arbitrum
-                                    </span>
-                                    </div>
-
                                 </div>
+                                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                    {NETWORK_OPTIONS.map((option) => {
+                                        const isSelected = chain === option.id;
+                                        return (
+                                            <button
+                                                key={option.id}
+                                                type="button"
+                                                disabled={updatingNetwork}
+                                                onClick={() => updateNetwork(option.id)}
+                                                className={`group flex flex-col items-start gap-2 rounded-2xl border px-3 py-3 text-left transition ${
+                                                    isSelected
+                                                        ? 'border-emerald-300/80 bg-emerald-50/70 shadow-[0_12px_30px_-24px_rgba(16,185,129,0.4)]'
+                                                        : 'border-slate-200 bg-white hover:border-slate-300'
+                                                } ${updatingNetwork ? 'cursor-not-allowed opacity-60' : ''}`}
+                                            >
+                                                <div className="flex w-full items-center justify-between">
+                                                    <Image
+                                                        src={option.logo}
+                                                        alt={`${option.label} logo`}
+                                                        width={24}
+                                                        height={24}
+                                                        className="h-6 w-6 rounded-full"
+                                                    />
+                                                    {isSelected && (
+                                                        <span className="rounded-full border border-emerald-200/70 bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+                                                            선택됨
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="text-sm font-semibold text-slate-900">
+                                                    {option.label}
+                                                </div>
+                                                <div className="text-xs text-slate-500">
+                                                    {option.subtitle}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {updatingNetwork && (
+                                    <p className="mt-3 text-xs font-semibold text-slate-400">
+                                        네트워크 변경 중...
+                                    </p>
+                                )}
+                            </section>
 
-                            </div>
+                            <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.5)]">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold text-slate-900">
+                                        센터 기본 정보
+                                    </h3>
+                                    <span className="text-xs font-semibold text-slate-400">
+                                        Service Profile
+                                    </span>
+                                </div>
+                                <div className="mt-4 flex flex-col gap-4">
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-xs font-semibold text-slate-500">
+                                            센터 이름
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={clientName}
+                                            onChange={(e) => setClientName(e.target.value)}
+                                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                            placeholder="센터 이름"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-xs font-semibold text-slate-500">
+                                            센터 소개
+                                        </label>
+                                        <textarea
+                                            value={clientDescription}
+                                            rows={4}
+                                            onChange={(e) => setClientDescription(e.target.value)}
+                                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                            placeholder="센터 소개"
+                                        />
+                                    </div>
+                                </div>
+                            </section>
 
-
-
-
-
-
-                            <div className="w-full flex flex-col items-start justify-start space-y-2">
-                                <span className="text-sm text-gray-500 font-semibold">
-                                    센터 이름
-                                </span>
-                                <input
-                                    type="text"
-                                    value={clientName}
-                                    onChange={(e) => setClientName(e.target.value)}
-                                    className="w-full p-2 border border-gray-300 rounded-lg"
-                                    placeholder="센터 이름"
-                                />
-                            </div>
-
-                            <div className="w-full flex flex-col items-start justify-start space-y-2">
-                                <span className="text-sm text-gray-500 font-semibold">
-                                    센터 소개
-                                </span>
-                                <textarea
-                                    value={clientDescription}
-                                    rows={4}
-                                    onChange={(e) => setClientDescription(e.target.value)}
-                                    className="w-full p-2 border border-gray-300 rounded-lg"
-                                    placeholder="센터 소개"
-                                />
-                            </div>
-
-                            {/*
-                            <div className="w-full flex flex-col items-start justify-start space-y-2">
-                                <span className="text-sm text-gray-500 font-semibold">
-                                    센터 로고
-                                </span>
-                                <Uploader
-                                    value={clientInfo.logo || ''}
-                                    onChange={(value) => updateClientInfo({ logo: value })}
-                                />
-                            </div>
-                            */}
-
-
-                            {/* exchange rate USDT */}
-                            <div className="w-full flex flex-col items-start justify-start space-y-2">
-                                <span className="text-sm text-gray-500 font-semibold">
-                                    환율 (USDT to ...)
-                                </span>
-
-                                <div className="w-full grid grid-cols-2 gap-4">
-
+                            <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.5)]">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold text-slate-900">
+                                        환율 설정
+                                    </h3>
+                                    <span className="text-xs font-semibold text-slate-400">
+                                        USDT 기준
+                                    </span>
+                                </div>
+                                <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
                                     <div className="flex flex-col items-start justify-start space-y-1">
-                                        <span className="text-sm text-gray-500">
+                                        <span className="text-xs font-semibold text-slate-500">
                                             USD
                                         </span>
                                         <input
                                             type="number"
                                             value={exchangeRateUSDT.USD}
                                             onChange={(e) => setExchangeRateUSDT({ ...exchangeRateUSDT, USD: Number(e.target.value) })}
-                                            className="w-full p-2 border border-gray-300 rounded-lg"
+                                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
                                         />
                                     </div>
 
                                     <div className="flex flex-col items-start justify-start space-y-1">
-                                        <span className="text-sm text-gray-500">
+                                        <span className="text-xs font-semibold text-slate-500">
                                             KRW
                                         </span>
                                         <input
                                             type="number"
                                             value={exchangeRateUSDT.KRW}
                                             onChange={(e) => setExchangeRateUSDT({ ...exchangeRateUSDT, KRW: Number(e.target.value) })}
-                                            className="w-full p-2 border border-gray-300 rounded-lg"
+                                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
                                         />
                                     </div>
 
                                     <div className="flex flex-col items-start justify-start space-y-1">
-                                        <span className="text-sm text-gray-500">
+                                        <span className="text-xs font-semibold text-slate-500">
                                             JPY
                                         </span>
                                         <input
                                             type="number"
                                             value={exchangeRateUSDT.JPY}
                                             onChange={(e) => setExchangeRateUSDT({ ...exchangeRateUSDT, JPY: Number(e.target.value) })}
-                                            className="w-full p-2 border border-gray-300 rounded-lg"
+                                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
                                         />
                                     </div>
 
                                     <div className="flex flex-col items-start justify-start space-y-1">
-                                        <span className="text-sm text-gray-500">
+                                        <span className="text-xs font-semibold text-slate-500">
                                             CNY
                                         </span>
                                         <input
                                             type="number"
                                             value={exchangeRateUSDT.CNY}
                                             onChange={(e) => setExchangeRateUSDT({ ...exchangeRateUSDT, CNY: Number(e.target.value) })}
-                                            className="w-full p-2 border border-gray-300 rounded-lg"
+                                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
                                         />
                                     </div>
 
                                     <div className="flex flex-col items-start justify-start space-y-1">
-                                        <span className="text-sm text-gray-500">
+                                        <span className="text-xs font-semibold text-slate-500">
                                             EUR
                                         </span>
                                         <input
                                             type="number"
                                             value={exchangeRateUSDT.EUR}
                                             onChange={(e) => setExchangeRateUSDT({ ...exchangeRateUSDT, EUR: Number(e.target.value) })}
-                                            className="w-full p-2 border border-gray-300 rounded-lg"
+                                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
                                         />
                                     </div>
                                 </div>
-
-                            </div>
-    
-
-
+                            </section>
 
                             <button
                                 disabled={updatingClientInfo}
                                 onClick={() => updateClientInfo()}
-                                className={`w-full bg-blue-500 text-white p-2 rounded-lg ${updatingClientInfo ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'}`}
+                                className={`w-full rounded-2xl px-4 py-3 text-lg font-semibold text-white transition-all duration-200 ease-in-out ${
+                                    updatingClientInfo
+                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                        : 'bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-[0_20px_40px_-22px_rgba(16,185,129,0.7)] hover:from-emerald-500 hover:to-emerald-400 hover:-translate-y-0.5'
+                                }`}
                             >
                                 {updatingClientInfo ? '저장 중...' : '저장하기'}
                             </button>
-
                         </div>
                     ) : (
-                        <div className="w-full flex flex-col items-center justify-center">
-                            <span className="text-sm text-gray-500">
+                        <div className="mt-6 flex flex-col items-center justify-center">
+                            <span className="text-sm text-slate-500">
                                 Loading...
                             </span>
                         </div>
                     )}
-
-
                 </div>
-
-
             </div>
-
         </main>
 
     );
