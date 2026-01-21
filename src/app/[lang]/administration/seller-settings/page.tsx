@@ -1096,6 +1096,29 @@ export default function SettingsPage({ params }: any) {
     };
 
 
+
+    // call api /api/escrow/clearSellerEscrowWallet
+    // 판매자 에스크로 지갑 잔고 회수하기
+    const [clearingSellerEscrowWalletBalance, setClearingSellerEscrowWalletBalance] = useState(false);
+    const clearSellerEscrowWalletBalance = async () => {
+        if (clearingSellerEscrowWalletBalance) return;
+        setClearingSellerEscrowWalletBalance(true);
+        await fetch('/api/escrow/clearSellerEscrowWallet', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                selectedChain: 'polygon',
+                walletAddress: address,
+            }),
+        });
+        setClearingSellerEscrowWalletBalance(false);
+        toast.success('판매자 에스크로 지갑 잔고 회수 요청이 완료되었습니다.');
+    };
+
+
+
     return (
 
         <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
@@ -1797,26 +1820,28 @@ export default function SettingsPage({ params }: any) {
 
                         </div>
 
-                        {/* 충전하기, 회수하기 버튼 */}
+                        {/* 설명 */}
+                        {/* 에스크로 지갑 잔액을 모두 나의 지갑 (address) 으로 회수할 수 있습니다. */}
+                        <div className="text-sm text-slate-600 mb-2">
+                            에스크로 지갑 잔액을 모두 나의 지갑 ({address?.slice(0,6)}...{address?.slice(-4)}) 으로 회수할 수 있습니다.
+                        </div>
+                        {/* 잔액 회수하기 버튼 */}
                         <div className='w-full flex flex-row gap-2 items-center justify-end'>
 
+                            {/* if escrowBalance is 0, disable the button */}
                             <button
                                 onClick={() => {
-                                    //router.push('/' + params.lang + '/wallet/deposit?storecode=' + storecode + '&to=' + (seller?.escrowWalletAddress || ''));
+                                    if (window.confirm('에스크로 지갑 잔액을 회수하시겠습니까?')) {
+                                        clearSellerEscrowWalletBalance();
+                                    }
                                 }}
-                                className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                                className={`
+                                    ${clearingSellerEscrowWalletBalance ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-500'}
+                                    px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition
+                                `}
+                                disabled={clearingSellerEscrowWalletBalance || escrowBalance <= 0}
                             >
-                                충전하기
-                            </button>
-
-                            <button
-                                onClick={() => {
-                                    // open transfer escrow balance modal
-                                    //setIsOpenTransferEscrowBalanceModal(true);
-                                }}
-                                className="rounded-full bg-rose-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-500"
-                            >
-                                회수하기
+                                {clearingSellerEscrowWalletBalance ? '회수중...' : '잔액 회수하기'}
                             </button>
 
                         </div>

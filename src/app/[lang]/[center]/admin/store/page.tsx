@@ -121,6 +121,7 @@ const wallets = [
       options: [
         "google",
         "email",
+        "phone",
       ],
     },
   }),

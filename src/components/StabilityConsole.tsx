@@ -113,6 +113,7 @@ const wallets = [
       options: [
         "google",
         "email",
+        "phone",
       ],
     },
   }),
@@ -277,49 +278,6 @@ const StabilityConsole = () => {
         bg-[radial-gradient(circle_at_center,#9be8d9_0%,rgba(155,232,217,0.2)_45%,transparent_70%)] blur-2xl" />
       <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full
         bg-[radial-gradient(circle_at_center,#bcd1ff_0%,rgba(188,209,255,0.25)_40%,transparent_70%)] blur-2xl" />
-
-      {/*
-      {!address && (
-
-        <ConnectButton
-          client={client}
-          wallets={wallets}
-          chain={chain === "ethereum" ? ethereum :
-                  chain === "polygon" ? polygon :
-                  chain === "arbitrum" ? arbitrum :
-                  chain === "bsc" ? bsc : arbitrum}
-          
-          theme={"light"}
-
-          // button color is dark skyblue convert (49, 103, 180) to hex
-          connectButton={{
-            style: {
-              backgroundColor: "#0047ab", // cobalt blue
-
-              color: "#f3f4f6", // gray-300 
-              padding: "2px 2px",
-              borderRadius: "10px",
-              fontSize: "14px",
-              //width: "40px",
-              height: "38px",
-            },
-            label: "웹3 로그인",
-          }}
-
-          connectModal={{
-            size: "wide", 
-            //size: "compact",
-            titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
-            showThirdwebBranding: false,
-          }}
-
-          locale={"ko_KR"}
-          //locale={"en_US"}
-        />
-
-      )}  
-      */}
-
 
 
       {/* address balance */}
