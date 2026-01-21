@@ -7,7 +7,7 @@
 
 ///import { ThirdwebProvider } from "thirdweb/react";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 
 //import Script from "next/script";
@@ -92,7 +92,7 @@ import {
 } from "./../app/client";
 
 import {
-  chain,
+  chain as envChain,
   ethereumContractAddressUSDT,
   polygonContractAddressUSDT,
   arbitrumContractAddressUSDT,
@@ -119,6 +119,15 @@ const wallets = [
   }),
 ];
 
+type NetworkKey = "ethereum" | "polygon" | "arbitrum" | "bsc";
+
+const resolveNetwork = (value?: string | null): NetworkKey | null => {
+  if (value === "ethereum" || value === "polygon" || value === "arbitrum" || value === "bsc") {
+    return value;
+  }
+  return null;
+};
+
 
 let wallet: ReturnType<typeof inAppWallet>;
 
@@ -129,7 +138,7 @@ if (process.env.NEXT_PUBLIC_SMART_ACCOUNT === "no") {
     wallet = inAppWallet({
         smartAccount: {    
             sponsorGas: false,
-            chain: chain === "bsc" ? bsc : chain === "polygon" ? polygon : chain === "arbitrum" ? arbitrum : ethereum,
+            chain: envChain === "bsc" ? bsc : envChain === "polygon" ? polygon : envChain === "arbitrum" ? arbitrum : ethereum,
         }
     });
 }  
@@ -162,54 +171,108 @@ const StabilityConsole = () => {
 
   const address = activeAccount?.address;
 
-  const networkLabel = chain === "ethereum"
+  const [clientChain, setClientChain] = useState<NetworkKey | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const fetchClientNetwork = async () => {
+      try {
+        const response = await fetch("/api/client/getClientInfo", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const data = await response.json();
+        const nextChain = resolveNetwork(data?.result?.clientInfo?.chain || data?.result?.chain);
+        if (nextChain && isMounted) {
+          setClientChain(nextChain);
+        }
+      } catch (error) {
+        console.error("Failed to fetch client network", error);
+      }
+    };
+
+    const startPolling = () => {
+      if (interval) {
+        return;
+      }
+      interval = setInterval(fetchClientNetwork, 60000);
+    };
+
+    const stopPolling = () => {
+      if (!interval) {
+        return;
+      }
+      clearInterval(interval);
+      interval = null;
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchClientNetwork();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    handleVisibilityChange();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  const displayChain = clientChain ?? resolveNetwork(envChain) ?? "polygon";
+  const activeChain = displayChain === "ethereum"
+    ? ethereum
+    : displayChain === "polygon"
+    ? polygon
+    : displayChain === "arbitrum"
+    ? arbitrum
+    : bsc;
+  const activeUsdtAddress = displayChain === "ethereum"
+    ? ethereumContractAddressUSDT
+    : displayChain === "polygon"
+    ? polygonContractAddressUSDT
+    : displayChain === "arbitrum"
+    ? arbitrumContractAddressUSDT
+    : bscContractAddressUSDT;
+  const usdtDecimals = displayChain === "bsc" ? 18 : 6;
+
+  const networkLabel = displayChain === "ethereum"
     ? "Ethereum"
-    : chain === "polygon"
+    : displayChain === "polygon"
     ? "Polygon"
-    : chain === "arbitrum"
+    : displayChain === "arbitrum"
     ? "Arbitrum"
-    : chain === "bsc"
+    : displayChain === "bsc"
     ? "BSC"
     : "Unknown";
 
-  const networkTone = chain === "ethereum"
+  const networkTone = displayChain === "ethereum"
     ? "border-indigo-200/70 bg-indigo-50 text-indigo-700"
-    : chain === "polygon"
+    : displayChain === "polygon"
     ? "border-violet-200/70 bg-violet-50 text-violet-700"
-    : chain === "arbitrum"
+    : displayChain === "arbitrum"
     ? "border-sky-200/70 bg-sky-50 text-sky-700"
-    : chain === "bsc"
+    : displayChain === "bsc"
     ? "border-amber-200/70 bg-amber-50 text-amber-700"
     : "border-slate-200/70 bg-slate-50 text-slate-600";
 
 
 
-  const contract = getContract({
-    // the client you have created via `createThirdwebClient()`
+  const contract = useMemo(() => getContract({
     client,
-    // the chain the contract is deployed on
-    
-    
-    //chain: arbitrum,
-    chain:  chain === "ethereum" ? ethereum :
-            chain === "polygon" ? polygon :
-            chain === "arbitrum" ? arbitrum :
-            chain === "bsc" ? bsc : arbitrum,
-  
-  
-  
-    // the contract's address
-    ///address: contractAddressArbitrum,
-
-    address: chain === "ethereum" ? ethereumContractAddressUSDT :
-            chain === "polygon" ? polygonContractAddressUSDT :
-            chain === "arbitrum" ? arbitrumContractAddressUSDT :
-            chain === "bsc" ? bscContractAddressUSDT : arbitrumContractAddressUSDT,
-
-
-    // OPTIONAL: the contract's abi
-    //abi: [...],
-  });
+    chain: activeChain,
+    address: activeUsdtAddress,
+  }), [activeChain, activeUsdtAddress]);
 
 
 
@@ -235,11 +298,7 @@ const StabilityConsole = () => {
           address: address,
         });
 
-        if (chain === 'bsc') {
-          setBalance( Number(result) / 10 ** 18 );
-        } else {
-          setBalance( Number(result) / 10 ** 6 );
-        }
+        setBalance(Number(result) / 10 ** usdtDecimals);
 
       } catch (error) {
         console.error("Error getting balance", error);
@@ -250,10 +309,7 @@ const StabilityConsole = () => {
       const result = await getWalletBalance({
         address: address,
         client: client,
-        chain: chain === "ethereum" ? ethereum :
-                chain === "polygon" ? polygon :
-                chain === "arbitrum" ? arbitrum :
-                chain === "bsc" ? bsc : arbitrum,
+        chain: activeChain,
       });
 
       if (result) {
@@ -275,7 +331,7 @@ const StabilityConsole = () => {
 
     return () => clearInterval(interval);
 
-  } , [address, contract]);
+  } , [address, contract, activeChain, usdtDecimals]);
 
 
 
@@ -430,8 +486,8 @@ const StabilityConsole = () => {
               <div className="flex w-full items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Image
-                    src={`/logo-chain-${chain}.png`}
-                    alt={`${chain} logo`}
+                    src={`/logo-chain-${displayChain}.png`}
+                    alt={`${displayChain} logo`}
                     width={20}
                     height={20}
                     className="rounded-lg"
@@ -448,10 +504,10 @@ const StabilityConsole = () => {
                     {Number(nativeBalance).toFixed(4)}
                   </span>
                   <span className="text-[12px] font-medium text-slate-500">
-                    {chain === "ethereum" ? "ETH" :
-                    chain === "polygon" ? "POL" :
-                    chain === "arbitrum" ? "ETH" :
-                    chain === "bsc" ? "BNB" : ""}
+                    {displayChain === "ethereum" ? "ETH" :
+                    displayChain === "polygon" ? "POL" :
+                    displayChain === "arbitrum" ? "ETH" :
+                    displayChain === "bsc" ? "BNB" : ""}
                   </span>
                 </div>
               </div>
@@ -468,7 +524,7 @@ const StabilityConsole = () => {
                 <div className="flex items-center gap-2">
                   <span className="text-base font-semibold">{networkLabel}</span>
                   <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm">
-                    {chain}
+                    {displayChain}
                   </span>
                 </div>
               </div>
@@ -546,10 +602,7 @@ const StabilityConsole = () => {
               <ConnectButton
                 client={client}
                 wallets={wallets}
-                chain={chain === "ethereum" ? ethereum :
-                        chain === "polygon" ? polygon :
-                        chain === "arbitrum" ? arbitrum :
-                        chain === "bsc" ? bsc : arbitrum}
+                chain={activeChain}
                 
                 theme={"light"}
 
