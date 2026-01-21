@@ -166,7 +166,7 @@ import path from 'path';
 
 
 export default function SendUsdt({ params }: any) {
-  const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
+  const { wallet, wallets, smartAccountEnabled } = useClientWallets({ authOptions: walletAuthOptions });
 
 
   //console.log("params", params);
@@ -947,14 +947,25 @@ export default function SendUsdt({ params }: any) {
                   {address.substring(0, 6)}...{address.substring(address.length - 4)}
                 </button>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200/70 bg-white shadow-sm">
-                <Image
-                  src="/icon-shield.png"
-                  alt="Wallet"
-                  width={20}
-                  height={20}
-                  className="w-5 h-5"
-                />
+              <div className="flex items-center gap-2">
+                {smartAccountEnabled && (
+                  <div className="relative">
+                    <span className="absolute -inset-1 rounded-full bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.75),rgba(249,115,22,0.25),transparent_70%)] blur-lg" />
+                    <span className="relative inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 px-3 py-1 text-[11px] font-bold text-white shadow-[0_12px_28px_-16px_rgba(249,115,22,0.9)]">
+                      <span className="inline-flex h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.95)]" />
+                      스마트 어카운트
+                    </span>
+                  </div>
+                )}
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200/70 bg-white shadow-sm">
+                  <Image
+                    src="/icon-shield.png"
+                    alt="Wallet"
+                    width={20}
+                    height={20}
+                    className="w-5 h-5"
+                  />
+                </div>
               </div>
             </div>
             <div className="mt-3 flex items-baseline justify-end gap-2">

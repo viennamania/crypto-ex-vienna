@@ -124,7 +124,7 @@ const StabilityConsole = () => {
   const { Canvas } = useQRCode();
 
   const router = useRouter();
-  const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
+  const { wallet, wallets, smartAccountEnabled } = useClientWallets({ authOptions: walletAuthOptions });
 
 
   /*
@@ -343,9 +343,20 @@ const StabilityConsole = () => {
               className="console-row w-full rounded-2xl border border-slate-200/70 bg-white/70 p-4 shadow-sm md:p-5"
               style={{ animationDelay: "0.05s" }}
             >
-              <div className="flex items-center gap-2 text-[12px] font-medium text-slate-500">
-                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
-                <span>내 지갑주소</span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-[12px] font-medium text-slate-500">
+                  <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
+                  <span>내 지갑주소</span>
+                </div>
+                {smartAccountEnabled && (
+                  <div className="relative">
+                    <span className="smart-account-glow absolute -inset-1 rounded-full" />
+                    <span className="smart-account-badge inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 px-3 py-1 text-[11px] font-bold text-white">
+                      <span className="inline-flex h-2 w-2 rounded-full bg-white shadow-[0_0_14px_rgba(255,255,255,0.95)]" />
+                      스마트 어카운트
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-4 grid w-full gap-4 md:grid-cols-[1fr_auto] md:items-center">
@@ -505,15 +516,24 @@ const StabilityConsole = () => {
               </div>
             </div>
 
-            {/* if pol balance is 0, comment out the text */}
-            {nativeBalance < 0.0001 && (
+            {smartAccountEnabled ? (
               <div
-                className="console-row w-full rounded-xl border border-rose-200/70 bg-rose-50/80
-                px-3 py-2 text-[12px] text-rose-600"
+                className="console-row w-full rounded-xl border border-emerald-200/70 bg-emerald-50/80
+                px-3 py-2 text-[12px] text-emerald-700"
                 style={{ animationDelay: "0.22s" }}
               >
-                가스비용이 부족합니다.<br />가스비용이 부족하면 입금은 가능하지만 출금은 불가능합니다.
+                스마트 어카운트는 출금 시 가스비용이 필요 없어 편리합니다.
               </div>
+            ) : (
+              nativeBalance < 0.0001 && (
+                <div
+                  className="console-row w-full rounded-xl border border-rose-200/70 bg-rose-50/80
+                  px-3 py-2 text-[12px] text-rose-600"
+                  style={{ animationDelay: "0.22s" }}
+                >
+                  가스비용이 부족합니다.<br />가스비용이 부족하면 입금은 가능하지만 출금은 불가능합니다.
+                </div>
+              )
             )}
 
 
@@ -651,6 +671,36 @@ const StabilityConsole = () => {
           to {
             opacity: 1;
             transform: translateY(0);
+          }
+        }
+        .smart-account-badge {
+          animation: smartBadgePulse 1.6s ease-in-out infinite;
+        }
+        .smart-account-glow {
+          background: radial-gradient(circle at center, rgba(251, 191, 36, 0.7), rgba(249, 115, 22, 0.3), transparent 70%);
+          filter: blur(10px);
+          animation: smartGlowPulse 1.6s ease-in-out infinite;
+        }
+        @keyframes smartBadgePulse {
+          0%,
+          100% {
+            transform: translateY(0) scale(1);
+            box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.35), 0 14px 30px -18px rgba(234, 88, 12, 0.7);
+          }
+          50% {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.18), 0 18px 40px -18px rgba(234, 88, 12, 0.8);
+          }
+        }
+        @keyframes smartGlowPulse {
+          0%,
+          100% {
+            opacity: 0.55;
+            transform: scale(0.95);
+          }
+          50% {
+            opacity: 0.95;
+            transform: scale(1.08);
           }
         }
       `}</style>
