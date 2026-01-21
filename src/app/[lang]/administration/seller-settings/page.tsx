@@ -110,38 +110,6 @@ export default function SettingsPage({ params }: any) {
 
     const { Canvas } = useQRCode();
 
-
-
-
-    const contract = getContract({
-        // the client you have created via `createThirdwebClient()`
-        client,
-        // the chain the contract is deployed on
-
-
-        //chain: arbitrum,
-        chain:  chain === "ethereum" ? ethereum :
-                chain === "polygon" ? polygon :
-                chain === "arbitrum" ? arbitrum :
-                chain === "bsc" ? bsc : arbitrum,
-
-
-
-        // the contract's address
-        ///address: contractAddressArbitrum,
-
-        address: chain === "ethereum" ? ethereumContractAddressUSDT :
-                chain === "polygon" ? polygonContractAddressUSDT :
-                chain === "arbitrum" ? arbitrumContractAddressUSDT :
-                chain === "bsc" ? bscContractAddressUSDT : arbitrumContractAddressUSDT,
-
-
-        // OPTIONAL: the contract's abi
-        //abi: [...],
-    });
-
-      
-
     
     
     const [data, setData] = useState({
@@ -338,7 +306,27 @@ export default function SettingsPage({ params }: any) {
 
 
 
+    // selectedChain USDT balance
+    const [selectedChain, setSelectedChain] = useState(chain);
 
+    const contract = getContract({
+        // the client you have created via `createThirdwebClient()`
+        client,
+        // the chain the contract is deployed on
+
+        chain:  selectedChain === "ethereum" ? ethereum :
+                selectedChain === "polygon" ? polygon :
+                selectedChain === "arbitrum" ? arbitrum :
+                selectedChain === "bsc" ? bsc : ethereum,
+
+        address: selectedChain === "ethereum" ? ethereumContractAddressUSDT :
+                selectedChain === "polygon" ? polygonContractAddressUSDT :
+                selectedChain === "arbitrum" ? arbitrumContractAddressUSDT :
+                selectedChain === "bsc" ? bscContractAddressUSDT : ethereumContractAddressUSDT,
+
+        // OPTIONAL: the contract's abi
+        //abi: [...],
+    });
 
 
 
@@ -360,8 +348,11 @@ export default function SettingsPage({ params }: any) {
   
     
         //console.log('balance result', result);
-    
-        setBalance( Number(result) / 10 ** 6 );
+        if (selectedChain === 'bsc') {
+            setBalance( Number(result) / 10 ** 18 );
+        } else {
+            setBalance( Number(result) / 10 ** 6 );
+        }
   
         /*
         await fetch('/api/user/getBalanceByWalletAddress', {
@@ -393,7 +384,7 @@ export default function SettingsPage({ params }: any) {
   
       return () => clearInterval(interval);
   
-    } , [address, contract]);
+    } , [address, contract, selectedChain]);
   
 
 
@@ -884,11 +875,6 @@ export default function SettingsPage({ params }: any) {
 
     const getEscrowBalance = async () => {
 
-        if (!address) {
-            setEscrowBalance(0);
-            return;
-        }
-
         if (!seller?.escrowWalletAddress || seller?.escrowWalletAddress === '') return;
 
         const result = await balanceOf({
@@ -897,8 +883,11 @@ export default function SettingsPage({ params }: any) {
         });
 
         //console.log('escrow balance result', result);
-    
-        setEscrowBalance( Number(result) / 10 ** 6 );
+        if (selectedChain === 'bsc') {
+            setEscrowBalance( Number(result) / 10 ** 18 );
+        } else {
+            setEscrowBalance( Number(result) / 10 ** 6 );
+        }
 
     };
 
@@ -910,7 +899,7 @@ export default function SettingsPage({ params }: any) {
 
     return () => clearInterval(interval);
 
-    } , [address, seller?.escrowWalletAddress, contract]);
+    } , [seller?.escrowWalletAddress, contract, selectedChain]);
 
 
 
@@ -1109,13 +1098,14 @@ export default function SettingsPage({ params }: any) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                selectedChain: 'polygon',
+                selectedChain: selectedChain,
                 walletAddress: address,
             }),
         });
         setClearingSellerEscrowWalletBalance(false);
         toast.success('판매자 에스크로 지갑 잔고 회수 요청이 완료되었습니다.');
     };
+
 
 
 
@@ -1134,7 +1124,7 @@ export default function SettingsPage({ params }: any) {
                     </div>
                 )}
         
-                <div className="w-full flex flex-row gap-2 items-center justify-start text-slate-600 text-sm"
+                <div className="w-full flex flex-row gap-2 items-center justify-start mb-4"
                 >
                     {/* go back button */}
                     <div className="w-full flex justify-start items-center gap-2">
@@ -1155,8 +1145,6 @@ export default function SettingsPage({ params }: any) {
                         </span>
                     </div>
 
-
-
                 </div>
 
                 {!address && (
@@ -1166,6 +1154,63 @@ export default function SettingsPage({ params }: any) {
                         </div>
                     </div>
                 )}
+
+                {/* select chain(ethereum, polygon, arbitrum, bsc) */}
+                {/* radio buttons */}
+                {address && (
+
+                    <div className='w-full flex flex-col items-center justify-center mb-4'>
+                        {/* 설명 */}
+                        <span className="text-sm text-slate-600 font-semibold mb-2">
+                            조회할 USDT 체인을 선택하세요.
+                        </span>
+
+                        <div className="w-full flex flex-row items-center justify-center gap-4 mb-4">
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="radio"
+                                    name="chain"
+                                    value="ethereum"
+                                    checked={selectedChain === 'ethereum'}
+                                    onChange={() => setSelectedChain('ethereum')}
+                                />
+                                <span className="text-sm text-slate-700 font-semibold">Ethereum</span>
+                            </label>
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="radio"
+                                    name="chain"
+                                    value="polygon"
+                                    checked={selectedChain === 'polygon'}
+                                    onChange={() => setSelectedChain('polygon')}
+                                />
+                                <span className="text-sm text-slate-700 font-semibold">Polygon</span>
+                            </label>
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="radio"
+                                    name="chain"
+                                    value="arbitrum"
+                                    checked={selectedChain === 'arbitrum'}
+                                    onChange={() => setSelectedChain('arbitrum')}
+                                />
+                                <span className="text-sm text-slate-700 font-semibold">Arbitrum</span>
+                            </label>
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="radio"
+                                    name="chain"
+                                    value="bsc"
+                                    checked={selectedChain === 'bsc'}
+                                    onChange={() => setSelectedChain('bsc')}
+                                />
+                                <span className="text-sm text-slate-700 font-semibold">BSC</span>
+                            </label>
+                        </div>
+                    </div>
+
+                )}
+
 
 
                 {address && (
