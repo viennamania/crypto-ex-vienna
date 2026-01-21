@@ -149,7 +149,13 @@ export default function RootLayout({
 
 
         <ThirdwebProvider>
+
+          {/* Client Settings Provider */}
+          {/* Provides client settings context to the app */}
+          {/*
           <ClientSettingsProvider>
+          */}
+
             <Toaster />
 
             <div className="flex w-full flex-col items-stretch p-4 bg-slate-900/80 rounded-lg shadow-xl mb-4 border border-slate-700">
@@ -354,7 +360,10 @@ export default function RootLayout({
 
             <Analytics />
             <SpeedInsights />
+          {/*</ClientSettingsProvider>*/}
+          {/*
           </ClientSettingsProvider>
+          */}
         </ThirdwebProvider>
 
       </body>

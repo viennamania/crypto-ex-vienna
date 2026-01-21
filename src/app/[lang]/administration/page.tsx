@@ -66,7 +66,9 @@ import {
   useSearchParams
 }from "next//navigation";
 import { add } from "thirdweb/extensions/farcaster/keyGateway";
-import { useClientWallets } from "@/lib/useClientWallets";
+
+//import { useClientWallets } from "@/lib/useClientWallets";
+
 
 
 import { getOwnedNFTs } from "thirdweb/extensions/erc721";
@@ -111,7 +113,8 @@ const walletAuthOptions = ["google", "email"];
 
 
 export default function Index({ params }: any) {
-  const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
+
+  //const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
 
 
 
