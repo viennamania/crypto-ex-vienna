@@ -29,12 +29,12 @@ const SUPPORT_REQUEST_TIMEOUT_MS = 12000;
 
 const STAT_ITEMS = [
     {
-        label: '누적 거래량',
+        label: '누적 정산량',
         value: 12876432,
         suffix: 'USDT',
     },
     {
-        label: '누적 거래금액',
+        label: '누적 결제금액',
         value: 51298412000,
         suffix: 'KRW',
     },
@@ -304,6 +304,8 @@ export default function OrangeXPage() {
     const activeAccount = useActiveAccount();
     const walletAddress = activeAccount?.address ?? '';
     const { smartAccountEnabled } = useClientWallets();
+    const hasWallet = Boolean(walletAddress);
+    const sellerPageHref = hasWallet ? `/${lang}/seller/${walletAddress}` : '';
     const isSupportEligible = Boolean(walletAddress);
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
     const [animatedStats, setAnimatedStats] = useState(() => STAT_ITEMS.map(() => 0));
@@ -927,7 +929,7 @@ export default function OrangeXPage() {
                 if (active) {
                     setRecentTrades([]);
                     setRecentTradesUpdatedAt(null);
-                    setRecentTradesError('거래내역을 불러오지 못했습니다');
+                    setRecentTradesError('정산 내역을 불러오지 못했습니다');
                 }
             }
         };
@@ -1163,11 +1165,11 @@ export default function OrangeXPage() {
                                     />
                                 </span>
                                 <h1 className="font-[var(--font-display)] text-3xl leading-tight text-[color:var(--ink)] sm:text-4xl md:text-6xl">
-                                    테더 P2P 마켓
+                                    안전한 테더 구매·판매
                                 </h1>
                             </div>
                             <p className="text-lg text-slate-700 md:text-xl">
-                                개인 간 테더(USDT) 구매·판매를 안전하게 연결합니다
+                                신원확인(KYC)·에스크로·분쟁조정으로 결제를 보호합니다
                             </p>
 
                             <div className="flex flex-col gap-4 sm:flex-row">
@@ -1180,18 +1182,33 @@ export default function OrangeXPage() {
                                         <path d="M9 22a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" fill="currentColor"/>
                                         <path d="M18 22a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" fill="currentColor"/>
                                     </svg>
-                                    구매하기
+                                    안전 구매 진행
                                 </Link>
-                                <Link
-                                    href="/ko/p2p/sell"
-                                    className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-slate-300/80 bg-white/80 px-8 py-4 text-base font-semibold text-slate-900 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)] transition hover:bg-white sm:w-auto"
-                                >
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
-                                        <path d="M12 2l7 7-7 7-7-7 7-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                        <path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                    </svg>
-                                    판매하기
-                                </Link>
+                                {hasWallet ? (
+                                    <Link
+                                        href={sellerPageHref}
+                                        className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-slate-300/80 bg-white/80 px-8 py-4 text-base font-semibold text-slate-900 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)] transition hover:bg-white sm:w-auto"
+                                    >
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
+                                            <path d="M12 2l7 7-7 7-7-7 7-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                            <path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                        보호된 판매 시작
+                                    </Link>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        disabled
+                                        aria-disabled="true"
+                                        className="inline-flex w-full cursor-not-allowed items-center justify-center gap-3 rounded-full border border-slate-200/80 bg-white/60 px-8 py-4 text-base font-semibold text-slate-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)] sm:w-auto"
+                                    >
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
+                                            <path d="M12 2l7 7-7 7-7-7 7-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                            <path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                        보호된 판매 시작
+                                    </button>
+                                )}
                             </div>
 
                             <div className={`relative overflow-hidden rounded-2xl border px-5 py-4 shadow-[0_20px_55px_-35px_rgba(15,23,42,0.55)] ${
@@ -1218,7 +1235,7 @@ export default function OrangeXPage() {
                                                 Web3 Login
                                             </span>
                                             <span className="text-lg font-semibold text-slate-900">
-                                                {walletAddress ? '로그인 완료 상태입니다' : '지갑을 연결하고 안전하게 거래하세요'}
+                                                {walletAddress ? '로그인 완료 상태입니다' : '지갑을 연결하고 보호된 결제를 시작하세요'}
                                             </span>
                                             <span className="text-sm text-slate-600">
                                                 {walletAddress ? (
@@ -1256,34 +1273,34 @@ export default function OrangeXPage() {
 
                         <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-6 shadow-[0_25px_70px_-45px_rgba(15,23,42,0.7)]">
                             <div className="flex items-center justify-between">
-                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">거래 흐름</p>
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">정산 절차</p>
                                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">보호됨</span>
                             </div>
                             <div className="mt-6 space-y-4">
                                 <div className="flex items-start gap-3">
                                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--ink)] text-xs font-semibold text-white">1</div>
                                     <div>
-                                        <p className="text-sm font-semibold text-slate-900">주문 생성</p>
-                                        <p className="text-xs text-slate-600">구매자가 주문을 생성합니다</p>
+                                        <p className="text-sm font-semibold text-slate-900">구매 요청 생성</p>
+                                        <p className="text-xs text-slate-600">구매 요청이 등록됩니다</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
                                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--ink)] text-xs font-semibold text-white">2</div>
                                     <div>
-                                        <p className="text-sm font-semibold text-slate-900">에스크로 예치</p>
-                                        <p className="text-xs text-slate-600">판매자가 테더를 예치합니다</p>
+                                        <p className="text-sm font-semibold text-slate-900">에스크로 보관</p>
+                                        <p className="text-xs text-slate-600">판매자가 테더를 에스크로에 보관합니다</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
                                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--ink)] text-xs font-semibold text-white">3</div>
                                     <div>
-                                        <p className="text-sm font-semibold text-slate-900">입금 확인 & 전송</p>
-                                        <p className="text-xs text-slate-600">입금 확인 후 자동 전송됩니다</p>
+                                        <p className="text-sm font-semibold text-slate-900">입금 확인 & 정산</p>
+                                        <p className="text-xs text-slate-600">입금 확인 후 자동 정산됩니다</p>
                                     </div>
                                 </div>
                             </div>
                             <div className="mt-6 rounded-xl border border-orange-200/60 bg-orange-50/80 px-4 py-3 text-sm text-orange-800">
-                                평균 처리 10-30분, 입금 확인 후 자동 전송
+                                평균 처리 10-30분, 입금 확인 후 자동 정산
                             </div>
                         </div>
                     </div>
@@ -1683,7 +1700,7 @@ export default function OrangeXPage() {
                                 </svg>
                                 <h2 className="font-[var(--font-display)] text-2xl text-slate-900 sm:text-3xl">베스트 셀러</h2>
                             </div>
-                            <p className="text-sm text-slate-600">최근 거래 완료량 기준 상위 판매자</p>
+                            <p className="text-sm text-slate-600">최근 정산 완료량 기준 상위 판매자</p>
                         </div>
                         <div className="flex items-center gap-4 text-xs font-semibold text-slate-500">
                             <span className="inline-flex items-center gap-2 rounded-full border border-amber-200/70 bg-amber-50/80 px-3 py-1 text-amber-700">
@@ -1888,7 +1905,7 @@ export default function OrangeXPage() {
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                     <path d="M7 10l5-5 5 5M12 5v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
-                                <h2 className="font-[var(--font-display)] text-2xl text-slate-900 sm:text-3xl">최근 거래내역</h2>
+                                <h2 className="font-[var(--font-display)] text-2xl text-slate-900 sm:text-3xl">최근 정산 내역</h2>
                             </div>
                             <p className="text-sm text-slate-600">최근 10건이 순환 표시됩니다</p>
                         </div>
@@ -1922,7 +1939,7 @@ export default function OrangeXPage() {
 
                     {recentTrades.length === 0 ? (
                         <div className="rounded-2xl border border-slate-200/70 bg-white/70 px-5 py-6 text-sm text-slate-600">
-                            거래내역을 불러오는 중입니다.
+                            정산 내역을 불러오는 중입니다.
                         </div>
                     ) : (
                         <div className="ticker relative overflow-hidden">
@@ -1980,9 +1997,9 @@ export default function OrangeXPage() {
                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                             </svg>
                         </div>
-                        <h3 className="mb-3 text-center font-[var(--font-display)] text-xl text-slate-900">안전한 거래</h3>
+                        <h3 className="mb-3 text-center font-[var(--font-display)] text-xl text-slate-900">보호된 결제</h3>
                         <p className="text-center text-sm text-slate-700">
-                            에스크로 시스템으로 거래 금액을 안전하게 보호합니다
+                            에스크로 시스템으로 결제 금액을 안전하게 보호합니다
                         </p>
                     </div>
 
@@ -1998,7 +2015,7 @@ export default function OrangeXPage() {
                         </div>
                         <h3 className="mb-3 text-center font-[var(--font-display)] text-xl text-slate-900">빠른 처리</h3>
                         <p className="text-center text-sm text-slate-700">
-                            실시간 거래 매칭과 즉시 정산 시스템
+                            실시간 매칭과 정상 정산 시스템
                         </p>
                     </div>
 
@@ -2014,9 +2031,9 @@ export default function OrangeXPage() {
                                 <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                             </svg>
                         </div>
-                        <h3 className="mb-3 text-center font-[var(--font-display)] text-xl text-slate-900">P2P 거래</h3>
+                        <h3 className="mb-3 text-center font-[var(--font-display)] text-xl text-slate-900">P2P 구매·판매</h3>
                         <p className="text-center text-sm text-slate-700">
-                            개인간 직접 거래로 최적의 가격을 찾을 수 있습니다
+                            개인 간 직접 구매·판매로 가격을 비교할 수 있습니다
                         </p>
                     </div>
                 </div>
@@ -2028,54 +2045,54 @@ export default function OrangeXPage() {
                 >
                     <div className="pointer-events-none absolute right-[-10%] top-[-20%] h-64 w-64 rounded-full bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.5),transparent_70%)] opacity-40 blur-3xl" />
                     <h2 className="font-[var(--font-display)] text-2xl sm:text-3xl md:text-4xl text-center mb-8">
-                        🔒 에스크로 시스템이란?
+                        🔒 에스크로 보호란?
                     </h2>
                     
                     <div className="max-w-4xl mx-auto">
                         <div className="grid md:grid-cols-2 gap-8 mb-8">
                             <div className="rounded-2xl border border-white/10 bg-white/10 p-6 backdrop-blur">
                                 <div className="text-3xl sm:text-4xl mb-4">1️⃣</div>
-                                <h3 className="text-xl font-bold mb-3">구매자가 주문</h3>
+                                <h3 className="text-xl font-bold mb-3">구매 요청 생성</h3>
                                 <p className="text-slate-100">
-                                    구매자가 원하는 금액으로 테더 구매 주문을 생성합니다
+                                    구매 요청이 등록되면 결제가 보호됩니다
                                 </p>
                             </div>
                             
                             <div className="rounded-2xl border border-white/10 bg-white/10 p-6 backdrop-blur">
                                 <div className="text-3xl sm:text-4xl mb-4">2️⃣</div>
-                                <h3 className="text-xl font-bold mb-3">판매자가 에스크로에 입금</h3>
+                                <h3 className="text-xl font-bold mb-3">에스크로 보관</h3>
                                 <p className="text-slate-100">
-                                    판매자가 테더를 에스크로 지갑에 안전하게 예치합니다
+                                    판매자가 테더를 에스크로 지갑에 안전하게 보관합니다
                                 </p>
                             </div>
                             
                             <div className="rounded-2xl border border-white/10 bg-white/10 p-6 backdrop-blur">
                                 <div className="text-3xl sm:text-4xl mb-4">3️⃣</div>
-                                <h3 className="text-xl font-bold mb-3">구매자가 원화 송금</h3>
+                                <h3 className="text-xl font-bold mb-3">입금 완료 알림</h3>
                                 <p className="text-slate-100">
-                                    구매자가 판매자 계좌로 원화를 송금하고 송금 완료 버튼을 클릭합니다
+                                    구매자가 입금 후 완료 알림을 보냅니다
                                 </p>
                             </div>
                             
                             <div className="rounded-2xl border border-white/10 bg-white/10 p-6 backdrop-blur">
                                 <div className="text-3xl sm:text-4xl mb-4">4️⃣</div>
-                                <h3 className="text-xl font-bold mb-3">판매자 확인 후 전송</h3>
+                                <h3 className="text-xl font-bold mb-3">확인 후 자동 정산</h3>
                                 <p className="text-slate-100">
-                                    판매자가 입금을 확인하면 에스크로에서 구매자에게 테더가 자동 전송됩니다
+                                    판매자가 입금을 확인하면 에스크로에서 자동 정산됩니다
                                 </p>
                             </div>
                         </div>
 
                         <div className="rounded-2xl border border-orange-200/40 bg-orange-500/15 p-6 text-center">
                             <p className="text-lg text-white">
-                                ✨ <strong>중간에서 자금을 보호</strong>하여 안전한 거래를 보장합니다!
+                                ✨ <strong>에스크로로 결제를 보호</strong>하여 안전한 정산을 보장합니다!
                             </p>
                         </div>
                     </div>
                 </div>
 
-                {/* 거래 방법 */}
-                <div className="grid gap-8 mb-12 md:grid-cols-2">
+                {/* 정산 절차 */}
+                <div id="settlement-guide" className="grid gap-8 mb-12 md:grid-cols-2">
                     {/* 구매 방법 */}
                     <div
                         data-reveal
@@ -2104,11 +2121,11 @@ export default function OrangeXPage() {
                             </li>
                             <li className="flex gap-3">
                                 <span className="font-bold text-[color:var(--sea)]">4.</span>
-                                <span>송금 완료 버튼을 클릭합니다</span>
+                                <span>입금 완료 알림을 보냅니다</span>
                             </li>
                             <li className="flex gap-3">
                                 <span className="font-bold text-[color:var(--sea)]">5.</span>
-                                <span>판매자 확인 후 테더가 자동으로 지갑에 입금됩니다</span>
+                                <span>판매자 확인 후 자동 정산됩니다</span>
                             </li>
                         </ol>
 
@@ -2116,7 +2133,7 @@ export default function OrangeXPage() {
                             href="/ko/p2p/buy"
                             className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-[color:var(--sea)] px-6 py-4 text-base font-semibold text-white shadow-[0_18px_40px_-20px_rgba(15,118,110,0.8)] transition hover:brightness-110"
                         >
-                            지금 구매하기 →
+                            안전 구매 진행 →
                         </Link>
                     </div>
 
@@ -2136,11 +2153,11 @@ export default function OrangeXPage() {
                         <ol className="space-y-4 text-slate-700">
                             <li className="flex gap-3">
                                 <span className="font-bold text-[color:var(--accent)]">1.</span>
-                                <span>판매할 테더 수량과 가격을 설정하여 주문을 등록합니다</span>
+                                <span>판매 수량과 가격을 등록합니다</span>
                             </li>
                             <li className="flex gap-3">
                                 <span className="font-bold text-[color:var(--accent)]">2.</span>
-                                <span>구매자가 주문을 수락하면 알림을 받습니다</span>
+                                <span>구매 요청이 수락되면 알림을 받습니다</span>
                             </li>
                             <li className="flex gap-3">
                                 <span className="font-bold text-[color:var(--accent)]">3.</span>
@@ -2148,20 +2165,31 @@ export default function OrangeXPage() {
                             </li>
                             <li className="flex gap-3">
                                 <span className="font-bold text-[color:var(--accent)]">4.</span>
-                                <span>구매자의 원화 입금을 확인합니다</span>
+                                <span>구매자의 입금을 확인합니다</span>
                             </li>
                             <li className="flex gap-3">
                                 <span className="font-bold text-[color:var(--accent)]">5.</span>
-                                <span>입금 확인 버튼을 누르면 거래가 완료됩니다</span>
+                                <span>입금 확인 버튼을 누르면 정산이 완료됩니다</span>
                             </li>
                         </ol>
 
-                        <Link 
-                            href="/ko/p2p/sell"
-                            className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-[color:var(--accent)] px-6 py-4 text-base font-semibold text-white shadow-[0_18px_40px_-20px_rgba(249,115,22,0.8)] transition hover:brightness-110"
-                        >
-                            지금 판매하기 →
-                        </Link>
+                        {hasWallet ? (
+                            <Link 
+                                href={sellerPageHref}
+                                className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-[color:var(--accent)] px-6 py-4 text-base font-semibold text-white shadow-[0_18px_40px_-20px_rgba(249,115,22,0.8)] transition hover:brightness-110"
+                            >
+                                보호된 판매 시작 →
+                            </Link>
+                        ) : (
+                            <button
+                                type="button"
+                                disabled
+                                aria-disabled="true"
+                                className="mt-8 inline-flex w-full cursor-not-allowed items-center justify-center rounded-full bg-slate-200 px-6 py-4 text-base font-semibold text-slate-500 shadow-[0_18px_40px_-20px_rgba(148,163,184,0.4)]"
+                            >
+                                보호된 판매 시작 →
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -2174,25 +2202,25 @@ export default function OrangeXPage() {
                     
                     <div className="space-y-6 max-w-3xl mx-auto">
                         <div className="border-b border-slate-200/70 pb-4">
-                            <h4 className="text-lg font-semibold mb-2 text-slate-900">❓ 거래는 안전한가요?</h4>
+                            <h4 className="text-lg font-semibold mb-2 text-slate-900">❓ 결제는 안전한가요?</h4>
                             <p className="text-slate-700">
-                                네, 에스크로 시스템을 통해 거래 금액을 중간에서 안전하게 보호합니다. 
-                                판매자와 구매자 모두 입금 확인 후에만 거래가 완료되므로 안심하고 거래할 수 있습니다.
+                                네, 에스크로로 결제 금액을 보호하고 입금 확인 후 정산됩니다.
+                                KYC/AML 기준을 준수하며 이상 거래는 즉시 제한됩니다.
                             </p>
                         </div>
                         
                         <div className="border-b border-slate-200/70 pb-4">
                             <h4 className="text-lg font-semibold mb-2 text-slate-900">❓ 수수료는 얼마인가요?</h4>
                             <p className="text-slate-700">
-                                거래 수수료는 거래 금액의 일정 비율로 부과됩니다. 
-                                자세한 수수료 정보는 거래 페이지에서 확인하실 수 있습니다.
+                                수수료와 환율은 결제 전 명확히 고지됩니다.
+                                자세한 수수료 정보는 결제 진행 화면에서 확인할 수 있습니다.
                             </p>
                         </div>
                         
                         <div className="border-b border-slate-200/70 pb-4">
-                            <h4 className="text-lg font-semibold mb-2 text-slate-900">❓ 거래는 얼마나 걸리나요?</h4>
+                            <h4 className="text-lg font-semibold mb-2 text-slate-900">❓ 정산은 얼마나 걸리나요?</h4>
                             <p className="text-slate-700">
-                                일반적으로 구매자의 입금부터 판매자 확인까지 10-30분 정도 소요됩니다. 
+                                일반적으로 입금부터 확인까지 10-30분 정도 소요됩니다.
                                 은행 송금 시간에 따라 다소 차이가 있을 수 있습니다.
                             </p>
                         </div>
@@ -2200,8 +2228,8 @@ export default function OrangeXPage() {
                         <div>
                             <h4 className="text-lg font-semibold mb-2 text-slate-900">❓ 분쟁이 발생하면 어떻게 하나요?</h4>
                             <p className="text-slate-700">
-                                거래 중 문제가 발생하면 고객센터로 연락주시면 전문 상담원이 신속하게 도와드립니다. 
-                                에스크로 시스템으로 자금은 안전하게 보호됩니다.
+                                결제 중 문제가 발생하면 고객센터로 연락해 주세요.
+                                에스크로 기록과 로그 기반의 분쟁조정 절차를 제공합니다.
                             </p>
                         </div>
                     </div>
@@ -2213,9 +2241,9 @@ export default function OrangeXPage() {
                     className="glam-card relative overflow-hidden rounded-[28px] bg-[linear-gradient(120deg,var(--sea),var(--accent),var(--rose))] p-8 text-center text-white shadow-[0_40px_120px_-60px_rgba(15,23,42,0.8)]"
                 >
                     <div className="pointer-events-none absolute -right-20 -top-16 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.45),transparent_70%)] opacity-60 blur-3xl" />
-                    <h2 className="font-[var(--font-display)] text-2xl mb-4 sm:text-3xl">지금 바로 시작하세요!</h2>
+                    <h2 className="font-[var(--font-display)] text-2xl mb-4 sm:text-3xl">안전하게 사고, 확실하게 받으세요.</h2>
                     <p className="text-lg text-white/90 mb-8">
-                        개인 간 테더 거래를 쉽고 안전하게
+                        KYC·에스크로·분쟁조정으로 결제를 보호합니다
                     </p>
                     
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -2223,14 +2251,14 @@ export default function OrangeXPage() {
                             href="/ko/p2p/buy"
                             className="w-full sm:w-auto rounded-full bg-white px-8 py-4 text-base font-semibold text-slate-900 shadow-[0_18px_45px_-25px_rgba(15,23,42,0.8)] transition hover:bg-white/90"
                         >
-                            구매하기 →
+                            보호된 결제 시작 →
                         </Link>
-                        <Link 
-                            href="/ko/p2p/sell"
+                        <a 
+                            href="#settlement-guide"
                             className="w-full sm:w-auto rounded-full border border-white/70 px-8 py-4 text-base font-semibold text-white transition hover:bg-white/10"
                         >
-                            판매하기 →
-                        </Link>
+                            절차 보기 →
+                        </a>
                     </div>
                 </div>
             </main>
@@ -2252,7 +2280,15 @@ export default function OrangeXPage() {
                         <a href="/privacy-policy" className="hover:text-white">
                             개인정보처리방침
                         </a>
+                        <span className="text-slate-500">|</span>
+                        <a href="/contact" className="hover:text-white">
+                            환불·분쟁 정책
+                        </a>
                     </div>
+                    <p className="max-w-2xl text-xs leading-relaxed text-slate-400">
+                        리스크 고지: 가상자산 결제에는 가격 변동 및 네트워크 지연 등 위험이 수반될 수 있습니다.
+                        결제 전에 수수료·환율·정산 조건을 확인해 주세요.
+                    </p>
                     <div className="text-sm text-slate-400">
                         <p>이메일 : help@orangex.center</p>
                         <p>주소 : 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
