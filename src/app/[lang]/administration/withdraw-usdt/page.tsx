@@ -166,7 +166,10 @@ import path from 'path';
 
 
 export default function SendUsdt({ params }: any) {
-  const { wallet, wallets, smartAccountEnabled } = useClientWallets({ authOptions: walletAuthOptions });
+  const { wallet, wallets, smartAccountEnabled } = useClientWallets({
+    authOptions: walletAuthOptions,
+    sponsorGas: true,
+  });
 
 
   //console.log("params", params);
@@ -738,7 +741,13 @@ export default function SendUsdt({ params }: any) {
       
 
     } catch (error) {
-      toast.error(Failed_to_send_USDT);
+      console.error('Failed to send USDT', error);
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.toLowerCase().includes('insufficient funds') || message.toLowerCase().includes('gas')) {
+        toast.error('가스비용이 부족합니다. 네트워크 잔고를 확인해주세요.');
+      } else {
+        toast.error(Failed_to_send_USDT);
+      }
     }
 
     setSending(false);
