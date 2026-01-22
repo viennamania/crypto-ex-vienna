@@ -305,7 +305,7 @@ export default function OrangeXPage() {
     const walletAddress = activeAccount?.address ?? '';
     const { smartAccountEnabled } = useClientWallets();
     const hasWallet = Boolean(walletAddress);
-    const sellerPageHref = hasWallet ? `/${lang}/seller/${walletAddress}` : '';
+    const sellerPageHref = hasWallet ? `/${lang}/administration/seller-settings` : '';
     const isSupportEligible = Boolean(walletAddress);
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
     const [animatedStats, setAnimatedStats] = useState(() => STAT_ITEMS.map(() => 0));

@@ -83,12 +83,39 @@ export function useClientWallets(options: UseClientWalletsOptions = {}) {
       return inAppWallet();
     }
 
+
+
+
+    /*
+    const wallet = inAppWallet({
+      // enable gasless transactions for the wallet
+      executionMode: {
+        mode: "EIP7702",
+        sponsorGas: true,
+      },
+    });
+    */
+
+
     return inAppWallet({
+
+      
       smartAccount: {
         sponsorGas,
         chain: activeChain,
       },
+      
+
+      /*
+      executionMode: {
+        mode: 'EIP7702',
+        sponsorGas: true,
+      },
+      */
+
+
     });
+
   }, [smartAccountEnabled, sponsorGas, activeChain]);
 
   const wallets = useMemo(() => {

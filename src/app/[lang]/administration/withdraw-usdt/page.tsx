@@ -166,10 +166,18 @@ import path from 'path';
 
 
 export default function SendUsdt({ params }: any) {
+
   const { wallet, wallets, smartAccountEnabled } = useClientWallets({
     authOptions: walletAuthOptions,
     sponsorGas: true,
   });
+
+  //console.log("wallet", wallet);
+  //console.log("wallets", wallets);
+  //console.log("smartAccountEnabled", smartAccountEnabled);
+
+
+
 
 
   //console.log("params", params);
@@ -664,6 +672,10 @@ export default function SendUsdt({ params }: any) {
             to: recipient.walletAddress,
             amount: amount,
         });
+
+        console.log("contract", contract);
+        console.log("recipient.walletAddress", recipient.walletAddress);
+        console.log("amount", amount);
         
 
         /*
@@ -837,10 +849,13 @@ export default function SendUsdt({ params }: any) {
   if (!address) {
     return (
       <main className="min-h-[100vh] bg-[radial-gradient(120%_120%_at_0%_0%,#fff7ed_0%,#fef2f2_38%,#eff6ff_78%,#f8fafc_100%)] px-4 py-8">
+        {/*
         <AutoConnect
           client={client}
-          wallets={[wallet]}
+          //wallets={[wallet]}
+          wallets={wallets}
         />
+        */}
         <div className="mx-auto flex min-h-[70vh] max-w-screen-sm items-center justify-center text-center">
           <p className="text-2xl font-semibold text-rose-600 sm:text-3xl">
             지갑 연결이 필요합니다. 연결 후 이용하십시오.
