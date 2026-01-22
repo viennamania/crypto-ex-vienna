@@ -1157,10 +1157,11 @@ export default function SettingsPage({ params }: any) {
 
                 {/* select chain(ethereum, polygon, arbitrum, bsc) */}
                 {/* radio buttons */}
+                {/*
                 {address && (
 
                     <div className='w-full flex flex-col items-center justify-center mb-4'>
-                        {/* 설명 */}
+
                         <span className="text-sm text-slate-600 font-semibold mb-2">
                             조회할 USDT 체인을 선택하세요.
                         </span>
@@ -1210,6 +1211,7 @@ export default function SettingsPage({ params }: any) {
                     </div>
 
                 )}
+                */}
 
 
 
