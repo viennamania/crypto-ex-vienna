@@ -10519,12 +10519,12 @@ const SendbirdChatEmbed = ({
 
   return (
     <div className="fixed bottom-6 right-6 z-50 w-[360px] max-w-[calc(100vw-3rem)] rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-xl">
-      <div className="mb-4 flex items-start justify-between gap-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">구매자 ↔ 판매자 채팅</h3>
           <p className="text-sm text-slate-600">실시간 대화를 통해 거래를 진행하세요.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           {isLoading && <span className="text-xs font-semibold text-slate-500">연결 중...</span>}
           <button
             type="button"

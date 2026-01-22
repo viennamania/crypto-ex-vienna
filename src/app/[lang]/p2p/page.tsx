@@ -1196,18 +1196,11 @@ export default function OrangeXPage() {
                                         보호된 판매 시작
                                     </Link>
                                 ) : (
-                                    <button
-                                        type="button"
-                                        disabled
-                                        aria-disabled="true"
-                                        className="inline-flex w-full cursor-not-allowed items-center justify-center gap-3 rounded-full border border-slate-200/80 bg-white/60 px-8 py-4 text-base font-semibold text-slate-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)] sm:w-auto"
-                                    >
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
-                                            <path d="M12 2l7 7-7 7-7-7 7-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                            <path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                        </svg>
-                                        보호된 판매 시작
-                                    </button>
+                                    <div className="flex w-full items-center justify-center sm:w-auto">
+                                        <span className="inline-flex items-center rounded-full border border-slate-200/80 bg-white/70 px-6 py-3 text-xs font-semibold text-slate-500">
+                                            로그인 후 판매 시작
+                                        </span>
+                                    </div>
                                 )}
                             </div>
 
@@ -2181,14 +2174,9 @@ export default function OrangeXPage() {
                                 보호된 판매 시작 →
                             </Link>
                         ) : (
-                            <button
-                                type="button"
-                                disabled
-                                aria-disabled="true"
-                                className="mt-8 inline-flex w-full cursor-not-allowed items-center justify-center rounded-full bg-slate-200 px-6 py-4 text-base font-semibold text-slate-500 shadow-[0_18px_40px_-20px_rgba(148,163,184,0.4)]"
-                            >
-                                보호된 판매 시작 →
-                            </button>
+                            <p className="mt-8 text-center text-xs font-semibold text-slate-500">
+                                로그인 후 판매 시작
+                            </p>
                         )}
                     </div>
                 </div>

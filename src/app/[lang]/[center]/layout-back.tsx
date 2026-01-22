@@ -102,6 +102,31 @@ export default function RootLayout({
 
   const [showChain, setShowChain] = useState(false);
 
+  useEffect(() => {
+    if (!showChain) {
+      return;
+    }
+
+    const body = document.body;
+    const html = document.documentElement;
+    const prevBodyOverflow = body.style.overflow;
+    const prevBodyTouchAction = body.style.touchAction;
+    const prevBodyOverscroll = body.style.overscrollBehavior;
+    const prevHtmlOverflow = html.style.overflow;
+
+    body.style.overflow = "hidden";
+    body.style.touchAction = "none";
+    body.style.overscrollBehavior = "contain";
+    html.style.overflow = "hidden";
+
+    return () => {
+      body.style.overflow = prevBodyOverflow;
+      body.style.touchAction = prevBodyTouchAction;
+      body.style.overscrollBehavior = prevBodyOverscroll;
+      html.style.overflow = prevHtmlOverflow;
+    };
+  }, [showChain]);
+
 
 
 
@@ -190,10 +215,14 @@ export default function RootLayout({
                 </div>
               </button>
 
-              <div className={`flex flex-col items-center justify-center
+              <div
+                className={`flex w-[92vw] max-w-[520px] flex-col items-stretch justify-center
                 ${showChain ? 'bg-white' : 'hidden'}
+                max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain
                 p-4 rounded-lg shadow-md transition-all duration-300 ease-in-out
-              `}>
+              `}
+                style={{ WebkitOverflowScrolling: "touch" }}
+              >
 
                 {/* Display client ID */}
                 {/*
