@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { AutoConnect, ConnectButton, useActiveAccount } from 'thirdweb/react';
 import { ethereum, polygon, arbitrum, bsc } from 'thirdweb/chains';
-import { useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 
 import { client } from '../../client';
@@ -36,6 +36,9 @@ export default function Web3LoginPage() {
   const address = activeAccount?.address;
   const activeChain = resolveChain(chain as NetworkKey);
   const searchParams = useSearchParams();
+  const params = useParams<{ lang?: string }>();
+  const langParam = params?.lang;
+  const lang = Array.isArray(langParam) ? langParam[0] : langParam || 'ko';
   const storecode = searchParams.get('storecode') || 'admin';
   const [nickname, setNickname] = useState('');
   const [editedNickname, setEditedNickname] = useState('');
@@ -180,6 +183,15 @@ export default function Web3LoginPage() {
       <div className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.2)_0%,transparent_70%)] blur-3xl" />
 
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
+        <div className="flex items-center justify-between">
+          <a
+            href={`/${lang}/p2p`}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+          >
+            <Image src="/icon-back.png" alt="Back" width={16} height={16} className="h-4 w-4" />
+            홈으로 돌아가기
+          </a>
+        </div>
         <header className="flex flex-col gap-3">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200/70 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-emerald-700 shadow-sm">
             Web3 Secure Access

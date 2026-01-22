@@ -8,6 +8,7 @@ import { Manrope, Playfair_Display } from 'next/font/google';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 import { useActiveAccount } from 'thirdweb/react';
+import { useClientWallets } from '@/lib/useClientWallets';
 
 
 const displayFont = Playfair_Display({
@@ -302,6 +303,7 @@ export default function OrangeXPage() {
     const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang ?? 'ko';
     const activeAccount = useActiveAccount();
     const walletAddress = activeAccount?.address ?? '';
+    const { smartAccountEnabled } = useClientWallets();
     const isSupportEligible = Boolean(walletAddress);
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
     const [animatedStats, setAnimatedStats] = useState(() => STAT_ITEMS.map(() => 0));
@@ -1190,6 +1192,59 @@ export default function OrangeXPage() {
                                     </svg>
                                     판매하기
                                 </Link>
+                            </div>
+
+                            <div className={`relative overflow-hidden rounded-2xl border px-5 py-4 shadow-[0_20px_55px_-35px_rgba(15,23,42,0.55)] ${
+                                walletAddress
+                                    ? 'border-emerald-200/70 bg-[linear-gradient(120deg,#ecfdf3_0%,#f0f9ff_65%,#ffffff_100%)]'
+                                    : 'border-amber-200/70 bg-[linear-gradient(120deg,#fff7ed_0%,#fef3c7_60%,#ffffff_100%)]'
+                            }`}>
+                                <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.4),transparent_70%)] blur-2xl" />
+                                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/70 bg-white/90 shadow-sm">
+                                            <Image
+                                                src="/icon-smart-wallet.png"
+                                                alt="Web3 Login"
+                                                width={26}
+                                                height={26}
+                                                className="h-6 w-6"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <span className={`text-xs font-semibold uppercase tracking-[0.3em] ${
+                                                walletAddress ? 'text-emerald-700' : 'text-amber-700'
+                                            }`}>
+                                                Web3 Login
+                                            </span>
+                                            <span className="text-lg font-semibold text-slate-900">
+                                                {walletAddress ? '로그인 완료 상태입니다' : '지갑을 연결하고 안전하게 거래하세요'}
+                                            </span>
+                                            <span className="text-sm text-slate-600">
+                                                {walletAddress ? (
+                                                    <span className="inline-flex flex-wrap items-center gap-2">
+                                                        <span>
+                                                            지갑: {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
+                                                        </span>
+                                                        {smartAccountEnabled && (
+                                                            <span className="inline-flex items-center rounded-full border border-amber-200/70 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                                                                스마트 어카운트
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                ) : (
+                                                    '비수탁 로그인 · 서명 기반 인증 · 실시간 보안 모니터링'
+                                                )}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <Link
+                                        href={`/${lang}/web3login`}
+                                        className="web3-cta inline-flex min-w-[140px] items-center justify-center rounded-full bg-[linear-gradient(135deg,var(--accent),var(--accent-deep))] px-7 py-3 text-sm font-semibold text-white shadow-[0_22px_50px_-22px_rgba(249,115,22,0.85)] transition hover:-translate-y-0.5 hover:shadow-[0_28px_60px_-24px_rgba(249,115,22,0.95)] whitespace-nowrap"
+                                    >
+                                        {walletAddress ? '내 지갑 보기' : '웹3 로그인'}
+                                    </Link>
+                                </div>
                             </div>
 
                             <div className="flex flex-wrap gap-3 text-xs font-semibold text-slate-500">
@@ -2638,6 +2693,68 @@ export default function OrangeXPage() {
                     }
                 }
 
+                .web3-cta {
+                    position: relative;
+                    overflow: hidden;
+                    animation: web3CtaPulse 1.4s ease-in-out infinite;
+                    will-change: transform, box-shadow;
+                }
+
+                .web3-cta::before {
+                    content: '';
+                    position: absolute;
+                    inset: -18px;
+                    border-radius: inherit;
+                    background: radial-gradient(circle, rgba(249, 115, 22, 0.45), transparent 65%);
+                    opacity: 0.7;
+                    filter: blur(14px);
+                    z-index: 0;
+                }
+
+                .web3-cta::after {
+                    content: '';
+                    position: absolute;
+                    top: -60%;
+                    left: -40%;
+                    width: 45%;
+                    height: 220%;
+                    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+                    transform: translateX(-120%);
+                    animation: web3CtaSheen 1.6s ease-in-out infinite;
+                    z-index: 0;
+                }
+
+                .web3-cta > * {
+                    position: relative;
+                    z-index: 1;
+                }
+
+                @keyframes web3CtaPulse {
+                    0%,
+                    100% {
+                        transform: translateY(0) scale(1);
+                        box-shadow: 0 22px 50px -22px rgba(249, 115, 22, 0.85);
+                    }
+                    50% {
+                        transform: translateY(-1px) scale(1.03);
+                        box-shadow: 0 30px 60px -24px rgba(249, 115, 22, 0.95);
+                    }
+                }
+
+                @keyframes web3CtaSheen {
+                    0% {
+                        transform: translateX(-120%);
+                        opacity: 0;
+                    }
+                    20% {
+                        opacity: 0.6;
+                    }
+                    100% {
+                        transform: translateX(240%);
+                        opacity: 0;
+                    }
+                }
+
                 @media (max-width: 640px) {
                     .ticker {
                         height: 280px;
@@ -2669,6 +2786,11 @@ export default function OrangeXPage() {
                     .float-slow,
                     .float-slower,
                     .hero-fade {
+                        animation: none;
+                    }
+                    .web3-cta,
+                    .web3-cta::before,
+                    .web3-cta::after {
                         animation: none;
                     }
                     [data-reveal] {

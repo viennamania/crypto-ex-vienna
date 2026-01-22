@@ -2730,6 +2730,41 @@ const fetchBuyOrders = async () => {
 
           </div>
 
+          {!address && (
+            <div className="mt-4 rounded-2xl border border-emerald-200/70 bg-[linear-gradient(120deg,#ecfdf3_0%,#f0f9ff_55%,#ffffff_100%)] p-5 shadow-[0_22px_55px_-40px_rgba(16,185,129,0.6)]">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-200 bg-white shadow-sm">
+                    <Image
+                      src="/icon-smart-wallet.png"
+                      alt="Web3 Login"
+                      width={26}
+                      height={26}
+                      className="h-6 w-6"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">
+                      Web3 Login
+                    </span>
+                    <span className="text-lg font-semibold text-slate-900">
+                      지갑을 연결하고 안전하게 거래하세요
+                    </span>
+                    <span className="text-sm text-slate-600">
+                      비수탁 로그인 · 서명 기반 인증 · 실시간 보안 모니터링
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => router.push('/' + params.lang + '/web3login')}
+                  className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_-22px_rgba(16,185,129,0.7)] transition hover:-translate-y-0.5 hover:bg-emerald-500"
+                >
+                  웹3 로그인
+                </button>
+              </div>
+            </div>
+          )}
+
 
 
           <div className="flex flex-col items-start justify-center gap-2 mt-4">
@@ -7577,6 +7612,5 @@ const TradeDetail = (
       </div>
     );
   };
-
 
 
