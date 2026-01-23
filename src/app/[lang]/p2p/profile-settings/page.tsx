@@ -954,7 +954,7 @@ export default function SettingsPage({ params }: any) {
                         <div className="grid w-full grid-cols-2 gap-2">
                             <button
                                 type="button"
-                                onClick={() => router.push('/' + params.lang + '/administration/profile-settings')}
+                                onClick={() => router.push('/' + params.lang + '/p2p/profile-settings')}
                                 className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-slate-900/80 bg-slate-900 px-3 py-2 text-white shadow-[0_16px_40px_-28px_rgba(15,23,42,0.6)] transition hover:-translate-y-0.5 hover:bg-slate-800"
                             >
                                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white">

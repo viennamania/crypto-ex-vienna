@@ -4936,7 +4936,7 @@ const fetchBuyOrders = async () => {
                     <button
                       type="button"
                       className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-orange-200 bg-orange-50/80 px-3 py-2 text-xs font-semibold text-orange-600 shadow-[0_10px_24px_-18px_rgba(249,115,22,0.6)] transition hover:bg-orange-100/80 sm:w-auto sm:px-4 sm:text-sm"
-                      onClick={() => router.push(`/${params.lang}/administration/seller-settings`)}
+                      onClick={() => router.push(`/${params.lang}/p2p/seller-settings`)}
                     >
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-orange-300/70 bg-white text-orange-600 shadow-[0_6px_14px_-10px_rgba(249,115,22,0.7)]">
                         <svg
@@ -7940,10 +7940,10 @@ const fetchBuyOrders = async () => {
                                     은행정보를 등록해야 구매할 수 있습니다.
                                   </span>
                                   {/* go to bank info page button */}
-                                  {/* /[params.lang]/administration/buyer-settings */}
+                                  {/* /[params.lang]/p2p/buyer-settings */}
                                   <button
                                     onClick={() => {
-                                      router.push('/' + params.lang + '/administration/buyer-settings');
+                                      router.push('/' + params.lang + '/p2p/buyer-settings');
                                     }}
                                     className="bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80 mt-2"
                                   >

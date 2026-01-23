@@ -4383,7 +4383,7 @@ const fetchBuyOrders = async () => {
               
               <button
                 onClick={() => {
-                  router.push('/' + params.lang + '/administration/profile-settings');
+                  router.push('/' + params.lang + '/p2p/profile-settings');
                 }}
                 className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900
                 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_-26px_rgba(15,23,42,0.7)]
@@ -4415,7 +4415,7 @@ const fetchBuyOrders = async () => {
               {user?.buyer && (
                 <button
                   onClick={() => {
-                    router.push('/' + params.lang + '/administration/buyer-settings');
+                    router.push('/' + params.lang + '/p2p/buyer-settings');
                   }}
                   className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90
                   px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
@@ -4439,7 +4439,7 @@ const fetchBuyOrders = async () => {
               {user?.seller && (
                 <button
                   onClick={() => {
-                    router.push('/' + params.lang + '/administration/seller-settings');
+                    router.push('/' + params.lang + '/p2p/seller-settings');
                   }}
                   className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90
                   px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
@@ -5619,7 +5619,7 @@ const fetchBuyOrders = async () => {
                             <button
                               title="나의 판매자계정으로 이동"
                               onClick={() => {
-                                router.push('/' + params.lang + '/administration/seller-settings');
+                                router.push('/' + params.lang + '/p2p/seller-settings');
                               }}
                               className="flex flex-row items-center justify-center gap-1
                               bg-white hover:bg-slate-50 text-slate-700

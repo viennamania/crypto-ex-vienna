@@ -4481,7 +4481,7 @@ const fetchBuyOrders = async () => {
               
               <button
                 onClick={() => {
-                  router.push('/' + params.lang + '/administration/profile-settings');
+                  router.push('/' + params.lang + '/p2p/profile-settings');
                 }}
                 className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
                 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
@@ -4512,7 +4512,7 @@ const fetchBuyOrders = async () => {
               {user?.buyer && (
                 <button
                   onClick={() => {
-                    router.push('/' + params.lang + '/administration/buyer-settings');
+                    router.push('/' + params.lang + '/p2p/buyer-settings');
                   }}
                   className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
                   px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
@@ -4536,7 +4536,7 @@ const fetchBuyOrders = async () => {
               {user?.seller && (
                 <button
                   onClick={() => {
-                    router.push('/' + params.lang + '/administration/seller-settings');
+                    router.push('/' + params.lang + '/p2p/seller-settings');
                   }}
                   className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
                   px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
