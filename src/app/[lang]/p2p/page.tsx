@@ -1346,53 +1346,59 @@ export default function OrangeXPage() {
                                 </div>
                             </div>
 
-                            <div className={`relative overflow-hidden rounded-2xl border px-5 py-4 shadow-[0_20px_55px_-35px_rgba(15,23,42,0.55)] ${
-                                walletAddress
-                                    ? 'border-emerald-200/70 bg-[linear-gradient(120deg,#ecfdf3_0%,#f0f9ff_65%,#ffffff_100%)]'
-                                    : 'border-amber-200/70 bg-[linear-gradient(120deg,#fff7ed_0%,#fef3c7_60%,#ffffff_100%)]'
-                            }`}>
-                                <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.4),transparent_70%)] blur-2xl" />
-                                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                    <div className="flex items-start gap-3">
-                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/70 bg-white/90 shadow-sm">
+                            <div className="relative overflow-hidden rounded-[28px] border border-slate-200/80 bg-[linear-gradient(145deg,#ffffff,#f1f5f9_60%,#e2e8f0)] px-6 py-5 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.5)]">
+                                <span className="pointer-events-none absolute left-0 top-0 h-full w-1.5 bg-[linear-gradient(180deg,#0f172a,#0ea5e9)]" />
+                                <div className="pointer-events-none absolute -right-16 -top-16 h-32 w-32 rounded-full bg-[radial-gradient(circle_at_center,rgba(15,23,42,0.18),transparent_70%)] blur-3xl" />
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <span className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-500">
+                                        Secure Web3 Login
+                                    </span>
+                                    <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 shadow-sm">
+                                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                        보안 인증됨
+                                    </span>
+                                </div>
+                                <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                    <div className="flex items-start gap-4 md:flex-1">
+                                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-[0_20px_40px_-18px_rgba(15,23,42,0.6)] ring-2 ring-slate-200/80">
                                             <Image
-                                                src="/icon-smart-wallet.png"
-                                                alt="Web3 Login"
-                                                width={26}
-                                                height={26}
-                                                className="h-6 w-6"
+                                                src="/icon-vault.png"
+                                                alt="Secure Wallet"
+                                                width={28}
+                                                height={28}
+                                                className="h-7 w-7"
                                             />
                                         </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className={`text-xs font-semibold uppercase tracking-[0.3em] ${
-                                                walletAddress ? 'text-emerald-700' : 'text-amber-700'
-                                            }`}>
-                                                Web3 Login
-                                            </span>
+                                        <div className="flex flex-col gap-2">
                                             <span className="text-lg font-semibold text-slate-900">
                                                 {walletAddress ? '로그인 완료 상태입니다' : '지갑을 연결하고 보호된 결제를 시작하세요'}
                                             </span>
                                             <span className="text-sm text-slate-600">
                                                 {walletAddress ? (
                                                     <span className="inline-flex flex-wrap items-center gap-2">
-                                                        <span>
+                                                        <span className="rounded-full border border-slate-200/80 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700">
                                                             지갑: {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
                                                         </span>
                                                         {smartAccountEnabled && (
-                                                            <span className="inline-flex items-center rounded-full border border-amber-200/70 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                                                            <span className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
                                                                 스마트 어카운트
                                                             </span>
                                                         )}
                                                     </span>
                                                 ) : (
-                                                    '비수탁 로그인 · 서명 기반 인증 · 실시간 보안 모니터링'
+                                                    '금융권 수준 보안 · 비수탁 로그인 · 실시간 모니터링'
                                                 )}
                                             </span>
+                                            <div className="flex flex-wrap gap-2 text-[11px] font-semibold text-slate-600">
+                                                <span className="rounded-full border border-slate-200/80 bg-white/90 px-3 py-1">서명 기반 인증</span>
+                                                <span className="rounded-full border border-slate-200/80 bg-white/90 px-3 py-1">실시간 보안 모니터링</span>
+                                                <span className="rounded-full border border-slate-200/80 bg-white/90 px-3 py-1">에스크로 보호</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <Link
                                         href={`/${lang}/web3login`}
-                                        className="web3-cta inline-flex min-w-[140px] items-center justify-center rounded-full bg-[linear-gradient(135deg,var(--accent),var(--accent-deep))] px-7 py-3 text-sm font-semibold text-white shadow-[0_22px_50px_-22px_rgba(249,115,22,0.85)] transition hover:-translate-y-0.5 hover:shadow-[0_28px_60px_-24px_rgba(249,115,22,0.95)] whitespace-nowrap"
+                                        className="inline-flex min-w-[150px] items-center justify-center rounded-full bg-slate-900 px-7 py-3 text-sm font-semibold text-white shadow-[0_22px_50px_-22px_rgba(15,23,42,0.6)] transition hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-[0_28px_60px_-24px_rgba(15,23,42,0.7)] whitespace-nowrap"
                                     >
                                         {walletAddress ? '내 지갑 보기' : '웹3 로그인'}
                                     </Link>
