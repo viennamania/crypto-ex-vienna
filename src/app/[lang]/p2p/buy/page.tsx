@@ -4411,34 +4411,67 @@ const fetchBuyOrders = async () => {
 
 
       <div className="py-0 w-full">
-
-
-        <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-3
-        rounded-2xl border border-orange-400/40 bg-gradient-to-r from-orange-600 to-amber-500 p-3 text-white shadow-[0_24px_60px_-40px_rgba(249,115,22,0.55)] backdrop-blur
-        mb-4">
-            
-          <div className="w-full flex flex-row items-center justify-start gap-2">
+        <div className="mb-4 w-full rounded-2xl border border-sky-200/70 bg-sky-50/80 p-4 shadow-[0_18px_45px_-35px_rgba(14,116,144,0.35)] backdrop-blur">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-200/80 text-sky-700">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M3 12h18M7 8l-4 4 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">Buyer View</p>
+                <h2 className="text-lg font-semibold text-slate-900">구매자가 보는 구매하기 페이지</h2>
+                <p className="text-xs text-slate-600 sm:text-sm">판매자는 판매하기 메뉴에서 거래를 진행합니다.</p>
+              </div>
+            </div>
             <button
+              type="button"
               onClick={() => router.push('/' + params.lang + '/p2p')}
-              className="group inline-flex items-center justify-center gap-2 rounded-full border border-slate-200/70
-              bg-white/90 px-3 py-2 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
-
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200/80 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:w-auto"
             >
-              <Image
-                src="/logo-orangex.png"
-                alt="logo"
-                width={100}
-                height={100}
-                className="w-24 h-8 object-contain"
-              />
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M3 12l9-9 9 9M6 10v10a1 1 0 001 1h3m6-11v11a1 1 0 01-1 1h-3"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              홈으로 돌아가기
             </button>
           </div>
+        </div>
 
 
-          {address && !loadingUser && (
+        <div className="w-full flex flex-col gap-4 lg:flex-row lg:items-stretch mb-4">
+          <div className="w-full lg:flex-[1.1]">
+            <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-3
+            rounded-2xl border border-orange-400/40 bg-gradient-to-r from-orange-600 to-amber-500 p-3 text-white shadow-[0_24px_60px_-40px_rgba(249,115,22,0.55)] backdrop-blur">
+                
+              <div className="w-full flex flex-row items-center justify-start gap-2">
+                <button
+                  onClick={() => router.push('/' + params.lang + '/p2p')}
+                  className="group inline-flex items-center justify-center gap-2 rounded-full border border-slate-200/70
+                  bg-white/90 px-3 py-2 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
+
+                >
+                  <Image
+                    src="/logo-orangex.png"
+                    alt="logo"
+                    width={100}
+                    height={100}
+                    className="w-24 h-8 object-contain"
+                  />
+                </button>
+              </div>
 
 
-            <div className="w-full flex flex-wrap items-center justify-end gap-2">
+              {address && !loadingUser && (
+
+
+                <div className="w-full flex flex-wrap items-center justify-end gap-2">
               
               <button
                 onClick={() => {
@@ -4543,12 +4576,12 @@ const fetchBuyOrders = async () => {
                 </button>
               )}
 
-            </div>
+                </div>
 
-          )}
+              )}
 
 
-          {/*!address && (
+              {/*!address && (
             <ConnectButton
 
               accountAbstraction={{
@@ -4595,101 +4628,89 @@ const fetchBuyOrders = async () => {
               //locale={"en_US"}
             />
 
-          )*/}
-
-
-
-
-        </div>
-
-
-
-        <div className="flex flex-col items-start justify-center gap-4 mt-4">
-
-
-          <div className="relative w-full">
-            <div className="fixed left-0 right-0 bottom-4 z-30 px-4 pb-[env(safe-area-inset-bottom)]">
-              <div className="mx-auto w-full max-w-screen-2xl">
-                <div className="w-full rounded-2xl border border-slate-200/70 bg-white/85 p-2 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.7)] backdrop-blur">
-                  <div className="grid w-full grid-cols-3 gap-2">
-                {/* 홈으로 이동 버튼 */}
-                <button
-                  className="group flex flex-col items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white/90 px-2 py-2 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-md"
-                  onClick={() => {
-                    router.push('/' + params.lang + '/p2p');
-                  }}
-                >
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-200">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                      />
-                    </svg>
-                  </div>
-                  <span className="text-[11px] font-semibold text-slate-700">홈으로</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    router.push('/' + params.lang + '/p2p/sell');
-                  }}
-                  className="group flex flex-col items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white/90 px-2 py-2 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-md"
-                >
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-200">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3 10h11M9 21V3m0 0l-6 6m6-6l6 6M13 14h8m-4-4v8m0 0l-4-4m4 4l4 4"
-                      />
-                    </svg>
-                  </div>
-                  <span className="text-[11px] font-semibold text-slate-700">판매하기</span>
-                </button>
-
-                <div className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-orange-400/40 bg-gradient-to-br from-orange-600 to-amber-500 px-2 py-2 text-white shadow-[0_16px_40px_-28px_rgba(249,115,22,0.8)]">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9a9 9 0 009-9m-9 9v-8m0 0L5 14m4-3l4 4"
-                      />
-                    </svg>
-                  </div>
-                  <span className="text-[11px] font-semibold text-white">구매하기</span>
-                </div>
-                  </div>
-                </div>
-              </div>
+              )*/}
             </div>
           </div>
 
+          <section className="w-full lg:flex-[0.9] rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.25)] backdrop-blur">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Image
+                  src="/icon-today.png"
+                  alt="Today"
+                  width={28}
+                  height={28}
+                  className="h-7 w-7 rounded-lg object-cover"
+                />
+                <h3 className="text-base font-semibold text-slate-800">오늘의 거래</h3>
+              </div>
+              <span className="text-xs font-semibold text-slate-500">실시간</span>
+            </div>
 
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-slate-50 px-3 py-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                  <span className="h-2 w-2 rounded-full bg-slate-500" />
+                  거래수
+                </div>
+                <span className="text-lg font-semibold text-slate-900 tabular-nums">
+                  {animatedTotalCount}
+                </span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-emerald-200/70 bg-emerald-50/70 px-3 py-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  거래량(USDT)
+                </div>
+                <div className="flex items-center gap-1">
+                  <Image
+                    src="/icon-tether.png"
+                    alt="Tether"
+                    width={16}
+                    height={16}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-lg font-semibold text-emerald-700 tabular-nums" style={{ fontFamily: 'monospace' }}>
+                    {animatedTotalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-amber-200/70 bg-amber-50/70 px-3 py-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-700">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  거래금액(원)
+                </div>
+                <span className="text-lg font-semibold text-amber-700 tabular-nums" style={{ fontFamily: 'monospace' }}>
+                  {animatedTotalKrwAmount.toLocaleString()}
+                </span>
+              </div>
+            </div>
 
+            {processingBuyOrders.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2">
+                <span className="text-xs font-semibold text-slate-600">진행중 주문</span>
+                <div className="flex items-center -space-x-2">
+                  {processingBuyOrders.slice(0, 5).map((order: BuyOrder, index: number) => (
+                    <Image
+                      key={`${order._id}-${index}`}
+                      src={order?.store?.storeLogo || '/logo.png'}
+                      alt={order?.store?.storeName || 'Store'}
+                      width={28}
+                      height={28}
+                      className="h-7 w-7 rounded-full border border-white object-cover"
+                    />
+                  ))}
+                </div>
+                {processingBuyOrders.length > 5 && (
+                  <span className="text-xs font-semibold text-slate-500">
+                    +{processingBuyOrders.length - 5}
+                  </span>
+                )}
+              </div>
+            )}
+          </section>
+        </div>
+      <div className="flex flex-col items-start justify-center gap-4 mt-4">
           {/* USDT 가격 binance market price */}
           {/*
           <div
@@ -4873,734 +4894,190 @@ const fetchBuyOrders = async () => {
 
 
 
-          
-          
-          {/* 오늘 거래 현황 */}
-
-          <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-4
-          border-t border-b border-zinc-300
-          py-4
-          ">
-
-            <div className="w-full flex flex-col xl:flex-row items-center justify-start gap-2">
-              <Image
-                src="/icon-today.png"
-                alt="Today"
-                width={50}
-                height={50}
-                className="w-16 h-16 rounded-lg object-cover"
-              />
-
-              <div className="flex flex-col gap-2 items-center">
-                {/* background color is 파스텔 오렌지  */}
-                <div className="
-                  bg-slate-100/80
-                  px-2.5 py-1 rounded-full
-                  text-sm font-semibold text-slate-700
-                  border border-slate-200
-                "
-                >
-                  {/* dot before */}
-                  <div className="inline-block w-2 h-2 bg-slate-500 rounded-full mr-2"></div>
-                  <span className="align-middle">
-                    거래수(건)
-                  </span>
+          <div className="w-full flex flex-col gap-4 lg:flex-row lg:items-stretch">
+            <section className="w-full lg:flex-1 rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.25)] backdrop-blur">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Image
+                    src="/icon-market.png"
+                    alt="Market"
+                    width={32}
+                    height={32}
+                    className="h-8 w-8 rounded-lg object-cover"
+                  />
+                  <span className="text-base font-semibold text-slate-800">실시간 환율</span>
+                  <Image
+                    src="/icon-live.gif"
+                    alt="Live"
+                    width={20}
+                    height={20}
+                    className="h-5 w-5 object-cover"
+                  />
                 </div>
-                <div className="text-4xl font-semibold text-slate-900 tabular-nums">
-                  {
-                    //buyOrderStats.totalCount?.toLocaleString()
-                    animatedTotalCount
-                  }
-                </div>
+                <span className="text-xs font-semibold text-slate-500">KRW 기준</span>
               </div>
 
-              <div className="flex flex-col xl:flex-row items-center justify-center gap-2">
-
-                <div className="flex flex-col gap-2 items-center">
-                  <div className="
-                    bg-slate-100/80
-                    px-2.5 py-1 rounded-full
-                    text-sm font-semibold text-slate-700
-                    border border-slate-200
-                  ">
-                    {/* dot before */}
-                    <div className="inline-block w-2 h-2 bg-emerald-500 rounded-full mr-2"></div>
-                    <span className="align-middle">
-                      거래량(USDT)
-                    </span>
-                  </div>
-                  <div className="flex flex-row items-center justify-center gap-1">
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2">
+                  <div className="flex items-center gap-2">
                     <Image
-                      src="/icon-tether.png"
-                      alt="Tether"
-                      width={20}
-                      height={20}
-                      className="w-5 h-5"
+                      src="/icon-market-upbit.png"
+                      alt="Upbit"
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 object-cover"
                     />
-                    {/* RGB: 64, 145, 146 */}
-                    <span className="text-4xl text-emerald-700 tabular-nums"
-                      style={{ fontFamily: 'monospace' }}>
-                      {
-                        //buyOrderStats.totalUsdtAmount
-                        //? buyOrderStats.totalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                        //: '0.000'
-                        animatedTotalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                      }
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2 items-center">
-                  <div className="
-                    bg-slate-100/80
-                    px-2.5 py-1 rounded-full
-                    text-sm font-semibold text-slate-700
-                    border border-slate-200
-                  ">
-                    {/* dot before */}
-                    <div className="inline-block w-2 h-2 bg-amber-500 rounded-full mr-2"></div>
-                    <span className="align-middle">
-                      거래금액(원)
-                    </span>
-                  </div>
-                  <div className="flex flex-row items-center justify-center gap-1">
-                    <span className="text-4xl text-amber-700 tabular-nums"
-                      style={{ fontFamily: 'monospace' }}>
-                      {
-                        //buyOrderStats.totalKrwAmount?.toLocaleString()
-                        animatedTotalKrwAmount.toLocaleString()
-                      }
-                    </span>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-
-            {/* list of buyOrders when status is 'ordered' or 'accepted' or 'paymentRequested' */}
-            {/* traideId, usdtAmount, krwAmount, createdAt */}
-            {/*
-            <table className="w-full xl:table-auto border-collapse border border-zinc-300
-            bg-white/80
-            p-4 rounded-lg shadow-md
-            backdrop-blur-md
-            ">
-              <thead>
-                <tr className="bg-zinc-200 text-zinc-700 text-sm font-semibold">
-                  <th className="border border-zinc-300 px-2 py-1">거래ID</th>
-                  <th className="border border-zinc-300 px-2 py-1">구래량(USDT)</th>
-                  <th className="border border-zinc-300 px-2 py-1">거래금액(원)</th>
-                  <th className="border border-zinc-300 px-2 py-1">생성일시</th>
-                  <th className="border border-zinc-300 px-2 py-1">상태</th>
-                </tr>
-              </thead>
-              <tbody>
-                {buyOrders.filter((order) =>
-                  order.status === 'ordered' ||
-                  order.status === 'accepted' ||
-                  order.status === 'paymentRequested'
-                ).map((order, index) => (
-                  <tr key={index} className="text-zinc-600 text-sm hover:bg-zinc-100
-                  transition-colors duration-150 ease-in-out
-                  ">
-                    <td className="border border-zinc-300 px-2 py-1 text-center">{order.tradeId}</td>
-                    <td className="border border-zinc-300 px-2 py-1 text-center"
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {order.usdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    </td>
-                    <td className="border border-zinc-300 px-2 py-1 text-center"
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {order.krwAmount.toLocaleString()}
-                    </td>
-                    <td className="border border-zinc-300 px-2 py-1 text-center">
-                      {new Date(order.createdAt).toLocaleString()}
-                    </td>
-                    <td className="border border-zinc-300 px-2 py-1 text-center capitalize">
-                      {order.status === 'ordered' && '주문접수'}
-                      {order.status === 'accepted' && '결제대기'}
-                      {order.status === 'paymentRequested' && '결제요청중'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            */}
-
-
-
-
-            <div className="flex flex-col items-end justify-center gap-4">
-
-              {/* 구매주문 목록 */}
-              <div className="
-                w-full
-                flex flex-row items-center justify-end gap-2
-                bg-white/90
-                p-2 rounded-lg shadow-xl
-                backdrop-blur-md
-                border border-slate-200
-              ">
-  
-                {/* array of processingBuyOrders store logos */}
-                {processingBuyOrders.length > 0 && (
-                <div className="w-full
-                  flex flex-col
-                  xl:flex-row items-center justify-end gap-2">
-                  
-                  {/* background dark colors */}
-                  {processingBuyOrders.slice(0, 3).map((order: BuyOrder, index: number) => (
-
-                    
-                    <div className="
-                    w-52
-
-                    flex flex-row items-center justify-start gap-2
-                    bg-white/90 border border-slate-200
-                    p-2 rounded-lg shadow-md
-                    backdrop-blur-md
-
-                    relative
-                    "
-                    key={index}>
-
-                      {/* top right corner position absolute red dot indicator for status is 'ordered' */}
-                      {order.status === 'ordered' && (
-                        <div className="
-                          absolute top-0 right-0
-                          w-4 h-4
-                          bg-rose-500
-                          rounded-full
-                          border-2 border-white
-                        ">
-                        </div>
-                      )}
-
-                      {/* order.nickname position fixed top left corner ribbon style */}
-                      <div className="
-                      absolute top-0 left-0
-                      flex flex-row items-center justify-start
-                      ">
-                        <div className="w-full flex flex-row items-center justify-between gap-2
-                        bg-emerald-50 text-emerald-700 px-2 py-1 rounded-br-lg rounded-tl-lg border border-emerald-200/80 shadow-sm
-                        ">
-                          <div className="flex flex-row items-center justify-center gap-1">
-                            <Image
-                              src="/icon-buyer.png"
-                              alt="Buyer"
-                              width={20}
-                              height={20}
-                              className="w-6 h-6 rounded-lg object-cover"
-                            />
-                            <span className="text-sm font-semibold">
-                              {order.nickname}
-                            </span>
-                            {!order.isWeb3Wallet && (
-                              <Image
-                                src="/icon-payment.png"
-                                alt="Web3 Wallet"
-                                width={20}
-                                height={20}
-                                className="w-6 h-6 rounded-lg object-cover"
-                              />
-                            )}
-                          </div>
-
-                          {/* whe  seller.seller?.totalPaymentConfirmedUsdtAmount > 10, show a badge */}
-                          {/*
-                          {seller.seller?.totalPaymentConfirmedUsdtAmount > 20 && (
-                            <Image
-                              src="/icon-best-seller.png"
-                              alt="Best Seller"
-                              width={30}
-                              height={30}
-                              className="w-6 h-6 rounded-lg object-cover"
-                            />
-                          )}
-                          */}
-
-                        </div>
-                      </div>
-                      
-                      {/* order.seller.nickname positon fixed botton right corner ribbon style */}
-                      {order.status === 'accepted' || order.status === 'paymentRequested' && (
-                        <div className="
-                        absolute bottom-0 right-0
-                        flex flex-row items-center justify-end
-                        ">
-                          <div className="w-full flex flex-row items-center justify-between gap-2
-                          bg-blue-500 text-white px-2 py-1 rounded-tl-lg rounded-br-lg shadow-lg
-                          ">
-                            <div className="flex flex-row items-center justify-center gap-1">
-                              <span className="text-sm font-semibold">
-                                {order.seller.nickname}
-                              </span>
-                              <Image
-                                src="/icon-seller.png"
-                                alt="Seller"
-                                width={20}
-                                height={20}
-                                className="w-6 h-6 rounded-lg object-cover"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="w-full flex flex-row items-start justify-between gap-2 mt-8 mb-8">
-                        
-                        <div className="w-full flex flex-col items-start justify-center gap-2">
-                          <Image
-                            src={order?.store?.storeLogo || '/logo.png'}
-                            alt={order?.store?.storeName || 'Store'}
-                            width={30}
-                            height={30}
-                            className="w-8 h-8 rounded-lg object-cover"
-                          />
-                          {/* status */}
-                          <div className="flex flex-row items-center justify-center gap-1 text-sm font-semibold">
-                            {order.status === 'ordered' && (
-                              <span className="text-red-600 font-semibold">
-                                매칭대기중
-                              </span>
-                            )}
-                            {order.status === 'accepted' && (
-                              <span className="text-blue-600 font-semibold">
-                                결제대기중
-                              </span>
-                            )}
-                            {order.status === 'paymentRequested' && (
-                              <span className="text-amber-600 font-semibold">
-                                입금진행중
-                              </span>
-                            )}
-                          </div>
-
-                          {order.status === 'ordered' && (
-                            <span className="text-sm text-slate-700">
-                              {
-                                (new Date().getTime() - new Date(order?.createdAt).getTime()) > 0
-                                ? `${Math.floor((new Date().getTime() - new Date(order?.createdAt).getTime()) / 60000)}분 경과`
-                                : ''
-                              }
-                            </span>
-                          )}
-
-                          {order.status === 'paymentRequested' && (
-                            <span className="text-sm text-slate-700">
-                              {
-                                (new Date().getTime() - new Date(order?.paymentRequestedAt).getTime()) > 0
-                                ? `${Math.floor((new Date().getTime() - new Date(order?.paymentRequestedAt).getTime()) / 60000)}분 경과`
-                                : ''
-                              }
-                            </span>
-                          )}
-
-
-                        </div>
-
-                        <div className="w-full flex flex-col items-end justify-center gap-1">
-                          <span className="text-sm text-slate-800 font-semibold">
-                            {order?.buyer.depositName.length > 1
-                              ? order?.buyer.depositName.slice(0, 1) + '**'
-                              : order?.buyer.depositName
-                            }
-                          </span>
-
-                          <div className="flex flex-row items-center justify-end gap-1">
-                            <Image
-                              src="/icon-tether.png"
-                              alt="Tether"
-                              width={20}
-                              height={20}
-                              className="w-5 h-5"
-                            />
-                            <span className="text-lg text-emerald-600 font-semibold"
-                              style={{ fontFamily: 'monospace' }}>
-                              {order?.usdtAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                            </span>
-                          </div>
-                          <span className="text-sm text-amber-600 font-semibold"
-                            style={{ fontFamily: 'monospace' }}>
-                            {order?.krwAmount.toLocaleString()}
-                          </span>
-                          {/* rate */}
-                          <span className="text-xs text-slate-700 font-semibold"
-                            style={{ fontFamily: 'monospace' }}>
-                            {order?.rate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 원/USDT
-                          </span>
-                        </div>
-
-                      </div>
-
+                    <div className="flex flex-col">
+                      <span className="text-xs font-semibold text-slate-500">Upbit</span>
+                      <span className="text-sm font-semibold text-slate-800 tabular-nums" style={{ fontFamily: 'monospace' }}>
+                        {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                      </span>
                     </div>
-
-                  ))}
-
-                  {processingBuyOrders.length > 3 && (
-                    <span className="text-4xl text-slate-700 font-semibold">
-                      +{processingBuyOrders.length - 3}
-                    </span>
-                  )}
-                </div>
-                )}
-
-                {/*
-                <div className="flex flex-row items-center justify-center gap-2">
-
-                  <p className="text-lg text-red-500 font-semibold">
-                    {
-                    totalNumberOfBuyOrders
-                    }
-                  </p>
-
-                </div>
-                */}
-
-                {totalNumberOfBuyOrders > 0 && (
-                  <div className="w-28 flex flex-row items-center justify-center gap-2">
-                    <Image
-                      src="/icon-notification.gif"
-                      alt="Notification"
-                      width={50}
-                      height={50}
-                      className="w-15 h-15 object-cover"
-                      
-                    />
                   </div>
-                )}
-
-
-              </div>
-
-
-          
-            </div>
-
-
-          </div>
-
-          
-          
-          <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-4
-          border-t border-b border-zinc-300
-          py-4
-          ">
-            <div className="flex flex-row items-center justify-start gap-2">
-              <Image
-                src="/icon-market.png"
-                alt="Market"
-                width={50}
-                height={50}
-                className="w-16 h-16 rounded-lg object-cover"
-              />
-              <span className="text-lg font-bold text-slate-800">
-                실시간 환율 정보
-              </span>
-              <Image
-                src="/icon-live.gif"
-                alt="Live"
-                width={30}
-                height={30}
-                className="w-8 h-8 object-cover"
-              />
-            </div>
-
-            <div className="w-full flex flex-col xl:flex-row items-center justify-end gap-4"> 
-
-              {/* animatedUpbitUsdtToKrwRate */}
-              {/* logo-upbit.jpg */}
-              {/* upbit usdt to krw rate display */}
-              {/* large font size */}
-              {/* upbitUsdtToKrwRateTimestamp - convert to local time */}
-              <div className="w-64   
-                flex flex-row items-center justify-between gap-2 p-2">
-                <Image
-                  src="/icon-market-upbit.png"
-                  alt="Upbit"
-                  width={50}
-                  height={50}
-                  className="w-12 h-12 object-cover"
-                />
-                
-                <div className="w-full flex flex-col items-end justify-center">
-
-                  <span className="text-2xl text-slate-800 font-semibold"
-                    style={{ fontFamily: 'monospace' }}>
-                      {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  </span>
-
-                  <div className="flex flex-row items-center justify-end gap-1">
+                  <div className="flex flex-col items-end gap-0.5 text-[11px] font-semibold">
                     <span
-                      className={`text-sm font-semibold
-                      ${
+                      className={`${
                         upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
                         upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                        'text-slate-700'
-                      }
-                      `}
-                      style={{ fontFamily: 'monospace' }}
-                      >
-                      {
-                        upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
-                        upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
-                        `- 0`
-                      }
-                    </span>
-                    {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
-                    <span className={`text-sm font-semibold
-                      ${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                        'text-slate-700'
-                      }
-                      `}
+                        'text-slate-600'
+                      }`}
                       style={{ fontFamily: 'monospace' }}
                     >
-                      {
-                        upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        `(0.0000%)`
-                      }
+                      {upbitUsdtToKrwRateChange === 'RISE'
+                        ? `▲ ${upbitUsdtToKrwRateChangePrice}`
+                        : upbitUsdtToKrwRateChange === 'FALL'
+                        ? `▼ ${upbitUsdtToKrwRateChangePrice}`
+                        : `- 0`}
                     </span>
-                    
+                    <span className="text-slate-500" style={{ fontFamily: 'monospace' }}>
+                      {TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''}
+                    </span>
                   </div>
-                  <span className="text-sm text-slate-700"
-                    style={{ fontFamily: 'monospace' }}>
-                    {
-                      //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
-                    
-                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
-                    }
-                  </span>
                 </div>
 
-              </div>
-
-              {/* divider line for row or column for xl */}
-              <div className="w-full xl:h-16 h-full xl:w-0 border border-zinc-300"></div>
-
-              {/* bithumb usdt to krw rate display */}
-              <div className="w-64
-                flex flex-row items-center justify-between gap-2 p-2">
-                <Image
-                  src="/icon-market-bithumb.png"
-                  alt="Bithumb"
-                  width={50}
-                  height={50}
-                  className="w-12 h-12 object-cover"
-                />
-                <div className="w-full flex flex-col items-end justify-center">
-
-                  <span className="text-2xl text-slate-800 font-semibold"
-                    style={{ fontFamily: 'monospace' }}>
-                      {animatedBithumbUsdtToKrwRate && animatedBithumbUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  </span>
-
-                  <div className="flex flex-row items-center justify-end gap-1">
-                    <span className={`text-sm font-semibold
-                      ${
+                <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <Image
+                      src="/icon-market-bithumb.png"
+                      alt="Bithumb"
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 object-cover"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-semibold text-slate-500">Bithumb</span>
+                      <span className="text-sm font-semibold text-slate-800 tabular-nums" style={{ fontFamily: 'monospace' }}>
+                        {animatedBithumbUsdtToKrwRate && animatedBithumbUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5 text-[11px] font-semibold">
+                    <span
+                      className={`${
                         bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
                         bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                        'text-slate-700'
-                      }
-                      `}
+                        'text-slate-600'
+                      }`}
                       style={{ fontFamily: 'monospace' }}
                     >
-                      {
-                        bithumbUsdtToKrwRateChange === 'RISE' ? `▲ ${bithumbUsdtToKrwRateChangePrice}` :
-                        bithumbUsdtToKrwRateChange === 'FALL' ? `▼ ${bithumbUsdtToKrwRateChangePrice}` :
-                        `- 0`
-                      }
+                      {bithumbUsdtToKrwRateChange === 'RISE'
+                        ? `▲ ${bithumbUsdtToKrwRateChangePrice}`
+                        : bithumbUsdtToKrwRateChange === 'FALL'
+                        ? `▼ ${bithumbUsdtToKrwRateChangePrice}`
+                        : `- 0`}
                     </span>
-                    {/* bithumbUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
-                    <span className={`text-sm font-semibold
-                      ${
-                        bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                        bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                        'text-slate-700'
-                      }
-                      `}
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {
-                        bithumbUsdtToKrwRateChange === 'RISE' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        bithumbUsdtToKrwRateChange === 'FALL' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        `(0.0000%)`
-                      }
+                    <span className="text-slate-500" style={{ fontFamily: 'monospace' }}>
+                      {TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''}
                     </span>
-                    
                   </div>
-                  <span className="text-sm text-slate-700"
-                    style={{ fontFamily: 'monospace' }}>
-                    {
-                      //bithumbUsdtToKrwRateTimestamp ? new Date(bithumbUsdtToKrwRateTimestamp).toLocaleString() : ''
-                    
-                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
-                    }
-                  </span>
                 </div>
-              </div>
 
-              {/* divider line for row or column for xl */}
-              <div className="w-full xl:h-16 h-full xl:w-0 border border-zinc-300"></div>
-
-              <div className="w-64
-                flex flex-row items-center justify-between gap-2 p-2">
-                <Image
-                  src="/icon-market-korbit.png"
-                  alt="Korbit"
-                  width={50}
-                  height={50}
-                  className="w-12 h-12 object-cover"
-                />
-                <div className="w-full flex flex-col items-end justify-center">
-
-                  <span className="text-2xl text-slate-800 font-semibold"
-                    style={{ fontFamily: 'monospace' }}>
-                      {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  </span>
-
-                  <div className="flex flex-row items-center justify-end gap-1">
-                    <span className={`text-sm font-semibold
-                      ${
+                <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <Image
+                      src="/icon-market-korbit.png"
+                      alt="Korbit"
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 object-cover"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-semibold text-slate-500">Korbit</span>
+                      <span className="text-sm font-semibold text-slate-800 tabular-nums" style={{ fontFamily: 'monospace' }}>
+                        {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5 text-[11px] font-semibold">
+                    <span
+                      className={`${
                         upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
                         upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                        'text-slate-700'
-                      }
-                      `}
+                        'text-slate-600'
+                      }`}
                       style={{ fontFamily: 'monospace' }}
                     >
-                      {
-                        upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
-                        upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
-                        `- 0`
-                      }
+                      {upbitUsdtToKrwRateChange === 'RISE'
+                        ? `▲ ${upbitUsdtToKrwRateChangePrice}`
+                        : upbitUsdtToKrwRateChange === 'FALL'
+                        ? `▼ ${upbitUsdtToKrwRateChangePrice}`
+                        : `- 0`}
                     </span>
-                    {/* upbitUsdtToKrwRateChangePriceRate => percentage with 4 decimal places */}
-                    <span className={`text-sm font-semibold
-                      ${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                        'text-slate-700'
-                      }
-                      `}
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {
-                        upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        `(0.0000%)`
-                      }
+                    <span className="text-slate-500" style={{ fontFamily: 'monospace' }}>
+                      {TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''}
                     </span>
-                    
                   </div>
-                  <span className="text-sm text-slate-700"
-                    style={{ fontFamily: 'monospace' }}>
-                    {
-                      //upbitUsdtToKrwRateTimestamp ? new Date(upbitUsdtToKrwRateTimestamp).toLocaleString() : ''
-                    
-                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
-                    }
+                </div>
+              </div>
+            </section>
+
+            <section className="w-full lg:flex-1 rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.25)] backdrop-blur">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Image
+                    src="/icon-seller.png"
+                    alt="Seller"
+                    width={32}
+                    height={32}
+                    className="h-8 w-8 rounded-lg object-cover"
+                  />
+                  <h2 className="text-base font-semibold text-slate-800">판매자 요약</h2>
+                </div>
+                <span className="text-xs font-semibold text-slate-500">실시간 집계</span>
+              </div>
+
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="flex items-center justify-between rounded-xl border border-orange-200/70 bg-orange-50/70 px-3 py-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-orange-700">
+                    <span className="h-2 w-2 rounded-full bg-orange-500" />
+                    판매자수(명)
+                  </div>
+                  <span className="text-xl font-semibold text-orange-600 tabular-nums" style={{ fontFamily: 'monospace' }}>
+                    {sellersBalance.length.toLocaleString()}
                   </span>
                 </div>
 
-              </div>
-
-
-            </div>
-
-          </div>
-          
-          
-          <div className="w-full flex flex-col items-start justify-center gap-2
-          border-t border-b border-zinc-300
-          py-4
-          ">
-
-            <div className="w-full flex flex-col xl:flex-row items-between justify-between gap-2">
-              {/* title - 판매주문 */}
-              <div className="flex flex-row items-center justify-start gap-2">
-                <Image
-                  src="/icon-seller.png"
-                  alt="Seller"
-                  width={50}
-                  height={50}
-                  className="w-16 h-16 rounded-lg object-cover"
-                />
-                <h2 className="text-lg font-bold text-slate-800">
-                  판매자
-                </h2>
-              </div>
-
-              {/* subtitle - 판매자 수: sellersBalance.length, 총 USDT 잔액: sum of sellersBalance.currentUsdtBalance */}
-              
-              <div className="flex flex-col xl:flex-row items-center justify-center gap-2">
-
-                <div className="flex flex-col gap-2 items-center">
-                  <div className="
-                    bg-orange-100/80
-                    px-2 py-1 rounded-full
-                    text-sm font-semibold text-orange-800
-                    border border-orange-200
-                  ">
-                    {/* dot before */}
-                    <div className="inline-block w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
-                    <span className="align-middle">
-                      판매자수(명)
-                    </span>
+                <div className="flex items-center justify-between rounded-xl border border-emerald-200/70 bg-emerald-50/70 px-3 py-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                    에스크로 총량(USDT)
                   </div>
-                  <div className="flex flex-row items-center justify-center gap-1">
-                    <span className="text-4xl text-orange-600"
-                      style={{ fontFamily: 'monospace' }}>
-                      {
-                        sellersBalance.length.toLocaleString()
-                      }
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 items-center">
-                  <div className="
-                    bg-white/70
-                    px-2 py-1 rounded-full
-                    text-sm font-semibold text-slate-800
-                    border border-slate-200
-                  ">
-                    {/* dot before */}
-                    <div className="inline-block w-2 h-2 bg-emerald-400 rounded-full mr-2"></div>
-                    <span className="align-middle">
-                      에스크로 총량(USDT)
-                    </span>
-                  </div>
-                  <div className="flex flex-row items-center justify-center gap-1">
+                  <div className="flex items-center gap-1">
                     <Image
                       src="/icon-tether.png"
                       alt="Tether"
-                      width={20}
-                      height={20}
-                      className="w-5 h-5"
+                      width={16}
+                      height={16}
+                      className="h-4 w-4"
                     />
-                    {/* RGB: 64, 145, 146 */}
-                    <span className="text-4xl text-[#409192]"
-                      style={{ fontFamily: 'monospace' }}>
-                      {
-                        // sum of sellersBalance.currentUsdtBalance
-                       // sellersBalance.reduce((acc, seller) => acc + seller.currentUsdtBalance, 0).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-
-                        animatedTotalUsdtBalance.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                      }
+                    <span className="text-xl font-semibold text-[#409192] tabular-nums" style={{ fontFamily: 'monospace' }}>
+                      {animatedTotalUsdtBalance.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     </span>
                   </div>
                 </div>
-
               </div>
-
-            </div>
-
-
+            </section>
+          </div>
 
             {/* 지정가로 구매주문하기 */}
             {/*
@@ -5700,7 +5177,7 @@ const fetchBuyOrders = async () => {
                     */
 
                     // seller.buyOrder.status = 'ordered' or 'paymentRequested' - red border and pulse animation
-                    className={`relative w-full flex flex-col xl:flex-row xl:flex-wrap items-start justify-between gap-5
+                    className={`relative w-full flex flex-col xl:flex-row xl:flex-wrap items-start justify-start gap-5
                     bg-white
                     p-5 rounded-2xl shadow-[0_18px_45px_-36px_rgba(15,23,42,0.25)]
                     border border-slate-200/80 text-slate-800
@@ -6316,7 +5793,7 @@ const fetchBuyOrders = async () => {
                             {currentUsdtBalanceArray[index] < 10 ? (
                               <div className="w-full rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
                                 {/*Warning: Low escrow balance may result in no order assignments. Please recharge USDT. */}
-                                경고: 에스크로 잔액이 부족하면 주문 할당이 이루어지지 않을 수 있습니다. USDT를 충전해주세요.
+                                판매자 에스크로 잔액이 낮아 주문 처리까지 시간이 조금 더 걸릴 수 있어요. 다른 판매자를 선택해 보세요.
                               </div>
                             ) : (
                               <>
@@ -11999,8 +11476,6 @@ const fetchBuyOrders = async () => {
         </div>
 
           
-      </div>
-
         {/*
         <Modal isOpen={isModalOpen} onClose={closeModal}>
             <TradeDetail
