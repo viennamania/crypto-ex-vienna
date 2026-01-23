@@ -1440,6 +1440,144 @@ export default function OrangeXPage() {
                                     </div>
                                 </div>
                             </div>
+                            <div className="mt-6 hidden lg:block">
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="rounded-xl border border-slate-200/70 bg-white/90 px-4 py-3 shadow-sm">
+                                        <div className="flex items-center gap-2">
+                                            <Image
+                                                src="/icon-approved.png"
+                                                alt="Approved"
+                                                width={20}
+                                                height={20}
+                                                className="h-5 w-5"
+                                            />
+                                            <span className="text-[11px] font-semibold text-slate-700 whitespace-nowrap tracking-tight">보호된 정산 체계</span>
+                                        </div>
+                                        <p className="mt-2 text-xs text-slate-600">
+                                            KYC · 에스크로 잠금 · 분쟁 중재 절차를 함께 운영합니다.
+                                        </p>
+                                    </div>
+                                    <div className="rounded-xl border border-slate-200/70 bg-white/90 px-4 py-3 shadow-sm">
+                                        <div className="flex items-center gap-2">
+                                            <Image
+                                                src="/icon-escrow.png"
+                                                alt="Escrow"
+                                                width={20}
+                                                height={20}
+                                                className="h-5 w-5"
+                                            />
+                                            <span className="text-[11px] font-semibold text-slate-700 whitespace-nowrap tracking-tight">에스크로 보관</span>
+                                        </div>
+                                        <p className="mt-2 text-xs text-slate-600">
+                                            거래가 완료될 때까지 자금이 안전하게 보호됩니다.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                                    <div className="rounded-xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 text-xs font-semibold text-slate-600">
+                                        <div className="flex flex-col items-start gap-2">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm">
+                                                <Image
+                                                    src="/icon-today.png"
+                                                    alt="Monitoring"
+                                                    width={16}
+                                                    height={16}
+                                                    className="h-5 w-5"
+                                                />
+                                            </div>
+                                            <span className="text-[11px] leading-tight tracking-tight">
+                                                실시간<br />모니터링
+                                            </span>
+                                        </div>
+                                        <p className="mt-2 text-sm font-semibold text-slate-900 whitespace-nowrap">24/7</p>
+                                    </div>
+                                    <div className="rounded-xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 text-xs font-semibold text-slate-600">
+                                        <div className="flex flex-col items-start gap-2">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm">
+                                                <Image
+                                                    src="/icon-bank-check.png"
+                                                    alt="Deposit Check"
+                                                    width={16}
+                                                    height={16}
+                                                    className="h-5 w-5"
+                                                />
+                                            </div>
+                                            <span className="text-[11px] leading-tight tracking-tight whitespace-nowrap">입금 확인</span>
+                                        </div>
+                                        <p className="mt-2 text-sm font-semibold text-slate-900 leading-tight tracking-tight">
+                                            <span className="whitespace-nowrap">자동/수동</span>
+                                            <br />
+                                            검증
+                                        </p>
+                                    </div>
+                                    <div className="rounded-xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 text-xs font-semibold text-slate-600">
+                                        <div className="flex flex-col items-start gap-2">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm">
+                                                <Image
+                                                    src="/icon-settlement.png"
+                                                    alt="Settlement"
+                                                    width={16}
+                                                    height={16}
+                                                    className="h-5 w-5"
+                                                />
+                                            </div>
+                                            <span className="text-[11px] leading-tight tracking-tight whitespace-nowrap">정산 처리</span>
+                                        </div>
+                                        <p className="mt-2 text-sm font-semibold text-slate-900 whitespace-nowrap tracking-tight">자동 전송</p>
+                                    </div>
+                                </div>
+                                <div className="mt-5 rounded-2xl border border-slate-200/70 bg-white/90 px-4 py-4 shadow-sm">
+                                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                        <span className="h-2 w-2 rounded-full bg-slate-400" />
+                                        구매·판매 절차
+                                    </div>
+                                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs font-semibold text-slate-700">
+                                        <div className="flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50 px-3 py-2">
+                                            <Image
+                                                src="/icon-buyer.png"
+                                                alt="Buyer"
+                                                width={16}
+                                                height={16}
+                                                className="h-4 w-4"
+                                            />
+                                            구매자 주문
+                                        </div>
+                                        <span className="text-slate-400">→</span>
+                                        <div className="flex items-center gap-2 rounded-full border border-amber-200/80 bg-amber-50 px-3 py-2 text-amber-700">
+                                            <Image
+                                                src="/icon-escrow.png"
+                                                alt="Escrow"
+                                                width={16}
+                                                height={16}
+                                                className="h-4 w-4"
+                                            />
+                                            에스크로 보관
+                                        </div>
+                                        <span className="text-slate-400">→</span>
+                                        <div className="flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50 px-3 py-2">
+                                            <Image
+                                                src="/icon-bank-check.png"
+                                                alt="Deposit Check"
+                                                width={16}
+                                                height={16}
+                                                className="h-4 w-4"
+                                            />
+                                            입금 확인
+                                        </div>
+                                        <span className="text-slate-400">→</span>
+                                        <div className="flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-2 text-emerald-700">
+                                            <Image
+                                                src="/icon-transfer.png"
+                                                alt="Settlement"
+                                                width={16}
+                                                height={16}
+                                                className="h-4 w-4"
+                                            />
+                                            USDT 전송·정산
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div className="mt-6 rounded-xl border border-orange-200/60 bg-orange-50/80 px-4 py-3 text-sm text-orange-800">
                                 평균 처리 10-30분, 입금 확인 후 자동 정산
                             </div>
