@@ -2,6 +2,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { Manrope, Playfair_Display } from 'next/font/google';
+import { getActiveGlobalAds, type GlobalAd } from '@/lib/api/globalAd';
+
+export const dynamic = 'force-dynamic';
 
 const displayFont = Playfair_Display({
     subsets: ['latin'],
@@ -14,6 +17,32 @@ const bodyFont = Manrope({
     weight: ['400', '500', '600', '700'],
     variable: '--font-body',
 });
+
+type BannerAd = {
+    id: string;
+    title: string;
+    image: string;
+    link: string;
+};
+
+const normalizeBannerAds = (ads: GlobalAd[] = []): BannerAd[] =>
+    ads
+        .map((ad, index) => {
+            const image = ad?.image || ad?.imageUrl || ad?.banner || ad?.bannerImage || ad?.bannerUrl;
+            const link = ad?.link || ad?.linkUrl || ad?.url || ad?.redirectUrl || ad?.targetUrl;
+
+            if (!image || !link) {
+                return null;
+            }
+
+            return {
+                id: String(ad?._id ?? ad?.id ?? index),
+                title: ad?.title || ad?.name || '제휴 배너',
+                image,
+                link,
+            } as BannerAd;
+        })
+        .filter(Boolean) as BannerAd[];
 
 const GUIDE_STEPS = [
     {
@@ -96,8 +125,16 @@ const FAQS = [
     },
 ];
 
-export default function BuyerGuidePage({ params }: { params: { lang?: string } }) {
+export default async function BuyerGuidePage({ params }: { params: { lang?: string } }) {
     const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang ?? 'ko';
+    let bannerAds: BannerAd[] = [];
+
+    try {
+        const ads = await getActiveGlobalAds({ placement: 'buyer-guide', limit: 12 });
+        bannerAds = normalizeBannerAds(ads as GlobalAd[]);
+    } catch (error) {
+        bannerAds = [];
+    }
 
     return (
         <div
@@ -190,6 +227,62 @@ export default function BuyerGuidePage({ params }: { params: { lang?: string } }
                         </div>
                     </div>
                 </header>
+
+                {bannerAds.length > 0 && (
+                    <section className="mt-10">
+                        <div className="rounded-[26px] border border-slate-200/70 bg-white/80 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.6)] backdrop-blur">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-start gap-3">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-100 text-orange-700">
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <path
+                                                d="M12 3l2.4 5 5.6.8-4 3.8.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.8 5.6-.8L12 3z"
+                                                stroke="currentColor"
+                                                strokeWidth="1.6"
+                                                strokeLinejoin="round"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                                            Partner
+                                        </p>
+                                        <h2 className="font-[var(--font-display)] text-2xl text-slate-900">
+                                            구매자 제휴 배너
+                                        </h2>
+                                        <p className="mt-1 text-sm text-slate-600">
+                                            구매에 도움이 되는 파트너 정보를 확인하세요.
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className="text-xs font-semibold text-slate-500">좌우로 스와이프</span>
+                            </div>
+
+                            <div
+                                className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 scrollbar-hide"
+                                aria-label="구매자 제휴 배너"
+                            >
+                                {bannerAds.map((ad) => (
+                                    <a
+                                        key={ad.id}
+                                        href={ad.link}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="shrink-0 snap-start"
+                                        aria-label={ad.title}
+                                    >
+                                        <div className="w-[70vw] max-w-[260px] overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_18px_40px_-30px_rgba(15,23,42,0.5)] sm:w-64">
+                                            <div className="aspect-[2/1] overflow-hidden bg-slate-100">
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img src={ad.image} alt={ad.title} className="h-full w-full object-cover" />
+                                            </div>
+                                        </div>
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
 
                 <section className="mt-12">
                     <div className="flex items-center gap-3">

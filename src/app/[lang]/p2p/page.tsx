@@ -57,6 +57,13 @@ type StablecoinNewsItem = {
     image: string;
 };
 
+type BannerAd = {
+    id: string;
+    title: string;
+    image: string;
+    link: string;
+};
+
 const STABLECOIN_NEWS: StablecoinNewsItem[] = [
     {
         id: 'stable-news-01',
@@ -1014,33 +1021,108 @@ export default function OrangeXPage() {
         };
     }, []);
 
-    // 배너 광고 데이터 (실제로는 API에서 가져올 수 있습니다)
-    const bannerAds = [
-        {
-            id: 1,
-            title: 'Binance Pay',
-            image: '/images/crypto-1218x350-1.gif',
-            link: 'https://pay.binance.com',
-        },
-        {
-            id: 2,
-            title: 'CoinPayments',
-            image: '/images/ad-4.gif',
-            link: 'https://www.coinpayments.net',
-        },
-        {
-            id: 3,
-            title: 'NOWPayments',
-            image: '/images/ad-5.gif',
-            link: 'https://nowpayments.io',
-        },
-        {
-            id: 4,
-            title: 'Crypto.com Pay',
-            image: '/images/ad-6.gif',
-            link: 'https://pay.crypto.com',
-        },
-    ];
+    const [globalAds, setGlobalAds] = useState<BannerAd[]>([]);
+    const bannerAds = globalAds;
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        if (bannerAds.length === 0) {
+            return;
+        }
+        const elements = Array.from(document.querySelectorAll('[data-reveal]:not(.is-visible)'));
+        if (elements.length === 0) {
+            return;
+        }
+
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reducedMotion || typeof IntersectionObserver === 'undefined') {
+            elements.forEach((element) => element.classList.add('is-visible'));
+            return;
+        }
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            },
+            { threshold: 0.2, rootMargin: '0px 0px -12% 0px' }
+        );
+
+        elements.forEach((element) => observer.observe(element));
+
+        return () => {
+            observer.disconnect();
+        };
+    }, [bannerAds.length]);
+
+    useEffect(() => {
+        let active = true;
+
+        const fetchGlobalAds = async () => {
+            try {
+                const response = await fetch('/api/globalAd/getActive', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        placement: 'p2p-home',
+                        limit: 12,
+                    }),
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+                const ads = Array.isArray(data?.result) ? data.result : [];
+                const normalized = ads
+                    .map((ad: any, index: number) => {
+                        const image =
+                            ad?.image ||
+                            ad?.imageUrl ||
+                            ad?.banner ||
+                            ad?.bannerImage ||
+                            ad?.bannerUrl;
+                        const link =
+                            ad?.link ||
+                            ad?.linkUrl ||
+                            ad?.url ||
+                            ad?.redirectUrl ||
+                            ad?.targetUrl;
+
+                        if (!image || !link) {
+                            return null;
+                        }
+
+                        return {
+                            id: String(ad?._id ?? ad?.id ?? index),
+                            title: ad?.title || ad?.name || '제휴 배너',
+                            image,
+                            link,
+                        } as BannerAd;
+                    })
+                    .filter(Boolean) as BannerAd[];
+
+                if (active && normalized.length > 0) {
+                    setGlobalAds(normalized);
+                }
+            } catch (error) {
+                // fallback to static banners
+            }
+        };
+
+        fetchGlobalAds();
+
+        return () => {
+            active = false;
+        };
+    }, []);
 
 
 
@@ -1166,43 +1248,45 @@ export default function OrangeXPage() {
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.4)_1px,transparent_1px)] [background-size:18px_18px] opacity-20" />
             <div className="pointer-events-none absolute left-[6%] top-[12%] h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(250,204,21,0.35),transparent_70%)] opacity-40 blur-3xl scroll-aurora" />
             <div className="pointer-events-none absolute right-[8%] top-[42%] h-80 w-80 rounded-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.35),transparent_70%)] opacity-30 blur-3xl scroll-aurora-alt" />
-            {/* PC 좌측 광고 배너 */}
-            <aside className="hidden lg:block fixed left-6 top-20 z-10 w-56 h-[calc(100vh-5rem)] overflow-y-auto p-4 space-y-4">
-                {bannerAds.map((ad) => (
-                    <a key={`left-${ad.id}`} href={ad.link} className="block" target="_blank" rel="noreferrer">
-                        <div className="overflow-hidden rounded-2xl shadow-[0_16px_45px_-32px_rgba(15,23,42,0.6)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_26px_60px_-36px_rgba(15,23,42,0.6)]">
-                            <div className="relative aspect-[2/1] overflow-hidden bg-[#f1eee7]">
-                                <Image
-                                    src={ad.image}
-                                    alt={ad.title}
-                                    fill
-                                        sizes="(min-width: 1024px) 224px, 50vw"
-                                        className="object-cover"
-                                    />
+            {bannerAds.length > 0 && (
+                <>
+                    {/* PC 좌측 광고 배너 */}
+                    <aside className="hidden lg:block fixed left-6 top-20 z-10 w-56 h-[calc(100vh-5rem)] overflow-y-auto p-4 space-y-4">
+                        {bannerAds.map((ad) => (
+                            <a key={`left-${ad.id}`} href={ad.link} className="block" target="_blank" rel="noreferrer">
+                                <div className="overflow-hidden rounded-2xl shadow-[0_16px_45px_-32px_rgba(15,23,42,0.6)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_26px_60px_-36px_rgba(15,23,42,0.6)]">
+                                    <div className="relative aspect-[2/1] overflow-hidden bg-[#f1eee7]">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={ad.image}
+                                            alt={ad.title}
+                                            className="h-full w-full object-cover"
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        </a>
-                ))}
-            </aside>
+                            </a>
+                        ))}
+                    </aside>
 
-            {/* PC 우측 광고 배너 */}
-            <aside className="hidden lg:block fixed right-6 top-20 z-10 w-56 h-[calc(100vh-5rem)] overflow-y-auto p-4 space-y-4">
-                {bannerAds.map((ad) => (
-                    <a key={`right-${ad.id}`} href={ad.link} className="block" target="_blank" rel="noreferrer">
-                        <div className="overflow-hidden rounded-2xl shadow-[0_16px_45px_-32px_rgba(15,23,42,0.6)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_26px_60px_-36px_rgba(15,23,42,0.6)]">
-                            <div className="relative aspect-[2/1] overflow-hidden bg-[#f1eee7]">
-                                <Image
-                                    src={ad.image}
-                                    alt={ad.title}
-                                    fill
-                                        sizes="(min-width: 1024px) 224px, 50vw"
-                                        className="object-cover"
-                                    />
+                    {/* PC 우측 광고 배너 */}
+                    <aside className="hidden lg:block fixed right-6 top-20 z-10 w-56 h-[calc(100vh-5rem)] overflow-y-auto p-4 space-y-4">
+                        {bannerAds.map((ad) => (
+                            <a key={`right-${ad.id}`} href={ad.link} className="block" target="_blank" rel="noreferrer">
+                                <div className="overflow-hidden rounded-2xl shadow-[0_16px_45px_-32px_rgba(15,23,42,0.6)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_26px_60px_-36px_rgba(15,23,42,0.6)]">
+                                    <div className="relative aspect-[2/1] overflow-hidden bg-[#f1eee7]">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={ad.image}
+                                            alt={ad.title}
+                                            className="h-full w-full object-cover"
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        </a>
-                ))}
-            </aside>
+                            </a>
+                        ))}
+                    </aside>
+                </>
+            )}
 
             {/* 메인 컨텐츠 */}
             <main className="container relative z-10 mx-auto max-w-5xl overflow-x-hidden px-4 pb-16 lg:px-8 lg:pb-12">
@@ -1736,90 +1820,90 @@ export default function OrangeXPage() {
                     </div>
                 </div>
 
-                {/* 스크롤 배너 섹션 */}
-                <div
-                    data-reveal
-                    className="glam-card rounded-[28px] border border-slate-200/70 bg-white/80 p-6 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur overflow-x-hidden"
-                >
-                    <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                                {/* partner icon */}
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="inline-block">
-                                    <path d="M12 2a5 5 0 0 1 5 5v3a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                    <path d="M19 10h2a2 2 0 0 1 2 2v6a4 4 0 0 1-4 4H5a4 4 0 0 1-4-4v-6a2 2 0 0 1 2-2h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                    <path d="M8 14h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-
-                                <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1">
-                                    <h2 className="font-[var(--font-display)] text-2xl text-slate-900">제휴 배너</h2>
-                                    <a
-                                        href="mailto:support@orangex.center"
-                                        className="group inline-flex w-full flex-wrap items-center gap-2 rounded-full border border-rose-200/70 bg-[linear-gradient(120deg,rgba(255,255,255,0.95),rgba(254,242,242,0.95))] px-3 py-2 text-xs font-semibold text-rose-600 shadow-[0_14px_32px_-20px_rgba(244,63,94,0.65)] ring-1 ring-rose-200/60 transition hover:-translate-y-0.5 hover:text-rose-700 hover:shadow-[0_20px_45px_-20px_rgba(244,63,94,0.75)] sm:w-auto sm:flex-nowrap sm:py-1 sm:text-sm"
-                                        aria-label="제휴 신청 이메일 보내기"
-                                    >
-                                        <span className="flex h-7 w-7 items-center justify-center rounded-full border border-rose-200/70 bg-rose-100 text-rose-600">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                                <path
-                                                    d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"
-                                                    stroke="currentColor"
-                                                    strokeWidth="1.6"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                />
-                                                <path
-                                                    d="m4 8 8 5 8-5"
-                                                    stroke="currentColor"
-                                                    strokeWidth="1.6"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                />
-                                            </svg>
-                                        </span>
-                                        <span className="tracking-tight">제휴 신청을 받습니다</span>
-                                        <span className="break-all rounded-full border border-rose-200/70 bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-rose-600 shadow-sm transition group-hover:border-rose-300 group-hover:text-rose-700 sm:text-[11px]">
-                                            support@orangex.center
-                                        </span>
-                                    </a>
-                                </div>
-                            </div>
-
-                            <p className="mt-1 text-xs text-slate-600 leading-relaxed sm:text-sm">좌우로 스와이프하여 확인하세요</p>
-                        </div>
-                        <span className="text-xs font-semibold text-slate-500">USDT 파트너</span>
-                    </div>
-                    {/* 스크롤 배너 컨테이너 */}
-
+                {bannerAds.length > 0 && (
                     <div
-                        className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 py-2 scrollbar-hide relative"
-                        aria-label="제휴 배너 스크롤"
+                        data-reveal
+                        className="glam-card rounded-[28px] border border-slate-200/70 bg-white/80 p-6 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur overflow-x-hidden"
                     >
-                        <div className="absolute left-0 top-0 h-full w-16 bg-[linear-gradient(90deg,rgba(255,255,255,1),rgba(255,255,255,0))]" />
-                        <div className="absolute right-0 top-0 h-full w-16 bg-[linear-gradient(270deg,rgba(255,255,255,1),rgba(255,255,255,0))]" />
+                        <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                                    {/* partner icon */}
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="inline-block">
+                                        <path d="M12 2a5 5 0 0 1 5 5v3a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        <path d="M19 10h2a2 2 0 0 1 2 2v6a4 4 0 0 1-4 4H5a4 4 0 0 1-4-4v-6a2 2 0 0 1 2-2h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        <path d="M8 14h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
 
-                        {SCROLL_BANNER_ADS.map((ad) => (
-                            <a
-                                key={ad.id}
-                                href={ad.link}
-                                className="banner-card shrink-0 snap-start"
-                                target="_blank"
-                                rel="noreferrer"
-                                aria-label={ad.title}
-                            >
-                                <div className="relative w-[78vw] max-w-[260px] aspect-[2/1] overflow-hidden rounded-2xl shadow-[0_18px_40px_-30px_rgba(15,23,42,0.6)] sm:w-64 md:max-w-none md:w-72">
-                                    <Image
-                                        src={ad.image}
-                                        alt={ad.title}
-                                        fill
-                                        sizes="(min-width: 768px) 288px, 78vw"
-                                        className="object-cover"
-                                    />
+                                    <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1">
+                                        <h2 className="font-[var(--font-display)] text-2xl text-slate-900">제휴 배너</h2>
+                                        <a
+                                            href="mailto:support@orangex.center"
+                                            className="group inline-flex w-full flex-wrap items-center gap-2 rounded-full border border-rose-200/70 bg-[linear-gradient(120deg,rgba(255,255,255,0.95),rgba(254,242,242,0.95))] px-3 py-2 text-xs font-semibold text-rose-600 shadow-[0_14px_32px_-20px_rgba(244,63,94,0.65)] ring-1 ring-rose-200/60 transition hover:-translate-y-0.5 hover:text-rose-700 hover:shadow-[0_20px_45px_-20px_rgba(244,63,94,0.75)] sm:w-auto sm:flex-nowrap sm:py-1 sm:text-sm"
+                                            aria-label="제휴 신청 이메일 보내기"
+                                        >
+                                            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-rose-200/70 bg-rose-100 text-rose-600">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                    <path
+                                                        d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"
+                                                        stroke="currentColor"
+                                                        strokeWidth="1.6"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                    />
+                                                    <path
+                                                        d="m4 8 8 5 8-5"
+                                                        stroke="currentColor"
+                                                        strokeWidth="1.6"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                    />
+                                                </svg>
+                                            </span>
+                                            <span className="tracking-tight">제휴 신청을 받습니다</span>
+                                            <span className="break-all rounded-full border border-rose-200/70 bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-rose-600 shadow-sm transition group-hover:border-rose-300 group-hover:text-rose-700 sm:text-[11px]">
+                                                support@orangex.center
+                                            </span>
+                                        </a>
+                                    </div>
                                 </div>
-                            </a>
-                        ))}
-                        
+
+                                <p className="mt-1 text-xs text-slate-600 leading-relaxed sm:text-sm">좌우로 스와이프하여 확인하세요</p>
+                            </div>
+                            <span className="text-xs font-semibold text-slate-500">USDT 파트너</span>
+                        </div>
+                        {/* 스크롤 배너 컨테이너 */}
+
+                        <div
+                            className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 py-2 scrollbar-hide relative"
+                            aria-label="제휴 배너 스크롤"
+                        >
+                            <div className="absolute left-0 top-0 h-full w-16 bg-[linear-gradient(90deg,rgba(255,255,255,1),rgba(255,255,255,0))]" />
+                            <div className="absolute right-0 top-0 h-full w-16 bg-[linear-gradient(270deg,rgba(255,255,255,1),rgba(255,255,255,0))]" />
+
+                            {bannerAds.map((ad) => (
+                                <a
+                                    key={ad.id}
+                                    href={ad.link}
+                                    className="banner-card shrink-0 snap-start"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    aria-label={ad.title}
+                                >
+                                    <div className="relative w-[78vw] max-w-[260px] aspect-[2/1] overflow-hidden rounded-2xl shadow-[0_18px_40px_-30px_rgba(15,23,42,0.6)] sm:w-64 md:max-w-none md:w-72">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={ad.image}
+                                            alt={ad.title}
+                                            className="h-full w-full object-cover"
+                                        />
+                                    </div>
+                                </a>
+                            ))}
+                            
+                        </div>
                     </div>
-                </div>
+                )}
 
 
                 {/* 통계 섹션 */}
@@ -2656,32 +2740,32 @@ export default function OrangeXPage() {
                 </button>
             </div>
 
-            {/* 모바일 하단 광고 배너 */}
-            <div className="lg:hidden border-t border-slate-200/70 bg-white/85 shadow-[0_-18px_60px_-50px_rgba(15,23,42,0.6)] backdrop-blur">
-                <div className="flex flex-col gap-3 p-3">
-                    {bannerAds.map((ad) => (
-                        <a
-                            key={`mobile-${ad.id}`}
-                            href={ad.link}
-                            className="w-full"
-                            target="_blank"
-                            rel="noreferrer"
-                        >
-                            <div className="overflow-hidden rounded-2xl shadow-[0_16px_45px_-32px_rgba(15,23,42,0.6)] transition hover:shadow-[0_26px_60px_-36px_rgba(15,23,42,0.6)]">
-                                <div className="relative aspect-[2/1] overflow-hidden bg-[#f1eee7]">
-                                    <Image
-                                        src={ad.image}
-                                        alt={ad.title}
-                                        fill
-                                        sizes="(min-width: 1024px) 224px, 60vw"
-                                        className="object-cover"
-                                    />
+            {bannerAds.length > 0 && (
+                <div className="lg:hidden border-t border-slate-200/70 bg-white/85 shadow-[0_-18px_60px_-50px_rgba(15,23,42,0.6)] backdrop-blur">
+                    <div className="flex flex-col gap-3 p-3">
+                        {bannerAds.map((ad) => (
+                            <a
+                                key={`mobile-${ad.id}`}
+                                href={ad.link}
+                                className="w-full"
+                                target="_blank"
+                                rel="noreferrer"
+                            >
+                                <div className="overflow-hidden rounded-2xl shadow-[0_16px_45px_-32px_rgba(15,23,42,0.6)] transition hover:shadow-[0_26px_60px_-36px_rgba(15,23,42,0.6)]">
+                                    <div className="relative aspect-[2/1] overflow-hidden bg-[#f1eee7]">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={ad.image}
+                                            alt={ad.title}
+                                            className="h-full w-full object-cover"
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        </a>
-                    ))}
+                            </a>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
 
             <style jsx>{`
                 .hero-fade {

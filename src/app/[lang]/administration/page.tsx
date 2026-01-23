@@ -1061,6 +1061,18 @@ export default function Index({ params }: any) {
                 </div>
               </button>
 
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    router.push('/' + params.lang + '/administration/banner');
+                  }}
+                  className="inline-flex items-center gap-2 rounded-full border border-orange-200/70 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700 shadow-[0_12px_30px_-22px_rgba(234,88,12,0.45)] transition hover:bg-orange-100"
+                >
+                  <Image src="/icon-admin.png" alt="Banner" width={16} height={16} className="h-4 w-4" />
+                  제휴 배너 관리
+                </button>
+              )}
+
 
 
               {isAdmin && (
@@ -2257,6 +2269,41 @@ export default function Index({ params }: any) {
             </div>
             
             
+            <div className="w-full flex flex-col items-start justify-start gap-2 bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
+              <div className="w-full flex flex-col xl:flex-row items-center justify-start gap-2">
+                <div className="w-full flex flex-row items-center justify-start gap-2">
+                  <Image
+                    src="/icon-admin.png"
+                    alt="Banner"
+                    width={35}
+                    height={35}
+                    className="w-7 h-7"
+                  />
+                  <h2 className="text-lg font-bold text-slate-900">제휴 배너</h2>
+                </div>
+                <div className="w-full flex flex-row items-center justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      router.push('/' + params.lang + '/administration/banner');
+                    }}
+                    className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800"
+                  >
+                    배너관리
+                  </button>
+                </div>
+              </div>
+
+              <div className="w-full mt-4">
+                <div className="flex flex-row items-center justify-start gap-2">
+                  <div className="w-2 h-2 bg-slate-900 rounded-full"></div>
+                  <h2 className="text-lg font-bold text-slate-900">P2P 홈 제휴 배너</h2>
+                  <p className="text-sm text-slate-600">
+                    제목 · 설명 · 이미지 · 링크를 관리할 수 있습니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="w-full flex flex-col items-start justify-start gap-2  bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
               
 
