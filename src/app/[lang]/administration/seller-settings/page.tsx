@@ -2158,6 +2158,24 @@ export default function SettingsPage({ params }: any) {
                                 </button>
                             </div>
 
+                            <div className="w-full mt-6 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 shadow-sm">
+                                <div className="flex items-center gap-2">
+                                    <Image
+                                        src="/icon-info.png"
+                                        alt="Guide"
+                                        width={18}
+                                        height={18}
+                                        className="h-4 w-4"
+                                    />
+                                    <span className="text-sm font-semibold text-slate-700">
+                                        이 페이지에서 설정할 항목
+                                    </span>
+                                </div>
+                                <p className="mt-2 text-sm text-slate-600">
+                                    판매 금액(원), 가격 설정 방식(시장가/고정가), 마켓 연동 선택, 판매 홍보 문구를 설정합니다.
+                                </p>
+                            </div>
+
                         </div>
 
                     </div>
@@ -2166,49 +2184,6 @@ export default function SettingsPage({ params }: any) {
 
 
             </div>
-
-            <div className="fixed left-0 right-0 bottom-4 z-30 px-4 pb-[env(safe-area-inset-bottom)]">
-                <div className="mx-auto w-full max-w-screen-sm">
-                    <div className="w-full rounded-2xl border border-slate-200/80 bg-white/90 p-2 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.25)] backdrop-blur">
-                        <div className="grid w-full grid-cols-2 gap-2">
-                            <button
-                                type="button"
-                                onClick={() => router.push('/' + params.lang + '/administration/profile-settings')}
-                                className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white/90 px-3 py-2 text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-md"
-                            >
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                                    <Image
-                                        src="/icon-user.png"
-                                        alt="Profile Settings"
-                                        width={20}
-                                        height={20}
-                                        className="h-5 w-5"
-                                    />
-                                </div>
-                                <span className="text-[11px] font-semibold">프로필 설정</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => router.push('/' + params.lang + '/administration/seller-settings')}
-                                className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-slate-900/80 bg-slate-900 px-3 py-2 text-white shadow-[0_16px_40px_-28px_rgba(15,23,42,0.6)] transition hover:-translate-y-0.5 hover:bg-slate-800"
-                            >
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white">
-                                    <Image
-                                        src="/icon-seller.png"
-                                        alt="Seller Settings"
-                                        width={20}
-                                        height={20}
-                                        className="h-5 w-5"
-                                    />
-                                </div>
-                                <span className="text-[11px] font-semibold">판매자 설정</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
         </main>
 
     );

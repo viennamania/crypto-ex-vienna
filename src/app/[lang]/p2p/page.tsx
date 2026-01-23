@@ -1275,6 +1275,77 @@ export default function OrangeXPage() {
                                 )}
                             </div>
 
+                            <div className="grid gap-4 lg:grid-cols-2">
+                                <div className="group relative overflow-hidden rounded-[28px] border border-emerald-200/60 bg-[linear-gradient(145deg,rgba(255,255,255,0.96),rgba(236,253,245,0.85))] px-6 py-5 shadow-[0_24px_60px_-45px_rgba(15,23,42,0.45)] backdrop-blur transition hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-50px_rgba(15,23,42,0.5)]">
+                                    <span className="pointer-events-none absolute left-0 top-0 h-full w-1.5 bg-emerald-400/70" />
+                                    <div className="pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full bg-emerald-300/30 blur-3xl" />
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-700 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.25)]">
+                                                <Image
+                                                    src="/icon-buyer.png"
+                                                    alt="Buyer Guide"
+                                                    width={24}
+                                                    height={24}
+                                                    className="h-6 w-6"
+                                                />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600">Buyer Guide</p>
+                                                <p className="text-base font-semibold text-slate-900 sm:text-lg">구매 전 꼭 확인하세요</p>
+                                            </div>
+                                        </div>
+                                        <Link
+                                            href={`/${lang}/buyerGuide`}
+                                            className="inline-flex items-center justify-center rounded-full border border-emerald-200/80 bg-white/90 px-5 py-2.5 text-xs font-semibold text-emerald-800 shadow-[0_12px_28px_-18px_rgba(16,185,129,0.35)] transition hover:border-emerald-300 hover:bg-white whitespace-nowrap"
+                                        >
+                                            구매자 메뉴얼 보기
+                                        </Link>
+                                    </div>
+                                    <p className="mt-4 text-sm leading-relaxed text-slate-600">
+                                        구매자 메뉴얼에서 안전한 구매 흐름과 주의사항을 확인해 보세요.
+                                    </p>
+                                    <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-semibold text-emerald-700/80">
+                                        <span className="rounded-full border border-emerald-200/70 bg-emerald-50 px-3 py-1">안전 흐름</span>
+                                        <span className="rounded-full border border-emerald-200/70 bg-emerald-50 px-3 py-1">주의사항</span>
+                                    </div>
+                                </div>
+                                <div className="group relative overflow-hidden rounded-[28px] border border-orange-200/60 bg-[linear-gradient(145deg,rgba(255,255,255,0.96),rgba(255,237,213,0.85))] px-6 py-5 shadow-[0_24px_60px_-45px_rgba(15,23,42,0.45)] backdrop-blur transition hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-50px_rgba(15,23,42,0.5)]">
+                                    <span className="pointer-events-none absolute left-0 top-0 h-full w-1.5 bg-orange-400/70" />
+                                    <div className="pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full bg-orange-300/30 blur-3xl" />
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/15 text-orange-700 shadow-[inset_0_0_0_1px_rgba(249,115,22,0.25)]">
+                                                <Image
+                                                    src="/icon-seller.png"
+                                                    alt="Seller Guide"
+                                                    width={24}
+                                                    height={24}
+                                                    className="h-6 w-6"
+                                                />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-600">Seller Guide</p>
+                                                <p className="text-base font-semibold text-slate-900 sm:text-lg">판매자 시작 전에 확인하세요</p>
+                                            </div>
+                                        </div>
+                                        <Link
+                                            href={`/${lang}/sellerGuide`}
+                                            className="inline-flex items-center justify-center rounded-full border border-orange-200/80 bg-white/90 px-5 py-2.5 text-xs font-semibold text-orange-800 shadow-[0_12px_28px_-18px_rgba(249,115,22,0.35)] transition hover:border-orange-300 hover:bg-white whitespace-nowrap"
+                                        >
+                                            판매자 메뉴얼 보기
+                                        </Link>
+                                    </div>
+                                    <p className="mt-4 text-sm leading-relaxed text-slate-600">
+                                        판매자 메뉴얼에서 에스크로 운영과 입금 확인 절차를 확인해 보세요.
+                                    </p>
+                                    <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-semibold text-orange-700/80">
+                                        <span className="rounded-full border border-orange-200/70 bg-orange-50 px-3 py-1">에스크로 운영</span>
+                                        <span className="rounded-full border border-orange-200/70 bg-orange-50 px-3 py-1">입금 확인</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className={`relative overflow-hidden rounded-2xl border px-5 py-4 shadow-[0_20px_55px_-35px_rgba(15,23,42,0.55)] ${
                                 walletAddress
                                     ? 'border-emerald-200/70 bg-[linear-gradient(120deg,#ecfdf3_0%,#f0f9ff_65%,#ffffff_100%)]'
