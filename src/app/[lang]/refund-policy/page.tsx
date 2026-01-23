@@ -29,21 +29,21 @@ const normalizeContent = (value?: string[] | string) => {
     .filter(Boolean);
 };
 
-export default async function PrivacyPolicyPage({ params }: { params: { lang?: string } }) {
+export default async function RefundPolicyPage({ params }: { params: { lang?: string } }) {
   const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang ?? 'ko';
-  const policy = await getPolicyBySlug('privacy-policy');
-  const title = policy?.title?.trim() || '개인정보처리방침';
+  const policy = await getPolicyBySlug('refund-policy');
+  const title = policy?.title?.trim() || '환불·분쟁 정책';
   const content = normalizeContent(policy?.content);
   const updatedAt = policy?.updatedAt || policy?.createdAt;
   const updatedDate = updatedAt ? String(updatedAt).slice(0, 10) : '';
 
   return (
     <div
-      className={`${bodyFont.variable} ${displayFont.variable} relative min-h-screen overflow-hidden bg-[linear-gradient(160deg,#f8fafc_0%,#fefce8_40%,#eff6ff_85%)] text-slate-900 font-[var(--font-body)]`}
+      className={`${bodyFont.variable} ${displayFont.variable} relative min-h-screen overflow-hidden bg-[linear-gradient(160deg,#ecfdf5_0%,#f0f9ff_45%,#fff7ed_85%)] text-slate-900 font-[var(--font-body)]`}
       style={
         {
-          '--accent': '#f59e0b',
-          '--accent-deep': '#d97706',
+          '--accent': '#10b981',
+          '--accent-deep': '#059669',
           '--sea': '#38bdf8',
           '--ink': '#1c1917',
         } as CSSProperties
@@ -60,8 +60,8 @@ export default async function PrivacyPolicyPage({ params }: { params: { lang?: s
 
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/70 bg-amber-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-                Privacy
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200/70 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                Refund
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <Image
@@ -72,14 +72,14 @@ export default async function PrivacyPolicyPage({ params }: { params: { lang?: s
                   className="h-10 w-auto"
                 />
                 <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-500">
-                  개인정보처리방침
+                  환불·분쟁 정책
                 </span>
               </div>
               <h1 className="font-[var(--font-display)] text-3xl text-[color:var(--ink)] sm:text-4xl">
                 {title}
               </h1>
               <p className="max-w-xl text-base text-slate-600">
-                개인정보 수집·이용·보관 정책을 안내합니다.
+                환불 및 분쟁 처리 절차와 기준을 안내합니다.
               </p>
               {updatedDate && (
                 <p className="text-xs font-semibold text-slate-400">마지막 업데이트: {updatedDate}</p>
@@ -99,12 +99,12 @@ export default async function PrivacyPolicyPage({ params }: { params: { lang?: s
         <section className="mt-10 rounded-2xl border border-slate-200/70 bg-white/90 px-6 py-8 shadow-[0_18px_45px_-35px_rgba(15,23,42,0.4)]">
           {content.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-white/80 px-5 py-8 text-center text-sm text-slate-500">
-              등록된 개인정보처리방침이 없습니다. 관리자에서 내용을 추가해 주세요.
+              등록된 환불·분쟁 정책이 없습니다. 관리자에서 내용을 추가해 주세요.
             </div>
           ) : (
             <div className="space-y-4 text-sm leading-relaxed text-slate-700">
               {content.map((line, index) => (
-                <p key={`privacy-${index}`}>{line}</p>
+                <p key={`refund-${index}`}>{line}</p>
               ))}
             </div>
           )}

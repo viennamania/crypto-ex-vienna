@@ -2793,17 +2793,17 @@ export default function OrangeXPage() {
                         className="h-10 w-auto"
                     />
                     <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-slate-300">
-                        <a href="/terms-of-service" className="hover:text-white">
+                        <Link href={`/${lang}/terms-of-service`} className="hover:text-white">
                             이용약관
-                        </a>
+                        </Link>
                         <span className="text-slate-500">|</span>
-                        <a href="/privacy-policy" className="hover:text-white">
+                        <Link href={`/${lang}/privacy-policy`} className="hover:text-white">
                             개인정보처리방침
-                        </a>
+                        </Link>
                         <span className="text-slate-500">|</span>
-                        <a href="/contact" className="hover:text-white">
+                        <Link href={`/${lang}/refund-policy`} className="hover:text-white">
                             환불·분쟁 정책
-                        </a>
+                        </Link>
                     </div>
                     <p className="max-w-2xl text-xs leading-relaxed text-slate-400">
                         리스크 고지: 가상자산 결제에는 가격 변동 및 네트워크 지연 등 위험이 수반될 수 있습니다.

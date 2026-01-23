@@ -2339,6 +2339,41 @@ export default function Index({ params }: any) {
               </div>
             </div>
 
+            <div className="w-full flex flex-col items-start justify-start gap-2 bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
+              <div className="w-full flex flex-col xl:flex-row items-center justify-start gap-2">
+                <div className="w-full flex flex-row items-center justify-start gap-2">
+                  <Image
+                    src="/icon-shield.png"
+                    alt="Policy"
+                    width={35}
+                    height={35}
+                    className="w-6 h-6"
+                  />
+                  <h2 className="text-lg font-bold text-slate-900">정책 관리</h2>
+                </div>
+                <div className="w-full flex flex-row items-center justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      router.push('/' + params.lang + '/administration/policy');
+                    }}
+                    className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800"
+                  >
+                    정책 관리
+                  </button>
+                </div>
+              </div>
+
+              <div className="w-full mt-4">
+                <div className="flex flex-row items-center justify-start gap-2">
+                  <div className="w-2 h-2 bg-slate-900 rounded-full"></div>
+                  <h2 className="text-lg font-bold text-slate-900">이용약관 · 개인정보 · 환불 정책</h2>
+                  <p className="text-sm text-slate-600">
+                    공개 정책 페이지 내용을 관리합니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="w-full flex flex-col items-start justify-start gap-2  bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
               
 

@@ -479,7 +479,7 @@ export default async function BuyerGuidePage({ params }: { params: { lang?: stri
                             개인정보처리방침
                         </Link>
                         <span className="text-slate-500">|</span>
-                        <Link href={`/${lang}/contact`} className="hover:text-white">
+                        <Link href={`/${lang}/refund-policy`} className="hover:text-white">
                             환불·분쟁 정책
                         </Link>
                     </div>
