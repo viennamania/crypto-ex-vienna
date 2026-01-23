@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, act } from "react";
+import { useState, useEffect, use, act, useRef } from "react";
 
 import Image from "next/image";
 
@@ -799,12 +799,14 @@ export default function Index({ params }: any) {
   }, [ownerWalletAddress]);
 
   const [selectedChatChannelUrl, setSelectedChatChannelUrl] = useState<string | null>(null);
-  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const [sellerChatItems, setSellerChatItems] = useState<SellerChatItem[]>([]);
   const [sellerChatLoading, setSellerChatLoading] = useState(false);
   const [sellerChatError, setSellerChatError] = useState<string | null>(null);
   const [globalBannerAds, setGlobalBannerAds] = useState<BannerAd[]>([]);
+  const chatUnreadTotalRef = useRef<number | null>(null);
+  const chatInitializedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -871,6 +873,9 @@ export default function Index({ params }: any) {
 
   useEffect(() => {
     let isMounted = true;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    chatInitializedRef.current = false;
+    chatUnreadTotalRef.current = null;
 
     const fetchSellerChats = async () => {
       if (!ownerWalletAddress) {
@@ -902,6 +907,7 @@ export default function Index({ params }: any) {
         const data = (await response.json()) as { items?: SellerChatItem[] };
         if (isMounted) {
           setSellerChatItems(data.items || []);
+          chatInitializedRef.current = true;
         }
       } catch (error) {
         if (isMounted) {
@@ -916,11 +922,53 @@ export default function Index({ params }: any) {
     };
 
     fetchSellerChats();
+    if (ownerWalletAddress) {
+      intervalId = setInterval(fetchSellerChats, 15000);
+    }
 
     return () => {
       isMounted = false;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
   }, [ownerWalletAddress]);
+
+  useEffect(() => {
+    if (!ownerWalletAddress) {
+      chatUnreadTotalRef.current = null;
+      chatInitializedRef.current = false;
+      return;
+    }
+    if (!chatInitializedRef.current) {
+      return;
+    }
+    if (!sellerChatItems.length) {
+      chatUnreadTotalRef.current = 0;
+      return;
+    }
+
+    const unreadTotal = sellerChatItems.reduce(
+      (sum, item) => sum + (item.unreadMessageCount ?? 0),
+      0
+    );
+    const previousUnread = chatUnreadTotalRef.current;
+
+    if (previousUnread === null) {
+      chatUnreadTotalRef.current = unreadTotal;
+      return;
+    }
+
+    if (unreadTotal > previousUnread && !isChatOpen) {
+      const nextChannel = sellerChatItems.find((item) => (item.unreadMessageCount ?? 0) > 0)?.channelUrl;
+      if (nextChannel) {
+        setSelectedChatChannelUrl(nextChannel);
+      }
+      setIsChatOpen(true);
+    }
+
+    chatUnreadTotalRef.current = unreadTotal;
+  }, [ownerWalletAddress, sellerChatItems, isChatOpen]);
 
 
 
