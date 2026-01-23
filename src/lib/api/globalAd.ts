@@ -11,10 +11,12 @@ export type GlobalAd = {
   imageUrl?: string;
   banner?: string;
   bannerImage?: string;
+  bannerUrl?: string;
   link?: string;
   linkUrl?: string;
   url?: string;
   redirectUrl?: string;
+  targetUrl?: string;
   placement?: string;
   isActive?: boolean;
   order?: number;
