@@ -466,39 +466,41 @@ const StabilityConsole = () => {
 
             </div>
 
-            <div
-              className="console-row w-full rounded-2xl border border-slate-200/60 bg-white/70 px-4 py-3"
-              style={{ animationDelay: "0.18s" }}
-            >
-              <div className="flex w-full items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Image
-                    src={`/logo-chain-${displayChain}.png`}
-                    alt={`${displayChain} logo`}
-                    width={20}
-                    height={20}
-                    className="rounded-lg"
-                  />
-                  <span className="text-[12px] font-medium text-slate-500">
-                    가스보유량
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span
-                    className="text-lg font-semibold text-slate-900 tabular-nums"
-                    style={{ fontFamily: '"JetBrains Mono", "IBM Plex Mono", "Menlo", monospace' }}
-                  >
-                    {Number(nativeBalance).toFixed(4)}
-                  </span>
-                  <span className="text-[12px] font-medium text-slate-500">
-                    {displayChain === "ethereum" ? "ETH" :
-                    displayChain === "polygon" ? "POL" :
-                    displayChain === "arbitrum" ? "ETH" :
-                    displayChain === "bsc" ? "BNB" : ""}
-                  </span>
+            {!smartAccountEnabled && (
+              <div
+                className="console-row w-full rounded-2xl border border-slate-200/60 bg-white/70 px-4 py-3"
+                style={{ animationDelay: "0.18s" }}
+              >
+                <div className="flex w-full items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Image
+                      src={`/logo-chain-${displayChain}.png`}
+                      alt={`${displayChain} logo`}
+                      width={20}
+                      height={20}
+                      className="rounded-lg"
+                    />
+                    <span className="text-[12px] font-medium text-slate-500">
+                      가스보유량
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className="text-lg font-semibold text-slate-900 tabular-nums"
+                      style={{ fontFamily: '"JetBrains Mono", "IBM Plex Mono", "Menlo", monospace' }}
+                    >
+                      {Number(nativeBalance).toFixed(4)}
+                    </span>
+                    <span className="text-[12px] font-medium text-slate-500">
+                      {displayChain === "ethereum" ? "ETH" :
+                      displayChain === "polygon" ? "POL" :
+                      displayChain === "arbitrum" ? "ETH" :
+                      displayChain === "bsc" ? "BNB" : ""}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div
               className={`console-row w-full rounded-2xl border px-4 py-3 ${networkTone}`}

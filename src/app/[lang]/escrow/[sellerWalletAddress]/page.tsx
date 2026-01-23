@@ -207,30 +207,12 @@ const walletAuthOptions = ["google", "email"];
 
 const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
 
-const ESCROW_BANNER_ADS_LEFT = [
-  { id: 'left-1', image: '/images/ad-2.gif', link: 'https://orangex.center' },
-  { id: 'left-2', image: '/images/ad-3.gif', link: 'https://orangex.center' },
-  { id: 'left-3', image: '/images/ad-4.gif', link: 'https://orangex.center' },
-];
-
-const ESCROW_BANNER_ADS_RIGHT = [
-  { id: 'right-1', image: '/images/ad-5.gif', link: 'https://orangex.center' },
-  { id: 'right-2', image: '/images/ad-6.gif', link: 'https://orangex.center' },
-  { id: 'right-3', image: '/images/ad-2.gif', link: 'https://orangex.center' },
-];
-
-const ESCROW_BANNER_ADS_SCROLL = [
-  { id: 'scroll-1', image: '/images/ad-6.gif', link: 'https://orangex.center' },
-  { id: 'scroll-2', image: '/images/ad-2.gif', link: 'https://orangex.center' },
-  { id: 'scroll-3', image: '/images/ad-3.gif', link: 'https://orangex.center' },
-  { id: 'scroll-4', image: '/images/ad-4.gif', link: 'https://orangex.center' },
-  { id: 'scroll-5', image: '/images/ad-5.gif', link: 'https://orangex.center' },
-  { id: 'scroll-6', image: '/images/ad-6.gif', link: 'https://orangex.center' },
-  { id: 'scroll-7', image: '/images/ad-1.gif', link: 'https://orangex.center' },
-  { id: 'scroll-8', image: '/images/ad-2.gif', link: 'https://orangex.center' },
-  { id: 'scroll-9', image: '/images/ad-3.gif', link: 'https://orangex.center' },
-  { id: 'scroll-10', image: '/images/ad-4.gif', link: 'https://orangex.center' },
-];
+type BannerAd = {
+  id: string;
+  title: string;
+  image: string;
+  link: string;
+};
 
 const TypingText = ({
   text,
@@ -822,6 +804,70 @@ export default function Index({ params }: any) {
   const [sellerChatItems, setSellerChatItems] = useState<SellerChatItem[]>([]);
   const [sellerChatLoading, setSellerChatLoading] = useState(false);
   const [sellerChatError, setSellerChatError] = useState<string | null>(null);
+  const [globalBannerAds, setGlobalBannerAds] = useState<BannerAd[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchGlobalAds = async () => {
+      try {
+        const response = await fetch('/api/globalAd/getActive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            placement: 'p2p-home',
+            limit: 12,
+          }),
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+        const ads = Array.isArray(data?.result) ? data.result : [];
+        const normalized = ads
+          .map((ad: any, index: number) => {
+            const image =
+              ad?.image ||
+              ad?.imageUrl ||
+              ad?.banner ||
+              ad?.bannerImage ||
+              ad?.bannerUrl;
+            const link =
+              ad?.link ||
+              ad?.linkUrl ||
+              ad?.url ||
+              ad?.redirectUrl ||
+              ad?.targetUrl;
+
+            if (!image || !link) {
+              return null;
+            }
+
+            return {
+              id: String(ad?._id ?? ad?.id ?? index),
+              title: ad?.title || ad?.name || '제휴 배너',
+              image,
+              link,
+            } as BannerAd;
+          })
+          .filter(Boolean) as BannerAd[];
+
+        if (active) {
+          setGlobalBannerAds(normalized);
+        }
+      } catch (error) {
+        // ignore
+      }
+    };
+
+    fetchGlobalAds();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -4669,6 +4715,7 @@ const fetchBuyOrders = async () => {
         .map((point) => `${point.x},${point.y}`)
         .join(' ')} L ${dailyTradeChartWidth} ${dailyTradeChartHeight} Z`
     : '';
+  const bannerAds = globalBannerAds;
 
 
 
@@ -4686,53 +4733,47 @@ const fetchBuyOrders = async () => {
       <div className="pointer-events-none absolute -right-24 -top-32 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.25)_0%,transparent_70%)] blur-2xl" />
       <div className="pointer-events-none absolute -left-24 bottom-[-120px] h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.25)_0%,transparent_70%)] blur-2xl" />
 
-      <aside className="pointer-events-auto hidden xl:flex fixed left-6 top-28 z-20 flex-col gap-4">
-        {ESCROW_BANNER_ADS_LEFT.map((ad) => (
-          <a
-            key={ad.id}
-            href={ad.link}
-            target="_blank"
-            rel="noreferrer"
-            className="group"
-          >
-            <div className="relative h-56 w-40 overflow-hidden rounded-2xl border border-white/80 bg-white/80 shadow-[0_22px_60px_-36px_rgba(15,23,42,0.6)]">
-              <Image
-                src={ad.image}
-                alt="Banner"
-                fill
-                sizes="160px"
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/40 opacity-70" />
-              <div className="absolute -bottom-10 -right-10 h-24 w-24 rounded-full bg-amber-300/40 blur-2xl" />
-            </div>
-          </a>
-        ))}
-      </aside>
+      {bannerAds.length > 0 && (
+        <>
+          <aside className="pointer-events-auto hidden xl:flex fixed left-6 top-28 z-20 flex-col gap-4">
+            {bannerAds.map((ad) => (
+              <a
+                key={`left-${ad.id}`}
+                href={ad.link}
+                target="_blank"
+                rel="noreferrer"
+                className="group"
+              >
+                <div className="relative w-56 aspect-[2/1] overflow-hidden rounded-2xl border border-white/80 bg-white/80 shadow-[0_22px_60px_-36px_rgba(15,23,42,0.6)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={ad.image} alt={ad.title} className="h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/40 opacity-70" />
+                  <div className="absolute -bottom-10 -right-10 h-24 w-24 rounded-full bg-amber-300/40 blur-2xl" />
+                </div>
+              </a>
+            ))}
+          </aside>
 
-      <aside className="pointer-events-auto hidden xl:flex fixed right-6 top-28 z-20 flex-col gap-4">
-        {ESCROW_BANNER_ADS_RIGHT.map((ad) => (
-          <a
-            key={ad.id}
-            href={ad.link}
-            target="_blank"
-            rel="noreferrer"
-            className="group"
-          >
-            <div className="relative h-56 w-40 overflow-hidden rounded-2xl border border-white/80 bg-white/80 shadow-[0_22px_60px_-36px_rgba(15,23,42,0.6)]">
-              <Image
-                src={ad.image}
-                alt="Banner"
-                fill
-                sizes="160px"
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/40 opacity-70" />
-              <div className="absolute -top-10 -left-10 h-24 w-24 rounded-full bg-sky-300/40 blur-2xl" />
-            </div>
-          </a>
-        ))}
-      </aside>
+          <aside className="pointer-events-auto hidden xl:flex fixed right-6 top-28 z-20 flex-col gap-4">
+            {bannerAds.map((ad) => (
+              <a
+                key={`right-${ad.id}`}
+                href={ad.link}
+                target="_blank"
+                rel="noreferrer"
+                className="group"
+              >
+                <div className="relative w-56 aspect-[2/1] overflow-hidden rounded-2xl border border-white/80 bg-white/80 shadow-[0_22px_60px_-36px_rgba(15,23,42,0.6)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={ad.image} alt={ad.title} className="h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/40 opacity-70" />
+                  <div className="absolute -top-10 -left-10 h-24 w-24 rounded-full bg-sky-300/40 blur-2xl" />
+                </div>
+              </a>
+            ))}
+          </aside>
+        </>
+      )}
 
       <div className="relative z-10 w-full">
 
@@ -6191,45 +6232,42 @@ const fetchBuyOrders = async () => {
 
           
           
-          <div className="w-full">
-            <div className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/80 p-3 shadow-[0_20px_55px_-40px_rgba(15,23,42,0.6)] backdrop-blur">
-              <div className="flex items-center justify-between gap-3 mb-2 px-1">
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                  <span className="inline-flex h-2 w-2 rounded-full bg-amber-500" />
-                  프로모션 배너
+          {bannerAds.length > 0 && (
+            <div className="w-full">
+              <div className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/80 p-3 shadow-[0_20px_55px_-40px_rgba(15,23,42,0.6)] backdrop-blur">
+                <div className="flex items-center justify-between gap-3 mb-2 px-1">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                    <span className="inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                    프로모션 배너
+                  </div>
+                  <span className="text-xs text-slate-600">좌로 자동 스크롤</span>
                 </div>
-                <span className="text-xs text-slate-600">좌로 자동 스크롤</span>
-              </div>
-              <div className="escrow-banner-marquee">
-                <div className="escrow-banner-track">
-                  {[0, 1].map((loopIndex) => (
-                    <div key={`scroll-loop-${loopIndex}`} className="escrow-banner-group">
-                      {ESCROW_BANNER_ADS_SCROLL.map((ad) => (
-                        <a
-                          key={`${loopIndex}-${ad.id}`}
-                          href={ad.link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="escrow-banner-card"
-                        >
-                          <div className="relative h-20 w-44 overflow-hidden rounded-xl border border-white/80 bg-white/80 shadow-[0_16px_45px_-30px_rgba(15,23,42,0.55)]">
-                            <Image
-                              src={ad.image}
-                              alt="Banner"
-                              fill
-                              sizes="176px"
-                              className="object-cover"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/40 opacity-70" />
-                          </div>
-                        </a>
-                      ))}
-                    </div>
-                  ))}
+                <div className="escrow-banner-marquee">
+                  <div className="escrow-banner-track">
+                    {[0, 1].map((loopIndex) => (
+                      <div key={`scroll-loop-${loopIndex}`} className="escrow-banner-group">
+                        {bannerAds.map((ad) => (
+                          <a
+                            key={`${loopIndex}-${ad.id}`}
+                            href={ad.link}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="escrow-banner-card"
+                          >
+                            <div className="relative w-44 aspect-[2/1] overflow-hidden rounded-xl border border-white/80 bg-white/80 shadow-[0_16px_45px_-30px_rgba(15,23,42,0.55)]">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={ad.image} alt={ad.title} className="h-full w-full object-cover" />
+                              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/40 opacity-70" />
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* 판매자 대화목록 섹션 */}
           {!isOwnerSeller && (
@@ -9988,30 +10026,27 @@ const fetchBuyOrders = async () => {
 
         </div>
 
-        <div className="mt-10 space-y-4 xl:hidden">
-          {[...ESCROW_BANNER_ADS_LEFT, ...ESCROW_BANNER_ADS_RIGHT].map((ad) => (
-            <a
-              key={`mobile-${ad.id}`}
-              href={ad.link}
-              target="_blank"
-              rel="noreferrer"
-              className="block"
-            >
-              <div className="relative overflow-hidden rounded-2xl bg-white/90 shadow-[0_20px_55px_-40px_rgba(15,23,42,0.6)]">
-                <div className="relative aspect-[2/1] w-full overflow-hidden">
-                  <Image
-                    src={ad.image}
-                    alt="Banner"
-                    fill
-                    sizes="(min-width: 640px) 520px, 90vw"
-                    className="object-cover"
-                  />
+        {bannerAds.length > 0 && (
+          <div className="mt-10 space-y-4 xl:hidden">
+            {bannerAds.map((ad) => (
+              <a
+                key={`mobile-${ad.id}`}
+                href={ad.link}
+                target="_blank"
+                rel="noreferrer"
+                className="block"
+              >
+                <div className="relative overflow-hidden rounded-2xl bg-white/90 shadow-[0_20px_55px_-40px_rgba(15,23,42,0.6)]">
+                  <div className="relative aspect-[2/1] w-full overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={ad.image} alt={ad.title} className="h-full w-full object-cover" />
+                  </div>
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/35 opacity-70" />
                 </div>
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/35 opacity-70" />
-              </div>
-            </a>
-          ))}
-        </div>
+              </a>
+            ))}
+          </div>
+        )}
 
           
       </div>
