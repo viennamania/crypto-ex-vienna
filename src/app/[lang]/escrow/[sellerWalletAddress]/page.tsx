@@ -4859,28 +4859,30 @@ const fetchBuyOrders = async () => {
             홈으로
           </button>
 
-          <button
-            type="button"
-            onClick={() => router.push(`/${params.lang}/p2p/buy`)}
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-2 text-sm font-semibold text-white shadow-[0_18px_45px_-25px_rgba(249,115,22,0.8)] transition hover:-translate-y-0.5 hover:shadow-[0_26px_60px_-32px_rgba(249,115,22,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden="true"
+          {!isOwnerSeller && (
+            <button
+              type="button"
+              onClick={() => router.push(`/${params.lang}/p2p/buy`)}
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-2 text-sm font-semibold text-white shadow-[0_18px_45px_-25px_rgba(249,115,22,0.8)] transition hover:-translate-y-0.5 hover:shadow-[0_26px_60px_-32px_rgba(249,115,22,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60"
             >
-              <path
-                d="M5 12h14M13 6l6 6-6 6"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            다른 판매자 보러가기
-          </button>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M5 12h14M13 6l6 6-6 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              다른 판매자 보러가기
+            </button>
+          )}
         </div>
 
         <div className="w-full flex flex-col items-center justify-center gap-3 mb-6
@@ -4913,28 +4915,61 @@ const fetchBuyOrders = async () => {
             */}
 
             <div className="w-full flex flex-col gap-4">
-              <div className="w-full flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="w-full flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto sm:justify-start">
                   <span
-                    className={`rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700
-                    ${address && activeSeller?.walletAddress === address ? '' : 'invisible'}`}
+                    className={`inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 shadow-sm
+                    ${isOwnerSeller ? '' : 'invisible'}`}
                   >
-                    마이페이지
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path
+                        d="M20 6L9 17l-5-5"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    내 판매자 페이지
                   </span>
-                  {address && activeSeller?.walletAddress === address && (
+                  {isOwnerSeller && (
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm hover:bg-white"
+                      className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-orange-200 bg-orange-50/80 px-3 py-2 text-xs font-semibold text-orange-600 shadow-[0_10px_24px_-18px_rgba(249,115,22,0.6)] transition hover:bg-orange-100/80 sm:w-auto sm:px-4 sm:text-sm"
                       onClick={() => router.push(`/${params.lang}/administration/seller-settings`)}
                     >
-                      설정하기
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-orange-300/70 bg-white text-orange-600 shadow-[0_6px_14px_-10px_rgba(249,115,22,0.7)]">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M10.5 2h3l.5 2.2a7.6 7.6 0 0 1 1.7.7l2-1.2 2.1 2.1-1.2 2a7.6 7.6 0 0 1 .7 1.7L22 10.5v3l-2.2.5a7.6 7.6 0 0 1-.7 1.7l1.2 2-2.1 2.1-2-1.2a7.6 7.6 0 0 1-1.7.7L13.5 22h-3l-.5-2.2a7.6 7.6 0 0 1-1.7-.7l-2 1.2-2.1-2.1 1.2-2a7.6 7.6 0 0 1-.7-1.7L2 13.5v-3l2.2-.5a7.6 7.6 0 0 1 .7-1.7l-1.2-2 2.1-2.1 2 1.2a7.6 7.6 0 0 1 1.7-.7L10.5 2z"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="3"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                          />
+                        </svg>
+                      </span>
+                      내 판매자 설정하기
                     </button>
                   )}
                 </div>
                 {shareLabel && (
                   <button
                     type="button"
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm hover:bg-white"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:bg-white sm:w-auto sm:py-1"
                     onClick={() => {
                       navigator.clipboard.writeText(window.location.href);
                       toast.success("링크가 복사되었습니다.");
@@ -4965,6 +5000,27 @@ const fetchBuyOrders = async () => {
                   </button>
                 )}
               </div>
+              {isOwnerSeller && (
+                <div className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50 px-3 py-2 text-center text-xs font-semibold text-emerald-700 sm:justify-start sm:text-left">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M12 8v4l3 2"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    />
+                  </svg>
+                  내가 관리하는 판매자 페이지입니다
+                </div>
+              )}
 
               <div className="w-full flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
@@ -4985,11 +5041,6 @@ const fetchBuyOrders = async () => {
                       <span className="text-lg font-semibold text-slate-900">
                         {activeSeller?.nickname || '판매자'}
                       </span>
-                      {sellerWalletAddress === address && (
-                        <span className="inline-flex items-center rounded-full border border-amber-300/60 bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-                          나의 판매계정
-                        </span>
-                      )}
                       {activeSeller && (
                         <span
                           className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
@@ -6181,7 +6232,6 @@ const fetchBuyOrders = async () => {
           </div>
 
           {/* 판매자 대화목록 섹션 */}
-          {/*
           {!isOwnerSeller && (
             <SellerChatList
               ownerWalletAddress={ownerWalletAddress}
@@ -6195,18 +6245,6 @@ const fetchBuyOrders = async () => {
               }}
             />
           )}
-          */}
-          <SellerChatList
-            ownerWalletAddress={ownerWalletAddress}
-            items={sellerChatItems}
-            loading={sellerChatLoading}
-            errorMessage={sellerChatError}
-            selectedChannelUrl={selectedChatChannelUrl}
-            onSelectChannel={(channelUrl) => {
-              setSelectedChatChannelUrl(channelUrl);
-              setIsChatOpen(true);
-            }}
-          />
           <div className="w-full flex flex-col items-start justify-center gap-2
           border-t border-b border-slate-200
           py-4
@@ -10208,13 +10246,15 @@ const fetchBuyOrders = async () => {
           }
         `}</style>
 
-        <SendbirdChatEmbed
-            buyerWalletAddress={address}
-            sellerWalletAddress={ownerWalletAddress}
-            selectedChannelUrl={selectedChatChannelUrl || undefined}
-            isOpen={isChatOpen}
-            onOpenChange={setIsChatOpen}
-        />
+        {!isOwnerSeller && (
+          <SendbirdChatEmbed
+              buyerWalletAddress={address}
+              sellerWalletAddress={ownerWalletAddress}
+              selectedChannelUrl={selectedChatChannelUrl || undefined}
+              isOpen={isChatOpen}
+              onOpenChange={setIsChatOpen}
+          />
+        )}
 
     </main>
 

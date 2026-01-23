@@ -38,7 +38,6 @@ import Image from "next/image";
 // import components
 import StabilityConsole from '@/components/StabilityConsole';
 import SellerSendbirdWidgetGlobal from '@/components/SellerSendbirdWidgetGlobal';
-import MySellerWidgetGlobal from '@/components/MySellerWidgetGlobal';
 import { ClientSettingsProvider } from '@/components/ClientSettingsProvider';
 
 
@@ -384,7 +383,6 @@ export default function RootLayout({
                 {children}
               </QueryClientProvider>
               <SellerSendbirdWidgetGlobal />
-              <MySellerWidgetGlobal />
             </div>
 
             <Analytics />

@@ -305,7 +305,20 @@ export default function OrangeXPage() {
     const walletAddress = activeAccount?.address ?? '';
     const { smartAccountEnabled } = useClientWallets();
     const hasWallet = Boolean(walletAddress);
-    const sellerPageHref = hasWallet ? `/${lang}/administration/seller-settings` : '';
+    const [sellerEscrowWalletAddress, setSellerEscrowWalletAddress] = useState<string | null>(null);
+    const [sellerEscrowLoading, setSellerEscrowLoading] = useState(false);
+    const sellerPageHref =
+        hasWallet && sellerEscrowWalletAddress
+            ? `/${lang}/escrow/${sellerEscrowWalletAddress}`
+            : '';
+    const canStartSeller = Boolean(hasWallet && sellerEscrowWalletAddress);
+    const sellerCtaLabel = !hasWallet
+        ? '로그인 후 판매 시작'
+        : sellerEscrowLoading
+        ? '판매자 정보 확인 중'
+        : sellerEscrowWalletAddress
+        ? '보호된 판매 시작'
+        : '판매자 설정 필요';
     const isSupportEligible = Boolean(walletAddress);
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
     const [animatedStats, setAnimatedStats] = useState(() => STAT_ITEMS.map(() => 0));
@@ -370,6 +383,64 @@ export default function OrangeXPage() {
             setSupportError(null);
         }
     }, [walletAddress, supportUserId]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        if (!walletAddress) {
+            setSellerEscrowWalletAddress(null);
+            setSellerEscrowLoading(false);
+            return () => {
+                isMounted = false;
+            };
+        }
+
+        const fetchSellerEscrowWallet = async () => {
+            setSellerEscrowWalletAddress(null);
+            setSellerEscrowLoading(true);
+            try {
+                const response = await fetch('/api/user/getUserByWalletAddress', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        storecode: 'admin',
+                        walletAddress,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch seller info');
+                }
+
+                const data = (await response.json()) as {
+                    result?: { seller?: { escrowWalletAddress?: string }; escrowWalletAddress?: string };
+                };
+
+                const nextEscrowWallet =
+                    data?.result?.seller?.escrowWalletAddress ||
+                    data?.result?.escrowWalletAddress ||
+                    null;
+
+                if (isMounted) {
+                    setSellerEscrowWalletAddress(nextEscrowWallet);
+                }
+            } catch {
+                if (isMounted) {
+                    setSellerEscrowWalletAddress(null);
+                }
+            } finally {
+                if (isMounted) {
+                    setSellerEscrowLoading(false);
+                }
+            }
+        };
+
+        fetchSellerEscrowWallet();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [walletAddress]);
 
     useEffect(() => {
         let isMounted = true;
@@ -1154,17 +1225,17 @@ export default function OrangeXPage() {
                                     priority
                                 />
                             </div>
-                            <div className="flex flex-wrap items-center gap-3">
-                                <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/90 shadow-[0_10px_25px_-15px_rgba(15,23,42,0.6)] md:h-14 md:w-14">
+                            <div className="flex flex-wrap items-center gap-2 md:flex-nowrap">
+                                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-[0_10px_25px_-15px_rgba(15,23,42,0.6)] md:h-10 md:w-10">
                                     <Image
                                         src="/logo-tether.png"
                                         alt="Tether"
                                         width={40}
                                         height={40}
-                                        className="h-8 w-8 object-contain md:h-10 md:w-10"
+                                        className="h-6 w-6 object-contain md:h-7 md:w-7"
                                     />
                                 </span>
-                                <h1 className="font-[var(--font-display)] text-3xl leading-tight text-[color:var(--ink)] sm:text-4xl md:text-6xl">
+                                <h1 className="font-[var(--font-display)] text-2xl leading-tight text-[color:var(--ink)] whitespace-nowrap sm:text-4xl md:text-5xl">
                                     안전한 테더 구매·판매
                                 </h1>
                             </div>
@@ -1184,7 +1255,7 @@ export default function OrangeXPage() {
                                     </svg>
                                     안전 구매 진행
                                 </Link>
-                                {hasWallet ? (
+                                {canStartSeller ? (
                                     <Link
                                         href={sellerPageHref}
                                         className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-slate-300/80 bg-white/80 px-8 py-4 text-base font-semibold text-slate-900 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)] transition hover:bg-white sm:w-auto"
@@ -1198,7 +1269,7 @@ export default function OrangeXPage() {
                                 ) : (
                                     <div className="flex w-full items-center justify-center sm:w-auto">
                                         <span className="inline-flex items-center rounded-full border border-slate-200/80 bg-white/70 px-6 py-3 text-xs font-semibold text-slate-500">
-                                            로그인 후 판매 시작
+                                            {sellerCtaLabel}
                                         </span>
                                     </div>
                                 )}
@@ -1443,9 +1514,9 @@ export default function OrangeXPage() {
                     data-reveal
                     className="glam-card rounded-[28px] border border-slate-200/70 bg-white/80 p-6 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur overflow-x-hidden"
                 >
-                    <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                    <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
                                 {/* partner icon */}
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="inline-block">
                                     <path d="M12 2a5 5 0 0 1 5 5v3a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1453,11 +1524,11 @@ export default function OrangeXPage() {
                                     <path d="M8 14h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
 
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1">
                                     <h2 className="font-[var(--font-display)] text-2xl text-slate-900">제휴 배너</h2>
                                     <a
                                         href="mailto:support@orangex.center"
-                                        className="group inline-flex items-center gap-2 rounded-full border border-rose-200/70 bg-[linear-gradient(120deg,rgba(255,255,255,0.95),rgba(254,242,242,0.95))] px-3 py-1 text-sm font-semibold text-rose-600 shadow-[0_14px_32px_-20px_rgba(244,63,94,0.65)] ring-1 ring-rose-200/60 transition hover:-translate-y-0.5 hover:text-rose-700 hover:shadow-[0_20px_45px_-20px_rgba(244,63,94,0.75)]"
+                                        className="group inline-flex w-full flex-wrap items-center gap-2 rounded-full border border-rose-200/70 bg-[linear-gradient(120deg,rgba(255,255,255,0.95),rgba(254,242,242,0.95))] px-3 py-2 text-xs font-semibold text-rose-600 shadow-[0_14px_32px_-20px_rgba(244,63,94,0.65)] ring-1 ring-rose-200/60 transition hover:-translate-y-0.5 hover:text-rose-700 hover:shadow-[0_20px_45px_-20px_rgba(244,63,94,0.75)] sm:w-auto sm:flex-nowrap sm:py-1 sm:text-sm"
                                         aria-label="제휴 신청 이메일 보내기"
                                     >
                                         <span className="flex h-7 w-7 items-center justify-center rounded-full border border-rose-200/70 bg-rose-100 text-rose-600">
@@ -1479,14 +1550,14 @@ export default function OrangeXPage() {
                                             </svg>
                                         </span>
                                         <span className="tracking-tight">제휴 신청을 받습니다</span>
-                                        <span className="rounded-full border border-rose-200/70 bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-rose-600 shadow-sm transition group-hover:border-rose-300 group-hover:text-rose-700">
+                                        <span className="break-all rounded-full border border-rose-200/70 bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-rose-600 shadow-sm transition group-hover:border-rose-300 group-hover:text-rose-700 sm:text-[11px]">
                                             support@orangex.center
                                         </span>
                                     </a>
                                 </div>
                             </div>
 
-                            <p className="mt-1 text-sm text-slate-600 leading-relaxed">좌우로 스와이프하여 확인하세요</p>
+                            <p className="mt-1 text-xs text-slate-600 leading-relaxed sm:text-sm">좌우로 스와이프하여 확인하세요</p>
                         </div>
                         <span className="text-xs font-semibold text-slate-500">USDT 파트너</span>
                     </div>
@@ -2166,7 +2237,7 @@ export default function OrangeXPage() {
                             </li>
                         </ol>
 
-                        {hasWallet ? (
+                        {canStartSeller ? (
                             <Link 
                                 href={sellerPageHref}
                                 className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-[color:var(--accent)] px-6 py-4 text-base font-semibold text-white shadow-[0_18px_40px_-20px_rgba(249,115,22,0.8)] transition hover:brightness-110"
@@ -2175,7 +2246,7 @@ export default function OrangeXPage() {
                             </Link>
                         ) : (
                             <p className="mt-8 text-center text-xs font-semibold text-slate-500">
-                                로그인 후 판매 시작
+                                {sellerCtaLabel}
                             </p>
                         )}
                     </div>
