@@ -4447,39 +4447,44 @@ const fetchBuyOrders = async () => {
 
         <div className="w-full flex flex-col gap-4 lg:flex-row lg:items-stretch mb-4">
           <div className="w-full lg:flex-[1.1]">
-            <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-3
-            rounded-2xl border border-orange-400/40 bg-gradient-to-r from-orange-600 to-amber-500 p-3 text-white shadow-[0_24px_60px_-40px_rgba(249,115,22,0.55)] backdrop-blur">
+            <div className="relative w-full flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3
+            rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.25)] backdrop-blur overflow-hidden">
+              <div className="pointer-events-none absolute -left-20 -top-20 h-40 w-40 rounded-full bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.2),transparent_70%)]" />
+              <div className="pointer-events-none absolute right-0 top-0 h-20 w-48 bg-[linear-gradient(120deg,rgba(249,115,22,0.15),transparent)]" />
                 
-              <div className="w-full flex flex-row items-center justify-start gap-2">
+              <div className="relative w-full flex flex-row items-center justify-start gap-3">
                 <button
                   onClick={() => router.push('/' + params.lang + '/p2p')}
-                  className="group inline-flex items-center justify-center gap-2 rounded-full border border-slate-200/70
-                  bg-white/90 px-3 py-2 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
-
+                  className="group inline-flex items-center justify-center gap-3 rounded-full border border-orange-200/70
+                  bg-orange-50/80 px-4 py-2 shadow-sm transition hover:-translate-y-0.5 hover:bg-orange-100/80 hover:shadow-md"
                 >
                   <Image
                     src="/logo-orangex.png"
                     alt="logo"
                     width={100}
                     height={100}
-                    className="w-24 h-8 object-contain"
+                    className="h-6 w-auto object-contain"
                   />
+                  <span className="text-sm font-semibold text-orange-700">OrangeX</span>
                 </button>
+                <div className="hidden sm:flex flex-col">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500">P2P BUY</span>
+                  <span className="text-base font-semibold text-slate-900">구매 센터</span>
+                </div>
               </div>
 
 
               {address && !loadingUser && (
 
 
-                <div className="w-full flex flex-wrap items-center justify-end gap-2">
+                <div className="relative w-full flex flex-wrap items-center justify-end gap-2">
               
               <button
                 onClick={() => {
                   router.push('/' + params.lang + '/administration/profile-settings');
                 }}
-                className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900
-                px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_-26px_rgba(15,23,42,0.6)]
-                transition hover:from-slate-800 hover:to-slate-700"
+                className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
+                px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
               >
                 <div className="flex flex-row items-center justify-center gap-2">
                   {isAdmin && (
@@ -4489,7 +4494,7 @@ const fetchBuyOrders = async () => {
                         alt="Admin"
                         width={20}
                         height={20}
-                        className="rounded-lg w-5 h-5"
+                        className="rounded-lg w-4 h-4 opacity-70 grayscale"
                       />
                       <span className="text-[11px] font-semibold text-amber-200">
                         센터 관리자
@@ -4509,8 +4514,8 @@ const fetchBuyOrders = async () => {
                   onClick={() => {
                     router.push('/' + params.lang + '/administration/buyer-settings');
                   }}
-                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90
-                  px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
+                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
+                  px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
                 >
                   <div className="flex flex-row items-center justify-center gap-2">
                     <Image
@@ -4518,7 +4523,7 @@ const fetchBuyOrders = async () => {
                       alt="Buyer"
                       width={20}
                       height={20}
-                      className="rounded-lg w-5 h-5"
+                      className="rounded-lg w-4 h-4 opacity-70 grayscale"
                     />
                     <span className="text-sm text-slate-700">
                       구매자 설정
@@ -4533,8 +4538,8 @@ const fetchBuyOrders = async () => {
                   onClick={() => {
                     router.push('/' + params.lang + '/administration/seller-settings');
                   }}
-                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90
-                  px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
+                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
+                  px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
                 >
                   <div className="flex flex-row items-center justify-center gap-2">
                     <Image
@@ -4542,7 +4547,7 @@ const fetchBuyOrders = async () => {
                       alt="Seller"
                       width={20}
                       height={20}
-                      className="rounded-lg w-5 h-5"
+                      className="rounded-lg w-4 h-4 opacity-70 grayscale"
                     />
                     <span className="text-sm text-slate-700">
                       판매자 설정
@@ -4558,8 +4563,8 @@ const fetchBuyOrders = async () => {
                   onClick={() => {
                     window.open('https://orangex.center/' + params.lang + '/administration/buyorder', '_blank');
                   }}
-                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90
-                  px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
+                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
+                  px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
                 >
                   <div className="flex flex-row items-center justify-center gap-2">
                     <Image
@@ -4567,7 +4572,7 @@ const fetchBuyOrders = async () => {
                       alt="Dashboard"
                       width={20}
                       height={20}
-                      className="rounded-lg w-5 h-5"
+                      className="rounded-lg w-4 h-4 opacity-70 grayscale"
                     />
                     <span className="text-sm text-slate-700">
                       관리자 대시보드
@@ -4635,54 +4640,68 @@ const fetchBuyOrders = async () => {
           <section className="w-full lg:flex-[0.9] rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.25)] backdrop-blur">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Image
-                  src="/icon-today.png"
-                  alt="Today"
-                  width={28}
-                  height={28}
-                  className="h-7 w-7 rounded-lg object-cover"
-                />
-                <h3 className="text-base font-semibold text-slate-800">오늘의 거래</h3>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-orange-200/70 bg-orange-50 text-orange-600">
+                  <Image
+                    src="/icon-today.png"
+                    alt="Today"
+                    width={20}
+                    height={20}
+                    className="h-5 w-5 object-cover"
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-slate-500">Today</span>
+                  <h3 className="text-base font-semibold text-slate-900">오늘의 거래</h3>
+                </div>
               </div>
-              <span className="text-xs font-semibold text-slate-500">실시간</span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200/70 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                실시간
+              </span>
             </div>
 
             <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-slate-50 px-3 py-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                  <span className="h-2 w-2 rounded-full bg-slate-500" />
-                  거래수
-                </div>
-                <span className="text-lg font-semibold text-slate-900 tabular-nums">
-                  {animatedTotalCount}
-                </span>
-              </div>
-              <div className="flex items-center justify-between rounded-xl border border-emerald-200/70 bg-emerald-50/70 px-3 py-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  거래량(USDT)
-                </div>
-                <div className="flex items-center gap-1">
-                  <Image
-                    src="/icon-tether.png"
-                    alt="Tether"
-                    width={16}
-                    height={16}
-                    className="h-4 w-4"
-                  />
-                  <span className="text-lg font-semibold text-emerald-700 tabular-nums" style={{ fontFamily: 'monospace' }}>
-                    {animatedTotalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-slate-50/80 px-3 py-2">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-semibold text-slate-500">거래수</span>
+                  <span className="text-lg font-semibold text-slate-900 tabular-nums">
+                    {animatedTotalCount}
                   </span>
                 </div>
-              </div>
-              <div className="flex items-center justify-between rounded-xl border border-amber-200/70 bg-amber-50/70 px-3 py-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-amber-700">
-                  <span className="h-2 w-2 rounded-full bg-amber-500" />
-                  거래금액(원)
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                  <span className="h-2 w-2 rounded-full bg-slate-500" />
                 </div>
-                <span className="text-lg font-semibold text-amber-700 tabular-nums" style={{ fontFamily: 'monospace' }}>
-                  {animatedTotalKrwAmount.toLocaleString()}
-                </span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-emerald-200/70 bg-emerald-50/80 px-3 py-2">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-semibold text-emerald-700">거래량(USDT)</span>
+                  <div className="flex items-center gap-1">
+                    <Image
+                      src="/icon-tether.png"
+                      alt="Tether"
+                      width={16}
+                      height={16}
+                      className="h-4 w-4"
+                    />
+                    <span className="text-lg font-semibold text-emerald-700 tabular-nums" style={{ fontFamily: 'monospace' }}>
+                      {animatedTotalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                </div>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-amber-200/70 bg-amber-50/80 px-3 py-2">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-semibold text-amber-700">거래금액(원)</span>
+                  <span className="text-lg font-semibold text-amber-700 tabular-nums" style={{ fontFamily: 'monospace' }}>
+                    {animatedTotalKrwAmount.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                </div>
               </div>
             </div>
 
@@ -5161,7 +5180,7 @@ const fetchBuyOrders = async () => {
 
 
             {sellersBalance.length > 0 && (
-              <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+              <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-start gap-4 mt-4">
 
                 {sellersBalance.map((seller, index) => (
                   <div key={index}
@@ -5177,7 +5196,7 @@ const fetchBuyOrders = async () => {
                     */
 
                     // seller.buyOrder.status = 'ordered' or 'paymentRequested' - red border and pulse animation
-                    className={`relative w-full flex flex-col xl:flex-row xl:flex-wrap items-start justify-start gap-5
+                    className={`relative w-full self-start flex flex-col xl:flex-row xl:flex-wrap items-start justify-start gap-5
                     bg-white
                     p-5 rounded-2xl shadow-[0_18px_45px_-36px_rgba(15,23,42,0.25)]
                     border border-slate-200/80 text-slate-800
@@ -5535,9 +5554,9 @@ const fetchBuyOrders = async () => {
                       */
 
                       // 배경색은 금융 무게감 있는 어두운 색상
-                      className={`mt-8
+                      className={`mt-4
                       w-full
-                      flex flex-col items-start justify-center gap-3
+                      flex flex-col items-start justify-start gap-3
                       bg-white p-5 rounded-2xl border border-slate-200/80 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.2)]
                       `}
 
@@ -5701,10 +5720,10 @@ const fetchBuyOrders = async () => {
                       )}
                       */}
                       
-                      <div className="w-full flex flex-col items-start justify-center gap-2">
+                      <div className="w-full flex flex-col items-start justify-start gap-2">
 
               
-                        <div className="w-full flex flex-col items-start justify-center gap-2">
+                        <div className="w-full flex flex-col items-start justify-start gap-2">
 
                           {/*}
                           <div className="absolute top-2 right-2">
@@ -6115,9 +6134,9 @@ const fetchBuyOrders = async () => {
                     {/* seller.buyOrder.krwAmount => 구매금액 */}
                     {/* seller.buyOrder.rate => 단가 */}
                     <div className="
-                      mt-10
+                      mt-6
                       w-full
-                      flex flex-col items-start justify-center gap-2">
+                      flex flex-col items-start justify-start gap-2">
 
                       {seller.seller?.buyOrder?.status === 'paymentRequested' ? (
                         <div className="w-full flex flex-col items-start justify-center gap-2">
