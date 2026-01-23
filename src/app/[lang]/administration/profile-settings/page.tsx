@@ -369,6 +369,8 @@ export default function SettingsPage({ params }: any) {
     const [nickname, setNickname] = useState("");
     const [avatar, setAvatar] = useState("/profile-default.png");
     const [userCode, setUserCode] = useState("");
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [adminChecked, setAdminChecked] = useState(false);
 
 
     const [nicknameEdit, setNicknameEdit] = useState(false);
@@ -411,6 +413,8 @@ export default function SettingsPage({ params }: any) {
                 setUserCode(data.result.id);
 
                 setSeller(data.result.seller);
+                setIsAdmin(data.result?.role === "admin");
+                setAdminChecked(true);
 
                 setEscrowWalletAddress(data.result.escrowWalletAddress);
             } else {
@@ -418,6 +422,8 @@ export default function SettingsPage({ params }: any) {
                 setAvatar('/profile-default.png');
                 setUserCode('');
                 setSeller(null);
+                setIsAdmin(false);
+                setAdminChecked(true);
                 setEditedNickname('');
                 setAccountHolder('');
                 setAccountNumber('');
@@ -702,6 +708,28 @@ export default function SettingsPage({ params }: any) {
 
                     </div>
 
+                    {adminChecked && (
+                        <div
+                            className={`w-full rounded-2xl border px-4 py-3 text-sm font-semibold shadow-sm ${
+                                isAdmin
+                                    ? 'border-emerald-200/80 bg-emerald-50/80 text-emerald-700'
+                                    : 'border-amber-200/80 bg-amber-50/80 text-amber-700'
+                            }`}
+                        >
+                            <div className="flex items-center justify-between gap-3">
+                                <span>관리자 권한</span>
+                                <span className="rounded-full border border-current/30 px-3 py-1 text-xs font-semibold">
+                                    {isAdmin ? '권한 있음' : '권한 없음'}
+                                </span>
+                            </div>
+                            {!isAdmin && (
+                                <p className="mt-2 text-xs font-medium text-amber-700/90">
+                                    관리자 권한이 없습니다. 관리자 등록을 위해 센터에 문의해주세요.
+                                </p>
+                            )}
+                        </div>
+                    )}
+
 
                     {/* 회원코드(id) */}
                     {userCode && (
@@ -861,84 +889,6 @@ export default function SettingsPage({ params }: any) {
                             </div>
                         )}
 
-                        {/* 판매자 설정 버튼 */}
-                        {userCode && (
-
-                            <div className='flex flex-col gap-4'>    
-
-                                {/* 구매자 설정 */}
-                                {/* /admin/p2p/buyer-settings */}
-                                <div className='flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm w-full'>
-                                    <div className="flex flex-row items-center gap-2">
-                                        {/* dot */}
-                                        <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                        <span className="text-sm font-semibold text-slate-600">
-                                            구매자 설정
-                                        </span>
-                                    </div>
-
-                                    {/* /admin/p2p/buyer-settings */}
-                                    <button
-                                        onClick={() => {
-                                            router.push(`/${params.lang}/p2p/buyer-settings`);
-                                        }}
-                                        className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-                                    >
-                                        구매자 설정 보기
-                                    </button>
-
-                                </div>
-
-
-                                
-                                {/* 판매자 설정 */}
-                                <div className='flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm w-full'>
-                                    <div className="flex flex-row items-center gap-2">
-                                        {/* dot */}
-                                        <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                        <span className="text-sm font-semibold text-slate-600">
-                                            {Seller} 설정
-                                        </span>
-                                    </div>
-
-                                    {seller ? (
-                                        <div className="w-full flex flex-row items-center justify-between">                                    
-                                            <div className="text-emerald-700 font-semibold
-                                            bg-emerald-50 border border-emerald-200/80 px-3 py-1.5 rounded-full text-xs">
-                                                {Seller} 승인 완료
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    router.push(`/${params.lang}/p2p/seller-settings`);
-                                                }}
-                                                className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-                                            >
-                                                {Seller} 설정 보기
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="w-full flex flex-row items-center justify-between">                                    
-                                            <div className="text-rose-700 font-semibold
-                                            bg-rose-50 border border-rose-200/80 px-3 py-1.5 rounded-full text-xs">
-                                                {Not_a_seller}
-                                            </div>
-
-                                            <button
-                                                onClick={() => {
-                                                    router.push(`/${params.lang}/p2p/seller-settings`);
-                                                }}
-                                                className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-                                            >
-                                                판매자 신청하기
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-
-                            </div>
-
-                        )}
-
 
                     </div>
 
@@ -946,48 +896,6 @@ export default function SettingsPage({ params }: any) {
                 </div>
 
 
-            </div>
-
-            <div className="fixed left-0 right-0 bottom-4 z-30 px-4 pb-[env(safe-area-inset-bottom)]">
-                <div className="mx-auto w-full max-w-screen-sm">
-                    <div className="w-full rounded-2xl border border-slate-200/80 bg-white/90 p-2 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.25)] backdrop-blur">
-                        <div className="grid w-full grid-cols-2 gap-2">
-                            <button
-                                type="button"
-                                onClick={() => router.push('/' + params.lang + '/administration/profile-settings')}
-                                className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-slate-900/80 bg-slate-900 px-3 py-2 text-white shadow-[0_16px_40px_-28px_rgba(15,23,42,0.6)] transition hover:-translate-y-0.5 hover:bg-slate-800"
-                            >
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white">
-                                    <Image
-                                        src="/icon-user.png"
-                                        alt="Profile Settings"
-                                        width={20}
-                                        height={20}
-                                        className="h-5 w-5"
-                                    />
-                                </div>
-                                <span className="text-[11px] font-semibold">프로필 설정</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => router.push('/' + params.lang + '/p2p/seller-settings')}
-                                className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white/90 px-3 py-2 text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-md"
-                            >
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                                    <Image
-                                        src="/icon-seller.png"
-                                        alt="Seller Settings"
-                                        width={20}
-                                        height={20}
-                                        className="h-5 w-5"
-                                    />
-                                </div>
-                                <span className="text-[11px] font-semibold">판매자 설정</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
             </div>
 
         </main>
