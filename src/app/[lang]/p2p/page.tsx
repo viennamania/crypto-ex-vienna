@@ -325,6 +325,7 @@ export default function OrangeXPage() {
         hasWallet && sellerEscrowWalletAddress
             ? `/${lang}/escrow/${sellerEscrowWalletAddress}`
             : '';
+    const sellerSetupHref = `/${lang}/p2p/seller-settings`;
     const canStartSeller = Boolean(hasWallet && sellerEscrowWalletAddress);
     const sellerCtaLabel = !hasWallet
         ? '로그인 후 판매 시작'
@@ -332,7 +333,11 @@ export default function OrangeXPage() {
         ? '판매자 정보 확인 중'
         : sellerEscrowWalletAddress
         ? '보호된 판매 시작하기'
-        : '판매자 설정 필요';
+        : '판매자 설정하기';
+    const needsSellerSetup = Boolean(hasWallet && !sellerEscrowLoading && !sellerEscrowWalletAddress);
+    const sellerCtaTone = !hasWallet
+        ? 'border-orange-200/90 bg-[linear-gradient(135deg,rgba(255,247,237,0.98),rgba(255,237,213,0.98))] text-orange-800 ring-1 ring-orange-200/70 shadow-[0_18px_40px_-24px_rgba(249,115,22,0.65)]'
+        : 'border-slate-200/80 bg-white/80 text-slate-600 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.2)]';
     const isSupportEligible = Boolean(walletAddress);
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
     const [animatedStats, setAnimatedStats] = useState(() => STAT_ITEMS.map(() => 0));
@@ -1430,9 +1435,23 @@ export default function OrangeXPage() {
                                     </Link>
                                 ) : (
                                     <div className="flex w-full items-center justify-center sm:w-auto">
-                                        <span className="inline-flex items-center rounded-full border border-slate-200/80 bg-white/70 px-6 py-3 text-xs font-semibold text-slate-500">
-                                            {sellerCtaLabel}
-                                        </span>
+                                        {needsSellerSetup ? (
+                                            <Link
+                                                href={sellerSetupHref}
+                                                className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[color:var(--accent)] px-8 py-4 text-base font-semibold text-white shadow-[0_18px_45px_-22px_rgba(249,115,22,0.9)] transition hover:brightness-110 sm:w-auto sm:min-w-[240px]"
+                                            >
+                                                판매자 설정하기
+                                            </Link>
+                                        ) : (
+                                            <span
+                                                className={`relative inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border px-8 py-4 text-base font-semibold tracking-tight sm:w-auto sm:min-w-[240px] ${sellerCtaTone}`}
+                                            >
+                                                {!hasWallet && (
+                                                    <span className="pointer-events-none absolute -right-6 -top-4 h-10 w-10 rounded-full bg-orange-300/40 blur-2xl" />
+                                                )}
+                                                <span className="relative">{sellerCtaLabel}</span>
+                                            </span>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -2706,9 +2725,25 @@ export default function OrangeXPage() {
                                 보호된 판매 시작하기 →
                             </Link>
                         ) : (
-                            <p className="mt-8 text-center text-xs font-semibold text-slate-500">
-                                {sellerCtaLabel}
-                            </p>
+                            <div className="mt-8 flex items-center justify-center">
+                                {needsSellerSetup ? (
+                                    <Link
+                                        href={sellerSetupHref}
+                                        className="inline-flex w-full items-center justify-center whitespace-nowrap rounded-full bg-[color:var(--accent)] px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_40px_-24px_rgba(249,115,22,0.9)] transition hover:brightness-110 sm:w-auto"
+                                    >
+                                        판매자 설정하기
+                                    </Link>
+                                ) : (
+                                    <span
+                                        className={`relative inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border px-6 py-3 text-sm font-semibold tracking-tight sm:w-auto ${sellerCtaTone}`}
+                                    >
+                                        {!hasWallet && (
+                                            <span className="pointer-events-none absolute -right-5 -top-3 h-8 w-8 rounded-full bg-orange-300/40 blur-2xl" />
+                                        )}
+                                        <span className="relative">{sellerCtaLabel}</span>
+                                    </span>
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>
