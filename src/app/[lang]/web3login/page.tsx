@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { AutoConnect, ConnectButton, useActiveAccount } from 'thirdweb/react';
+import { AutoConnect, ConnectButton, useActiveAccount, useActiveWallet } from 'thirdweb/react';
 import { ethereum, polygon, arbitrum, bsc } from 'thirdweb/chains';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -33,6 +33,7 @@ export default function Web3LoginPage() {
     authOptions: walletAuthOptions,
   });
   const activeAccount = useActiveAccount();
+  const activeWallet = useActiveWallet();
   const address = activeAccount?.address;
   const activeChain = resolveChain(chain as NetworkKey);
   const searchParams = useSearchParams();
@@ -331,6 +332,30 @@ export default function Web3LoginPage() {
                   }}
                   locale="ko_KR"
                 />
+
+                {address && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!activeWallet) {
+                        return;
+                      }
+                      if (!confirm('지갑 연결을 해제하시겠습니까?')) {
+                        return;
+                      }
+                      try {
+                        await activeWallet.disconnect();
+                        toast.success('로그아웃 되었습니다');
+                      } catch (error) {
+                        console.error('Disconnect wallet failed', error);
+                        toast.error('지갑 연결 해제에 실패했습니다.');
+                      }
+                    }}
+                    className="w-full rounded-2xl border border-rose-200/80 bg-white px-4 py-3 text-base font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
+                  >
+                    지갑 연결 해제
+                  </button>
+                )}
 
                 <div className="flex flex-wrap gap-2">
                   {['비수탁', '서명 확인', '보안 로그', '실시간 모니터링'].map((item) => (
