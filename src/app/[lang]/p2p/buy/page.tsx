@@ -561,6 +561,21 @@ export default function Index({ params }: any) {
   const activeAccount = useActiveAccount();
 
   const address = activeAccount?.address;
+  const shortAddress = address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : '';
+  const [walletCopied, setWalletCopied] = useState(false);
+
+  const handleCopyWallet = async () => {
+    if (!address) return;
+    try {
+      await navigator.clipboard.writeText(address);
+      toast.success(Copied_Wallet_Address || '지갑주소가 복사되었습니다.');
+      setWalletCopied(true);
+      window.setTimeout(() => setWalletCopied(false), 1500);
+    } catch (error) {
+      console.error('Failed to copy wallet address', error);
+      toast.error('복사에 실패했습니다.');
+    }
+  };
 
 
 
@@ -4507,31 +4522,42 @@ const fetchBuyOrders = async () => {
                 <div className="relative w-full flex flex-wrap items-center justify-end gap-2">
               
               {user?.nickname && (
-                <button
-                  onClick={() => {
-                    router.push('/' + params.lang + '/p2p/profile-settings');
-                  }}
-                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
-                  px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
-                >
-                  <div className="flex flex-row items-center justify-center gap-2">
-                    {isAdmin && (
-                      <div className="flex flex-row items-center justify-center gap-2">
-                        <Image
-                          src="/icon-admin.png"
-                          alt="Admin"
-                          width={20}
-                          height={20}
-                          className="rounded-lg w-4 h-4 opacity-70 grayscale"
-                        />
-                      </div>
-                    )}
-                    <span className="text-sm text-slate-700">
-                      {user?.nickname}
-                    </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      router.push('/' + params.lang + '/p2p/profile-settings');
+                    }}
+                    className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
+                    px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
+                  >
+                    <div className="flex flex-row items-center justify-center gap-2">
+                      {isAdmin && (
+                        <div className="flex flex-row items-center justify-center gap-2">
+                          <Image
+                            src="/icon-admin.png"
+                            alt="Admin"
+                            width={20}
+                            height={20}
+                            className="rounded-lg w-4 h-4 opacity-70 grayscale"
+                          />
+                        </div>
+                      )}
+                      <span className="text-sm text-slate-700">
+                        {user?.nickname}
+                      </span>
 
-                  </div>
-                </button>
+                    </div>
+                  </button>
+                  <span
+                    className={`inline-flex min-w-[160px] items-center justify-center rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm ${
+                      user?.buyer?.status === 'confirmed'
+                        ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                        : 'border-amber-200/80 bg-amber-50 text-amber-700'
+                    }`}
+                  >
+                    {user?.buyer?.status === 'confirmed' ? '구매가능상태' : '구매불가능상태'}
+                  </span>
+                </div>
               )}
 
               {/* 구매자 설정 */}
@@ -4647,9 +4673,37 @@ const fetchBuyOrders = async () => {
                   </div>
                   <div className="flex flex-col">
                     <p className="text-sm font-semibold text-slate-900">로그인된 지갑주소</p>
-                    <p className="text-xs text-slate-600 break-all">
-                      {address}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs font-semibold text-slate-700" title={address}>
+                        {shortAddress}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleCopyWallet}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-semibold shadow-sm transition ${
+                          walletCopied
+                            ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                            : 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        {walletCopied ? (
+                          <>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            복사됨
+                          </>
+                        ) : (
+                          <>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
+                              <rect x="4" y="4" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
+                            </svg>
+                            복사하기
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
