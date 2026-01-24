@@ -890,6 +890,7 @@ export default function Index({ params }: any) {
   }
 
 
+
   useEffect(() => {
     if (!address) {
       return;
@@ -903,6 +904,7 @@ export default function Index({ params }: any) {
     return () => clearInterval(interval);
     
   } , [address]);
+
 
 
 
@@ -1446,8 +1448,6 @@ export default function Index({ params }: any) {
 
             </div>
 
-
-            
             {version !== 'bangbang' && (
             <div className="hidden w-full flex-col items-start justify-start gap-2  bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
 
@@ -2398,6 +2398,14 @@ export default function Index({ params }: any) {
                     className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800"
                   >
                     회원관리
+                  </button>
+                  <button
+                    onClick={() => {
+                      router.push('/' + params.lang + '/administration/buyer-management');
+                    }}
+                    className="bg-white text-sm text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50"
+                  >
+                    구매자 관리
                   </button>
                 </div>
 

@@ -688,7 +688,7 @@ export default function SettingsPage({ params }: any) {
             body: JSON.stringify({
                 storecode: storecode,
                 walletAddress: address,
-                buyerStatus: 'confirmed',
+                buyerStatus: 'pending',
                 bankName: bankName,
                 accountNumber: accountNumber,
                 accountHolder: accountHolder,
