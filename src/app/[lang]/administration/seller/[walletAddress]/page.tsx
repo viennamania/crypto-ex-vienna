@@ -23,6 +23,8 @@ export default function SellerDetailPage() {
   const [loading, setLoading] = useState(true);
   const [decisionLoading, setDecisionLoading] = useState<'approve' | 'reject' | null>(null);
   const [bankDecisionLoading, setBankDecisionLoading] = useState<'approve' | 'reject' | null>(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [selectedSellerStatus, setSelectedSellerStatus] = useState<SellerStatusValue>('pending');
   const rejectionReasons = [
     '신분증 식별 불가',
     '정보 불일치',
@@ -101,6 +103,27 @@ export default function SellerDetailPage() {
     seller?.bankInfo?.status || (seller?.bankInfo?.accountNumber ? 'pending' : 'none');
   const normalizedSellerStatus: SellerStatusValue = sellerStatus === 'confirmed' ? 'confirmed' : 'pending';
 
+  const buildStatusHistory = (nextStatus: SellerStatusValue, reason: string) => {
+    const previousStatus = seller?.status || 'pending';
+    if (previousStatus === nextStatus) {
+      return seller?.statusHistory || [];
+    }
+    return [
+      ...(seller?.statusHistory || []),
+      {
+        from: previousStatus,
+        to: nextStatus,
+        changedAt: new Date().toISOString(),
+        changedBy: '관리자',
+        reason,
+      },
+    ];
+  };
+
+  useEffect(() => {
+    setSelectedSellerStatus(normalizedSellerStatus);
+  }, [normalizedSellerStatus]);
+
   const handleDecision = async (decision: 'approved' | 'rejected') => {
     if (!walletAddress || !seller) {
       return;
@@ -126,6 +149,7 @@ export default function SellerDetailPage() {
       const updatedSeller = {
         ...seller,
         status: nextSellerStatus,
+        statusHistory: buildStatusHistory(nextSellerStatus, '신분증 심사'),
         kyc: {
           ...(seller?.kyc || {}),
           status: decision,
@@ -184,6 +208,7 @@ export default function SellerDetailPage() {
       const updatedSeller = {
         ...seller,
         status: nextSellerStatus,
+        statusHistory: buildStatusHistory(nextSellerStatus, '계좌 심사'),
         bankInfo: {
           ...(seller?.bankInfo || {}),
           status: decision,
@@ -215,6 +240,42 @@ export default function SellerDetailPage() {
       toast.error('처리에 실패했습니다.');
     }
     setBankDecisionLoading(null);
+  };
+
+  const handleStatusUpdate = async () => {
+    if (!walletAddress || !seller) {
+      return;
+    }
+    setStatusUpdating(true);
+    try {
+      const nextStatus = selectedSellerStatus || 'pending';
+      const updatedSeller = {
+        ...seller,
+        status: nextStatus,
+        statusHistory: buildStatusHistory(nextStatus, '관리자 수동 변경'),
+      };
+      await fetch('/api/user/updateSellerInfo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storecode: user?.storecode || storecode,
+          walletAddress,
+          sellerStatus: nextStatus,
+          bankName: seller?.bankInfo?.bankName || '',
+          accountNumber: seller?.bankInfo?.accountNumber || '',
+          accountHolder: seller?.bankInfo?.accountHolder || '',
+          seller: updatedSeller,
+        }),
+      });
+      toast.success('판매자 상태가 변경되었습니다.');
+      await fetchUser();
+    } catch (error) {
+      console.error('Status update failed', error);
+      toast.error('상태 변경에 실패했습니다.');
+    }
+    setStatusUpdating(false);
   };
 
   return (
@@ -270,6 +331,102 @@ export default function SellerDetailPage() {
                 <div className="flex flex-col gap-1 text-xs text-slate-600">
                   <span>지갑주소: {walletAddress}</span>
                 </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-900">판매자 상태 변경</span>
+                  <span className="text-xs text-slate-500">관리자 수동 변경</span>
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <select
+                    className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300 sm:w-56"
+                    value={selectedSellerStatus}
+                    onChange={(event) => setSelectedSellerStatus(event.target.value as SellerStatusValue)}
+                  >
+                    <option value="pending">판매불가능상태</option>
+                    <option value="confirmed">판매가능상태</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleStatusUpdate}
+                    disabled={statusUpdating || selectedSellerStatus === normalizedSellerStatus}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                      statusUpdating || selectedSellerStatus === normalizedSellerStatus
+                        ? 'bg-slate-200 text-slate-400'
+                        : 'bg-slate-900 text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    {statusUpdating ? '변경 중...' : '상태 변경하기'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-slate-900">판매자 상태 변경 로그</span>
+                <span className="text-xs text-slate-500">최신순</span>
+              </div>
+              <div className="mt-3 flex flex-col gap-2 text-sm text-slate-600">
+                {(seller?.statusHistory || []).length === 0 ? (
+                  <span className="text-xs text-slate-500">변경 기록이 없습니다.</span>
+                ) : (
+                  [...(seller?.statusHistory || [])]
+                    .sort((a: any, b: any) => {
+                      const aTime = new Date(a?.changedAt || 0).getTime();
+                      const bTime = new Date(b?.changedAt || 0).getTime();
+                      return bTime - aTime;
+                    })
+                    .map((entry: any, index: number) => (
+                      (() => {
+                        const toConfirmed = entry?.to === 'confirmed';
+                        const stateStyle = toConfirmed
+                          ? {
+                              badge: 'border-emerald-200/80 bg-emerald-50 text-emerald-700',
+                              icon: (
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                  <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              ),
+                              label: '판매가능상태',
+                            }
+                          : {
+                              badge: 'border-amber-200/80 bg-amber-50 text-amber-700',
+                              icon: (
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                  <path d="M12 7v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                  <circle cx="12" cy="17" r="1.5" fill="currentColor" />
+                                </svg>
+                              ),
+                              label: '판매불가능상태',
+                            };
+
+                        return (
+                      <div
+                        key={`${entry?.changedAt || 'log'}-${index}`}
+                        className="flex flex-col gap-1 rounded-xl border border-slate-200/70 bg-slate-50/70 px-3 py-2"
+                      >
+                        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700">
+                          <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${stateStyle.badge}`}>
+                            {stateStyle.icon}
+                            {stateStyle.label}
+                          </span>
+                          <span className="text-slate-500">
+                            {entry?.changedAt ? new Date(entry.changedAt).toLocaleString() : '-'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          변경자: {entry?.changedBy || '-'} · 사유: {entry?.reason || '-'} · 이전 상태:{' '}
+                          {entry?.from === 'confirmed' ? '판매가능상태' : '판매불가능상태'}
+                        </div>
+                      </div>
+                        );
+                      })()
+                    ))
+                )}
               </div>
             </div>
 
