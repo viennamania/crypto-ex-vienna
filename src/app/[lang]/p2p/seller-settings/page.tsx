@@ -14,6 +14,7 @@ import {
 } from "thirdweb";
 
 import {
+    AutoConnect,
     ConnectButton,
     useActiveAccount,
     useActiveWallet,
@@ -1171,13 +1172,47 @@ export default function SettingsPage({ params }: any) {
 
 
 
+    if (!address) {
+        return (
+            <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+                <AutoConnect client={client} wallets={wallets} />
+                <div className="w-full">
+                    <div className="mb-4 flex items-center gap-2 text-sm text-slate-600">
+                        <button
+                            type="button"
+                            onClick={() => window.history.back()}
+                            className="flex items-center justify-center rounded-full border border-slate-200/70 bg-white/90 p-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                        >
+                            <Image src="/icon-back.png" alt="Back" width={20} height={20} className="rounded-full" />
+                        </button>
+                        <span className="font-semibold">돌아가기</span>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-6 text-center shadow-sm">
+                        <p className="text-base font-semibold text-slate-600">
+                            로그인해서 지갑을 연결하세요.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => router.push(`/${params.lang}/web3login`)}
+                            className="mt-4 inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                        >
+                            웹3 로그인 이동
+                        </button>
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
     return (
 
         <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+            <AutoConnect client={client} wallets={wallets} />
 
             <div className="py-0 w-full">
         
 
+                {/*
                 {storecode && (
                     <div className="w-full flex flex-row items-center justify-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 shadow-sm backdrop-blur mb-4">
                         <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -1185,8 +1220,9 @@ export default function SettingsPage({ params }: any) {
                         </span>
                     </div>
                 )}
+                */}
         
-                <div className="w-full flex flex-row gap-2 items-center justify-start mb-4"
+                <div className="w-full flex flex-row gap-2 items-center justify-start mb-2"
                 >
                     {/* go back button */}
                     <div className="w-full flex justify-start items-center gap-2">
@@ -1209,13 +1245,7 @@ export default function SettingsPage({ params }: any) {
 
                 </div>
 
-                {!address && (
-                    <div className="w-full flex flex-col items-center justify-center gap-4 mt-8 rounded-2xl border border-slate-200/70 bg-white/90 p-6 shadow-sm">
-                        <div className="text-base text-slate-600">
-                            {Please_connect_your_wallet_first}
-                        </div>
-                    </div>
-                )}
+
 
                 {/* select chain(ethereum, polygon, arbitrum, bsc) */}
                 {/* radio buttons */}
