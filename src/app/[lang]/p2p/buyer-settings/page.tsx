@@ -6,7 +6,8 @@ import React, { use, useEffect, useState } from 'react';
 
 import { toast } from 'react-hot-toast';
 
-import { client } from "../../../client";
+import { useClientWallets } from '@/lib/useClientWallets';
+import { client } from "@/app/client";
 
 import {
     getContract,
@@ -14,6 +15,7 @@ import {
 } from "thirdweb";
 
 import {
+    AutoConnect,
     ConnectButton,
     useActiveAccount,
     useActiveWallet,
@@ -288,28 +290,25 @@ export default function SettingsPage({ params }: any) {
 
     const router = useRouter();
 
+    const { smartAccountEnabled, wallet } = useClientWallets();
 
+    // get the active wallet
+    const activeWallet = useActiveWallet();
 
-  // get the active wallet
-  const activeWallet = useActiveWallet();
+    const setActiveAccount = useSetActiveWallet();
+    
+    const connectWallets = useConnectedWallets();
 
-  const setActiveAccount = useSetActiveWallet();
- 
-  const connectWallets = useConnectedWallets();
+    //console.log('connectWallets', connectWallets);
 
-  //console.log('connectWallets', connectWallets);
-
-  const smartConnectWallet = connectWallets?.[0];
-  const inAppConnectWallet = connectWallets?.[1];
-
-
-
-
+    const smartConnectWallet = connectWallets?.[0];
+    const inAppConnectWallet = connectWallets?.[1];
 
 
     const smartAccount = useActiveAccount();
 
     const address = smartAccount?.address;
+
     const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '-';
 
     const copyWalletAddress = async () => {
@@ -1034,6 +1033,7 @@ export default function SettingsPage({ params }: any) {
     return (
 
         <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+            <AutoConnect client={client} wallets={[wallet]} />
 
             <div className="py-0 w-full">
         
@@ -1071,646 +1071,629 @@ export default function SettingsPage({ params }: any) {
 
                 </div>
 
-                {!address && (
-                    <div className="w-full flex flex-col items-center justify-center gap-4 mt-8 rounded-2xl border border-slate-200/70 bg-white/90 p-6 shadow-sm">
-                        <div className="text-base text-slate-600">
-                            {Please_connect_your_wallet_first}
-                        </div>
-                    </div>
-                )}
+
 
 
                 {address && (
                     <div className="w-full" />
                 )}
 
-                {loadingUserData && (
-                    <div className="mt-4 flex w-full items-center justify-center rounded-2xl border border-slate-200/70 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm">
-                        사용자 정보를 불러오는 중입니다...
+
+                {!address ? (
+                    <div className="w-full">
+                        <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-6 text-center shadow-sm">
+                            <p className="text-base font-semibold text-slate-600">
+                                로그인해서 지갑을 연결하세요.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => router.push(`/${params.lang}/web3login`)}
+                                className="mt-4 inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                            >
+                                웹3 로그인 이동
+                            </button>
+                        </div>
                     </div>
-                )}
+                ) : (
+                    <div className="w-full flex flex-col gap-4">
 
-                {!loadingUserData && !nickname && (
-                    <div className='w-full flex flex-col gap-3 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm'>
 
-                        <span className="text-base font-semibold text-slate-800">
-                            회원이 아닙니다.
-                        </span>
-
-                        <div className="w-full flex flex-col items-center justify-center mt-2">
-                            <div className="text-sm text-rose-600">
-                            로그인을 해야 구매할 수 있습니다.
+                        {loadingUserData && (
+                            <div className="mt-4 flex w-full items-center justify-center rounded-2xl border border-slate-200/70 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm">
+                                사용자 정보를 불러오는 중입니다...
                             </div>
+                        )}
 
-                            <ConnectButton
-                            client={client}
-                            wallets={wallets}
+                        {loadingUserData && (
+                            <div className="text-sm text-slate-500">Loading user data...</div>
+                        )}
 
-                            /*
-                            accountAbstraction={{
-                                chain: arbitrum,
-                                sponsorGas: false
-                            }}
-                            */
-                            
-                            theme={"light"}
+                        {!loadingUserData && !nickname && (
+                            <div className='w-full flex flex-col gap-2 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm'>
 
-                            // button color is dark skyblue convert (49, 103, 180) to hex
-                            connectButton={{
-                                style: {
-                                    backgroundColor: "#0f172a", // slate-900
-                                    color: "#f8fafc", // slate-50
-                                    padding: "6px 14px",
-                                    borderRadius: "9999px",
-                                    fontSize: "14px",
-                                    width: "60x",
-                                    height: "38px",
-                                },
-                                label: "웹3 로그인",
-                            }}
-
-                            connectModal={{
-                                size: "wide", 
-                                //size: "compact",
-                                titleIcon: "https://loot.menu/logo.png",                           
-                                showThirdwebBranding: false,
-                            }}
-
-                            locale={"ko_KR"}
-                            //locale={"en_US"}
-                            />
-
-                        </div>
-
-                    </div>
-                )}
-
-                {!loadingUserData && nickname && !buyer?.status && (
-                    <div className='w-full flex flex-col gap-3 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm'>
-
-                        <div className="w-full flex flex-col gap-3">
-                            <div className='w-full flex flex-row gap-2 items-center justify-between'>
-                                <div className="flex flex-row items-center gap-2">
-                                    {/* dot */}
-                                    <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                    <span className="text-sm font-semibold text-slate-600">
-                                        회원아이디
-                                    </span>
-                                </div>
-                                <span className="text-2xl font-semibold text-emerald-700">
-                                    {nickname}
+                                <span className="text-base font-semibold text-slate-800">
+                                    회원이 아닙니다.
                                 </span>
+
+                                <button
+                                    onClick={() => {
+                                        router.push('/' + params.lang + '/p2p/profile-settings');
+                                    }}
+                                    className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                                >
+                                    회원가입하기
+                                </button>
+
                             </div>
-                            <div className='w-full flex flex-row gap-2 items-center justify-between'>
-                                <div className="flex flex-row items-center gap-2">
-                                    {/* dot */}
-                                    <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                    <span className="text-sm font-semibold text-slate-600">
-                                        지갑주소
+                        )}
+
+                        {!loadingUserData && nickname && !buyer?.status && (
+                            <div className='w-full flex flex-col gap-3 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm'>
+
+                                <div className="w-full flex flex-col gap-3">
+                                    <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                                        <div className="flex flex-row items-center gap-2">
+                                            {/* dot */}
+                                            <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                            <span className="text-sm font-semibold text-slate-600">
+                                                회원아이디
+                                            </span>
+                                        </div>
+                                        <span className="text-2xl font-semibold text-emerald-700">
+                                            {nickname}
+                                        </span>
+                                    </div>
+                                    <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                                        <div className="flex flex-row items-center gap-2">
+                                            {/* dot */}
+                                            <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                            <span className="text-sm font-semibold text-slate-600">
+                                                지갑주소
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className="max-w-[70%] break-all text-right text-xs font-semibold text-slate-600"
+                                                title={address || ''}
+                                            >
+                                                {shortAddress}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={copyWalletAddress}
+                                                disabled={!address}
+                                                className={`rounded-full border px-2 py-1 text-xs font-semibold shadow-sm transition ${
+                                                    address
+                                                        ? 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300'
+                                                        : 'border-slate-200/80 bg-slate-100 text-slate-400'
+                                                }`}
+                                            >
+                                                {walletCopied ? '복사됨' : '복사하기'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <span className="text-xs text-slate-500">
+                                        구매한 USDT 를 받을 지갑주소입니다.
                                     </span>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <span
-                                        className="max-w-[70%] break-all text-right text-xs font-semibold text-slate-600"
-                                        title={address || ''}
-                                    >
-                                        {shortAddress}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={copyWalletAddress}
-                                        disabled={!address}
-                                        className={`rounded-full border px-2 py-1 text-xs font-semibold shadow-sm transition ${
-                                            address
-                                                ? 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300'
-                                                : 'border-slate-200/80 bg-slate-100 text-slate-400'
-                                        }`}
-                                    >
-                                        {walletCopied ? '복사됨' : '복사하기'}
-                                    </button>
-                                </div>
-                            </div>
-                            <span className="text-xs text-slate-500">
-                                구매한 USDT 를 받을 지갑주소입니다.
-                            </span>
-                        </div>
 
-                        <span className="inline-flex items-center justify-center rounded-full border border-amber-200/80 bg-amber-50 px-4 py-1.5 text-xs font-semibold text-amber-700 shadow-sm">
-                            구매불가능상태
-                        </span>
-
-                        <button
-                            onClick={() => {
-                                applyBuyer();
-                            }}
-                            className={`
-                                ${applyingBuyer ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-500'}
-                                px-5 py-2 rounded-full text-sm font-semibold shadow-sm transition
-                            `}
-                            disabled={applyingBuyer}
-                        >
-                            {applyingBuyer ? Applying + '...' : Apply}
-                        </button>
-
-                    </div>
-                )}
-
-
-                {!loadingUserData && buyer?.status && (
-                    <>
-                    <div className='w-full flex flex-col gap-4 items-center justify-between rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm'>
-
-                        {/* image and title */}
-                        <div className='w-full flex flex-row gap-2 items-center justify-start'>
-                            <Image
-                                src="/icon-buyer.png"
-                                alt="Buyer Settings"
-                                width={50}
-                                height={50}
-                                className='w-10 h-10'
-                            />
-                            <span className="text-xl font-semibold text-slate-900">
-                                구매자 설정
-                            </span>
-                        </div>
-
-
-                        <div className="w-full flex flex-col gap-3">
-                            <div className='w-full flex flex-row gap-2 items-center justify-between'>
-                                <div className="flex flex-row items-center gap-2">
-                                    {/* dot */}
-                                    <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                    <span className="text-sm font-semibold text-slate-600">
-                                        회원아이디
-                                    </span>
-                                </div>
-                                <span className="text-2xl font-semibold text-emerald-700">
-                                    {nickname}
-                                </span>
-                            </div>
-                            <div className='w-full flex flex-row gap-2 items-center justify-between'>
-                                <div className="flex flex-row items-center gap-2">
-                                    {/* dot */}
-                                    <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                    <span className="text-sm font-semibold text-slate-600">
-                                        지갑주소
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span
-                                        className="max-w-[70%] break-all text-right text-xs font-semibold text-slate-600"
-                                        title={address || ''}
-                                    >
-                                        {shortAddress}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={copyWalletAddress}
-                                        disabled={!address}
-                                        className={`rounded-full border px-2 py-1 text-xs font-semibold shadow-sm transition ${
-                                            address
-                                                ? 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300'
-                                                : 'border-slate-200/80 bg-slate-100 text-slate-400'
-                                        }`}
-                                    >
-                                        {walletCopied ? '복사됨' : '복사하기'}
-                                    </button>
-                                </div>
-                            </div>
-                            <span className="text-xs text-slate-500">
-                                구매한 USDT 를 받을 지갑주소입니다.
-                            </span>
-                        </div>
-
-                        {/* buyer?.status */}
-                        {/* status: pending, confirmed */}
-                        <div className='w-full flex flex-row gap-2 items-center justify-between
-                            border-t border-slate-200/80 pt-4'>
-                            <div className="flex flex-row items-center gap-2">
-                                {/* dot */}
-                                <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                <span className="text-sm font-semibold text-slate-600">
-                                    구매자 상태
-                                </span>
-                            </div>
-                            {buyer?.status === 'confirmed' ? (
-                                <span className="inline-flex min-w-[160px] items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-50 px-4 py-1.5 text-sm font-semibold text-emerald-700 shadow-sm">
-                                    구매가능상태
-                                </span>
-                            ) : (
-                                <span className="inline-flex min-w-[160px] items-center justify-center rounded-full border border-amber-200/80 bg-amber-50 px-4 py-1.5 text-sm font-semibold text-amber-700 shadow-sm">
+                                <span className="inline-flex items-center justify-center rounded-full border border-amber-200/80 bg-amber-50 px-4 py-1.5 text-xs font-semibold text-amber-700 shadow-sm">
                                     구매불가능상태
                                 </span>
-                            )}
-                        </div>
-
-                        <div className='mt-4 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm'>
-                            <div className="flex w-full flex-row items-center justify-between gap-3">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                                        <Image
-                                            src="/icon-bank-check.png"
-                                            alt="Bank"
-                                            width={24}
-                                            height={24}
-                                            className="h-6 w-6"
-                                        />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-semibold text-slate-900">입금할 계좌 정보</span>
-                                        <span className="text-xs text-slate-500">계좌 정보 제출 후 심사됩니다.</span>
-                                    </div>
-                                </div>
-                                <span
-                                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
-                                        bankInfoStatus === 'approved'
-                                            ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
-                                            : bankInfoStatus === 'rejected'
-                                            ? 'border-rose-200/80 bg-rose-50 text-rose-700'
-                                            : bankInfoStatus === 'pending'
-                                            ? 'border-amber-200/80 bg-amber-50 text-amber-700'
-                                            : 'border-slate-200/80 bg-slate-50 text-slate-600'
-                                    }`}
-                                >
-                                    {bankInfoStatusLabel}
-                                </span>
-                            </div>
-
-                            <div className="mt-3 flex flex-col gap-1 text-sm text-slate-600">
-                                {buyer?.bankInfo?.bankName ? (
-                                    <>
-                                        <span>은행: {buyer?.bankInfo?.bankName}</span>
-                                        <span>계좌번호: {buyer?.bankInfo?.accountNumber}</span>
-                                        <span>예금주: {buyer?.bankInfo?.accountHolder}</span>
-                                    </>
-                                ) : (
-                                    <span>등록된 계좌 정보가 없습니다.</span>
-                                )}
-                                {bankInfoStatus === 'approved' && (
-                                    <span className="text-xs text-emerald-600">
-                                        승인된 계좌 정보입니다. 승인 시간: {buyer?.bankInfo?.reviewedAt ? new Date(buyer.bankInfo.reviewedAt).toLocaleString() : '-'}
-                                    </span>
-                                )}
-                                {bankInfoStatus === 'pending' && (
-                                    <span className="text-xs text-amber-600">
-                                        신청 시간: {buyer?.bankInfo?.submittedAt ? new Date(buyer.bankInfo.submittedAt).toLocaleString() : '-'}
-                                    </span>
-                                )}
-                                {bankInfoStatus === 'rejected' && buyer?.bankInfo?.rejectionReason && (
-                                    <span className="text-xs text-rose-600">거절 사유: {buyer.bankInfo.rejectionReason}</span>
-                                )}
-                            </div>
-
-                            {/* otp verification */}
-
-                            {/*
-                            {verifiedOtp ? (
-                                <div className="w-full flex flex-row gap-2 items-center justify-center">
-                                <Image
-                                    src="/verified.png"
-                                    alt="check"
-                                    width={30}
-                                    height={30}
-                                />
-                                <div className="text-white">
-                                    {OTP_verified}
-                                </div>
-                                </div>
-                            ) : (
-                            
-                        
-                                <div className="w-full flex flex-row gap-2 items-start">
 
                                 <button
-                                    disabled={!address || isSendingOtp}
-                                    onClick={sendOtp}
-                                    className={`
-                                    
-                                    ${isSendedOtp && 'hidden'}
-
-                                    w-32 p-2 rounded-lg text-sm font-semibold
-
-                                        ${
-                                        !address || isSendingOtp
-                                        ?'bg-gray-300 text-gray-400'
-                                        : 'bg-green-500 text-white'
-                                        }
-                                    
-                                    `}
-                                >
-                                    {Send_OTP}
-                                </button>
-
-
-                                <div className={`flex flex-row gap-2 items-center justify-center ${!isSendedOtp && 'hidden'}`}>
-                                    <input
-                                    type="text"
-                                    placeholder={Enter_OTP}
-                                    className=" w-40 p-2 border border-gray-300 rounded text-black text-sm font-semibold"
-                                    value={otp}
-                                    onChange={(e) => setOtp(e.target.value)}
-                                    />
-
-                                    <button
-                                    disabled={!otp || isVerifingOtp}
-                                    onClick={verifyOtp}
-                                    className={`w-32 p-2 rounded-lg text-sm font-semibold
-
-                                        ${
-                                        !otp || isVerifingOtp
-                                        ?'bg-gray-300 text-gray-400'
-                                        : 'bg-green-500 text-white'
-                                        }
-                                        
-                                        `}
-                                    >
-                                        {Verify_OTP}
-                                    </button>
-                                </div>
-
-
-
-                                </div>
-
-                            )}
-                            */}
-
-                        </div>
-
-                    </div>
-
-                    <div className='mt-4 w-full flex flex-col gap-4 items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4'>
-                        <div className='w-full flex flex-row gap-2 items-center justify-between'>
-                            <div className="flex flex-row items-center gap-2">
-                                <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                <span className="text-sm font-semibold text-slate-600">
-                                    입금할 계좌 정보 신청
-                                </span>
-                            </div>
-
-                            {!buyer && (
-                                <div className="text-sm text-slate-500">
-                                    구매자 승인이 필요합니다.
-                                </div>
-                            )}
-
-                            {bankInfoStatus === 'pending' ? (
-                                <div className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm">
-                                    심사중
-                                </div>
-                            ) : applying ? (
-                                <div className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm">
-                                    {Applying}...
-                                </div>
-                            ) : (
-                                <button
-                                    disabled={applying || !verifiedOtp}
                                     onClick={() => {
-                                        apply();
+                                        applyBuyer();
                                     }}
                                     className={`
-                                        ${!verifiedOtp ? 'bg-slate-200 text-slate-400'
-                                        : 'bg-emerald-600 text-white hover:bg-emerald-500'}
-                                        px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition
+                                        ${applyingBuyer ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-500'}
+                                        px-5 py-2 rounded-full text-sm font-semibold shadow-sm transition
                                     `}
+                                    disabled={applyingBuyer}
                                 >
-                                    {Apply}
+                                    {applyingBuyer ? Applying + '...' : Apply}
                                 </button>
-                            )}
-                        </div>
 
-                        {/* 은행명, 계좌번호, 예금주 */}
-                        <div className='flex flex-col gap-2 items-start justify-between w-full'>
-                            <select
-                                disabled={!address || bankInfoStatus === 'pending' || applying}
-                                className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm
-                                focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                                value={bankName}
-                                onChange={(e) => {
-                                    setBankName(e.target.value);
-                                }}
-                            >
-                                <option value="" selected={bankName === ""}>
-                                    은행선택
-                                </option>
-                                <option value="카카오뱅크" selected={bankName === "카카오뱅크"}>
-                                    카카오뱅크
-                                </option>
-                                <option value="케이뱅크" selected={bankName === "케이뱅크"}>
-                                    케이뱅크
-                                </option>
-                                <option value="토스뱅크" selected={bankName === "토스뱅크"}>
-                                    토스뱅크
-                                </option>
-                                <option value="국민은행" selected={bankName === "국민은행"}>
-                                    국민은행
-                                </option>
-                                <option value="우리은행" selected={bankName === "우리은행"}>
-                                    우리은행
-                                </option>
-                                <option value="신한은행" selected={bankName === "신한은행"}>
-                                    신한은행
-                                </option>
-                                <option value="농협" selected={bankName === "농협"}>
-                                    농협
-                                </option>
-                                <option value="기업은행" selected={bankName === "기업은행"}>
-                                    기업은행
-                                </option>
-                                <option value="하나은행" selected={bankName === "하나은행"}>
-                                    하나은행
-                                </option>
-                                <option value="외환은행" selected={bankName === "외환은행"}>
-                                    외환은행
-                                </option>
-                                <option value="부산은행" selected={bankName === "부산은행"}>
-                                    부산은행
-                                </option>
-                                <option value="대구은행" selected={bankName === "대구은행"}>
-                                    대구은행
-                                </option>
-                                <option value="전북은행" selected={bankName === "전북은행"}>
-                                    전북은행
-                                </option>
-                                <option value="경북은행" selected={bankName === "경북은행"}>
-                                    경북은행
-                                </option>
-                                <option value="광주은행" selected={bankName === "광주은행"}>
-                                    광주은행
-                                </option>
-                                <option value="수협" selected={bankName === "수협"}>
-                                    수협
-                                </option>
-                                <option value="씨티은행" selected={bankName === "씨티은행"}>
-                                    씨티은행
-                                </option>
-                                <option value="대신은행" selected={bankName === "대신은행"}>
-                                    대신은행
-                                </option>
-                                <option value="동양종합금융" selected={bankName === "동양종합금융"}>
-                                    동양종합금융
-                                </option>
-                                <option value="SC제일은행" selected={bankName === "SC제일은행"}>
-                                    SC제일은행
-                                </option>
-                                <option value="한국씨티은행" selected={bankName === "한국씨티은행"}>
-                                    한국씨티은행
-                                </option>
-                                <option value="산업은행" selected={bankName === "산업은행"}>
-                                    산업은행
-                                </option>
-                                <option value="JT친애저축은행" selected={bankName === "JT친애저축은행"}>
-                                    JT친애저축은행
-                                </option>
-                            </select>
+                            </div>
+                        )}
 
-                            <input 
-                                disabled={applying || bankInfoStatus === 'pending'}
-                                className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                                placeholder={Enter_your_account_number}
-                                value={accountNumber}
-                                type="text"
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                onChange={(e) => {
-                                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
-                                    setAccountNumber(e.target.value);
-                                }}
-                            />
-                            <input 
-                                disabled={applying || bankInfoStatus === 'pending'}
-                                className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                                placeholder={Enter_your_account_holder}
-                                value={accountHolder}
-                                type='text'
-                                onChange={(e) => {
-                                    setAccountHolder(e.target.value);
-                                }}
-                            />
-                        </div>
-                    </div>
-                    <div className="mt-4 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
-                        <div className="flex w-full flex-row items-center justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+
+                        {!loadingUserData && buyer?.status && (
+                            <>
+                            <div className='w-full flex flex-col gap-4 items-center justify-between rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm'>
+
+                                {/* image and title */}
+                                <div className='w-full flex flex-row gap-2 items-center justify-start'>
                                     <Image
-                                        src="/icon-kyc.png"
-                                        alt="KYC"
-                                        width={24}
-                                        height={24}
-                                        className="h-6 w-6"
+                                        src="/icon-buyer.png"
+                                        alt="Buyer Settings"
+                                        width={50}
+                                        height={50}
+                                        className='w-10 h-10'
+                                    />
+                                    <span className="text-xl font-semibold text-slate-900">
+                                        구매자 설정
+                                    </span>
+                                </div>
+
+
+                                <div className="w-full flex flex-col gap-3">
+                                    <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                                        <div className="flex flex-row items-center gap-2">
+                                            {/* dot */}
+                                            <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                            <span className="text-sm font-semibold text-slate-600">
+                                                회원아이디
+                                            </span>
+                                        </div>
+                                        <span className="text-2xl font-semibold text-emerald-700">
+                                            {nickname}
+                                        </span>
+                                    </div>
+                                    <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                                        <div className="flex flex-row items-center gap-2">
+                                            {/* dot */}
+                                            <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                            <span className="text-sm font-semibold text-slate-600">
+                                                지갑주소
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className="max-w-[70%] break-all text-right text-xs font-semibold text-slate-600"
+                                                title={address || ''}
+                                            >
+                                                {shortAddress}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={copyWalletAddress}
+                                                disabled={!address}
+                                                className={`rounded-full border px-2 py-1 text-xs font-semibold shadow-sm transition ${
+                                                    address
+                                                        ? 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300'
+                                                        : 'border-slate-200/80 bg-slate-100 text-slate-400'
+                                                }`}
+                                            >
+                                                {walletCopied ? '복사됨' : '복사하기'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <span className="text-xs text-slate-500">
+                                        구매한 USDT 를 받을 지갑주소입니다.
+                                    </span>
+                                </div>
+
+                                {/* buyer?.status */}
+                                {/* status: pending, confirmed */}
+                                <div className='w-full flex flex-row gap-2 items-center justify-between
+                                    border-t border-slate-200/80 pt-4'>
+                                    <div className="flex flex-row items-center gap-2">
+                                        {/* dot */}
+                                        <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                        <span className="text-sm font-semibold text-slate-600">
+                                            구매자 상태
+                                        </span>
+                                    </div>
+                                    {buyer?.status === 'confirmed' ? (
+                                        <span className="inline-flex min-w-[160px] items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-50 px-4 py-1.5 text-sm font-semibold text-emerald-700 shadow-sm">
+                                            구매가능상태
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex min-w-[160px] items-center justify-center rounded-full border border-amber-200/80 bg-amber-50 px-4 py-1.5 text-sm font-semibold text-amber-700 shadow-sm">
+                                            구매불가능상태
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className='mt-4 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm'>
+                                    <div className="flex w-full flex-row items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                                                <Image
+                                                    src="/icon-bank-check.png"
+                                                    alt="Bank"
+                                                    width={24}
+                                                    height={24}
+                                                    className="h-6 w-6"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-semibold text-slate-900">입금할 계좌 정보</span>
+                                                <span className="text-xs text-slate-500">계좌 정보 제출 후 심사됩니다.</span>
+                                            </div>
+                                        </div>
+                                        <span
+                                            className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                                                bankInfoStatus === 'approved'
+                                                    ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                                                    : bankInfoStatus === 'rejected'
+                                                    ? 'border-rose-200/80 bg-rose-50 text-rose-700'
+                                                    : bankInfoStatus === 'pending'
+                                                    ? 'border-amber-200/80 bg-amber-50 text-amber-700'
+                                                    : 'border-slate-200/80 bg-slate-50 text-slate-600'
+                                            }`}
+                                        >
+                                            {bankInfoStatusLabel}
+                                        </span>
+                                    </div>
+
+                                    <div className="mt-3 flex flex-col gap-1 text-sm text-slate-600">
+                                        {buyer?.bankInfo?.bankName ? (
+                                            <>
+                                                <span>은행: {buyer?.bankInfo?.bankName}</span>
+                                                <span>계좌번호: {buyer?.bankInfo?.accountNumber}</span>
+                                                <span>예금주: {buyer?.bankInfo?.accountHolder}</span>
+                                            </>
+                                        ) : (
+                                            <span>등록된 계좌 정보가 없습니다.</span>
+                                        )}
+                                        {bankInfoStatus === 'approved' && (
+                                            <span className="text-xs text-emerald-600">
+                                                승인된 계좌 정보입니다. 승인 시간: {buyer?.bankInfo?.reviewedAt ? new Date(buyer.bankInfo.reviewedAt).toLocaleString() : '-'}
+                                            </span>
+                                        )}
+                                        {bankInfoStatus === 'pending' && (
+                                            <span className="text-xs text-amber-600">
+                                                신청 시간: {buyer?.bankInfo?.submittedAt ? new Date(buyer.bankInfo.submittedAt).toLocaleString() : '-'}
+                                            </span>
+                                        )}
+                                        {bankInfoStatus === 'rejected' && buyer?.bankInfo?.rejectionReason && (
+                                            <span className="text-xs text-rose-600">거절 사유: {buyer.bankInfo.rejectionReason}</span>
+                                        )}
+                                    </div>
+
+                                    {/* otp verification */}
+
+                                    {/*
+                                    {verifiedOtp ? (
+                                        <div className="w-full flex flex-row gap-2 items-center justify-center">
+                                        <Image
+                                            src="/verified.png"
+                                            alt="check"
+                                            width={30}
+                                            height={30}
+                                        />
+                                        <div className="text-white">
+                                            {OTP_verified}
+                                        </div>
+                                        </div>
+                                    ) : (
+                                    
+                                
+                                        <div className="w-full flex flex-row gap-2 items-start">
+
+                                        <button
+                                            disabled={!address || isSendingOtp}
+                                            onClick={sendOtp}
+                                            className={`
+                                            
+                                            ${isSendedOtp && 'hidden'}
+
+                                            w-32 p-2 rounded-lg text-sm font-semibold
+
+                                                ${
+                                                !address || isSendingOtp
+                                                ?'bg-gray-300 text-gray-400'
+                                                : 'bg-green-500 text-white'
+                                                }
+                                            
+                                            `}
+                                        >
+                                            {Send_OTP}
+                                        </button>
+
+
+                                        <div className={`flex flex-row gap-2 items-center justify-center ${!isSendedOtp && 'hidden'}`}>
+                                            <input
+                                            type="text"
+                                            placeholder={Enter_OTP}
+                                            className=" w-40 p-2 border border-gray-300 rounded text-black text-sm font-semibold"
+                                            value={otp}
+                                            onChange={(e) => setOtp(e.target.value)}
+                                            />
+
+                                            <button
+                                            disabled={!otp || isVerifingOtp}
+                                            onClick={verifyOtp}
+                                            className={`w-32 p-2 rounded-lg text-sm font-semibold
+
+                                                ${
+                                                !otp || isVerifingOtp
+                                                ?'bg-gray-300 text-gray-400'
+                                                : 'bg-green-500 text-white'
+                                                }
+                                                
+                                                `}
+                                            >
+                                                {Verify_OTP}
+                                            </button>
+                                        </div>
+
+
+
+                                        </div>
+
+                                    )}
+                                    */}
+
+                                </div>
+
+                            </div>
+
+                            <div className='mt-4 w-full flex flex-col gap-4 items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4'>
+                                <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                                    <div className="flex flex-row items-center gap-2">
+                                        <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                        <span className="text-sm font-semibold text-slate-600">
+                                            입금할 계좌 정보 신청
+                                        </span>
+                                    </div>
+
+                                    {!buyer && (
+                                        <div className="text-sm text-slate-500">
+                                            구매자 승인이 필요합니다.
+                                        </div>
+                                    )}
+
+                                    {bankInfoStatus === 'pending' ? (
+                                        <div className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm">
+                                            심사중
+                                        </div>
+                                    ) : applying ? (
+                                        <div className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm">
+                                            {Applying}...
+                                        </div>
+                                    ) : (
+                                        <button
+                                            disabled={applying || !verifiedOtp}
+                                            onClick={() => {
+                                                apply();
+                                            }}
+                                            className={`
+                                                ${!verifiedOtp ? 'bg-slate-200 text-slate-400'
+                                                : 'bg-emerald-600 text-white hover:bg-emerald-500'}
+                                                px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition
+                                            `}
+                                        >
+                                            {Apply}
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* 은행명, 계좌번호, 예금주 */}
+                                <div className='flex flex-col gap-2 items-start justify-between w-full'>
+                                    <select
+                                        disabled={!address || bankInfoStatus === 'pending' || applying}
+                                        className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm
+                                        focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                        value={bankName}
+                                        onChange={(e) => {
+                                            setBankName(e.target.value);
+                                        }}
+                                    >
+                                        <option value="" selected={bankName === ""}>
+                                            은행선택
+                                        </option>
+                                        <option value="카카오뱅크" selected={bankName === "카카오뱅크"}>
+                                            카카오뱅크
+                                        </option>
+                                        <option value="케이뱅크" selected={bankName === "케이뱅크"}>
+                                            케이뱅크
+                                        </option>
+                                        <option value="토스뱅크" selected={bankName === "토스뱅크"}>
+                                            토스뱅크
+                                        </option>
+                                        <option value="국민은행" selected={bankName === "국민은행"}>
+                                            국민은행
+                                        </option>
+                                        <option value="우리은행" selected={bankName === "우리은행"}>
+                                            우리은행
+                                        </option>
+                                        <option value="신한은행" selected={bankName === "신한은행"}>
+                                            신한은행
+                                        </option>
+                                        <option value="농협" selected={bankName === "농협"}>
+                                            농협
+                                        </option>
+                                        <option value="기업은행" selected={bankName === "기업은행"}>
+                                            기업은행
+                                        </option>
+                                        <option value="하나은행" selected={bankName === "하나은행"}>
+                                            하나은행
+                                        </option>
+                                        <option value="외환은행" selected={bankName === "외환은행"}>
+                                            외환은행
+                                        </option>
+                                        <option value="부산은행" selected={bankName === "부산은행"}>
+                                            부산은행
+                                        </option>
+                                        <option value="대구은행" selected={bankName === "대구은행"}>
+                                            대구은행
+                                        </option>
+                                        <option value="전북은행" selected={bankName === "전북은행"}>
+                                            전북은행
+                                        </option>
+                                        <option value="경북은행" selected={bankName === "경북은행"}>
+                                            경북은행
+                                        </option>
+                                        <option value="광주은행" selected={bankName === "광주은행"}>
+                                            광주은행
+                                        </option>
+                                        <option value="수협" selected={bankName === "수협"}>
+                                            수협
+                                        </option>
+                                        <option value="씨티은행" selected={bankName === "씨티은행"}>
+                                            씨티은행
+                                        </option>
+                                        <option value="대신은행" selected={bankName === "대신은행"}>
+                                            대신은행
+                                        </option>
+                                        <option value="동양종합금융" selected={bankName === "동양종합금융"}>
+                                            동양종합금융
+                                        </option>
+                                        <option value="SC제일은행" selected={bankName === "SC제일은행"}>
+                                            SC제일은행
+                                        </option>
+                                        <option value="한국씨티은행" selected={bankName === "한국씨티은행"}>
+                                            한국씨티은행
+                                        </option>
+                                        <option value="산업은행" selected={bankName === "산업은행"}>
+                                            산업은행
+                                        </option>
+                                        <option value="JT친애저축은행" selected={bankName === "JT친애저축은행"}>
+                                            JT친애저축은행
+                                        </option>
+                                    </select>
+
+                                    <input 
+                                        disabled={applying || bankInfoStatus === 'pending'}
+                                        className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                        placeholder={Enter_your_account_number}
+                                        value={accountNumber}
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        onChange={(e) => {
+                                            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                                            setAccountNumber(e.target.value);
+                                        }}
+                                    />
+                                    <input 
+                                        disabled={applying || bankInfoStatus === 'pending'}
+                                        className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                        placeholder={Enter_your_account_holder}
+                                        value={accountHolder}
+                                        type='text'
+                                        onChange={(e) => {
+                                            setAccountHolder(e.target.value);
+                                        }}
                                     />
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-semibold text-slate-900">신분증 인증 (KYC)</span>
-                                    <span className="text-xs text-slate-500">주민증/운전면허증/여권 중 1장 업로드</span>
-                                </div>
                             </div>
-                            <span
-                                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
-                                    kycStatus === 'approved'
-                                        ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
-                                        : kycStatus === 'rejected'
-                                        ? 'border-rose-200/80 bg-rose-50 text-rose-700'
-                                        : kycStatus === 'pending'
-                                        ? 'border-amber-200/80 bg-amber-50 text-amber-700'
-                                        : 'border-slate-200/80 bg-slate-50 text-slate-600'
-                                }`}
-                            >
-                                {kycStatusLabel}
-                            </span>
-                        </div>
-
-                        <div className="mt-4 flex flex-col gap-3">
-                            {kycStatus === 'pending' ? (
-                                <>
-                                    <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-amber-50/80 px-4 py-3 text-sm text-amber-700 shadow-sm">
-                                        <span className="font-semibold">심사 신청이 접수되었습니다.</span>
-                                        <span className="text-xs">
-                                            신청 시간: {buyer?.kyc?.submittedAt ? new Date(buyer.kyc.submittedAt).toLocaleString() : '-'}
-                                        </span>
+                            <div className="mt-4 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
+                                <div className="flex w-full flex-row items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                                            <Image
+                                                src="/icon-kyc.png"
+                                                alt="KYC"
+                                                width={24}
+                                                height={24}
+                                                className="h-6 w-6"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-semibold text-slate-900">신분증 인증 (KYC)</span>
+                                            <span className="text-xs text-slate-500">주민증/운전면허증/여권 중 1장 업로드</span>
+                                        </div>
                                     </div>
-                                    {kycPreview && (
-                                        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 shadow-sm">
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img
-                                                src={kycPreview}
-                                                alt="KYC Preview"
-                                                className="h-40 w-full object-cover"
-                                            />
-                                        </div>
-                                    )}
-                                </>
-                            ) : kycStatus === 'approved' ? (
-                                <>
-                                    <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-700 shadow-sm">
-                                        <span className="font-semibold">승인된 신분증입니다.</span>
-                                        <span className="mt-1 text-xs text-emerald-600">
-                                            승인 시간: {buyer?.kyc?.reviewedAt ? new Date(buyer.kyc.reviewedAt).toLocaleString() : '-'}
-                                        </span>
-                                    </div>
-                                    {kycPreview && (
-                                        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 shadow-sm">
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img
-                                                src={kycPreview}
-                                                alt="KYC Preview"
-                                                className="h-40 w-full object-cover"
-                                            />
-                                        </div>
-                                    )}
-                                </>
-                            ) : (
-                                <>
-                                    <label
-                                        htmlFor="kyc-id-upload-buyer"
-                                        className="cursor-pointer rounded-xl border border-dashed border-slate-200/80 bg-slate-50/80 px-4 py-4 text-center shadow-sm transition hover:border-slate-300"
-                                    >
-                                        <input
-                                            id="kyc-id-upload-buyer"
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            onChange={handleKycFileChange}
-                                        />
-                                        <div className="flex flex-col items-center gap-1">
-                                            <span className="text-sm font-semibold text-slate-700">신분증 사진 업로드</span>
-                                            <span className="text-xs text-slate-500">JPG/PNG, 10MB 이하</span>
-                                        </div>
-                                    </label>
-                                    {kycPreview && (
-                                        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 shadow-sm">
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img
-                                                src={kycPreview}
-                                                alt="KYC Preview"
-                                                className="h-40 w-full object-cover"
-                                            />
-                                        </div>
-                                    )}
-                                    <p className="text-xs text-slate-500">
-                                        업로드 후 심사까지 영업일 기준 1-2일 소요될 수 있습니다.
-                                    </p>
-                                    <button
-                                        type="button"
-                                        onClick={submitKyc}
-                                        disabled={kycSubmitting || (!kycFile && !kycImageUrl)}
-                                        className={`inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition sm:w-auto sm:self-start ${
-                                            kycSubmitting || (!kycFile && !kycImageUrl)
-                                                ? 'bg-slate-200 text-slate-400'
-                                                : 'bg-slate-900 text-white hover:bg-slate-800'
+                                    <span
+                                        className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                                            kycStatus === 'approved'
+                                                ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                                                : kycStatus === 'rejected'
+                                                ? 'border-rose-200/80 bg-rose-50 text-rose-700'
+                                                : kycStatus === 'pending'
+                                                ? 'border-amber-200/80 bg-amber-50 text-amber-700'
+                                                : 'border-slate-200/80 bg-slate-50 text-slate-600'
                                         }`}
                                     >
-                                        {kycSubmitting ? '심사 신청 중...' : '심사신청하기'}
-                                    </button>
-                                </>
-                            )}
-                        </div>
+                                        {kycStatusLabel}
+                                    </span>
+                                </div>
+
+                                <div className="mt-4 flex flex-col gap-3">
+                                    {kycStatus === 'pending' ? (
+                                        <>
+                                            <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-amber-50/80 px-4 py-3 text-sm text-amber-700 shadow-sm">
+                                                <span className="font-semibold">심사 신청이 접수되었습니다.</span>
+                                                <span className="text-xs">
+                                                    신청 시간: {buyer?.kyc?.submittedAt ? new Date(buyer.kyc.submittedAt).toLocaleString() : '-'}
+                                                </span>
+                                            </div>
+                                            {kycPreview && (
+                                                <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 shadow-sm">
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img
+                                                        src={kycPreview}
+                                                        alt="KYC Preview"
+                                                        className="h-40 w-full object-cover"
+                                                    />
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : kycStatus === 'approved' ? (
+                                        <>
+                                            <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-700 shadow-sm">
+                                                <span className="font-semibold">승인된 신분증입니다.</span>
+                                                <span className="mt-1 text-xs text-emerald-600">
+                                                    승인 시간: {buyer?.kyc?.reviewedAt ? new Date(buyer.kyc.reviewedAt).toLocaleString() : '-'}
+                                                </span>
+                                            </div>
+                                            {kycPreview && (
+                                                <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 shadow-sm">
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img
+                                                        src={kycPreview}
+                                                        alt="KYC Preview"
+                                                        className="h-40 w-full object-cover"
+                                                    />
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <label
+                                                htmlFor="kyc-id-upload-buyer"
+                                                className="cursor-pointer rounded-xl border border-dashed border-slate-200/80 bg-slate-50/80 px-4 py-4 text-center shadow-sm transition hover:border-slate-300"
+                                            >
+                                                <input
+                                                    id="kyc-id-upload-buyer"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={handleKycFileChange}
+                                                />
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <span className="text-sm font-semibold text-slate-700">신분증 사진 업로드</span>
+                                                    <span className="text-xs text-slate-500">JPG/PNG, 10MB 이하</span>
+                                                </div>
+                                            </label>
+                                            {kycPreview && (
+                                                <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 shadow-sm">
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img
+                                                        src={kycPreview}
+                                                        alt="KYC Preview"
+                                                        className="h-40 w-full object-cover"
+                                                    />
+                                                </div>
+                                            )}
+                                            <p className="text-xs text-slate-500">
+                                                업로드 후 심사까지 영업일 기준 1-2일 소요될 수 있습니다.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={submitKyc}
+                                                disabled={kycSubmitting || (!kycFile && !kycImageUrl)}
+                                                className={`inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition sm:w-auto sm:self-start ${
+                                                    kycSubmitting || (!kycFile && !kycImageUrl)
+                                                        ? 'bg-slate-200 text-slate-400'
+                                                        : 'bg-slate-900 text-white hover:bg-slate-800'
+                                                }`}
+                                            >
+                                                {kycSubmitting ? '심사 신청 중...' : '심사신청하기'}
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                            </>
+                        )}
+
                     </div>
-                    </>
                 )}
-
-
 
             </div>
 
