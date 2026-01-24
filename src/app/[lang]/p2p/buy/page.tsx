@@ -4528,7 +4528,7 @@ const fetchBuyOrders = async () => {
                       </span>
                     </div>
                   )}
-                  <span className="text-sm text-white">
+                  <span className="text-sm text-slate-700">
                     {user?.nickname || "프로필"}
                   </span>
 
