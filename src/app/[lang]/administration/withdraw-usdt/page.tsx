@@ -875,541 +875,539 @@ export default function SendUsdt({ params }: any) {
 
 
       <div className="w-full max-w-screen-sm mx-auto">
+        
         <div className="rounded-[32px] border border-slate-200/70 bg-white/85 p-6 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
 
   
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <button
-            onClick={() => window.history.back()}
-            className="group inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-100">
-              <Image
-                src="/icon-back.png"
-                alt="Back"
-                width={18}
-                height={18}
-                className="rounded-full"
-              />
-            </span>
-            돌아가기
-          </button>
-          {params.center && (
-            <span className="rounded-full border border-slate-200/70 bg-slate-100/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              {params.center}
-            </span>
-          )}
-        </div>
-
-        <div className="mt-5 flex flex-col gap-1">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-200/70 bg-emerald-50 shadow-sm">
-              <Image
-                src="/logo-tether.svg"
-                alt="USDT"
-                width={24}
-                height={24}
-                className="w-6 h-6"
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                Wallet Transfer
-              </span>
-              <span className="text-xl font-semibold text-slate-900">
-                {Withdraw_USDT}
-              </span>
-            </div>
-          </div>
-          <p className="text-sm text-slate-500">보안 기준을 충족한 사용자만 출금할 수 있습니다.</p>
-        </div>
-
-        <div className="mt-5 flex flex-col gap-2 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.4)]">
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-            네트워크 선택
-          </span>
-          <select
-            value={selectedNetwork}
-            onChange={(e) => setSelectedNetwork(e.target.value as NetworkKey)}
-            disabled={sending}
-            className={`w-full rounded-xl border px-3 py-2 text-base font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
-              sending
-                ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
-                : 'border-slate-200 bg-white text-slate-800'
-            }`}
-            aria-label="네트워크 선택"
-          >
-            {NETWORK_OPTIONS.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-slate-500">
-            선택한 네트워크 기준으로 잔고와 출금이 처리됩니다.
-          </p>
-        </div>
-
-            
-
-        {address && (
-          <div className="mt-6 rounded-2xl border border-slate-200/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(240,253,250,0.85))] p-4 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.45)]">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                  My Wallet
-                </span>
-                <button
-                  className="text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-2 transition hover:text-slate-900"
-                  onClick={() => {
-                    navigator.clipboard.writeText(address);
-                    toast.success(Copied_Wallet_Address);
-                  }}
-                >
-                  {address.substring(0, 6)}...{address.substring(address.length - 4)}
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                {smartAccountEnabled && (
-                  <div className="relative">
-                    <span className="absolute -inset-1 rounded-full bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.75),rgba(249,115,22,0.25),transparent_70%)] blur-lg" />
-                    <span className="relative inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 px-3 py-1 text-[11px] font-bold text-white shadow-[0_12px_28px_-16px_rgba(249,115,22,0.9)]">
-                      <span className="inline-flex h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.95)]" />
-                      스마트 어카운트
-                    </span>
-                  </div>
-                )}
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200/70 bg-white shadow-sm">
-                  <Image
-                    src="/icon-shield.png"
-                    alt="Wallet"
-                    width={20}
-                    height={20}
-                    className="w-5 h-5"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="mt-3 flex items-baseline justify-end gap-2">
-              <span className="text-3xl sm:text-4xl font-semibold text-emerald-700 tabular-nums"
-                style={{ fontFamily: 'monospace' }}
-              >
-                {Number(balance).toFixed(3)}
-              </span>
-              <span className="text-sm font-semibold text-slate-500">USDT</span>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {NETWORK_OPTIONS.map((option) => {
-            const value = nativeBalances[option.id];
-            return (
-              <div
-                key={option.id}
-                className="rounded-2xl border border-slate-200/70 bg-white/85 px-4 py-3 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.35)]"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                    {option.label}
-                  </span>
-                  {option.id === selectedNetwork && (
-                    <span className="rounded-full border border-emerald-200/70 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
-                      선택됨
-                    </span>
-                  )}
-                </div>
-                <div className="mt-2 flex items-baseline justify-between gap-2">
-                  <span className="text-lg font-semibold text-slate-800 tabular-nums">
-                    {value == null
-                      ? '...'
-                      : value.toFixed(4)}
-                  </span>
-                  <span className="text-xs font-semibold text-slate-400">
-                    {option.nativeSymbol}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-6 flex flex-col gap-5 rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.5)]">
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-slate-900">출금 요청</span>
-            <p className="text-sm text-slate-500">{Enter_the_amount_and_recipient_address}</p>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-3">
-                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                  Amount
-                </label>
-                <button
-                  type="button"
-                  onClick={handleMaxAmount}
-                  className="text-xs font-semibold text-emerald-600 underline decoration-emerald-200 underline-offset-2 transition hover:text-emerald-700"
-                >
-                  잔고 전체 선택
-                </button>
-              </div>
-              <div className="relative">
-                <input
-                  disabled={sending}
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="0.00"
-                  className={`
-                    w-full rounded-2xl border px-4 py-4 pr-20 text-right text-3xl font-semibold text-slate-900 shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)] focus:outline-none focus:ring-2 focus:ring-emerald-400
-                    ${sending ? 'border-slate-200 bg-slate-100 text-slate-400' : 'border-slate-200 bg-white'}
-                  `}
-                  value={amountInput}
-                  onChange={(e) => handleAmountChange(e.target.value)}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button
+              onClick={() => window.history.back()}
+              className="group inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-100">
+                <Image
+                  src="/icon-back.png"
+                  alt="Back"
+                  width={18}
+                  height={18}
+                  className="rounded-full"
                 />
-                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
-                  USDT
+              </span>
+              돌아가기
+            </button>
+
+          </div>
+
+          <div className="mt-5 flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-200/70 bg-emerald-50 shadow-sm">
+                <Image
+                  src="/logo-tether.svg"
+                  alt="USDT"
+                  width={24}
+                  height={24}
+                  className="w-6 h-6"
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  Wallet Transfer
+                </span>
+                <span className="text-xl font-semibold text-slate-900">
+                  {Withdraw_USDT}
                 </span>
               </div>
-              <div className="text-xs font-semibold text-slate-400">
-                사용 가능: {formatAmountInput(maxAmount, selectedNetworkConfig.decimals)} USDT
-              </div>
             </div>
-           
+            <p className="text-sm text-slate-500">보안 기준을 충족한 사용자만 출금할 수 있습니다.</p>
+          </div>
 
-            
-            
-                {!wantToReceiveWalletAddress ? (
-                  <>
-                  <div className='w-full flex flex-row gap-4 items-center justify-between'>
-                    <select
-                      disabled={sending}
+          <div className="mt-5 flex flex-col gap-2 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.4)]">
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+              네트워크 선택
+            </span>
+            <select
+              value={selectedNetwork}
+              onChange={(e) => setSelectedNetwork(e.target.value as NetworkKey)}
+              disabled={sending}
+              className={`w-full rounded-xl border px-3 py-2 text-base font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
+                sending
+                  ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                  : 'border-slate-200 bg-white text-slate-800'
+              }`}
+              aria-label="네트워크 선택"
+            >
+              {NETWORK_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500">
+              선택한 네트워크 기준으로 잔고와 출금이 처리됩니다.
+            </p>
+          </div>
 
-                      className="
-                        
-                        w-56 rounded-xl border border-slate-200 bg-white px-3 py-2 text-base font-semibold text-slate-800 shadow-sm "
-                        
-                      value={
-                        recipient?.nickname
-                      }
-
-
-                      onChange={(e) => {
-
-                        const selectedUser = users.find((user) => user.nickname === e.target.value) as any;
-
-                        console.log("selectedUser", selectedUser);
-
-                        setRecipient(selectedUser);
-
-                      } } 
-
-                    >
-                      <option value="">{Select_a_user}</option>
-                      
-
-                      {users.map((user) => (
-                        <option key={user.id} value={user.nickname}>{user.nickname}</option>
-                      ))}
-                    </select>
-
-                    {/* select user profile image */}
-
-                    <div className="w-full flex flex-row gap-2 items-center justify-center">
-                      <Image
-                        src={recipient?.avatar || '/profile-default.png'}
-                        alt="profile"
-                        width={38}
-                        height={38}
-                        className="rounded-full border border-slate-200 bg-white"
-                        style={{
-                          objectFit: 'cover',
-                          width: '38px',
-                          height: '38px',
-                        }}
-                      />
-
-                      {recipient?.walletAddress && (
-                        <Image
-                          src="/verified.png"
-                          alt="check"
-                          width={28}
-                          height={28}
-                        />
-                      )}
-
-                    </div>
-
-                    
-
-
-                  </div>
               
 
-                    {/* input wallet address */}
-                    
-                    <input
-                      disabled={true}
-                      type="text"
-                      placeholder={User_wallet_address}
-                      className="w-80 xl:w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600"
-                      value={recipient?.walletAddress}
-                      onChange={(e) => {
-      
-                        
-                        
-                          getUserByWalletAddress(e.target.value)
-
-                          .then((data) => {
-
-                            //console.log("data", data);
-
-                            const checkUser = data;
-
-                            if (checkUser) {
-                              setRecipient(checkUser as any);
-                            } else {
-                              
-                              setRecipient({
-                                ...recipient,
-                                walletAddress: e.target.value,
-                              });
-                              
-                            }
-
-                          });
-
-                      } }
+          {address && (
+            <div className="mt-6 rounded-2xl border border-slate-200/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(240,253,250,0.85))] p-4 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.45)]">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    My Wallet
+                  </span>
+                  <button
+                    className="text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-2 transition hover:text-slate-900"
+                    onClick={() => {
+                      navigator.clipboard.writeText(address);
+                      toast.success(Copied_Wallet_Address);
+                    }}
+                  >
+                    {address.substring(0, 6)}...{address.substring(address.length - 4)}
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  {smartAccountEnabled && (
+                    <div className="relative">
+                      <span className="absolute -inset-1 rounded-full bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.75),rgba(249,115,22,0.25),transparent_70%)] blur-lg" />
+                      <span className="relative inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 px-3 py-1 text-[11px] font-bold text-white shadow-[0_12px_28px_-16px_rgba(249,115,22,0.9)]">
+                        <span className="inline-flex h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.95)]" />
+                        스마트 어카운트
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200/70 bg-white shadow-sm">
+                    <Image
+                      src="/icon-shield.png"
+                      alt="Wallet"
+                      width={20}
+                      height={20}
+                      className="w-5 h-5"
                     />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 flex items-baseline justify-end gap-2">
+                <span className="text-3xl sm:text-4xl font-semibold text-emerald-700 tabular-nums"
+                  style={{ fontFamily: 'monospace' }}
+                >
+                  {Number(balance).toFixed(3)}
+                </span>
+                <span className="text-sm font-semibold text-slate-500">USDT</span>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {NETWORK_OPTIONS.map((option) => {
+              const value = nativeBalances[option.id];
+              return (
+                <div
+                  key={option.id}
+                  className="rounded-2xl border border-slate-200/70 bg-white/85 px-4 py-3 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.35)]"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                      {option.label}
+                    </span>
+                    {option.id === selectedNetwork && (
+                      <span className="rounded-full border border-emerald-200/70 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+                        선택됨
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex items-baseline justify-between gap-2">
+                    <span className="text-lg font-semibold text-slate-800 tabular-nums">
+                      {value == null
+                        ? '...'
+                        : value.toFixed(4)}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-400">
+                      {option.nativeSymbol}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 flex flex-col gap-5 rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.5)]">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-slate-900">출금 요청</span>
+              <p className="text-sm text-slate-500">{Enter_the_amount_and_recipient_address}</p>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Amount
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleMaxAmount}
+                    className="text-xs font-semibold text-emerald-600 underline decoration-emerald-200 underline-offset-2 transition hover:text-emerald-700"
+                  >
+                    잔고 전체 선택
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    disabled={sending}
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    className={`
+                      w-full rounded-2xl border px-4 py-4 pr-20 text-right text-3xl font-semibold text-slate-900 shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)] focus:outline-none focus:ring-2 focus:ring-emerald-400
+                      ${sending ? 'border-slate-200 bg-slate-100 text-slate-400' : 'border-slate-200 bg-white'}
+                    `}
+                    value={amountInput}
+                    onChange={(e) => handleAmountChange(e.target.value)}
+                  />
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
+                    USDT
+                  </span>
+                </div>
+                <div className="text-xs font-semibold text-slate-400">
+                  사용 가능: {formatAmountInput(maxAmount, selectedNetworkConfig.decimals)} USDT
+                </div>
+              </div>
+            
+
+              
+              
+                  {!wantToReceiveWalletAddress ? (
+                    <>
+                    <div className='w-full flex flex-row gap-4 items-center justify-between'>
+                      <select
+                        disabled={sending}
+
+                        className="
+                          
+                          w-56 rounded-xl border border-slate-200 bg-white px-3 py-2 text-base font-semibold text-slate-800 shadow-sm "
+                          
+                        value={
+                          recipient?.nickname
+                        }
 
 
-          
+                        onChange={(e) => {
 
+                          const selectedUser = users.find((user) => user.nickname === e.target.value) as any;
 
-                </>
+                          console.log("selectedUser", selectedUser);
 
-                ) : (
+                          setRecipient(selectedUser);
 
-                  <div className='flex flex-col gap-4 items-center justify-between'>
-                    <input
-                      disabled={sending}
-                      type="text"
-                      placeholder={User_wallet_address}
-                      className="w-80 xl:w-96 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"
-                      value={recipient.walletAddress}
-                      onChange={(e) => setRecipient({
-                        ...recipient,
-                        walletAddress: e.target.value,
-                      })}
-                    />
+                        } } 
 
-                    {isWhateListedUser ? (
-                      <div className="flex flex-row gap-2 items-center justify-center rounded-full border border-emerald-200/70 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
+                      >
+                        <option value="">{Select_a_user}</option>
+                        
 
+                        {users.map((user) => (
+                          <option key={user.id} value={user.nickname}>{user.nickname}</option>
+                        ))}
+                      </select>
 
+                      {/* select user profile image */}
+
+                      <div className="w-full flex flex-row gap-2 items-center justify-center">
                         <Image
-                          src={recipient.avatar || '/profile-default.png'}
+                          src={recipient?.avatar || '/profile-default.png'}
                           alt="profile"
-                          width={30}
-                          height={30}
-                          className="rounded-full"
+                          width={38}
+                          height={38}
+                          className="rounded-full border border-slate-200 bg-white"
                           style={{
                             objectFit: 'cover',
                             width: '38px',
                             height: '38px',
                           }}
                         />
-                        <div>{recipient?.nickname}</div>
-                        <Image
-                          src="/verified.png"
-                          alt="check"
-                          width={30}
-                          height={30}
-                        />
-                        
+
+                        {recipient?.walletAddress && (
+                          <Image
+                            src="/verified.png"
+                            alt="check"
+                            width={28}
+                            height={28}
+                          />
+                        )}
+
                       </div>
-                    ) : (
-                      <>
 
-                      {recipient?.walletAddress && (
-                        <div className='flex flex-row gap-2 items-start justify-center rounded-xl border border-rose-200/70 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600'>
-                          {/* dot icon */}
-                          <div className="mt-1 h-2.5 w-2.5 rounded-full bg-rose-500"></div>
-                          <div>
-                            {This_address_is_not_white_listed}
-                            <br />
-                            {If_you_are_sure_please_click_the_send_button}
-                          </div>
+                      
+
+
+                    </div>
+                
+
+                      {/* input wallet address */}
+                      
+                      <input
+                        disabled={true}
+                        type="text"
+                        placeholder={User_wallet_address}
+                        className="w-80 xl:w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600"
+                        value={recipient?.walletAddress}
+                        onChange={(e) => {
+        
+                          
+                          
+                            getUserByWalletAddress(e.target.value)
+
+                            .then((data) => {
+
+                              //console.log("data", data);
+
+                              const checkUser = data;
+
+                              if (checkUser) {
+                                setRecipient(checkUser as any);
+                              } else {
+                                
+                                setRecipient({
+                                  ...recipient,
+                                  walletAddress: e.target.value,
+                                });
+                                
+                              }
+
+                            });
+
+                        } }
+                      />
+
+
+            
+
+
+                  </>
+
+                  ) : (
+
+                    <div className='flex flex-col gap-4 items-center justify-between'>
+                      <input
+                        disabled={sending}
+                        type="text"
+                        placeholder={User_wallet_address}
+                        className="w-80 xl:w-96 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"
+                        value={recipient.walletAddress}
+                        onChange={(e) => setRecipient({
+                          ...recipient,
+                          walletAddress: e.target.value,
+                        })}
+                      />
+
+                      {isWhateListedUser ? (
+                        <div className="flex flex-row gap-2 items-center justify-center rounded-full border border-emerald-200/70 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
+
+
+                          <Image
+                            src={recipient.avatar || '/profile-default.png'}
+                            alt="profile"
+                            width={30}
+                            height={30}
+                            className="rounded-full"
+                            style={{
+                              objectFit: 'cover',
+                              width: '38px',
+                              height: '38px',
+                            }}
+                          />
+                          <div>{recipient?.nickname}</div>
+                          <Image
+                            src="/verified.png"
+                            alt="check"
+                            width={30}
+                            height={30}
+                          />
+                          
                         </div>
+                      ) : (
+                        <>
 
+                        {recipient?.walletAddress && (
+                          <div className='flex flex-row gap-2 items-start justify-center rounded-xl border border-rose-200/70 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600'>
+                            {/* dot icon */}
+                            <div className="mt-1 h-2.5 w-2.5 rounded-full bg-rose-500"></div>
+                            <div>
+                              {This_address_is_not_white_listed}
+                              <br />
+                              {If_you_are_sure_please_click_the_send_button}
+                            </div>
+                          </div>
+
+                        )}
+
+                        </>
                       )}
 
-                      </>
-                    )}
 
 
+                    </div>
 
-                  </div>
+                  )} 
 
-                )} 
-
-              </div>
-
-              {/* otp verification */}
-              {/*
-              {verifiedOtp ? (
-                <div className="w-full flex flex-row gap-2 items-center justify-center">
-                  <Image
-                    src="/verified.png"
-                    alt="check"
-                    width={30}
-                    height={30}
-                  />
-                  <div className="text-white">OTP verified</div>
                 </div>
-              ) : (
-             
-        
-                <div className="w-full flex flex-row gap-2 items-start">
 
-                  <button
-                    disabled={!address || !recipient?.walletAddress || !amount || isSendingOtp}
-                    onClick={sendOtp}
-                    className={`
-                      
-                      ${isSendedOtp && 'hidden'}
-
-                      w-32 p-2 rounded-lg text-sm font-semibold
-
-                        ${
-                        !address || !recipient?.walletAddress || !amount || isSendingOtp
-                        ?'bg-gray-300 text-gray-400'
-                        : 'bg-green-500 text-white'
-                        }
-                      
-                      `}
-                  >
-                      Send OTP
-                  </button>
-
-                  <div className={`flex flex-row gap-2 items-center justify-center ${!isSendedOtp && 'hidden'}`}>
-                    <input
-                      type="text"
-                      placeholder="Enter OTP"
-                      className=" w-40 p-2 border border-gray-300 rounded text-black text-sm font-semibold"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
+                {/* otp verification */}
+                {/*
+                {verifiedOtp ? (
+                  <div className="w-full flex flex-row gap-2 items-center justify-center">
+                    <Image
+                      src="/verified.png"
+                      alt="check"
+                      width={30}
+                      height={30}
                     />
+                    <div className="text-white">OTP verified</div>
+                  </div>
+                ) : (
+              
+          
+                  <div className="w-full flex flex-row gap-2 items-start">
 
                     <button
-                      disabled={!otp || isVerifingOtp}
-                      onClick={verifyOtp}
-                      className={`w-32 p-2 rounded-lg text-sm font-semibold
+                      disabled={!address || !recipient?.walletAddress || !amount || isSendingOtp}
+                      onClick={sendOtp}
+                      className={`
+                        
+                        ${isSendedOtp && 'hidden'}
+
+                        w-32 p-2 rounded-lg text-sm font-semibold
 
                           ${
-                          !otp || isVerifingOtp
+                          !address || !recipient?.walletAddress || !amount || isSendingOtp
                           ?'bg-gray-300 text-gray-400'
                           : 'bg-green-500 text-white'
                           }
                         
                         `}
                     >
-                        Verify OTP
+                        Send OTP
                     </button>
+
+                    <div className={`flex flex-row gap-2 items-center justify-center ${!isSendedOtp && 'hidden'}`}>
+                      <input
+                        type="text"
+                        placeholder="Enter OTP"
+                        className=" w-40 p-2 border border-gray-300 rounded text-black text-sm font-semibold"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
+                      />
+
+                      <button
+                        disabled={!otp || isVerifingOtp}
+                        onClick={verifyOtp}
+                        className={`w-32 p-2 rounded-lg text-sm font-semibold
+
+                            ${
+                            !otp || isVerifingOtp
+                            ?'bg-gray-300 text-gray-400'
+                            : 'bg-green-500 text-white'
+                            }
+                          
+                          `}
+                      >
+                          Verify OTP
+                      </button>
+                    </div>
+
                   </div>
 
-                </div>
-
-              )}
-                */}
-
-              
-
-
-
-              <button
-                disabled={!address || !recipient?.walletAddress || !amount || sending || !verifiedOtp}
-                onClick={sendUsdt}
-                className={`mt-2 w-full rounded-2xl px-4 py-3 text-lg font-semibold transition-all duration-200 ease-in-out
-
-                    ${
-                    !address || !recipient?.walletAddress || !amount || sending || !verifiedOtp
-                    ?'bg-slate-200 text-slate-400'
-                    : 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-[0_20px_40px_-22px_rgba(16,185,129,0.7)] hover:from-emerald-500 hover:to-emerald-400 hover:-translate-y-0.5'
-                    }
-                   
-                   `}
-              >
-                  {Send_USDT}
-              </button>
-
-              <div className="w-full flex flex-row gap-2 text-sm font-semibold text-slate-600">
-
-                {/* sending rotate animation with white color*/}
-                {sending && (
-                  <div className="
-                    w-5 h-5
-                    border-2 border-slate-400
-                    rounded-full
-                    animate-spin
-                  ">
-                    <Image
-                      src="/icon-loading.png"
-                      alt="loading"
-                      width={20}
-                      height={20}
-                    />
-                  </div>
                 )}
-                <div>
-                  {sending ? Sending : ''}
+                  */}
+
+                
+
+
+
+                <button
+                  disabled={!address || !recipient?.walletAddress || !amount || sending || !verifiedOtp}
+                  onClick={sendUsdt}
+                  className={`mt-2 w-full rounded-2xl px-4 py-3 text-lg font-semibold transition-all duration-200 ease-in-out
+
+                      ${
+                      !address || !recipient?.walletAddress || !amount || sending || !verifiedOtp
+                      ?'bg-slate-200 text-slate-400'
+                      : 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-[0_20px_40px_-22px_rgba(16,185,129,0.7)] hover:from-emerald-500 hover:to-emerald-400 hover:-translate-y-0.5'
+                      }
+                    
+                    `}
+                >
+                    {Send_USDT}
+                </button>
+
+                <div className="w-full flex flex-row gap-2 text-sm font-semibold text-slate-600">
+
+                  {/* sending rotate animation with white color*/}
+                  {sending && (
+                    <div className="
+                      w-5 h-5
+                      border-2 border-slate-400
+                      rounded-full
+                      animate-spin
+                    ">
+                      <Image
+                        src="/icon-loading.png"
+                        alt="loading"
+                        width={20}
+                        height={20}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    {sending ? Sending : ''}
+                  </div>
+
                 </div>
 
-              </div>
-
-            </div>
-
-
-
-        {address && (
-          <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-200/70 pt-4">
-            <span className="text-xs font-semibold text-slate-400">보안 로그인을 확인했습니다.</span>
-            <ConnectButton
-              client={client}
-              wallets={wallets}
-              chain={selectedNetworkConfig.chain}
-
-              theme={"light"}
-
-              // button color is dark skyblue convert (49, 103, 180) to hex
-              connectButton={{
-                  style: {
-                      backgroundColor: "#0047ab", // cobalt blue
-                      color: "#f3f4f6", // gray-300
-                      padding: "2px 10px",
-                      borderRadius: "10px",
-                      fontSize: "14px",
-                      width: "60x",
-                      height: "38px",
-                  },
-                  label: "웹3 로그인",
-              }}
-
-              connectModal={{
-                  size: "wide", 
-                  //size: "compact",
-                  titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
-                  showThirdwebBranding: false,
-              }}
-
-              locale={"ko_KR"}
-              //locale={"en_US"}
-            />
           </div>
-        )}
+
+
+
+          {address && (
+            <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-200/70 pt-4">
+              <span className="text-xs font-semibold text-slate-400">보안 로그인을 확인했습니다.</span>
+              <ConnectButton
+                client={client}
+                wallets={wallets}
+                chain={selectedNetworkConfig.chain}
+
+                theme={"light"}
+
+                // button color is dark skyblue convert (49, 103, 180) to hex
+                connectButton={{
+                    style: {
+                        backgroundColor: "#0047ab", // cobalt blue
+                        color: "#f3f4f6", // gray-300
+                        padding: "2px 10px",
+                        borderRadius: "10px",
+                        fontSize: "14px",
+                        width: "60x",
+                        height: "38px",
+                    },
+                    label: "웹3 로그인",
+                }}
+
+                connectModal={{
+                    size: "wide", 
+                    //size: "compact",
+                    titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
+                    showThirdwebBranding: false,
+                }}
+
+                locale={"ko_KR"}
+                //locale={"en_US"}
+              />
+            </div>
+          )}
 
         </div>
-       </div>
+
+      </div>
 
     </main>
 
