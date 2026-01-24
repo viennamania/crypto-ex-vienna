@@ -159,10 +159,12 @@ export default function Web3LoginPage() {
       const data = await response.json();
 
       if (data.result) {
-        setNickname(data.result.nickname || trimmed);
-        setEditedNickname(data.result.nickname || trimmed);
+        const nextNickname = data.result.nickname || trimmed;
+        setNickname(nextNickname);
+        setEditedNickname(nextNickname);
         setHasUser(true);
-        toast.success('닉네임이 저장되었습니다.');
+        await updateSendbirdNickname(nextNickname);
+        toast.success('채팅 닉네임도 변경됨');
       } else {
         toast.error('닉네임 저장에 실패했습니다.');
       }
@@ -170,6 +172,30 @@ export default function Web3LoginPage() {
       toast.error('닉네임 저장에 실패했습니다.');
     } finally {
       setSavingNickname(false);
+    }
+  };
+
+  const updateSendbirdNickname = async (nextNickname: string) => {
+    if (!address || !nextNickname) {
+      return;
+    }
+    try {
+      const response = await fetch('/api/sendbird/update-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: address,
+          nickname: nextNickname,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => null);
+        throw new Error(error?.error || 'Sendbird nickname update failed');
+      }
+    } catch (error) {
+      console.error('Sendbird nickname update failed', error);
+      toast.error('채팅 닉네임 변경에 실패했습니다.');
     }
   };
 
