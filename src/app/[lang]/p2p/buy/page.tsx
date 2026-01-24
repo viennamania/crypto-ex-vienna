@@ -4506,34 +4506,33 @@ const fetchBuyOrders = async () => {
 
                 <div className="relative w-full flex flex-wrap items-center justify-end gap-2">
               
-              <button
-                onClick={() => {
-                  router.push('/' + params.lang + '/p2p/profile-settings');
-                }}
-                className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
-                px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
-              >
-                <div className="flex flex-row items-center justify-center gap-2">
-                  {isAdmin && (
-                    <div className="flex flex-row items-center justify-center gap-2">
-                      <Image
-                        src="/icon-admin.png"
-                        alt="Admin"
-                        width={20}
-                        height={20}
-                        className="rounded-lg w-4 h-4 opacity-70 grayscale"
-                      />
-                      <span className="text-[11px] font-semibold text-amber-200">
-                        센터 관리자
-                      </span>
-                    </div>
-                  )}
-                  <span className="text-sm text-slate-700">
-                    {user?.nickname || "프로필"}
-                  </span>
+              {user?.nickname && (
+                <button
+                  onClick={() => {
+                    router.push('/' + params.lang + '/p2p/profile-settings');
+                  }}
+                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
+                  px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
+                >
+                  <div className="flex flex-row items-center justify-center gap-2">
+                    {isAdmin && (
+                      <div className="flex flex-row items-center justify-center gap-2">
+                        <Image
+                          src="/icon-admin.png"
+                          alt="Admin"
+                          width={20}
+                          height={20}
+                          className="rounded-lg w-4 h-4 opacity-70 grayscale"
+                        />
+                      </div>
+                    )}
+                    <span className="text-sm text-slate-700">
+                      {user?.nickname}
+                    </span>
 
-                </div>
-              </button>
+                  </div>
+                </button>
+              )}
 
               {/* 구매자 설정 */}
               {user?.buyer && (
@@ -4541,8 +4540,7 @@ const fetchBuyOrders = async () => {
                   onClick={() => {
                     router.push('/' + params.lang + '/p2p/buyer-settings');
                   }}
-                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
-                  px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
+                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
                 >
                   <div className="flex flex-row items-center justify-center gap-2">
                     <Image
@@ -4552,61 +4550,11 @@ const fetchBuyOrders = async () => {
                       height={20}
                       className="rounded-lg w-4 h-4 opacity-70 grayscale"
                     />
-                    <span className="text-sm text-slate-700">
-                      구매자 설정
-                    </span>
+                    <span className="text-sm">구매자 설정보기</span>
                   </div>
                 </button>
               )}
 
-              {/* sellerSettings */}
-              {user?.seller && (
-                <button
-                  onClick={() => {
-                    router.push('/' + params.lang + '/p2p/seller-settings');
-                  }}
-                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
-                  px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
-                >
-                  <div className="flex flex-row items-center justify-center gap-2">
-                    <Image
-                      src="/icon-seller.png"
-                      alt="Seller"
-                      width={20}
-                      height={20}
-                      className="rounded-lg w-4 h-4 opacity-70 grayscale"
-                    />
-                    <span className="text-sm text-slate-700">
-                      판매자 설정
-                    </span>
-                  </div>
-                </button>
-              )}
-
-              {/* opnew new window for admin dashboard */}
-              {/* https://orangex.center/ko/administration/buyorder */}
-              {isAdmin && (
-                <button
-                  onClick={() => {
-                    window.open('https://orangex.center/' + params.lang + '/administration/buyorder', '_blank');
-                  }}
-                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
-                  px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
-                >
-                  <div className="flex flex-row items-center justify-center gap-2">
-                    <Image
-                      src="/icon-dashboard.png"
-                      alt="Dashboard"
-                      width={20}
-                      height={20}
-                      className="rounded-lg w-4 h-4 opacity-70 grayscale"
-                    />
-                    <span className="text-sm text-slate-700">
-                      관리자 대시보드
-                    </span>
-                  </div>
-                </button>
-              )}
 
                 </div>
 
@@ -4662,6 +4610,104 @@ const fetchBuyOrders = async () => {
 
               )*/}
             </div>
+
+            {!address && (
+              <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-indigo-200/80 bg-indigo-50/80 p-4 shadow-[0_16px_40px_-28px_rgba(67,56,202,0.35)]">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-200/80 text-indigo-700">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 7v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <circle cx="12" cy="17" r="1.5" fill="currentColor" />
+                      <path d="M10.3 4.5h3.4L21 20H3L10.3 4.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <div className="flex flex-col">
+                    <p className="text-sm font-semibold text-indigo-900">웹3 로그인이 필요합니다</p>
+                    <p className="text-xs text-indigo-700">로그인 후 구매 기능을 이용할 수 있습니다.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    router.push('/' + params.lang + '/web3login');
+                  }}
+                  className="inline-flex w-full items-center justify-center rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_-24px_rgba(67,56,202,0.55)] transition hover:bg-indigo-700 sm:w-auto sm:self-start"
+                >
+                  웹3 로그인하기
+                </button>
+              </div>
+            )}
+            {address && (
+              <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.18)]">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 2l7 7-7 7-7-7 7-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <div className="flex flex-col">
+                    <p className="text-sm font-semibold text-slate-900">로그인된 지갑주소</p>
+                    <p className="text-xs text-slate-600 break-all">
+                      {address}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {address && !loadingUser && (!user || !user?.nickname) && (
+              <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-sky-200/80 bg-sky-50/80 p-4 shadow-[0_16px_40px_-28px_rgba(14,116,144,0.35)]">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-200/80 text-sky-700">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 7v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <circle cx="12" cy="17" r="1.5" fill="currentColor" />
+                      <path d="M10.3 4.5h3.4L21 20H3L10.3 4.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <div className="flex flex-col">
+                    <p className="text-sm font-semibold text-sky-900">프로필 설정이 필요합니다</p>
+                    <p className="text-xs text-sky-700">
+                      프로필 정보를 입력해야 구매를 진행할 수 있습니다.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    router.push('/' + params.lang + '/p2p/profile-settings');
+                  }}
+                  className="inline-flex w-full items-center justify-center rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_-24px_rgba(2,132,199,0.55)] transition hover:bg-sky-700 sm:w-auto sm:self-start"
+                >
+                  프로필 설정하기
+                </button>
+              </div>
+            )}
+            {address && !loadingUser && user?.nickname && !user?.buyer && (
+              <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-amber-200/80 bg-amber-50/80 p-4 shadow-[0_16px_40px_-28px_rgba(249,115,22,0.5)]">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-200/80 text-amber-700">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 7v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <circle cx="12" cy="17" r="1.5" fill="currentColor" />
+                      <path d="M10.3 4.5h3.4L21 20H3L10.3 4.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <div className="flex flex-col">
+                    <p className="text-sm font-semibold text-amber-900">구매자 설정이 필요합니다</p>
+                    <p className="text-xs text-amber-700">
+                      구매자 설정을 완료해야 구매를 진행할 수 있습니다.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    router.push('/' + params.lang + '/p2p/buyer-settings');
+                  }}
+                  className="inline-flex w-full items-center justify-center rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_-24px_rgba(249,115,22,0.9)] transition hover:bg-orange-600 sm:w-auto sm:self-start"
+                >
+                  구매자 설정하기
+                </button>
+              </div>
+            )}
           </div>
 
           <section className="w-full lg:flex-[0.9] rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.25)] backdrop-blur">

@@ -36,7 +36,6 @@ import Image from 'next/image';
 import GearSetupIcon from "@/components/gearSetupIcon";
 
 
-import Uploader from '@/components/uploader';
 
 import { balanceOf, transfer } from "thirdweb/extensions/erc20";
  
@@ -468,6 +467,11 @@ export default function SettingsPage({ params }: any) {
 
     const [buyer, setBuyer] = useState(null) as any;
 
+    const [kycFile, setKycFile] = useState<File | null>(null);
+    const [kycPreview, setKycPreview] = useState<string | null>(null);
+    const [kycImageUrl, setKycImageUrl] = useState<string | null>(null);
+    const [kycSubmitting, setKycSubmitting] = useState(false);
+
 
     const [loadingUserData, setLoadingUserData] = useState(false);
     useEffect(() => {
@@ -497,6 +501,8 @@ export default function SettingsPage({ params }: any) {
                 setUserCode(data.result.id);
 
                 setBuyer(data.result.buyer);
+                setKycImageUrl(data.result.buyer?.kyc?.idImageUrl || null);
+                setKycPreview(data.result.buyer?.kyc?.idImageUrl || null);
 
                 ////setEscrowWalletAddress(data.result.seller?.escrowWalletAddress || '');
             } else {
@@ -507,6 +513,9 @@ export default function SettingsPage({ params }: any) {
                 setEditedNickname('');
                 setAccountHolder('');
                 setAccountNumber('');
+                setKycImageUrl(null);
+                setKycPreview(null);
+                setKycFile(null);
 
                 ///setEscrowWalletAddress('');
 
@@ -683,6 +692,10 @@ export default function SettingsPage({ params }: any) {
                 bankName: bankName,
                 accountNumber: accountNumber,
                 accountHolder: accountHolder,
+                buyer: {
+                    ...(buyer || {}),
+                    kyc: buyer?.kyc,
+                },
             }),
           });
           
@@ -751,6 +764,107 @@ export default function SettingsPage({ params }: any) {
             setBuyer(data.result.buyer);
         }
         setApplyingBuyer(false);
+    };
+
+    const handleKycFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.currentTarget.files?.[0] || null;
+        if (!file) {
+            return;
+        }
+        if (file.size / 1024 / 1024 > 10) {
+            toast.error('파일 용량은 10MB 이하만 가능합니다.');
+            return;
+        }
+        setKycFile(file);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setKycPreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const submitKyc = async () => {
+        if (!address || kycSubmitting) {
+            return;
+        }
+        if (!kycFile && !kycImageUrl) {
+            toast.error('신분증 사진을 업로드해 주세요.');
+            return;
+        }
+        setKycSubmitting(true);
+        try {
+            let uploadedUrl = kycImageUrl;
+            if (kycFile) {
+                const uploadRes = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        'content-type': kycFile.type || 'application/octet-stream',
+                    },
+                    body: kycFile,
+                });
+                if (!uploadRes.ok) {
+                    throw new Error('Upload failed');
+                }
+                const uploadData = await uploadRes.json();
+                uploadedUrl = uploadData?.url || uploadData?.pathname || '';
+            }
+
+            if (!uploadedUrl) {
+                throw new Error('Upload failed');
+            }
+
+            const updatedBuyer = {
+                ...(buyer || {}),
+                kyc: {
+                    ...(buyer?.kyc || {}),
+                    status: 'pending',
+                    idImageUrl: uploadedUrl,
+                    submittedAt: new Date().toISOString(),
+                },
+            };
+
+            await fetch('/api/user/updateBuyer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    storecode: storecode,
+                    walletAddress: address,
+                    buyerStatus: buyer?.status || 'pending',
+                    bankName: buyer?.bankInfo?.bankName || bankName || '',
+                    accountNumber: buyer?.bankInfo?.accountNumber || accountNumber || '',
+                    accountHolder: buyer?.bankInfo?.accountHolder || accountHolder || '',
+                    buyer: updatedBuyer,
+                }),
+            });
+
+            const response = await fetch("/api/user/getUser", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    storecode: storecode,
+                    walletAddress: address,
+                }),
+            });
+            const data = await response.json();
+            if (data.result) {
+                setBuyer(data.result.buyer);
+                setKycImageUrl(data.result.buyer?.kyc?.idImageUrl || uploadedUrl);
+                setKycPreview(data.result.buyer?.kyc?.idImageUrl || uploadedUrl);
+            } else {
+                setBuyer(updatedBuyer);
+                setKycImageUrl(uploadedUrl);
+                setKycPreview(uploadedUrl);
+            }
+            setKycFile(null);
+            toast.success('심사 신청이 완료되었습니다.');
+        } catch (error) {
+            toast.error('심사 신청에 실패했습니다.');
+        }
+        setKycSubmitting(false);
     };
 
 
@@ -842,7 +956,16 @@ export default function SettingsPage({ params }: any) {
       setIsVerifingOtp(false);
     
     }
-  
+
+    const kycStatus = buyer?.kyc?.status || (kycImageUrl ? 'pending' : 'none');
+    const kycStatusLabel =
+        kycStatus === 'approved'
+            ? '승인완료'
+            : kycStatus === 'rejected'
+            ? '승인거절'
+            : kycStatus === 'pending'
+            ? '심사중'
+            : '미제출';
 
     return (
 
@@ -860,7 +983,7 @@ export default function SettingsPage({ params }: any) {
                 )}
                 */}
         
-                <div className="w-full flex flex-row gap-2 items-center justify-start text-slate-600 text-sm">
+                <div className="w-full flex flex-row gap-2 items-center justify-start text-slate-600 text-sm mb-4">
                     {/* go back button */}
                     <div className="w-full flex justify-start items-center gap-2">
                         <button
@@ -894,43 +1017,13 @@ export default function SettingsPage({ params }: any) {
 
 
                 {address && (
-                    <div className="w-full flex flex-col items-end justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
-
-                        <div className="flex flex-row items-center justify-center gap-2">
-
-                            <button
-                                className="text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 transition hover:text-slate-900"
-                                onClick={() => {
-                                    navigator.clipboard.writeText(address);
-                                    toast.success(Copied_Wallet_Address);
-                                } }
-                            >
-                                {address.substring(0, 6)}...{address.substring(address.length - 4)}
-                            </button>
-                            
-                            <Image
-                                src="/icon-shield.png"
-                                alt="Wallet"
-                                width={100}
-                                height={100}
-                                className="w-6 h-6"
-                            />
-
-                        </div>
-
-                        <div className="flex flex-row items-center justify-end  gap-2">
-                            <span className="text-2xl xl:text-4xl font-semibold text-emerald-700 tabular-nums tracking-tight"
-                                style={{ fontFamily: 'monospace' }}
-                            >
-                                {Number(balance).toFixed(2)}
-                            </span>
-                        </div>
-
-                    </div>
+                    <div className="w-full" />
                 )}
 
                 {loadingUserData && (
-                    <div className="text-sm text-slate-500 mt-4">Loading user data...</div>
+                    <div className="mt-4 flex w-full items-center justify-center rounded-2xl border border-slate-200/70 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm">
+                        사용자 정보를 불러오는 중입니다...
+                    </div>
                 )}
 
                 {!loadingUserData && !nickname && (
@@ -1006,7 +1099,7 @@ export default function SettingsPage({ params }: any) {
                         </div>
 
                         <span className="text-base font-semibold text-slate-700">
-                            구매자가 아닙니다.
+                            미승인 상태입니다.
                         </span>
 
                         <button
@@ -1074,7 +1167,7 @@ export default function SettingsPage({ params }: any) {
                                 <div className="flex flex-row items-center gap-2
                                     bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full border border-amber-200/80 shadow-sm">
                                     <span className="text-sm font-semibold">
-                                        승인대기중
+                                        미승인
                                     </span>
                                 </div>
                             ) : buyer?.status === 'confirmed' ? (
@@ -1406,30 +1499,86 @@ export default function SettingsPage({ params }: any) {
                                     <span className="text-xs text-slate-500">주민증/운전면허증/여권 중 1장 업로드</span>
                                 </div>
                             </div>
-                            <span className="inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                                심사중
+                            <span
+                                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                                    kycStatus === 'approved'
+                                        ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                                        : kycStatus === 'rejected'
+                                        ? 'border-rose-200/80 bg-rose-50 text-rose-700'
+                                        : kycStatus === 'pending'
+                                        ? 'border-amber-200/80 bg-amber-50 text-amber-700'
+                                        : 'border-slate-200/80 bg-slate-50 text-slate-600'
+                                }`}
+                            >
+                                {kycStatusLabel}
                             </span>
                         </div>
 
                         <div className="mt-4 flex flex-col gap-3">
-                            <label
-                                htmlFor="kyc-id-upload-buyer"
-                                className="cursor-pointer rounded-xl border border-dashed border-slate-200/80 bg-slate-50/80 px-4 py-4 text-center shadow-sm transition hover:border-slate-300"
-                            >
-                                <input
-                                    id="kyc-id-upload-buyer"
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                />
-                                <div className="flex flex-col items-center gap-1">
-                                    <span className="text-sm font-semibold text-slate-700">신분증 사진 업로드</span>
-                                    <span className="text-xs text-slate-500">JPG/PNG, 10MB 이하</span>
-                                </div>
-                            </label>
-                            <p className="text-xs text-slate-500">
-                                업로드 후 심사까지 영업일 기준 1-2일 소요될 수 있습니다.
-                            </p>
+                            {kycStatus === 'pending' ? (
+                                <>
+                                    <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-amber-50/80 px-4 py-3 text-sm text-amber-700 shadow-sm">
+                                        <span className="font-semibold">심사 신청이 접수되었습니다.</span>
+                                        <span className="text-xs">
+                                            신청 시간: {buyer?.kyc?.submittedAt ? new Date(buyer.kyc.submittedAt).toLocaleString() : '-'}
+                                        </span>
+                                    </div>
+                                    {kycPreview && (
+                                        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 shadow-sm">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img
+                                                src={kycPreview}
+                                                alt="KYC Preview"
+                                                className="h-40 w-full object-cover"
+                                            />
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    <label
+                                        htmlFor="kyc-id-upload-buyer"
+                                        className="cursor-pointer rounded-xl border border-dashed border-slate-200/80 bg-slate-50/80 px-4 py-4 text-center shadow-sm transition hover:border-slate-300"
+                                    >
+                                        <input
+                                            id="kyc-id-upload-buyer"
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleKycFileChange}
+                                        />
+                                        <div className="flex flex-col items-center gap-1">
+                                            <span className="text-sm font-semibold text-slate-700">신분증 사진 업로드</span>
+                                            <span className="text-xs text-slate-500">JPG/PNG, 10MB 이하</span>
+                                        </div>
+                                    </label>
+                                    {kycPreview && (
+                                        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 shadow-sm">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img
+                                                src={kycPreview}
+                                                alt="KYC Preview"
+                                                className="h-40 w-full object-cover"
+                                            />
+                                        </div>
+                                    )}
+                                    <p className="text-xs text-slate-500">
+                                        업로드 후 심사까지 영업일 기준 1-2일 소요될 수 있습니다.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={submitKyc}
+                                        disabled={kycSubmitting || (!kycFile && !kycImageUrl)}
+                                        className={`inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition sm:w-auto sm:self-start ${
+                                            kycSubmitting || (!kycFile && !kycImageUrl)
+                                                ? 'bg-slate-200 text-slate-400'
+                                                : 'bg-slate-900 text-white hover:bg-slate-800'
+                                        }`}
+                                    >
+                                        {kycSubmitting ? '심사 신청 중...' : '심사신청하기'}
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                     </>

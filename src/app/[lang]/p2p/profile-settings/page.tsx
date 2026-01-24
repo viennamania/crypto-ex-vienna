@@ -644,14 +644,6 @@ export default function SettingsPage({ params }: any) {
             <div className="py-0 w-full">
         
 
-                {storecode && (
-                    <div className="w-full flex flex-row items-center justify-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 shadow-sm backdrop-blur mb-4">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        {storecode}
-                        </span>
-                    </div>
-                )}
-        
                 <div className="w-full flex flex-row gap-2 items-center justify-between text-slate-600 text-sm"
                 >
                     {/* go back button */}
@@ -723,7 +715,7 @@ export default function SettingsPage({ params }: any) {
                                 }}
                                 className="rounded-full bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
                             >
-                                복사
+                                복사하기
                             </button>
                         </div>
                     )}
@@ -761,7 +753,7 @@ export default function SettingsPage({ params }: any) {
                                     } }
                                     className="rounded-full bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
                                 >
-                                    {nicknameEdit ? Cancel : Edit}
+                                    {nicknameEdit ? '취소하기' : '수정하기'}
                                 </button>
 
                                 <Image
@@ -794,7 +786,7 @@ export default function SettingsPage({ params }: any) {
                                 <div className='flex flex-col gap-2'>
                                     <input
                                         disabled={!address}
-                                        className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                        className="w-full rounded-2xl border border-slate-200/80 bg-white px-6 py-5 text-2xl font-black text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                                         placeholder={Enter_your_nickname}
                                         
                                         //value={nickname}
@@ -835,7 +827,7 @@ export default function SettingsPage({ params }: any) {
                                         setUserData();
                                     }}
                                 >
-                                    {Save}
+                                    저장하기
                                 </button>
 
                                 
@@ -861,83 +853,6 @@ export default function SettingsPage({ params }: any) {
                             </div>
                         )}
 
-                        {/* 판매자 설정 버튼 */}
-                        {userCode && (
-
-                            <div className='flex flex-col gap-4'>    
-
-                                {/* 구매자 설정 */}
-                                {/* /admin/p2p/buyer-settings */}
-                                <div className='flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm w-full'>
-                                    <div className="flex flex-row items-center gap-2">
-                                        {/* dot */}
-                                        <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                        <span className="text-sm font-semibold text-slate-600">
-                                            구매자 설정
-                                        </span>
-                                    </div>
-
-                                    {/* /admin/p2p/buyer-settings */}
-                                    <button
-                                        onClick={() => {
-                                            router.push(`/${params.lang}/p2p/buyer-settings`);
-                                        }}
-                                        className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-                                    >
-                                        구매자 설정 보기
-                                    </button>
-
-                                </div>
-
-
-                                
-                                {/* 판매자 설정 */}
-                                <div className='flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm w-full'>
-                                    <div className="flex flex-row items-center gap-2">
-                                        {/* dot */}
-                                        <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                        <span className="text-sm font-semibold text-slate-600">
-                                            {Seller} 설정
-                                        </span>
-                                    </div>
-
-                                    {seller ? (
-                                        <div className="w-full flex flex-row items-center justify-between">                                    
-                                            <div className="text-emerald-700 font-semibold
-                                            bg-emerald-50 border border-emerald-200/80 px-3 py-1.5 rounded-full text-xs">
-                                                {Seller} 승인 완료
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    router.push(`/${params.lang}/p2p/seller-settings`);
-                                                }}
-                                                className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-                                            >
-                                                {Seller} 설정 보기
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="w-full flex flex-row items-center justify-between">                                    
-                                            <div className="text-rose-700 font-semibold
-                                            bg-rose-50 border border-rose-200/80 px-3 py-1.5 rounded-full text-xs">
-                                                {Not_a_seller}
-                                            </div>
-
-                                            <button
-                                                onClick={() => {
-                                                    router.push(`/${params.lang}/p2p/seller-settings`);
-                                                }}
-                                                className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-                                            >
-                                                판매자 신청하기
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-
-                            </div>
-
-                        )}
 
 
                     </div>
@@ -945,49 +860,59 @@ export default function SettingsPage({ params }: any) {
 
                 </div>
 
-
-            </div>
-
-            <div className="fixed left-0 right-0 bottom-4 z-30 px-4 pb-[env(safe-area-inset-bottom)]">
-                <div className="mx-auto w-full max-w-screen-sm">
-                    <div className="w-full rounded-2xl border border-slate-200/80 bg-white/90 p-2 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.25)] backdrop-blur">
-                        <div className="grid w-full grid-cols-2 gap-2">
-                            <button
-                                type="button"
-                                onClick={() => router.push('/' + params.lang + '/p2p/profile-settings')}
-                                className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-slate-900/80 bg-slate-900 px-3 py-2 text-white shadow-[0_16px_40px_-28px_rgba(15,23,42,0.6)] transition hover:-translate-y-0.5 hover:bg-slate-800"
-                            >
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white">
-                                    <Image
-                                        src="/icon-user.png"
-                                        alt="Profile Settings"
-                                        width={20}
-                                        height={20}
-                                        className="h-5 w-5"
-                                    />
+                <div className="mt-8 w-full rounded-2xl border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(241,245,249,0.9))] p-5 shadow-[0_20px_50px_-38px_rgba(15,23,42,0.35)]">
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex flex-col gap-1">
+                                <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Profile Guide</span>
+                                <p className="text-base font-semibold text-slate-900">프로필을 최신 상태로 유지하세요</p>
+                                <p className="text-xs text-slate-600">
+                                    빠른 거래 승인과 안전한 정산을 위해 기본 정보를 최신화해 주세요.
+                                </p>
+                            </div>
+                            <div className="hidden sm:flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm ring-1 ring-slate-200/70">
+                                <Image
+                                    src="/icon-shield.png"
+                                    alt="Guide"
+                                    width={24}
+                                    height={24}
+                                    className="h-6 w-6 brightness-0 invert opacity-95"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                            <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                                    <Image src="/icon-user.png" alt="Profile" width={18} height={18} className="h-4 w-4" />
                                 </div>
-                                <span className="text-[11px] font-semibold">프로필 설정</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => router.push('/' + params.lang + '/p2p/seller-settings')}
-                                className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white/90 px-3 py-2 text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-md"
-                            >
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                                    <Image
-                                        src="/icon-seller.png"
-                                        alt="Seller Settings"
-                                        width={20}
-                                        height={20}
-                                        className="h-5 w-5"
-                                    />
+                                <div className="flex flex-col">
+                                    <span className="text-xs font-semibold text-slate-700">닉네임</span>
+                                    <span className="text-[11px] text-slate-500">실사용 닉네임 유지</span>
                                 </div>
-                                <span className="text-[11px] font-semibold">판매자 설정</span>
-                            </button>
+                            </div>
+                            <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                                    <Image src="/icon-bank-check.png" alt="Verification" width={18} height={18} className="h-4 w-4" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-xs font-semibold text-slate-700">인증 정보</span>
+                                    <span className="text-[11px] text-slate-500">계좌/연락처 확인</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                                    <Image src="/icon-chat.png" alt="Support" width={18} height={18} className="h-4 w-4" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-xs font-semibold text-slate-700">문의 대응</span>
+                                    <span className="text-[11px] text-slate-500">알림/채팅 확인</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+
             </div>
 
         </main>

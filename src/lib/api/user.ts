@@ -2671,7 +2671,7 @@ export async function updateUserForBuyer(
     {
       $set: {
         buyer: {
-          status: 'confirmed',
+          status: 'pending',
         }
       }
     }
