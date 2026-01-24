@@ -7,8 +7,9 @@ import { useParams } from 'next/navigation';
 import { Manrope, Playfair_Display } from 'next/font/google';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
-import { useActiveAccount } from 'thirdweb/react';
+import { AutoConnect, useActiveAccount } from 'thirdweb/react';
 import { useClientWallets } from '@/lib/useClientWallets';
+import { client } from '@/app/client';
 
 
 const displayFont = Playfair_Display({
@@ -317,8 +318,10 @@ export default function OrangeXPage() {
     const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang ?? 'ko';
     const activeAccount = useActiveAccount();
     const walletAddress = activeAccount?.address ?? '';
-    const { smartAccountEnabled } = useClientWallets();
+    const { smartAccountEnabled, wallet } = useClientWallets();
     const hasWallet = Boolean(walletAddress);
+    const web3LoginHref = `/${lang}/web3login`;
+    const buyPageHref = hasWallet ? `/${lang}/p2p/buy` : web3LoginHref;
     const [sellerEscrowWalletAddress, setSellerEscrowWalletAddress] = useState<string | null>(null);
     const [sellerEscrowLoading, setSellerEscrowLoading] = useState(false);
     const sellerPageHref =
@@ -1371,6 +1374,7 @@ export default function OrangeXPage() {
                 </>
             )}
 
+            <AutoConnect client={client} wallets={[wallet]} />
             {/* 메인 컨텐츠 */}
             <main className="container relative z-10 mx-auto max-w-5xl overflow-x-hidden px-4 pb-16 lg:px-8 lg:pb-12">
                 {/* 히어로 섹션 */}
@@ -1412,7 +1416,7 @@ export default function OrangeXPage() {
 
                             <div className="flex flex-col gap-4 sm:flex-row">
                                 <Link
-                                    href="/ko/p2p/buy"
+                                    href={buyPageHref}
                                     className="inline-flex w-full items-center justify-center gap-3 whitespace-nowrap rounded-full bg-[color:var(--accent)] px-8 py-4 text-base font-semibold text-white shadow-[0_18px_45px_-20px_rgba(249,115,22,0.9)] transition hover:bg-[color:var(--accent-deep)] sm:w-auto sm:min-w-[220px]"
                                 >
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
@@ -2674,7 +2678,7 @@ export default function OrangeXPage() {
                         </ol>
 
                         <Link 
-                            href="/ko/p2p/buy"
+                            href={buyPageHref}
                             className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-[color:var(--sea)] px-6 py-4 text-base font-semibold text-white shadow-[0_18px_40px_-20px_rgba(15,118,110,0.8)] transition hover:brightness-110"
                         >
                             안전 구매 진행하기 →
@@ -2803,7 +2807,7 @@ export default function OrangeXPage() {
                     
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <Link 
-                            href="/ko/p2p/buy"
+                            href={buyPageHref}
                             className="w-full sm:w-auto rounded-full bg-white px-8 py-4 text-base font-semibold text-slate-900 shadow-[0_18px_45px_-25px_rgba(15,23,42,0.8)] transition hover:bg-white/90"
                         >
                             안전 구매 시작 →
