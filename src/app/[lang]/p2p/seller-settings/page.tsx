@@ -6,7 +6,9 @@ import React, { use, useEffect, useState } from 'react';
 
 import { toast } from 'react-hot-toast';
 
-import { client } from "../../../client";
+import { useClientWallets } from '@/lib/useClientWallets';
+import { client } from "@/app/client";
+
 
 import {
     getContract,
@@ -258,19 +260,19 @@ export default function SettingsPage({ params }: any) {
 
     const router = useRouter();
 
+    const { smartAccountEnabled, wallet } = useClientWallets();
 
+    // get the active wallet
+    const activeWallet = useActiveWallet();
 
-  // get the active wallet
-  const activeWallet = useActiveWallet();
+    const setActiveAccount = useSetActiveWallet();
+    
+    const connectWallets = useConnectedWallets();
 
-  const setActiveAccount = useSetActiveWallet();
- 
-  const connectWallets = useConnectedWallets();
+    //console.log('connectWallets', connectWallets);
 
-  //console.log('connectWallets', connectWallets);
-
-  const smartConnectWallet = connectWallets?.[0];
-  const inAppConnectWallet = connectWallets?.[1];
+    const smartConnectWallet = connectWallets?.[0];
+    const inAppConnectWallet = connectWallets?.[1];
 
 
 
@@ -1172,11 +1174,10 @@ export default function SettingsPage({ params }: any) {
 
 
 
-
     return (
 
         <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
-            <AutoConnect client={client} wallets={wallets} />
+            <AutoConnect client={client} wallets={[wallet]} />
 
             <div className="py-0 w-full">
         
