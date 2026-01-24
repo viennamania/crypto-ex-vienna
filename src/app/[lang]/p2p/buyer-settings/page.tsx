@@ -1124,7 +1124,7 @@ export default function SettingsPage({ params }: any) {
                         </div>
 
                         <span className="text-base font-semibold text-slate-700">
-                            미승인 상태입니다.
+                            미승인
                         </span>
 
                         <button
@@ -1178,7 +1178,7 @@ export default function SettingsPage({ params }: any) {
                         </div>
 
                         {/* buyer?.status */}
-                        {/* status: pending, confirmed, rejected */}
+                        {/* status: pending, confirmed */}
                         <div className='w-full flex flex-row gap-2 items-center justify-between
                             border-t border-slate-200/80 pt-4'>
                             <div className="flex flex-row items-center gap-2">
@@ -1188,28 +1188,15 @@ export default function SettingsPage({ params }: any) {
                                     구매자 상태
                                 </span>
                             </div>
-                            {buyer?.status === 'pending' ? (
-                                <div className="flex flex-row items-center gap-2
-                                    bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full border border-amber-200/80 shadow-sm">
-                                    <span className="text-sm font-semibold">
-                                        미승인
-                                    </span>
-                                </div>
-                            ) : buyer?.status === 'confirmed' ? (
-                                <div className="flex flex-row items-center gap-2
-                                    bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-200/80 shadow-sm">
-                                    <span className="text-sm font-semibold">
-                                        승인완료
-                                    </span>
-                                </div>
-                            ) : buyer?.status === 'rejected' ? (
-                                <div className="flex flex-row items-center gap-2
-                                    bg-rose-50 text-rose-700 px-3 py-1.5 rounded-full border border-rose-200/80 shadow-sm">
-                                    <span className="text-sm font-semibold">
-                                        승인거절
-                                    </span>
-                                </div>
-                            ) : null}
+                            {buyer?.status === 'confirmed' ? (
+                                <span className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 shadow-sm">
+                                    승인완료
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 shadow-sm">
+                                    미승인
+                                </span>
+                            )}
                         </div>
 
                         <div className='mt-4 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm'>

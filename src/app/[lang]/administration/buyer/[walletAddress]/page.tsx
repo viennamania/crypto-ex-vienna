@@ -6,7 +6,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 
 type BuyerStatus = 'pending' | 'confirmed' | 'rejected' | undefined;
-type BuyerStatusValue = 'pending' | 'confirmed' | 'rejected';
+type BuyerStatusValue = 'pending' | 'confirmed';
 type KycStatus = 'pending' | 'approved' | 'rejected' | 'none' | undefined;
 
 export default function BuyerDetailPage() {
@@ -101,10 +101,11 @@ export default function BuyerDetailPage() {
   const kycImageUrl = buyer?.kyc?.idImageUrl;
   const bankInfoStatus: KycStatus =
     buyer?.bankInfo?.status || (buyer?.bankInfo?.accountNumber ? 'pending' : 'none');
+  const normalizedBuyerStatus: BuyerStatusValue = buyerStatus === 'confirmed' ? 'confirmed' : 'pending';
 
   useEffect(() => {
-    setSelectedBuyerStatus((buyerStatus || 'pending') as BuyerStatusValue);
-  }, [buyerStatus]);
+    setSelectedBuyerStatus(normalizedBuyerStatus);
+  }, [normalizedBuyerStatus]);
 
   const handleDecision = async (decision: 'approved' | 'rejected') => {
     if (!walletAddress || !buyer) {
@@ -121,9 +122,7 @@ export default function BuyerDetailPage() {
     setDecisionLoading(decision === 'approved' ? 'approve' : 'reject');
     try {
       const nextBuyerStatus =
-        decision === 'approved' && bankInfoStatus === 'approved'
-          ? 'confirmed'
-          : buyer?.status || 'pending';
+        decision === 'approved' && bankInfoStatus === 'approved' ? 'confirmed' : 'pending';
       const finalRejectionReason =
         decision === 'rejected'
           ? selectedRejectionReason === '기타'
@@ -181,9 +180,7 @@ export default function BuyerDetailPage() {
     setBankDecisionLoading(decision === 'approved' ? 'approve' : 'reject');
     try {
       const nextBuyerStatus =
-        decision === 'approved' && kycStatus === 'approved'
-          ? 'confirmed'
-          : buyer?.status || 'pending';
+        decision === 'approved' && kycStatus === 'approved' ? 'confirmed' : 'pending';
       const finalReason =
         decision === 'rejected'
           ? selectedBankRejectionReason === '기타'
@@ -303,18 +300,12 @@ export default function BuyerDetailPage() {
                   </div>
                   <span
                     className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
-                      buyerStatus === 'confirmed'
+                      normalizedBuyerStatus === 'confirmed'
                         ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
-                        : buyerStatus === 'rejected'
-                        ? 'border-rose-200/80 bg-rose-50 text-rose-700'
                         : 'border-amber-200/80 bg-amber-50 text-amber-700'
                     }`}
                   >
-                    {buyerStatus === 'confirmed'
-                      ? '승인완료'
-                      : buyerStatus === 'rejected'
-                      ? '승인거절'
-                      : '미승인'}
+                    {normalizedBuyerStatus === 'confirmed' ? '승인완료' : '미승인'}
                   </span>
                 </div>
                 <div className="flex flex-col gap-1 text-xs text-slate-600">
@@ -337,14 +328,13 @@ export default function BuyerDetailPage() {
                   >
                     <option value="pending">미승인</option>
                     <option value="confirmed">승인완료</option>
-                    <option value="rejected">승인거절</option>
                   </select>
                   <button
                     type="button"
                     onClick={handleStatusUpdate}
-                    disabled={statusUpdating || selectedBuyerStatus === (buyerStatus || 'pending')}
+                    disabled={statusUpdating || selectedBuyerStatus === normalizedBuyerStatus}
                     className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
-                      statusUpdating || selectedBuyerStatus === (buyerStatus || 'pending')
+                      statusUpdating || selectedBuyerStatus === normalizedBuyerStatus
                         ? 'bg-slate-200 text-slate-400'
                         : 'bg-slate-900 text-white hover:bg-slate-800'
                     }`}

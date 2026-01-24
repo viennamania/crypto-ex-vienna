@@ -95,6 +95,7 @@ export default function BuyerManagementPage() {
                 <tbody>
                   {buyers.map((buyerUser, index) => {
                     const buyerStatus = buyerUser?.buyer?.status;
+                    const normalizedBuyerStatus = buyerStatus === 'confirmed' ? 'confirmed' : 'pending';
                     const kycStatus =
                       buyerUser?.buyer?.kyc?.status ||
                       (buyerUser?.buyer?.kyc?.idImageUrl ? 'pending' : 'none');
@@ -124,19 +125,13 @@ export default function BuyerManagementPage() {
                         </td>
                         <td className="px-4 py-2">
                           <span
-                            className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${
-                              buyerStatus === 'confirmed'
+                            className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                              normalizedBuyerStatus === 'confirmed'
                                 ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
-                                : buyerStatus === 'rejected'
-                                ? 'border-rose-200/80 bg-rose-50 text-rose-700'
                                 : 'border-amber-200/80 bg-amber-50 text-amber-700'
                             }`}
                           >
-                            {buyerStatus === 'confirmed'
-                              ? '승인완료'
-                              : buyerStatus === 'rejected'
-                              ? '승인거절'
-                              : '미승인'}
+                            {normalizedBuyerStatus === 'confirmed' ? '승인완료' : '미승인'}
                           </span>
                         </td>
                         <td className="px-4 py-2">
