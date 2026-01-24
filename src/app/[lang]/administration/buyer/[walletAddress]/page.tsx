@@ -21,6 +21,19 @@ export default function BuyerDetailPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [decisionLoading, setDecisionLoading] = useState<'approve' | 'reject' | null>(null);
+  const rejectionReasons = [
+    '신분증 식별 불가',
+    '정보 불일치',
+    '사진 품질 불량',
+    '타인 신분증 의심',
+    '유효기간 만료',
+    '얼굴/정보 가림',
+    '서류 종류 불일치',
+    '중복 제출',
+    '기타',
+  ];
+  const [selectedRejectionReason, setSelectedRejectionReason] = useState('');
+  const [customRejectionReason, setCustomRejectionReason] = useState('');
 
   const fetchUser = async () => {
     if (!walletAddress) {
@@ -52,6 +65,16 @@ export default function BuyerDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletAddress, storecode]);
 
+  useEffect(() => {
+    if (user?.buyer?.kyc?.rejectionReason) {
+      setSelectedRejectionReason(user.buyer.kyc.rejectionReason);
+      if (!rejectionReasons.includes(user.buyer.kyc.rejectionReason)) {
+        setSelectedRejectionReason('기타');
+        setCustomRejectionReason(user.buyer.kyc.rejectionReason);
+      }
+    }
+  }, [user]);
+
   const buyer = user?.buyer || {};
   const buyerStatus: BuyerStatus = buyer?.status;
   const kycStatus: KycStatus = buyer?.kyc?.status || (buyer?.kyc?.idImageUrl ? 'pending' : 'none');
@@ -61,9 +84,23 @@ export default function BuyerDetailPage() {
     if (!walletAddress || !buyer) {
       return;
     }
+    if (decision === 'rejected' && !selectedRejectionReason) {
+      toast.error('거절 사유를 선택해 주세요.');
+      return;
+    }
+    if (decision === 'rejected' && selectedRejectionReason === '기타' && !customRejectionReason.trim()) {
+      toast.error('기타 사유를 입력해 주세요.');
+      return;
+    }
     setDecisionLoading(decision === 'approved' ? 'approve' : 'reject');
     try {
       const nextBuyerStatus = decision === 'approved' ? 'confirmed' : 'rejected';
+      const finalRejectionReason =
+        decision === 'rejected'
+          ? selectedRejectionReason === '기타'
+            ? customRejectionReason.trim()
+            : selectedRejectionReason
+          : '';
       const updatedBuyer = {
         ...buyer,
         status: nextBuyerStatus,
@@ -71,6 +108,7 @@ export default function BuyerDetailPage() {
           ...(buyer?.kyc || {}),
           status: decision,
           reviewedAt: new Date().toISOString(),
+          rejectionReason: finalRejectionReason,
         },
       };
 
@@ -209,6 +247,49 @@ export default function BuyerDetailPage() {
                 )}
               </div>
 
+              {kycImageUrl && (
+                <div className="mt-4 rounded-xl border border-slate-200/80 bg-slate-50/80 p-4">
+                  <p className="text-sm font-semibold text-slate-700">거절 사유 선택</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {rejectionReasons.map((reason) => (
+                      <button
+                        key={reason}
+                        type="button"
+                        onClick={() => {
+                          setSelectedRejectionReason(reason);
+                          if (reason !== '기타') {
+                            setCustomRejectionReason('');
+                          }
+                        }}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold border transition ${
+                          selectedRejectionReason === reason
+                            ? 'border-rose-300 bg-rose-50 text-rose-700'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        {reason}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedRejectionReason === '기타' && (
+                    <div className="mt-3">
+                      <textarea
+                        value={customRejectionReason}
+                        onChange={(event) => setCustomRejectionReason(event.target.value)}
+                        placeholder="기타 거절 사유를 입력해 주세요."
+                        className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-200"
+                        rows={3}
+                      />
+                    </div>
+                  )}
+                  {buyer?.kyc?.rejectionReason && (
+                    <p className="mt-2 text-xs text-slate-500">
+                      현재 사유: {buyer.kyc.rejectionReason}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -220,19 +301,27 @@ export default function BuyerDetailPage() {
                       : 'bg-emerald-600 text-white hover:bg-emerald-500'
                   }`}
                 >
-                  {decisionLoading === 'approve' ? '승인 처리중...' : '승인'}
+                  {decisionLoading === 'approve' ? '승인 처리중...' : '승인하기'}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDecision('rejected')}
-                  disabled={decisionLoading !== null || !kycImageUrl}
+                  disabled={
+                    decisionLoading !== null ||
+                    !kycImageUrl ||
+                    !selectedRejectionReason ||
+                    (selectedRejectionReason === '기타' && !customRejectionReason.trim())
+                  }
                   className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
-                    decisionLoading || !kycImageUrl
+                    decisionLoading ||
+                    !kycImageUrl ||
+                    !selectedRejectionReason ||
+                    (selectedRejectionReason === '기타' && !customRejectionReason.trim())
                       ? 'bg-rose-100 text-rose-300'
                       : 'bg-rose-600 text-white hover:bg-rose-500'
                   }`}
                 >
-                  {decisionLoading === 'reject' ? '거절 처리중...' : '거절'}
+                  {decisionLoading === 'reject' ? '거절 처리중...' : '거절하기'}
                 </button>
               </div>
             </div>
