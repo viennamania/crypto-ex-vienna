@@ -119,7 +119,7 @@ const resolveNetwork = (value?: string | null): NetworkKey | null => {
   return null;
 };
 
-const StabilityConsole = () => {
+const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) => {
 
   const { Canvas } = useQRCode();
 
@@ -425,9 +425,9 @@ const StabilityConsole = () => {
                 <span>내 테더 잔액(USDT)</span>
               </div>
 
-              <div className="mt-3 flex w-full items-baseline justify-between">
+              <div className="mt-3 flex w-full items-baseline justify-end gap-2 text-right">
                 <div
-                  className="text-2xl font-semibold text-emerald-700 tabular-nums"
+                  className="text-2xl font-semibold text-emerald-700 tabular-nums text-right"
                   style={{ fontFamily: '"JetBrains Mono", "IBM Plex Mono", "Menlo", monospace' }}
                 >
                   {Number(balance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -551,8 +551,8 @@ const StabilityConsole = () => {
                 //onClick={() => router.push("/ko/administration/withdraw-usdt")}
                 /* router and hide button for withdraw USDT */
                 onClick={() => {
+                  onRequestClose?.();
                   router.push("/ko/administration/withdraw-usdt");
-                  //setShowChain(false);
                 }}>
                   <Image
                     src={`/icon-withdraw.png`}

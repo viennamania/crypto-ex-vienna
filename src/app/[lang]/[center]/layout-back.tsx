@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
-import { ThirdwebProvider } from "thirdweb/react";
+import { ThirdwebProvider, useActiveAccount } from "thirdweb/react";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -11,9 +11,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 
 
-import { Toaster } from "react-hot-toast";
+import { Toaster, toast } from "react-hot-toast";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 
 import Script from "next/script";
@@ -79,28 +79,44 @@ export const metadata: Metadata = {
 const queryClient = new QueryClient();
 
 
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-
-
+const WalletConsoleShell = () => {
   const router = useRouter();
-
-  /*
-  useEffect(() => {
-  
-    window.googleTranslateElementInit = () => {
-     new window.google.translate.TranslateElement({ pageLanguage: 'en' }, 'google_translate_element');
-    };
-  
-   }, []);
-   */
-
-
   const [showChain, setShowChain] = useState(false);
+  const activeAccount = useActiveAccount();
+  const previousAddressRef = useRef<string | undefined>(undefined);
+  const isConnected = !!activeAccount?.address;
+
+  useEffect(() => {
+    const prevAddress = previousAddressRef.current;
+    const nextAddress = activeAccount?.address;
+
+    if (prevAddress && !nextAddress) {
+      if (showChain) {
+        setShowChain(false);
+      }
+      toast('지갑 연결이 해제되어 지갑 패널이 닫혔습니다.', { icon: '🔒' });
+    }
+
+    if (!prevAddress && nextAddress && typeof window !== "undefined") {
+      const storedOpen = window.localStorage.getItem("walletConsoleOpen");
+      if (storedOpen === "1") {
+        setShowChain(true);
+      }
+    }
+
+    previousAddressRef.current = nextAddress;
+  }, [activeAccount?.address, showChain]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (!activeAccount?.address) {
+      return;
+    }
+    window.localStorage.setItem("walletConsoleOpen", showChain ? "1" : "0");
+  }, [showChain, activeAccount?.address]);
+
 
   useEffect(() => {
     if (!showChain) {
@@ -127,67 +143,11 @@ export default function RootLayout({
     };
   }, [showChain]);
 
-
-
+  if (!isConnected) {
+    return null;
+  }
 
   return (
-
-    <html lang="ko">
-
-    {/*
-    <html lang="en">
-    */}
-
-
-
-      <head>
-        
-        {/* Google Translate */}
-        {/*}
-        <Script
-        src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
-        ></Script>
-        */}
-
-   
-
-        {/* Google Translate CSS */}
-        {/*
-        <link
-        rel="stylesheet"
-        type="text/css"
-        href="https://www.gstatic.com/_/translate_http/_/ss/k=translate_http.tr.26tY-h6gH9w.L.W.O/am=CAM/d=0/rs=AN8SPfpIXxhebB2A47D9J-MACsXmFF6Vew/m=el_main_css"
-        />
-        */}
-
-
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>OrangX OTC</title>
-        <meta name="description" content="Gate for Crypto OTC." />
-        <link rel="icon" href="/favicon.ico" />
-
-
-
-
-      </head>
-
-
-        
-      <body>
-
-
-
-
-        <ThirdwebProvider>
-
-          <Toaster />
-
-          {/* chain image */}
-
-          <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg shadow-md mb-4">
-
-            {/* fixed position vertically top */}
             <div className="fixed top-2 right-2 z-50 flex flex-col items-end justify-center">
 
 
@@ -270,8 +230,8 @@ export default function RootLayout({
                   </div>
 
                   <div className="flex flex-row items-center justify-center gap-4 mb-4">
-                    
-                    <div className={`
+
+                    <div className={``
                       w-20 h-20
                       flex flex-col items-center justify-center gap-1 ${chain === 'ethereum' ? 'border-2 border-blue-500 p-2 rounded' : ''}
                       hover:bg-blue-500 hover:text-white transition-colors duration-200`}>
@@ -283,7 +243,7 @@ export default function RootLayout({
                         className="h-6 w-6 rounded-full"
                         style={{ objectFit: "cover" }}
                       />
-                      <span className={`
+                      <span className={``
                         ${chain === 'ethereum' ? 'text-blue-500' : 'text-gray-600'}
                         hover:text-blue-500
                       `}>
@@ -291,7 +251,7 @@ export default function RootLayout({
                       </span>
                     </div>
 
-                    <div className={`
+                    <div className={``
                       w-20 h-20
                       flex flex-col items-center justify-center gap-1 ${chain === 'polygon' ? 'border-2 border-blue-500 p-2 rounded' : ''}
                       hover:bg-blue-500 hover:text-white transition-colors duration-200`}>
@@ -303,7 +263,7 @@ export default function RootLayout({
                         className="h-6 w-6 rounded-full"
                         style={{ objectFit: "cover" }}
                       />
-                      <span className={`
+                      <span className={``
                         ${chain === 'polygon' ? 'text-blue-500' : 'text-gray-600'}
                         hover:text-blue-500
                       `}>
@@ -311,7 +271,7 @@ export default function RootLayout({
                       </span>
                     </div>
 
-                    <div className={`
+                    <div className={``
                       w-20 h-20
                       flex flex-col items-center justify-center gap-1 ${chain === 'bsc' ? 'border-2 border-blue-500 p-2 rounded' : ''}
                       hover:bg-blue-500 hover:text-white transition-colors duration-200`}>
@@ -323,7 +283,7 @@ export default function RootLayout({
                         className="h-6 w-6 rounded-full"
                         style={{ objectFit: "cover" }}
                       />
-                      <span className={`
+                      <span className={``
                         ${chain === 'bsc' ? 'text-blue-500' : 'text-gray-600'}
                         hover:text-blue-500
                       `}>
@@ -331,7 +291,7 @@ export default function RootLayout({
                       </span>
                     </div>
 
-                    <div className={`
+                    <div className={``
                       w-20 h-20
                       flex flex-col items-center justify-center gap-1 ${chain === 'arbitrum' ? 'border-2 border-blue-500 p-2 rounded' : ''}
                       hover:bg-blue-500 hover:text-white transition-colors duration-200`}>
@@ -343,7 +303,7 @@ export default function RootLayout({
                         className="h-6 w-6 rounded-full"
                         style={{ objectFit: "cover" }}
                       />
-                      <span className={`
+                      <span className={``
                         ${chain === 'arbitrum' ? 'text-blue-500' : 'text-gray-600'}
                         hover:text-blue-500
                       `}>
@@ -368,7 +328,7 @@ export default function RootLayout({
 
                     <button
                       className="bg-blue-500 text-white rounded-md px-2 py-1 text-xs hover:bg-blue-600 transition-colors duration-200"
-                      
+
                       //onClick={() => router.push("/ko/administration/withdraw-usdt")}
                       /* router and hide button for withdraw USDT */
                       onClick={() => {
@@ -380,13 +340,84 @@ export default function RootLayout({
 
                   </div>
 
-                  <StabilityConsole />
+                  <StabilityConsole onRequestClose={() => setShowChain(false)} />
 
                 </div>
 
               </div>
 
             </div>
+  );
+};
+
+
+
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+
+    <html lang="ko">
+
+
+    {/*
+    <html lang="en">
+    */}
+
+
+
+      <head>
+        
+        {/* Google Translate */}
+        {/*}
+        <Script
+        src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
+        ></Script>
+        */}
+
+   
+
+        {/* Google Translate CSS */}
+        {/*
+        <link
+        rel="stylesheet"
+        type="text/css"
+        href="https://www.gstatic.com/_/translate_http/_/ss/k=translate_http.tr.26tY-h6gH9w.L.W.O/am=CAM/d=0/rs=AN8SPfpIXxhebB2A47D9J-MACsXmFF6Vew/m=el_main_css"
+        />
+        */}
+
+
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>OrangX OTC</title>
+        <meta name="description" content="Gate for Crypto OTC." />
+        <link rel="icon" href="/favicon.ico" />
+
+
+
+
+      </head>
+
+
+        
+      <body>
+
+
+
+
+        <ThirdwebProvider>
+
+          <Toaster />
+
+          {/* chain image */}
+
+          <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg shadow-md mb-4">
+
+                        <WalletConsoleShell />
+
 
 
             <QueryClientProvider client={queryClient}>
