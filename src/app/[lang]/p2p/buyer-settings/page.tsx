@@ -680,6 +680,14 @@ export default function SettingsPage({ params }: any) {
           console.log(transactionResult);
             */
   
+          const nextBuyerStatus = buyer?.status === 'confirmed' ? 'confirmed' : 'pending';
+          const nextBankInfo = {
+            ...(buyer?.bankInfo || {}),
+            status: 'pending',
+            submittedAt: new Date().toISOString(),
+            rejectionReason: '',
+          };
+
           await fetch('/api/user/updateBuyer', {
             method: 'POST',
             headers: {
@@ -688,12 +696,14 @@ export default function SettingsPage({ params }: any) {
             body: JSON.stringify({
                 storecode: storecode,
                 walletAddress: address,
-                buyerStatus: 'pending',
+                buyerStatus: nextBuyerStatus,
                 bankName: bankName,
                 accountNumber: accountNumber,
                 accountHolder: accountHolder,
                 buyer: {
                     ...(buyer || {}),
+                    status: nextBuyerStatus,
+                    bankInfo: nextBankInfo,
                     kyc: buyer?.kyc,
                 },
             }),
@@ -966,6 +976,21 @@ export default function SettingsPage({ params }: any) {
             : kycStatus === 'pending'
             ? '심사중'
             : '미제출';
+    const bankInfoStatus =
+        buyer?.bankInfo?.status ||
+        (buyer?.bankInfo?.accountNumber
+            ? buyer?.status === 'confirmed'
+                ? 'approved'
+                : 'pending'
+            : 'none');
+    const bankInfoStatusLabel =
+        bankInfoStatus === 'approved'
+            ? '승인완료'
+            : bankInfoStatus === 'rejected'
+            ? '승인거절'
+            : bankInfoStatus === 'pending'
+            ? '심사중'
+            : '미제출';
 
     return (
 
@@ -1187,222 +1212,62 @@ export default function SettingsPage({ params }: any) {
                             ) : null}
                         </div>
 
-                        {/* bank info */}
-                        <div className='w-full flex flex-row gap-2 items-center justify-between
-                            border-t border-slate-200/80 pt-4'>
-                            <div className="flex flex-row items-center gap-2">
-                                {/* dot */}
-                                <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                <span className="text-sm font-semibold text-slate-600">
-                                    입금할 계좌 정보
-                                </span>
-                            </div>
-
-
-                            <div className="flex flex-col xl:flex-row p-2 gap-2">
-                                
-                                <span className="text-sm text-slate-600 font-semibold">
-                                    {buyer?.bankInfo?.bankName}
-                                </span>
-
-                                <span className="text-sm text-slate-600 font-semibold">
-                                    {buyer?.bankInfo?.accountNumber}
-                                </span>
-                                <span className="text-sm text-slate-600 font-semibold">
-                                    {buyer?.bankInfo?.accountHolder}
-                                </span>
-
-                            </div>
-
-                            {/*
-                            <button
-                                onClick={() => {
-                                    setEditBuyer(!editBuyer);
-                                }}
-                                className="p-2 bg-blue-500 text-zinc-100 rounded"
-                            >
-                                {editBuyer ? Cancel : Edit}
-                            </button>
-                            */}
-
-
-                        </div>
-
-
-                        <div className='mt-4 w-full flex flex-col gap-4 items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4'>
-                            
-                            <div className='w-full flex flex-row gap-2 items-center justify-between'>
-
-                                <div className="flex flex-row items-center gap-2">
-                                    <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                    <span className="text-sm font-semibold text-slate-600">
-                                        입금할 계좌 정보 수정
-                                    </span>
+                        <div className='mt-4 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm'>
+                            <div className="flex w-full flex-row items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                                        <Image
+                                            src="/icon-bank-check.png"
+                                            alt="Bank"
+                                            width={24}
+                                            height={24}
+                                            className="h-6 w-6"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-semibold text-slate-900">입금할 계좌 정보</span>
+                                        <span className="text-xs text-slate-500">계좌 정보 제출 후 심사됩니다.</span>
+                                    </div>
                                 </div>
-
-                                {!buyer && (
-                                    <div className="text-sm text-slate-500">
-                                        구매자 승인이 필요합니다.
-                                    </div>
-                                )}
-
-                                {applying ? (
-                                    <div className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm">
-                                        {Applying}...
-                                    </div>
-                                ) : (
-                                    <button
-                                        disabled={applying || !verifiedOtp}
-
-                                        onClick={() => {
-                                            // apply to be a seller
-                                            // set seller to true
-                                            // set seller to false
-                                            // set seller to pending
-
-                                            apply();
-
-                                        }}
-                                        className={`
-                                            ${!verifiedOtp ? 'bg-slate-200 text-slate-400'
-                                            : 'bg-emerald-600 text-white hover:bg-emerald-500'}
-                                            px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition
-                                        `}
-                                    >
-                                        {Apply}
-                                    </button>
-                                )}
-
-                            </div>
-
-                            {/* 은행명, 계좌번호, 예금주 */}
-                            <div className='flex flex-col gap-2 items-start justify-between w-full'>
-
-                                {/*                             
-                                <input 
-                                    disabled={applying}
-                                    className="p-2 w-64 text-zinc-100 bg-zinc-800 rounded text-lg font-semibold"
-                                    placeholder={Enter_your_bank_name}
-                                    value={bankName}
-                                    type='text'
-                                    onChange={(e) => {
-                                        setBankName(e.target.value);
-                                    }}
-                                />
-                                */}
-
-
-                                <select
-                                    disabled={!address}
-                                    className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm
-                                    focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                                    value={bankName}
-                                    onChange={(e) => {
-                                        setBankName(e.target.value);
-                                    }}
+                                <span
+                                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                                        bankInfoStatus === 'approved'
+                                            ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                                            : bankInfoStatus === 'rejected'
+                                            ? 'border-rose-200/80 bg-rose-50 text-rose-700'
+                                            : bankInfoStatus === 'pending'
+                                            ? 'border-amber-200/80 bg-amber-50 text-amber-700'
+                                            : 'border-slate-200/80 bg-slate-50 text-slate-600'
+                                    }`}
                                 >
-                                    <option value="" selected={bankName === ""}>
-                                        은행선택
-                                    </option>
-                                    <option value="카카오뱅크" selected={bankName === "카카오뱅크"}>
-                                        카카오뱅크
-                                    </option>
-                                    <option value="케이뱅크" selected={bankName === "케이뱅크"}>
-                                        케이뱅크
-                                    </option>
-                                    <option value="토스뱅크" selected={bankName === "토스뱅크"}>
-                                        토스뱅크
-                                    </option>
-                                    <option value="국민은행" selected={bankName === "국민은행"}>
-                                        국민은행
-                                    </option>
-                                    <option value="우리은행" selected={bankName === "우리은행"}>
-                                        우리은행
-                                    </option>
-                                    <option value="신한은행" selected={bankName === "신한은행"}>
-                                        신한은행
-                                    </option>
-                                    <option value="농협" selected={bankName === "농협"}>
-                                        농협
-                                    </option>
-                                    <option value="기업은행" selected={bankName === "기업은행"}>
-                                        기업은행
-                                    </option>
-                                    <option value="하나은행" selected={bankName === "하나은행"}>
-                                        하나은행
-                                    </option>
-                                    <option value="외환은행" selected={bankName === "외환은행"}>
-                                        외환은행
-                                    </option>
-                                    <option value="부산은행" selected={bankName === "부산은행"}>
-                                        부산은행
-                                    </option>
-                                    <option value="대구은행" selected={bankName === "대구은행"}>
-                                        대구은행
-                                    </option>
-                                    <option value="전북은행" selected={bankName === "전북은행"}>
-                                        전북은행
-                                    </option>
-                                    <option value="경북은행" selected={bankName === "경북은행"}>
-                                        경북은행
-                                    </option>
-                                    <option value="광주은행" selected={bankName === "광주은행"}>
-                                        광주은행
-                                    </option>
-                                    <option value="수협" selected={bankName === "수협"}>
-                                        수협
-                                    </option>
-                                    <option value="씨티은행" selected={bankName === "씨티은행"}>
-                                        씨티은행
-                                    </option>
-                                    <option value="대신은행" selected={bankName === "대신은행"}>
-                                        대신은행
-                                    </option>
-                                    <option value="동양종합금융" selected={bankName === "동양종합금융"}>
-                                        동양종합금융
-                                    </option>
-                                    <option value="SC제일은행" selected={bankName === "SC제일은행"}>
-                                        SC제일은행
-                                    </option>
-                                    <option value="한국씨티은행" selected={bankName === "한국씨티은행"}>
-                                        한국씨티은행
-                                    </option>
-                                    <option value="산업은행" selected={bankName === "산업은행"}>
-                                        산업은행
-                                    </option>
-                                    <option value="JT친애저축은행" selected={bankName === "JT친애저축은행"}>
-                                        JT친애저축은행
-                                    </option>
-                                </select>
-
-                                
-                                <input 
-                                    disabled={applying}
-                                    className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                                    placeholder={Enter_your_account_number}
-                                    value={accountNumber}
-                                    type='number'
-                                    onChange={(e) => {
-
-                                        // check if the value is a number
-
-                                        e.target.value = e.target.value.replace(/[^0-9]/g, '');
-
-                                        setAccountNumber(e.target.value);
-                                    }}
-                                />
-                                <input 
-                                    disabled={applying}
-                                    className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                                    placeholder={Enter_your_account_holder}
-                                    value={accountHolder}
-                                    type='text'
-                                    onChange={(e) => {
-                                        setAccountHolder(e.target.value);
-                                    }}
-                                />
+                                    {bankInfoStatusLabel}
+                                </span>
                             </div>
 
+                            <div className="mt-3 flex flex-col gap-1 text-sm text-slate-600">
+                                {buyer?.bankInfo?.bankName ? (
+                                    <>
+                                        <span>은행: {buyer?.bankInfo?.bankName}</span>
+                                        <span>계좌번호: {buyer?.bankInfo?.accountNumber}</span>
+                                        <span>예금주: {buyer?.bankInfo?.accountHolder}</span>
+                                    </>
+                                ) : (
+                                    <span>등록된 계좌 정보가 없습니다.</span>
+                                )}
+                                {bankInfoStatus === 'approved' && (
+                                    <span className="text-xs text-emerald-600">
+                                        승인된 계좌 정보입니다. 승인 시간: {buyer?.bankInfo?.reviewedAt ? new Date(buyer.bankInfo.reviewedAt).toLocaleString() : '-'}
+                                    </span>
+                                )}
+                                {bankInfoStatus === 'pending' && (
+                                    <span className="text-xs text-amber-600">
+                                        신청 시간: {buyer?.bankInfo?.submittedAt ? new Date(buyer.bankInfo.submittedAt).toLocaleString() : '-'}
+                                    </span>
+                                )}
+                                {bankInfoStatus === 'rejected' && buyer?.bankInfo?.rejectionReason && (
+                                    <span className="text-xs text-rose-600">거절 사유: {buyer.bankInfo.rejectionReason}</span>
+                                )}
+                            </div>
 
                             {/* otp verification */}
 
@@ -1482,6 +1347,156 @@ export default function SettingsPage({ params }: any) {
 
                     </div>
 
+                    <div className='mt-4 w-full flex flex-col gap-4 items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4'>
+                        <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                            <div className="flex flex-row items-center gap-2">
+                                <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                <span className="text-sm font-semibold text-slate-600">
+                                    입금할 계좌 정보 신청
+                                </span>
+                            </div>
+
+                            {!buyer && (
+                                <div className="text-sm text-slate-500">
+                                    구매자 승인이 필요합니다.
+                                </div>
+                            )}
+
+                            {bankInfoStatus === 'pending' ? (
+                                <div className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm">
+                                    심사중
+                                </div>
+                            ) : applying ? (
+                                <div className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm">
+                                    {Applying}...
+                                </div>
+                            ) : (
+                                <button
+                                    disabled={applying || !verifiedOtp}
+                                    onClick={() => {
+                                        apply();
+                                    }}
+                                    className={`
+                                        ${!verifiedOtp ? 'bg-slate-200 text-slate-400'
+                                        : 'bg-emerald-600 text-white hover:bg-emerald-500'}
+                                        px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition
+                                    `}
+                                >
+                                    {Apply}
+                                </button>
+                            )}
+                        </div>
+
+                        {/* 은행명, 계좌번호, 예금주 */}
+                        <div className='flex flex-col gap-2 items-start justify-between w-full'>
+                            <select
+                                disabled={!address || bankInfoStatus === 'pending' || applying}
+                                className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm
+                                focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                value={bankName}
+                                onChange={(e) => {
+                                    setBankName(e.target.value);
+                                }}
+                            >
+                                <option value="" selected={bankName === ""}>
+                                    은행선택
+                                </option>
+                                <option value="카카오뱅크" selected={bankName === "카카오뱅크"}>
+                                    카카오뱅크
+                                </option>
+                                <option value="케이뱅크" selected={bankName === "케이뱅크"}>
+                                    케이뱅크
+                                </option>
+                                <option value="토스뱅크" selected={bankName === "토스뱅크"}>
+                                    토스뱅크
+                                </option>
+                                <option value="국민은행" selected={bankName === "국민은행"}>
+                                    국민은행
+                                </option>
+                                <option value="우리은행" selected={bankName === "우리은행"}>
+                                    우리은행
+                                </option>
+                                <option value="신한은행" selected={bankName === "신한은행"}>
+                                    신한은행
+                                </option>
+                                <option value="농협" selected={bankName === "농협"}>
+                                    농협
+                                </option>
+                                <option value="기업은행" selected={bankName === "기업은행"}>
+                                    기업은행
+                                </option>
+                                <option value="하나은행" selected={bankName === "하나은행"}>
+                                    하나은행
+                                </option>
+                                <option value="외환은행" selected={bankName === "외환은행"}>
+                                    외환은행
+                                </option>
+                                <option value="부산은행" selected={bankName === "부산은행"}>
+                                    부산은행
+                                </option>
+                                <option value="대구은행" selected={bankName === "대구은행"}>
+                                    대구은행
+                                </option>
+                                <option value="전북은행" selected={bankName === "전북은행"}>
+                                    전북은행
+                                </option>
+                                <option value="경북은행" selected={bankName === "경북은행"}>
+                                    경북은행
+                                </option>
+                                <option value="광주은행" selected={bankName === "광주은행"}>
+                                    광주은행
+                                </option>
+                                <option value="수협" selected={bankName === "수협"}>
+                                    수협
+                                </option>
+                                <option value="씨티은행" selected={bankName === "씨티은행"}>
+                                    씨티은행
+                                </option>
+                                <option value="대신은행" selected={bankName === "대신은행"}>
+                                    대신은행
+                                </option>
+                                <option value="동양종합금융" selected={bankName === "동양종합금융"}>
+                                    동양종합금융
+                                </option>
+                                <option value="SC제일은행" selected={bankName === "SC제일은행"}>
+                                    SC제일은행
+                                </option>
+                                <option value="한국씨티은행" selected={bankName === "한국씨티은행"}>
+                                    한국씨티은행
+                                </option>
+                                <option value="산업은행" selected={bankName === "산업은행"}>
+                                    산업은행
+                                </option>
+                                <option value="JT친애저축은행" selected={bankName === "JT친애저축은행"}>
+                                    JT친애저축은행
+                                </option>
+                            </select>
+
+                            <input 
+                                disabled={applying || bankInfoStatus === 'pending'}
+                                className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                placeholder={Enter_your_account_number}
+                                value={accountNumber}
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                onChange={(e) => {
+                                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                                    setAccountNumber(e.target.value);
+                                }}
+                            />
+                            <input 
+                                disabled={applying || bankInfoStatus === 'pending'}
+                                className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                placeholder={Enter_your_account_holder}
+                                value={accountHolder}
+                                type='text'
+                                onChange={(e) => {
+                                    setAccountHolder(e.target.value);
+                                }}
+                            />
+                        </div>
+                    </div>
                     <div className="mt-4 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
                         <div className="flex w-full flex-row items-center justify-between gap-3">
                             <div className="flex items-center gap-3">
@@ -1521,6 +1536,25 @@ export default function SettingsPage({ params }: any) {
                                         <span className="font-semibold">심사 신청이 접수되었습니다.</span>
                                         <span className="text-xs">
                                             신청 시간: {buyer?.kyc?.submittedAt ? new Date(buyer.kyc.submittedAt).toLocaleString() : '-'}
+                                        </span>
+                                    </div>
+                                    {kycPreview && (
+                                        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 shadow-sm">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img
+                                                src={kycPreview}
+                                                alt="KYC Preview"
+                                                className="h-40 w-full object-cover"
+                                            />
+                                        </div>
+                                    )}
+                                </>
+                            ) : kycStatus === 'approved' ? (
+                                <>
+                                    <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-700 shadow-sm">
+                                        <span className="font-semibold">승인된 신분증입니다.</span>
+                                        <span className="mt-1 text-xs text-emerald-600">
+                                            승인 시간: {buyer?.kyc?.reviewedAt ? new Date(buyer.kyc.reviewedAt).toLocaleString() : '-'}
                                         </span>
                                     </div>
                                     {kycPreview && (

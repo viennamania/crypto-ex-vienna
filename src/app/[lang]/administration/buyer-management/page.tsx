@@ -85,8 +85,10 @@ export default function BuyerManagementPage() {
                     <th className="px-4 py-2 text-left">회원아이디</th>
                     <th className="px-4 py-2 text-left">지갑주소</th>
                     <th className="px-4 py-2 text-left">상태</th>
+                    <th className="px-4 py-2 text-left">계좌정보</th>
+                    <th className="px-4 py-2 text-left">계좌정보 신청시간</th>
                     <th className="px-4 py-2 text-left">KYC</th>
-                    <th className="px-4 py-2 text-left">신청시간</th>
+                    <th className="px-4 py-2 text-left">KYC 신청시간</th>
                     <th className="px-4 py-2 text-left">상세</th>
                   </tr>
                 </thead>
@@ -96,7 +98,23 @@ export default function BuyerManagementPage() {
                     const kycStatus =
                       buyerUser?.buyer?.kyc?.status ||
                       (buyerUser?.buyer?.kyc?.idImageUrl ? 'pending' : 'none');
-                    const submittedAt = buyerUser?.buyer?.kyc?.submittedAt;
+                    const bankInfo = buyerUser?.buyer?.bankInfo;
+                    const bankInfoStatus =
+                      bankInfo?.status || (bankInfo?.accountNumber ? 'pending' : 'none');
+                    const bankInfoLabel =
+                      bankInfoStatus === 'approved'
+                        ? '승인완료'
+                        : bankInfoStatus === 'rejected'
+                        ? '거절'
+                        : bankInfoStatus === 'pending'
+                        ? '심사중'
+                        : '미제출';
+                    const bankName = bankInfo?.bankName || '-';
+                    const maskedAccount = bankInfo?.accountNumber
+                      ? `${bankInfo.accountNumber.slice(0, 3)}****${bankInfo.accountNumber.slice(-2)}`
+                      : '-';
+                    const bankInfoSubmittedAt = bankInfo?.submittedAt;
+                    const kycSubmittedAt = buyerUser?.buyer?.kyc?.submittedAt;
                     return (
                       <tr key={index} className="border-b hover:bg-slate-50">
                         <td className="px-4 py-2 text-slate-900 font-medium">{buyerUser?.nickname || '-'}</td>
@@ -122,6 +140,28 @@ export default function BuyerManagementPage() {
                           </span>
                         </td>
                         <td className="px-4 py-2">
+                          <div className="flex flex-col gap-1">
+                            <span
+                              className={`inline-flex w-fit items-center rounded-full border px-2 py-1 text-xs font-semibold ${
+                                bankInfoStatus === 'approved'
+                                  ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                                  : bankInfoStatus === 'rejected'
+                                  ? 'border-rose-200/80 bg-rose-50 text-rose-700'
+                                  : bankInfoStatus === 'pending'
+                                  ? 'border-amber-200/80 bg-amber-50 text-amber-700'
+                                  : 'border-slate-200/80 bg-slate-50 text-slate-600'
+                              }`}
+                            >
+                              {bankInfoLabel}
+                            </span>
+                            <span className="text-xs text-slate-600">{bankName}</span>
+                            <span className="text-xs text-slate-500">{maskedAccount}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2 text-xs text-slate-600">
+                          {bankInfoSubmittedAt ? new Date(bankInfoSubmittedAt).toLocaleString() : '-'}
+                        </td>
+                        <td className="px-4 py-2">
                           <span
                             className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${
                               kycStatus === 'approved'
@@ -143,7 +183,7 @@ export default function BuyerManagementPage() {
                           </span>
                         </td>
                         <td className="px-4 py-2 text-xs text-slate-600">
-                          {submittedAt ? new Date(submittedAt).toLocaleString() : '-'}
+                          {kycSubmittedAt ? new Date(kycSubmittedAt).toLocaleString() : '-'}
                         </td>
                         <td className="px-4 py-2">
                           <button
