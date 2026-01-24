@@ -2796,7 +2796,7 @@ export default function OrangeXPage() {
                     className="glam-card relative overflow-hidden rounded-[28px] bg-[linear-gradient(120deg,var(--sea),var(--accent),var(--rose))] p-8 text-center text-white shadow-[0_40px_120px_-60px_rgba(15,23,42,0.8)]"
                 >
                     <div className="pointer-events-none absolute -right-20 -top-16 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.45),transparent_70%)] opacity-60 blur-3xl" />
-                    <h2 className="font-[var(--font-display)] text-2xl mb-4 sm:text-3xl">안전하게 사고, 확실하게 받으세요.</h2>
+                    <h2 className="font-[var(--font-display)] text-2xl mb-4 sm:text-3xl">안심하고 판매와 구매를 하십시오.</h2>
                     <p className="text-lg text-white/90 mb-8">
                         KYC·에스크로·분쟁조정으로 결제를 보호합니다.
                     </p>
@@ -2806,7 +2806,7 @@ export default function OrangeXPage() {
                             href="/ko/p2p/buy"
                             className="w-full sm:w-auto rounded-full bg-white px-8 py-4 text-base font-semibold text-slate-900 shadow-[0_18px_45px_-25px_rgba(15,23,42,0.8)] transition hover:bg-white/90"
                         >
-                            보호된 결제 시작 →
+                            안전 구매 시작 →
                         </Link>
                         <a 
                             href="#settlement-guide"
