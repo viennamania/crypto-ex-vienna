@@ -1157,65 +1157,10 @@ export default function SettingsPage({ params }: any) {
                                         회원아이디
                                     </span>
                                 </div>
+                                <span className="text-2xl font-semibold text-emerald-700">
+                                    {nickname}
+                                </span>
                             </div>
-                            {nicknameEdit ? (
-                                <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                    <input
-                                        value={editedNickname}
-                                        onChange={(event) => {
-                                            const nextValue = event.target.value
-                                                .toLowerCase()
-                                                .replace(/[^a-z0-9]/g, '');
-                                            setEditedNickname(nextValue);
-                                        }}
-                                        placeholder={Enter_your_nickname}
-                                        inputMode="text"
-                                        pattern="[a-z0-9]*"
-                                        className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-base font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/40 sm:max-w-[60%]"
-                                        autoFocus
-                                    />
-                                    <div className="flex w-full gap-2 sm:w-auto">
-                                        <button
-                                            type="button"
-                                            onClick={() => setUserData()}
-                                            disabled={!editedNickname || editedNickname === nickname}
-                                            className={`w-full rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition sm:w-auto ${
-                                                !editedNickname || editedNickname === nickname
-                                                    ? 'bg-slate-200 text-slate-400'
-                                                    : 'bg-emerald-600 text-white hover:bg-emerald-500'
-                                            }`}
-                                        >
-                                            저장하기
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setNicknameEdit(false);
-                                                setEditedNickname('');
-                                            }}
-                                            className="w-full rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 sm:w-auto"
-                                        >
-                                            취소하기
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex w-full items-center justify-between gap-3">
-                                    <span className="text-2xl font-semibold text-emerald-700">
-                                        {nickname}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setEditedNickname(nickname || '');
-                                            setNicknameEdit(true);
-                                        }}
-                                        className="rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300"
-                                    >
-                                        수정하기
-                                    </button>
-                                </div>
-                            )}
                             <div className='w-full flex flex-row gap-2 items-center justify-between'>
                                 <div className="flex flex-row items-center gap-2">
                                     {/* dot */}
@@ -1299,65 +1244,10 @@ export default function SettingsPage({ params }: any) {
                                         회원아이디
                                     </span>
                                 </div>
+                                <span className="text-2xl font-semibold text-emerald-700">
+                                    {nickname}
+                                </span>
                             </div>
-                            {nicknameEdit ? (
-                                <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                    <input
-                                        value={editedNickname}
-                                        onChange={(event) => {
-                                            const nextValue = event.target.value
-                                                .toLowerCase()
-                                                .replace(/[^a-z0-9]/g, '');
-                                            setEditedNickname(nextValue);
-                                        }}
-                                        placeholder={Enter_your_nickname}
-                                        inputMode="text"
-                                        pattern="[a-z0-9]*"
-                                        className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-base font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/40 sm:max-w-[60%]"
-                                        autoFocus
-                                    />
-                                    <div className="flex w-full gap-2 sm:w-auto">
-                                        <button
-                                            type="button"
-                                            onClick={() => setUserData()}
-                                            disabled={!editedNickname || editedNickname === nickname}
-                                            className={`w-full rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition sm:w-auto ${
-                                                !editedNickname || editedNickname === nickname
-                                                    ? 'bg-slate-200 text-slate-400'
-                                                    : 'bg-emerald-600 text-white hover:bg-emerald-500'
-                                            }`}
-                                        >
-                                            저장하기
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setNicknameEdit(false);
-                                                setEditedNickname('');
-                                            }}
-                                            className="w-full rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 sm:w-auto"
-                                        >
-                                            취소하기
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex w-full items-center justify-between gap-3">
-                                    <span className="text-2xl font-semibold text-emerald-700">
-                                        {nickname}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setEditedNickname(nickname || '');
-                                            setNicknameEdit(true);
-                                        }}
-                                        className="rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300"
-                                    >
-                                        수정하기
-                                    </button>
-                                </div>
-                            )}
                             <div className='w-full flex flex-row gap-2 items-center justify-between'>
                                 <div className="flex flex-row items-center gap-2">
                                     {/* dot */}

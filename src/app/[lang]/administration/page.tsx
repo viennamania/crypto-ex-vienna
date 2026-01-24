@@ -2407,6 +2407,14 @@ export default function Index({ params }: any) {
                   >
                     구매자 관리
                   </button>
+                  <button
+                    onClick={() => {
+                      router.push('/' + params.lang + '/administration/seller-management');
+                    }}
+                    className="bg-white text-sm text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50"
+                  >
+                    판매자 관리
+                  </button>
                 </div>
 
               </div>

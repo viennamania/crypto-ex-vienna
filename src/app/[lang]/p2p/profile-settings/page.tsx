@@ -432,6 +432,28 @@ export default function SettingsPage({ params }: any) {
         fetchData();
     }, [address]);
 
+    const updateSendbirdNickname = async (nextNickname: string) => {
+        if (!address || !nextNickname) return;
+        try {
+            const response = await fetch('/api/sendbird/update-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: address,
+                    nickname: nextNickname,
+                    profileUrl: avatar || undefined,
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => null);
+                throw new Error(error?.error || 'Sendbird nickname update failed');
+            }
+        } catch (error) {
+            console.error('Sendbird nickname update failed', error);
+            toast.error('채팅 닉네임 변경에 실패했습니다.');
+        }
+    };
 
 
 
@@ -481,11 +503,12 @@ export default function SettingsPage({ params }: any) {
 
                 setUserCode(data.result.id);
                 setNickname(data.result.nickname);
+                await updateSendbirdNickname(data.result.nickname);
 
                 setNicknameEdit(false);
                 setEditedNickname('');
 
-                toast.success('아이디이 저장되었습니다');
+                toast.success('채팅 닉네임도 변경됨');
 
             } else {
 
@@ -520,11 +543,12 @@ export default function SettingsPage({ params }: any) {
 
                 setUserCode(data.result.id);
                 setNickname(data.result.nickname);
+                await updateSendbirdNickname(data.result.nickname);
 
                 setNicknameEdit(false);
                 setEditedNickname('');
 
-                toast.success('아이디이 저장되었습니다');
+                toast.success('채팅 닉네임도 변경됨');
 
             } else {
                 toast.error('아이디 저장에 실패했습니다');

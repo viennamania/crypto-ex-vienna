@@ -677,25 +677,6 @@ export async function updateSellerStatus(data: any) {
   */
 
 
-  const sellerBankInfo = {
-    bankName: data.bankName,
-    accountNumber: data.accountNumber,
-    accountHolder: data.accountHolder,
-  };
-  
-
-  // upsert seller info
-
-  /*
-  const result = await collection.updateOne(
-    {
-      storecode: data.storecode,
-      walletAddress: data.walletAddress
-    },
-    { $set: { seller: seller } }
-  );
-  */
-
   // if user is exist, update seller info
   const existingUser = await collection.findOne(
     {
@@ -708,6 +689,13 @@ export async function updateSellerStatus(data: any) {
     console.log('No existing user found for updateSellerStatus');
     return null;
   }
+
+  const sellerBankInfo = {
+    ...(existingUser as any)?.seller?.bankInfo,
+    bankName: data.bankName,
+    accountNumber: data.accountNumber,
+    accountHolder: data.accountHolder,
+  };
 
 
   // update seller info
@@ -994,6 +982,31 @@ export async function updateBuyer({
     }
   );
   
+}
+
+export async function updateSeller({
+  storecode,
+  walletAddress,
+  seller,
+}: {
+  storecode: string;
+  walletAddress: string;
+  seller: any;
+}) {
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  return await collection.updateOne(
+    {
+      storecode: storecode,
+      walletAddress: walletAddress,
+    },
+    {
+      $set: {
+        seller,
+      },
+    }
+  );
 }
 
 
@@ -2637,7 +2650,7 @@ export async function updateUserForSeller(
     {
       $set: {
         seller: {
-          status: 'confirmed',
+          status: 'pending',
           enabled: false,
           escrowWalletAddress: escrowWalletAddress,
         }
