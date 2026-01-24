@@ -193,6 +193,20 @@ interface BuyOrder {
 
 
 const walletAuthOptions = ["google", "email"];
+const SELLER_CARD_TONES = [
+  {
+    card: "border-sky-200/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(224,242,254,0.7))]",
+    header: "border-sky-200/80 bg-sky-50/80",
+  },
+  {
+    card: "border-amber-200/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,237,213,0.7))]",
+    header: "border-amber-200/80 bg-amber-50/80",
+  },
+  {
+    card: "border-emerald-200/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(220,252,231,0.7))]",
+    header: "border-emerald-200/80 bg-emerald-50/80",
+  },
+];
 
 
 
@@ -3584,6 +3598,10 @@ const fetchBuyOrders = async () => {
 
 
       const sortedSellers = data.result.users;
+      const pricedSellers = sortedSellers.filter((seller: any) => {
+        const rate = Number(seller?.seller?.usdtToKrwRate ?? 0);
+        return rate > 0;
+      });
 
       // if walletAddress is address, then order first
       // and then others is ordered by seller.totalPaymentConfirmedUsdtAmount descending
@@ -3604,7 +3622,7 @@ const fetchBuyOrders = async () => {
       });
       */
       // remove walletAddress is a address from sortedSellers
-      const filteredSellers = sortedSellers.filter((seller: any) => seller.walletAddress !== address);
+      const filteredSellers = pricedSellers.filter((seller: any) => seller.walletAddress !== address);
       // sort filteredSellers by totalPaymentConfirmedUsdtAmount descending
       filteredSellers.sort((a: any, b: any) => {
         return b.totalPaymentConfirmedUsdtAmount - a.totalPaymentConfirmedUsdtAmount;
@@ -4416,7 +4434,9 @@ const fetchBuyOrders = async () => {
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-200/80 text-sky-700">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M3 12h18M7 8l-4 4 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M6 6h15l-1.5 9h-13L6 6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M9 22a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" fill="currentColor"/>
+                  <path d="M18 22a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" fill="currentColor"/>
                 </svg>
               </div>
               <div>
@@ -4432,7 +4452,14 @@ const fetchBuyOrders = async () => {
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path
-                  d="M3 12l9-9 9 9M6 10v10a1 1 0 001 1h3m6-11v11a1 1 0 01-1 1h-3"
+                  d="M3 11l9-7 9 7"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M5 10.5V20a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9.5"
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
@@ -5197,9 +5224,9 @@ const fetchBuyOrders = async () => {
 
                     // seller.buyOrder.status = 'ordered' or 'paymentRequested' - red border and pulse animation
                     className={`relative w-full self-start flex flex-col xl:flex-row xl:flex-wrap items-start justify-start gap-5
-                    bg-white
                     p-5 rounded-2xl shadow-[0_18px_45px_-36px_rgba(15,23,42,0.25)]
-                    border border-slate-200/80 text-slate-800
+                    border text-slate-800
+                    ${SELLER_CARD_TONES[index % SELLER_CARD_TONES.length].card}
                     
                     ${(
                       (seller.seller.buyOrder?.status === 'ordered'
@@ -5227,7 +5254,7 @@ const fetchBuyOrders = async () => {
                     `}
                   >
 
-                    <div className="w-full xl:basis-full flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-2">
+                    <div className={`w-full xl:basis-full flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-2 ${SELLER_CARD_TONES[index % SELLER_CARD_TONES.length].header}`}>
                       <div className="flex items-center gap-2">
                         <Image
                           src="/icon-seller.png"
