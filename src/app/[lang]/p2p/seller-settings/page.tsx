@@ -99,7 +99,7 @@ import {
 } from "next//navigation";
 
 
-
+const walletAuthOptions = ['google', 'email', 'phone'];
 
 
 export default function SettingsPage({ params }: any) {
@@ -260,29 +260,20 @@ export default function SettingsPage({ params }: any) {
 
     const router = useRouter();
 
-    const { smartAccountEnabled, wallet } = useClientWallets();
+    const { wallet, wallets, smartAccountEnabled, chain } = useClientWallets({
+        authOptions: walletAuthOptions,
+    });
 
-    // get the active wallet
+
+    const activeAccount = useActiveAccount();
     const activeWallet = useActiveWallet();
-
-    const setActiveAccount = useSetActiveWallet();
-    
-    const connectWallets = useConnectedWallets();
-
-    //console.log('connectWallets', connectWallets);
-
-    const smartConnectWallet = connectWallets?.[0];
-    const inAppConnectWallet = connectWallets?.[1];
+    const address = activeAccount?.address;
 
 
-    const smartAccount = useActiveAccount();
-
-    const address = smartAccount?.address;
-
-    
 
     const [phoneNumber, setPhoneNumber] = useState("");
 
+    /*
     useEffect(() => {
   
   
@@ -301,6 +292,7 @@ export default function SettingsPage({ params }: any) {
       }
   
     } , [smartAccount]);
+    */
 
 
 
@@ -1172,6 +1164,7 @@ export default function SettingsPage({ params }: any) {
     return (
 
         <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+
             <AutoConnect client={client} wallets={[wallet]} />
 
             <div className="py-0 w-full">
