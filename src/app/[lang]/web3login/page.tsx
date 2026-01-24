@@ -380,8 +380,18 @@ export default function Web3LoginPage() {
                     value={editedNickname}
                     disabled={!address || savingNickname}
                     onChange={(event) => {
-                      setEditedNickname(event.target.value.toLowerCase());
+                      const nextValue = event.target.value.toLowerCase().replace(/[^a-z0-9]/g, '');
+                      setEditedNickname(nextValue);
                       setNicknameError('');
+                    }}
+                    onPaste={(event) => {
+                      const pasteText = event.clipboardData.getData('text');
+                      if (!/^[a-z0-9]*$/i.test(pasteText)) {
+                        event.preventDefault();
+                        const message = '붙여넣기는 영문 소문자와 숫자만 가능합니다.';
+                        setNicknameError(message);
+                        toast.error(message);
+                      }
                     }}
                     placeholder="5~10자 영문 소문자/숫자"
                     className={`w-full rounded-2xl border px-4 py-3 text-base font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
