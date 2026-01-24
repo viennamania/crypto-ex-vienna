@@ -383,6 +383,7 @@ export default function SellerDetailPage() {
                     .map((entry: any, index: number) => (
                       (() => {
                         const toConfirmed = entry?.to === 'confirmed';
+                        const fromConfirmed = entry?.from === 'confirmed';
                         const stateStyle = toConfirmed
                           ? {
                               badge: 'border-emerald-200/80 bg-emerald-50 text-emerald-700',
@@ -403,6 +404,15 @@ export default function SellerDetailPage() {
                               ),
                               label: '판매불가능상태',
                             };
+                        const fromStyle = fromConfirmed
+                          ? {
+                              badge: 'border-emerald-200/80 bg-emerald-50 text-emerald-700',
+                              label: '판매가능상태',
+                            }
+                          : {
+                              badge: 'border-amber-200/80 bg-amber-50 text-amber-700',
+                              label: '판매불가능상태',
+                            };
 
                         return (
                       <div
@@ -410,6 +420,10 @@ export default function SellerDetailPage() {
                         className="flex flex-col gap-1 rounded-xl border border-slate-200/70 bg-slate-50/70 px-3 py-2"
                       >
                         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700">
+                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${fromStyle.badge}`}>
+                            {fromStyle.label}
+                          </span>
+                          <span className="text-slate-400">→</span>
                           <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${stateStyle.badge}`}>
                             {stateStyle.icon}
                             {stateStyle.label}
