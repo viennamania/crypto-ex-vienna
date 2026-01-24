@@ -310,6 +310,20 @@ export default function SettingsPage({ params }: any) {
     const smartAccount = useActiveAccount();
 
     const address = smartAccount?.address;
+    const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '-';
+
+    const copyWalletAddress = async () => {
+        if (!address) return;
+        try {
+            await navigator.clipboard.writeText(address);
+            toast.success('지갑주소가 복사되었습니다.');
+            setWalletCopied(true);
+            window.setTimeout(() => setWalletCopied(false), 1500);
+        } catch (error) {
+            console.error('Failed to copy wallet address', error);
+            toast.error('복사에 실패했습니다.');
+        }
+    };
 
       
  
@@ -457,6 +471,7 @@ export default function SettingsPage({ params }: any) {
 
 
     const [avatarEdit, setAvatarEdit] = useState(false);
+    const [walletCopied, setWalletCopied] = useState(false);
 
 
 
@@ -528,6 +543,28 @@ export default function SettingsPage({ params }: any) {
         fetchData();
     }, [address]);
 
+    const updateSendbirdNickname = async (nextNickname: string) => {
+        if (!address || !nextNickname) return;
+        try {
+            const response = await fetch('/api/sendbird/update-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: address,
+                    nickname: nextNickname,
+                    profileUrl: avatar || undefined,
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => null);
+                throw new Error(error?.error || 'Sendbird nickname update failed');
+            }
+        } catch (error) {
+            console.error('Sendbird nickname update failed', error);
+            toast.error('채팅 닉네임 변경에 실패했습니다.');
+        }
+    };
 
 
 
@@ -577,11 +614,12 @@ export default function SettingsPage({ params }: any) {
 
                 setUserCode(data.result.id);
                 setNickname(data.result.nickname);
+                await updateSendbirdNickname(data.result.nickname);
 
                 setNicknameEdit(false);
                 setEditedNickname('');
 
-                toast.success('아이디이 저장되었습니다');
+                toast.success('채팅 닉네임도 변경됨');
 
             } else {
 
@@ -616,11 +654,12 @@ export default function SettingsPage({ params }: any) {
 
                 setUserCode(data.result.id);
                 setNickname(data.result.nickname);
+                await updateSendbirdNickname(data.result.nickname);
 
                 setNicknameEdit(false);
                 setEditedNickname('');
 
-                toast.success('아이디이 저장되었습니다');
+                toast.success('채팅 닉네임도 변경됨');
 
             } else {
                 toast.error('아이디 저장에 실패했습니다');
@@ -1109,22 +1148,110 @@ export default function SettingsPage({ params }: any) {
                 {!loadingUserData && nickname && !buyer?.status && (
                     <div className='w-full flex flex-col gap-3 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm'>
 
-                        {/* nickname */}
-                        <div className='w-full flex flex-row gap-2 items-center justify-between'>
-                            <div className="flex flex-row items-center gap-2">
-                                {/* dot */}
-                                <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                <span className="text-sm font-semibold text-slate-600">
-                                    회원아이디
-                                </span>
+                        <div className="w-full flex flex-col gap-3">
+                            <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                                <div className="flex flex-row items-center gap-2">
+                                    {/* dot */}
+                                    <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                    <span className="text-sm font-semibold text-slate-600">
+                                        회원아이디
+                                    </span>
+                                </div>
                             </div>
-                            <span className="text-2xl font-semibold text-emerald-700">
-                                {nickname}
+                            {nicknameEdit ? (
+                                <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <input
+                                        value={editedNickname}
+                                        onChange={(event) => {
+                                            const nextValue = event.target.value
+                                                .toLowerCase()
+                                                .replace(/[^a-z0-9]/g, '');
+                                            setEditedNickname(nextValue);
+                                        }}
+                                        placeholder={Enter_your_nickname}
+                                        inputMode="text"
+                                        pattern="[a-z0-9]*"
+                                        className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-base font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/40 sm:max-w-[60%]"
+                                        autoFocus
+                                    />
+                                    <div className="flex w-full gap-2 sm:w-auto">
+                                        <button
+                                            type="button"
+                                            onClick={() => setUserData()}
+                                            disabled={!editedNickname || editedNickname === nickname}
+                                            className={`w-full rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition sm:w-auto ${
+                                                !editedNickname || editedNickname === nickname
+                                                    ? 'bg-slate-200 text-slate-400'
+                                                    : 'bg-emerald-600 text-white hover:bg-emerald-500'
+                                            }`}
+                                        >
+                                            저장하기
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setNicknameEdit(false);
+                                                setEditedNickname('');
+                                            }}
+                                            className="w-full rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 sm:w-auto"
+                                        >
+                                            취소하기
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex w-full items-center justify-between gap-3">
+                                    <span className="text-2xl font-semibold text-emerald-700">
+                                        {nickname}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setEditedNickname(nickname || '');
+                                            setNicknameEdit(true);
+                                        }}
+                                        className="rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300"
+                                    >
+                                        수정하기
+                                    </button>
+                                </div>
+                            )}
+                            <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                                <div className="flex flex-row items-center gap-2">
+                                    {/* dot */}
+                                    <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                    <span className="text-sm font-semibold text-slate-600">
+                                        지갑주소
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span
+                                        className="max-w-[70%] break-all text-right text-xs font-semibold text-slate-600"
+                                        title={address || ''}
+                                    >
+                                        {shortAddress}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={copyWalletAddress}
+                                        disabled={!address}
+                                        className={`rounded-full border px-2 py-1 text-xs font-semibold shadow-sm transition ${
+                                            address
+                                                ? 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300'
+                                                : 'border-slate-200/80 bg-slate-100 text-slate-400'
+                                        }`}
+                                    >
+                                        {walletCopied ? '복사됨' : '복사하기'}
+                                    </button>
+                                </div>
+                            </div>
+                            <span className="text-xs text-slate-500">
+                                구매한 USDT 를 받을 지갑주소입니다.
                             </span>
                         </div>
 
-                        <span className="text-base font-semibold text-slate-700">
-                            미승인
+                        <span className="inline-flex items-center justify-center rounded-full border border-amber-200/80 bg-amber-50 px-4 py-1.5 text-xs font-semibold text-amber-700 shadow-sm">
+                            구매불가능상태
                         </span>
 
                         <button
@@ -1163,17 +1290,105 @@ export default function SettingsPage({ params }: any) {
                         </div>
 
 
-                        {/* nickname */}
-                        <div className='w-full flex flex-row gap-2 items-center justify-between'>
-                            <div className="flex flex-row items-center gap-2">
-                                {/* dot */}
-                                <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                <span className="text-sm font-semibold text-slate-600">
-                                    회원아이디
-                                </span>
+                        <div className="w-full flex flex-col gap-3">
+                            <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                                <div className="flex flex-row items-center gap-2">
+                                    {/* dot */}
+                                    <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                    <span className="text-sm font-semibold text-slate-600">
+                                        회원아이디
+                                    </span>
+                                </div>
                             </div>
-                            <span className="text-2xl font-semibold text-emerald-700">
-                                {nickname}
+                            {nicknameEdit ? (
+                                <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <input
+                                        value={editedNickname}
+                                        onChange={(event) => {
+                                            const nextValue = event.target.value
+                                                .toLowerCase()
+                                                .replace(/[^a-z0-9]/g, '');
+                                            setEditedNickname(nextValue);
+                                        }}
+                                        placeholder={Enter_your_nickname}
+                                        inputMode="text"
+                                        pattern="[a-z0-9]*"
+                                        className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-base font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/40 sm:max-w-[60%]"
+                                        autoFocus
+                                    />
+                                    <div className="flex w-full gap-2 sm:w-auto">
+                                        <button
+                                            type="button"
+                                            onClick={() => setUserData()}
+                                            disabled={!editedNickname || editedNickname === nickname}
+                                            className={`w-full rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition sm:w-auto ${
+                                                !editedNickname || editedNickname === nickname
+                                                    ? 'bg-slate-200 text-slate-400'
+                                                    : 'bg-emerald-600 text-white hover:bg-emerald-500'
+                                            }`}
+                                        >
+                                            저장하기
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setNicknameEdit(false);
+                                                setEditedNickname('');
+                                            }}
+                                            className="w-full rounded-full border border-slate-200/80 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 sm:w-auto"
+                                        >
+                                            취소하기
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex w-full items-center justify-between gap-3">
+                                    <span className="text-2xl font-semibold text-emerald-700">
+                                        {nickname}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setEditedNickname(nickname || '');
+                                            setNicknameEdit(true);
+                                        }}
+                                        className="rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300"
+                                    >
+                                        수정하기
+                                    </button>
+                                </div>
+                            )}
+                            <div className='w-full flex flex-row gap-2 items-center justify-between'>
+                                <div className="flex flex-row items-center gap-2">
+                                    {/* dot */}
+                                    <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                    <span className="text-sm font-semibold text-slate-600">
+                                        지갑주소
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span
+                                        className="max-w-[70%] break-all text-right text-xs font-semibold text-slate-600"
+                                        title={address || ''}
+                                    >
+                                        {shortAddress}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={copyWalletAddress}
+                                        disabled={!address}
+                                        className={`rounded-full border px-2 py-1 text-xs font-semibold shadow-sm transition ${
+                                            address
+                                                ? 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300'
+                                                : 'border-slate-200/80 bg-slate-100 text-slate-400'
+                                        }`}
+                                    >
+                                        {walletCopied ? '복사됨' : '복사하기'}
+                                    </button>
+                                </div>
+                            </div>
+                            <span className="text-xs text-slate-500">
+                                구매한 USDT 를 받을 지갑주소입니다.
                             </span>
                         </div>
 
@@ -1189,12 +1404,12 @@ export default function SettingsPage({ params }: any) {
                                 </span>
                             </div>
                             {buyer?.status === 'confirmed' ? (
-                                <span className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 shadow-sm">
-                                    승인완료
+                                <span className="inline-flex min-w-[160px] items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-50 px-4 py-1.5 text-sm font-semibold text-emerald-700 shadow-sm">
+                                    구매가능상태
                                 </span>
                             ) : (
-                                <span className="inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 shadow-sm">
-                                    미승인
+                                <span className="inline-flex min-w-[160px] items-center justify-center rounded-full border border-amber-200/80 bg-amber-50 px-4 py-1.5 text-sm font-semibold text-amber-700 shadow-sm">
+                                    구매불가능상태
                                 </span>
                             )}
                         </div>

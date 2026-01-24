@@ -299,13 +299,13 @@ export default function BuyerDetailPage() {
                     </div>
                   </div>
                   <span
-                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                    className={`inline-flex min-w-[160px] items-center justify-center rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm ${
                       normalizedBuyerStatus === 'confirmed'
                         ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
                         : 'border-amber-200/80 bg-amber-50 text-amber-700'
                     }`}
                   >
-                    {normalizedBuyerStatus === 'confirmed' ? '승인완료' : '미승인'}
+                    {normalizedBuyerStatus === 'confirmed' ? '구매가능상태' : '구매불가능상태'}
                   </span>
                 </div>
                 <div className="flex flex-col gap-1 text-xs text-slate-600">
@@ -326,8 +326,8 @@ export default function BuyerDetailPage() {
                     value={selectedBuyerStatus}
                     onChange={(event) => setSelectedBuyerStatus(event.target.value as BuyerStatusValue)}
                   >
-                    <option value="pending">미승인</option>
-                    <option value="confirmed">승인완료</option>
+                    <option value="pending">구매불가능상태</option>
+                    <option value="confirmed">구매가능상태</option>
                   </select>
                   <button
                     type="button"

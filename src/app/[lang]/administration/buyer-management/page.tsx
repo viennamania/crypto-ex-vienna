@@ -125,13 +125,13 @@ export default function BuyerManagementPage() {
                         </td>
                         <td className="px-4 py-2">
                           <span
-                            className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                            className={`inline-flex min-w-[160px] items-center justify-center rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm ${
                               normalizedBuyerStatus === 'confirmed'
                                 ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
                                 : 'border-amber-200/80 bg-amber-50 text-amber-700'
                             }`}
                           >
-                            {normalizedBuyerStatus === 'confirmed' ? '승인완료' : '미승인'}
+                            {normalizedBuyerStatus === 'confirmed' ? '구매가능상태' : '구매불가능상태'}
                           </span>
                         </td>
                         <td className="px-4 py-2">
