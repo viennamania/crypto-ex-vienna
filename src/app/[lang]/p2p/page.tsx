@@ -656,13 +656,17 @@ export default function OrangeXPage() {
                 setSupportPhase('session');
                 startTimeout();
                 const sessionStartedAt = performance.now();
-                const sessionResponse = await fetch('/api/sendbird/session-token', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: supportUserId,
-                        nickname: supportNickname,
-                    }),
+                const sessionUrl =
+                    typeof window !== 'undefined'
+                        ? new URL('/api/sendbird/session-token', window.location.origin)
+                        : null;
+                if (!sessionUrl) {
+                    throw new Error('세션 요청 URL을 만들지 못했습니다.');
+                }
+                sessionUrl.searchParams.set('userId', supportUserId);
+                sessionUrl.searchParams.set('nickname', supportNickname);
+                const sessionResponse = await fetch(sessionUrl.toString(), {
+                    method: 'GET',
                     signal: activeController.signal,
                 });
 
@@ -670,7 +674,7 @@ export default function OrangeXPage() {
                     const error = await sessionResponse.json().catch(() => null);
                     pushSupportDiagnostic({
                         phase: 'session',
-                        endpoint: '/api/sendbird/session-token',
+                        endpoint: '/api/sendbird/session-token?userId=...',
                         status: sessionResponse.status,
                         ok: false,
                         durationMs: Math.round(performance.now() - sessionStartedAt),
@@ -681,7 +685,7 @@ export default function OrangeXPage() {
                 }
                 pushSupportDiagnostic({
                     phase: 'session',
-                    endpoint: '/api/sendbird/session-token',
+                    endpoint: '/api/sendbird/session-token?userId=...',
                     status: sessionResponse.status,
                     ok: true,
                     durationMs: Math.round(performance.now() - sessionStartedAt),
@@ -3060,137 +3064,6 @@ export default function OrangeXPage() {
                     <p className="text-sm text-slate-500">Copyright © OrangeX All Rights Reserved</p>
                 </div>
             </footer>
-
-            <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
-                {chatOpen && (
-                    <div
-                        id="support-chat"
-                        className="w-[320px] max-w-[90vw] overflow-hidden rounded-2xl border border-white/70 bg-white/90 shadow-[0_30px_70px_-40px_rgba(15,23,42,0.7)] backdrop-blur"
-                        role="dialog"
-                        aria-label="문의하기 채팅 위젯"
-                    >
-                        <div className="flex items-center justify-between border-b border-slate-200/70 bg-white/80 px-4 py-3">
-                            <div>
-                                <p className="text-sm font-semibold text-slate-900">문의하기</p>
-                                <p className="text-xs text-slate-500">
-                                    {isSupportEligible ? '지갑 연결 회원 전용 상담입니다' : '지갑 연결 후 문의할 수 있습니다'}
-                                </p>
-                            </div>
-                            <span
-                                className={`flex items-center gap-2 text-xs font-semibold ${
-                                    isSupportEligible ? 'text-emerald-600' : 'text-amber-600'
-                                }`}
-                            >
-                                <span
-                                    className={`h-2 w-2 rounded-full ${
-                                        isSupportEligible ? 'bg-emerald-500' : 'bg-amber-500'
-                                    }`}
-                                />
-                                {isSupportEligible ? '상담 가능' : '지갑 연결 필요'}
-                            </span>
-                        </div>
-                        <div className="px-4 py-4 text-sm text-slate-700">
-                            {!isSupportEligible ? (
-                                <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-3 text-xs text-amber-700">
-                                    익명 사용자는 문의할 수 없습니다. 지갑을 연결한 후 상담을 시작해 주세요.
-                                </div>
-                            ) : supportError ? (
-                                <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-3 text-xs text-amber-700">
-                                    {supportError}
-                                </div>
-                            ) : supportSessionToken && supportChannelUrl && supportUserId ? (
-                                <div className="h-[420px] max-h-[60vh] overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                    <SendbirdProvider
-                                        appId={SENDBIRD_APP_ID}
-                                        userId={supportUserId}
-                                        accessToken={supportSessionToken}
-                                        theme="light"
-                                    >
-                                        <GroupChannel channelUrl={supportChannelUrl} />
-                                    </SendbirdProvider>
-                                </div>
-                            ) : (
-                                <div className="rounded-xl border border-slate-200/70 bg-white/85 px-3 py-3 text-xs text-slate-600">
-                                    {supportStatusMessage}
-                                </div>
-                            )}
-                            {debugSupport && (
-                                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/90 px-3 py-2 text-[11px] text-slate-600">
-                                    <p className="font-semibold text-slate-700">문의하기 디버그</p>
-                                    <div className="mt-1 space-y-1">
-                                        <div>phase: {supportPhase}</div>
-                                        <div className="flex flex-col gap-1">
-                                            <span>user: {supportUserLabel}</span>
-                                            <div className="flex items-center gap-2">
-                                                <span className="truncate font-mono text-[10px] text-slate-500">
-                                                    {supportUserId || 'n/a'}
-                                                </span>
-                                                {supportUserId && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleCopySupportUserId}
-                                                        className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
-                                                    >
-                                                        {supportCopied ? '복사됨' : '복사'}
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div>admin: {SUPPORT_ADMIN_ID}</div>
-                                        <div>timeout: {SUPPORT_REQUEST_TIMEOUT_MS}ms</div>
-                                        <div>session token: {supportSessionToken ? 'ok' : 'none'}</div>
-                                        <div>channel: {supportChannelUrl ? 'ok' : 'none'}</div>
-                                    </div>
-                                    {supportDiagnostics.length > 0 && (
-                                        <div className="mt-2 space-y-1">
-                                            {supportDiagnostics.map((entry, index) => (
-                                                <div
-                                                    key={`${entry.timestamp}-${index}`}
-                                                    className="rounded-lg border border-slate-200 bg-white/90 px-2 py-1"
-                                                >
-                                                    <div className="flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
-                                                        <span className="font-semibold text-slate-700">
-                                                            {entry.phase}
-                                                        </span>
-                                                        <span>{entry.endpoint}</span>
-                                                    </div>
-                                                    <div className="text-[11px] text-slate-600">
-                                                        {entry.error
-                                                            ? 'error'
-                                                            : entry.ok === false
-                                                            ? 'error'
-                                                            : entry.ok === true
-                                                            ? 'ok'
-                                                            : 'info'}
-                                                        {entry.status ? ` · ${entry.status}` : ''}
-                                                        {entry.durationMs !== undefined ? ` · ${entry.durationMs}ms` : ''}
-                                                        {entry.error ? ` · ${entry.error}` : ''}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                <button
-                    type="button"
-                    onClick={() => setChatOpen((prev) => !prev)}
-                    className="inline-flex items-center gap-3 rounded-full border border-white/70 bg-white/90 px-5 py-3 text-sm font-semibold text-slate-900 shadow-[0_20px_50px_-30px_rgba(15,23,42,0.7)] backdrop-blur transition hover:-translate-y-0.5"
-                    aria-expanded={chatOpen}
-                    aria-controls="support-chat"
-                >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--accent)] text-white">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                            <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                    </span>
-                    {chatOpen ? '채팅 닫기' : '문의하기'}
-                </button>
-            </div>
 
             {bannerAds.length > 0 && (
                 <div className="lg:hidden border-t border-slate-200/70 bg-white/85 shadow-[0_-18px_60px_-50px_rgba(15,23,42,0.6)] backdrop-blur">

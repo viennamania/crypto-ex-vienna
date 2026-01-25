@@ -33,9 +33,16 @@ const fetchWithTimeout = async (
         const response = await fetch(url, { ...init, signal: controller.signal });
         const durationMs = Date.now() - startedAt;
         if (!response.ok) {
+            let errorBody: string | null = null;
+            try {
+                errorBody = await response.clone().text();
+            } catch {
+                errorBody = null;
+            }
             logSendbird('error', label, {
                 status: response.status,
                 durationMs,
+                errorBody: errorBody && errorBody.length > 500 ? `${errorBody.slice(0, 500)}…` : errorBody,
             });
         } else if (durationMs > 1000) {
             logSendbird('warn', label, { durationMs });

@@ -34,9 +34,16 @@ const fetchWithTimeout = async (
         const response = await fetch(url, { ...init, signal: controller.signal });
         const durationMs = Date.now() - startedAt;
         if (!response.ok) {
+            let errorBody: string | null = null;
+            try {
+                errorBody = await response.clone().text();
+            } catch {
+                errorBody = null;
+            }
             logSendbird('error', label, {
                 status: response.status,
                 durationMs,
+                errorBody: errorBody && errorBody.length > 500 ? `${errorBody.slice(0, 500)}…` : errorBody,
             });
         } else if (durationMs > 1000) {
             logSendbird('warn', label, { durationMs });
@@ -119,17 +126,16 @@ const issueSessionToken = async (headers: Record<string, string>, userId: string
     return data.token;
 };
 
-export async function POST(request: Request) {
+const handleSessionToken = async (body: {
+    userId?: string;
+    nickname?: string;
+    profileUrl?: string;
+}) => {
     const headers = getHeaders();
     if (!headers) {
         return NextResponse.json({ error: 'Sendbird API token is missing.' }, { status: 500 });
     }
 
-    const body = (await request.json().catch(() => null)) as {
-        userId?: string;
-        nickname?: string;
-        profileUrl?: string;
-    } | null;
     if (!body?.userId) {
         return NextResponse.json({ error: 'userId is required.' }, { status: 400 });
     }
@@ -146,4 +152,23 @@ export async function POST(request: Request) {
         const message = error instanceof Error ? error.message : 'Failed to issue session token';
         return NextResponse.json({ error: message }, { status: 500 });
     }
+};
+
+export async function POST(request: Request) {
+    const body = (await request.json().catch(() => null)) as {
+        userId?: string;
+        nickname?: string;
+        profileUrl?: string;
+    } | null;
+
+    return handleSessionToken(body || {});
+}
+
+export async function GET(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId') || undefined;
+    const nickname = searchParams.get('nickname') || undefined;
+    const profileUrl = searchParams.get('profileUrl') || undefined;
+
+    return handleSessionToken({ userId, nickname, profileUrl });
 }
