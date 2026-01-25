@@ -123,7 +123,7 @@ const AdminSupportChatWidget = () => {
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
       {adminChatOpen && (
         <div
-          className="w-[360px] max-w-[90vw] overflow-hidden rounded-2xl border border-slate-200/70 bg-white/95 shadow-[0_30px_70px_-40px_rgba(15,23,42,0.7)] backdrop-blur"
+          className="w-[360px] max-w-[90vw] overflow-hidden rounded-2xl border border-slate-200/70 bg-white/95 shadow-[0_30px_70px_-40px_rgba(15,23,42,0.7)] backdrop-blur md:w-[520px] md:max-w-[75vw] lg:w-[720px] lg:max-w-[65vw] xl:w-[840px] xl:max-w-[60vw]"
           role="dialog"
           aria-label="상담관리 채팅 위젯"
         >
@@ -156,8 +156,50 @@ const AdminSupportChatWidget = () => {
                 accessToken={adminSessionToken}
                 theme="light"
               >
-                {adminChatView === 'list' ? (
-                  <div className="h-[420px] overflow-hidden rounded-xl border border-slate-200 bg-white">
+                {/* Mobile: toggle list/chat */}
+                <div className="md:hidden">
+                  {adminChatView === 'list' ? (
+                    <div className="h-[420px] overflow-hidden rounded-xl border border-slate-200 bg-white">
+                      <GroupChannelList
+                        onChannelSelect={(channel) => {
+                          setAdminChannelUrl(channel?.url ?? null);
+                          setAdminChatView('chat');
+                        }}
+                        onChannelCreated={(channel) => {
+                          setAdminChannelUrl(channel?.url ?? null);
+                          setAdminChatView('chat');
+                        }}
+                        selectedChannelUrl={adminChannelUrl ?? undefined}
+                        disableAutoSelect
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-[420px] overflow-hidden rounded-xl border border-slate-200 bg-white">
+                      {adminChannelUrl ? (
+                        <GroupChannel channelUrl={adminChannelUrl} />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                          대화를 선택하세요.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {adminChatView === 'chat' && (
+                    <div className="mt-3 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setAdminChatView('list')}
+                        className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600"
+                      >
+                        목록으로
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Desktop: list + chat side by side */}
+                <div className="hidden md:flex md:h-[560px] md:gap-3 lg:h-[680px]">
+                  <div className="h-full min-w-0 flex-[0_0_40%] overflow-hidden rounded-xl border border-slate-200 bg-white">
                     <GroupChannelList
                       onChannelSelect={(channel) => {
                         setAdminChannelUrl(channel?.url ?? null);
@@ -171,8 +213,7 @@ const AdminSupportChatWidget = () => {
                       disableAutoSelect
                     />
                   </div>
-                ) : (
-                  <div className="h-[420px] overflow-hidden rounded-xl border border-slate-200 bg-white">
+                  <div className="h-full min-w-0 flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white">
                     {adminChannelUrl ? (
                       <GroupChannel channelUrl={adminChannelUrl} />
                     ) : (
@@ -181,18 +222,7 @@ const AdminSupportChatWidget = () => {
                       </div>
                     )}
                   </div>
-                )}
-                {adminChatView === 'chat' && (
-                  <div className="mt-3 flex items-center justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setAdminChatView('list')}
-                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600"
-                    >
-                      목록으로
-                    </button>
-                  </div>
-                )}
+                </div>
               </SendbirdProvider>
             )}
           </div>

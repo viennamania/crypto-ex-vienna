@@ -318,7 +318,7 @@ export default function SupportSettingsPage() {
             <div className="flex items-center gap-4">
               <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 text-white">
                 {avatarPreview ? (
-                  <Image src={avatarPreview} alt="Support Avatar" fill className="object-cover" />
+                  <Image src={avatarPreview} alt="Support Avatar" fill sizes="64px" className="object-cover" />
                 ) : (
                   <span className="text-base font-semibold tracking-[0.2em]">{initials}</span>
                 )}

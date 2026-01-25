@@ -609,6 +609,7 @@ export default function Web3LoginPage() {
                           src={avatarPreview || avatarUrl || '/profile-default.png'}
                           alt="Avatar"
                           fill
+                          sizes="48px"
                           className="object-cover"
                         />
                       </div>
