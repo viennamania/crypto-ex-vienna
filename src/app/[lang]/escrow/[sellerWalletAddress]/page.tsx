@@ -1268,7 +1268,8 @@ export default function Index({ params }: any) {
  const [limitValue, setLimitValue] = useState(20);
   useEffect(() => {
     const limit = searchParams.get('limit') || 20;
-    setLimitValue(Number(limit));
+    const nextLimit = Number(limit);
+    setLimitValue((prev) => (Object.is(prev, nextLimit) ? prev : nextLimit));
   }, [searchParams]);
 
 
@@ -1276,7 +1277,8 @@ export default function Index({ params }: any) {
   const [pageValue, setPageValue] = useState(1);
   useEffect(() => {
     const page = searchParams.get('page') || 1;
-    setPageValue(Number(page));
+    const nextPage = Number(page);
+    setPageValue((prev) => (Object.is(prev, nextPage) ? prev : nextPage));
   }, [searchParams]);
 
 
@@ -5112,14 +5114,14 @@ const fetchBuyOrders = async () => {
               )}
 
               <div className="w-full flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
+                <div className="flex items-stretch gap-3">
+                  <div className="flex aspect-square shrink-0 self-stretch items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
                     <Image
-                      src="/icon-seller.png"
+                      src={activeSeller?.avatar || activeSeller?.seller?.avatar || "/icon-seller.png"}
                       alt="Seller"
-                      width={40}
-                      height={40}
-                      className="h-9 w-9"
+                      width={96}
+                      height={96}
+                      className="h-full w-full object-cover ring-1 ring-white/80"
                     />
                   </div>
                   <div className="flex flex-col gap-1">

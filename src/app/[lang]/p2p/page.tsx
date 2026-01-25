@@ -320,8 +320,7 @@ export default function OrangeXPage() {
     const walletAddress = activeAccount?.address ?? '';
     const { smartAccountEnabled, wallet } = useClientWallets();
     const hasWallet = Boolean(walletAddress);
-    const web3LoginHref = `/${lang}/web3login`;
-    const buyPageHref = hasWallet ? `/${lang}/p2p/buy` : web3LoginHref;
+    const buyPageHref = `/${lang}/p2p/buy`;
     const [sellerEscrowWalletAddress, setSellerEscrowWalletAddress] = useState<string | null>(null);
     const [sellerEscrowLoading, setSellerEscrowLoading] = useState(false);
     const sellerPageHref =

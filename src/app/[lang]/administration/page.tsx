@@ -15,7 +15,7 @@ import { createThirdwebClient } from "thirdweb";
 
 import {
   //ThirdwebProvider,
-  ///ConnectButton,
+  ConnectButton,
 
   AutoConnect,
 
@@ -922,48 +922,40 @@ export default function Index({ params }: any) {
 
   if (!address) {
     return (
-      <div className="flex flex-col items-center justify-center">
-
-        {/*
-        <h1 className="text-2xl font-bold">로그인</h1>
-
-          <ConnectButton
-            client={client}
-            wallets={wallets}
-            chain={chain === "ethereum" ? ethereum :
-                    chain === "polygon" ? polygon :
-                    chain === "arbitrum" ? arbitrum :
-                    chain === "bsc" ? bsc : arbitrum}
-            
-            theme={"light"}
-
-            // button color is dark skyblue convert (49, 103, 180) to hex
-            connectButton={{
-              style: {
-                backgroundColor: "#0047ab", // cobalt blue
-
-                color: "#f3f4f6", // gray-300 
-                padding: "2px 2px",
-                borderRadius: "10px",
-                fontSize: "14px",
-                //width: "40px",
-                height: "38px",
-              },
-              label: "웹3 로그인",
-            }}
-
-            connectModal={{
-              size: "wide", 
-              //size: "compact",
-              titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
-              showThirdwebBranding: false,
-            }}
-
-            locale={"ko_KR"}
-            //locale={"en_US"}
-          />
-        */}
-
+      <div className="min-h-[60vh] w-full flex flex-col items-center justify-center gap-4 p-6">
+        <AutoConnect client={client} wallets={[wallet]} />
+        <div className="w-full max-w-sm rounded-2xl border border-slate-200/80 bg-white/90 p-6 text-center shadow-[0_20px_60px_-40px_rgba(15,23,42,0.35)]">
+          <h1 className="text-lg font-semibold text-slate-900">관리자 지갑 연결</h1>
+          <p className="mt-2 text-sm text-slate-500">관리자 기능을 사용하려면 지갑 연결이 필요합니다.</p>
+          <div className="mt-4 flex items-center justify-center">
+            <ConnectButton
+              client={client}
+              wallets={wallets}
+              chain={chain === "ethereum" ? ethereum :
+                      chain === "polygon" ? polygon :
+                      chain === "arbitrum" ? arbitrum :
+                      chain === "bsc" ? bsc : arbitrum}
+              theme={"light"}
+              connectButton={{
+                style: {
+                  backgroundColor: "#0f172a",
+                  color: "#f8fafc",
+                  padding: "6px 14px",
+                  borderRadius: "999px",
+                  fontSize: "14px",
+                  height: "40px",
+                },
+                label: "지갑 연결하기",
+              }}
+              connectModal={{
+                size: "wide",
+                titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",
+                showThirdwebBranding: false,
+              }}
+              locale={"ko_KR"}
+            />
+          </div>
+        </div>
       </div>
     );
   }

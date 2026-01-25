@@ -4530,6 +4530,25 @@ const fetchBuyOrders = async () => {
                     className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
                     px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
                   >
+                    {seller.seller?.totalPaymentConfirmedUsdtAmount > 20 && (
+                      <div className="absolute -right-1 -top-1 z-10">
+                        <div className="relative h-16 w-16 overflow-hidden">
+                          <div className="absolute right-0 top-0 h-16 w-16 bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500 shadow-lg" />
+                          <div className="absolute right-[-22px] top-[14px] w-[120px] -rotate-45 bg-black/70 py-1 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-white shadow-md">
+                            BEST
+                          </div>
+                          <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 shadow-sm">
+                            <Image
+                              src="/icon-best-seller.png"
+                              alt="Best Seller"
+                              width={14}
+                              height={14}
+                              className="h-3.5 w-3.5"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex flex-row items-center justify-center gap-2">
                       {isAdmin && (
                         <div className="flex flex-row items-center justify-center gap-2">
@@ -5354,27 +5373,26 @@ const fetchBuyOrders = async () => {
                     `}
                   >
 
-                    <div className={`w-full xl:basis-full flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-2 ${SELLER_CARD_TONES[index % SELLER_CARD_TONES.length].header}`}>
-                      <div className="flex items-center gap-2">
-                        <Image
-                          src="/icon-seller.png"
-                          alt="Seller"
-                          width={20}
-                          height={20}
-                          className="w-6 h-6 rounded-lg object-cover"
-                        />
-                        <span className="text-sm font-semibold text-slate-900">
-                          {seller.nickname}
-                        </span>
-                        {seller.seller?.totalPaymentConfirmedUsdtAmount > 20 && (
+                    <div className={`w-full xl:basis-full flex flex-wrap items-center justify-between gap-4 rounded-xl border px-5 py-4 ${SELLER_CARD_TONES[index % SELLER_CARD_TONES.length].header}`}>
+                      <div className="flex items-center gap-4">
+                        <div className="relative">
                           <Image
-                            src="/icon-best-seller.png"
-                            alt="Best Seller"
-                            width={30}
-                            height={30}
-                            className="w-6 h-6 rounded-lg object-cover"
+                            src={seller.avatar || "/icon-seller.png"}
+                            alt="Seller"
+                            width={48}
+                            height={48}
+                            className="h-12 w-12 rounded-2xl object-cover shadow-md ring-2 ring-white/80"
                           />
-                        )}
+                          <span className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-white bg-emerald-400 shadow-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">
+                            Seller
+                          </span>
+                          <span className="text-xl font-bold text-slate-900 tracking-tight">
+                            {seller.nickname}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
@@ -10358,7 +10376,7 @@ const fetchBuyOrders = async () => {
                                 >
                                   <div className="flex flex-col gap-1 items-center justify-center">
                                     <Image
-                                      src="/icon-user.png"
+                                      src={item.avatar || "/icon-user.png"}
                                       alt="User Icon"
                                       width={20}
                                       height={20}

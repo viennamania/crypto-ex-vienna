@@ -5081,7 +5081,7 @@ const fetchBuyOrders = async () => {
                                 {order.seller.nickname}
                               </span>
                               <Image
-                                src="/icon-seller.png"
+                                src={order.seller?.avatar || "/icon-seller.png"}
                                 alt="Seller"
                                 width={20}
                                 height={20}
@@ -5592,7 +5592,7 @@ const fetchBuyOrders = async () => {
                     <div className="w-full xl:basis-full flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-2">
                       <div className="flex items-center gap-2">
                         <Image
-                          src="/icon-seller.png"
+                          src={seller.avatar || "/icon-seller.png"}
                           alt="Seller"
                           width={20}
                           height={20}
@@ -10546,7 +10546,7 @@ const fetchBuyOrders = async () => {
                                 >
                                   <div className="flex flex-col gap-1 items-center justify-center">
                                     <Image
-                                      src="/icon-user.png"
+                                      src={item.avatar || "/icon-user.png"}
                                       alt="User Icon"
                                       width={20}
                                       height={20}

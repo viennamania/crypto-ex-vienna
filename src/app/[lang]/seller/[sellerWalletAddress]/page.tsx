@@ -4865,17 +4865,19 @@ const fetchBuyOrders = async () => {
                           <div className="w-full flex flex-row items-center justify-between gap-2
                           bg-blue-500 text-white px-2 py-1 rounded-tl-lg rounded-br-lg shadow-lg
                           ">
-                            <div className="flex flex-row items-center justify-center gap-1">
+                            <div className="flex flex-row items-stretch justify-center gap-1">
                               <span className="text-sm font-semibold">
                                 {order.seller.nickname}
                               </span>
-                              <Image
-                                src="/icon-seller.png"
-                                alt="Seller"
-                                width={20}
-                                height={20}
-                                className="w-6 h-6 rounded-lg object-cover"
-                              />
+                              <div className="flex aspect-square h-full shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/30 bg-white/10">
+                                <Image
+                                  src={order.seller?.avatar || "/icon-seller.png"}
+                                  alt="Seller"
+                                  width={32}
+                                  height={32}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -5311,14 +5313,16 @@ const fetchBuyOrders = async () => {
                       flex flex-row items-center justify-between gap-2
                       bg-slate-700 text-slate-100 px-2 py-1 rounded-br-lg rounded-tl-lg shadow-xl border border-slate-600
                       ">
-                        <div className="flex flex-row items-center justify-center gap-1">
-                          <Image
-                            src="/icon-seller.png"
-                            alt="Seller"
-                            width={20}
-                            height={20}
-                            className="w-6 h-6 rounded-lg object-cover"
-                          />
+                        <div className="flex flex-row items-stretch justify-center gap-1">
+                          <div className="flex aspect-square h-full shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/30 bg-white/10">
+                            <Image
+                              src={seller.avatar || seller.seller?.avatar || "/icon-seller.png"}
+                              alt="Seller"
+                              width={32}
+                              height={32}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
                           <span className="text-sm font-semibold">
                             {seller.nickname}
                           </span>
@@ -11760,5 +11764,3 @@ const TradeDetail = (
       </div>
     );
   };
-
-
