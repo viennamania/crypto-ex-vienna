@@ -4530,24 +4530,31 @@ const fetchBuyOrders = async () => {
                     className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
                     px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
                   >
-                    {seller.seller?.totalPaymentConfirmedUsdtAmount > 20 && (
-                      <div className="absolute -right-1 -top-1 z-10">
-                        <div className="relative h-16 w-16 overflow-hidden">
-                          <div className="absolute right-0 top-0 h-16 w-16 bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500 shadow-lg" />
-                          <div className="absolute right-[-22px] top-[14px] w-[120px] -rotate-45 bg-black/70 py-1 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-white shadow-md">
-                            BEST
-                          </div>
-                          <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 shadow-sm">
-                            <Image
-                              src="/icon-best-seller.png"
-                              alt="Best Seller"
-                              width={14}
-                              height={14}
-                              className="h-3.5 w-3.5"
-                            />
-                          </div>
-                        </div>
-                      </div>
+                    {user?.seller?.totalPaymentConfirmedUsdtAmount > 20 && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/80 bg-gradient-to-r from-amber-200 via-amber-300 to-amber-200 px-2.5 py-0.5 text-[10px] font-bold tracking-[0.18em] text-amber-900 shadow-[0_6px_16px_-10px_rgba(251,191,36,0.6)]">
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M4 10l4-4 4 4 4-4 4 4-2 8H6l-2-8z"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M8 18h8"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        BEST
+                      </span>
                     )}
                     <div className="flex flex-row items-center justify-center gap-2">
                       {isAdmin && (

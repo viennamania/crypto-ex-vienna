@@ -323,6 +323,8 @@ export default function OrangeXPage() {
     const buyPageHref = `/${lang}/p2p/buy`;
     const [sellerEscrowWalletAddress, setSellerEscrowWalletAddress] = useState<string | null>(null);
     const [sellerEscrowLoading, setSellerEscrowLoading] = useState(false);
+    const [profileAvatarUrl, setProfileAvatarUrl] = useState('');
+    const [profileInitial, setProfileInitial] = useState('');
     const sellerPageHref =
         hasWallet && sellerEscrowWalletAddress
             ? `/${lang}/escrow/${sellerEscrowWalletAddress}`
@@ -414,6 +416,8 @@ export default function OrangeXPage() {
         if (!walletAddress) {
             setSellerEscrowWalletAddress(null);
             setSellerEscrowLoading(false);
+            setProfileAvatarUrl('');
+            setProfileInitial('');
             return () => {
                 isMounted = false;
             };
@@ -437,7 +441,13 @@ export default function OrangeXPage() {
                 }
 
                 const data = (await response.json()) as {
-                    result?: { seller?: { escrowWalletAddress?: string }; escrowWalletAddress?: string };
+                    result?: { 
+                        seller?: { escrowWalletAddress?: string }; 
+                        escrowWalletAddress?: string;
+                        avatar?: string;
+                        nickname?: string;
+                        user?: { nickname?: string };
+                    };
                 };
 
                 const nextEscrowWallet =
@@ -447,10 +457,20 @@ export default function OrangeXPage() {
 
                 if (isMounted) {
                     setSellerEscrowWalletAddress(nextEscrowWallet);
+                    const nextAvatar = data?.result?.avatar || '';
+                    const nicknameSeed =
+                        (data?.result?.nickname || data?.result?.user?.nickname || '').trim();
+                    const walletSeed = walletAddress.replace(/^0x/i, '').slice(0, 2);
+                    setProfileAvatarUrl(nextAvatar);
+                    setProfileInitial(
+                        nicknameSeed ? nicknameSeed.slice(0, 2).toUpperCase() : walletSeed.toUpperCase()
+                    );
                 }
             } catch {
                 if (isMounted) {
                     setSellerEscrowWalletAddress(null);
+                    setProfileAvatarUrl('');
+                    setProfileInitial(walletAddress.replace(/^0x/i, '').slice(0, 2).toUpperCase());
                 }
             } finally {
                 if (isMounted) {
@@ -1544,14 +1564,30 @@ export default function OrangeXPage() {
                                 </div>
                                 <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                                     <div className="flex items-start gap-4 md:flex-1">
-                                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-[0_20px_40px_-18px_rgba(15,23,42,0.6)] ring-2 ring-slate-200/80">
-                                            <Image
-                                                src="/icon-vault.png"
-                                                alt="Secure Wallet"
-                                                width={28}
-                                                height={28}
-                                                className="h-7 w-7"
-                                            />
+                                        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-900 text-white shadow-[0_20px_40px_-18px_rgba(15,23,42,0.6)] ring-2 ring-slate-200/80">
+                                            {walletAddress ? (
+                                                profileAvatarUrl ? (
+                                                    <Image
+                                                        src={profileAvatarUrl}
+                                                        alt="Member Avatar"
+                                                        fill
+                                                        sizes="56px"
+                                                        className="object-cover"
+                                                    />
+                                                ) : (
+                                                    <span className="text-base font-semibold tracking-[0.12em]">
+                                                        {profileInitial || 'NA'}
+                                                    </span>
+                                                )
+                                            ) : (
+                                                <Image
+                                                    src="/icon-vault.png"
+                                                    alt="Secure Wallet"
+                                                    width={28}
+                                                    height={28}
+                                                    className="h-7 w-7"
+                                                />
+                                            )}
                                         </div>
                                         <div className="flex flex-col gap-2">
                                             <span className="text-lg font-semibold text-slate-900">
