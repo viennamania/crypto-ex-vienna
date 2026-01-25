@@ -6320,7 +6320,7 @@ const fetchBuyOrders = async () => {
           )}
 
           {/* 판매자 대화목록 섹션 */}
-          {!isOwnerSeller && (
+          {!isOwnerSeller && !isAdmin && (
             <SellerChatList
               ownerWalletAddress={ownerWalletAddress}
               items={sellerChatItems}

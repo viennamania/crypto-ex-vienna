@@ -513,6 +513,7 @@ export default function Index({ params }: any) {
 
 
   const [isAdmin, setIsAdmin] = useState(false);
+
  
 
   const [nickname, setNickname] = useState("");
@@ -698,6 +699,7 @@ export default function Index({ params }: any) {
     fetchData();
 
   } , [address]);
+
 
 
 
@@ -983,8 +985,7 @@ export default function Index({ params }: any) {
             >
               회원가입하러 가기
             </button>
-          </div>
-
+        </div>
 
 
 
@@ -2407,6 +2408,14 @@ export default function Index({ params }: any) {
                   >
                     판매자 관리
                   </button>
+                  <button
+                    onClick={() => {
+                      router.push('/' + params.lang + '/administration/support-settings');
+                    }}
+                    className="bg-white text-sm text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50"
+                  >
+                    상담원 설정
+                  </button>
                 </div>
 
               </div>
@@ -2519,8 +2528,6 @@ export default function Index({ params }: any) {
           </div>
 
         </div>
-
-
 
       </div>
 
