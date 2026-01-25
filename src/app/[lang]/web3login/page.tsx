@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { AutoConnect, ConnectButton, useActiveAccount, useActiveWallet } from 'thirdweb/react';
 import { ethereum, polygon, arbitrum, bsc } from 'thirdweb/chains';
@@ -44,6 +44,13 @@ export default function Web3LoginPage() {
   const storecode = searchParams.get('storecode') || 'admin';
   const [nickname, setNickname] = useState('');
   const [editedNickname, setEditedNickname] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarErrorLog, setAvatarErrorLog] = useState('');
+  const MAX_AVATAR_MB = 5;
+  const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   const [loadingUser, setLoadingUser] = useState(false);
   const [savingNickname, setSavingNickname] = useState(false);
   const [hasUser, setHasUser] = useState(false);
@@ -58,6 +65,10 @@ export default function Web3LoginPage() {
     }
     return nickname ? nickname : '미등록';
   }, [address, loadingUser, nickname]);
+
+  const isNicknameUnchanged = useMemo(() => {
+    return editedNickname.trim() === (nickname || '');
+  }, [editedNickname, nickname]);
 
   useEffect(() => {
     let active = true;
@@ -89,10 +100,12 @@ export default function Web3LoginPage() {
         if (data.result) {
           setNickname(data.result.nickname || '');
           setEditedNickname(data.result.nickname || '');
+          setAvatarUrl(data.result.avatar || '');
           setHasUser(true);
         } else {
           setNickname('');
           setEditedNickname('');
+          setAvatarUrl('');
           setHasUser(false);
         }
         setNicknameError('');
@@ -100,6 +113,7 @@ export default function Web3LoginPage() {
         if (active) {
           setNickname('');
           setEditedNickname('');
+          setAvatarUrl('');
           setHasUser(false);
           setNicknameError('');
         }
@@ -164,7 +178,7 @@ export default function Web3LoginPage() {
         setNickname(nextNickname);
         setEditedNickname(nextNickname);
         setHasUser(true);
-        await updateSendbirdNickname(nextNickname);
+        await updateSendbirdUser(nextNickname, avatarUrl);
         toast.success('채팅 닉네임도 변경됨');
       } else {
         toast.error('닉네임 저장에 실패했습니다.');
@@ -176,7 +190,7 @@ export default function Web3LoginPage() {
     }
   };
 
-  const updateSendbirdNickname = async (nextNickname: string) => {
+  const updateSendbirdUser = async (nextNickname: string, profileUrl?: string) => {
     if (!address || !nextNickname) {
       return;
     }
@@ -187,6 +201,7 @@ export default function Web3LoginPage() {
         body: JSON.stringify({
           userId: address,
           nickname: nextNickname,
+          ...(profileUrl ? { profileUrl } : {}),
         }),
       });
 
@@ -197,6 +212,146 @@ export default function Web3LoginPage() {
     } catch (error) {
       console.error('Sendbird nickname update failed', error);
       toast.error('채팅 닉네임 변경에 실패했습니다.');
+    }
+  };
+
+  const prepareAvatarFile = async (file: File) => {
+    const sourceUrl = URL.createObjectURL(file);
+    try {
+      const image = new window.Image();
+      image.src = sourceUrl;
+      await image.decode();
+      const size = Math.min(image.width, image.height);
+      const sx = (image.width - size) / 2;
+      const sy = (image.height - size) / 2;
+      const canvas = document.createElement('canvas');
+      const targetSize = 512;
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Canvas context missing');
+      }
+      ctx.drawImage(image, sx, sy, size, size, 0, 0, targetSize, targetSize);
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((result) => {
+          if (result) {
+            resolve(result);
+          } else {
+            reject(new Error('Canvas export failed'));
+          }
+        }, 'image/jpeg', 0.9);
+      });
+      const processedFile = new File([blob], `avatar-${Date.now()}.jpg`, {
+        type: blob.type,
+      });
+      const previewUrl = URL.createObjectURL(blob);
+      return { processedFile, previewUrl };
+    } finally {
+      URL.revokeObjectURL(sourceUrl);
+    }
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!address) {
+      toast.error('로그인 후 이미지를 업로드할 수 있습니다.');
+      return;
+    }
+    if (avatarUploading) {
+      return;
+    }
+    setAvatarErrorLog('');
+    if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+      toast.error('PNG, JPG, WEBP 형식만 업로드할 수 있습니다.');
+      return;
+    }
+    if (file.size / 1024 / 1024 > MAX_AVATAR_MB) {
+      toast.error(`파일 용량은 ${MAX_AVATAR_MB}MB 이하만 가능합니다.`);
+      return;
+    }
+    setAvatarUploading(true);
+    let previewUrl: string | null = null;
+    let localPreviewUrl: string | null = null;
+    const previousAvatarUrl = avatarPreview || avatarUrl;
+    try {
+      const { processedFile, previewUrl: processedPreviewUrl } = await prepareAvatarFile(file);
+      previewUrl = processedPreviewUrl;
+      localPreviewUrl = processedPreviewUrl;
+      setAvatarPreview(processedPreviewUrl);
+      const previousAvatar = avatarUrl;
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'content-type': processedFile.type || 'application/octet-stream' },
+        body: processedFile,
+      });
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(`Upload failed (${uploadResponse.status}): ${errorText || uploadResponse.statusText}`);
+      }
+      const { url } = (await uploadResponse.json()) as { url: string };
+
+      const updateResponse = await fetch('/api/user/updateAvatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode,
+          walletAddress: address,
+          avatar: url,
+        }),
+      });
+      const updateData = await updateResponse.json();
+      if (!updateResponse.ok || !updateData?.result) {
+        throw new Error(
+          `Avatar update failed (${updateResponse.status}): ${updateData?.error || updateResponse.statusText}`,
+        );
+      }
+      setAvatarUrl(url);
+      setAvatarPreview(url);
+      if (nickname) {
+        await updateSendbirdUser(nickname, url);
+      } else {
+        setNicknameError('닉네임을 먼저 등록해 주세요.');
+      }
+      if (previousAvatar && previousAvatar !== url) {
+        await fetch('/api/upload/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: previousAvatar }),
+        });
+      }
+      toast.success('프로필 이미지가 변경되었습니다.');
+    } catch (error) {
+      console.error('Avatar upload failed', error);
+      toast.error('이미지 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      setAvatarErrorLog(message);
+      setAvatarPreview(previousAvatarUrl || null);
+      if (address) {
+        try {
+          const fallbackResponse = await fetch('/api/user/getUser', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              storecode,
+              walletAddress: address,
+            }),
+          });
+          const fallbackData = await fallbackResponse.json();
+          if (fallbackData?.result?.avatar) {
+            setAvatarUrl(fallbackData.result.avatar);
+            setAvatarPreview(fallbackData.result.avatar);
+          }
+        } catch (fallbackError) {
+          console.error('Failed to refresh avatar after upload error', fallbackError);
+        }
+      }
+    } finally {
+      setAvatarUploading(false);
+      if (localPreviewUrl) {
+        URL.revokeObjectURL(localPreviewUrl);
+      }
     }
   };
 
@@ -371,7 +526,7 @@ export default function Web3LoginPage() {
             </section>
 
             <section className="rounded-[28px] border border-slate-200/70 bg-white/90 p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.55)] backdrop-blur">
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-5">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100">
                     <Image src="/icon-user.png" alt="Nickname" width={20} height={20} />
@@ -380,11 +535,11 @@ export default function Web3LoginPage() {
                     <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
                       Profile
                     </span>
-                    <span className="text-lg font-semibold text-slate-900">회원 닉네임 등록</span>
+                    <span className="text-lg font-semibold text-slate-900">회원 정보 등록</span>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4">
+                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                     현재 닉네임
                   </p>
@@ -396,7 +551,7 @@ export default function Web3LoginPage() {
                   </p>
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                   <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                     닉네임
                   </label>
@@ -432,16 +587,91 @@ export default function Web3LoginPage() {
 
                 <button
                   type="button"
-                  disabled={!address || savingNickname}
+                  disabled={!address || savingNickname || isNicknameUnchanged}
                   onClick={handleSaveNickname}
                   className={`w-full rounded-2xl px-4 py-3 text-base font-semibold transition ${
-                    !address || savingNickname
+                    !address || savingNickname || isNicknameUnchanged
                       ? 'cursor-not-allowed bg-slate-200 text-slate-400'
                       : 'bg-emerald-600 text-white shadow-[0_16px_35px_-20px_rgba(16,185,129,0.7)] hover:bg-emerald-500'
                   }`}
                 >
                   {savingNickname ? '저장 중...' : '닉네임 저장'}
                 </button>
+                {isNicknameUnchanged && address && !savingNickname && !nicknameError && (
+                  <span className="text-xs font-semibold text-slate-400">변경 사항 없음</span>
+                )}
+
+                <div className="pt-4 border-t border-slate-200/70">
+                  <div className="flex items-center justify-between rounded-2xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="relative h-12 w-12 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                        <Image
+                          src={avatarPreview || avatarUrl || '/profile-default.png'}
+                          alt="Avatar"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                          Avatar
+                        </span>
+                        <span className="text-sm font-semibold text-slate-700">
+                          프로필 이미지
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) {
+                            handleAvatarUpload(file);
+                            event.target.value = '';
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        disabled={!address || avatarUploading}
+                        onClick={() => avatarInputRef.current?.click()}
+                        className={`rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition ${
+                          !address || avatarUploading
+                            ? 'bg-slate-200 text-slate-400'
+                            : 'bg-slate-900 text-white hover:bg-slate-800'
+                        }`}
+                      >
+                        {avatarUploading ? '업로드 중...' : '이미지 변경'}
+                      </button>
+                    </div>
+                  </div>
+                  {avatarErrorLog && (
+                    <div className="mt-3 rounded-xl border border-rose-200/80 bg-rose-50/80 px-3 py-2 text-[11px] font-semibold text-rose-600">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-semibold text-rose-600">업로드 오류 로그</span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(avatarErrorLog);
+                              toast.success('로그가 복사되었습니다.');
+                            } catch (error) {
+                              toast.error('로그 복사에 실패했습니다.');
+                            }
+                          }}
+                          className="rounded-full border border-rose-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-rose-600 shadow-sm transition hover:border-rose-300"
+                        >
+                          복사하기
+                        </button>
+                      </div>
+                      <p className="mt-1 whitespace-pre-wrap">{avatarErrorLog}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
           </div>

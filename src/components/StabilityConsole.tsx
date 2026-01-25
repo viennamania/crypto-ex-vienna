@@ -254,6 +254,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
 
   const [balance, setBalance] = useState(0);
   const [nativeBalance, setNativeBalance] = useState(0);
+  const [showQrCode, setShowQrCode] = useState(false);
 
   useEffect(() => {
 
@@ -316,7 +317,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
     <div
       className="console-shell relative mx-auto mb-4 w-full max-w-lg overflow-hidden rounded-[28px]
       bg-[radial-gradient(120%_120%_at_0%_0%,#fbfaf6_0%,#eff3f7_45%,#e1e8f1_100%)]
-      p-6 shadow-[0_40px_80px_-50px_rgba(15,23,42,0.65)] ring-1 ring-[#d6dde7] md:p-7"
+      p-4 shadow-[0_40px_80px_-50px_rgba(15,23,42,0.65)] ring-1 ring-[#d6dde7] md:p-7"
       style={{ fontFamily: '"Space Grotesk", "Avenir Next", "Segoe UI", sans-serif' }}
     >
 
@@ -333,9 +334,9 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
 
 
       {/* address balance */}
-      <div className="console-card relative flex w-full flex-col gap-6 rounded-[22px]
-        border border-white/70 bg-white/80 p-5 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.45)]
-        backdrop-blur-xl md:p-6">
+      <div className="console-card relative flex w-full flex-col gap-4 rounded-[22px]
+        border border-white/70 bg-white/80 p-4 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.45)]
+        backdrop-blur-xl md:gap-6 md:p-6">
 
         {address ? (
 
@@ -350,20 +351,20 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                   <span>내 지갑주소</span>
                 </div>
                 {smartAccountEnabled && (
-                  <div className="relative">
-                    <span className="smart-account-glow absolute -inset-1 rounded-full" />
-                    <span className="smart-account-badge inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 px-3 py-1 text-[11px] font-bold text-white">
+                <div className="relative">
+                  <span className="smart-account-glow absolute -inset-1 rounded-full" />
+                    <span className="smart-account-badge inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 px-2.5 py-0.5 text-[10px] font-bold text-white md:px-3 md:py-1 md:text-[11px]">
                       <span className="inline-flex h-2 w-2 rounded-full bg-white shadow-[0_0_14px_rgba(255,255,255,0.95)]" />
                       스마트 어카운트
                     </span>
-                  </div>
+                </div>
                 )}
               </div>
 
-              <div className="mt-4 grid w-full gap-4 md:grid-cols-[1fr_auto] md:items-center">
+              <div className="mt-3 grid w-full gap-3 md:grid-cols-[1fr_auto] md:items-center md:gap-4">
                 <button
                   className="inline-flex items-center gap-2 rounded-full border border-slate-200/70
-                  bg-white/80 px-4 py-2 text-base font-semibold text-slate-900 shadow-sm
+                  bg-white/80 px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm
                   transition hover:border-slate-300 hover:shadow-md"
                   onClick={() => {
                     navigator.clipboard.writeText(address);
@@ -383,9 +384,24 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                   </span>
                 </button>
 
-                <div className="flex justify-center md:justify-end">
-                  <div className="rounded-2xl bg-white p-3 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.35)]
-                    ring-1 ring-slate-200/60">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 md:hidden">
+                  <span>QR 코드</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowQrCode((prev) => !prev)}
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm transition hover:border-slate-300"
+                  >
+                    {showQrCode ? 'QR 접기' : 'QR 펼치기'}
+                  </button>
+                </div>
+
+                <div
+                  className={`flex justify-center md:justify-end overflow-hidden transition-all duration-300 ease-out origin-top
+                  ${showQrCode ? 'max-h-[260px] opacity-100 scale-100' : 'max-h-0 opacity-0 scale-95'}
+                  md:max-h-none md:opacity-100 md:scale-100 md:overflow-visible`}
+                >
+                  <div className="rounded-2xl bg-white p-2 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.35)]
+                    ring-1 ring-slate-200/60 md:p-3">
                     <Canvas
                       text={address}
                       options={{
@@ -394,7 +410,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                         scale: 4,
                         ///width: 200,
                         // width 100%
-                        width: 140,
+                        width: 120,
                         color: {
                           dark: '#0f172a',
                           light: '#ffffff',
@@ -425,9 +441,9 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                 <span>내 테더 잔액(USDT)</span>
               </div>
 
-              <div className="mt-3 flex w-full items-baseline justify-end gap-2 text-right">
+              <div className="mt-2 flex w-full items-baseline justify-end gap-2 text-right md:mt-3">
                 <div
-                  className="text-2xl font-semibold text-emerald-700 tabular-nums text-right"
+                  className="text-xl font-semibold text-emerald-700 tabular-nums text-right md:text-2xl"
                   style={{ fontFamily: '"JetBrains Mono", "IBM Plex Mono", "Menlo", monospace' }}
                 >
                   {Number(balance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -511,10 +527,14 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                   현재 네트워크
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold">{networkLabel}</span>
-                  <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm">
-                    {displayChain}
-                  </span>
+                  <Image
+                    src="/logo-chain-polygon.png"
+                    alt="Polygon"
+                    width={18}
+                    height={18}
+                    className="h-4 w-4 rounded-full"
+                  />
+                  <span className="text-base font-semibold">Polygon</span>
                 </div>
               </div>
             </div>
@@ -546,7 +566,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
             >
               <button
                 className="group inline-flex items-center justify-center gap-2 rounded-full bg-slate-900
-                px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_-18px_rgba(15,23,42,0.6)]
+                px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_30px_-18px_rgba(15,23,42,0.6)]
                 transition hover:-translate-y-0.5 hover:bg-slate-800"
                 //onClick={() => router.push("/ko/administration/withdraw-usdt")}
                 /* router and hide button for withdraw USDT */
@@ -565,7 +585,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
 
                 <button
                   className="inline-flex items-center justify-center rounded-full border border-rose-200
-                  bg-white px-4 py-2.5 text-sm font-semibold text-rose-600 shadow-sm
+                  bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm
                   transition hover:border-rose-300 hover:bg-rose-50"
                   onClick={() => {
                     // Add your disconnect wallet logic here

@@ -20,6 +20,12 @@ const nextConfig = {
       "t0gqytzvlsa2lapo.public.blob.vercel-storage.com",
       "crypto-ex-vienna.vercel.app",
     ],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.public.blob.vercel-storage.com",
+      },
+    ],
   },
 
   experimental: {

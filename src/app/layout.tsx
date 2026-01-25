@@ -152,8 +152,8 @@ const WalletConsoleShell = () => {
                 className={`group mb-2 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold
                 shadow-[0_16px_40px_-24px_rgba(15,23,42,0.8)] transition-all duration-200 backdrop-blur
                 ${showChain
-                  ? 'border-emerald-300/60 bg-emerald-500/15 text-emerald-50 hover:bg-emerald-500/25'
-                  : 'border-slate-700/80 bg-slate-900/70 text-slate-100 hover:bg-slate-900/90'}
+                  ? 'border-emerald-300/80 bg-emerald-600/60 text-emerald-50 hover:bg-emerald-600/75'
+                  : 'border-slate-700/80 bg-slate-950/80 text-slate-100 hover:bg-slate-950/95'}
                 `}
                 onClick={() => setShowChain(!showChain)}
               >
@@ -167,7 +167,9 @@ const WalletConsoleShell = () => {
                     className={`transition-transform duration-200 ${showChain ? 'scale-110' : 'scale-100'}`}
                   />
 
-                  <span className="text-sm tracking-tight">
+                  <span className={`text-sm font-semibold tracking-tight ${
+                    showChain ? 'text-white drop-shadow-[0_1px_2px_rgba(15,23,42,0.6)]' : 'text-slate-100'
+                  }`}>
                     {showChain ? '내 지갑 닫기' : '내 지갑 열기'}
                   </span>
 
