@@ -118,6 +118,10 @@ export default function BuyerSettingsPage() {
       setErrorMessage('회원 아이디를 입력해 주세요.');
       return;
     }
+    if (!/^[a-z0-9]+$/.test(nicknameInput.trim())) {
+      setErrorMessage('회원 아이디는 영문 소문자와 숫자만 사용할 수 있습니다.');
+      return;
+    }
     setSaving(true);
     setErrorMessage(null);
     try {
@@ -195,11 +199,11 @@ export default function BuyerSettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(120%_120%_at_50%_0%,#ffffff_0%,#f0f0f3_45%,#dadce1_100%)] text-black">
+    <div className="flex min-h-screen flex-col bg-[radial-gradient(120%_120%_at_50%_0%,#ffffff_0%,#f0f0f3_45%,#dadce1_100%)] text-black">
       <AutoConnect client={client} wallets={wallets} />
-      <div className="mx-auto w-full max-w-sm px-4 py-10">
-        <main className="overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_34px_90px_-50px_rgba(15,15,18,0.45)] ring-1 ring-black/10">
-          <div className="flex flex-col gap-6 px-5 pt-8">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 py-10">
+        <main className="flex flex-1 flex-col overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_34px_90px_-50px_rgba(15,15,18,0.45)] ring-1 ring-black/10">
+          <div className="flex flex-1 flex-col gap-6 px-5 pt-8 pb-6">
             <header className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-black/10 bg-white shadow-[0_8px_20px_-12px_rgba(0,0,0,0.35)]">
@@ -277,9 +281,13 @@ export default function BuyerSettingsPage() {
               <div className="mt-3 flex flex-col gap-3">
                 <input
                   value={nicknameInput}
-                  onChange={(event) => setNicknameInput(event.target.value)}
+                  onChange={(event) =>
+                    setNicknameInput(event.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))
+                  }
                   placeholder="회원 아이디"
-                  className="w-full rounded-2xl border border-white/10 bg-[#141416] px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-white/40"
+                  inputMode="text"
+                  pattern="[a-z0-9]*"
+                  className="w-full rounded-2xl border border-white/10 bg-[#141416] px-4 py-4 text-2xl font-extrabold text-white outline-none placeholder:text-white/40"
                 />
                 <button
                   type="button"
@@ -333,7 +341,14 @@ export default function BuyerSettingsPage() {
               </section>
             )}
 
-            <footer className="-mx-5 mt-2 rounded-b-[32px] bg-[#1f1f1f] px-5 py-6 pb-10 text-center text-xs text-[#9aa3b2]">
+            {errorMessage && (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-600">
+                {errorMessage}
+              </div>
+            )}
+          </div>
+          <div className="mt-auto px-5">
+            <footer className="-mx-5 rounded-b-[32px] bg-[#1f1f1f] px-5 py-6 pb-10 text-center text-xs text-[#9aa3b2]">
               <div className="flex flex-col items-center gap-2">
                 <p className="text-2xl font-semibold tracking-tight text-[#ff8a1f]">
                   Orange X™
@@ -361,12 +376,6 @@ export default function BuyerSettingsPage() {
                 Copyright © OrangeX All Rights Reserved
               </p>
             </footer>
-
-            {errorMessage && (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-600">
-                {errorMessage}
-              </div>
-            )}
           </div>
         </main>
       </div>

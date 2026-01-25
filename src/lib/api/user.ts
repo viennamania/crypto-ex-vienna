@@ -1716,6 +1716,68 @@ export async function getAllSellersByStorecode(
 
 
 
+// searchSellersByBankAccountHolder
+export async function searchSellersByBankAccountHolder(
+  {
+    storecode,
+    accountHolder,
+    limit,
+    page,
+  }: {
+    storecode: string;
+    accountHolder: string;
+    limit: number;
+    page: number;
+  }
+): Promise<ResultProps> {
+  console.log(
+    'searchSellersByBankAccountHolder storecode: ' +
+      storecode +
+      ' accountHolder: ' +
+      accountHolder
+  );
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  const query = {
+    storecode: { $regex: String(storecode || ''), $options: 'i' },
+    walletAddress: { $exists: true, $ne: null },
+    seller: { $exists: true, $ne: null },
+    'seller.status': 'confirmed',
+    'seller.enabled': true,
+    'seller.bankInfo.accountHolder': { $regex: String(accountHolder || ''), $options: 'i' },
+  };
+
+  const users = await collection
+    .find<UserProps>(
+      query,
+      {
+        projection: {
+          id: 1,
+          nickname: 1,
+          avatar: 1,
+          walletAddress: 1,
+          seller: 1,
+        },
+        limit: limit,
+        skip: (page - 1) * limit,
+      },
+    )
+    .sort({ nickname: 1 })
+    .toArray();
+
+  const totalCount = await collection.countDocuments(query);
+
+  return {
+    totalCount,
+    totalResult: totalCount,
+    users,
+  };
+}
+
+
+
 
 
 // getAllUsersByStorecode

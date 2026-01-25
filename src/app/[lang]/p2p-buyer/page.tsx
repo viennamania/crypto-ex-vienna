@@ -321,7 +321,7 @@ export default function P2PBuyerPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(120%_120%_at_50%_0%,#ffffff_0%,#f0f0f3_45%,#dadce1_100%)] text-black">
+    <div className="flex min-h-screen flex-col bg-[radial-gradient(120%_120%_at_50%_0%,#ffffff_0%,#f0f0f3_45%,#dadce1_100%)] text-black">
       <AutoConnect client={client} wallets={wallets} />
       {!bannerLoading && bannerAds.length > 0 && (
         <div className="fixed left-6 top-1/2 hidden -translate-y-1/2 lg:flex">
@@ -351,9 +351,9 @@ export default function P2PBuyerPage() {
         </div>
       </div>
       )}
-      <div className="mx-auto w-full max-w-sm px-4 py-10">
-        <main className="overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_34px_90px_-50px_rgba(15,15,18,0.45)] ring-1 ring-black/10">
-          <div className="flex flex-col gap-6 px-5 pt-8">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 py-10">
+        <main className="flex flex-1 flex-col overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_34px_90px_-50px_rgba(15,15,18,0.45)] ring-1 ring-black/10">
+          <div className="flex flex-1 flex-col gap-6 px-5 pt-8 pb-6">
             <header className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-black/10 bg-white shadow-[0_8px_20px_-12px_rgba(0,0,0,0.35)]">
@@ -376,6 +376,32 @@ export default function P2PBuyerPage() {
                 테더(USDT) 구매를 빠르고 안전하게 진행하는 전용 화면입니다.
               </p>
             </header>
+
+            <section className="rounded-3xl border border-black/10 bg-white/90 p-4 text-black shadow-[0_18px_40px_-28px_rgba(0,0,0,0.25)]">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-black/10 bg-[#f4f4f4] text-lg font-semibold text-black/70 shadow-[0_8px_20px_-12px_rgba(0,0,0,0.25)]">
+                    🔎
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.3em] text-black/40">
+                      Quick Menu
+                    </p>
+                    <p className="text-lg font-semibold tracking-tight">판매자 찾기</p>
+                    <p className="text-xs text-black/60">
+                      은행 계좌 예금주 이름으로 판매자를 조회합니다.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/${lang}/p2p-buyer/seller-search`)}
+                  className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-[#ff7a1a] px-4 text-xs font-semibold text-white shadow-[0_10px_24px_-16px_rgba(249,115,22,0.9)]"
+                >
+                  <span className="whitespace-nowrap">찾기</span>
+                </button>
+              </div>
+            </section>
 
             <section className="rounded-3xl border border-black/10 bg-[#0f0f12] p-5 text-white shadow-[0_18px_40px_-24px_rgba(0,0,0,0.35)]">
               <div className="flex items-center gap-3">
@@ -456,7 +482,26 @@ export default function P2PBuyerPage() {
               </p>
             </section>
 
-            <footer className="-mx-5 mt-2 rounded-b-[32px] bg-[#1f1f1f] px-5 py-6 pb-8 text-center text-xs text-[#9aa3b2]">
+            {!bannerLoading && bannerAds.length > 0 && (
+              <div className="-mx-5 mt-6 border-t border-black/5 px-5 pb-8 lg:hidden">
+                <p className="pt-4 text-xs font-semibold uppercase tracking-[0.25em] text-black/40">
+                  Banner Ads
+                </p>
+                <div className="mt-4 grid gap-4">
+                  {bannerAds.map((banner) => (
+                    <div
+                      key={`mobile-${banner.id}`}
+                      className="rounded-2xl border border-black/10 bg-white/90 p-2 shadow-[0_18px_50px_-28px_rgba(0,0,0,0.35)]"
+                    >
+                      {renderBannerImage(banner)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="mt-auto px-5">
+            <footer className="-mx-5 rounded-b-[32px] bg-[#1f1f1f] px-5 py-6 pb-8 text-center text-xs text-[#9aa3b2]">
               <div className="flex flex-col items-center gap-2">
                 <p className="text-2xl font-semibold tracking-tight text-[#ff8a1f]">
                   Orange X™
@@ -484,24 +529,6 @@ export default function P2PBuyerPage() {
                 Copyright © OrangeX All Rights Reserved
               </p>
             </footer>
-
-            {!bannerLoading && bannerAds.length > 0 && (
-              <div className="-mx-5 mt-6 border-t border-black/5 px-5 pb-8 lg:hidden">
-                <p className="pt-4 text-xs font-semibold uppercase tracking-[0.25em] text-black/40">
-                  Banner Ads
-                </p>
-                <div className="mt-4 grid gap-4">
-                  {bannerAds.map((banner) => (
-                    <div
-                      key={`mobile-${banner.id}`}
-                      className="rounded-2xl border border-black/10 bg-white/90 p-2 shadow-[0_18px_50px_-28px_rgba(0,0,0,0.35)]"
-                    >
-                      {renderBannerImage(banner)}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </main>
       </div>
