@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Manrope, Playfair_Display } from 'next/font/google';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
@@ -25,7 +25,7 @@ const bodyFont = Manrope({
 });
 
 const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
-const SUPPORT_ADMIN_ID = 'orancex-center';
+const SUPPORT_ADMIN_ID = 'orangex-center';
 const SUPPORT_REQUEST_TIMEOUT_MS = 12000;
 
 const STAT_ITEMS = [
@@ -70,6 +70,16 @@ type NoticeSummary = {
     title: string;
     summary: string;
     date: string;
+};
+
+type SupportDebugEntry = {
+    phase: 'session' | 'channel' | 'find';
+    endpoint: string;
+    status?: number;
+    ok?: boolean;
+    durationMs?: number;
+    error?: string;
+    timestamp: string;
 };
 
 const STABLECOIN_NEWS: StablecoinNewsItem[] = [
@@ -316,6 +326,10 @@ const formatRelativeTime = (value?: string) => {
 export default function OrangeXPage() {
     const params = useParams<{ lang: string }>();
     const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang ?? 'ko';
+    const searchParams = useSearchParams();
+    const debugSupport =
+        searchParams?.get('supportDebug') === '1' ||
+        process.env.NODE_ENV === 'development';
     const activeAccount = useActiveAccount();
     const walletAddress = activeAccount?.address ?? '';
     const { smartAccountEnabled, wallet } = useClientWallets();
@@ -355,6 +369,7 @@ export default function OrangeXPage() {
     );
     const [supportLoading, setSupportLoading] = useState(false);
     const [supportError, setSupportError] = useState<string | null>(null);
+    const [supportDiagnostics, setSupportDiagnostics] = useState<SupportDebugEntry[]>([]);
     const [marketTickers, setMarketTickers] = useState<MarketTicker[]>(() => MARKET_SOURCES);
     const [tickerUpdatedAt, setTickerUpdatedAt] = useState<string | null>(null);
     const [tickerError, setTickerError] = useState<string | null>(null);
@@ -391,6 +406,19 @@ export default function OrangeXPage() {
     const supportNickname = supportUserId
         ? `지갑-${supportUserId.slice(0, 6)}...${supportUserId.slice(-4)}`
         : '회원';
+    const supportUserLabel = supportUserId
+        ? `${supportUserId.slice(0, 6)}...${supportUserId.slice(-4)}`
+        : 'n/a';
+
+    const pushSupportDiagnostic = (entry: SupportDebugEntry) => {
+        if (!debugSupport) {
+            return;
+        }
+        setSupportDiagnostics((prev) => {
+            const next = [entry, ...prev];
+            return next.slice(0, 6);
+        });
+    };
 
     useEffect(() => {
         if (!walletAddress) {
@@ -547,6 +575,8 @@ export default function OrangeXPage() {
             let currentPhase: 'session' | 'channel' = 'session';
 
             const findExistingSupportChannel = async () => {
+                const startedAt = performance.now();
+                const endpoint = '/api/sendbird/user-channels';
                 try {
                     const response = await fetch('/api/sendbird/user-channels', {
                         method: 'POST',
@@ -555,16 +585,43 @@ export default function OrangeXPage() {
                         signal: activeController?.signal,
                     });
                     if (!response.ok) {
+                        const error = await response.json().catch(() => null);
+                        pushSupportDiagnostic({
+                            phase: 'find',
+                            endpoint,
+                            status: response.status,
+                            ok: false,
+                            durationMs: Math.round(performance.now() - startedAt),
+                            error: error?.error || error?.message || 'Failed to load user channels',
+                            timestamp: new Date().toISOString(),
+                        });
                         return null;
                     }
                     const data = (await response.json()) as {
                         items?: { channelUrl?: string; members?: { userId?: string }[] }[];
                     };
+                    pushSupportDiagnostic({
+                        phase: 'find',
+                        endpoint,
+                        status: response.status,
+                        ok: true,
+                        durationMs: Math.round(performance.now() - startedAt),
+                        timestamp: new Date().toISOString(),
+                    });
                     const match = data.items?.find((channel) =>
                         channel.members?.some((member) => member.userId === SUPPORT_ADMIN_ID),
                     );
                     return match?.channelUrl || null;
-                } catch {
+                } catch (error) {
+                    const message =
+                        error instanceof Error ? error.message : 'Failed to fetch user channels';
+                    pushSupportDiagnostic({
+                        phase: 'find',
+                        endpoint,
+                        durationMs: Math.round(performance.now() - startedAt),
+                        error: message,
+                        timestamp: new Date().toISOString(),
+                    });
                     return null;
                 }
             };
@@ -573,6 +630,7 @@ export default function OrangeXPage() {
                 activeController = new AbortController();
                 setSupportPhase('session');
                 startTimeout();
+                const sessionStartedAt = performance.now();
                 const sessionResponse = await fetch('/api/sendbird/session-token', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -585,8 +643,25 @@ export default function OrangeXPage() {
 
                 if (!sessionResponse.ok) {
                     const error = await sessionResponse.json().catch(() => null);
+                    pushSupportDiagnostic({
+                        phase: 'session',
+                        endpoint: '/api/sendbird/session-token',
+                        status: sessionResponse.status,
+                        ok: false,
+                        durationMs: Math.round(performance.now() - sessionStartedAt),
+                        error: error?.error || error?.message || 'Failed to issue session token',
+                        timestamp: new Date().toISOString(),
+                    });
                     throw new Error(error?.error || '세션 토큰을 발급하지 못했습니다.');
                 }
+                pushSupportDiagnostic({
+                    phase: 'session',
+                    endpoint: '/api/sendbird/session-token',
+                    status: sessionResponse.status,
+                    ok: true,
+                    durationMs: Math.round(performance.now() - sessionStartedAt),
+                    timestamp: new Date().toISOString(),
+                });
 
                 const sessionData = (await sessionResponse.json()) as { sessionToken?: string };
                 if (!sessionData.sessionToken) {
@@ -607,6 +682,7 @@ export default function OrangeXPage() {
                     setSupportPhase('ready');
                     return;
                 }
+                const channelStartedAt = performance.now();
                 const channelResponse = await fetch('/api/sendbird/group-channel', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -619,8 +695,25 @@ export default function OrangeXPage() {
 
                 if (!channelResponse.ok) {
                     const error = await channelResponse.json().catch(() => null);
+                    pushSupportDiagnostic({
+                        phase: 'channel',
+                        endpoint: '/api/sendbird/group-channel',
+                        status: channelResponse.status,
+                        ok: false,
+                        durationMs: Math.round(performance.now() - channelStartedAt),
+                        error: error?.error || error?.message || 'Failed to create group channel',
+                        timestamp: new Date().toISOString(),
+                    });
                     throw new Error(error?.error || '관리자 채팅을 생성하지 못했습니다.');
                 }
+                pushSupportDiagnostic({
+                    phase: 'channel',
+                    endpoint: '/api/sendbird/group-channel',
+                    status: channelResponse.status,
+                    ok: true,
+                    durationMs: Math.round(performance.now() - channelStartedAt),
+                    timestamp: new Date().toISOString(),
+                });
 
                 const channelData = (await channelResponse.json()) as { channelUrl?: string };
                 if (isMounted) {
@@ -646,6 +739,15 @@ export default function OrangeXPage() {
                             : error instanceof Error
                             ? error.message
                             : '채팅을 불러오지 못했습니다.';
+                    pushSupportDiagnostic({
+                        phase: currentPhase,
+                        endpoint:
+                            currentPhase === 'channel'
+                                ? '/api/sendbird/group-channel'
+                                : '/api/sendbird/session-token',
+                        error: message,
+                        timestamp: new Date().toISOString(),
+                    });
                     setSupportError(message);
                     setSupportPhase('idle');
                 }
@@ -2985,6 +3087,48 @@ export default function OrangeXPage() {
                             ) : (
                                 <div className="rounded-xl border border-slate-200/70 bg-white/85 px-3 py-3 text-xs text-slate-600">
                                     {supportStatusMessage}
+                                </div>
+                            )}
+                            {debugSupport && (
+                                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/90 px-3 py-2 text-[11px] text-slate-600">
+                                    <p className="font-semibold text-slate-700">문의하기 디버그</p>
+                                    <div className="mt-1 space-y-1">
+                                        <div>phase: {supportPhase}</div>
+                                        <div>user: {supportUserLabel}</div>
+                                        <div>admin: {SUPPORT_ADMIN_ID}</div>
+                                        <div>timeout: {SUPPORT_REQUEST_TIMEOUT_MS}ms</div>
+                                        <div>session token: {supportSessionToken ? 'ok' : 'none'}</div>
+                                        <div>channel: {supportChannelUrl ? 'ok' : 'none'}</div>
+                                    </div>
+                                    {supportDiagnostics.length > 0 && (
+                                        <div className="mt-2 space-y-1">
+                                            {supportDiagnostics.map((entry, index) => (
+                                                <div
+                                                    key={`${entry.timestamp}-${index}`}
+                                                    className="rounded-lg border border-slate-200 bg-white/90 px-2 py-1"
+                                                >
+                                                    <div className="flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
+                                                        <span className="font-semibold text-slate-700">
+                                                            {entry.phase}
+                                                        </span>
+                                                        <span>{entry.endpoint}</span>
+                                                    </div>
+                                                    <div className="text-[11px] text-slate-600">
+                                                        {entry.error
+                                                            ? 'error'
+                                                            : entry.ok === false
+                                                            ? 'error'
+                                                            : entry.ok === true
+                                                            ? 'ok'
+                                                            : 'info'}
+                                                        {entry.status ? ` · ${entry.status}` : ''}
+                                                        {entry.durationMs !== undefined ? ` · ${entry.durationMs}ms` : ''}
+                                                        {entry.error ? ` · ${entry.error}` : ''}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

@@ -3,6 +3,58 @@ import { NextResponse } from 'next/server';
 const APPLICATION_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
 const API_BASE = `https://api-${APPLICATION_ID}.sendbird.com/v3`;
 const DEFAULT_PROFILE_URL = 'https://crypto-ex-vienna.vercel.app/logo.png';
+const REQUEST_TIMEOUT_MS = Number(process.env.SENDBIRD_REQUEST_TIMEOUT_MS ?? 8000);
+
+const logSendbird = (
+    level: 'info' | 'warn' | 'error',
+    label: string,
+    data: Record<string, unknown>,
+) => {
+    const prefix = `[sendbird:${label}]`;
+    if (level === 'error') {
+        console.error(prefix, data);
+        return;
+    }
+    if (level === 'warn') {
+        console.warn(prefix, data);
+        return;
+    }
+    console.info(prefix, data);
+};
+
+const fetchWithTimeout = async (
+    label: string,
+    url: string,
+    init: RequestInit,
+) => {
+    const controller = new AbortController();
+    const startedAt = Date.now();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+        const response = await fetch(url, { ...init, signal: controller.signal });
+        const durationMs = Date.now() - startedAt;
+        if (!response.ok) {
+            logSendbird('error', label, {
+                status: response.status,
+                durationMs,
+            });
+        } else if (durationMs > 1000) {
+            logSendbird('warn', label, { durationMs });
+        }
+        return { response, durationMs };
+    } catch (error) {
+        const durationMs = Date.now() - startedAt;
+        const isTimeout = error instanceof DOMException && error.name === 'AbortError';
+        logSendbird('error', label, {
+            durationMs,
+            error: error instanceof Error ? error.message : String(error),
+            timeout: isTimeout,
+        });
+        throw new Error(isTimeout ? 'Sendbird request timed out' : 'Sendbird request failed');
+    } finally {
+        clearTimeout(timeoutId);
+    }
+};
 
 const getHeaders = () => {
     const apiToken = process.env.SENDBIRD_API_TOKEN;
@@ -16,7 +68,7 @@ const getHeaders = () => {
 };
 
 const createUserIfNeeded = async (headers: Record<string, string>, userId: string) => {
-    const response = await fetch(`${API_BASE}/users`, {
+    const { response } = await fetchWithTimeout(`create-user:${userId}`, `${API_BASE}/users`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -62,16 +114,20 @@ export async function POST(request: Request) {
         await createUserIfNeeded(headers, body.buyerId);
         await createUserIfNeeded(headers, body.sellerId);
 
-        const response = await fetch(`${API_BASE}/group_channels`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-                name: `escrow-${body.buyerId.slice(0, 6)}-${body.sellerId.slice(0, 6)}`,
-                user_ids: [body.buyerId, body.sellerId],
-                is_distinct: true,
-                custom_type: 'escrow',
-            }),
-        });
+        const { response } = await fetchWithTimeout(
+            `group-channel:${body.buyerId}:${body.sellerId}`,
+            `${API_BASE}/group_channels`,
+            {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    name: `escrow-${body.buyerId.slice(0, 6)}-${body.sellerId.slice(0, 6)}`,
+                    user_ids: [body.buyerId, body.sellerId],
+                    is_distinct: true,
+                    custom_type: 'escrow',
+                }),
+            },
+        );
 
         if (!response.ok) {
             const error = await response.json().catch(() => null);

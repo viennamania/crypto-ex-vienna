@@ -2,6 +2,58 @@ import { NextResponse } from 'next/server';
 
 const APPLICATION_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
 const API_BASE = `https://api-${APPLICATION_ID}.sendbird.com/v3`;
+const REQUEST_TIMEOUT_MS = Number(process.env.SENDBIRD_REQUEST_TIMEOUT_MS ?? 8000);
+
+const logSendbird = (
+    level: 'info' | 'warn' | 'error',
+    label: string,
+    data: Record<string, unknown>,
+) => {
+    const prefix = `[sendbird:${label}]`;
+    if (level === 'error') {
+        console.error(prefix, data);
+        return;
+    }
+    if (level === 'warn') {
+        console.warn(prefix, data);
+        return;
+    }
+    console.info(prefix, data);
+};
+
+const fetchWithTimeout = async (
+    label: string,
+    url: string,
+    init: RequestInit,
+) => {
+    const controller = new AbortController();
+    const startedAt = Date.now();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+        const response = await fetch(url, { ...init, signal: controller.signal });
+        const durationMs = Date.now() - startedAt;
+        if (!response.ok) {
+            logSendbird('error', label, {
+                status: response.status,
+                durationMs,
+            });
+        } else if (durationMs > 1000) {
+            logSendbird('warn', label, { durationMs });
+        }
+        return { response, durationMs };
+    } catch (error) {
+        const durationMs = Date.now() - startedAt;
+        const isTimeout = error instanceof DOMException && error.name === 'AbortError';
+        logSendbird('error', label, {
+            durationMs,
+            error: error instanceof Error ? error.message : String(error),
+            timeout: isTimeout,
+        });
+        throw new Error(isTimeout ? 'Sendbird request timed out' : 'Sendbird request failed');
+    } finally {
+        clearTimeout(timeoutId);
+    }
+};
 
 const getHeaders = () => {
     const apiToken = process.env.SENDBIRD_API_TOKEN;
@@ -37,7 +89,7 @@ export async function POST(request: Request) {
     url.searchParams.set('show_member', 'true');
 
     try {
-        const response = await fetch(url.toString(), {
+        const { response } = await fetchWithTimeout(`user-channels:${body.userId}`, url.toString(), {
             method: 'GET',
             headers,
         });
