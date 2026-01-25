@@ -2049,75 +2049,6 @@ export default function OrangeXPage() {
                 
 
 
-                <section
-                    data-reveal
-                    className="mb-12 rounded-[28px] border border-slate-200/70 bg-white/80 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur"
-                >
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-start gap-3">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                    <path
-                                        d="M7 3h10a2 2 0 0 1 2 2v14l-4-2-4 2-4-2-4 2V5a2 2 0 0 1 2-2Z"
-                                        stroke="currentColor"
-                                        strokeWidth="1.6"
-                                        strokeLinejoin="round"
-                                    />
-                                </svg>
-                            </div>
-                            <div>
-                                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                                    Notice
-                                </p>
-                                <h2 className="font-[var(--font-display)] text-2xl text-slate-900">
-                                    공지사항
-                                </h2>
-                                <p className="mt-1 text-sm text-slate-600">
-                                    서비스 업데이트와 주요 안내를 확인하세요.
-                                </p>
-                            </div>
-                        </div>
-                        <Link
-                            href={`/${lang}/notice`}
-                            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white/90 px-5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-white sm:text-sm"
-                        >
-                            공지사항 전체보기
-                        </Link>
-                    </div>
-
-                    <div className="mt-5 grid gap-3 md:grid-cols-3">
-                        {noticeLoading ? (
-                            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-                                공지사항을 불러오는 중입니다.
-                            </div>
-                        ) : noticeError ? (
-                            <div className="rounded-2xl border border-amber-200/70 bg-amber-50 px-4 py-6 text-sm text-amber-700">
-                                {noticeError}
-                            </div>
-                        ) : noticeItems.length === 0 ? (
-                            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-                                등록된 공지사항이 없습니다.
-                            </div>
-                        ) : (
-                            noticeItems.map((notice) => (
-                                <Link
-                                    key={notice.id}
-                                    href={`/${lang}/notice/${notice.id}`}
-                                    className="group rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.4)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-36px_rgba(15,23,42,0.45)]"
-                                >
-                                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-                                        <span className="inline-flex h-2 w-2 rounded-full bg-amber-500" />
-                                        {notice.date}
-                                    </div>
-                                    <p className="mt-2 text-base font-semibold text-slate-900 group-hover:text-orange-600">
-                                        {notice.title}
-                                    </p>
-                                    <p className="mt-2 text-sm text-slate-600">{notice.summary}</p>
-                                </Link>
-                            ))
-                        )}
-                    </div>
-                </section>
 
                 {/* 마켓 시세 섹션 */}
                 <div
@@ -2202,6 +2133,75 @@ export default function OrangeXPage() {
                         })}
                     </div>
                 </div>
+                <section
+                    data-reveal
+                    className="mb-12 rounded-[28px] border border-slate-200/70 bg-white/80 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur"
+                >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path
+                                        d="M7 3h10a2 2 0 0 1 2 2v14l-4-2-4 2-4-2-4 2V5a2 2 0 0 1 2-2Z"
+                                        stroke="currentColor"
+                                        strokeWidth="1.6"
+                                        strokeLinejoin="round"
+                                    />
+                                </svg>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                                    Notice
+                                </p>
+                                <h2 className="font-[var(--font-display)] text-2xl text-slate-900">
+                                    공지사항
+                                </h2>
+                                <p className="mt-1 text-sm text-slate-600">
+                                    서비스 업데이트와 주요 안내를 확인하세요.
+                                </p>
+                            </div>
+                        </div>
+                        <Link
+                            href={`/${lang}/notice`}
+                            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white/90 px-5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-white sm:text-sm"
+                        >
+                            공지사항 전체보기
+                        </Link>
+                    </div>
+
+                    <div className="mt-5 grid gap-3 md:grid-cols-3">
+                        {noticeLoading ? (
+                            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                                공지사항을 불러오는 중입니다.
+                            </div>
+                        ) : noticeError ? (
+                            <div className="rounded-2xl border border-amber-200/70 bg-amber-50 px-4 py-6 text-sm text-amber-700">
+                                {noticeError}
+                            </div>
+                        ) : noticeItems.length === 0 ? (
+                            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                                등록된 공지사항이 없습니다.
+                            </div>
+                        ) : (
+                            noticeItems.map((notice) => (
+                                <Link
+                                    key={notice.id}
+                                    href={`/${lang}/notice/${notice.id}`}
+                                    className="group rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.4)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-36px_rgba(15,23,42,0.45)]"
+                                >
+                                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                                        <span className="inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                                        {notice.date}
+                                    </div>
+                                    <p className="mt-2 text-base font-semibold text-slate-900 group-hover:text-orange-600">
+                                        {notice.title}
+                                    </p>
+                                    <p className="mt-2 text-sm text-slate-600">{notice.summary}</p>
+                                </Link>
+                            ))
+                        )}
+                    </div>
+                </section>
 
                 {bannerAds.length > 0 && (
                     <div

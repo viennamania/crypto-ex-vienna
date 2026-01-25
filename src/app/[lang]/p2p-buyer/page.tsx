@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { AutoConnect, ConnectButton, useActiveAccount } from 'thirdweb/react';
+import { AutoConnect, ConnectButton, useActiveAccount, useActiveWallet } from 'thirdweb/react';
 
 import { useClientWallets } from '@/lib/useClientWallets';
 import { client } from '@/app/client';
 
 const PRICE_POLL_MS = 8000;
 const BANNER_PLACEMENT = 'p2p-home';
+const USER_STORECODE = 'admin';
 const DEFAULT_BANNERS = [
   { id: 'default-1', title: 'orangex banner 1', image: '/ads/orangex-banner-01.svg' },
   { id: 'default-2', title: 'orangex banner 2', image: '/ads/orangex-banner-02.svg' },
@@ -34,7 +35,9 @@ const formatPrice = (value: number | null) => {
 
 export default function P2PBuyerPage() {
   const activeAccount = useActiveAccount();
-  const address = activeAccount?.address ?? '';
+  const activeWallet = useActiveWallet();
+  const address =
+    activeAccount?.address ?? activeWallet?.getAccount?.()?.address ?? '';
   const isLoggedIn = Boolean(address);
   const { wallets } = useClientWallets();
 
@@ -44,6 +47,41 @@ export default function P2PBuyerPage() {
 
   const [bannerAds, setBannerAds] = useState<BannerAd[]>([]);
   const [bannerLoading, setBannerLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<any | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  const renderBannerImage = (banner: BannerAd) => {
+    const content = banner.image.startsWith('http') ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={banner.image}
+        alt={banner.title}
+        className="h-full w-full object-cover"
+      />
+    ) : (
+      <Image
+        src={banner.image}
+        alt={banner.title}
+        fill
+        sizes="204px"
+        className="object-cover"
+      />
+    );
+
+    const frame = (
+      <div className="relative h-[120px] w-full overflow-hidden rounded-xl bg-white/80">
+        {content}
+      </div>
+    );
+
+    return banner.link ? (
+      <a href={banner.link} target="_blank" rel="noreferrer" className="block">
+        {frame}
+      </a>
+    ) : (
+      frame
+    );
+  };
 
   const priceUpdatedLabel = useMemo(() => {
     if (!priceUpdatedAt) {
@@ -102,6 +140,99 @@ export default function P2PBuyerPage() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const generateNickname = () => {
+      const chars = 'abcdefghijklmnopqrstuvwxyz';
+      let result = '';
+      const randomValues =
+        typeof window !== 'undefined' && window.crypto?.getRandomValues
+          ? window.crypto.getRandomValues(new Uint8Array(8))
+          : null;
+
+      for (let i = 0; i < 8; i += 1) {
+        const index = randomValues
+          ? randomValues[i] % chars.length
+          : Math.floor(Math.random() * chars.length);
+        result += chars[index];
+      }
+      return result;
+    };
+
+    const fetchUserProfile = async () => {
+      const response = await fetch('/api/user/getUser', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: USER_STORECODE,
+          walletAddress: address,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || '회원 정보를 불러오지 못했습니다.');
+      }
+      if (active) {
+        setUserProfile(data?.result || null);
+      }
+      return data?.result || null;
+    };
+
+    const ensureUserProfile = async () => {
+      if (!address) {
+        if (active) {
+          setUserProfile(null);
+          setProfileLoading(false);
+        }
+        return;
+      }
+
+      try {
+        if (active) {
+          setProfileLoading(true);
+        }
+        const existingUser = await fetchUserProfile();
+        if (existingUser) {
+          if (active) {
+            setProfileLoading(false);
+          }
+          return;
+        }
+
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          const nickname = generateNickname();
+          const createResponse = await fetch('/api/user/setUser', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              storecode: USER_STORECODE,
+              walletAddress: address,
+              nickname,
+            }),
+          });
+          const created = await createResponse.json().catch(() => ({}));
+          if (createResponse.ok && !created?.result?.error) {
+            break;
+          }
+        }
+        await fetchUserProfile();
+      } catch (error) {
+        console.warn('Failed to ensure user profile', error);
+      } finally {
+        if (active) {
+          setProfileLoading(false);
+        }
+      }
+    };
+
+    ensureUserProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [address]);
 
   useEffect(() => {
     let active = true;
@@ -195,39 +326,7 @@ export default function P2PBuyerPage() {
               key={`left-${banner.id}`}
               className="rounded-2xl border border-black/10 bg-white/90 p-2 shadow-[0_18px_50px_-28px_rgba(0,0,0,0.35)] backdrop-blur"
             >
-              {banner.link ? (
-                <a href={banner.link} target="_blank" rel="noreferrer">
-                  {banner.image.startsWith('http') ? (
-                    <img
-                      src={banner.image}
-                      alt={banner.title}
-                      className="h-auto w-full rounded-xl"
-                    />
-                  ) : (
-                    <Image
-                      src={banner.image}
-                      alt={banner.title}
-                      width={204}
-                      height={120}
-                      className="h-auto w-full rounded-xl"
-                    />
-                  )}
-                </a>
-              ) : banner.image.startsWith('http') ? (
-                <img
-                  src={banner.image}
-                  alt={banner.title}
-                  className="h-auto w-full rounded-xl"
-                />
-              ) : (
-                <Image
-                  src={banner.image}
-                  alt={banner.title}
-                  width={204}
-                  height={120}
-                  className="h-auto w-full rounded-xl"
-                />
-              )}
+              {renderBannerImage(banner)}
             </div>
           ))}
         </div>
@@ -241,39 +340,7 @@ export default function P2PBuyerPage() {
               key={`right-${banner.id}`}
               className="rounded-2xl border border-black/10 bg-white/90 p-2 shadow-[0_18px_50px_-28px_rgba(0,0,0,0.35)] backdrop-blur"
             >
-              {banner.link ? (
-                <a href={banner.link} target="_blank" rel="noreferrer">
-                  {banner.image.startsWith('http') ? (
-                    <img
-                      src={banner.image}
-                      alt={banner.title}
-                      className="h-auto w-full rounded-xl"
-                    />
-                  ) : (
-                    <Image
-                      src={banner.image}
-                      alt={banner.title}
-                      width={204}
-                      height={120}
-                      className="h-auto w-full rounded-xl"
-                    />
-                  )}
-                </a>
-              ) : banner.image.startsWith('http') ? (
-                <img
-                  src={banner.image}
-                  alt={banner.title}
-                  className="h-auto w-full rounded-xl"
-                />
-              ) : (
-                <Image
-                  src={banner.image}
-                  alt={banner.title}
-                  width={204}
-                  height={120}
-                  className="h-auto w-full rounded-xl"
-                />
-              )}
+              {renderBannerImage(banner)}
             </div>
           ))}
         </div>
@@ -324,30 +391,51 @@ export default function P2PBuyerPage() {
                 Web3 Login
               </p>
               <div className="mt-3">
-                <ConnectButton
-                  client={client}
-                  wallets={wallets}
-                  theme="light"
-                  connectButton={{
-                    label: isLoggedIn ? '지갑 연결됨' : '웹3 로그인',
-                    style: {
-                      background: '#ff7a1a',
-                      color: '#ffffff',
-                      border: '1px solid rgba(255,177,116,0.7)',
-                      boxShadow: '0 14px 32px -18px rgba(249,115,22,0.9)',
-                      width: '100%',
-                      height: '48px',
-                      borderRadius: '16px',
-                      fontWeight: 600,
-                      fontSize: '15px',
-                    },
-                  }}
-                  connectModal={{
-                    size: 'wide',
-                    showThirdwebBranding: false,
-                  }}
-                  locale="ko_KR"
-                />
+                {isLoggedIn ? (
+                  <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#141416] px-4 py-3">
+                    <div className="h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-white/10">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={userProfile?.avatar || '/profile-default.png'}
+                        alt="회원 프로필"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] uppercase tracking-[0.2em] text-white/50">
+                        Member ID
+                      </span>
+                      <span className="text-sm font-semibold text-white">
+                        {profileLoading ? '불러오는 중...' : userProfile?.nickname || 'guest'}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <ConnectButton
+                    client={client}
+                    wallets={wallets}
+                    theme="light"
+                    connectButton={{
+                      label: '웹3 로그인',
+                      style: {
+                        background: '#ff7a1a',
+                        color: '#ffffff',
+                        border: '1px solid rgba(255,177,116,0.7)',
+                        boxShadow: '0 14px 32px -18px rgba(249,115,22,0.9)',
+                        width: '100%',
+                        height: '48px',
+                        borderRadius: '16px',
+                        fontWeight: 600,
+                        fontSize: '15px',
+                      },
+                    }}
+                    connectModal={{
+                      size: 'wide',
+                      showThirdwebBranding: false,
+                    }}
+                    locale="ko_KR"
+                  />
+                )}
               </div>
               <p className="mt-3 text-xs text-white/60">
                 로그인 후 테더(USDT) 구매를 바로 진행할 수 있습니다.
@@ -382,6 +470,24 @@ export default function P2PBuyerPage() {
                 Copyright © OrangeX All Rights Reserved
               </p>
             </footer>
+
+            {!bannerLoading && bannerAds.length > 0 && (
+              <div className="-mx-5 mt-6 border-t border-black/5 px-5 pb-8 lg:hidden">
+                <p className="pt-4 text-xs font-semibold uppercase tracking-[0.25em] text-black/40">
+                  Banner Ads
+                </p>
+                <div className="mt-4 grid gap-4">
+                  {bannerAds.map((banner) => (
+                    <div
+                      key={`mobile-${banner.id}`}
+                      className="rounded-2xl border border-black/10 bg-white/90 p-2 shadow-[0_18px_50px_-28px_rgba(0,0,0,0.35)]"
+                    >
+                      {renderBannerImage(banner)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </main>
       </div>

@@ -196,6 +196,7 @@ export async function insertOne(data: any) {
       id: id,
       email: data.email,
       nickname: data.nickname,
+      avatar: data.avatar || '',
       mobile: data.mobile,
 
       storecode: data.storecode,
