@@ -2,15 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
-import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 import { AutoConnect, ConnectButton, useActiveAccount } from 'thirdweb/react';
 
 import { useClientWallets } from '@/lib/useClientWallets';
 import { client } from '@/app/client';
 
-const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
-const MANAGER_ID = process.env.NEXT_PUBLIC_SENDBIRD_MANAGER_ID || 'orangexManager';
 const PRICE_POLL_MS = 8000;
 const BANNER_PLACEMENT = 'p2p-home';
 const DEFAULT_BANNERS = [
@@ -46,9 +42,6 @@ export default function P2PBuyerPage() {
   const [priceUpdatedAt, setPriceUpdatedAt] = useState<string | null>(null);
   const [priceError, setPriceError] = useState<string | null>(null);
 
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
-  const [channelUrl, setChannelUrl] = useState<string | null>(null);
-  const [chatError, setChatError] = useState<string | null>(null);
   const [bannerAds, setBannerAds] = useState<BannerAd[]>([]);
   const [bannerLoading, setBannerLoading] = useState(true);
 
@@ -109,77 +102,6 @@ export default function P2PBuyerPage() {
       }
     };
   }, []);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const connectChat = async () => {
-      if (!address) {
-        if (isActive) {
-          setSessionToken(null);
-          setChannelUrl(null);
-          setChatError(null);
-        }
-        return;
-      }
-
-      try {
-        const sessionUrl =
-          typeof window !== 'undefined'
-            ? new URL('/api/sendbird/session-token', window.location.origin)
-            : null;
-        if (!sessionUrl) {
-          throw new Error('세션 요청 URL을 만들지 못했습니다.');
-        }
-        sessionUrl.searchParams.set('userId', address);
-        sessionUrl.searchParams.set('nickname', `buyer-${address.slice(0, 6)}`);
-
-        const sessionResponse = await fetch(sessionUrl.toString(), {
-          method: 'GET',
-        });
-        if (!sessionResponse.ok) {
-          const error = await sessionResponse.json().catch(() => null);
-          throw new Error(error?.error || '세션 토큰을 발급하지 못했습니다.');
-        }
-        const sessionData = (await sessionResponse.json()) as { sessionToken?: string };
-        if (!sessionData.sessionToken) {
-          throw new Error('세션 토큰이 비어 있습니다.');
-        }
-
-        const channelResponse = await fetch('/api/sendbird/group-channel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            buyerId: address,
-            sellerId: MANAGER_ID,
-          }),
-        });
-        if (!channelResponse.ok) {
-          const error = await channelResponse.json().catch(() => null);
-          throw new Error(error?.error || '채팅 채널을 생성하지 못했습니다.');
-        }
-        const channelData = (await channelResponse.json()) as { channelUrl?: string };
-
-        if (isActive) {
-          setSessionToken(sessionData.sessionToken);
-          setChannelUrl(channelData.channelUrl || null);
-          setChatError(null);
-        }
-      } catch (error) {
-        if (isActive) {
-          const message =
-            error instanceof Error ? error.message : '채팅을 불러오지 못했습니다.';
-          setChatError(message);
-        }
-      }
-    };
-
-    connectChat();
-
-    return () => {
-      isActive = false;
-    };
-  }, [address]);
 
   useEffect(() => {
     let active = true;
@@ -428,7 +350,7 @@ export default function P2PBuyerPage() {
                 />
               </div>
               <p className="mt-3 text-xs text-white/60">
-                로그인 후 상담 채팅이 오른쪽 하단에 표시됩니다.
+                로그인 후 테더(USDT) 구매를 바로 진행할 수 있습니다.
               </p>
             </section>
 
@@ -464,32 +386,6 @@ export default function P2PBuyerPage() {
         </main>
       </div>
 
-      {isLoggedIn && (
-        <div className="fixed bottom-6 right-6 z-50 w-[320px] max-w-[90vw] overflow-hidden rounded-2xl border border-black/10 bg-[#0f0f12] text-white shadow-[0_20px_50px_-30px_rgba(0,0,0,0.5)]">
-          <div className="border-b border-white/10 px-4 py-3">
-            <p className="text-sm font-semibold">채팅</p>
-            <p className="text-xs text-white/60">orangexManager</p>
-          </div>
-          {chatError ? (
-            <div className="px-4 py-4 text-xs text-rose-300">{chatError}</div>
-          ) : !sessionToken || !channelUrl ? (
-            <div className="px-4 py-4 text-xs text-white/60">
-              채팅을 준비 중입니다.
-            </div>
-          ) : (
-            <div className="h-[420px] bg-white text-black">
-              <SendbirdProvider
-                appId={SENDBIRD_APP_ID}
-                userId={address}
-                accessToken={sessionToken}
-                theme="light"
-              >
-                <GroupChannel channelUrl={channelUrl} />
-              </SendbirdProvider>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
