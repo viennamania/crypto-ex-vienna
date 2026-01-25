@@ -546,6 +546,29 @@ export default function OrangeXPage() {
             setSupportError(null);
             let currentPhase: 'session' | 'channel' = 'session';
 
+            const findExistingSupportChannel = async () => {
+                try {
+                    const response = await fetch('/api/sendbird/user-channels', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: supportUserId, limit: 20 }),
+                        signal: activeController?.signal,
+                    });
+                    if (!response.ok) {
+                        return null;
+                    }
+                    const data = (await response.json()) as {
+                        items?: { channelUrl?: string; members?: { userId?: string }[] }[];
+                    };
+                    const match = data.items?.find((channel) =>
+                        channel.members?.some((member) => member.userId === SUPPORT_ADMIN_ID),
+                    );
+                    return match?.channelUrl || null;
+                } catch {
+                    return null;
+                }
+            };
+
             try {
                 activeController = new AbortController();
                 setSupportPhase('session');
@@ -578,6 +601,12 @@ export default function OrangeXPage() {
                 currentPhase = 'channel';
                 setSupportPhase('channel');
                 startTimeout();
+                const existingChannel = await findExistingSupportChannel();
+                if (existingChannel && isMounted) {
+                    setSupportChannelUrl(existingChannel);
+                    setSupportPhase('ready');
+                    return;
+                }
                 const channelResponse = await fetch('/api/sendbird/group-channel', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -602,6 +631,13 @@ export default function OrangeXPage() {
                 const isTimeout =
                     error instanceof DOMException && error.name === 'AbortError';
                 if (isMounted) {
+                    const fallbackChannel = await findExistingSupportChannel();
+                    if (fallbackChannel) {
+                        setSupportChannelUrl(fallbackChannel);
+                        setSupportPhase('ready');
+                        setSupportError(null);
+                        return;
+                    }
                     const message =
                         isTimeout && currentPhase === 'channel'
                             ? '관리자 채널 생성 요청이 시간 초과되었습니다.'

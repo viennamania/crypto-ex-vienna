@@ -82,7 +82,7 @@ export default function SellerManagementPage() {
               <table className="min-w-full border-collapse border border-slate-200 rounded-lg overflow-hidden shadow-sm">
                 <thead className="bg-slate-50 text-slate-700 text-xs font-bold uppercase border-b">
                   <tr>
-                    <th className="px-4 py-2 text-left">회원아이디</th>
+                    <th className="px-4 py-2 text-left">프로필</th>
                     <th className="px-4 py-2 text-left">지갑주소</th>
                     <th className="px-4 py-2 text-left">상태</th>
                     <th className="px-4 py-2 text-left">계좌정보</th>
@@ -116,9 +116,36 @@ export default function SellerManagementPage() {
                       : '-';
                     const bankInfoSubmittedAt = bankInfo?.submittedAt;
                     const kycSubmittedAt = sellerUser?.seller?.kyc?.submittedAt;
+                    const avatar = sellerUser?.avatar || '/profile-default.png';
+                    const initials = (sellerUser?.nickname || sellerUser?.walletAddress || 'NA')
+                      .replace(/^0x/i, '')
+                      .slice(0, 2)
+                      .toUpperCase();
                     return (
                       <tr key={index} className="border-b hover:bg-slate-50">
-                        <td className="px-4 py-2 text-slate-900 font-medium">{sellerUser?.nickname || '-'}</td>
+                        <td className="px-4 py-2">
+                          <div className="flex items-center gap-3">
+                            <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-slate-200 bg-slate-900 text-white">
+                              {sellerUser?.avatar ? (
+                                <Image
+                                  src={avatar}
+                                  alt="Profile"
+                                  fill
+                                  sizes="40px"
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-xs font-semibold tracking-[0.12em]">
+                                  {initials}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-semibold text-slate-900">{sellerUser?.nickname || '-'}</span>
+                              <span className="text-[11px] text-slate-500">{initials}</span>
+                            </div>
+                          </div>
+                        </td>
                         <td className="px-4 py-2 text-slate-700 text-xs">
                           {sellerUser?.walletAddress?.substring(0, 6)}...
                           {sellerUser?.walletAddress?.substring(sellerUser?.walletAddress.length - 4)}
