@@ -7,6 +7,7 @@ import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 
 const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
 const SUPPORT_ADMIN_ID = process.env.NEXT_PUBLIC_SENDBIRD_MANAGER_ID || 'orangexManager';
+const USER_STORECODE = 'admin';
 
 const BuyerSupportChatWidgetGlobal = () => {
   const activeAccount = useActiveAccount();
@@ -20,6 +21,8 @@ const BuyerSupportChatWidgetGlobal = () => {
   const [channelUrl, setChannelUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [buyerNickname, setBuyerNickname] = useState('');
+  const [buyerAvatar, setBuyerAvatar] = useState('');
   const connectingRef = useRef(false);
 
   useEffect(() => {
@@ -29,8 +32,80 @@ const BuyerSupportChatWidgetGlobal = () => {
       setChannelUrl(null);
       setErrorMessage(null);
       setLoading(false);
+      setBuyerNickname('');
+      setBuyerAvatar('');
     }
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchUserProfile = async () => {
+      if (!address) {
+        return;
+      }
+      try {
+        const response = await fetch('/api/user/getUser', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storecode: USER_STORECODE,
+            walletAddress: address,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data?.error || '회원 정보를 불러오지 못했습니다.');
+        }
+        if (active) {
+          setBuyerNickname(data?.result?.nickname || '');
+          setBuyerAvatar(data?.result?.avatar || '');
+        }
+      } catch (error) {
+        if (active) {
+          setBuyerNickname('');
+          setBuyerAvatar('');
+        }
+      }
+    };
+
+    fetchUserProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [address]);
+
+  useEffect(() => {
+    let active = true;
+
+    const syncSendbirdProfile = async () => {
+      if (!address || !buyerNickname) {
+        return;
+      }
+      try {
+        await fetch('/api/sendbird/update-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: address,
+            nickname: buyerNickname,
+            ...(buyerAvatar ? { profileUrl: buyerAvatar } : {}),
+          }),
+        });
+      } catch {
+        // ignore sendbird sync errors here
+      }
+    };
+
+    if (active) {
+      syncSendbirdProfile();
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [address, buyerAvatar, buyerNickname]);
 
   useEffect(() => {
     let active = true;
@@ -43,6 +118,10 @@ const BuyerSupportChatWidgetGlobal = () => {
         return;
       }
       if (connectingRef.current) {
+        return;
+      }
+      if (!buyerNickname) {
+        setLoading(false);
         return;
       }
       connectingRef.current = true;
@@ -58,7 +137,10 @@ const BuyerSupportChatWidgetGlobal = () => {
           throw new Error('세션 요청 URL을 만들지 못했습니다.');
         }
         sessionUrl.searchParams.set('userId', address);
-        sessionUrl.searchParams.set('nickname', `buyer-${address.slice(0, 6)}`);
+        sessionUrl.searchParams.set('nickname', buyerNickname.trim());
+        if (buyerAvatar) {
+          sessionUrl.searchParams.set('profileUrl', buyerAvatar);
+        }
 
         const sessionResponse = await fetch(sessionUrl.toString(), {
           method: 'GET',
@@ -109,7 +191,7 @@ const BuyerSupportChatWidgetGlobal = () => {
     return () => {
       active = false;
     };
-  }, [address, channelUrl, isLoggedIn, isOpen, sessionToken]);
+  }, [address, buyerAvatar, buyerNickname, channelUrl, isLoggedIn, isOpen, sessionToken]);
 
   if (!isLoggedIn) {
     return null;
@@ -135,6 +217,10 @@ const BuyerSupportChatWidgetGlobal = () => {
           <div className="h-[420px] bg-white">
             {errorMessage ? (
               <div className="px-4 py-4 text-xs text-rose-500">{errorMessage}</div>
+            ) : !buyerNickname ? (
+              <div className="px-4 py-4 text-xs text-slate-500">
+                회원 정보를 불러오는 중입니다.
+              </div>
             ) : !sessionToken || !channelUrl ? (
               <div className="px-4 py-4 text-xs text-slate-500">
                 {loading ? '채팅을 준비 중입니다.' : '채팅을 불러오는 중입니다.'}

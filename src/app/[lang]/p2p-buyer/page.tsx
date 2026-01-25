@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import { useParams, useRouter } from 'next/navigation';
 import { AutoConnect, ConnectButton, useActiveAccount, useActiveWallet } from 'thirdweb/react';
 
 import { useClientWallets } from '@/lib/useClientWallets';
@@ -34,6 +35,10 @@ const formatPrice = (value: number | null) => {
 };
 
 export default function P2PBuyerPage() {
+  const router = useRouter();
+  const params = useParams<{ lang?: string }>();
+  const langParam = params?.lang;
+  const lang = Array.isArray(langParam) ? langParam[0] : langParam || 'ko';
   const activeAccount = useActiveAccount();
   const activeWallet = useActiveWallet();
   const address =
@@ -392,23 +397,32 @@ export default function P2PBuyerPage() {
               </p>
               <div className="mt-3">
                 {isLoggedIn ? (
-                  <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#141416] px-4 py-3">
-                    <div className="h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-white/10">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={userProfile?.avatar || '/profile-default.png'}
-                        alt="회원 프로필"
-                        className="h-full w-full object-cover"
-                      />
+                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#141416] px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-white/10">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={userProfile?.avatar || '/profile-default.png'}
+                          alt="회원 프로필"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[11px] uppercase tracking-[0.2em] text-white/50">
+                          Member ID
+                        </span>
+                        <span className="text-sm font-semibold text-white">
+                          {profileLoading ? '불러오는 중...' : userProfile?.nickname || 'guest'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-[11px] uppercase tracking-[0.2em] text-white/50">
-                        Member ID
-                      </span>
-                      <span className="text-sm font-semibold text-white">
-                        {profileLoading ? '불러오는 중...' : userProfile?.nickname || 'guest'}
-                      </span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/${lang}/p2p-buyer/buyer-settings`)}
+                      className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold text-white/80 transition hover:border-white/40 hover:text-white"
+                    >
+                      회원정보
+                    </button>
                   </div>
                 ) : (
                   <ConnectButton
