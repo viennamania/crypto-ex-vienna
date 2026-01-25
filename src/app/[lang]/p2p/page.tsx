@@ -25,7 +25,7 @@ const bodyFont = Manrope({
 });
 
 const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
-const SUPPORT_ADMIN_ID = 'orangex-center';
+const SUPPORT_ADMIN_ID = 'orangexManager';
 const SUPPORT_REQUEST_TIMEOUT_MS = 12000;
 
 const STAT_ITEMS = [
@@ -370,6 +370,7 @@ export default function OrangeXPage() {
     const [supportLoading, setSupportLoading] = useState(false);
     const [supportError, setSupportError] = useState<string | null>(null);
     const [supportDiagnostics, setSupportDiagnostics] = useState<SupportDebugEntry[]>([]);
+    const [supportCopied, setSupportCopied] = useState(false);
     const [marketTickers, setMarketTickers] = useState<MarketTicker[]>(() => MARKET_SOURCES);
     const [tickerUpdatedAt, setTickerUpdatedAt] = useState<string | null>(null);
     const [tickerError, setTickerError] = useState<string | null>(null);
@@ -418,6 +419,30 @@ export default function OrangeXPage() {
             const next = [entry, ...prev];
             return next.slice(0, 6);
         });
+    };
+
+    const handleCopySupportUserId = async () => {
+        if (!supportUserId || typeof window === 'undefined') {
+            return;
+        }
+        try {
+            if (navigator?.clipboard?.writeText) {
+                await navigator.clipboard.writeText(supportUserId);
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = supportUserId;
+                textarea.style.position = 'fixed';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+            setSupportCopied(true);
+            window.setTimeout(() => setSupportCopied(false), 1500);
+        } catch {
+            setSupportCopied(false);
+        }
     };
 
     useEffect(() => {
@@ -3094,7 +3119,23 @@ export default function OrangeXPage() {
                                     <p className="font-semibold text-slate-700">문의하기 디버그</p>
                                     <div className="mt-1 space-y-1">
                                         <div>phase: {supportPhase}</div>
-                                        <div>user: {supportUserLabel}</div>
+                                        <div className="flex flex-col gap-1">
+                                            <span>user: {supportUserLabel}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="truncate font-mono text-[10px] text-slate-500">
+                                                    {supportUserId || 'n/a'}
+                                                </span>
+                                                {supportUserId && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCopySupportUserId}
+                                                        className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
+                                                    >
+                                                        {supportCopied ? '복사됨' : '복사'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
                                         <div>admin: {SUPPORT_ADMIN_ID}</div>
                                         <div>timeout: {SUPPORT_REQUEST_TIMEOUT_MS}ms</div>
                                         <div>session token: {supportSessionToken ? 'ok' : 'none'}</div>

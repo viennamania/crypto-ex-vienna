@@ -8,7 +8,7 @@ import { toast } from 'react-hot-toast';
 import { useClientWallets } from '@/lib/useClientWallets';
 import { client } from '@/app/client';
 
-const ADMIN_CHAT_ID = 'orangex-center';
+const ADMIN_CHAT_ID = 'orangexManager';
 const STORAGE_KEY = 'adminSupportProfile';
 const ALLOWED_AVATAR_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 const MAX_AVATAR_MB = 5;
