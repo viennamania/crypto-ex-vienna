@@ -15,6 +15,8 @@ export const runtime = 'nodejs';
 const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 10);
 const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
+const SENDBIRD_API_BASE = `https://api-${SENDBIRD_APP_ID}.sendbird.com/v3`;
 const DEFAULT_AVATAR_SOURCE = '/profile-default.png';
 const DEFAULT_AVATAR_BLOB_URL = process.env.DEFAULT_AVATAR_BLOB_URL || '';
 let cachedDefaultAvatarUrl: string | null = DEFAULT_AVATAR_BLOB_URL || null;
@@ -68,6 +70,61 @@ const generateAvatarUrl = async () => {
   } catch (error) {
     console.warn('OpenAI avatar generation error', error);
     return null;
+  }
+};
+
+const syncSendbirdUser = async (userId: string, nickname: string, profileUrl: string) => {
+  const apiToken = process.env.SENDBIRD_API_TOKEN;
+  if (!apiToken) {
+    console.warn('SENDBIRD_API_TOKEN is missing; skip Sendbird sync.');
+    return;
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Api-Token': apiToken,
+  };
+
+  try {
+    const updateResponse = await fetch(
+      `${SENDBIRD_API_BASE}/users/${encodeURIComponent(userId)}`,
+      {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          nickname,
+          ...(profileUrl ? { profile_url: profileUrl } : {}),
+        }),
+      },
+    );
+
+    if (updateResponse.ok) {
+      return;
+    }
+
+    const error = await updateResponse.json().catch(() => null);
+    const message = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
+
+    if (updateResponse.status === 404 || message.includes('not found') || message.includes('not exist')) {
+      const createResponse = await fetch(`${SENDBIRD_API_BASE}/users`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          user_id: userId,
+          nickname,
+          profile_url: profileUrl,
+        }),
+      });
+      if (!createResponse.ok) {
+        const createError = await createResponse.json().catch(() => null);
+        console.warn('Sendbird create user failed', createError?.message || createError);
+      }
+      return;
+    }
+
+    console.warn('Sendbird update user failed', error?.message || error);
+  } catch (error) {
+    console.warn('Sendbird sync error', error);
   }
 };
 
@@ -165,6 +222,9 @@ export async function POST(request: NextRequest) {
       error: "Failed to create user",
     }, { status: 500 });
   }
+
+  // Sync Sendbird user on first signup.
+  await syncSendbirdUser(walletAddress, nickname, finalAvatarUrl);
 
 
  

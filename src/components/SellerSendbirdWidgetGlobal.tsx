@@ -13,7 +13,7 @@ import Badge from '@sendbird/uikit-react/ui/Badge';
 const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
 const OWNER_WALLET_STORAGE_KEY = 'sellerOwnerWalletAddress';
 const OWNER_WALLET_EVENT = 'seller-owner-wallet-address';
-const ORANGE_MANAGER_ID = process.env.NEXT_PUBLIC_SENDBIRD_MANAGER_ID || 'orangeManager';
+const ORANGE_MANAGER_ID = process.env.NEXT_PUBLIC_SENDBIRD_MANAGER_ID || 'orangexManager';
 const ORANGE_MANAGER_GREETING = '고객님 안녕하세요. 무엇을 도와드릴까요?';
 
 const readOwnerWalletAddress = () => {
