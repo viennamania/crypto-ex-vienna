@@ -126,9 +126,13 @@ export default function P2PBuyerPage() {
   };
 
   const handleUsdtChange = (value: string) => {
-    const sanitized = sanitizeUsdtInput(value);
+    let sanitized = sanitizeUsdtInput(value);
+    let numeric = parseNumericInput(sanitized);
+    if (numeric !== null && numeric > 1000000) {
+      numeric = 1000000;
+      sanitized = formatUsdtValue(numeric);
+    }
     setUsdtAmount(sanitized);
-    const numeric = parseNumericInput(sanitized);
     if (!price || numeric === null) {
       setKrwAmount('');
       return;
@@ -139,8 +143,12 @@ export default function P2PBuyerPage() {
 
   const handleKrwChange = (value: string) => {
     const sanitized = sanitizeKrwInput(value);
-    setKrwAmount(sanitized);
-    const numeric = parseNumericInput(sanitized);
+    let numeric = parseNumericInput(sanitized);
+    if (numeric !== null && numeric > 100000000) {
+      numeric = 100000000;
+    }
+    const capped = numeric !== null ? formatIntegerWithCommas(String(numeric)) : sanitized;
+    setKrwAmount(capped);
     if (!price || numeric === null) {
       setUsdtAmount('');
       return;
