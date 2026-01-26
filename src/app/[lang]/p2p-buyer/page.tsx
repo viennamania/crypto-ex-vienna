@@ -72,6 +72,7 @@ export default function P2PBuyerPage() {
   const [bannerLoading, setBannerLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const isNicknameSearch = SELLER_SEARCH_BY === 'nickname';
 
   const formatIntegerWithCommas = (value: string) =>
     value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -580,12 +581,29 @@ export default function P2PBuyerPage() {
                   </span>
                   <input
                     value={sellerSearchInput}
-                    onChange={(event) => setSellerSearchInput(event.target.value)}
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+                      if (isNicknameSearch) {
+                        const sanitized = nextValue
+                          .toLowerCase()
+                          .replace(/[^a-z0-9]/g, '');
+                        setSellerSearchInput(sanitized);
+                        return;
+                      }
+                      const sanitized = nextValue.replace(/[^a-zA-Z가-힣]/g, '');
+                      setSellerSearchInput(sanitized);
+                    }}
                     placeholder={
                       SELLER_SEARCH_BY === 'nickname'
                         ? '판매자 회원 아이디를 입력하세요'
                         : '판매자 계좌 예금주 이름을 입력하세요'
                     }
+                    inputMode={isNicknameSearch ? ('latin' as any) : 'text'}
+                    lang={isNicknameSearch ? 'en' : 'ko'}
+                    pattern={isNicknameSearch ? '[a-z0-9]*' : '[A-Za-z가-힣]*'}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                     className="h-full w-full bg-transparent px-2 pt-1 pb-4 text-center text-xl font-extrabold leading-relaxed text-black placeholder:font-extrabold placeholder:text-black focus:outline-none sm:text-lg sm:pl-12 sm:text-left"
                   />
                 </div>
