@@ -6,6 +6,10 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useActiveAccount, useActiveWallet } from 'thirdweb/react';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
+import { ConnectButton } from 'thirdweb/react';
+
+import { useClientWallets } from '@/lib/useClientWallets';
+import { client } from '@/app/client';
 
 const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
 const USER_STORECODE = 'admin';
@@ -17,6 +21,21 @@ const formatNumber = (value: number | undefined, digits = 2) => {
   return value.toLocaleString('ko-KR', {
     minimumFractionDigits: 0,
     maximumFractionDigits: digits,
+  });
+};
+
+const formatUpdatedTime = (value?: string | null) => {
+  if (!value) {
+    return '';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return date.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
   });
 };
 
@@ -45,6 +64,7 @@ export default function SellerChatPage() {
   const address =
     activeAccount?.address ?? activeWallet?.getAccount?.()?.address ?? '';
   const isLoggedIn = Boolean(address);
+  const { wallets } = useClientWallets();
 
   const sellerId = searchParams?.get('sellerId') || '';
   const sellerName = searchParams?.get('sellerName') || sellerId || '판매자';
@@ -61,8 +81,20 @@ export default function SellerChatPage() {
   const [sellerUsdtRate, setSellerUsdtRate] = useState<number | null>(null);
   const [sellerLoading, setSellerLoading] = useState(false);
   const [sellerError, setSellerError] = useState<string | null>(null);
+  const [marketPrice, setMarketPrice] = useState<number | null>(null);
+  const [marketUpdatedAt, setMarketUpdatedAt] = useState<string | null>(null);
+  const promoSentRef = useRef(new Set<string>());
 
   const displaySellerName = sellerProfile?.nickname || sellerName;
+  const marketLabelMap: Record<string, string> = {
+    upbit: '업비트',
+    bithumb: '빗썸',
+    korbit: '코빗',
+  };
+  const priceTypeLabel =
+    sellerProfile?.seller?.priceSettingMethod === 'market'
+      ? `시장가(${marketLabelMap[sellerProfile?.seller?.market || ''] || '업비트'})`
+      : '고정가';
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -113,6 +145,34 @@ export default function SellerChatPage() {
       active = false;
     };
   }, [address]);
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchMarketPrice = async () => {
+      try {
+        const response = await fetch('/api/markets/usdt-krw');
+        const data = await response.json().catch(() => ({}));
+        const items = Array.isArray(data?.items) ? data.items : [];
+        const upbit = items.find((item) => item?.id === 'upbit');
+        if (active) {
+          setMarketPrice(typeof upbit?.price === 'number' ? upbit.price : null);
+          setMarketUpdatedAt(typeof data?.updatedAt === 'string' ? data.updatedAt : null);
+        }
+      } catch {
+        if (active) {
+          setMarketPrice(null);
+          setMarketUpdatedAt(null);
+        }
+      }
+    };
+
+    fetchMarketPrice();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -205,6 +265,48 @@ export default function SellerChatPage() {
       active = false;
     };
   }, [address, buyerAvatar, buyerNickname]);
+
+  useEffect(() => {
+    let active = true;
+
+    const sendPromotionMessage = async () => {
+      const promotionText = sellerProfile?.seller?.promotionText?.trim?.() || '';
+      if (!channelUrl || !sellerId || !promotionText) {
+        return;
+      }
+      if (promoSentRef.current.has(channelUrl)) {
+        return;
+      }
+      try {
+        const response = await fetch('/api/sendbird/welcome-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channelUrl,
+            senderId: sellerId,
+            message: promotionText,
+          }),
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(() => null);
+          throw new Error(error?.error || '프로모션 메시지를 전송하지 못했습니다.');
+        }
+        if (active) {
+          promoSentRef.current.add(channelUrl);
+        }
+      } catch (error) {
+        if (active) {
+          console.warn('Failed to send promotion message', error);
+        }
+      }
+    };
+
+    sendPromotionMessage();
+
+    return () => {
+      active = false;
+    };
+  }, [channelUrl, sellerId, sellerProfile?.seller?.promotionText]);
 
   useEffect(() => {
     let active = true;
@@ -315,12 +417,17 @@ export default function SellerChatPage() {
               </p>
             </header>
 
-            <section className="rounded-3xl border border-black/10 bg-white p-4 text-black shadow-[0_18px_40px_-26px_rgba(0,0,0,0.22)]">
-              <div className="flex items-center justify-between">
-                <p className="text-xs uppercase tracking-[0.2em] text-black/50">
-                  Seller Profile
-                </p>
-                <span className="text-xs text-black/40">정보 확인</span>
+            <section className="rounded-3xl bg-white/95 p-5 text-black shadow-[0_18px_40px_-24px_rgba(0,0,0,0.25)]">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-black/50">
+                    Seller Profile
+                  </p>
+                  <p className="text-lg font-semibold tracking-tight">판매자 정보</p>
+                </div>
+                <div className="rounded-2xl border border-black/10 bg-black/5 px-3 py-2 text-xs font-semibold text-black/70">
+                  정보 확인
+                </div>
               </div>
               {!sellerId ? (
                 <p className="mt-3 text-sm text-black/60">판매자 정보를 찾을 수 없습니다.</p>
@@ -383,14 +490,38 @@ export default function SellerChatPage() {
                           : '-'}
                       </span>
                     </div>
+                    <div className="flex items-center justify-between border-b border-black/10 pb-2">
+                      <span className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-black/50">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src="/logo-upbit.jpg"
+                          alt="Upbit"
+                          className="h-5 w-5 rounded-full"
+                        />
+                        업비트 시세
+                      </span>
+                      <span className="text-right text-sm font-semibold text-black">
+                        {typeof marketPrice === 'number'
+                          ? `${formatNumber(marketPrice, 0)} KRW`
+                          : '-'}
+                        {marketUpdatedAt && (
+                          <span className="mt-1 block text-xs font-medium text-black/50">
+                            업데이트 {formatUpdatedTime(marketUpdatedAt)}
+                          </span>
+                        )}
+                      </span>
+                    </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs uppercase tracking-[0.2em] text-black/50">
                         USDT 판매금액
                       </span>
-                      <span className="text-sm font-semibold text-black">
+                      <span className="text-right text-sm font-semibold text-black">
                         {typeof sellerUsdtRate === 'number'
                           ? `${formatNumber(sellerUsdtRate, 0)} KRW`
                           : '-'}
+                        <span className="mt-1 block text-xs font-medium text-black/50">
+                          {priceTypeLabel}
+                        </span>
                       </span>
                     </div>
                   </div>
@@ -398,31 +529,60 @@ export default function SellerChatPage() {
               )}
             </section>
 
-            <section className="rounded-3xl border border-black/10 bg-white p-4 text-black shadow-[0_18px_40px_-26px_rgba(0,0,0,0.22)]">
+            <section className="rounded-3xl bg-transparent py-5 text-black">
+              <div className="flex items-start justify-between gap-3 px-0">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-black/50">
+                    Live Chat
+                  </p>
+                  <p className="text-lg font-semibold tracking-tight">판매자 채팅</p>
+                </div>
+                <div className="rounded-2xl border border-black/10 bg-black/5 px-3 py-2 text-xs font-semibold text-black/70">
+                  상담 진행
+                </div>
+              </div>
               {!sellerId ? (
-                <p className="text-sm text-black/60">판매자 정보를 찾을 수 없습니다.</p>
+                <p className="mt-3 px-5 text-sm text-black/60">판매자 정보를 찾을 수 없습니다.</p>
               ) : !isLoggedIn ? (
-                <div className="flex flex-col gap-3">
+                <div className="mt-3 flex flex-col gap-3 px-5">
                   <p className="text-sm text-black/60">
                     지갑 연결 후 판매자와 상담할 수 있습니다.
                   </p>
-                  <Link
-                    href={`/${lang}/p2p-buyer`}
-                    className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-black"
-                  >
-                    로그인 하러 가기
-                  </Link>
+                    <ConnectButton
+                      client={client}
+                      wallets={wallets}
+                      theme="light"
+                      connectButton={{
+                        label: '웹3 로그인',
+                        style: {
+                        background: '#ff7a1a',
+                        color: '#ffffff',
+                        border: '1px solid rgba(255,177,116,0.7)',
+                        boxShadow: '0 14px 32px -18px rgba(249,115,22,0.9)',
+                        width: '100%',
+                        height: '48px',
+                        borderRadius: '9999px',
+                        fontWeight: 600,
+                        fontSize: '15px',
+                        },
+                      }}
+                    connectModal={{
+                      size: 'wide',
+                      showThirdwebBranding: false,
+                    }}
+                    locale="ko_KR"
+                  />
                 </div>
               ) : errorMessage ? (
-                <p className="text-sm text-rose-500">{errorMessage}</p>
+                <p className="mt-3 px-5 text-sm text-rose-500">{errorMessage}</p>
               ) : !buyerNickname ? (
-                <p className="text-sm text-black/60">회원 정보를 불러오는 중입니다.</p>
+                <p className="mt-3 px-5 text-sm text-black/60">회원 정보를 불러오는 중입니다.</p>
               ) : !sessionToken || !channelUrl ? (
-                <p className="text-sm text-black/60">
+                <p className="mt-3 px-5 text-sm text-black/60">
                   {loading ? '채팅을 준비 중입니다.' : '채팅을 불러오는 중입니다.'}
                 </p>
               ) : (
-                <div className="h-[520px]">
+                <div className="mt-4 h-[520px]">
                   <SendbirdProvider
                     appId={SENDBIRD_APP_ID}
                     userId={address}

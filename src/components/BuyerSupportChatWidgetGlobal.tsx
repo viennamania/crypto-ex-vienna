@@ -256,7 +256,7 @@ const BuyerSupportChatWidgetGlobal = () => {
             />
           </svg>
         </span>
-        문의하기
+        고객센터
       </button>
     </div>
   );
