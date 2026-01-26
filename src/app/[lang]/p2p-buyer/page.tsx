@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { AutoConnect, ConnectButton, useActiveAccount, useActiveWallet } from 'thirdweb/react';
 
@@ -25,6 +26,13 @@ type BannerAd = {
   title: string;
   image: string;
   link?: string;
+};
+
+type NoticeItem = {
+  title?: string;
+  summary?: string;
+  publishedAt?: string;
+  createdAt?: string;
 };
 
 const formatPrice = (value: number | null) => {
@@ -51,6 +59,8 @@ export default function P2PBuyerPage() {
   const [priceError, setPriceError] = useState<string | null>(null);
   const [usdtAmount, setUsdtAmount] = useState('');
   const [krwAmount, setKrwAmount] = useState('');
+  const [sellerSearchInput, setSellerSearchInput] = useState('');
+  const [latestNotice, setLatestNotice] = useState<NoticeItem | null>(null);
 
   const [bannerAds, setBannerAds] = useState<BannerAd[]>([]);
   const [bannerLoading, setBannerLoading] = useState(true);
@@ -227,6 +237,31 @@ export default function P2PBuyerPage() {
       if (intervalId) {
         window.clearInterval(intervalId);
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const fetchLatestNotice = async () => {
+      try {
+        const response = await fetch('/api/notice/getActive?limit=1');
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data?.error || '공지사항을 불러오지 못했습니다.');
+        }
+        const item = Array.isArray(data?.result) ? data.result[0] : null;
+        if (active) {
+          setLatestNotice(item || null);
+        }
+      } catch {
+        if (active) {
+          setLatestNotice(null);
+        }
+      }
+    };
+    fetchLatestNotice();
+    return () => {
+      active = false;
     };
   }, []);
 
@@ -439,57 +474,65 @@ export default function P2PBuyerPage() {
         <main className="flex flex-1 flex-col overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_34px_90px_-50px_rgba(15,15,18,0.45)] ring-1 ring-black/10">
           <div className="flex flex-1 flex-col gap-6 px-5 pt-8 pb-6">
             <header className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-black/10 bg-white shadow-[0_8px_20px_-12px_rgba(0,0,0,0.35)]">
-                  <Image
-                    src="/logo-orangex.png"
-                    alt="orangex"
-                    width={24}
-                    height={24}
-                  />
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-black/50">
-                    P2P Buyer
-                  </p>
-                  <p className="text-sm font-semibold tracking-tight">orangex</p>
-                </div>
-              </div>
               <h1 className="text-2xl font-semibold tracking-tight">구매자 전용</h1>
               <p className="text-sm text-black/60">
                 테더(USDT) 구매를 빠르고 안전하게 진행하는 전용 화면입니다.
               </p>
             </header>
 
-            <section className="rounded-3xl border border-black/10 bg-white/90 p-4 text-black shadow-[0_18px_40px_-28px_rgba(0,0,0,0.25)]">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-black/10 bg-[#f4f4f4] text-lg font-semibold text-black/70 shadow-[0_8px_20px_-12px_rgba(0,0,0,0.25)]">
+            <section className="py-4 text-black">
+              <form
+                className="flex flex-col gap-3 sm:flex-row sm:items-center"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const trimmed = sellerSearchInput.trim();
+                  const destination = trimmed
+                    ? `/${lang}/p2p-buyer/seller-search?query=${encodeURIComponent(trimmed)}`
+                    : `/${lang}/p2p-buyer/seller-search`;
+                  router.push(destination);
+                }}
+              >
+                <div className="flex h-16 flex-1 items-center gap-3 border-b-2 border-black/80 bg-transparent px-1">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-black/70">
                     🔎
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.3em] text-black/40">
-                      Quick Menu
-                    </p>
-                    <p className="text-lg font-semibold tracking-tight">판매자 찾기</p>
-                    <p className="text-xs text-black/60">
-                      은행 계좌 예금주 이름으로 판매자를 조회합니다.
-                    </p>
-                  </div>
+                  </span>
+                  <input
+                    value={sellerSearchInput}
+                    onChange={(event) => setSellerSearchInput(event.target.value)}
+                    placeholder="어떤 판매자를 찾을까요?"
+                    className="h-full flex-1 bg-transparent text-lg font-semibold leading-none text-black placeholder:font-extrabold placeholder:text-black focus:outline-none"
+                  />
                 </div>
                 <button
-                  type="button"
-                  onClick={() => router.push(`/${lang}/p2p-buyer/seller-search`)}
-                  className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-[#ff7a1a] px-4 text-xs font-semibold text-white shadow-[0_10px_24px_-16px_rgba(249,115,22,0.9)]"
+                  type="submit"
+                  disabled={!sellerSearchInput.trim()}
+                  className="flex h-16 shrink-0 items-center gap-2 justify-center rounded-full border border-black/10 bg-white px-6 text-lg font-extrabold leading-none text-black shadow-[0_12px_28px_-22px_rgba(0,0,0,0.25)] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto w-full"
                 >
-                  <span className="whitespace-nowrap">찾기</span>
+                  <span className="text-base">✔</span>
+                  찾기
                 </button>
-              </div>
+              </form>
+              <p className="mt-4 text-xs text-black/60">
+                은행 계좌 예금주 이름으로 판매자를 조회합니다.
+              </p>
             </section>
+
+            {latestNotice && (
+              <section className="flex items-center justify-between gap-4 px-1">
+                <div className="min-w-0">
+                  <p className="truncate text-xl font-extrabold text-black">
+                    {latestNotice.title || latestNotice.summary || '공지사항'}
+                  </p>
+                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/5 text-xl text-black/70">
+                  ›
+                </div>
+              </section>
+            )}
 
             <section className="rounded-3xl border border-black/10 bg-[#0f0f12] p-5 text-white shadow-[0_18px_40px_-24px_rgba(0,0,0,0.35)]">
               <div className="flex items-center gap-3">
-                <Image src="/logo-upbit.jpg" alt="Upbit" width={28} height={28} className="rounded-full" />
+                <Image src="/logo-upbit.jpg" alt="Upbit" width={40} height={40} className="rounded-full" />
                 <p className="text-xs uppercase tracking-[0.2em] text-white/60">
                   업비트 USDT
                 </p>
@@ -611,9 +654,35 @@ export default function P2PBuyerPage() {
               </div>
               <p className="mt-3 text-xs text-white/60">
                 {isLoggedIn
-                  ? '로그인 완료. 지금 바로 USDT 구매를 시작하세요.'
-                  : '로그인 후 테더(USDT) 구매를 바로 진행할 수 있습니다.'}
+                  ? '로그인 완료. 지금 바로 상담이 가능합니다.'
+                  : '로그인 후 상담을 바로 시작할 수 있습니다.'}
               </p>
+            </section>
+            <section className="rounded-3xl border border-black/10 bg-white/90 p-4 text-black shadow-[0_18px_40px_-28px_rgba(0,0,0,0.25)]">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-orange-200/80 bg-orange-100 text-xl font-semibold text-orange-600 shadow-[0_8px_20px_-12px_rgba(249,115,22,0.55)]">
+                    ⚡
+                  </div>
+                  <div>
+                  <p className="text-[11px] uppercase tracking-[0.3em] text-black/40">
+                    Advanced
+                  </p>
+                  <p className="text-base font-semibold tracking-tight">전문가용 바로가기</p>
+                  <p className="text-xs text-black/60">
+                    고급 기능과 상세 매매 화면으로 이동합니다.
+                  </p>
+                  </div>
+                </div>
+                <a
+                  href="https://www.orangex.center/ko/p2p"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-[#ff7a1a] px-4 text-xs font-semibold text-white shadow-[0_10px_24px_-16px_rgba(249,115,22,0.9)]"
+                >
+                  이동
+                </a>
+              </div>
             </section>
 
             {!bannerLoading && bannerAds.length > 0 && (
@@ -641,11 +710,17 @@ export default function P2PBuyerPage() {
                   Orange X™
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] text-[#b6beca]">
-                  <span className="px-2">이용약관</span>
+                  <Link href={`/${lang}/p2p-buyer/terms-of-service`} className="px-2 hover:text-white">
+                    이용약관
+                  </Link>
                   <span className="text-[#566072]">|</span>
-                  <span className="px-2">개인정보처리방침</span>
+                  <Link href={`/${lang}/p2p-buyer/privacy-policy`} className="px-2 hover:text-white">
+                    개인정보처리방침
+                  </Link>
                   <span className="text-[#566072]">|</span>
-                  <span className="px-2">환불 분쟁 정책</span>
+                  <Link href={`/${lang}/p2p-buyer/refund-policy`} className="px-2 hover:text-white">
+                    환불 분쟁 정책
+                  </Link>
                 </div>
               </div>
 

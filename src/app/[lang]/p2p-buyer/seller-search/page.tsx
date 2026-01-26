@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import Image from 'next/image';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
 const USER_STORECODE = 'admin';
 const DEFAULT_AVATAR = '/profile-default.png';
@@ -51,6 +51,7 @@ const maskAccountNumber = (accountNumber?: string) => {
 
 export default function SellerSearchPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const params = useParams<{ lang?: string }>();
   const langParam = params?.lang;
   const lang = Array.isArray(langParam) ? langParam[0] : langParam || 'ko';
@@ -68,8 +69,8 @@ export default function SellerSearchPage() {
     return `${results.length}건`;
   }, [results.length, searched]);
 
-  const handleSearch = async () => {
-    const trimmed = query.trim();
+  const executeSearch = async (value: string) => {
+    const trimmed = value.trim();
     if (!trimmed) {
       setErrorMessage('판매자 예금주 이름을 입력해 주세요.');
       setResults([]);
@@ -105,23 +106,24 @@ export default function SellerSearchPage() {
     }
   };
 
+  const handleSearch = async () => {
+    await executeSearch(query);
+  };
+
+  useEffect(() => {
+    const initialQuery = searchParams?.get('query');
+    if (initialQuery) {
+      setQuery(initialQuery);
+      executeSearch(initialQuery);
+    }
+  }, [searchParams]);
+
   return (
     <div className="flex min-h-screen flex-col bg-[radial-gradient(120%_120%_at_50%_0%,#ffffff_0%,#f0f0f3_45%,#dadce1_100%)] text-black">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 py-10">
         <main className="flex flex-1 flex-col overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_34px_90px_-50px_rgba(15,15,18,0.45)] ring-1 ring-black/10">
           <div className="flex flex-1 flex-col gap-6 px-5 pt-8 pb-6">
             <header className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-black/10 bg-white shadow-[0_8px_20px_-12px_rgba(0,0,0,0.35)]">
-                  <Image src="/logo-orangex.png" alt="orangex" width={24} height={24} />
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-black/50">
-                    P2P Buyer
-                  </p>
-                  <p className="text-sm font-semibold tracking-tight">orangex</p>
-                </div>
-              </div>
               <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-semibold tracking-tight">판매자 찾기</h1>
                 <button
@@ -286,11 +288,17 @@ export default function SellerSearchPage() {
                   Orange X™
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] text-[#b6beca]">
-                  <span className="px-2">이용약관</span>
+                  <Link href={`/${lang}/p2p-buyer/terms-of-service`} className="px-2 hover:text-white">
+                    이용약관
+                  </Link>
                   <span className="text-[#566072]">|</span>
-                  <span className="px-2">개인정보처리방침</span>
+                  <Link href={`/${lang}/p2p-buyer/privacy-policy`} className="px-2 hover:text-white">
+                    개인정보처리방침
+                  </Link>
                   <span className="text-[#566072]">|</span>
-                  <span className="px-2">환불 분쟁 정책</span>
+                  <Link href={`/${lang}/p2p-buyer/refund-policy`} className="px-2 hover:text-white">
+                    환불 분쟁 정책
+                  </Link>
                 </div>
               </div>
 
