@@ -12,6 +12,8 @@ import { client } from '@/app/client';
 const PRICE_POLL_MS = 8000;
 const BANNER_PLACEMENT = 'p2p-home';
 const USER_STORECODE = 'admin';
+const USDT_DECIMALS = 2;
+const KRW_ROUNDING: 'round' | 'floor' | 'ceil' = 'round';
 const DEFAULT_BANNERS = [
   { id: 'default-1', title: 'orangex banner 1', image: '/ads/orangex-banner-01.svg' },
   { id: 'default-2', title: 'orangex banner 2', image: '/ads/orangex-banner-02.svg' },
@@ -66,8 +68,6 @@ export default function P2PBuyerPage() {
   const [bannerLoading, setBannerLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
-  const USDT_DECIMALS = 2;
-  const KRW_ROUNDING: 'round' | 'floor' | 'ceil' = 'round';
 
   const formatIntegerWithCommas = (value: string) =>
     value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
