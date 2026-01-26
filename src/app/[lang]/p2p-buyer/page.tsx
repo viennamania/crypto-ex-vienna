@@ -49,11 +49,95 @@ export default function P2PBuyerPage() {
   const [price, setPrice] = useState<number | null>(null);
   const [priceUpdatedAt, setPriceUpdatedAt] = useState<string | null>(null);
   const [priceError, setPriceError] = useState<string | null>(null);
+  const [usdtAmount, setUsdtAmount] = useState('');
+  const [krwAmount, setKrwAmount] = useState('');
 
   const [bannerAds, setBannerAds] = useState<BannerAd[]>([]);
   const [bannerLoading, setBannerLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const USDT_DECIMALS = 2;
+  const KRW_ROUNDING: 'round' | 'floor' | 'ceil' = 'round';
+
+  const formatIntegerWithCommas = (value: string) =>
+    value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  const parseNumericInput = (value: string) => {
+    const normalized = value.replace(/,/g, '').trim();
+    if (!normalized) {
+      return null;
+    }
+    const numberValue = Number(normalized);
+    if (Number.isNaN(numberValue)) {
+      return null;
+    }
+    return numberValue;
+  };
+
+  const sanitizeUsdtInput = (value: string) => {
+    const raw = value.replace(/,/g, '').replace(/[^0-9.]/g, '');
+    if (!raw) {
+      return '';
+    }
+    const dotIndex = raw.indexOf('.');
+    const hasDot = dotIndex >= 0;
+    const intPartRaw = hasDot ? raw.slice(0, dotIndex) : raw;
+    const decimalRaw = hasDot ? raw.slice(dotIndex + 1) : '';
+    const intPart = intPartRaw === '' ? '0' : intPartRaw.replace(/^0+(?=\d)/, '');
+    const decimal = decimalRaw.replace(/\./g, '').slice(0, USDT_DECIMALS);
+    const formattedInt = formatIntegerWithCommas(intPart);
+    return hasDot ? `${formattedInt}.${decimal}` : formattedInt;
+  };
+
+  const sanitizeKrwInput = (value: string) => {
+    const digits = value.replace(/[^0-9]/g, '');
+    if (!digits) {
+      return '';
+    }
+    const trimmed = digits.replace(/^0+(?=\d)/, '');
+    return formatIntegerWithCommas(trimmed || '0');
+  };
+
+  const formatUsdtValue = (value: number) => {
+    const fixed = value.toFixed(USDT_DECIMALS);
+    const [intPart, decimalPart] = fixed.split('.');
+    const formattedInt = formatIntegerWithCommas(intPart);
+    return USDT_DECIMALS > 0 ? `${formattedInt}.${decimalPart}` : formattedInt;
+  };
+
+  const applyKrwRounding = (value: number) => {
+    if (KRW_ROUNDING === 'floor') {
+      return Math.floor(value);
+    }
+    if (KRW_ROUNDING === 'ceil') {
+      return Math.ceil(value);
+    }
+    return Math.round(value);
+  };
+
+  const handleUsdtChange = (value: string) => {
+    const sanitized = sanitizeUsdtInput(value);
+    setUsdtAmount(sanitized);
+    const numeric = parseNumericInput(sanitized);
+    if (!price || numeric === null) {
+      setKrwAmount('');
+      return;
+    }
+    const next = applyKrwRounding(numeric * price);
+    setKrwAmount(formatIntegerWithCommas(String(next)));
+  };
+
+  const handleKrwChange = (value: string) => {
+    const sanitized = sanitizeKrwInput(value);
+    setKrwAmount(sanitized);
+    const numeric = parseNumericInput(sanitized);
+    if (!price || numeric === null) {
+      setUsdtAmount('');
+      return;
+    }
+    const next = numeric / price;
+    setUsdtAmount(formatUsdtValue(next));
+  };
 
   const renderBannerImage = (banner: BannerAd) => {
     const content = banner.image.startsWith('http') ? (
@@ -410,11 +494,59 @@ export default function P2PBuyerPage() {
                   업비트 USDT
                 </p>
               </div>
-              <div className="mt-3 text-3xl font-semibold">{formatPrice(price)}</div>
-              <div className="mt-2 text-xs text-white/60">{priceUpdatedLabel}</div>
+              <div className="mt-3 text-right text-3xl font-semibold">{formatPrice(price)}</div>
+              <div className="mt-2 text-right text-xs text-white/60">{priceUpdatedLabel}</div>
               {priceError && (
                 <p className="mt-3 text-xs text-rose-300">{priceError}</p>
               )}
+            </section>
+
+            <section className="rounded-3xl border border-black/10 bg-white/95 p-5 text-black shadow-[0_18px_40px_-28px_rgba(0,0,0,0.25)]">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-black/50">
+                    USDT Calculator
+                  </p>
+                  <p className="text-lg font-semibold tracking-tight">USDT 계산기</p>
+                </div>
+                <div className="rounded-2xl border border-black/10 bg-black/5 px-3 py-2 text-xs font-semibold text-black/70">
+                  1 USDT = {price ? price.toLocaleString('ko-KR') : '--'} KRW
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3">
+                <div className="relative">
+                  <input
+                    value={usdtAmount}
+                    onChange={(event) => handleUsdtChange(event.target.value)}
+                    placeholder="0"
+                    inputMode="decimal"
+                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-lg font-semibold text-black shadow-[0_12px_30px_-22px_rgba(0,0,0,0.3)] outline-none focus:border-black/30"
+                  />
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-black/50">
+                    USDT
+                  </span>
+                </div>
+                <div className="flex items-center justify-center">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white text-base text-black/50">
+                    ⇄
+                  </div>
+                </div>
+                <div className="relative">
+                  <input
+                    value={krwAmount}
+                    onChange={(event) => handleKrwChange(event.target.value)}
+                    placeholder="0"
+                    inputMode="numeric"
+                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-lg font-semibold text-black shadow-[0_12px_30px_-22px_rgba(0,0,0,0.3)] outline-none focus:border-black/30"
+                  />
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-black/50">
+                    KRW
+                  </span>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-black/60">
+                업비트 시세 기준으로 자동 계산됩니다.
+              </p>
             </section>
 
             <section className="rounded-3xl border border-black/10 bg-[#0f0f12] p-5 text-white shadow-[0_18px_40px_-24px_rgba(0,0,0,0.35)]">
@@ -478,7 +610,9 @@ export default function P2PBuyerPage() {
                 )}
               </div>
               <p className="mt-3 text-xs text-white/60">
-                로그인 후 테더(USDT) 구매를 바로 진행할 수 있습니다.
+                {isLoggedIn
+                  ? '로그인 완료. 지금 바로 USDT 구매를 시작하세요.'
+                  : '로그인 후 테더(USDT) 구매를 바로 진행할 수 있습니다.'}
               </p>
             </section>
 

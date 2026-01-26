@@ -141,7 +141,7 @@ export default function SellerSearchPage() {
               <p className="text-xs uppercase tracking-[0.2em] text-black/70">
                 Search
               </p>
-              <div className="mt-3 flex items-center gap-2">
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
@@ -151,12 +151,12 @@ export default function SellerSearchPage() {
                     }
                   }}
                   placeholder="예금주 이름을 입력하세요"
-                  className="flex-1 rounded-2xl border border-black/10 bg-white px-4 py-3 text-base font-semibold text-black placeholder:text-black/50 focus:border-black/30 focus:outline-none"
+                  className="w-full flex-1 rounded-2xl border border-black/10 bg-white px-4 py-3 text-base font-semibold text-black placeholder:text-black/50 focus:border-black/30 focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={handleSearch}
-                  className="rounded-full bg-[#ff7a1a] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_-16px_rgba(249,115,22,0.9)]"
+                  className="w-full rounded-full bg-[#ff7a1a] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_-16px_rgba(249,115,22,0.9)] sm:w-auto"
                 >
                   조회
                 </button>
