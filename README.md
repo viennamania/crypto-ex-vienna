@@ -14,6 +14,15 @@ Starter template to build an onchain react native app with [thirdweb](https://th
 - thirdweb SDK
 - MongoDB
 
+## Folder Structure Summary
+
+- [src/app](src/app): App Router pages and layouts
+- [src/app/api](src/app/api): API route handlers
+- [src/components](src/components): Reusable UI components
+- [src/lib](src/lib): Server/client utilities (DB, API helpers)
+- [src/utils](src/utils): Shared helpers (theme, locales)
+- [public](public): Static assets
+
 ## Installation
 
 Install the template using [thirdweb create](https://portal.thirdweb.com/cli/create)
