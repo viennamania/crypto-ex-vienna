@@ -66,6 +66,7 @@ export default function P2PBuyerPage() {
   const [krwAmount, setKrwAmount] = useState('');
   const [sellerSearchInput, setSellerSearchInput] = useState('');
   const [latestNotice, setLatestNotice] = useState<NoticeItem | null>(null);
+  const [isUsdtFirst, setIsUsdtFirst] = useState(true);
 
   const [bannerAds, setBannerAds] = useState<BannerAd[]>([]);
   const [bannerLoading, setBannerLoading] = useState(true);
@@ -159,6 +160,55 @@ export default function P2PBuyerPage() {
     const next = numeric / price;
     setUsdtAmount(formatUsdtValue(next));
   };
+
+  const handleSwapInputs = () => {
+    const usdtNumeric = parseNumericInput(usdtAmount);
+    const krwNumeric = parseNumericInput(krwAmount);
+
+    const nextUsdtNumeric = krwNumeric !== null ? Math.min(krwNumeric, 1000000) : null;
+    const nextKrwNumeric =
+      usdtNumeric !== null ? Math.min(applyKrwRounding(usdtNumeric), 100000000) : null;
+
+    setIsUsdtFirst((prev) => !prev);
+    setUsdtAmount(
+      nextUsdtNumeric === null ? '' : sanitizeUsdtInput(String(nextUsdtNumeric)),
+    );
+    setKrwAmount(
+      nextKrwNumeric === null ? '' : formatIntegerWithCommas(String(nextKrwNumeric)),
+    );
+  };
+
+  const usdtInput = (
+    <div className="relative">
+      <input
+        value={usdtAmount}
+        onChange={(event) => handleUsdtChange(event.target.value)}
+        placeholder="0"
+        inputMode="decimal"
+        disabled={!price}
+        className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 pr-16 text-right text-5xl font-extrabold text-black outline-none focus:border-black/30 disabled:bg-gray-100 disabled:text-black/40 sm:text-4xl"
+      />
+      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-black/50">
+        USDT
+      </span>
+    </div>
+  );
+
+  const krwInput = (
+    <div className="relative">
+      <input
+        value={krwAmount}
+        onChange={(event) => handleKrwChange(event.target.value)}
+        placeholder="0"
+        inputMode="numeric"
+        disabled={!price}
+        className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 pr-16 text-right text-3xl font-extrabold text-black outline-none focus:border-black/30 disabled:bg-gray-100 disabled:text-black/40 sm:text-2xl"
+      />
+      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-black/50">
+        KRW
+      </span>
+    </div>
+  );
 
   const renderBannerImage = (banner: BannerAd) => {
     const content = banner.image.startsWith('http') ? (
@@ -484,6 +534,27 @@ export default function P2PBuyerPage() {
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-0 pt-6 pb-0 sm:px-5 sm:py-10">
         <main className="flex flex-1 flex-col overflow-hidden bg-white sm:rounded-[32px] sm:border sm:border-black/10 sm:shadow-[0_34px_90px_-50px_rgba(15,15,18,0.45)] sm:ring-1 sm:ring-black/10">
           <div className="flex flex-1 flex-col gap-6 px-5 pt-8 pb-6">
+            <section className="flex items-center justify-between gap-4 px-1">
+              <div className="min-w-0">
+                <p className="truncate text-xl font-extrabold text-black">
+                  {latestNotice?.title || latestNotice?.summary || '공지사항'}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/${lang}/p2p-buyer/notice`}
+                  className="flex items-center gap-2 rounded-full border border-black/10 px-3 py-1 text-xs font-semibold text-black/60"
+                >
+                  공지사항 보러가기
+                  <span className="text-base text-black/60">›</span>
+                </Link>
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-500 opacity-70"></span>
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-500"></span>
+                </span>
+              </div>
+            </section>
+
             <header className="flex flex-col gap-3">
               <h1 className="text-2xl font-semibold tracking-tight">구매자 전용</h1>
               <p className="text-sm text-black/60">
@@ -493,7 +564,7 @@ export default function P2PBuyerPage() {
 
             <section className="py-4 text-black pb-14">
               <form
-                className="flex flex-col gap-3 sm:flex-row sm:items-center"
+                className="flex flex-col gap-3"
                 onSubmit={(event) => {
                   event.preventDefault();
                   const trimmed = sellerSearchInput.trim();
@@ -521,7 +592,7 @@ export default function P2PBuyerPage() {
                 <button
                   type="submit"
                   disabled={!sellerSearchInput.trim()}
-                  className="flex h-16 shrink-0 items-center gap-2 justify-center rounded-full border border-black/10 bg-white px-6 text-lg font-extrabold leading-none text-black shadow-[0_12px_28px_-22px_rgba(0,0,0,0.25)] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto w-full"
+                  className="flex h-16 w-full shrink-0 items-center justify-center gap-2 rounded-full border border-black/10 bg-white px-6 text-lg font-extrabold leading-none text-black shadow-[0_12px_28px_-22px_rgba(0,0,0,0.25)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <span className="text-base">👤</span>
                   판매자 찾기
@@ -532,21 +603,6 @@ export default function P2PBuyerPage() {
                   ? '판매자 회원 아이디로 판매자를 조회합니다.'
                   : '은행 계좌 예금주 이름으로 판매자를 조회합니다.'}
               </p>
-            </section>
-
-            <section className="flex items-center justify-between gap-4 px-1">
-              <div className="min-w-0">
-                <p className="truncate text-xl font-extrabold text-black">
-                  {latestNotice?.title || latestNotice?.summary || '공지사항'}
-                </p>
-              </div>
-              <Link
-                href={`/${lang}/p2p-buyer/notice`}
-                className="flex items-center gap-2 rounded-full border border-black/10 px-3 py-1 text-xs font-semibold text-black/60"
-              >
-                공지사항 보러가기
-                <span className="text-base text-black/60">›</span>
-              </Link>
             </section>
 
             <section className="rounded-3xl border border-black/10 bg-[#0f0f12] p-5 text-white shadow-[0_18px_40px_-24px_rgba(0,0,0,0.35)]">
@@ -576,37 +632,17 @@ export default function P2PBuyerPage() {
                 </div>
               </div>
               <div className="mt-4 grid gap-3">
-                <div className="relative">
-                  <input
-                    value={usdtAmount}
-                    onChange={(event) => handleUsdtChange(event.target.value)}
-                    placeholder="0"
-                    inputMode="decimal"
-                    disabled={!price}
-                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 pr-16 text-right text-5xl font-extrabold text-black outline-none focus:border-black/30 disabled:bg-gray-100 disabled:text-black/40 sm:text-4xl"
-                  />
-                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-black/50">
-                    USDT
-                  </span>
-                </div>
+                {isUsdtFirst ? usdtInput : krwInput}
                 <div className="flex items-center justify-center">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white text-base text-black/50">
+                  <button
+                    type="button"
+                    onClick={handleSwapInputs}
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white text-base text-black/50"
+                  >
                     ⇄
-                  </div>
+                  </button>
                 </div>
-                <div className="relative">
-                  <input
-                    value={krwAmount}
-                    onChange={(event) => handleKrwChange(event.target.value)}
-                    placeholder="0"
-                    inputMode="numeric"
-                    disabled={!price}
-                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 pr-16 text-right text-3xl font-extrabold text-black outline-none focus:border-black/30 disabled:bg-gray-100 disabled:text-black/40 sm:text-2xl"
-                  />
-                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-black/50">
-                    KRW
-                  </span>
-                </div>
+                {isUsdtFirst ? krwInput : usdtInput}
               </div>
               <p className="mt-3 text-xs text-black/60">
                 업비트 시세 기준으로 자동 계산됩니다.
