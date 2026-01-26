@@ -544,7 +544,7 @@ export default function P2PBuyerPage() {
               )}
             </section>
 
-            <section className="rounded-3xl border border-black/10 bg-white/95 p-5 text-black shadow-[0_18px_40px_-28px_rgba(0,0,0,0.25)]">
+            <section className="border-y border-black/15 bg-transparent px-5 py-6 text-black">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-black/50">
@@ -563,7 +563,8 @@ export default function P2PBuyerPage() {
                     onChange={(event) => handleUsdtChange(event.target.value)}
                     placeholder="0"
                     inputMode="decimal"
-                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-lg font-semibold text-black shadow-[0_12px_30px_-22px_rgba(0,0,0,0.3)] outline-none focus:border-black/30"
+                    disabled={!price}
+                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 pr-16 text-right text-5xl font-extrabold text-black outline-none focus:border-black/30 disabled:bg-gray-100 disabled:text-black/40 sm:text-4xl"
                   />
                   <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-black/50">
                     USDT
@@ -580,7 +581,8 @@ export default function P2PBuyerPage() {
                     onChange={(event) => handleKrwChange(event.target.value)}
                     placeholder="0"
                     inputMode="numeric"
-                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-lg font-semibold text-black shadow-[0_12px_30px_-22px_rgba(0,0,0,0.3)] outline-none focus:border-black/30"
+                    disabled={!price}
+                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 pr-16 text-right text-3xl font-extrabold text-black outline-none focus:border-black/30 disabled:bg-gray-100 disabled:text-black/40 sm:text-2xl"
                   />
                   <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-black/50">
                     KRW
