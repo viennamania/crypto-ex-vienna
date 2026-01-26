@@ -440,7 +440,7 @@ export default function P2PBuyerPage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col bg-[radial-gradient(120%_120%_at_50%_0%,#ffffff_0%,#f0f0f3_45%,#dadce1_100%)] text-black">
+    <div className="flex min-h-screen flex-col bg-white text-black sm:bg-[radial-gradient(120%_120%_at_50%_0%,#ffffff_0%,#f0f0f3_45%,#dadce1_100%)]">
       <AutoConnect client={client} wallets={wallets} />
       {!bannerLoading && bannerAds.length > 0 && (
         <div className="fixed left-6 top-1/2 hidden -translate-y-1/2 lg:flex">
@@ -470,8 +470,8 @@ export default function P2PBuyerPage() {
         </div>
       </div>
       )}
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 py-10">
-        <main className="flex flex-1 flex-col overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_34px_90px_-50px_rgba(15,15,18,0.45)] ring-1 ring-black/10">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-0 pt-6 pb-0 sm:px-5 sm:py-10">
+        <main className="flex flex-1 flex-col overflow-hidden bg-white sm:rounded-[32px] sm:border sm:border-black/10 sm:shadow-[0_34px_90px_-50px_rgba(15,15,18,0.45)] sm:ring-1 sm:ring-black/10">
           <div className="flex flex-1 flex-col gap-6 px-5 pt-8 pb-6">
             <header className="flex flex-col gap-3">
               <h1 className="text-2xl font-semibold tracking-tight">구매자 전용</h1>
@@ -492,15 +492,15 @@ export default function P2PBuyerPage() {
                   router.push(destination);
                 }}
               >
-                <div className="flex h-16 flex-1 items-center gap-3 border-b-2 border-black/80 bg-transparent px-1">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-black/70">
+                <div className="relative flex h-16 flex-1 items-center border-b-2 border-black/80 bg-transparent px-0">
+                  <span className="absolute left-0 top-1/2 flex h-8 w-8 -translate-y-1/2 -mt-2 items-center justify-center rounded-full bg-white text-black/70">
                     🔎
                   </span>
                   <input
                     value={sellerSearchInput}
                     onChange={(event) => setSellerSearchInput(event.target.value)}
                     placeholder="어떤 판매자를 찾을까요?"
-                    className="h-full flex-1 bg-transparent text-lg font-semibold leading-none text-black placeholder:font-extrabold placeholder:text-black focus:outline-none"
+                    className="h-full w-full bg-transparent px-2 pt-1 pb-4 text-center text-xl font-extrabold leading-relaxed text-black placeholder:font-extrabold placeholder:text-black focus:outline-none sm:text-lg sm:pl-12 sm:text-left"
                   />
                 </div>
                 <button
@@ -703,8 +703,9 @@ export default function P2PBuyerPage() {
               </div>
             )}
           </div>
-          <div className="mt-auto px-5">
-            <footer className="-mx-5 rounded-b-[32px] bg-[#1f1f1f] px-5 py-6 pb-8 text-center text-xs text-[#9aa3b2]">
+          <div className="mt-auto px-0 sm:px-5">
+            <footer className="mx-0 rounded-none bg-[#1f1f1f] px-0 py-6 pb-0 text-center text-xs text-[#9aa3b2] sm:-mx-5 sm:rounded-b-[32px] sm:px-5 sm:pb-8">
+              <div className="px-5 sm:px-0">
               <div className="flex flex-col items-center gap-2">
                 <p className="text-2xl font-semibold tracking-tight text-[#ff8a1f]">
                   Orange X™
@@ -737,6 +738,7 @@ export default function P2PBuyerPage() {
               <p className="mt-4 text-[11px] text-[#6c7688]">
                 Copyright © OrangeX All Rights Reserved
               </p>
+              </div>
             </footer>
           </div>
         </main>
