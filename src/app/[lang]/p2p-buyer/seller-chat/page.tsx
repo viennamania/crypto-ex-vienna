@@ -86,14 +86,25 @@ export default function SellerChatPage() {
   const promoSentRef = useRef(new Set<string>());
 
   const displaySellerName = sellerProfile?.nickname || sellerName;
+  const isMarketPrice = sellerProfile?.seller?.priceSettingMethod === 'market';
+  const marketId = sellerProfile?.seller?.market || 'upbit';
+  const marketIdForPrice = isMarketPrice ? marketId : 'upbit';
   const marketLabelMap: Record<string, string> = {
     upbit: '업비트',
     bithumb: '빗썸',
     korbit: '코빗',
   };
+  const marketIconMap: Record<string, string> = {
+    upbit: '/icon-market-upbit.png',
+    bithumb: '/icon-market-bithumb.png',
+    korbit: '/icon-market-korbit.png',
+  };
+  const marketLabel = marketLabelMap[marketId] || '업비트';
+  const marketLabelForPrice = marketLabelMap[marketIdForPrice] || '업비트';
+  const marketIconForPrice = marketIconMap[marketIdForPrice] || '/icon-market-upbit.png';
   const priceTypeLabel =
     sellerProfile?.seller?.priceSettingMethod === 'market'
-      ? `시장가(${marketLabelMap[sellerProfile?.seller?.market || ''] || '업비트'})`
+      ? `시장가(${marketLabel})`
       : '고정가';
 
   useEffect(() => {
@@ -154,9 +165,9 @@ export default function SellerChatPage() {
         const response = await fetch('/api/markets/usdt-krw');
         const data = await response.json().catch(() => ({}));
         const items = Array.isArray(data?.items) ? data.items : [];
-        const upbit = items.find((item) => item?.id === 'upbit');
+        const market = items.find((item) => item?.id === marketIdForPrice);
         if (active) {
-          setMarketPrice(typeof upbit?.price === 'number' ? upbit.price : null);
+          setMarketPrice(typeof market?.price === 'number' ? market.price : null);
           setMarketUpdatedAt(typeof data?.updatedAt === 'string' ? data.updatedAt : null);
         }
       } catch {
@@ -172,7 +183,7 @@ export default function SellerChatPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [marketIdForPrice]);
 
   useEffect(() => {
     let active = true;
@@ -494,11 +505,11 @@ export default function SellerChatPage() {
                       <span className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-black/50">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src="/logo-upbit.jpg"
-                          alt="Upbit"
+                          src={marketIconForPrice}
+                          alt={marketLabelForPrice}
                           className="h-5 w-5 rounded-full"
                         />
-                        업비트 시세
+                        {marketLabelForPrice} 시세
                       </span>
                       <span className="text-right text-sm font-semibold text-black">
                         {typeof marketPrice === 'number'
