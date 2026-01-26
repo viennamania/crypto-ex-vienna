@@ -163,20 +163,44 @@ export default function P2PBuyerPage() {
   };
 
   const handleSwapInputs = () => {
-    const usdtNumeric = parseNumericInput(usdtAmount);
-    const krwNumeric = parseNumericInput(krwAmount);
+    if (!price) {
+      setIsUsdtFirst((prev) => !prev);
+      setUsdtAmount(krwAmount);
+      setKrwAmount(usdtAmount);
+      return;
+    }
 
-    const nextUsdtNumeric = krwNumeric !== null ? Math.min(krwNumeric, 1000000) : null;
-    const nextKrwNumeric =
-      usdtNumeric !== null ? Math.min(applyKrwRounding(usdtNumeric), 100000000) : null;
+    if (isUsdtFirst) {
+      const movedNumeric = parseNumericInput(usdtAmount);
+      const nextKrwNumeric =
+        movedNumeric === null
+          ? null
+          : Math.min(applyKrwRounding(movedNumeric), 100000000);
+      const nextKrwValue =
+        nextKrwNumeric === null ? '' : formatIntegerWithCommas(String(nextKrwNumeric));
+      const nextUsdtNumeric =
+        nextKrwNumeric === null ? null : Math.min(nextKrwNumeric / price, 1000000);
+      const nextUsdtValue =
+        nextUsdtNumeric === null ? '' : formatUsdtValue(nextUsdtNumeric);
+      setKrwAmount(nextKrwValue);
+      setUsdtAmount(nextUsdtValue);
+    } else {
+      const movedNumeric = parseNumericInput(krwAmount);
+      const nextUsdtNumeric =
+        movedNumeric === null ? null : Math.min(movedNumeric, 1000000);
+      const nextUsdtValue =
+        nextUsdtNumeric === null ? '' : sanitizeUsdtInput(String(nextUsdtNumeric));
+      const nextKrwNumeric =
+        nextUsdtNumeric === null
+          ? null
+          : Math.min(applyKrwRounding(nextUsdtNumeric * price), 100000000);
+      const nextKrwValue =
+        nextKrwNumeric === null ? '' : formatIntegerWithCommas(String(nextKrwNumeric));
+      setUsdtAmount(nextUsdtValue);
+      setKrwAmount(nextKrwValue);
+    }
 
     setIsUsdtFirst((prev) => !prev);
-    setUsdtAmount(
-      nextUsdtNumeric === null ? '' : sanitizeUsdtInput(String(nextUsdtNumeric)),
-    );
-    setKrwAmount(
-      nextKrwNumeric === null ? '' : formatIntegerWithCommas(String(nextKrwNumeric)),
-    );
   };
 
   const usdtInput = (
