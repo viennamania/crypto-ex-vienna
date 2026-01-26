@@ -604,7 +604,7 @@ export default function P2PBuyerPage() {
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="h-full w-full bg-transparent px-2 pt-1 pb-4 text-center text-xl font-extrabold leading-relaxed text-black placeholder:font-extrabold placeholder:text-black focus:outline-none sm:text-lg sm:pl-12 sm:text-left"
+                    className="h-full w-full bg-transparent pl-12 pr-2 pt-1 pb-4 text-center text-lg font-extrabold leading-relaxed text-black placeholder:font-extrabold placeholder:text-black focus:outline-none sm:text-lg sm:text-left"
                   />
                 </div>
                 <button
