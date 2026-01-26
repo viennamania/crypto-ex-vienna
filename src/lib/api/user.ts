@@ -1721,33 +1721,46 @@ export async function searchSellersByBankAccountHolder(
   {
     storecode,
     accountHolder,
+    searchBy,
     limit,
     page,
   }: {
     storecode: string;
     accountHolder: string;
+    searchBy?: 'accountHolder' | 'nickname';
     limit: number;
     page: number;
   }
 ): Promise<ResultProps> {
+  const normalizedSearchBy = searchBy === 'nickname' ? 'nickname' : 'accountHolder';
   console.log(
     'searchSellersByBankAccountHolder storecode: ' +
       storecode +
-      ' accountHolder: ' +
+      ' searchBy: ' +
+      normalizedSearchBy +
+      ' query: ' +
       accountHolder
   );
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
 
-  const query = {
+  const query: any = {
     storecode: { $regex: String(storecode || ''), $options: 'i' },
     walletAddress: { $exists: true, $ne: null },
     seller: { $exists: true, $ne: null },
     'seller.status': 'confirmed',
     'seller.enabled': true,
-    'seller.bankInfo.accountHolder': { $regex: String(accountHolder || ''), $options: 'i' },
   };
+
+  if (normalizedSearchBy === 'nickname') {
+    query.nickname = { $regex: String(accountHolder || ''), $options: 'i' };
+  } else {
+    query['seller.bankInfo.accountHolder'] = {
+      $regex: String(accountHolder || ''),
+      $options: 'i',
+    };
+  }
 
   const users = await collection
     .find<UserProps>(

@@ -6,6 +6,9 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
 const USER_STORECODE = 'admin';
 const DEFAULT_AVATAR = '/profile-default.png';
+const SELLER_SEARCH_BY =
+  (process.env.NEXT_PUBLIC_P2P_BUYER_SELLER_SEARCH_BY as 'accountHolder' | 'nickname') ||
+  'accountHolder';
 
 type SellerResult = {
   id?: string | number;
@@ -69,10 +72,20 @@ export default function SellerSearchPage() {
     return `${results.length}건`;
   }, [results.length, searched]);
 
+  const searchByParam = searchParams?.get('searchBy');
+  const searchBy =
+    searchByParam === 'nickname' || searchByParam === 'accountHolder'
+      ? searchByParam
+      : SELLER_SEARCH_BY;
+
   const executeSearch = async (value: string) => {
     const trimmed = value.trim();
     if (!trimmed) {
-      setErrorMessage('판매자 예금주 이름을 입력해 주세요.');
+      setErrorMessage(
+        searchBy === 'nickname'
+          ? '판매자 회원 아이디를 입력해 주세요.'
+          : '판매자 예금주 이름을 입력해 주세요.',
+      );
       setResults([]);
       setSearched(false);
       return;
@@ -86,7 +99,8 @@ export default function SellerSearchPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storecode: USER_STORECODE,
-          accountHolder: trimmed,
+          query: trimmed,
+          searchBy,
           limit: 20,
           page: 1,
         }),
@@ -135,7 +149,9 @@ export default function SellerSearchPage() {
                 </button>
               </div>
               <p className="text-sm text-black/60">
-                판매자 은행계좌의 예금주 이름으로 판매자를 조회합니다.
+                {searchBy === 'nickname'
+                  ? '판매자 회원 아이디로 판매자를 조회합니다.'
+                  : '판매자 은행계좌의 예금주 이름으로 판매자를 조회합니다.'}
               </p>
             </header>
 
@@ -152,7 +168,11 @@ export default function SellerSearchPage() {
                       handleSearch();
                     }
                   }}
-                  placeholder="예금주 이름을 입력하세요"
+                  placeholder={
+                    searchBy === 'nickname'
+                      ? '판매자 회원 아이디를 입력하세요'
+                      : '예금주 이름을 입력하세요'
+                  }
                   className="w-full flex-1 rounded-2xl border border-black/10 bg-white px-4 py-3 text-base font-semibold text-black placeholder:text-black/50 focus:border-black/30 focus:outline-none"
                 />
                 <button
@@ -164,7 +184,9 @@ export default function SellerSearchPage() {
                 </button>
               </div>
               <p className="mt-2 text-xs text-black/80">
-                정확한 예금주 이름을 입력할수록 검색 정확도가 높아집니다.
+                {searchBy === 'nickname'
+                  ? '정확한 회원 아이디를 입력할수록 검색 정확도가 높아집니다.'
+                  : '정확한 예금주 이름을 입력할수록 검색 정확도가 높아집니다.'}
               </p>
               {errorMessage && (
                 <p className="mt-2 text-xs text-rose-500">{errorMessage}</p>

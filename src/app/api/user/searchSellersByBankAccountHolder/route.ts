@@ -27,18 +27,20 @@ import {
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
-  const { storecode, accountHolder, limit, page } = body || {};
+  const { storecode, accountHolder, query, searchBy, limit, page } = body || {};
 
-  if (!storecode || !accountHolder) {
+  const keyword = query || accountHolder;
+  if (!storecode || !keyword) {
     return NextResponse.json(
-      { error: 'storecode and accountHolder are required.' },
+      { error: 'storecode and query are required.' },
       { status: 400 },
     );
   }
 
   const result = await searchSellersByBankAccountHolder({
     storecode,
-    accountHolder,
+    accountHolder: keyword,
+    searchBy: searchBy === 'nickname' ? 'nickname' : 'accountHolder',
     limit: limit || 20,
     page: page || 1,
   });

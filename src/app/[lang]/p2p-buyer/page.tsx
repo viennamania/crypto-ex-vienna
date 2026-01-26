@@ -14,6 +14,9 @@ const BANNER_PLACEMENT = 'p2p-home';
 const USER_STORECODE = 'admin';
 const USDT_DECIMALS = 2;
 const KRW_ROUNDING: 'round' | 'floor' | 'ceil' = 'round';
+const SELLER_SEARCH_BY =
+  (process.env.NEXT_PUBLIC_P2P_BUYER_SELLER_SEARCH_BY as 'accountHolder' | 'nickname') ||
+  'accountHolder';
 const DEFAULT_BANNERS = [
   { id: 'default-1', title: 'orangex banner 1', image: '/ads/orangex-banner-01.svg' },
   { id: 'default-2', title: 'orangex banner 2', image: '/ads/orangex-banner-02.svg' },
@@ -488,14 +491,14 @@ export default function P2PBuyerPage() {
               </p>
             </header>
 
-            <section className="py-4 text-black">
+            <section className="py-4 text-black pb-14">
               <form
                 className="flex flex-col gap-3 sm:flex-row sm:items-center"
                 onSubmit={(event) => {
                   event.preventDefault();
                   const trimmed = sellerSearchInput.trim();
                   const destination = trimmed
-                    ? `/${lang}/p2p-buyer/seller-search?query=${encodeURIComponent(trimmed)}`
+                    ? `/${lang}/p2p-buyer/seller-search?query=${encodeURIComponent(trimmed)}&searchBy=${SELLER_SEARCH_BY}`
                     : `/${lang}/p2p-buyer/seller-search`;
                   router.push(destination);
                 }}
@@ -507,7 +510,11 @@ export default function P2PBuyerPage() {
                   <input
                     value={sellerSearchInput}
                     onChange={(event) => setSellerSearchInput(event.target.value)}
-                    placeholder="어떤 판매자를 찾을까요?"
+                    placeholder={
+                      SELLER_SEARCH_BY === 'nickname'
+                        ? '판매자 회원 아이디를 입력하세요'
+                        : '판매자 계좌 예금주 이름을 입력하세요'
+                    }
                     className="h-full w-full bg-transparent px-2 pt-1 pb-4 text-center text-xl font-extrabold leading-relaxed text-black placeholder:font-extrabold placeholder:text-black focus:outline-none sm:text-lg sm:pl-12 sm:text-left"
                   />
                 </div>
@@ -516,12 +523,14 @@ export default function P2PBuyerPage() {
                   disabled={!sellerSearchInput.trim()}
                   className="flex h-16 shrink-0 items-center gap-2 justify-center rounded-full border border-black/10 bg-white px-6 text-lg font-extrabold leading-none text-black shadow-[0_12px_28px_-22px_rgba(0,0,0,0.25)] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto w-full"
                 >
-                  <span className="text-base">✔</span>
-                  찾기
+                  <span className="text-base">👤</span>
+                  판매자 찾기
                 </button>
               </form>
               <p className="mt-4 text-xs text-black/60">
-                은행 계좌 예금주 이름으로 판매자를 조회합니다.
+                {SELLER_SEARCH_BY === 'nickname'
+                  ? '판매자 회원 아이디로 판매자를 조회합니다.'
+                  : '은행 계좌 예금주 이름으로 판매자를 조회합니다.'}
               </p>
             </section>
 
