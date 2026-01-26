@@ -487,7 +487,7 @@ export default function P2PBuyerPage() {
             <header className="flex flex-col gap-3">
               <h1 className="text-2xl font-semibold tracking-tight">구매자 전용</h1>
               <p className="text-sm text-black/60">
-                테더(USDT) 구매를 빠르고 안전하게 진행하는 전용 화면입니다.
+                테더(USDT) 구매를 빠르고 안전하게.
               </p>
             </header>
 
