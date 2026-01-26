@@ -5,6 +5,15 @@
 
 Starter template to build an onchain react native app with [thirdweb](https://thirdweb.com/) and [next](https://nextjs.org/).
 
+## Tech Stack
+
+- Next.js (App Router)
+- React
+- TypeScript
+- Tailwind CSS
+- thirdweb SDK
+- MongoDB
+
 ## Installation
 
 Install the template using [thirdweb create](https://portal.thirdweb.com/cli/create)
