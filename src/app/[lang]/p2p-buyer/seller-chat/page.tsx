@@ -164,7 +164,9 @@ export default function SellerChatPage() {
       try {
         const response = await fetch('/api/markets/usdt-krw');
         const data = await response.json().catch(() => ({}));
-        const items = Array.isArray(data?.items) ? data.items : [];
+        const items = Array.isArray(data?.items)
+          ? (data.items as Array<{ id?: string; price?: number }>)
+          : [];
         const market = items.find((item) => item?.id === marketIdForPrice);
         if (active) {
           setMarketPrice(typeof market?.price === 'number' ? market.price : null);
