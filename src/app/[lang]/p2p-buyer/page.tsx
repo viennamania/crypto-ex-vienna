@@ -525,18 +525,20 @@ export default function P2PBuyerPage() {
               </p>
             </section>
 
-            {latestNotice && (
-              <section className="flex items-center justify-between gap-4 px-1">
-                <div className="min-w-0">
-                  <p className="truncate text-xl font-extrabold text-black">
-                    {latestNotice.title || latestNotice.summary || '공지사항'}
-                  </p>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/5 text-xl text-black/70">
-                  ›
-                </div>
-              </section>
-            )}
+            <section className="flex items-center justify-between gap-4 px-1">
+              <div className="min-w-0">
+                <p className="truncate text-xl font-extrabold text-black">
+                  {latestNotice?.title || latestNotice?.summary || '공지사항'}
+                </p>
+              </div>
+              <Link
+                href={`/${lang}/p2p-buyer/notice`}
+                className="flex items-center gap-2 rounded-full border border-black/10 px-3 py-1 text-xs font-semibold text-black/60"
+              >
+                공지사항 보러가기
+                <span className="text-base text-black/60">›</span>
+              </Link>
+            </section>
 
             <section className="rounded-3xl border border-black/10 bg-[#0f0f12] p-5 text-white shadow-[0_18px_40px_-24px_rgba(0,0,0,0.35)]">
               <div className="flex items-center gap-3">
@@ -552,7 +554,7 @@ export default function P2PBuyerPage() {
               )}
             </section>
 
-            <section className="border-y border-black/15 bg-transparent px-5 py-6 text-black">
+            <section className="border-y border-black/15 bg-transparent px-0 py-6 text-black">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-black/50">
