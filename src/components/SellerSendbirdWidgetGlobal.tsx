@@ -159,6 +159,8 @@ const SellerSendbirdWidgetGlobal = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCheckingRole, setIsCheckingRole] = useState(false);
+  const [isSellerActive, setIsSellerActive] = useState(false);
+  const [isCheckingSeller, setIsCheckingSeller] = useState(false);
   const effectiveWalletAddress = address || ownerWalletAddress;
 
   useEffect(() => {
@@ -191,7 +193,7 @@ const SellerSendbirdWidgetGlobal = () => {
     };
   }, [isMounted]);
 
-  const canShow = Boolean(address) && !isAdmin && !isCheckingRole;
+  const canShow = Boolean(address) && !isAdmin && !isCheckingRole && !isCheckingSeller && isSellerActive;
 
   useEffect(() => {
     if (!address) {
@@ -226,6 +228,47 @@ const SellerSendbirdWidgetGlobal = () => {
     };
 
     fetchUserRole();
+
+    return () => {
+      active = false;
+    };
+  }, [address]);
+
+  useEffect(() => {
+    if (!address) {
+      setIsSellerActive(false);
+      setIsCheckingSeller(false);
+      return;
+    }
+
+    let active = true;
+
+    const fetchSellerStatus = async () => {
+      setIsCheckingSeller(true);
+      try {
+        const response = await fetch('/api/user/getUser', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storecode: USER_STORECODE, walletAddress: address }),
+        });
+        const data = await response.json().catch(() => ({}));
+        const sellerStatus = data?.result?.seller?.status;
+        const sellerEnabled = data?.result?.seller?.enabled;
+        if (active) {
+          setIsSellerActive(sellerStatus === 'confirmed' && sellerEnabled !== false);
+        }
+      } catch {
+        if (active) {
+          setIsSellerActive(false);
+        }
+      } finally {
+        if (active) {
+          setIsCheckingSeller(false);
+        }
+      }
+    };
+
+    fetchSellerStatus();
 
     return () => {
       active = false;
