@@ -8757,7 +8757,7 @@ export async function acceptBuyOrderPrivateSale(
       privateSale: true,
       usdtAmount: usdtAmount,
       rate: usdtToKrwRate,
-      krwAmount: usdtAmount * usdtToKrwRate,
+      krwAmount: Math.floor(usdtAmount * usdtToKrwRate),
       storecode: 'admin',
       totalAmount: usdtAmount,
       status: 'paymentRequested',
