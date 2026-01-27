@@ -35,11 +35,11 @@ const buildPrompt = (data: PromotionContext) => {
     '- 이모지, 따옴표, 줄바꿈 금지',
     '- 과장 광고/수익 보장 표현 금지',
     '- 사람처럼 자연스럽게 대화하듯이 작성',
-    price ? '- 판매가격 숫자를 반드시 포함' : '- 판매가격 정보가 없으면 가격 언급 없이 작성',
+    '- 판매가격 숫자를 반드시 포함 (원 단위)',
     '참고 정보:',
     `- 가격방식: ${priceMode}`,
     `- 마켓: ${market}`,
-    price ? `- 판매가: ${price}` : '',
+    price ? `- 판매가: ${price}원` : '- 판매가: 0원',
     escrow ? `- 에스크로 잔고(USDT): ${escrow}` : '',
     seedText ? `- 기존 홍보 문구: ${seedText}` : '',
   ]

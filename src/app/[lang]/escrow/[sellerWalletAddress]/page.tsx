@@ -3944,14 +3944,24 @@ const fetchBuyOrders = async () => {
     if (!ownerSeller) {
       return null;
     }
+    const priceSettingMethod = ownerSeller?.seller?.priceSettingMethod;
+    const market = ownerSeller?.seller?.market;
+    let price = ownerSeller?.seller?.price;
+    if (!price && priceSettingMethod === 'market') {
+      if (market === 'bithumb' && bithumbUsdtToKrwRate > 0) {
+        price = bithumbUsdtToKrwRate;
+      } else if (upbitUsdtToKrwRate > 0) {
+        price = upbitUsdtToKrwRate;
+      }
+    }
     return {
-      priceSettingMethod: ownerSeller?.seller?.priceSettingMethod,
-      market: ownerSeller?.seller?.market,
-      price: ownerSeller?.seller?.price,
+      priceSettingMethod,
+      market,
+      price,
       escrowBalance: ownerSeller?.currentUsdtBalance,
       promotionText: ownerSeller?.seller?.promotionText || ownerSeller?.promotionText || '',
     };
-  }, [ownerWalletAddress, sellersBalance]);
+  }, [ownerWalletAddress, sellersBalance, upbitUsdtToKrwRate, bithumbUsdtToKrwRate]);
   const fetchSellersBalance = async () => {
     try {
       const response = await fetch('/api/user/getAllSellersForBalance', {
