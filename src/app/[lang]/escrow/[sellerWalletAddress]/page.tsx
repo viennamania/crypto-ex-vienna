@@ -19,6 +19,8 @@ import { toast } from 'react-hot-toast';
 
 import SendbirdProvider from "@sendbird/uikit-react/SendbirdProvider";
 import GroupChannel from "@sendbird/uikit-react/GroupChannel";
+import { useSendbird } from "@sendbird/uikit-react";
+import { GroupChannelHandler } from "@sendbird/chat/groupChannel";
 
 import {
   clientId,
@@ -10521,6 +10523,119 @@ const TradeDetail = (
 
 
 
+type BuyerAutoReplyContext = {
+  buyerWalletAddress?: string;
+  sellerWalletAddress?: string;
+  priceSettingMethod?: string;
+  market?: string;
+  price?: number | string;
+  escrowBalance?: number | string;
+};
+
+const AUTO_REPLY_STORAGE_PREFIX = 'buyer-auto-reply';
+
+const AutoBuyerReplyListener = ({
+  channelUrl,
+  buyerWalletAddress,
+  sellerWalletAddress,
+  context,
+  enabled,
+}: {
+  channelUrl: string | null;
+  buyerWalletAddress?: string;
+  sellerWalletAddress?: string;
+  context?: BuyerAutoReplyContext | null;
+  enabled: boolean;
+}) => {
+  const { sdk } = useSendbird();
+  const sentRef = useRef<Set<string>>(new Set());
+  const pendingRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+    if (!sdk?.groupChannel?.addGroupChannelHandler || !channelUrl) {
+      return;
+    }
+    if (!buyerWalletAddress || !sellerWalletAddress) {
+      return;
+    }
+    if (buyerWalletAddress === sellerWalletAddress) {
+      return;
+    }
+
+    const storageKey = `${AUTO_REPLY_STORAGE_PREFIX}:${buyerWalletAddress}:${channelUrl}`;
+    if (typeof window !== 'undefined' && window.localStorage.getItem(storageKey) === '1') {
+      sentRef.current.add(channelUrl);
+    }
+
+    const handlerId = `${AUTO_REPLY_STORAGE_PREFIX}:${channelUrl}`;
+    const handler = new GroupChannelHandler({
+      onMessageReceived: async (channel, message) => {
+        if (!channel || channel.url !== channelUrl) {
+          return;
+        }
+        if (!message || message?.sender?.userId !== sellerWalletAddress) {
+          return;
+        }
+        if (sentRef.current.has(channelUrl) || pendingRef.current.has(channelUrl)) {
+          return;
+        }
+
+        pendingRef.current.add(channelUrl);
+        try {
+          const aiResponse = await fetch('/api/user/generateBuyerIntentMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              buyerWalletAddress,
+              sellerWalletAddress,
+              ...(context ?? {}),
+            }),
+          });
+          const aiData = await aiResponse.json().catch(() => ({}));
+          if (!aiResponse.ok || !aiData?.text) {
+            return;
+          }
+
+          const response = await fetch('/api/sendbird/welcome-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              channelUrl,
+              senderId: buyerWalletAddress,
+              message: aiData.text,
+            }),
+          });
+          if (response.ok) {
+            sentRef.current.add(channelUrl);
+            if (typeof window !== 'undefined') {
+              window.localStorage.setItem(storageKey, '1');
+            }
+          }
+        } catch {
+          // ignore auto-reply errors
+        } finally {
+          pendingRef.current.delete(channelUrl);
+        }
+      },
+    });
+
+    sdk.groupChannel.addGroupChannelHandler(handlerId, handler);
+
+    return () => {
+      try {
+        sdk.groupChannel.removeGroupChannelHandler(handlerId);
+      } catch {
+        // ignore cleanup errors
+      }
+    };
+  }, [sdk, channelUrl, buyerWalletAddress, sellerWalletAddress, context, enabled]);
+
+  return null;
+};
+
 const SendbirdChatEmbed = ({
   buyerWalletAddress,
   sellerWalletAddress,
@@ -10551,6 +10666,19 @@ const SendbirdChatEmbed = ({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const lastPromotionKeyRef = useRef<string | null>(null);
+  const buyerAutoReplyContext = useMemo<BuyerAutoReplyContext | null>(() => {
+    if (!buyerWalletAddress || !sellerWalletAddress) {
+      return null;
+    }
+    return {
+      buyerWalletAddress,
+      sellerWalletAddress,
+      priceSettingMethod: promotionContext?.priceSettingMethod,
+      market: promotionContext?.market,
+      price: promotionContext?.price,
+      escrowBalance: promotionContext?.escrowBalance,
+    };
+  }, [buyerWalletAddress, promotionContext, sellerWalletAddress]);
 
   useEffect(() => {
     let isMounted = true;
@@ -10752,6 +10880,13 @@ const SendbirdChatEmbed = ({
               accessToken={sessionToken}
               theme="light"
             >
+              <AutoBuyerReplyListener
+                channelUrl={channelUrl}
+                buyerWalletAddress={buyerWalletAddress}
+                sellerWalletAddress={sellerWalletAddress}
+                context={buyerAutoReplyContext}
+                enabled={shouldShowChat}
+              />
               <GroupChannel channelUrl={channelUrl} />
             </SendbirdProvider>
           ) : (
