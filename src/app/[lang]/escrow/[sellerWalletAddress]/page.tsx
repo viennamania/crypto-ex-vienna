@@ -4565,6 +4565,32 @@ const fetchBuyOrders = async () => {
         const usdtAmount = buyAmountInputs[index];
         const krwAmount = Math.floor(usdtAmount * rate);
 
+        setBuyAmountInputs((prev) => {
+          const next = [...prev];
+          next[index] = 0;
+          return next;
+        });
+        setBuyAmountKrwInputs((prev) => {
+          const next = [...prev];
+          next[index] = 0;
+          return next;
+        });
+        setBuyAmountInputTexts((prev) => {
+          const next = [...prev];
+          next[index] = '';
+          return next;
+        });
+        setBuyAmountOverLimitArray((prev) => {
+          const next = [...prev];
+          next[index] = false;
+          return next;
+        });
+        setBuyAmountKrwOverLimitArray((prev) => {
+          const next = [...prev];
+          next[index] = false;
+          return next;
+        });
+
         setSellersBalance((prev) =>
           prev.map((seller) =>
             seller.walletAddress === sellerWalletAddress
@@ -7873,10 +7899,10 @@ const fetchBuyOrders = async () => {
 
                                 <button
                                   onClick={() => {                             
-                                    buyOrderPrivateSale(
-                                      index,
-                                      seller.walletAddress,
-                                    )
+                                    if (!window.confirm('USDT 구매를 진행할까요?')) {
+                                      return;
+                                    }
+                                    buyOrderPrivateSale(index, seller.walletAddress);
                                   }}
                                   className={`
                                     ${address
