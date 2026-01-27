@@ -6319,17 +6319,6 @@ const fetchBuyOrders = async () => {
             </div>
           )}
 
-          {!isOwnerSeller && (
-            <SendbirdChatEmbed
-                buyerWalletAddress={address}
-                sellerWalletAddress={ownerWalletAddress}
-                selectedChannelUrl={selectedChatChannelUrl || undefined}
-                isOpen={isChatOpen}
-                onOpenChange={setIsChatOpen}
-                variant="inline"
-            />
-          )}
-
           {/* 판매자 대화목록 섹션 */}
           {!isOwnerSeller && !isAdmin && (
             <SellerChatList
@@ -6342,6 +6331,16 @@ const fetchBuyOrders = async () => {
                 setSelectedChatChannelUrl(channelUrl);
                 setIsChatOpen(true);
               }}
+            />
+          )}
+          {!isOwnerSeller && (
+            <SendbirdChatEmbed
+                buyerWalletAddress={address}
+                sellerWalletAddress={ownerWalletAddress}
+                selectedChannelUrl={selectedChatChannelUrl || undefined}
+                isOpen={isChatOpen}
+                onOpenChange={setIsChatOpen}
+                variant="inline"
             />
           )}
           <div className="w-full flex flex-col items-start justify-center gap-2
