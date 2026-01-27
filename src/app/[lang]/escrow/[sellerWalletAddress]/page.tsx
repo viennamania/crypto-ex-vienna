@@ -3316,29 +3316,37 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
 
       
 
-      const response = await fetch('/api/order/getAllBuyOrders', {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(
+      const isSellerHistory = Boolean(sellerWalletAddress);
+      const endpoint = isSellerHistory
+        ? '/api/order/getAllBuyOrdersBySellerEscrowWallet'
+        : '/api/order/getAllBuyOrders';
+      const payload = isSellerHistory
+        ? {
+            limit: Number(limitValue),
+            page: Number(pageValue),
+            walletAddress: sellerWalletAddress,
+            startDate: searchFromDate,
+            endDate: searchToDate,
+          }
+        : {
+            storecode: searchStorecode,
+            limit: Number(limitValue),
+            page: Number(pageValue),
+            walletAddress: address,
+            searchMyOrders: searchMyOrders,
+            searchOrderStatusCancelled: searchOrderStatusCancelled,
+            searchOrderStatusCompleted: searchOrderStatusCompleted,
+            searchStoreName: searchStoreName,
+            fromDate: searchFromDate,
+            toDate: searchToDate,
+          };
 
-            {
-              storecode: searchStorecode,
-              limit: Number(limitValue),
-              page: Number(pageValue),
-              walletAddress: address,
-              searchMyOrders: searchMyOrders,
-              searchOrderStatusCancelled: searchOrderStatusCancelled,
-              searchOrderStatusCompleted: searchOrderStatusCompleted,
-
-              searchStoreName: searchStoreName,
-
-              fromDate: searchFromDate,
-              toDate: searchToDate,
-            }
-
-        ),
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -3393,23 +3401,37 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
 
       setBuyOrders(data.result.orders);
 
-      //setTotalCount(data.result.totalCount);
-
-      setBuyOrderStats({
-        totalCount: data.result.totalCount,
-        totalKrwAmount: data.result.totalKrwAmount,
-        totalUsdtAmount: data.result.totalUsdtAmount,
-        totalSettlementCount: data.result.totalSettlementCount,
-        totalSettlementAmount: data.result.totalSettlementAmount,
-        totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-        totalFeeAmount: data.result.totalFeeAmount,
-        totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-        totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-        totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
-
-        totalByBuyerDepositName: data.result.totalByBuyerDepositName,
-        totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
-      });
+      if (isSellerHistory) {
+        setBuyOrderStats({
+          totalCount: data.result.totalCount,
+          totalKrwAmount: data.result.totalKrwAmount,
+          totalUsdtAmount: data.result.totalUsdtAmount,
+          totalSettlementCount: 0,
+          totalSettlementAmount: 0,
+          totalSettlementAmountKRW: 0,
+          totalFeeAmount: 0,
+          totalFeeAmountKRW: 0,
+          totalAgentFeeAmount: 0,
+          totalAgentFeeAmountKRW: 0,
+          totalByBuyerDepositName: [],
+          totalReaultGroupByBuyerDepositNameCount: 0,
+        });
+      } else {
+        setBuyOrderStats({
+          totalCount: data.result.totalCount,
+          totalKrwAmount: data.result.totalKrwAmount,
+          totalUsdtAmount: data.result.totalUsdtAmount,
+          totalSettlementCount: data.result.totalSettlementCount,
+          totalSettlementAmount: data.result.totalSettlementAmount,
+          totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
+          totalFeeAmount: data.result.totalFeeAmount,
+          totalFeeAmountKRW: data.result.totalFeeAmountKRW,
+          totalAgentFeeAmount: data.result.totalAgentFeeAmount,
+          totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
+          totalByBuyerDepositName: data.result.totalByBuyerDepositName,
+          totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
+        });
+      }
 
 
     }
@@ -8734,6 +8756,7 @@ const fetchBuyOrders = async () => {
               <thead className="bg-black text-white text-xs uppercase tracking-widest">
                 <tr>
                   <th className="px-3 py-2 text-left font-semibold">거래번호</th>
+                  <th className="px-3 py-2 text-left font-semibold">거래시간</th>
                   <th className="px-3 py-2 text-left font-semibold">구매자</th>
                   <th className="px-3 py-2 text-right font-semibold">USDT</th>
                   <th className="px-3 py-2 text-right font-semibold">KRW</th>
@@ -8747,6 +8770,16 @@ const fetchBuyOrders = async () => {
                     className={index % 2 === 0 ? 'bg-white' : 'bg-[#f7f7f7]'}
                   >
                     <td className="px-3 py-2 font-semibold text-black">#{item.tradeId}</td>
+                    <td className="px-3 py-2 text-black">
+                      {item?.createdAt
+                        ? new Date(item.createdAt).toLocaleString('ko-KR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            month: '2-digit',
+                            day: '2-digit',
+                          })
+                        : '-'}
+                    </td>
                     <td className="px-3 py-2 text-black">
                       {item?.nickname || item?.buyer?.nickname || '구매자'}
                     </td>
@@ -9029,9 +9062,9 @@ const fetchBuyOrders = async () => {
                             </span>
                             <span className="text-sm text-slate-600">
                               {
-                                item?.agent.agentName?.length > 5 ?
-                                item?.agent.agentName?.substring(0, 5) + '...' :
-                                item?.agent.agentName
+                                item?.agent?.agentName?.length > 5
+                                  ? item?.agent?.agentName?.substring(0, 5) + '...'
+                                  : item?.agent?.agentName
                               }
                             </span>
                           </div>

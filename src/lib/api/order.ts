@@ -4777,6 +4777,84 @@ export async function getAllBuyOrdersBySeller(
 }
 
 
+// getAllBuyOrdersBySellerEscrowWallet
+// returns all orders matched by seller.escrow wallet address (any status)
+export async function getAllBuyOrdersBySellerEscrowWallet(
+  {
+    limit,
+    page,
+    startDate,
+    endDate,
+    walletAddress,
+  }: {
+    limit: number;
+    page: number;
+    startDate?: string;
+    endDate?: string;
+    walletAddress: string;
+  }
+): Promise<any> {
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('buyorders');
+
+  if (limit > 1000) {
+    limit = 1000;
+  }
+
+  const createdAtFilter: Record<string, string> = {};
+  if (startDate) {
+    const startDateTime = new Date(startDate);
+    if (!Number.isNaN(startDateTime.getTime())) {
+      createdAtFilter.$gte = startDateTime.toISOString();
+    }
+  }
+  if (endDate) {
+    const endDateTime = new Date(endDate);
+    if (!Number.isNaN(endDateTime.getTime())) {
+      endDateTime.setDate(endDateTime.getDate() + 1);
+      createdAtFilter.$lt = endDateTime.toISOString();
+    }
+  }
+
+  const matchQuery: Record<string, any> = {
+    'seller.walletAddress': walletAddress,
+  };
+  if (Object.keys(createdAtFilter).length > 0) {
+    matchQuery.createdAt = createdAtFilter;
+  }
+
+  const results = await collection
+    .find<UserProps>(matchQuery)
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .skip((page - 1) * limit)
+    .toArray();
+
+  const totalCount = await collection.countDocuments(matchQuery);
+
+  const totalKrwAmountAgg = await collection
+    .aggregate([
+      { $match: matchQuery },
+      { $group: { _id: null, totalKrwAmount: { $sum: '$krwAmount' } } },
+    ])
+    .toArray();
+
+  const totalUsdtAmountAgg = await collection
+    .aggregate([
+      { $match: matchQuery },
+      { $group: { _id: null, totalUsdtAmount: { $sum: '$usdtAmount' } } },
+    ])
+    .toArray();
+
+  return {
+    totalCount,
+    totalKrwAmount: totalKrwAmountAgg?.[0]?.totalKrwAmount || 0,
+    totalUsdtAmount: totalUsdtAmountAgg?.[0]?.totalUsdtAmount || 0,
+    orders: results,
+  };
+}
+
+
 
 
 
