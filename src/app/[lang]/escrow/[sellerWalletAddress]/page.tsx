@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, act, useRef } from "react";
+import { useState, useEffect, use, act, useRef, useMemo } from "react";
 
 import Image from "next/image";
 
@@ -203,7 +203,7 @@ type SellerChatItem = {
 };
 
 
-const walletAuthOptions = ["google", "email"];
+const walletAuthOptions = ["google", "email", "phone"];
 
 const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
 
@@ -3912,6 +3912,22 @@ const fetchBuyOrders = async () => {
   // /api/user/getAllSellersForBalance
   const [sellersBalance, setSellersBalance] = useState([] as any[]);
   const [sellerProfileLoaded, setSellerProfileLoaded] = useState(false);
+  const sellerPromotionContext = useMemo(() => {
+    if (!ownerWalletAddress) {
+      return null;
+    }
+    const ownerSeller = sellersBalance.find((item) => item?.walletAddress === ownerWalletAddress);
+    if (!ownerSeller) {
+      return null;
+    }
+    return {
+      priceSettingMethod: ownerSeller?.seller?.priceSettingMethod,
+      market: ownerSeller?.seller?.market,
+      price: ownerSeller?.seller?.price,
+      escrowBalance: ownerSeller?.currentUsdtBalance,
+      promotionText: ownerSeller?.seller?.promotionText || ownerSeller?.promotionText || '',
+    };
+  }, [ownerWalletAddress, sellersBalance]);
   const fetchSellersBalance = async () => {
     try {
       const response = await fetch('/api/user/getAllSellersForBalance', {
@@ -6320,19 +6336,6 @@ const fetchBuyOrders = async () => {
           )}
 
           {/* 판매자 대화목록 섹션 */}
-          {!isOwnerSeller && !isAdmin && (
-            <SellerChatList
-              ownerWalletAddress={ownerWalletAddress}
-              items={sellerChatItems}
-              loading={sellerChatLoading}
-              errorMessage={sellerChatError}
-              selectedChannelUrl={selectedChatChannelUrl}
-              onSelectChannel={(channelUrl) => {
-                setSelectedChatChannelUrl(channelUrl);
-                setIsChatOpen(true);
-              }}
-            />
-          )}
           {!isOwnerSeller && (
             <SendbirdChatEmbed
                 buyerWalletAddress={address}
@@ -6341,6 +6344,7 @@ const fetchBuyOrders = async () => {
                 isOpen={isChatOpen}
                 onOpenChange={setIsChatOpen}
                 variant="inline"
+                promotionContext={sellerPromotionContext}
             />
           )}
           <div className="w-full flex flex-col items-start justify-center gap-2
@@ -10524,6 +10528,7 @@ const SendbirdChatEmbed = ({
   isOpen,
   onOpenChange,
   variant = 'floating',
+  promotionContext,
 }: {
   buyerWalletAddress?: string;
   sellerWalletAddress: string;
@@ -10531,6 +10536,13 @@ const SendbirdChatEmbed = ({
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   variant?: 'floating' | 'inline';
+  promotionContext?: {
+    priceSettingMethod?: string;
+    market?: string;
+    price?: number | string;
+    escrowBalance?: number | string;
+    promotionText?: string;
+  } | null;
 }) => {
   const isInline = variant === 'inline';
   const shouldShowChat = isInline || isOpen;
@@ -10538,6 +10550,7 @@ const SendbirdChatEmbed = ({
   const [channelUrl, setChannelUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const lastPromotionKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -10632,6 +10645,51 @@ const SendbirdChatEmbed = ({
       setErrorMessage(null);
     }
   }, [selectedChannelUrl]);
+
+  useEffect(() => {
+    if (!channelUrl || !shouldShowChat) {
+      return;
+    }
+    const contextKey = promotionContext ? JSON.stringify(promotionContext) : '';
+    if (!contextKey) {
+      return;
+    }
+    const key = `${channelUrl}:${contextKey}:${shouldShowChat}`;
+    if (lastPromotionKeyRef.current === key) {
+      return;
+    }
+
+    const sendPromotion = async () => {
+      try {
+        const aiResponse = await fetch('/api/user/generateChatPromotion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(promotionContext),
+        });
+        const aiData = await aiResponse.json().catch(() => ({}));
+        if (!aiResponse.ok || !aiData?.text) {
+          return;
+        }
+
+        const response = await fetch('/api/sendbird/welcome-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channelUrl,
+            senderId: sellerWalletAddress,
+            message: aiData.text,
+          }),
+        });
+        if (response.ok) {
+          lastPromotionKeyRef.current = key;
+        }
+      } catch {
+        // ignore promotion message errors
+      }
+    };
+
+    sendPromotion();
+  }, [channelUrl, promotionContext, sellerWalletAddress, shouldShowChat]);
 
   if (!shouldShowChat) {
     return (
