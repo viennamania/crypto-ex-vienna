@@ -3936,32 +3936,6 @@ const fetchBuyOrders = async () => {
   // /api/user/getAllSellersForBalance
   const [sellersBalance, setSellersBalance] = useState([] as any[]);
   const [sellerProfileLoaded, setSellerProfileLoaded] = useState(false);
-  const sellerPromotionContext = useMemo(() => {
-    if (!ownerWalletAddress) {
-      return null;
-    }
-    const ownerSeller = sellersBalance.find((item) => item?.walletAddress === ownerWalletAddress);
-    if (!ownerSeller) {
-      return null;
-    }
-    const priceSettingMethod = ownerSeller?.seller?.priceSettingMethod;
-    const market = ownerSeller?.seller?.market;
-    let price = ownerSeller?.seller?.price;
-    if (!price && priceSettingMethod === 'market') {
-      if (market === 'bithumb' && bithumbUsdtToKrwRate > 0) {
-        price = bithumbUsdtToKrwRate;
-      } else if (upbitUsdtToKrwRate > 0) {
-        price = upbitUsdtToKrwRate;
-      }
-    }
-    return {
-      priceSettingMethod,
-      market,
-      price,
-      escrowBalance: ownerSeller?.currentUsdtBalance,
-      promotionText: ownerSeller?.seller?.promotionText || ownerSeller?.promotionText || '',
-    };
-  }, [ownerWalletAddress, sellersBalance, upbitUsdtToKrwRate, bithumbUsdtToKrwRate]);
   const fetchSellersBalance = async () => {
     try {
       const response = await fetch('/api/user/getAllSellersForBalance', {
@@ -4368,6 +4342,33 @@ const fetchBuyOrders = async () => {
     }, 1000 / frameRate);
     return () => clearInterval(interval);
   }, [bithumbUsdtToKrwRate]);
+
+  const sellerPromotionContext = useMemo(() => {
+    if (!ownerWalletAddress) {
+      return null;
+    }
+    const ownerSeller = sellersBalance.find((item) => item?.walletAddress === ownerWalletAddress);
+    if (!ownerSeller) {
+      return null;
+    }
+    const priceSettingMethod = ownerSeller?.seller?.priceSettingMethod;
+    const market = ownerSeller?.seller?.market;
+    let price = ownerSeller?.seller?.price;
+    if (!price && priceSettingMethod === 'market') {
+      if (market === 'bithumb' && bithumbUsdtToKrwRate > 0) {
+        price = bithumbUsdtToKrwRate;
+      } else if (upbitUsdtToKrwRate > 0) {
+        price = upbitUsdtToKrwRate;
+      }
+    }
+    return {
+      priceSettingMethod,
+      market,
+      price,
+      escrowBalance: ownerSeller?.currentUsdtBalance,
+      promotionText: ownerSeller?.seller?.promotionText || ownerSeller?.promotionText || '',
+    };
+  }, [ownerWalletAddress, sellersBalance, upbitUsdtToKrwRate, bithumbUsdtToKrwRate]);
 
 
 
