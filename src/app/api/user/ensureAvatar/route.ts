@@ -10,6 +10,7 @@ export const runtime = 'nodejs';
 
 const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 10);
 const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1';
+const OPENAI_IMAGE_FALLBACK_MODELS = process.env.OPENAI_IMAGE_FALLBACK_MODELS || 'dall-e-3,dall-e-2';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
 const SENDBIRD_API_BASE = `https://api-${SENDBIRD_APP_ID}.sendbird.com/v3`;
@@ -30,39 +31,70 @@ const generateAvatarUrl = async () => {
       ` centered, high contrast, clean vector style, no text, no letters, no watermark,` +
       ` unique variation ${seed}.`;
 
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: OPENAI_IMAGE_MODEL,
+    const fallbackList = OPENAI_IMAGE_FALLBACK_MODELS.split(',')
+      .map((model) => model.trim())
+      .filter(Boolean);
+    const candidates = [OPENAI_IMAGE_MODEL, ...fallbackList].filter(Boolean);
+
+    for (const model of candidates) {
+      const isGptImage = model.startsWith('gpt-image');
+      const requestBody: Record<string, unknown> = {
+        model,
         prompt,
-      }),
-    });
+        size: '1024x1024',
+      };
+      if (!isGptImage) {
+        requestBody.response_format = 'b64_json';
+      }
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      console.warn('OpenAI image generation failed', response.status, errorText);
-      return null;
+      const response = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        console.warn(`OpenAI image generation failed (${model})`, response.status, errorText);
+        continue;
+      }
+
+      const data = await response.json();
+      const imageBase64 = data?.data?.[0]?.b64_json;
+      const imageUrl = data?.data?.[0]?.url;
+
+      if (imageBase64) {
+        const buffer = Buffer.from(imageBase64, 'base64');
+        const filename = `avatar-${nanoid()}.png`;
+        const blob = await put(filename, buffer, {
+          contentType: 'image/png',
+          access: 'public',
+        });
+        return blob.url || null;
+      }
+
+      if (typeof imageUrl === 'string' && imageUrl) {
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) {
+          console.warn(`Failed to download generated image (${model})`, imageResponse.status);
+          continue;
+        }
+        const arrayBuffer = await imageResponse.arrayBuffer();
+        const filename = `avatar-${nanoid()}.png`;
+        const blob = await put(filename, Buffer.from(arrayBuffer), {
+          contentType: imageResponse.headers.get('content-type') || 'image/png',
+          access: 'public',
+        });
+        return blob.url || null;
+      }
+
+      console.warn(`OpenAI image generation returned empty data (${model})`);
     }
 
-    const data = await response.json();
-    const imageBase64 = data?.data?.[0]?.b64_json;
-    if (!imageBase64) {
-      console.warn('OpenAI image generation returned empty data');
-      return null;
-    }
-
-    const buffer = Buffer.from(imageBase64, 'base64');
-    const filename = `avatar-${nanoid()}.png`;
-    const blob = await put(filename, buffer, {
-      contentType: 'image/png',
-      access: 'public',
-    });
-
-    return blob.url || null;
+    return null;
   } catch (error) {
     console.warn('OpenAI avatar generation error', error);
     return null;

@@ -769,28 +769,6 @@ export default function Web3LoginPage() {
                       <p className="mt-1 whitespace-pre-wrap">{avatarErrorLog}</p>
                     </div>
                   )}
-                  {autoAvatarUrlLog && (
-                    <div className="mt-3 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2 text-[11px] font-semibold text-slate-600">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-semibold text-slate-600">자동 생성 URL</span>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            try {
-                              await navigator.clipboard.writeText(autoAvatarUrlLog);
-                              toast.success('URL이 복사되었습니다.');
-                            } catch (error) {
-                              toast.error('URL 복사에 실패했습니다.');
-                            }
-                          }}
-                          className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-600 shadow-sm transition hover:border-slate-300"
-                        >
-                          복사하기
-                        </button>
-                      </div>
-                      <p className="mt-1 break-all">{autoAvatarUrlLog}</p>
-                    </div>
-                  )}
                 </div>
               </div>
             </section>
