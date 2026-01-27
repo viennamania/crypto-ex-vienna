@@ -6319,6 +6319,17 @@ const fetchBuyOrders = async () => {
             </div>
           )}
 
+          {!isOwnerSeller && (
+            <SendbirdChatEmbed
+                buyerWalletAddress={address}
+                sellerWalletAddress={ownerWalletAddress}
+                selectedChannelUrl={selectedChatChannelUrl || undefined}
+                isOpen={isChatOpen}
+                onOpenChange={setIsChatOpen}
+                variant="inline"
+            />
+          )}
+
           {/* 판매자 대화목록 섹션 */}
           {!isOwnerSeller && !isAdmin && (
             <SellerChatList
@@ -10331,15 +10342,6 @@ const fetchBuyOrders = async () => {
           }
         `}</style>
 
-        {!isOwnerSeller && (
-          <SendbirdChatEmbed
-              buyerWalletAddress={address}
-              sellerWalletAddress={ownerWalletAddress}
-              selectedChannelUrl={selectedChatChannelUrl || undefined}
-              isOpen={isChatOpen}
-              onOpenChange={setIsChatOpen}
-          />
-        )}
 
     </main>
 
@@ -10522,13 +10524,17 @@ const SendbirdChatEmbed = ({
   selectedChannelUrl,
   isOpen,
   onOpenChange,
+  variant = 'floating',
 }: {
   buyerWalletAddress?: string;
   sellerWalletAddress: string;
   selectedChannelUrl?: string;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  variant?: 'floating' | 'inline';
 }) => {
+  const isInline = variant === 'inline';
+  const shouldShowChat = isInline || isOpen;
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [channelUrl, setChannelUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -10628,7 +10634,7 @@ const SendbirdChatEmbed = ({
     }
   }, [selectedChannelUrl]);
 
-  if (!isOpen) {
+  if (!shouldShowChat) {
     return (
       <div className="fixed bottom-6 right-6 z-50">
         <button
@@ -10643,22 +10649,33 @@ const SendbirdChatEmbed = ({
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-[360px] max-w-[calc(100vw-3rem)] rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-xl">
+    <div
+      className={
+        isInline
+          ? 'w-full rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-xl'
+          : 'fixed bottom-6 right-6 z-50 w-[360px] max-w-[calc(100vw-3rem)] rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-xl'
+      }
+    >
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">구매자 ↔ 판매자 채팅</h3>
           <p className="text-sm text-slate-600">실시간 대화를 통해 거래를 진행하세요.</p>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          {isLoading && <span className="text-xs font-semibold text-slate-500">연결 중...</span>}
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900"
-          >
-            닫기
-          </button>
-        </div>
+        {!isInline && (
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            {isLoading && <span className="text-xs font-semibold text-slate-500">연결 중...</span>}
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900"
+            >
+              닫기
+            </button>
+          </div>
+        )}
+        {isInline && isLoading && (
+          <span className="text-xs font-semibold text-slate-500">연결 중...</span>
+        )}
       </div>
 
       {!buyerWalletAddress ? (
