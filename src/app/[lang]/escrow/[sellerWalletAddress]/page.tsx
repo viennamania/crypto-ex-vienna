@@ -8695,72 +8695,54 @@ const fetchBuyOrders = async () => {
           </div>
 
 
-          {/* buyOrderStats.totalByBuyerDepositName */}
-          
-          <div className="mt-6
-            w-full
-            grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6
-            gap-4
-            items-start justify-start
-            border-t border-slate-200
-            py-4
-            ">
-            {buyOrderStats.totalByBuyerDepositName?.map((item, index) => (
-              <div
-                key={index}
-                className={`w-full flex flex-col items-start justify-center gap-2
-                p-2 rounded-lg shadow-md
-                backdrop-blur-md
-                ${buyerDisplayValueArray && buyerDisplayValueArray[index] !== undefined && buyerDisplayValueArray[index] !== item.totalKrwAmount
-                  ? 'bg-yellow-100/80 animate-pulse'
-                  : 'bg-white/80'}
-                `}
-              >
-                <div className="flex flex-row items-start justify-start gap-1">
-                  <Image
-                    src="/icon-user.png"
-                    alt="User"
-                    width={30}
-                    height={30}
-                    className="w-6 h-6"
-                  />          
-                  {item._id.length > 1 ? item._id.slice(0, 1) + '*' .repeat(item._id.length - 1) : item._id}  
-                </div>
-                <div className="w-full flex flex-row items-center justify-between gap-1">
-                  <span className="text-sm text-slate-500">
-                    {item.totalCount?.toLocaleString() || '0'}건
-                  </span>
-                  ｜
-                  <span className="text-sm text-green-600"
-                    style={{ fontFamily: 'monospace' }}>
-                    {(item.totalUsdtAmount || 0).toLocaleString()}테더
-                  </span>
-                  ｜
-                  <span className="text-sm text-yellow-600"
-                    style={{ fontFamily: 'monospace' }}>
-                    {(item.totalKrwAmount || 0).toLocaleString()}원
-                  </span>
-                </div>
-              </div>
-            ))}
-
-
-            {buyOrderStats.totalReaultGroupByBuyerDepositNameCount! - buyOrderStats.totalByBuyerDepositName!.length > 0 && (
-
-              <div className="text-xl font-bold text-red-500
-                flex items-center justify-center"
-              >
-                +{buyOrderStats.totalReaultGroupByBuyerDepositNameCount! - buyOrderStats.totalByBuyerDepositName!.length} 명
-              </div>
-
-            )}
-          </div>
-
-
           <div className="
             mt-6
             w-full overflow-x-auto">
 
+            <table className="w-full table-auto border-collapse border border-black/10 text-sm text-black">
+              <thead className="bg-black text-white text-xs uppercase tracking-widest">
+                <tr>
+                  <th className="px-3 py-2 text-left font-semibold">거래번호</th>
+                  <th className="px-3 py-2 text-left font-semibold">구매자</th>
+                  <th className="px-3 py-2 text-right font-semibold">USDT</th>
+                  <th className="px-3 py-2 text-right font-semibold">KRW</th>
+                  <th className="px-3 py-2 text-left font-semibold">상태</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-black/10 bg-white">
+                {buyOrders.map((item, index) => (
+                  <tr
+                    key={`minimal-${index}`}
+                    className={index % 2 === 0 ? 'bg-white' : 'bg-[#f7f7f7]'}
+                  >
+                    <td className="px-3 py-2 font-semibold text-black">#{item.tradeId}</td>
+                    <td className="px-3 py-2 text-black">
+                      {item?.nickname || item?.buyer?.nickname || '구매자'}
+                    </td>
+                    <td className="px-3 py-2 text-right font-semibold text-black">
+                      {typeof item?.usdtAmount === 'number'
+                        ? item.usdtAmount.toLocaleString()
+                        : '-'}
+                    </td>
+                    <td className="px-3 py-2 text-right font-semibold text-black">
+                      {typeof item?.krwAmount === 'number'
+                        ? item.krwAmount.toLocaleString()
+                        : '-'}
+                    </td>
+                    <td className="px-3 py-2 text-black">
+                      {item.status === 'ordered' && '주문접수'}
+                      {item.status === 'accepted' && '결제대기'}
+                      {item.status === 'paymentRequested' && '결제요청'}
+                      {item.status === 'paymentConfirmed' && '결제확인'}
+                      {item.status === 'completed' && '거래완료'}
+                      {!item.status && '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="hidden">
             <table className="w-full table-auto border-collapse border border-slate-300 rounded-md">
 
               <thead
@@ -9995,6 +9977,7 @@ const fetchBuyOrders = async () => {
               </tbody>
 
             </table>
+            </div>
 
           </div>
 
