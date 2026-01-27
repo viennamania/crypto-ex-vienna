@@ -6781,7 +6781,7 @@ const fetchBuyOrders = async () => {
 
                           <div className="w-full flex flex-col items-start justify-center gap-3">
 
-                            <div className="w-full flex flex-col items-center justify-center gap-3">
+                          <div className="w-full flex flex-col items-center justify-start gap-3">
 
                               <div className="w-full rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 via-emerald-50/80 to-white px-5 py-4
                               shadow-[0_18px_45px_-28px_rgba(16,185,129,0.65)]">
@@ -7629,42 +7629,6 @@ const fetchBuyOrders = async () => {
                       ) : (
                         <div className="w-full flex flex-col items-start justify-center gap-2">
                           
-                          {/* 최근 거래내역 */}
-                          {/* seller?.buyOrder */}
-                          {seller.seller?.buyOrder && (
-                            <div className="w-full flex flex-col items-start justify-center gap-1
-                            border-t border-slate-200 pt-2
-                            ">
-                              <span className="text-sm font-semibold text-slate-800">
-                                최근 거래내역
-                              </span>
-                              <div className="w-full flex flex-row items-center justify-start gap-2">
-                                <span className="text-sm text-slate-600">
-                                  상태:
-                                </span>
-                                <span className="text-sm font-semibold text-slate-800">
-                                  {seller.seller?.buyOrder?.status === 'completed' ? '거래완료' :
-                                    seller.seller?.buyOrder?.status === 'paymentConfirmed' ? 'USDT전송완료' :
-                                    seller.seller?.buyOrder?.status === 'paymentRequested' ? '입금확인중' :
-                                    seller.seller?.buyOrder?.status === 'ordered' ? '입금대기중' :
-                                    seller.seller?.buyOrder?.status === 'cancelled' ? '취소됨' :
-                                    '알수없음'
-                                  }
-                                </span>
-                              </div>
-                              <div className="w-full flex flex-row items-center justify-start gap-2">
-                                <span className="text-sm text-slate-600">
-                                  거래시간:
-                                </span>
-                                <span className="text-sm font-semibold text-slate-800">
-                                  {seller.seller?.buyOrder?.createdAt ? new Date(seller.seller?.buyOrder?.createdAt).toLocaleString() : ''}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-
-
-
                           {/* if seller.walletAddress is equal to address, show this section */}
                           <div className={'w-full flex flex-col items-start justify-center gap-2'}>
 
@@ -7673,7 +7637,7 @@ const fetchBuyOrders = async () => {
                             totalPaymentConfirmedKrwAmount
                             정상 거래 */}
                             {/* green color for background */}
-                            <div className="w-full flex flex-row items-center justify-between gap-2 mt-2
+                            <div className="w-full flex flex-row items-center justify-between gap-2
                             p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl
                             shadow-[0_12px_28px_-20px_rgba(16,185,129,0.45)]
                             ">
