@@ -10698,6 +10698,116 @@ const AutoBuyerReplyListener = ({
   return null;
 };
 
+const AutoSellerReplyListener = ({
+  channelUrl,
+  buyerWalletAddress,
+  sellerWalletAddress,
+  context,
+  enabled,
+}: {
+  channelUrl: string | null;
+  buyerWalletAddress?: string;
+  sellerWalletAddress?: string;
+  context?: BuyerAutoReplyContext | null;
+  enabled: boolean;
+}) => {
+  const { state } = useSendbird();
+  const sdk = state?.stores?.sdkStore?.sdk;
+  const repliedRef = useRef<Set<string | number>>(new Set());
+  const pendingRef = useRef<Set<string | number>>(new Set());
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+    if (!sdk?.groupChannel?.addGroupChannelHandler || !channelUrl) {
+      return;
+    }
+    if (!buyerWalletAddress || !sellerWalletAddress) {
+      return;
+    }
+    if (buyerWalletAddress === sellerWalletAddress) {
+      return;
+    }
+
+    const handlerId = `seller-auto-reply:${channelUrl}`;
+    const handler = new GroupChannelHandler({
+      onMessageReceived: async (channel, message) => {
+        if (!channel || channel.url !== channelUrl) {
+          return;
+        }
+        if (!message) {
+          return;
+        }
+        const senderId =
+          'sender' in message ? (message as { sender?: { userId?: string } })?.sender?.userId : undefined;
+        if (senderId !== buyerWalletAddress) {
+          return;
+        }
+        const messageId =
+          'messageId' in message ? (message as { messageId?: number })?.messageId : undefined;
+        const key = messageId ?? `${channelUrl}:${(message as any)?.createdAt ?? Date.now()}`;
+        if (repliedRef.current.has(key) || pendingRef.current.has(key)) {
+          return;
+        }
+
+        const messageText =
+          'message' in message ? (message as { message?: string })?.message?.trim?.() : '';
+        if (!messageText) {
+          return;
+        }
+
+        pendingRef.current.add(key);
+        try {
+          const delayMs = 2000 + Math.floor(Math.random() * 2000);
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+
+          const aiResponse = await fetch('/api/user/generateSellerAutoReply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: messageText,
+              ...(context ?? {}),
+            }),
+          });
+          const aiData = await aiResponse.json().catch(() => ({}));
+          if (!aiResponse.ok || !aiData?.text) {
+            return;
+          }
+
+          const response = await fetch('/api/sendbird/welcome-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              channelUrl,
+              senderId: sellerWalletAddress,
+              message: aiData.text,
+            }),
+          });
+          if (response.ok) {
+            repliedRef.current.add(key);
+          }
+        } catch {
+          // ignore auto-reply errors
+        } finally {
+          pendingRef.current.delete(key);
+        }
+      },
+    });
+
+    sdk.groupChannel.addGroupChannelHandler(handlerId, handler);
+    return () => {
+      try {
+        sdk.groupChannel.removeGroupChannelHandler(handlerId);
+      } catch {
+        // ignore cleanup errors
+      }
+    };
+  }, [sdk, channelUrl, buyerWalletAddress, sellerWalletAddress, context, enabled]);
+
+  return null;
+};
+
 const SendbirdChatEmbed = ({
   buyerWalletAddress,
   sellerWalletAddress,
@@ -10741,6 +10851,7 @@ const SendbirdChatEmbed = ({
       escrowBalance: promotionContext?.escrowBalance,
     };
   }, [buyerWalletAddress, promotionContext, sellerWalletAddress]);
+  const sellerAutoReplyContext = buyerAutoReplyContext;
 
   useEffect(() => {
     let isMounted = true;
@@ -10947,6 +11058,13 @@ const SendbirdChatEmbed = ({
                 buyerWalletAddress={buyerWalletAddress}
                 sellerWalletAddress={sellerWalletAddress}
                 context={buyerAutoReplyContext}
+                enabled={shouldShowChat}
+              />
+              <AutoSellerReplyListener
+                channelUrl={channelUrl}
+                buyerWalletAddress={buyerWalletAddress}
+                sellerWalletAddress={sellerWalletAddress}
+                context={sellerAutoReplyContext}
                 enabled={shouldShowChat}
               />
               <GroupChannel channelUrl={channelUrl} />
