@@ -4515,18 +4515,28 @@ const fetchBuyOrders = async () => {
       return;
     }
 
-    if (!buyAmountInputs[index] || buyAmountInputs[index] <= 0) {
+    const targetSeller = sellersBalance.find(
+      (seller) => seller.walletAddress === sellerWalletAddress
+    );
+    const rate = targetSeller?.seller?.usdtToKrwRate || 0;
+    const krwInput = buyAmountKrwInputs[index] ?? 0;
+    const computedUsdtFromKrw =
+      rate > 0 && krwInput > 0 ? Math.floor((krwInput / rate) * 100) / 100 : 0;
+    const usdtAmount =
+      computedUsdtFromKrw > 0 ? computedUsdtFromKrw : buyAmountInputs[index] || 0;
+
+    if (!usdtAmount || usdtAmount <= 0) {
       toast.error('구매 금액을 입력해주세요.');
       return;
     }
 
-    if (buyAmountInputs[index] > MAX_BUY_AMOUNT) {
+    if (usdtAmount > MAX_BUY_AMOUNT) {
       toast.error('구매 수량은 100,000 USDT 이하로 입력해주세요.');
       return;
     }
 
     // if buyAmountInputs[index] is more than currentUsdtBalanceArray[index], show error
-    if (buyAmountInputs[index] > currentUsdtBalanceArray[index]) {
+    if (usdtAmount > currentUsdtBalanceArray[index]) {
       toast.error('구매 금액이 판매자의 잔여 USDT 잔고를 초과합니다.');
       return;
     }
@@ -4546,7 +4556,7 @@ const fetchBuyOrders = async () => {
         body: JSON.stringify({
           buyerWalletAddress: address,
           sellerWalletAddress: sellerWalletAddress,
-          usdtAmount: buyAmountInputs[index],
+          usdtAmount,
         }),
       });
 
@@ -4558,11 +4568,6 @@ const fetchBuyOrders = async () => {
       if (data.result) {
         toast.success('구매 주문이 생성되었습니다.');
         const nowIso = new Date().toISOString();
-        const targetSeller = sellersBalance.find(
-          (seller) => seller.walletAddress === sellerWalletAddress
-        );
-        const rate = targetSeller?.seller?.usdtToKrwRate || 0;
-        const usdtAmount = buyAmountInputs[index];
         const krwAmount = Math.floor(usdtAmount * rate);
 
         setBuyAmountInputs((prev) => {
