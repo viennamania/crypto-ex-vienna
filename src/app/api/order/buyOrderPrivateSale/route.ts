@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
         buyerWalletAddress,
         sellerWalletAddress,
         usdtAmount,
+        krwAmount,
     } = body;
 
     //console.log('acceptBuyOrderPrivateSale body', body);
@@ -95,6 +96,7 @@ export async function POST(request: NextRequest) {
                 buyerWalletAddress,
                 sellerWalletAddress,
                 usdtAmount,
+                krwAmount,
             });
             if (!created) {
                 return NextResponse.json(
@@ -215,6 +217,7 @@ export async function POST(request: NextRequest) {
             buyerWalletAddress,
             sellerWalletAddress,
             usdtAmount,
+            krwAmount,
         });
 
     return NextResponse.json({ result });

@@ -4579,6 +4579,7 @@ const fetchBuyOrders = async () => {
           buyerWalletAddress: address,
           sellerWalletAddress: sellerWalletAddress,
           usdtAmount,
+          krwAmount: krwInput,
         }),
       });
 

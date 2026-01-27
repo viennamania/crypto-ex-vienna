@@ -8759,10 +8759,12 @@ export async function acceptBuyOrderPrivateSale(
     buyerWalletAddress,
     sellerWalletAddress,
     usdtAmount,
+    krwAmount,
   }: {
     buyerWalletAddress: string;
     sellerWalletAddress: string;
     usdtAmount: number;
+    krwAmount?: number;
   }): Promise<boolean> {
 
     // new buyorder for private sale
@@ -8826,6 +8828,15 @@ export async function acceptBuyOrderPrivateSale(
 
 
 
+    const normalizedKrwAmount =
+      typeof krwAmount === 'number' && Number.isFinite(krwAmount)
+        ? Math.floor(krwAmount)
+        : Math.floor(usdtAmount * usdtToKrwRate);
+    const normalizedUsdtAmount =
+      typeof krwAmount === 'number' && krwAmount > 0 && usdtToKrwRate > 0
+        ? Math.floor((normalizedKrwAmount / usdtToKrwRate) * 100) / 100
+        : usdtAmount;
+
     const newBuyOrder = {
       tradeId: tradeId,
       walletAddress: buyerWalletAddress,
@@ -8833,11 +8844,11 @@ export async function acceptBuyOrderPrivateSale(
       nickname: buyer.nickname || '',
       avatar: buyer.avatar || '',
       privateSale: true,
-      usdtAmount: usdtAmount,
+      usdtAmount: normalizedUsdtAmount,
       rate: usdtToKrwRate,
-      krwAmount: Math.floor(usdtAmount * usdtToKrwRate),
+      krwAmount: normalizedKrwAmount,
       storecode: 'admin',
-      totalAmount: usdtAmount,
+      totalAmount: normalizedUsdtAmount,
       status: 'paymentRequested',
       createdAt: new Date().toISOString(),
       acceptedAt: new Date().toISOString(),
