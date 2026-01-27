@@ -88,25 +88,14 @@ const WalletConsoleShell = () => {
       toast('지갑 연결이 해제되어 지갑 패널이 닫혔습니다.', { icon: '🔒' });
     }
 
-    if (!prevAddress && nextAddress && typeof window !== "undefined") {
-      const storedOpen = window.localStorage.getItem("walletConsoleOpen");
-      if (storedOpen === "1") {
-        setShowChain(true);
+    if (!prevAddress && nextAddress) {
+      if (showChain) {
+        setShowChain(false);
       }
     }
 
     previousAddressRef.current = nextAddress;
   }, [activeAccount?.address, showChain]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    if (!activeAccount?.address) {
-      return;
-    }
-    window.localStorage.setItem("walletConsoleOpen", showChain ? "1" : "0");
-  }, [showChain, activeAccount?.address]);
 
 
   useEffect(() => {
@@ -141,7 +130,7 @@ const WalletConsoleShell = () => {
   return (
     <div className="
               flex
-              fixed top-2 right-2
+              fixed top-8 right-10
               z-[9999]
               flex-col items-end justify-center">
 
@@ -180,14 +169,17 @@ const WalletConsoleShell = () => {
               {/* z order above all other elements */}
               {/* 나의 지갑 정보 표시 */}
               <div
-                className={`flex w-[92vw] max-w-[520px] flex-col items-stretch justify-center
+                className={`relative flex w-[260px] max-w-[92vw] flex-col items-stretch justify-center
                 ${showChain ? 'bg-slate-900/80 border border-slate-700/70 ring-1 ring-white/10' : 'hidden'}
                 max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain
-                p-4 rounded-2xl shadow-[0_24px_60px_-36px_rgba(15,23,42,0.8)]
+                p-2 rounded-2xl shadow-[0_24px_60px_-36px_rgba(15,23,42,0.8)]
                 backdrop-blur-md transition-all duration-300 ease-in-out
               `}
                 style={{ WebkitOverflowScrolling: "touch" }}
               >
+                {showChain && (
+                  <span className="absolute -top-2 right-8 h-0 w-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-slate-900/80" />
+                )}
 
                 {/* Display client ID */}
                 {/*

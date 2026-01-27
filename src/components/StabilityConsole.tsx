@@ -232,14 +232,14 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
     : "Unknown";
 
   const networkTone = displayChain === "ethereum"
-    ? "border-indigo-200/70 bg-indigo-50 text-indigo-700"
+    ? "border-indigo-200/40 bg-indigo-50/50 text-indigo-700"
     : displayChain === "polygon"
-    ? "border-violet-200/70 bg-violet-50 text-violet-700"
+    ? "border-violet-200/40 bg-violet-50/50 text-violet-700"
     : displayChain === "arbitrum"
-    ? "border-sky-200/70 bg-sky-50 text-sky-700"
+    ? "border-sky-200/40 bg-sky-50/50 text-sky-700"
     : displayChain === "bsc"
-    ? "border-amber-200/70 bg-amber-50 text-amber-700"
-    : "border-slate-200/70 bg-slate-50 text-slate-600";
+    ? "border-amber-200/40 bg-amber-50/50 text-amber-700"
+    : "border-slate-200/40 bg-slate-50/50 text-slate-600";
 
 
 
@@ -315,9 +315,9 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
   return (
 
     <div
-      className="console-shell relative mx-auto mb-4 w-full max-w-lg overflow-hidden rounded-[28px]
+      className="console-shell relative mx-auto mb-4 w-[360px] max-w-full overflow-hidden rounded-[22px]
       bg-[radial-gradient(120%_120%_at_0%_0%,#fbfaf6_0%,#eff3f7_45%,#e1e8f1_100%)]
-      p-4 shadow-[0_40px_80px_-50px_rgba(15,23,42,0.65)] ring-1 ring-[#d6dde7] md:p-7"
+      p-2 shadow-[0_40px_80px_-50px_rgba(15,23,42,0.65)] ring-1 ring-[#d6dde7]"
       style={{ fontFamily: '"Space Grotesk", "Avenir Next", "Segoe UI", sans-serif' }}
     >
 
@@ -334,15 +334,13 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
 
 
       {/* address balance */}
-      <div className="console-card relative flex w-full flex-col gap-4 rounded-[22px]
-        border border-white/70 bg-white/80 p-4 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.45)]
-        backdrop-blur-xl md:gap-6 md:p-6">
+      <div className="console-card relative flex w-full flex-col gap-3">
 
         {address ? (
 
           <>
             <div
-              className="console-row w-full rounded-2xl border border-slate-200/70 bg-white/70 p-4 shadow-sm md:p-5"
+              className="console-row w-full rounded-2xl border border-slate-200/40 bg-white/60 p-3"
               style={{ animationDelay: "0.05s" }}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -353,7 +351,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                 {smartAccountEnabled && (
                 <div className="relative">
                   <span className="smart-account-glow absolute -inset-1 rounded-full" />
-                    <span className="smart-account-badge inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 px-2.5 py-0.5 text-[10px] font-bold text-white md:px-3 md:py-1 md:text-[11px]">
+                    <span className="smart-account-badge inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 px-2.5 py-0.5 text-[10px] font-bold text-white">
                       <span className="inline-flex h-2 w-2 rounded-full bg-white shadow-[0_0_14px_rgba(255,255,255,0.95)]" />
                       스마트 어카운트
                     </span>
@@ -361,11 +359,11 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                 )}
               </div>
 
-              <div className="mt-3 grid w-full gap-3 md:grid-cols-[1fr_auto] md:items-center md:gap-4">
+              <div className="mt-2 grid w-full gap-3">
                 <button
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200/70
-                  bg-white/80 px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm
-                  transition hover:border-slate-300 hover:shadow-md"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200/50
+                  bg-white/70 px-4 py-2 text-sm font-semibold text-slate-900
+                  transition hover:border-slate-300"
                   onClick={() => {
                     navigator.clipboard.writeText(address);
                     //toast.success(Copied_Wallet_Address);
@@ -384,7 +382,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                   </span>
                 </button>
 
-                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 md:hidden">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
                   <span>QR 코드</span>
                   <button
                     type="button"
@@ -396,12 +394,10 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                 </div>
 
                 <div
-                  className={`flex justify-center md:justify-end overflow-hidden transition-all duration-300 ease-out origin-top
-                  ${showQrCode ? 'max-h-[260px] opacity-100 scale-100' : 'max-h-0 opacity-0 scale-95'}
-                  md:max-h-none md:opacity-100 md:scale-100 md:overflow-visible`}
+                  className={`flex justify-center overflow-hidden transition-all duration-300 ease-out origin-top
+                  ${showQrCode ? 'max-h-[260px] opacity-100 scale-100' : 'max-h-0 opacity-0 scale-95'}`}
                 >
-                  <div className="rounded-2xl bg-white p-2 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.35)]
-                    ring-1 ring-slate-200/60 md:p-3">
+                  <div className="rounded-2xl bg-white/80 p-2 ring-1 ring-slate-200/50">
                     <Canvas
                       text={address}
                       options={{
@@ -425,9 +421,8 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
 
 
             <div
-              className="console-row w-full rounded-2xl border border-emerald-100/70
-              bg-[linear-gradient(135deg,#f1fff8_0%,#f7fbff_100%)] p-4 shadow-[0_18px_40px_-30px_rgba(16,185,129,0.6)]
-              md:p-5"
+              className="console-row w-full rounded-2xl border border-emerald-100/40
+              bg-[linear-gradient(135deg,#f7fffb_0%,#f8fbff_100%)] p-3"
               style={{ animationDelay: "0.12s" }}
             >
               <div className="flex items-center gap-2 text-[12px] font-medium text-emerald-700/80">
@@ -441,9 +436,9 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                 <span>내 테더 잔액(USDT)</span>
               </div>
 
-              <div className="mt-2 flex w-full items-baseline justify-end gap-2 text-right md:mt-3">
+              <div className="mt-2 flex w-full items-baseline justify-end gap-2 text-right">
                 <div
-                  className="text-xl font-semibold text-emerald-700 tabular-nums text-right md:text-2xl"
+                  className="text-xl font-semibold text-emerald-700 tabular-nums text-right"
                   style={{ fontFamily: '"JetBrains Mono", "IBM Plex Mono", "Menlo", monospace' }}
                 >
                   {Number(balance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -484,7 +479,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
 
             {!smartAccountEnabled && (
               <div
-                className="console-row w-full rounded-2xl border border-slate-200/60 bg-white/70 px-4 py-3"
+                className="console-row w-full rounded-2xl border border-slate-200/40 bg-white/60 px-3 py-2.5"
                 style={{ animationDelay: "0.18s" }}
               >
                 <div className="flex w-full items-center justify-between">
@@ -519,7 +514,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
             )}
 
             <div
-              className={`console-row w-full rounded-2xl border px-4 py-3 ${networkTone}`}
+              className={`console-row w-full rounded-2xl border px-3 py-2.5 ${networkTone}`}
               style={{ animationDelay: "0.2s" }}
             >
               <div className="flex w-full items-center justify-between">
@@ -541,8 +536,8 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
 
             {smartAccountEnabled ? (
               <div
-                className="console-row w-full rounded-xl border border-emerald-200/70 bg-emerald-50/80
-                px-3 py-2 text-[12px] text-emerald-700"
+                className="console-row w-full rounded-xl border border-emerald-200/50 bg-emerald-50/70
+                px-3 py-2 text-[11px] text-emerald-700"
                 style={{ animationDelay: "0.22s" }}
               >
                 스마트 어카운트는 출금 시 가스비용이 필요 없어 편리합니다.
@@ -550,8 +545,8 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
             ) : (
               nativeBalance < 0.0001 && (
                 <div
-                  className="console-row w-full rounded-xl border border-rose-200/70 bg-rose-50/80
-                  px-3 py-2 text-[12px] text-rose-600"
+                  className="console-row w-full rounded-xl border border-rose-200/50 bg-rose-50/70
+                  px-3 py-2 text-[11px] text-rose-600"
                   style={{ animationDelay: "0.22s" }}
                 >
                   가스비용이 부족합니다.<br />가스비용이 부족하면 입금은 가능하지만 출금은 불가능합니다.
@@ -561,13 +556,12 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
 
 
             <div
-              className="console-row w-full grid grid-cols-1 gap-3 md:grid-cols-2"
+              className="console-row w-full grid grid-cols-1 gap-2.5"
               style={{ animationDelay: "0.26s" }}
             >
               <button
-                className="group inline-flex items-center justify-center gap-2 rounded-full bg-slate-900
-                px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_30px_-18px_rgba(15,23,42,0.6)]
-                transition hover:-translate-y-0.5 hover:bg-slate-800"
+                className="group inline-flex h-11 items-center justify-center gap-2 rounded-full bg-slate-900
+                px-4 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
                 //onClick={() => router.push("/ko/administration/withdraw-usdt")}
                 /* router and hide button for withdraw USDT */
                 onClick={() => {
@@ -584,8 +578,8 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
               </button>
 
                 <button
-                  className="inline-flex items-center justify-center rounded-full border border-rose-200
-                  bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-rose-200/70
+                  bg-white/70 px-4 text-sm font-semibold text-rose-600
                   transition hover:border-rose-300 hover:bg-rose-50"
                   onClick={() => {
                     // Add your disconnect wallet logic here
@@ -607,7 +601,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
         ) : (
 
           <div
-            className="console-row w-full rounded-2xl border border-slate-200/70 bg-white/75 p-5 text-center shadow-sm"
+            className="console-row w-full rounded-2xl border border-slate-200/50 bg-white/60 p-4 text-center"
             style={{ animationDelay: "0.08s" }}
           >
             {/* 로그인하고 나의 자산을 확인하세요 */}
