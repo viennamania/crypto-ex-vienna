@@ -6101,12 +6101,12 @@ const fetchBuyOrders = async () => {
 
 
 
-            <div className="flex flex-col items-end justify-center gap-4">
+            <div className="hidden flex-col items-end justify-center gap-4">
 
               {/* 구매주문 목록 */}
               <div className="
-                w-full
-                flex flex-row items-center justify-end gap-2
+                w-full flex
+                flex-row items-center justify-end gap-2
                 bg-blue-50/80
                 p-2 rounded-lg shadow-xl
                 backdrop-blur-md
@@ -6549,7 +6549,7 @@ const fetchBuyOrders = async () => {
                     {/* 판매자 에스크로 잔고, 입금은행정보 */}
                     <div
                       /*
-                      className={`mt-8
+                      className={`mt-4
                       w-full
                       flex flex-col items-start justify-center gap-2
                       p-2
@@ -6561,7 +6561,7 @@ const fetchBuyOrders = async () => {
                       */
 
                       // 배경색은 금융 무게감 있는 어두운 색상
-                      className={`mt-8
+                      className={`
                       w-full
                       flex flex-col items-start justify-center gap-4
                       relative overflow-visible
@@ -7291,7 +7291,6 @@ const fetchBuyOrders = async () => {
                     {/* seller.buyOrder.krwAmount => 구매금액 */}
                     {/* seller.buyOrder.rate => 단가 */}
                     <div className="
-                      mt-10
                       w-full
                       flex flex-col items-start justify-center gap-2">
 
