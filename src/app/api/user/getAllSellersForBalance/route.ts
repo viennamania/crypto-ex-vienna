@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
     storecode,
     limit,
     page,
+    escrowWalletAddress,
   } = body;
 
   //console.log("getAllStores request body", body);
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
     storecode: storecode || "",
     limit: limit || 100,
     page: page || 1,
+    escrowWalletAddress,
   });
 
   //console.log("getAllSellersForBalanceInquiry result", result);

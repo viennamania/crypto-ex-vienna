@@ -3933,7 +3933,7 @@ const fetchBuyOrders = async () => {
 
 
 
-  // /api/user/getAllSellersForBalance
+  // 판매자 잔고 불러오기
   const [sellersBalance, setSellersBalance] = useState([] as any[]);
   const [sellerProfileLoaded, setSellerProfileLoaded] = useState(false);
   const fetchSellersBalance = async () => {
@@ -3948,6 +3948,7 @@ const fetchBuyOrders = async () => {
             storecode: "admin",
             limit: 100,
             page: 1,
+            escrowWalletAddress: sellerWalletAddress,
           }
         )
       });

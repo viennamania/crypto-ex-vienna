@@ -2607,10 +2607,12 @@ export async function getAllSellersForBalanceInquiry(
     storecode,
     limit,
     page,
+    escrowWalletAddress,
   }: {
     storecode: string;
     limit: number;
     page: number;
+    escrowWalletAddress?: string;
   }
 ): Promise<any> {
   const client = await clientPromise;
@@ -2621,19 +2623,22 @@ export async function getAllSellersForBalanceInquiry(
   // if storecode is empty, return all users
   // projection: id, nickname, walletAddress
 
+  const matchQuery: Record<string, any> = {
+    storecode: { $regex: String(storecode), $options: 'i' },
+    walletAddress: { $exists: true, $ne: null },
+    seller: { $exists: true, $ne: null },
+    'seller.status': 'confirmed',
+    'seller.enabled': true,
+    'seller.escrowWalletAddress': { $exists: true, $ne: null },
+  };
+
+  if (escrowWalletAddress) {
+    matchQuery['seller.escrowWalletAddress'] = escrowWalletAddress;
+  }
+
   const users = await collection
     .find<UserProps>(
-      {
-        storecode: { $regex: String(storecode), $options: 'i' },
-
-        walletAddress: { $exists: true, $ne: null },
-        seller: { $exists: true  , $ne: null},
-        
-        'seller.status': 'confirmed',
-        'seller.enabled': true,
-        'seller.escrowWalletAddress': { $exists: true, $ne: null },
-
-      },
+      matchQuery,
       {
         projection: {
           id: 1,
@@ -2649,17 +2654,7 @@ export async function getAllSellersForBalanceInquiry(
     .skip((page - 1) * limit)
     .toArray();
 
-  const totalCount = await collection.countDocuments(
-    {
-      storecode: { $regex: String(storecode), $options: 'i' },
-
-      walletAddress: { $exists: true, $ne: null },
-      seller: { $exists: true  , $ne: null},
-      'seller.status': 'confirmed',
-      'seller.enabled': true,
-      'seller.escrowWalletAddress': { $exists: true, $ne: null },
-    }
-  );
+  const totalCount = await collection.countDocuments(matchQuery);
 
 
   return {
