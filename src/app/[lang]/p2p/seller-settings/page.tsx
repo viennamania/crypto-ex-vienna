@@ -1115,6 +1115,8 @@ export default function SettingsPage({ params }: any) {
     // updatingPromotionText
     const [promotionText, setPromotionText] = useState('');
     const [updatingPromotionText, setUpdatingPromotionText] = useState(false);
+    const [generatingPromotionText, setGeneratingPromotionText] = useState(false);
+    const [promotionGenerateError, setPromotionGenerateError] = useState('');
     const updatePromotionText = async () => {
         if (!seller) return;
         setUpdatingPromotionText(true);
@@ -1134,6 +1136,37 @@ export default function SettingsPage({ params }: any) {
             ...seller,
             promotionText: promotionText,
         });
+    };
+
+    const generatePromotionText = async () => {
+        if (!seller || !address || generatingPromotionText) return;
+        setPromotionGenerateError('');
+        setGeneratingPromotionText(true);
+        try {
+            const response = await fetch('/api/user/generatePromotionText', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    storecode: storecode,
+                    walletAddress: address,
+                    market: seller?.market,
+                    priceSettingMethod: seller?.priceSettingMethod,
+                    price: seller?.price,
+                }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data?.text) {
+                throw new Error(data?.error || '자동 생성에 실패했습니다.');
+            }
+            setPromotionText(data.text);
+            toast.success('판매 홍보 문구가 자동 생성되었습니다.');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '자동 생성에 실패했습니다.';
+            setPromotionGenerateError(message);
+            toast.error('자동 생성에 실패했습니다.');
+        } finally {
+            setGeneratingPromotionText(false);
+        }
     };
 
 
@@ -2158,16 +2191,37 @@ export default function SettingsPage({ params }: any) {
                                             rows={4}
                                         ></textarea>
 
-                                        <button
-                                            disabled={updatingPromotionText}
-                                            onClick={updatePromotionText}
-                                            className={`
-                                                ${updatingPromotionText ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-500'}
-                                                px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition
-                                            `}
-                                        >
-                                            {updatingPromotionText ? '수정중...' : '수정하기'}
-                                        </button>
+                                        <div className="flex flex-wrap gap-2">
+                                            <button
+                                                disabled={generatingPromotionText || updatingPromotionText}
+                                                onClick={generatePromotionText}
+                                                className={`
+                                                    ${generatingPromotionText || updatingPromotionText
+                                                        ? 'bg-slate-200 text-slate-400'
+                                                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'}
+                                                    px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition
+                                                `}
+                                            >
+                                                {generatingPromotionText ? '자동 생성중...' : '자동 생성'}
+                                            </button>
+                                            <button
+                                                disabled={updatingPromotionText || generatingPromotionText}
+                                                onClick={updatePromotionText}
+                                                className={`
+                                                    ${updatingPromotionText || generatingPromotionText
+                                                        ? 'bg-slate-200 text-slate-400'
+                                                        : 'bg-emerald-600 text-white hover:bg-emerald-500'}
+                                                    px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition
+                                                `}
+                                            >
+                                                {updatingPromotionText ? '수정중...' : '수정하기'}
+                                            </button>
+                                        </div>
+                                        {promotionGenerateError && (
+                                            <div className="text-xs font-semibold text-rose-500">
+                                                {promotionGenerateError}
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="w-full mt-6 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 shadow-sm">
