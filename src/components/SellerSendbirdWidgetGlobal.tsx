@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useActiveAccount } from 'thirdweb/react';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
@@ -13,8 +13,7 @@ import Badge from '@sendbird/uikit-react/ui/Badge';
 const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
 const OWNER_WALLET_STORAGE_KEY = 'sellerOwnerWalletAddress';
 const OWNER_WALLET_EVENT = 'seller-owner-wallet-address';
-const ORANGE_MANAGER_ID = process.env.NEXT_PUBLIC_SENDBIRD_MANAGER_ID || 'orangexManager';
-const ORANGE_MANAGER_GREETING = '고객님 안녕하세요. 무엇을 도와드릴까요?';
+const USER_STORECODE = 'admin';
 
 const readOwnerWalletAddress = () => {
   if (typeof window === 'undefined') {
@@ -103,7 +102,7 @@ const SellerChannelList = ({
           onClick={onClick}
         >
           <div className="sendbird-channel-preview__avatar">
-            <ChannelAvatar channel={channel} userId={currentUserId} theme={theme} />
+            <ChannelAvatar channel={channel} userId={currentUserId} theme={theme} width={36} height={36} />
           </div>
           <div className="sendbird-channel-preview__content">
             <div className="sendbird-channel-preview__content__upper">
@@ -152,16 +151,15 @@ const SellerSendbirdWidgetGlobal = () => {
   const [ownerWalletAddress, setOwnerWalletAddress] = useState('');
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [selectedChannelUrl, setSelectedChannelUrl] = useState<string | null>(null);
-  const [managerChannelUrl, setManagerChannelUrl] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<'list' | 'chat'>('list');
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const managerInitRef = useRef(false);
-  const managerAutoOpenRef = useRef(false);
-  const welcomeSentRef = useRef<Set<string>>(new Set());
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCheckingRole, setIsCheckingRole] = useState(false);
+  const effectiveWalletAddress = address || ownerWalletAddress;
 
   useEffect(() => {
     setIsMounted(true);
@@ -193,17 +191,52 @@ const SellerSendbirdWidgetGlobal = () => {
     };
   }, [isMounted]);
 
-  const canShow = Boolean(
-    address &&
-      ownerWalletAddress &&
-      address === ownerWalletAddress
-  );
+  const canShow = Boolean(address) && !isAdmin && !isCheckingRole;
+
+  useEffect(() => {
+    if (!address) {
+      setIsAdmin(false);
+      setIsCheckingRole(false);
+      return;
+    }
+
+    let active = true;
+
+    const fetchUserRole = async () => {
+      setIsCheckingRole(true);
+      try {
+        const response = await fetch('/api/user/getUser', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storecode: USER_STORECODE, walletAddress: address }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (active) {
+          setIsAdmin(data?.result?.role === 'admin');
+        }
+      } catch {
+        if (active) {
+          setIsAdmin(false);
+        }
+      } finally {
+        if (active) {
+          setIsCheckingRole(false);
+        }
+      }
+    };
+
+    fetchUserRole();
+
+    return () => {
+      active = false;
+    };
+  }, [address]);
 
   useEffect(() => {
     let isActive = true;
 
     const fetchSessionToken = async () => {
-      if (!canShow) {
+      if (!canShow || !effectiveWalletAddress) {
         if (isActive) {
           setSessionToken(null);
           setSelectedChannelUrl(null);
@@ -220,8 +253,8 @@ const SellerSendbirdWidgetGlobal = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: ownerWalletAddress,
-            nickname: `${ownerWalletAddress.slice(0, 6)}...`,
+            userId: effectiveWalletAddress,
+            nickname: `${effectiveWalletAddress.slice(0, 6)}...`,
           }),
         });
 
@@ -256,7 +289,7 @@ const SellerSendbirdWidgetGlobal = () => {
     return () => {
       isActive = false;
     };
-  }, [canShow, ownerWalletAddress]);
+  }, [canShow, effectiveWalletAddress]);
 
   useEffect(() => {
     if (!canShow) {
@@ -266,127 +299,16 @@ const SellerSendbirdWidgetGlobal = () => {
   }, [canShow]);
 
   useEffect(() => {
-    managerInitRef.current = false;
-    managerAutoOpenRef.current = false;
-    welcomeSentRef.current.clear();
-  }, [ownerWalletAddress]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const ensureManagerChannel = async () => {
-      if (!canShow || !sessionToken || !ownerWalletAddress) {
-        return;
-      }
-      if (managerInitRef.current) {
-        return;
-      }
-      managerInitRef.current = true;
-
-      try {
-        const listResponse = await fetch('/api/sendbird/user-channels', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: ownerWalletAddress, limit: 20 }),
-        });
-        if (!listResponse.ok) {
-          throw new Error('관리자 채널을 불러오지 못했습니다.');
-        }
-        const listData = (await listResponse.json()) as {
-          items?: { channelUrl?: string; members?: { userId?: string }[] }[];
-        };
-        const existingChannel = listData.items?.find((channel) =>
-          channel.members?.some((member) => member.userId === ORANGE_MANAGER_ID),
-        );
-        let channelUrl = existingChannel?.channelUrl || null;
-
-        if (!channelUrl) {
-          const createResponse = await fetch('/api/sendbird/group-channel', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              buyerId: ownerWalletAddress,
-              sellerId: ORANGE_MANAGER_ID,
-            }),
-          });
-          if (!createResponse.ok) {
-            const error = await createResponse.json().catch(() => null);
-            throw new Error(error?.error || '관리자 채널을 생성하지 못했습니다.');
-          }
-          const createData = (await createResponse.json()) as { channelUrl?: string };
-          channelUrl = createData.channelUrl || null;
-        }
-
-        if (isActive && channelUrl) {
-          setSelectedChannelUrl(channelUrl);
-          setManagerChannelUrl(channelUrl);
-          setView('chat');
-          if (!managerAutoOpenRef.current) {
-            managerAutoOpenRef.current = true;
-            setIsOpen(true);
-          }
-        }
-      } catch (error) {
-        if (isActive) {
-          const message =
-            error instanceof Error ? error.message : '관리자 채널을 불러오지 못했습니다.';
-          setErrorMessage(message);
-        }
-      }
-    };
-
-    ensureManagerChannel();
-
-    return () => {
-      isActive = false;
-    };
-  }, [canShow, ownerWalletAddress, sessionToken]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const sendWelcomeMessage = async () => {
-      if (!managerChannelUrl || !sessionToken) {
-        return;
-      }
-      if (welcomeSentRef.current.has(managerChannelUrl)) {
-        return;
-      }
-      welcomeSentRef.current.add(managerChannelUrl);
-
-      try {
-        const response = await fetch('/api/sendbird/welcome-message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            channelUrl: managerChannelUrl,
-            senderId: ORANGE_MANAGER_ID,
-            message: ORANGE_MANAGER_GREETING,
-          }),
-        });
-        if (!response.ok) {
-          const error = await response.json().catch(() => null);
-          throw new Error(error?.error || '환영 메시지를 전송하지 못했습니다.');
-        }
-      } catch (error) {
-        if (isActive) {
-          console.warn('Failed to send welcome message', error);
-        }
-      }
-    };
-
-    sendWelcomeMessage();
-
-    return () => {
-      isActive = false;
-    };
-  }, [managerChannelUrl, sessionToken]);
+    if (!canShow) {
+      setSelectedChannelUrl(null);
+    }
+  }, [canShow]);
 
   useEffect(() => {
     let isActive = true;
 
     const fetchUnreadCount = async () => {
-      if (!canShow || !ownerWalletAddress) {
+      if (!canShow || !effectiveWalletAddress) {
         if (isActive) {
           setUnreadCount(0);
         }
@@ -397,7 +319,7 @@ const SellerSendbirdWidgetGlobal = () => {
         const response = await fetch('/api/sendbird/user-channels', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: ownerWalletAddress, limit: 20 }),
+          body: JSON.stringify({ userId: effectiveWalletAddress, limit: 20 }),
         });
 
         if (!response.ok) {
@@ -429,7 +351,7 @@ const SellerSendbirdWidgetGlobal = () => {
       isActive = false;
       window.clearInterval(intervalId);
     };
-  }, [canShow, ownerWalletAddress]);
+  }, [canShow, effectiveWalletAddress]);
 
   if (!isMounted || !canShow) {
     return null;
@@ -482,11 +404,11 @@ const SellerSendbirdWidgetGlobal = () => {
             ) : (
               <SendbirdProvider
                 appId={SENDBIRD_APP_ID}
-                userId={ownerWalletAddress}
+                userId={effectiveWalletAddress}
                 accessToken={sessionToken}
                 theme="light"
               >
-                <div className="lg:grid lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)] lg:gap-4">
+                <div className="lg:grid lg:grid-cols-[minmax(200px,260px)_minmax(0,1fr)] lg:gap-4">
                   {/* Mobile: list only */}
                   {view === 'list' && (
                     <div className="h-[360px] overflow-hidden rounded-xl border border-slate-200 bg-white md:h-[480px] lg:hidden">

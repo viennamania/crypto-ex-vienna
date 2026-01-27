@@ -441,15 +441,6 @@ export default function Web3LoginPage() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4">
-                  <p className="text-sm font-semibold text-slate-700">
-                    지갑 연결은 1분 내에 완료됩니다.
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    연결 후에도 자산은 지갑 밖으로 이동하지 않으며, 플랫폼은 권한을 보관하지 않습니다.
-                  </p>
-                </div>
-
                 {smartAccountEnabled && (
                   <div className="relative overflow-hidden rounded-2xl border border-amber-200/70 bg-gradient-to-r from-amber-50 via-rose-50 to-orange-50 p-4">
                     <div className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.6),transparent_70%)] blur-2xl" />
@@ -462,31 +453,33 @@ export default function Web3LoginPage() {
                   </div>
                 )}
 
-                <ConnectButton
-                  client={client}
-                  wallets={wallets}
-                  chain={activeChain}
-                  theme="light"
-                  connectButton={{
-                    style: {
-                      background: 'linear-gradient(135deg, #0f172a, #1e293b)',
-                      color: '#f8fafc',
-                      padding: '12px 16px',
-                      borderRadius: '14px',
-                      fontSize: '16px',
-                      height: '52px',
-                      width: '100%',
-                      boxShadow: '0 18px 45px -25px rgba(15,23,42,0.7)',
-                    },
-                    label: '웹3 로그인',
-                  }}
-                  connectModal={{
-                    size: 'wide',
-                    titleIcon: 'https://crypto-ex-vienna.vercel.app/logo.png',
-                    showThirdwebBranding: false,
-                  }}
-                  locale="ko_KR"
-                />
+                {!address && (
+                  <ConnectButton
+                    client={client}
+                    wallets={wallets}
+                    chain={activeChain}
+                    theme="light"
+                    connectButton={{
+                      style: {
+                        background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+                        color: '#f8fafc',
+                        padding: '12px 16px',
+                        borderRadius: '14px',
+                        fontSize: '16px',
+                        height: '52px',
+                        width: '100%',
+                        boxShadow: '0 18px 45px -25px rgba(15,23,42,0.7)',
+                      },
+                      label: '웹3 로그인',
+                    }}
+                    connectModal={{
+                      size: 'wide',
+                      titleIcon: 'https://crypto-ex-vienna.vercel.app/logo.png',
+                      showThirdwebBranding: false,
+                    }}
+                    locale="ko_KR"
+                  />
+                )}
 
                 {address && (
                   <button

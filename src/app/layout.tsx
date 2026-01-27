@@ -404,7 +404,9 @@ export default function RootLayout({
               <QueryClientProvider client={queryClient}>
                 {children}
               </QueryClientProvider>
+              
               <BuyerSupportChatWidgetGlobal />
+              
               <SellerSendbirdWidgetGlobal />
             </div>
 

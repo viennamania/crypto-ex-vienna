@@ -23,6 +23,8 @@ const BuyerSupportChatWidgetGlobal = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [buyerNickname, setBuyerNickname] = useState('');
   const [buyerAvatar, setBuyerAvatar] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCheckingRole, setIsCheckingRole] = useState(false);
   const connectingRef = useRef(false);
 
   useEffect(() => {
@@ -36,6 +38,45 @@ const BuyerSupportChatWidgetGlobal = () => {
       setBuyerAvatar('');
     }
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!address) {
+      setIsAdmin(false);
+      setIsCheckingRole(false);
+      return;
+    }
+
+    let active = true;
+
+    const fetchUserRole = async () => {
+      setIsCheckingRole(true);
+      try {
+        const response = await fetch('/api/user/getUser', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storecode: USER_STORECODE, walletAddress: address }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (active) {
+          setIsAdmin(data?.result?.role === 'admin');
+        }
+      } catch {
+        if (active) {
+          setIsAdmin(false);
+        }
+      } finally {
+        if (active) {
+          setIsCheckingRole(false);
+        }
+      }
+    };
+
+    fetchUserRole();
+
+    return () => {
+      active = false;
+    };
+  }, [address]);
 
   useEffect(() => {
     let active = true;
@@ -193,7 +234,7 @@ const BuyerSupportChatWidgetGlobal = () => {
     };
   }, [address, buyerAvatar, buyerNickname, channelUrl, isLoggedIn, isOpen, sessionToken]);
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn || isAdmin || isCheckingRole) {
     return null;
   }
 
