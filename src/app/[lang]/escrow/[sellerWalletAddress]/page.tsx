@@ -10560,7 +10560,12 @@ const AutoBuyerReplyListener = ({
         if (!channel || channel.url !== channelUrl) {
           return;
         }
-        if (!message || message?.sender?.userId !== sellerWalletAddress) {
+        if (!message) {
+          return;
+        }
+        const senderId =
+          'sender' in message ? (message as { sender?: { userId?: string } })?.sender?.userId : undefined;
+        if (senderId !== sellerWalletAddress) {
           return;
         }
         if (sentRef.current.has(channelUrl) || pendingRef.current.has(channelUrl)) {
