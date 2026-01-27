@@ -46,9 +46,11 @@ export default function Web3LoginPage() {
   const [editedNickname, setEditedNickname] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [autoAvatarLoading, setAutoAvatarLoading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarErrorLog, setAvatarErrorLog] = useState('');
+  const [autoAvatarUrlLog, setAutoAvatarUrlLog] = useState('');
   const MAX_AVATAR_MB = 5;
   const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   const [loadingUser, setLoadingUser] = useState(false);
@@ -98,15 +100,50 @@ export default function Web3LoginPage() {
           return;
         }
         if (data.result) {
-          setNickname(data.result.nickname || '');
-          setEditedNickname(data.result.nickname || '');
-          setAvatarUrl(data.result.avatar || '');
+          const nextNickname = data.result.nickname || '';
+          const nextAvatar = data.result.avatar || '';
+          setNickname(nextNickname);
+          setEditedNickname(nextNickname);
+          setAvatarUrl(nextAvatar);
+          setAvatarPreview(nextAvatar || null);
           setHasUser(true);
+          if (!nextAvatar) {
+            setAutoAvatarLoading(true);
+            try {
+              const ensureResponse = await fetch('/api/user/ensureAvatar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  storecode,
+                  walletAddress: address,
+                }),
+              });
+              const ensureData = await ensureResponse.json().catch(() => ({}));
+              if (active && ensureResponse.ok && ensureData?.avatar) {
+                setAvatarUrl(ensureData.avatar);
+                setAvatarPreview(ensureData.avatar);
+                setAutoAvatarUrlLog(ensureData.avatar);
+                if (nextNickname) {
+                  await updateSendbirdUser(nextNickname, ensureData.avatar);
+                }
+              }
+            } catch (error) {
+              console.error('Auto avatar generation failed', error);
+            } finally {
+              if (active) {
+                setAutoAvatarLoading(false);
+              }
+            }
+          } else {
+            setAutoAvatarLoading(false);
+          }
         } else {
           setNickname('');
           setEditedNickname('');
           setAvatarUrl('');
+          setAvatarPreview(null);
           setHasUser(false);
+          setAutoAvatarLoading(false);
         }
         setNicknameError('');
       } catch (error) {
@@ -114,8 +151,10 @@ export default function Web3LoginPage() {
           setNickname('');
           setEditedNickname('');
           setAvatarUrl('');
+          setAvatarPreview(null);
           setHasUser(false);
           setNicknameError('');
+          setAutoAvatarLoading(false);
         }
       } finally {
         if (active) {
@@ -175,10 +214,15 @@ export default function Web3LoginPage() {
 
       if (data.result) {
         const nextNickname = data.result.nickname || trimmed;
+        const nextAvatar = data.result.avatar || avatarUrl;
         setNickname(nextNickname);
         setEditedNickname(nextNickname);
         setHasUser(true);
-        await updateSendbirdUser(nextNickname, avatarUrl);
+        if (nextAvatar) {
+          setAvatarUrl(nextAvatar);
+          setAvatarPreview(nextAvatar);
+        }
+        await updateSendbirdUser(nextNickname, nextAvatar || avatarUrl);
         toast.success('채팅 닉네임도 변경됨');
       } else {
         toast.error('닉네임 저장에 실패했습니다.');
@@ -352,6 +396,43 @@ export default function Web3LoginPage() {
       if (localPreviewUrl) {
         URL.revokeObjectURL(localPreviewUrl);
       }
+    }
+  };
+
+  const handleAutoAvatarGenerate = async () => {
+    if (!address || avatarUploading || autoAvatarLoading) {
+      return;
+    }
+    setAvatarErrorLog('');
+    setAutoAvatarLoading(true);
+    try {
+      const response = await fetch('/api/user/ensureAvatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode,
+          walletAddress: address,
+          force: true,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.avatar) {
+        throw new Error(data?.error || '자동 생성에 실패했습니다.');
+      }
+      setAvatarUrl(data.avatar);
+      setAvatarPreview(data.avatar);
+      setAutoAvatarUrlLog(data.avatar);
+      if (nickname) {
+        await updateSendbirdUser(nickname, data.avatar);
+      }
+      toast.success('자동 생성 아바타로 변경되었습니다.');
+    } catch (error) {
+      console.error('Auto avatar generation failed', error);
+      toast.error('자동 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      setAvatarErrorLog(message);
+    } finally {
+      setAutoAvatarLoading(false);
     }
   };
 
@@ -599,12 +680,18 @@ export default function Web3LoginPage() {
                     <div className="flex items-center gap-3">
                       <div className="relative h-12 w-12 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
                         <Image
+                          key={avatarPreview || avatarUrl || '/profile-default.png'}
                           src={avatarPreview || avatarUrl || '/profile-default.png'}
                           alt="Avatar"
                           fill
                           sizes="48px"
                           className="object-cover"
                         />
+                        {(autoAvatarLoading || avatarUploading) && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/70">
+                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-col">
                         <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
@@ -613,6 +700,11 @@ export default function Web3LoginPage() {
                         <span className="text-sm font-semibold text-slate-700">
                           프로필 이미지
                         </span>
+                        {autoAvatarLoading && (
+                          <span className="mt-1 text-[11px] font-semibold text-amber-600">
+                            자동 생성 중...
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -631,15 +723,27 @@ export default function Web3LoginPage() {
                       />
                       <button
                         type="button"
-                        disabled={!address || avatarUploading}
+                        disabled={!address || loadingUser || avatarUploading || autoAvatarLoading}
+                        onClick={handleAutoAvatarGenerate}
+                        className={`rounded-full border px-4 py-2 text-xs font-semibold shadow-sm transition ${
+                          !address || loadingUser || avatarUploading || autoAvatarLoading
+                            ? 'border-slate-200 bg-slate-200 text-slate-400'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {loadingUser ? '불러오는 중...' : autoAvatarLoading ? '생성 중...' : '자동 생성'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!address || loadingUser || avatarUploading || autoAvatarLoading}
                         onClick={() => avatarInputRef.current?.click()}
                         className={`rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition ${
-                          !address || avatarUploading
+                          !address || loadingUser || avatarUploading || autoAvatarLoading
                             ? 'bg-slate-200 text-slate-400'
                             : 'bg-slate-900 text-white hover:bg-slate-800'
                         }`}
                       >
-                        {avatarUploading ? '업로드 중...' : '이미지 변경'}
+                        {loadingUser ? '불러오는 중...' : avatarUploading ? '업로드 중...' : '이미지 업로드'}
                       </button>
                     </div>
                   </div>
@@ -663,6 +767,28 @@ export default function Web3LoginPage() {
                         </button>
                       </div>
                       <p className="mt-1 whitespace-pre-wrap">{avatarErrorLog}</p>
+                    </div>
+                  )}
+                  {autoAvatarUrlLog && (
+                    <div className="mt-3 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2 text-[11px] font-semibold text-slate-600">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-semibold text-slate-600">자동 생성 URL</span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(autoAvatarUrlLog);
+                              toast.success('URL이 복사되었습니다.');
+                            } catch (error) {
+                              toast.error('URL 복사에 실패했습니다.');
+                            }
+                          }}
+                          className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-600 shadow-sm transition hover:border-slate-300"
+                        >
+                          복사하기
+                        </button>
+                      </div>
+                      <p className="mt-1 break-all">{autoAvatarUrlLog}</p>
                     </div>
                   )}
                 </div>

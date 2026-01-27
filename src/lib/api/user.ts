@@ -384,6 +384,7 @@ export async function insertOneVerified(data: any) {
       email: data.email,
       nickname: data.nickname,
       mobile: data.mobile,
+      avatar: data.avatar || '',
 
       storecode: data.storecode,
       store: store,
@@ -407,6 +408,7 @@ export async function insertOneVerified(data: any) {
       storecode: data.storecode,
       walletAddress: data.walletAddress,
       mobile: data.mobile,
+      avatar: data.avatar || '',
     };
   } else {
     return null;
