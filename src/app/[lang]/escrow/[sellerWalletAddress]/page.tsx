@@ -4355,12 +4355,8 @@ const fetchBuyOrders = async () => {
     const priceSettingMethod = ownerSeller?.seller?.priceSettingMethod;
     const market = ownerSeller?.seller?.market;
     let price = ownerSeller?.seller?.price;
-    if (!price && priceSettingMethod === 'market') {
-      if (market === 'bithumb' && bithumbUsdtToKrwRate > 0) {
-        price = bithumbUsdtToKrwRate;
-      } else if (upbitUsdtToKrwRate > 0) {
-        price = upbitUsdtToKrwRate;
-      }
+    if (!price && ownerSeller?.seller?.usdtToKrwRate) {
+      price = ownerSeller.seller.usdtToKrwRate;
     }
     return {
       priceSettingMethod,
@@ -4369,7 +4365,7 @@ const fetchBuyOrders = async () => {
       escrowBalance: ownerSeller?.currentUsdtBalance,
       promotionText: ownerSeller?.seller?.promotionText || ownerSeller?.promotionText || '',
     };
-  }, [ownerWalletAddress, sellersBalance, upbitUsdtToKrwRate, bithumbUsdtToKrwRate]);
+  }, [ownerWalletAddress, sellersBalance]);
 
 
 
