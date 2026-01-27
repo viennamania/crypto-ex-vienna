@@ -10530,7 +10530,8 @@ const AutoBuyerReplyListener = ({
   context?: BuyerAutoReplyContext | null;
   enabled: boolean;
 }) => {
-  const { sdk } = useSendbird();
+  const { state } = useSendbird();
+  const sdk = state?.stores?.sdkStore?.sdk;
   const sentRef = useRef<Set<string>>(new Set());
   const pendingRef = useRef<Set<string>>(new Set());
 
