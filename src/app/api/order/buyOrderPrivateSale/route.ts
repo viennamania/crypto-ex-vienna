@@ -51,6 +51,8 @@ export async function POST(request: NextRequest) {
     };
 
 
+    let createdBuyOrder = false;
+
     if (payactionKeys?.payactionApiKey && payactionKeys?.payactionShopId) {
 
 
@@ -78,7 +80,7 @@ export async function POST(request: NextRequest) {
         */
 
         // getSellerBySellerWalletAddress
-        const seller = await getSellerBySellerWalletAddress(sellerWalletAddress);
+        let seller = await getSellerBySellerWalletAddress(sellerWalletAddress);
 
         if (!seller) {
             console.error("Seller not found for wallet address:", sellerWalletAddress);
@@ -88,7 +90,36 @@ export async function POST(request: NextRequest) {
             }, { status: 404 });
         }
 
-        const orderId = seller.seller.buyOrder._id;
+        if (!seller?.seller?.buyOrder?._id) {
+            const created = await acceptBuyOrderPrivateSale({
+                buyerWalletAddress,
+                sellerWalletAddress,
+                usdtAmount,
+            });
+            if (!created) {
+                return NextResponse.json(
+                    { error: "Buy order creation failed" },
+                    { status: 400 },
+                );
+            }
+            createdBuyOrder = true;
+            seller = await getSellerBySellerWalletAddress(sellerWalletAddress);
+        }
+
+        const orderIdRaw = seller?.seller?.buyOrder?._id;
+        if (!orderIdRaw) {
+            return NextResponse.json(
+                { error: "Buy order not found on seller" },
+                { status: 404 },
+            );
+        }
+        const orderId = typeof orderIdRaw === 'string' ? orderIdRaw : orderIdRaw?.toString?.();
+        if (!orderId) {
+            return NextResponse.json(
+                { error: "Invalid buy order id" },
+                { status: 400 },
+            );
+        }
 
 
         // getOneBuyOrderByOrderId
@@ -178,11 +209,13 @@ export async function POST(request: NextRequest) {
 
 
 
-    const result = await acceptBuyOrderPrivateSale({
-        buyerWalletAddress,
-        sellerWalletAddress,
-        usdtAmount,
-    });
+    const result = createdBuyOrder
+        ? true
+        : await acceptBuyOrderPrivateSale({
+            buyerWalletAddress,
+            sellerWalletAddress,
+            usdtAmount,
+        });
 
     return NextResponse.json({ result });
 
