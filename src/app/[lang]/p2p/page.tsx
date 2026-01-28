@@ -352,7 +352,7 @@ export default function OrangeXPage() {
         ? '판매자 정보 확인 중'
         : sellerEscrowWalletAddress
         ? '판매하기'
-        : '판매자 설정하기';
+        : '판매하기';
     const needsSellerSetup = Boolean(hasWallet && !sellerEscrowLoading && !sellerEscrowWalletAddress);
     const sellerCtaTone = !hasWallet
         ? 'border-orange-200/90 bg-[linear-gradient(135deg,rgba(255,247,237,0.98),rgba(255,237,213,0.98))] text-orange-800 ring-1 ring-orange-200/70 shadow-[0_18px_40px_-24px_rgba(249,115,22,0.65)]'
@@ -1634,7 +1634,7 @@ export default function OrangeXPage() {
                                                 href={sellerSetupHref}
                                                 className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[color:var(--accent)] px-8 py-4 text-base font-semibold text-white shadow-[0_18px_45px_-22px_rgba(249,115,22,0.9)] transition hover:brightness-110 sm:w-auto sm:min-w-[240px]"
                                             >
-                                                판매자 설정하기
+                                                판매하기
                                             </Link>
                                         ) : (
                                             <span
@@ -2966,7 +2966,7 @@ export default function OrangeXPage() {
                                         href={sellerSetupHref}
                                         className="inline-flex w-full items-center justify-center whitespace-nowrap rounded-full bg-[color:var(--accent)] px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_40px_-24px_rgba(249,115,22,0.9)] transition hover:brightness-110 sm:w-auto"
                                     >
-                                        판매자 설정하기
+                                        판매하기
                                     </Link>
                                 ) : (
                                     <span
