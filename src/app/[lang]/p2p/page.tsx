@@ -332,7 +332,7 @@ export default function OrangeXPage() {
         process.env.NODE_ENV === 'development';
     const activeAccount = useActiveAccount();
     const walletAddress = activeAccount?.address ?? '';
-    const { smartAccountEnabled, wallet } = useClientWallets();
+    const { smartAccountEnabled, wallet, chain } = useClientWallets();
     const hasWallet = Boolean(walletAddress);
     const buyPageHref = `/${lang}/p2p/buy`;
     const [sellerEscrowWalletAddress, setSellerEscrowWalletAddress] = useState<string | null>(null);
@@ -357,6 +357,38 @@ export default function OrangeXPage() {
     const sellerCtaTone = !hasWallet
         ? 'border-orange-200/90 bg-[linear-gradient(135deg,rgba(255,247,237,0.98),rgba(255,237,213,0.98))] text-orange-800 ring-1 ring-orange-200/70 shadow-[0_18px_40px_-24px_rgba(249,115,22,0.65)]'
         : 'border-slate-200/80 bg-white/80 text-slate-600 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.2)]';
+    const chainBadgeMap: Record<string, { label: string; icon: string; tone: string; ring: string }> = {
+        polygon: {
+            label: '폴리곤',
+            icon: '/logo-chain-polygon.png',
+            tone: 'text-purple-700',
+            ring: 'border-purple-200/80 bg-white/90',
+        },
+        ethereum: {
+            label: '이더리움',
+            icon: '/logo-chain-ethereum.png',
+            tone: 'text-indigo-700',
+            ring: 'border-indigo-200/80 bg-white/90',
+        },
+        arbitrum: {
+            label: '아비트럼',
+            icon: '/icon-blockchain.png',
+            tone: 'text-sky-700',
+            ring: 'border-sky-200/80 bg-white/90',
+        },
+        bsc: {
+            label: 'BSC',
+            icon: '/icon-blockchain.png',
+            tone: 'text-amber-700',
+            ring: 'border-amber-200/80 bg-white/90',
+        },
+    };
+    const chainBadge = chainBadgeMap[chain] ?? {
+        label: '지원 체인',
+        icon: '/icon-blockchain.png',
+        tone: 'text-slate-700',
+        ring: 'border-slate-200/80 bg-white/90',
+    };
     const isSupportEligible = Boolean(walletAddress);
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
     const [animatedStats, setAnimatedStats] = useState(() => STAT_ITEMS.map(() => 0));
@@ -1573,8 +1605,29 @@ export default function OrangeXPage() {
                     <div className="absolute -bottom-24 left-[-10%] h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,var(--sea)_0%,transparent_70%)] opacity-25" />
                     <div className="relative grid gap-8 p-8 md:p-12">
                         <div className="space-y-6">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-rose-200/70 bg-[linear-gradient(135deg,#fff1f2,#ffedd5)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-rose-700">
-                                USDT · P2P · Escrow
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <span className="inline-flex items-center gap-2 rounded-full border border-rose-200/70 bg-[linear-gradient(135deg,#fff1f2,#ffedd5)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-rose-700">
+                                    USDT · P2P · Escrow
+                                </span>
+                                <div className={`inline-flex items-center gap-3 rounded-full border px-3 py-2 ${chainBadge.ring}`}>
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm">
+                                        <Image
+                                            src={chainBadge.icon}
+                                            alt={`${chainBadge.label} 체인`}
+                                            width={20}
+                                            height={20}
+                                            className="h-5 w-5 object-contain"
+                                        />
+                                    </span>
+                                    <div className="flex flex-col leading-tight">
+                                        <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-slate-500">
+                                            Network
+                                        </span>
+                                        <span className={`text-sm font-semibold ${chainBadge.tone}`}>
+                                            {chainBadge.label}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                             <div className="flex items-center gap-4">
                                 <Image
