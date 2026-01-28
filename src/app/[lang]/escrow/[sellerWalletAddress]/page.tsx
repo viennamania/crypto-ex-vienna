@@ -306,6 +306,28 @@ const TypingText = ({
   );
 };
 
+const formatKrwValue = (value: number | string | null | undefined) => {
+  if (value == null || value === '') {
+    return '0';
+  }
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) {
+    return '0';
+  }
+  return numeric.toLocaleString('ko-KR', { maximumFractionDigits: 0 });
+};
+
+const maskBuyerId = (value?: string | null) => {
+  const name = (value ?? '').trim();
+  if (!name) {
+    return '구매자';
+  }
+  if (name.length < 2) {
+    return name;
+  }
+  return `${name[0]}${'*'.repeat(name.length - 1)}`;
+};
+
 
 
 export default function Index({ params }: any) {
@@ -4195,18 +4217,8 @@ const fetchBuyOrders = async () => {
   // get upbit usdt to krw rate every 10 seconds
 
   const [upbitUsdtToKrwRate, setUpbitUsdtToKrwRate] = useState(0);
-  const [upbitUsdtToKrwRateChange, setUpbitUsdtToKrwRateChange] = useState("");
-  const [upbitUsdtToKrwRateChangePrice, setUpbitUsdtToKrwRateChangePrice] = useState(0);
-  const [upbitUsdtToKrwRateChangeRate, setUpbitUsdtToKrwRateChangeRate] = useState(0);
-
-
-  const [upbitUsdtToKrwRateTimestamp, setUpbitUsdtToKrwRateTimestamp] = useState(0);
-  const [TradeDateKst, setTradeDateKst] = useState<any>(null);
-  const [TradeTimeKst, setTradeTimeKst] = useState<string>('');
-  const [loadingUpbitRate, setLoadingUpbitRate] = useState(false);
   useEffect(() => {
     const fetchUpbitRate = async () => {
-      setLoadingUpbitRate(true);
       const response = await fetch('/api/market/upbit', {
         method: 'POST',
         headers: {
@@ -4228,18 +4240,8 @@ const fetchBuyOrders = async () => {
       // data.result
       if (data?.result) {
         setUpbitUsdtToKrwRate(data.result.trade_price);
-        setUpbitUsdtToKrwRateChange(data.result.change);
-        setUpbitUsdtToKrwRateChangePrice(data.result.change_price);
-        setUpbitUsdtToKrwRateChangeRate(data.result.change_rate);
-
-
-        setUpbitUsdtToKrwRateTimestamp(data.result.trade_timestamp);
-        setTradeDateKst(data.result.trade_date_kst);
-        setTradeTimeKst(data.result.trade_time_kst);
       }
 
-
-      setLoadingUpbitRate(false);
 
     };
     fetchUpbitRate();
@@ -4248,101 +4250,6 @@ const fetchBuyOrders = async () => {
     }, 5000);
     return () => clearInterval(interval);
   }, []);
-
-
-  // animate upbitUsdtToKrwRate
-  const [animatedUpbitUsdtToKrwRate, setAnimatedUpbitUsdtToKrwRate] = useState(0);
-  useEffect(() => {
-    const animationDuration = 1000; // 1 second
-    const frameRate = 30; // 30 frames per second
-    const totalFrames = Math.round((animationDuration / 1000) * frameRate);
-    const initialRate = animatedUpbitUsdtToKrwRate;
-    const targetRate = upbitUsdtToKrwRate;
-    let frame = 0;
-    const interval = setInterval(() => {
-      frame++;
-      const progress = Math.min(frame / totalFrames, 1);
-      const newRate = initialRate + (targetRate - initialRate) * progress;
-      setAnimatedUpbitUsdtToKrwRate(newRate);
-      if (frame >= totalFrames) {
-        clearInterval(interval);
-      }
-    }, 1000 / frameRate);
-    return () => clearInterval(interval);
-  }, [upbitUsdtToKrwRate]);
-
-
-
-
-
-
-
-
-  // api/market/bithumb
-  // get bithumb usdt to krw rate every 10 seconds
-  const [bithumbUsdtToKrwRate, setBithumbUsdtToKrwRate] = useState(0);
-  const [bithumbUsdtToKrwRateChange, setBithumbUsdtToKrwRateChange] = useState("");
-  const [bithumbUsdtToKrwRateChangePrice, setBithumbUsdtToKrwRateChangePrice] = useState(0);
-  const [bithumbUsdtToKrwRateChangeRate, setBithumbUsdtToKrwRateChangeRate] = useState(0);
-
-
-  const [bithumbUsdtToKrwRateTimestamp, setBithumbUsdtToKrwRateTimestamp] = useState(0);
-  //const [TradeDateKst, setTradeDateKst] = useState<any>(null);
-  //const [TradeTimeKst, setTradeTimeKst] = useState<string>('');
-  const [loadingBithumbRate, setLoadingBithumbRate] = useState(false);
-
-  useEffect(() => {
-    const fetchBithumbRate = async () => {
-      setLoadingBithumbRate(true);
-      const response = await fetch('/api/market/bithumb', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await response.json();
-      //console.log('bithumb usdt to krw rate data', data);
-      // data.result
-      if (data?.result) {
-        setBithumbUsdtToKrwRate(data.result.trade_price);
-        setBithumbUsdtToKrwRateChange(data.result.change);
-        setBithumbUsdtToKrwRateChangePrice(data.result.change_price);
-        setBithumbUsdtToKrwRateChangeRate(data.result.change_rate);
-        setBithumbUsdtToKrwRateTimestamp(data.result.trade_timestamp);
-        
-        //setTradeDateKst(data.result.trade_date_kst);
-        //setTradeTimeKst(data.result.trade_time_kst);
-      }
-      setLoadingBithumbRate(false);
-    };
-    fetchBithumbRate();
-    const interval = setInterval(() => {
-      fetchBithumbRate();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-
-  // animate bithumbUsdtToKrwRate
-  const [animatedBithumbUsdtToKrwRate, setAnimatedBithumbUsdtToKrwRate] = useState(0);
-  useEffect(() => {
-    const animationDuration = 1000; // 1 second
-    const frameRate = 30; // 30 frames per second
-    const totalFrames = Math.round((animationDuration / 1000) * frameRate);
-    const initialRate = animatedBithumbUsdtToKrwRate;
-    const targetRate = bithumbUsdtToKrwRate;
-    let frame = 0;
-    const interval = setInterval(() => {
-      frame++;
-      const progress = Math.min(frame / totalFrames, 1);
-      const newRate = initialRate + (targetRate - initialRate) * progress;
-      setAnimatedBithumbUsdtToKrwRate(newRate);
-      if (frame >= totalFrames) {
-        clearInterval(interval);
-      }
-    }, 1000 / frameRate);
-    return () => clearInterval(interval);
-  }, [bithumbUsdtToKrwRate]);
 
   const sellerPromotionContext = useMemo(() => {
     if (!ownerWalletAddress) {
@@ -5380,197 +5287,6 @@ const fetchBuyOrders = async () => {
 
         </div>
 
-        <div className="w-full rounded-2xl border border-slate-800/70 bg-slate-950/90 p-4 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.9)] backdrop-blur">
-          {sellersBalance[0]?.seller?.priceSettingMethod === 'market' && (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/70 pb-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                실시간 환율 정보
-                <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
-                  LIVE
-                </span>
-              </div>
-              <span className="text-xs text-slate-400">USDT/KRW</span>
-            </div>
-          )}
-
-          <div className="mt-3 space-y-2">
-            {sellersBalance[0]?.seller?.priceSettingMethod === 'market'
-            && sellersBalance[0]?.seller?.market === 'upbit' && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800/70 bg-slate-900/60 px-3 py-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-                  <Image
-                    src="/icon-market-upbit.png"
-                    alt="Upbit"
-                    width={50}
-                    height={50}
-                    className="h-7 w-7 rounded-lg border border-slate-800/80 bg-slate-900/80 object-contain p-1"
-                  />
-                  <span>업비트</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-lg font-semibold text-white tabular-nums sm:text-xl"
-                    style={{ fontFamily: 'monospace' }}>
-                    {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  </span>
-                  <div className="flex items-center gap-2 text-xs font-semibold">
-                    <span
-                      className={`${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-emerald-300' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-rose-300' :
-                        'text-slate-300'
-                      }`}
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {
-                        upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
-                        upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
-                        `- 0`
-                      }
-                    </span>
-                    <span
-                      className={`${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-emerald-300' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-rose-300' :
-                        'text-slate-300'
-                      }`}
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {
-                        upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        `(0.0000%)`
-                      }
-                    </span>
-                  </div>
-                  <span className="text-xs text-slate-400"
-                    style={{ fontFamily: 'monospace' }}>
-                    {
-                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
-                    }
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {sellersBalance[0]?.seller?.priceSettingMethod === 'market'
-            && sellersBalance[0]?.seller?.market === 'bithumb' && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800/70 bg-slate-900/60 px-3 py-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-                  <Image
-                    src="/icon-market-bithumb.png"
-                    alt="Bithumb"
-                    width={50}
-                    height={50}
-                    className="h-7 w-7 rounded-lg border border-slate-800/80 bg-slate-900/80 object-contain p-1"
-                  />
-                  <span>빗썸</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-lg font-semibold text-white tabular-nums sm:text-xl"
-                    style={{ fontFamily: 'monospace' }}>
-                    {animatedBithumbUsdtToKrwRate && animatedBithumbUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  </span>
-                  <div className="flex items-center gap-2 text-xs font-semibold">
-                    <span
-                      className={`${
-                        bithumbUsdtToKrwRateChange === 'RISE' ? 'text-emerald-300' :
-                        bithumbUsdtToKrwRateChange === 'FALL' ? 'text-rose-300' :
-                        'text-slate-300'
-                      }`}
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {
-                        bithumbUsdtToKrwRateChange === 'RISE' ? `▲ ${bithumbUsdtToKrwRateChangePrice}` :
-                        bithumbUsdtToKrwRateChange === 'FALL' ? `▼ ${bithumbUsdtToKrwRateChangePrice}` :
-                        `- 0`
-                      }
-                    </span>
-                    <span
-                      className={`${
-                        bithumbUsdtToKrwRateChange === 'RISE' ? 'text-emerald-300' :
-                        bithumbUsdtToKrwRateChange === 'FALL' ? 'text-rose-300' :
-                        'text-slate-300'
-                      }`}
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {
-                        bithumbUsdtToKrwRateChange === 'RISE' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        bithumbUsdtToKrwRateChange === 'FALL' ? `(${(bithumbUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        `(0.0000%)`
-                      }
-                    </span>
-                  </div>
-                  <span className="text-xs text-slate-400"
-                    style={{ fontFamily: 'monospace' }}>
-                    {
-                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
-                    }
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {sellersBalance[0]?.seller?.priceSettingMethod === 'market'
-            && sellersBalance[0]?.seller?.market === 'korbit' && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800/70 bg-slate-900/60 px-3 py-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-                  <Image
-                    src="/icon-market-korbit.png"
-                    alt="Korbit"
-                    width={50}
-                    height={50}
-                    className="h-7 w-7 rounded-lg border border-slate-800/80 bg-slate-900/80 object-contain p-1"
-                  />
-                  <span>코빗</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-lg font-semibold text-white tabular-nums sm:text-xl"
-                    style={{ fontFamily: 'monospace' }}>
-                    {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  </span>
-                  <div className="flex items-center gap-2 text-xs font-semibold">
-                    <span
-                      className={`${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-emerald-300' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-rose-300' :
-                        'text-slate-300'
-                      }`}
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {
-                        upbitUsdtToKrwRateChange === 'RISE' ? `▲ ${upbitUsdtToKrwRateChangePrice}` :
-                        upbitUsdtToKrwRateChange === 'FALL' ? `▼ ${upbitUsdtToKrwRateChangePrice}` :
-                        `- 0`
-                      }
-                    </span>
-                    <span
-                      className={`${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-emerald-300' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-rose-300' :
-                        'text-slate-300'
-                      }`}
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {
-                        upbitUsdtToKrwRateChange === 'RISE' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        upbitUsdtToKrwRateChange === 'FALL' ? `(${(upbitUsdtToKrwRateChangeRate * 100).toFixed(4)}%)` :
-                        `(0.0000%)`
-                      }
-                    </span>
-                  </div>
-                  <span className="text-xs text-slate-400"
-                    style={{ fontFamily: 'monospace' }}>
-                    {
-                      TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''
-                    }
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
         {activeSeller?.seller && saleRateValue != null && (
           <div className="mt-4 w-full rounded-2xl border border-amber-400/70 bg-gradient-to-r from-amber-500/90 via-amber-400/80 to-orange-500/90 p-[1px] shadow-[0_22px_60px_-25px_rgba(245,158,11,0.85)]">
             <div className="rounded-2xl bg-slate-950/95 px-4 py-4">
@@ -6036,7 +5752,7 @@ const fetchBuyOrders = async () => {
                       style={{ fontFamily: 'monospace' }}>
                       {
                         //buyOrderStats.totalKrwAmount?.toLocaleString()
-                        animatedTotalKrwAmount.toLocaleString()
+                        formatKrwValue(animatedTotalKrwAmount)
                       }
                     </span>
                   </div>
@@ -6082,7 +5798,7 @@ const fetchBuyOrders = async () => {
                     <td className="border border-slate-200 px-2 py-1 text-center"
                       style={{ fontFamily: 'monospace' }}
                     >
-                      {order.krwAmount.toLocaleString()}
+                      {formatKrwValue(order.krwAmount)}
                     </td>
                     <td className="border border-slate-200 px-2 py-1 text-center">
                       {new Date(order.createdAt).toLocaleString()}
@@ -6164,7 +5880,7 @@ const fetchBuyOrders = async () => {
                               className="w-6 h-6 rounded-lg object-cover"
                             />
                             <span className="text-sm font-semibold">
-                              {order.nickname}
+                              {maskBuyerId(order.nickname)}
                             </span>
                             {!order.isWeb3Wallet && (
                               <Image
@@ -6302,7 +6018,7 @@ const fetchBuyOrders = async () => {
                           </div>
                           <span className="text-sm text-amber-300 font-semibold"
                             style={{ fontFamily: 'monospace' }}>
-                            {order?.krwAmount.toLocaleString()}
+                            {formatKrwValue(order?.krwAmount)}
                           </span>
                           {/* rate */}
                           <span className="text-xs text-slate-700 font-semibold"
@@ -6759,26 +6475,6 @@ const fetchBuyOrders = async () => {
                           */}
 
 
-                          <div className="w-full flex flex-row items-center justify-between gap-2 pl-8">
-                            <div className="flex flex-row items-center justify-center gap-2">
-                              <div className="flex h-9 w-9 items-center justify-center rounded-full border border-blue-200/60 bg-blue-50 shadow-sm">
-                                <Image
-                                  src="/icon-escrow-wallet.webp"
-                                  alt="Escrow Wallet"
-                                  width={20}
-                                  height={20}
-                                  className="w-5 h-5"
-                                />
-                              </div>
-                              <span className="text-sm font-semibold text-slate-800">
-                                에스크로 잔고
-                              </span>
-                            </div>
-                            <span className="rounded-full border border-emerald-200/70 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700">
-                              USDT
-                            </span>
-                          </div>
-
                           <div className="w-full flex flex-col items-start justify-center gap-3">
 
                           <div className="w-full flex flex-col items-center justify-start gap-3">
@@ -7114,13 +6810,13 @@ const fetchBuyOrders = async () => {
                               {seller.walletAddress === address && (
                                 <span className="text-sm font-semibold">
                                   {'구매자가 ' +
-                                  seller.seller?.buyOrder.krwAmount.toLocaleString() + ' 원 입금을 진행중입니다.'}
+                                  formatKrwValue(seller.seller?.buyOrder.krwAmount) + ' 원 입금을 진행중입니다.'}
                                 </span>
                               )}
                               {seller.seller?.buyOrder?.buyer?.walletAddress === address && (
                                 <span className="text-sm font-semibold">
                                   {'판매자가 ' +
-                                  seller.seller?.buyOrder.krwAmount.toLocaleString() + ' 원 입금을 기다리고 있습니다.'}
+                                  formatKrwValue(seller.seller?.buyOrder.krwAmount) + ' 원 입금을 기다리고 있습니다.'}
                                 </span>
                               )}
 
@@ -7143,7 +6839,7 @@ const fetchBuyOrders = async () => {
                               border-t border-amber-200/70 pt-2
                               ">
                                 <span className="text-sm font-semibold text-slate-700">
-                                  구매자는 아래 계좌로 {seller.seller?.buyOrder.krwAmount.toLocaleString()} 원을 입금해주세요.
+                                  구매자는 아래 계좌로 {formatKrwValue(seller.seller?.buyOrder.krwAmount)} 원을 입금해주세요.
                                   <br />
                                   입금자명과 입금액이 일치해야 입금확인이 처리됩니다.
                                 </span>
@@ -7193,7 +6889,7 @@ const fetchBuyOrders = async () => {
                               {/* 입금자명과 입금액이 일치하는지 확인 후에 클릭 */}
                               <span className="text-xs text-slate-600 mb-1">
                                 입금자명이 {seller.seller?.buyOrder?.buyer?.depositName || '알수없음'} 으로
-                                , 입금액이 {seller.seller?.buyOrder.krwAmount.toLocaleString()} 원 으로 일치하는지 확인 후에 클릭하세요.
+                                , 입금액이 {formatKrwValue(seller.seller?.buyOrder.krwAmount)} 원 으로 일치하는지 확인 후에 클릭하세요.
                               </span>
 
 
@@ -7396,10 +7092,10 @@ const fetchBuyOrders = async () => {
                                 {Buy_Amount}(USDT): {seller.seller?.buyOrder?.usdtAmount}
                               </span>
                               <span className="text-sm text-slate-700">
-                                {Payment_Amount}(원): {seller.seller?.buyOrder?.krwAmount.toLocaleString()}
+                                {Payment_Amount}(원): {formatKrwValue(seller.seller?.buyOrder?.krwAmount)}
                               </span>
                               <span className="text-sm text-slate-700">
-                                {Rate}(원): {seller.seller?.buyOrder?.rate.toLocaleString()} 
+                                {Rate}(원): {formatKrwValue(seller.seller?.buyOrder?.rate)} 
                               </span>
 
 
@@ -7442,7 +7138,7 @@ const fetchBuyOrders = async () => {
                                 />
                                 <div className="flex flex-col items-start justify-center gap-0">
                                   <span className="text-sm font-semibold">
-                                    {seller.seller?.buyOrder.krwAmount.toLocaleString()} 원 입금확인중
+                                    {formatKrwValue(seller.seller?.buyOrder.krwAmount)} 원 입금확인중
                                   </span>
                                   {seller.walletAddress === address ? (
                                     <span className="text-sm">
@@ -7463,7 +7159,7 @@ const fetchBuyOrders = async () => {
                                 
                                   <span className="text-xs text-slate-700 mb-1">
                                     입금자명이 {seller.seller?.buyOrder?.buyer?.depositName || '알수없음'} 으로
-                                    , 입금액이 {seller.seller?.buyOrder.krwAmount.toLocaleString()} 원 으로 일치하는지 확인 후에 클릭하세요.
+                                    , 입금액이 {formatKrwValue(seller.seller?.buyOrder.krwAmount)} 원 으로 일치하는지 확인 후에 클릭하세요.
                                   </span>
 
 
@@ -7668,8 +7364,8 @@ const fetchBuyOrders = async () => {
                                 </span>
                                 <span className="text-lg font-semibold text-amber-600"
                                   style={{ fontFamily: 'monospace' }}>
-                                  {seller.seller?.totalPaymentConfirmedKrwAmount
-                                  && seller.seller?.totalPaymentConfirmedKrwAmount.toLocaleString()} 원
+                                  {seller.seller?.totalPaymentConfirmedKrwAmount != null
+                                  && formatKrwValue(seller.seller?.totalPaymentConfirmedKrwAmount)} 원
                                 </span>
                               </div>
                             </div>
@@ -7709,8 +7405,8 @@ const fetchBuyOrders = async () => {
                                 </span>
                                 <span className="text-lg font-semibold text-amber-600"
                                   style={{ fontFamily: 'monospace' }}>
-                                  {seller.seller?.totalDisputeResolvedKrwAmount
-                                  ? seller.seller?.totalDisputeResolvedKrwAmount.toLocaleString()
+                                  {seller.seller?.totalDisputeResolvedKrwAmount != null
+                                  ? formatKrwValue(seller.seller?.totalDisputeResolvedKrwAmount)
                                   : '0'
                                   } 원
                                 </span>
@@ -8537,7 +8233,7 @@ const fetchBuyOrders = async () => {
                       style={{ fontFamily: 'monospace' }}>
                       {
                         //buyOrderStats.totalKrwAmount?.toLocaleString()
-                        animatedTotalKrwAmount.toLocaleString()
+                        formatKrwValue(animatedTotalKrwAmount)
                       }
                     </span>
                   </div>
@@ -8598,7 +8294,7 @@ const fetchBuyOrders = async () => {
                     <div className="flex flex-row items-center justify-center gap-1">
                       <span className="text-xl font-semibold text-yellow-600"
                         style={{ fontFamily: 'monospace' }}>
-                        {buyOrderStats.totalSettlementAmountKRW?.toLocaleString()}
+                        {formatKrwValue(buyOrderStats.totalSettlementAmountKRW)}
                       </span>
                     </div>
                   </div>
@@ -8705,7 +8401,7 @@ const fetchBuyOrders = async () => {
               <div className="flex flex-col gap-2 items-center">
                 <div className="text-sm">총 청산금액(원)</div>
                 <div className="text-xl font-semibold text-slate-500">
-                  {tradeSummary.totalClearanceAmount?.toLocaleString()} 원
+                  {formatKrwValue(tradeSummary.totalClearanceAmount)} 원
                 </div>
               </div>
               <div className="flex flex-col gap-2 items-center">
@@ -8753,7 +8449,7 @@ const fetchBuyOrders = async () => {
                         : '-'}
                     </td>
                     <td className="px-3 py-2 text-black">
-                      {item?.nickname || item?.buyer?.nickname || '구매자'}
+                      {maskBuyerId(item?.nickname || item?.buyer?.nickname)}
                     </td>
                     <td className="px-3 py-2 text-right font-semibold text-black">
                       {typeof item?.usdtAmount === 'number'
@@ -8762,7 +8458,7 @@ const fetchBuyOrders = async () => {
                     </td>
                     <td className="px-3 py-2 text-right font-semibold text-black">
                       {typeof item?.krwAmount === 'number'
-                        ? item.krwAmount.toLocaleString()
+                        ? formatKrwValue(item.krwAmount)
                         : '-'}
                     </td>
                     <td className="px-3 py-2 text-black">
@@ -9171,11 +8867,7 @@ const fetchBuyOrders = async () => {
                               }}
                             />
                             <span className="text-lg text-slate-500 font-semibold">
-                              {
-                                item?.nickname?.length > 10 ?
-                                item?.nickname?.substring(0, 10) + '...' :
-                                item?.nickname
-                              }
+                              {maskBuyerId(item?.nickname)}
                             </span>
                           </div>
 
@@ -9246,8 +8938,8 @@ const fetchBuyOrders = async () => {
                           </span>
                           <span className="text-sm text-slate-500">
                             {
-                              item?.userStats?.totalPaymentConfirmedKrwAmount &&
-                              item?.userStats?.totalPaymentConfirmedKrwAmount.toLocaleString() + ' 원'
+                              item?.userStats?.totalPaymentConfirmedKrwAmount != null &&
+                              formatKrwValue(item?.userStats?.totalPaymentConfirmedKrwAmount) + ' 원'
                             }
                           </span>
 
@@ -9299,7 +8991,7 @@ const fetchBuyOrders = async () => {
                             }}
                           >
                             {
-                              item.krwAmount?.toLocaleString()
+                              formatKrwValue(item.krwAmount)
                             }
                           </span>
                         </div>
@@ -9800,7 +9492,7 @@ const fetchBuyOrders = async () => {
                             <span className="text-xl text-yellow-600 font-semibold"
                               style={{ fontFamily: 'monospace' }}>
                               {
-                                item.paymentAmount?.toLocaleString()
+                                formatKrwValue(item.paymentAmount)
                               }
                             </span>
                           </div>
@@ -10453,11 +10145,11 @@ const TradeDetail = (
         <div className="mt-4">
           <div className="flex justify-between text-slate-700">
             <span>Price</span>
-            <span>{price} KRW</span>
+            <span>{formatKrwValue(price)} KRW</span>
           </div>
           <div className="flex justify-between text-slate-700 mt-2">
             <span>Limit</span>
-            <span>40680.00 KRW - 99002.9 KRW</span>
+            <span>{formatKrwValue(40680)} KRW - {formatKrwValue(99002.9)} KRW</span>
           </div>
           <div className="flex justify-between text-slate-700 mt-2">
             <span>Available</span>
