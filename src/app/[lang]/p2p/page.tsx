@@ -24,7 +24,7 @@ const bodyFont = Manrope({
     variable: '--font-body',
 });
 
-const SENDBIRD_APP_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
+const SENDBIRD_APP_ID = process.env.SENDBIRD_APP_ID || '';
 const SUPPORT_ADMIN_ID = 'orangexManager';
 const SUPPORT_REQUEST_TIMEOUT_MS = 12000;
 
@@ -351,7 +351,7 @@ export default function OrangeXPage() {
         : sellerEscrowLoading
         ? '판매자 정보 확인 중'
         : sellerEscrowWalletAddress
-        ? '보호된 판매 시작하기'
+        ? '판매하기'
         : '판매자 설정하기';
     const needsSellerSetup = Boolean(hasWallet && !sellerEscrowLoading && !sellerEscrowWalletAddress);
     const sellerCtaTone = !hasWallet
@@ -1568,10 +1568,10 @@ export default function OrangeXPage() {
             {/* 메인 컨텐츠 */}
             <main className="container relative z-10 mx-auto max-w-5xl overflow-x-hidden px-4 pb-16 lg:px-8 lg:pb-12">
                 {/* 히어로 섹션 */}
-                <div className="hero-fade relative mt-10 mb-14 overflow-hidden rounded-[28px] border border-white/70 bg-white/70 shadow-[0_40px_120px_-60px_rgba(15,23,42,0.6)] backdrop-blur">
+                <div className="hero-fade relative mt-10 mb-10 overflow-hidden rounded-[28px] border border-white/70 bg-white/70 shadow-[0_40px_120px_-60px_rgba(15,23,42,0.6)] backdrop-blur">
                     <div className="absolute -right-16 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(circle_at_center,var(--accent)_0%,transparent_70%)] opacity-30" />
                     <div className="absolute -bottom-24 left-[-10%] h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,var(--sea)_0%,transparent_70%)] opacity-25" />
-                    <div className="relative grid gap-10 p-8 md:grid-cols-[1.1fr_0.9fr] md:p-12">
+                    <div className="relative grid gap-8 p-8 md:p-12">
                         <div className="space-y-6">
                             <div className="inline-flex items-center gap-2 rounded-full border border-rose-200/70 bg-[linear-gradient(135deg,#fff1f2,#ffedd5)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-rose-700">
                                 USDT · P2P · Escrow
@@ -1614,7 +1614,7 @@ export default function OrangeXPage() {
                                         <path d="M9 22a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" fill="currentColor"/>
                                         <path d="M18 22a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" fill="currentColor"/>
                                     </svg>
-                                    안전 구매 진행하기
+                                    구매하기
                                 </Link>
                                 {canStartSeller ? (
                                     <Link
@@ -1625,7 +1625,7 @@ export default function OrangeXPage() {
                                             <path d="M12 2l7 7-7 7-7-7 7-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                             <path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                         </svg>
-                                        보호된 판매 시작하기
+                                        판매하기
                                     </Link>
                                 ) : (
                                     <div className="flex w-full items-center justify-center sm:w-auto">
@@ -1651,7 +1651,7 @@ export default function OrangeXPage() {
                             </div>
 
                             <div className="grid gap-4 lg:grid-cols-2">
-                                <div className="group relative overflow-hidden rounded-[28px] border border-emerald-200/60 bg-[linear-gradient(145deg,rgba(255,255,255,0.96),rgba(236,253,245,0.85))] px-6 py-5 shadow-[0_24px_60px_-45px_rgba(15,23,42,0.45)] backdrop-blur transition hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-50px_rgba(15,23,42,0.5)]">
+                                <div className="group relative overflow-hidden rounded-[28px] border border-emerald-200/60 bg-[linear-gradient(145deg,rgba(255,255,255,0.96),rgba(236,253,245,0.85))] px-6 py-4 shadow-[0_24px_60px_-45px_rgba(15,23,42,0.45)] backdrop-blur transition hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-50px_rgba(15,23,42,0.5)]">
                                     <span className="pointer-events-none absolute left-0 top-0 h-full w-1.5 bg-emerald-400/70" />
                                     <div className="pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full bg-emerald-300/30 blur-3xl" />
                                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1677,15 +1677,8 @@ export default function OrangeXPage() {
                                             구매자 메뉴얼 보기
                                         </Link>
                                     </div>
-                                    <p className="mt-4 text-sm leading-relaxed text-slate-600">
-                                        구매자 메뉴얼에서 안전한 구매 흐름과 주의사항을 확인해 보세요.
-                                    </p>
-                                    <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-semibold text-emerald-700/80">
-                                        <span className="rounded-full border border-emerald-200/70 bg-emerald-50 px-3 py-1">안전 흐름</span>
-                                        <span className="rounded-full border border-emerald-200/70 bg-emerald-50 px-3 py-1">주의사항</span>
-                                    </div>
                                 </div>
-                                <div className="group relative overflow-hidden rounded-[28px] border border-orange-200/60 bg-[linear-gradient(145deg,rgba(255,255,255,0.96),rgba(255,237,213,0.85))] px-6 py-5 shadow-[0_24px_60px_-45px_rgba(15,23,42,0.45)] backdrop-blur transition hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-50px_rgba(15,23,42,0.5)]">
+                                <div className="group relative overflow-hidden rounded-[28px] border border-orange-200/60 bg-[linear-gradient(145deg,rgba(255,255,255,0.96),rgba(255,237,213,0.85))] px-6 py-4 shadow-[0_24px_60px_-45px_rgba(15,23,42,0.45)] backdrop-blur transition hover:-translate-y-0.5 hover:shadow-[0_30px_70px_-50px_rgba(15,23,42,0.5)]">
                                     <span className="pointer-events-none absolute left-0 top-0 h-full w-1.5 bg-orange-400/70" />
                                     <div className="pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full bg-orange-300/30 blur-3xl" />
                                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1710,13 +1703,6 @@ export default function OrangeXPage() {
                                         >
                                             판매자 메뉴얼 보기
                                         </Link>
-                                    </div>
-                                    <p className="mt-4 text-sm leading-relaxed text-slate-600">
-                                        판매자 메뉴얼에서 에스크로 운영과 입금 확인 절차를 확인해 보세요.
-                                    </p>
-                                    <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-semibold text-orange-700/80">
-                                        <span className="rounded-full border border-orange-200/70 bg-orange-50 px-3 py-1">에스크로 운영</span>
-                                        <span className="rounded-full border border-orange-200/70 bg-orange-50 px-3 py-1">입금 확인</span>
                                     </div>
                                 </div>
                             </div>
@@ -1761,33 +1747,27 @@ export default function OrangeXPage() {
                                             )}
                                         </div>
                                         <div className="flex flex-col gap-1.5">
-                                            <span className="text-base font-semibold text-slate-900 sm:text-lg">
-                                                {walletAddress ? '로그인 완료 상태입니다' : '지갑을 연결하고 보호된 결제를 시작하세요'}
-                                            </span>
-                                            <span className="text-xs text-slate-600">
-                                                {walletAddress ? (
-                                                    <span className="inline-flex flex-wrap items-center gap-1.5">
-                                                        <span className="rounded-full border border-slate-200/80 bg-white/90 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
-                                                            회원 아이디: {profileNickname || '미등록'}
-                                                        </span>
-                                                        <span className="rounded-full border border-slate-200/80 bg-white/90 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
-                                                            지갑: {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
-                                                        </span>
-                                                        {smartAccountEnabled && (
-                                                            <span className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                                                                스마트 어카운트
-                                                            </span>
-                                                        )}
-                                                    </span>
-                                                ) : (
-                                                    '금융권 수준 보안 · 비수탁 로그인 · 실시간 모니터링'
-                                                )}
-                                            </span>
-                                            <div className="flex flex-wrap gap-1.5 text-[10px] font-semibold text-slate-600">
-                                                <span className="rounded-full border border-slate-200/80 bg-white/90 px-2.5 py-0.5">서명 기반 인증</span>
-                                                <span className="rounded-full border border-slate-200/80 bg-white/90 px-2.5 py-0.5">실시간 보안 모니터링</span>
-                                                <span className="rounded-full border border-slate-200/80 bg-white/90 px-2.5 py-0.5">에스크로 보호</span>
-                                            </div>
+                                            {!walletAddress && (
+                                                <span className="text-base font-semibold text-slate-900 sm:text-lg">
+                                                    지갑을 연결하고 보호된 결제를 시작하세요
+                                                </span>
+                                            )}
+                                            {walletAddress ? (
+                                                <span className="text-lg font-semibold text-slate-900 sm:text-xl">
+                                                    회원 아이디: {profileNickname || '미등록'}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-slate-600">
+                                                    금융권 수준 보안 · 비수탁 로그인 · 실시간 모니터링
+                                                </span>
+                                            )}
+                                            {!walletAddress && (
+                                                <div className="flex flex-wrap gap-1.5 text-[10px] font-semibold text-slate-600">
+                                                    <span className="rounded-full border border-slate-200/80 bg-white/90 px-2.5 py-0.5">서명 기반 인증</span>
+                                                    <span className="rounded-full border border-slate-200/80 bg-white/90 px-2.5 py-0.5">실시간 보안 모니터링</span>
+                                                    <span className="rounded-full border border-slate-200/80 bg-white/90 px-2.5 py-0.5">에스크로 보호</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <Link
@@ -1806,6 +1786,7 @@ export default function OrangeXPage() {
                             </div>
                         </div>
 
+                        {false && (
                         <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-6 shadow-[0_25px_70px_-45px_rgba(15,23,42,0.7)]">
                             <div className="flex items-center justify-between">
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">정산 절차</p>
@@ -1988,6 +1969,7 @@ export default function OrangeXPage() {
                                 평균 처리 10-30분, 판매자 입금 확인 후 자동 USDT 전송 및 정산
                             </div>
                         </div>
+                        )}
                     </div>
                 </div>
 
@@ -2044,9 +2026,49 @@ export default function OrangeXPage() {
                     </div>
                 </div>
                 */}
-                
-
-                
+                <section
+                    data-reveal
+                    className="glam-card relative mb-12 overflow-hidden rounded-[32px] bg-[linear-gradient(135deg,#0f172a,#0b1220_55%,#0f172a)] px-8 py-7 text-white shadow-[0_40px_120px_-80px_rgba(15,23,42,0.9)]"
+                >
+                    <div className="pointer-events-none absolute -left-20 -top-16 h-44 w-44 rounded-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.28),transparent_70%)] blur-3xl" />
+                    <div className="pointer-events-none absolute -right-12 -bottom-20 h-52 w-52 rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.28),transparent_70%)] blur-3xl" />
+                    <div className="pointer-events-none absolute right-0 top-0 h-full w-1/2 overflow-hidden rounded-[32px] opacity-40">
+                        <Image
+                            src="/logo-guardian-holdings.png"
+                            alt="Guardian Holdings"
+                            fill
+                            sizes="42vw"
+                            className="object-contain object-right"
+                        />
+                    </div>
+                    <div className="relative space-y-4">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <span className="inline-flex items-center rounded-full border border-white/10 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-amber-200">
+                                USDT Escrow Overview
+                            </span>
+                            <span className="inline-flex items-center rounded-full border border-emerald-300/40 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+                                대한민국 FIU 등록 VASP (주)가이언홀딩스 제공
+                            </span>
+                        </div>
+                        <h2 className="font-[var(--font-display)] text-2xl text-white sm:text-3xl">
+                            USDT 에스크로
+                        </h2>
+                        <p className="font-[var(--font-display)] text-3xl font-semibold tracking-tight text-white/95 sm:text-4xl">
+                            Lock → Verify → Release
+                        </p>
+                        <p className="text-sm text-slate-200/90 sm:text-base">
+                            에스크로 지갑에 예치된 USDT는 거래 완료 전까지 보호되며, 거래 당사자의 합의 및 증빙 확인 이후에만 해제됩니다.
+                            <span className="ml-2 font-semibold text-emerald-200">
+                                에스크로 서비스는 대한민국 FIU에 등록된 VASP (주)가이언홀딩스에서 제공합니다.
+                            </span>
+                        </p>
+                        <ul className="mt-4 space-y-1.5 text-sm text-slate-200/90">
+                            <li>• MPC/Multi-Sig 기반 콜드·핫 지갑 분리</li>
+                            <li>• 거래 패턴 기반 이상징후 탐지</li>
+                            <li>• 분쟁 발생 시 전담 심사팀이 증빙 기반 조정</li>
+                        </ul>
+                    </div>
+                </section>
 
 
 
@@ -2890,7 +2912,7 @@ export default function OrangeXPage() {
                             href={buyPageHref}
                             className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-[color:var(--sea)] px-6 py-4 text-base font-semibold text-white shadow-[0_18px_40px_-20px_rgba(15,118,110,0.8)] transition hover:brightness-110"
                         >
-                            안전 구매 진행하기 →
+                            구매하기 →
                         </Link>
                     </div>
 
@@ -2935,7 +2957,7 @@ export default function OrangeXPage() {
                                 href={sellerPageHref}
                                 className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-[color:var(--accent)] px-6 py-4 text-base font-semibold text-white shadow-[0_18px_40px_-20px_rgba(249,115,22,0.8)] transition hover:brightness-110"
                             >
-                                보호된 판매 시작하기 →
+                                판매하기 →
                             </Link>
                         ) : (
                             <div className="mt-8 flex items-center justify-center">
