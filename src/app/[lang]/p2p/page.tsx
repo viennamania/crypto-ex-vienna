@@ -2038,7 +2038,7 @@ export default function OrangeXPage() {
                             alt="Guardian Holdings"
                             fill
                             sizes="42vw"
-                            className="object-contain object-right"
+                            className="object-contain object-[right_top] md:object-[right_center]"
                         />
                     </div>
                     <div className="relative space-y-4">
@@ -2067,6 +2067,16 @@ export default function OrangeXPage() {
                             <li>• 거래 패턴 기반 이상징후 탐지</li>
                             <li>• 분쟁 발생 시 전담 심사팀이 증빙 기반 조정</li>
                         </ul>
+                        <div className="pt-2">
+                            <a
+                                href="https://zigle.cryptoss.beauty"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-5 py-2 text-xs font-semibold text-white shadow-[0_18px_40px_-26px_rgba(15,23,42,0.8)] transition hover:bg-white/15 hover:border-white/30"
+                            >
+                                에스크로 서비스 보러가기
+                            </a>
+                        </div>
                     </div>
                 </section>
 
