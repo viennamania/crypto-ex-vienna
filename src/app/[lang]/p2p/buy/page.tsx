@@ -3836,18 +3836,8 @@ const fetchBuyOrders = async () => {
   // get upbit usdt to krw rate every 10 seconds
 
   const [upbitUsdtToKrwRate, setUpbitUsdtToKrwRate] = useState(0);
-  const [upbitUsdtToKrwRateChange, setUpbitUsdtToKrwRateChange] = useState("");
-  const [upbitUsdtToKrwRateChangePrice, setUpbitUsdtToKrwRateChangePrice] = useState(0);
-  const [upbitUsdtToKrwRateChangeRate, setUpbitUsdtToKrwRateChangeRate] = useState(0);
-
-
-  const [upbitUsdtToKrwRateTimestamp, setUpbitUsdtToKrwRateTimestamp] = useState(0);
-  const [TradeDateKst, setTradeDateKst] = useState<any>(null);
-  const [TradeTimeKst, setTradeTimeKst] = useState<string>('');
-  const [loadingUpbitRate, setLoadingUpbitRate] = useState(false);
   useEffect(() => {
     const fetchUpbitRate = async () => {
-      setLoadingUpbitRate(true);
       const response = await fetch('/api/market/upbit', {
         method: 'POST',
         headers: {
@@ -3869,19 +3859,7 @@ const fetchBuyOrders = async () => {
       // data.result
       if (data?.result) {
         setUpbitUsdtToKrwRate(data.result.trade_price);
-        setUpbitUsdtToKrwRateChange(data.result.change);
-        setUpbitUsdtToKrwRateChangePrice(data.result.change_price);
-        setUpbitUsdtToKrwRateChangeRate(data.result.change_rate);
-
-
-        setUpbitUsdtToKrwRateTimestamp(data.result.trade_timestamp);
-        setTradeDateKst(data.result.trade_date_kst);
-        setTradeTimeKst(data.result.trade_time_kst);
       }
-
-
-      setLoadingUpbitRate(false);
-
     };
     fetchUpbitRate();
     const interval = setInterval(() => {
@@ -3889,104 +3867,6 @@ const fetchBuyOrders = async () => {
     }, 5000);
     return () => clearInterval(interval);
   }, []);
-
-
-  // animate upbitUsdtToKrwRate
-  const [animatedUpbitUsdtToKrwRate, setAnimatedUpbitUsdtToKrwRate] = useState(0);
-  useEffect(() => {
-    const animationDuration = 1000; // 1 second
-    const frameRate = 30; // 30 frames per second
-    const totalFrames = Math.round((animationDuration / 1000) * frameRate);
-    const initialRate = animatedUpbitUsdtToKrwRate;
-    const targetRate = upbitUsdtToKrwRate;
-    let frame = 0;
-    const interval = setInterval(() => {
-      frame++;
-      const progress = Math.min(frame / totalFrames, 1);
-      const newRate = initialRate + (targetRate - initialRate) * progress;
-      setAnimatedUpbitUsdtToKrwRate(newRate);
-      if (frame >= totalFrames) {
-        clearInterval(interval);
-      }
-    }, 1000 / frameRate);
-    return () => clearInterval(interval);
-  }, [upbitUsdtToKrwRate]);
-
-
-
-
-
-
-
-
-  // api/market/bithumb
-  // get bithumb usdt to krw rate every 10 seconds
-  const [bithumbUsdtToKrwRate, setBithumbUsdtToKrwRate] = useState(0);
-  const [bithumbUsdtToKrwRateChange, setBithumbUsdtToKrwRateChange] = useState("");
-  const [bithumbUsdtToKrwRateChangePrice, setBithumbUsdtToKrwRateChangePrice] = useState(0);
-  const [bithumbUsdtToKrwRateChangeRate, setBithumbUsdtToKrwRateChangeRate] = useState(0);
-
-
-  const [bithumbUsdtToKrwRateTimestamp, setBithumbUsdtToKrwRateTimestamp] = useState(0);
-  //const [TradeDateKst, setTradeDateKst] = useState<any>(null);
-  //const [TradeTimeKst, setTradeTimeKst] = useState<string>('');
-  const [loadingBithumbRate, setLoadingBithumbRate] = useState(false);
-
-  useEffect(() => {
-    const fetchBithumbRate = async () => {
-      setLoadingBithumbRate(true);
-      const response = await fetch('/api/market/bithumb', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await response.json();
-      //console.log('bithumb usdt to krw rate data', data);
-      // data.result
-      if (data?.result) {
-        setBithumbUsdtToKrwRate(data.result.trade_price);
-        setBithumbUsdtToKrwRateChange(data.result.change);
-        setBithumbUsdtToKrwRateChangePrice(data.result.change_price);
-        setBithumbUsdtToKrwRateChangeRate(data.result.change_rate);
-        setBithumbUsdtToKrwRateTimestamp(data.result.trade_timestamp);
-        
-        //setTradeDateKst(data.result.trade_date_kst);
-        //setTradeTimeKst(data.result.trade_time_kst);
-      }
-      setLoadingBithumbRate(false);
-    };
-    fetchBithumbRate();
-    const interval = setInterval(() => {
-      fetchBithumbRate();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-
-  // animate bithumbUsdtToKrwRate
-  const [animatedBithumbUsdtToKrwRate, setAnimatedBithumbUsdtToKrwRate] = useState(0);
-  useEffect(() => {
-    const animationDuration = 1000; // 1 second
-    const frameRate = 30; // 30 frames per second
-    const totalFrames = Math.round((animationDuration / 1000) * frameRate);
-    const initialRate = animatedBithumbUsdtToKrwRate;
-    const targetRate = bithumbUsdtToKrwRate;
-    let frame = 0;
-    const interval = setInterval(() => {
-      frame++;
-      const progress = Math.min(frame / totalFrames, 1);
-      const newRate = initialRate + (targetRate - initialRate) * progress;
-      setAnimatedBithumbUsdtToKrwRate(newRate);
-      if (frame >= totalFrames) {
-        clearInterval(interval);
-      }
-    }, 1000 / frameRate);
-    return () => clearInterval(interval);
-  }, [bithumbUsdtToKrwRate]);
-
-
-
 
 
 
@@ -4444,10 +4324,10 @@ const fetchBuyOrders = async () => {
 
 
       <div className="py-0 w-full">
-        <div className="mb-4 w-full rounded-2xl border border-sky-200/70 bg-sky-50/80 p-4 shadow-[0_18px_45px_-35px_rgba(14,116,144,0.35)] backdrop-blur">
+        <div className="mb-4 w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-200/80 text-sky-700">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M6 6h15l-1.5 9h-13L6 6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M9 22a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" fill="currentColor"/>
@@ -4455,7 +4335,7 @@ const fetchBuyOrders = async () => {
                 </svg>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">Buyer View</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Buyer View</p>
                 <h2 className="text-lg font-semibold text-slate-900">구매자가 보는 구매하기 페이지</h2>
                 <p className="text-xs text-slate-600 sm:text-sm">판매자는 판매하기 메뉴에서 거래를 진행합니다.</p>
               </div>
@@ -4463,7 +4343,7 @@ const fetchBuyOrders = async () => {
             <button
               type="button"
               onClick={() => router.push('/' + params.lang + '/p2p')}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200/80 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path
@@ -4487,18 +4367,15 @@ const fetchBuyOrders = async () => {
         </div>
 
 
-        <div className="w-full flex flex-col gap-4 lg:flex-row lg:items-stretch mb-4">
-          <div className="w-full lg:flex-[1.1]">
-            <div className="relative w-full flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3
-            rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.25)] backdrop-blur overflow-hidden">
-              <div className="pointer-events-none absolute -left-20 -top-20 h-40 w-40 rounded-full bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.2),transparent_70%)]" />
-              <div className="pointer-events-none absolute right-0 top-0 h-20 w-48 bg-[linear-gradient(120deg,rgba(249,115,22,0.15),transparent)]" />
-                
+        <div className="w-full grid grid-cols-1 gap-2 lg:grid-cols-2 lg:items-start mb-4">
+          <div className="w-full">
+            <div className="relative w-full flex flex-col lg:flex-row items-start lg:items-center justify-between gap-2
+            rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
               <div className="relative w-full flex flex-row items-center justify-start gap-3">
                 <button
                   onClick={() => router.push('/' + params.lang + '/p2p')}
-                  className="group inline-flex items-center justify-center gap-3 rounded-full border border-orange-200/70
-                  bg-orange-50/80 px-4 py-2 shadow-sm transition hover:-translate-y-0.5 hover:bg-orange-100/80 hover:shadow-md"
+                  className="group inline-flex items-center justify-center gap-3 rounded-full border border-slate-200
+                  bg-white px-4 py-2 text-slate-700 transition hover:bg-slate-50"
                 >
                   <Image
                     src="/logo-orangex.png"
@@ -4507,7 +4384,7 @@ const fetchBuyOrders = async () => {
                     height={100}
                     className="h-6 w-auto object-contain"
                   />
-                  <span className="text-sm font-semibold text-orange-700">OrangeX</span>
+                  <span className="text-sm font-semibold text-slate-700">OrangeX</span>
                 </button>
                 <div className="hidden sm:flex flex-col">
                   <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500">P2P BUY</span>
@@ -4527,11 +4404,11 @@ const fetchBuyOrders = async () => {
                     onClick={() => {
                       router.push('/' + params.lang + '/p2p/profile-settings');
                     }}
-                    className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70
-                    px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
+                    className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white
+                    px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:px-4 sm:text-sm"
                   >
                     {user?.seller?.totalPaymentConfirmedUsdtAmount > 20 && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/80 bg-gradient-to-r from-amber-200 via-amber-300 to-amber-200 px-2.5 py-0.5 text-[10px] font-bold tracking-[0.18em] text-amber-900 shadow-[0_6px_16px_-10px_rgba(251,191,36,0.6)]">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold tracking-[0.18em] text-amber-800">
                         <svg
                           width="12"
                           height="12"
@@ -4575,10 +4452,10 @@ const fetchBuyOrders = async () => {
                     </div>
                   </button>
                   <span
-                    className={`inline-flex min-w-[160px] items-center justify-center rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm ${
+                    className={`inline-flex min-w-[160px] items-center justify-center rounded-full border px-4 py-1.5 text-sm font-semibold ${
                       user?.buyer?.status === 'confirmed'
-                        ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
-                        : 'border-amber-200/80 bg-amber-50 text-amber-700'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        : 'border-amber-200 bg-amber-50 text-amber-700'
                     }`}
                   >
                     {user?.buyer?.status === 'confirmed' ? '구매가능상태' : '구매불가능상태'}
@@ -4592,7 +4469,7 @@ const fetchBuyOrders = async () => {
                   onClick={() => {
                     router.push('/' + params.lang + '/p2p/buyer-settings');
                   }}
-                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md sm:px-4 sm:text-sm"
+                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:px-4 sm:text-sm"
                 >
                   <div className="flex flex-row items-center justify-center gap-2">
                     <Image
@@ -4663,137 +4540,13 @@ const fetchBuyOrders = async () => {
               )*/}
             </div>
 
-            {!address && (
-              <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-indigo-200/80 bg-indigo-50/80 p-4 shadow-[0_16px_40px_-28px_rgba(67,56,202,0.35)]">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-200/80 text-indigo-700">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M12 7v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                      <circle cx="12" cy="17" r="1.5" fill="currentColor" />
-                      <path d="M10.3 4.5h3.4L21 20H3L10.3 4.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                  <div className="flex flex-col">
-                    <p className="text-sm font-semibold text-indigo-900">웹3 로그인이 필요합니다</p>
-                    <p className="text-xs text-indigo-700">로그인 후 구매 기능을 이용할 수 있습니다.</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    router.push('/' + params.lang + '/web3login');
-                  }}
-                  className="inline-flex w-full items-center justify-center rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_-24px_rgba(67,56,202,0.55)] transition hover:bg-indigo-700 sm:w-auto sm:self-start"
-                >
-                  웹3 로그인하기
-                </button>
-              </div>
-            )}
-            {address && (
-              <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.18)]">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M12 2l7 7-7 7-7-7 7-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                  <div className="flex flex-col">
-                    <p className="text-sm font-semibold text-slate-900">로그인된 지갑주소</p>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-xs font-semibold text-slate-700" title={address}>
-                        {shortAddress}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleCopyWallet}
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-semibold shadow-sm transition ${
-                          walletCopied
-                            ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
-                            : 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300'
-                        }`}
-                      >
-                        {walletCopied ? (
-                          <>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                              <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                            복사됨
-                          </>
-                        ) : (
-                          <>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                              <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
-                              <rect x="4" y="4" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
-                            </svg>
-                            복사하기
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            {address && !loadingUser && (!user || !user?.nickname) && (
-              <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-sky-200/80 bg-sky-50/80 p-4 shadow-[0_16px_40px_-28px_rgba(14,116,144,0.35)]">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-200/80 text-sky-700">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M12 7v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                      <circle cx="12" cy="17" r="1.5" fill="currentColor" />
-                      <path d="M10.3 4.5h3.4L21 20H3L10.3 4.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                  <div className="flex flex-col">
-                    <p className="text-sm font-semibold text-sky-900">프로필 설정이 필요합니다</p>
-                    <p className="text-xs text-sky-700">
-                      프로필 정보를 입력해야 구매를 진행할 수 있습니다.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    router.push('/' + params.lang + '/p2p/profile-settings');
-                  }}
-                  className="inline-flex w-full items-center justify-center rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_-24px_rgba(2,132,199,0.55)] transition hover:bg-sky-700 sm:w-auto sm:self-start"
-                >
-                  프로필 설정하기
-                </button>
-              </div>
-            )}
-            {address && !loadingUser && user?.nickname && !user?.buyer && (
-              <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-amber-200/80 bg-amber-50/80 p-4 shadow-[0_16px_40px_-28px_rgba(249,115,22,0.5)]">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-200/80 text-amber-700">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M12 7v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                      <circle cx="12" cy="17" r="1.5" fill="currentColor" />
-                      <path d="M10.3 4.5h3.4L21 20H3L10.3 4.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                  <div className="flex flex-col">
-                    <p className="text-sm font-semibold text-amber-900">구매자 설정이 필요합니다</p>
-                    <p className="text-xs text-amber-700">
-                      구매자 설정을 완료해야 구매를 진행할 수 있습니다.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    router.push('/' + params.lang + '/p2p/buyer-settings');
-                  }}
-                  className="inline-flex w-full items-center justify-center rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_40px_-24px_rgba(249,115,22,0.9)] transition hover:bg-orange-600 sm:w-auto sm:self-start"
-                >
-                  구매자 설정하기
-                </button>
-              </div>
-            )}
+
           </div>
 
-          <section className="w-full lg:flex-[0.9] rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.25)] backdrop-blur">
+          <section className="w-full lg:col-span-1 self-start rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-orange-200/70 bg-orange-50 text-orange-600">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600">
                   <Image
                     src="/icon-today.png"
                     alt="Today"
@@ -4807,14 +4560,14 @@ const fetchBuyOrders = async () => {
                   <h3 className="text-base font-semibold text-slate-900">오늘의 거래</h3>
                 </div>
               </div>
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200/70 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
                 실시간
               </span>
             </div>
 
-            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-slate-50/80 px-3 py-2">
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-3">
+              <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-xs font-semibold text-slate-500">거래수</span>
                   <span className="text-lg font-semibold text-slate-900 tabular-nums">
@@ -4822,12 +4575,12 @@ const fetchBuyOrders = async () => {
                   </span>
                 </div>
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-                  <span className="h-2 w-2 rounded-full bg-slate-500" />
+                  <span className="h-2 w-2 rounded-full bg-slate-400" />
                 </div>
               </div>
-              <div className="flex items-center justify-between rounded-xl border border-emerald-200/70 bg-emerald-50/80 px-3 py-2">
+              <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-semibold text-emerald-700">거래량(USDT)</span>
+                  <span className="text-xs font-semibold text-slate-500">거래량(USDT)</span>
                   <div className="flex items-center gap-1">
                     <Image
                       src="/icon-tether.png"
@@ -4836,30 +4589,30 @@ const fetchBuyOrders = async () => {
                       height={16}
                       className="h-4 w-4"
                     />
-                    <span className="text-lg font-semibold text-emerald-700 tabular-nums" style={{ fontFamily: 'monospace' }}>
+                    <span className="text-lg font-semibold text-slate-900 tabular-nums" style={{ fontFamily: 'monospace' }}>
                       {animatedTotalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     </span>
                   </div>
                 </div>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                  <span className="h-2 w-2 rounded-full bg-slate-400" />
                 </div>
               </div>
-              <div className="flex items-center justify-between rounded-xl border border-amber-200/70 bg-amber-50/80 px-3 py-2">
+              <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-semibold text-amber-700">거래금액(원)</span>
-                  <span className="text-lg font-semibold text-amber-700 tabular-nums" style={{ fontFamily: 'monospace' }}>
+                  <span className="text-xs font-semibold text-slate-500">거래금액(원)</span>
+                  <span className="text-lg font-semibold text-slate-900 tabular-nums" style={{ fontFamily: 'monospace' }}>
                     {animatedTotalKrwAmount.toLocaleString()}
                   </span>
                 </div>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                  <span className="h-2 w-2 rounded-full bg-slate-400" />
                 </div>
               </div>
             </div>
 
             {processingBuyOrders.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
                 <span className="text-xs font-semibold text-slate-600">진행중 주문</span>
                 <div className="flex items-center -space-x-2">
                   {processingBuyOrders.slice(0, 5).map((order: BuyOrder, index: number) => (
@@ -4881,7 +4634,184 @@ const fetchBuyOrders = async () => {
               </div>
             )}
           </section>
+          
         </div>
+      <div className="w-full grid grid-cols-1 gap-2 lg:grid-cols-2 lg:items-start mb-4">
+        <div className="w-full flex flex-col gap-2">
+                    {!address && (
+                      <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M12 7v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                              <circle cx="12" cy="17" r="1.5" fill="currentColor" />
+                              <path d="M10.3 4.5h3.4L21 20H3L10.3 4.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </div>
+                          <div className="flex flex-col">
+                            <p className="text-sm font-semibold text-slate-900">웹3 로그인이 필요합니다</p>
+                            <p className="text-xs text-slate-600">로그인 후 구매 기능을 이용할 수 있습니다.</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            router.push('/' + params.lang + '/web3login');
+                          }}
+                          className="inline-flex w-full items-center justify-center rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto sm:self-start"
+                        >
+                          웹3 로그인하기
+                        </button>
+                      </div>
+                    )}
+                    {address && (
+                      <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M12 2l7 7-7 7-7-7 7-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </div>
+                          <div className="flex flex-col">
+                            <p className="text-sm font-semibold text-slate-900">로그인된 지갑주소</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-xs font-semibold text-slate-700" title={address}>
+                                {shortAddress}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={handleCopyWallet}
+                                className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-semibold shadow-sm transition ${
+                                  walletCopied
+                                    ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                                    : 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300'
+                                }`}
+                              >
+                                {walletCopied ? (
+                                  <>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                      <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                    복사됨
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                      <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
+                                      <rect x="4" y="4" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
+                                    </svg>
+                                    복사하기
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {address && !loadingUser && (!user || !user?.nickname) && (
+                      <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M12 7v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                              <circle cx="12" cy="17" r="1.5" fill="currentColor" />
+                              <path d="M10.3 4.5h3.4L21 20H3L10.3 4.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </div>
+                          <div className="flex flex-col">
+                            <p className="text-sm font-semibold text-slate-900">프로필 설정이 필요합니다</p>
+                            <p className="text-xs text-slate-600">
+                              프로필 정보를 입력해야 구매를 진행할 수 있습니다.
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            router.push('/' + params.lang + '/p2p/profile-settings');
+                          }}
+                          className="inline-flex w-full items-center justify-center rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto sm:self-start"
+                        >
+                          프로필 설정하기
+                        </button>
+                      </div>
+                    )}
+                    {address && !loadingUser && user?.nickname && !user?.buyer && (
+                      <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M12 7v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                              <circle cx="12" cy="17" r="1.5" fill="currentColor" />
+                              <path d="M10.3 4.5h3.4L21 20H3L10.3 4.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </div>
+                          <div className="flex flex-col">
+                            <p className="text-sm font-semibold text-slate-900">구매자 설정이 필요합니다</p>
+                            <p className="text-xs text-slate-600">
+                              구매자 설정을 완료해야 구매를 진행할 수 있습니다.
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            router.push('/' + params.lang + '/p2p/buyer-settings');
+                          }}
+                          className="inline-flex w-full items-center justify-center rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto sm:self-start"
+                        >
+                          구매자 설정하기
+                        </button>
+                      </div>
+                    )}
+                  </div>
+        <section className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Image
+                            src="/icon-seller.png"
+                            alt="Seller"
+                            width={32}
+                            height={32}
+                            className="h-8 w-8 rounded-lg object-cover"
+                          />
+                          <h2 className="text-base font-semibold text-slate-800">판매자 요약</h2>
+                        </div>
+                        <span className="text-xs font-semibold text-slate-500">실시간 집계</span>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
+                          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                            <span className="h-2 w-2 rounded-full bg-slate-400" />
+                            판매자수(명)
+                          </div>
+                          <span className="text-xl font-semibold text-slate-900 tabular-nums" style={{ fontFamily: 'monospace' }}>
+                            {sellersBalance.length.toLocaleString()}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
+                          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                            <span className="h-2 w-2 rounded-full bg-slate-400" />
+                            에스크로 총량(USDT)
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Image
+                              src="/icon-tether.png"
+                              alt="Tether"
+                              width={16}
+                              height={16}
+                              className="h-4 w-4"
+                            />
+                            <span className="text-xl font-semibold text-slate-900 tabular-nums" style={{ fontFamily: 'monospace' }}>
+                              {animatedTotalUsdtBalance.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+      </div>
+
       <div className="flex flex-col items-start justify-center gap-4 mt-4">
           {/* USDT 가격 binance market price */}
           {/*
@@ -5066,190 +4996,7 @@ const fetchBuyOrders = async () => {
 
 
 
-          <div className="w-full flex flex-col gap-4 lg:flex-row lg:items-stretch">
-            <section className="w-full lg:flex-1 rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.25)] backdrop-blur">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Image
-                    src="/icon-market.png"
-                    alt="Market"
-                    width={32}
-                    height={32}
-                    className="h-8 w-8 rounded-lg object-cover"
-                  />
-                  <span className="text-base font-semibold text-slate-800">실시간 환율</span>
-                  <Image
-                    src="/icon-live.gif"
-                    alt="Live"
-                    width={20}
-                    height={20}
-                    className="h-5 w-5 object-cover"
-                  />
-                </div>
-                <span className="text-xs font-semibold text-slate-500">KRW 기준</span>
-              </div>
-
-              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <Image
-                      src="/icon-market-upbit.png"
-                      alt="Upbit"
-                      width={32}
-                      height={32}
-                      className="h-8 w-8 object-cover"
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-xs font-semibold text-slate-500">Upbit</span>
-                      <span className="text-sm font-semibold text-slate-800 tabular-nums" style={{ fontFamily: 'monospace' }}>
-                        {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-0.5 text-[11px] font-semibold">
-                    <span
-                      className={`${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                        'text-slate-600'
-                      }`}
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {upbitUsdtToKrwRateChange === 'RISE'
-                        ? `▲ ${upbitUsdtToKrwRateChangePrice}`
-                        : upbitUsdtToKrwRateChange === 'FALL'
-                        ? `▼ ${upbitUsdtToKrwRateChangePrice}`
-                        : `- 0`}
-                    </span>
-                    <span className="text-slate-500" style={{ fontFamily: 'monospace' }}>
-                      {TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <Image
-                      src="/icon-market-bithumb.png"
-                      alt="Bithumb"
-                      width={32}
-                      height={32}
-                      className="h-8 w-8 object-cover"
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-xs font-semibold text-slate-500">Bithumb</span>
-                      <span className="text-sm font-semibold text-slate-800 tabular-nums" style={{ fontFamily: 'monospace' }}>
-                        {animatedBithumbUsdtToKrwRate && animatedBithumbUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-0.5 text-[11px] font-semibold">
-                    <span
-                      className={`${
-                        bithumbUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                        bithumbUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                        'text-slate-600'
-                      }`}
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {bithumbUsdtToKrwRateChange === 'RISE'
-                        ? `▲ ${bithumbUsdtToKrwRateChangePrice}`
-                        : bithumbUsdtToKrwRateChange === 'FALL'
-                        ? `▼ ${bithumbUsdtToKrwRateChangePrice}`
-                        : `- 0`}
-                    </span>
-                    <span className="text-slate-500" style={{ fontFamily: 'monospace' }}>
-                      {TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <Image
-                      src="/icon-market-korbit.png"
-                      alt="Korbit"
-                      width={32}
-                      height={32}
-                      className="h-8 w-8 object-cover"
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-xs font-semibold text-slate-500">Korbit</span>
-                      <span className="text-sm font-semibold text-slate-800 tabular-nums" style={{ fontFamily: 'monospace' }}>
-                        {animatedUpbitUsdtToKrwRate && animatedUpbitUsdtToKrwRate.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-0.5 text-[11px] font-semibold">
-                    <span
-                      className={`${
-                        upbitUsdtToKrwRateChange === 'RISE' ? 'text-red-500' :
-                        upbitUsdtToKrwRateChange === 'FALL' ? 'text-blue-500' :
-                        'text-slate-600'
-                      }`}
-                      style={{ fontFamily: 'monospace' }}
-                    >
-                      {upbitUsdtToKrwRateChange === 'RISE'
-                        ? `▲ ${upbitUsdtToKrwRateChangePrice}`
-                        : upbitUsdtToKrwRateChange === 'FALL'
-                        ? `▼ ${upbitUsdtToKrwRateChangePrice}`
-                        : `- 0`}
-                    </span>
-                    <span className="text-slate-500" style={{ fontFamily: 'monospace' }}>
-                      {TradeDateKst && TradeTimeKst ? `${TradeTimeKst.slice(0,2)}:${TradeTimeKst.slice(2,4)}:${TradeTimeKst.slice(4,6)}` : ''}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="w-full lg:flex-1 rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.25)] backdrop-blur">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Image
-                    src="/icon-seller.png"
-                    alt="Seller"
-                    width={32}
-                    height={32}
-                    className="h-8 w-8 rounded-lg object-cover"
-                  />
-                  <h2 className="text-base font-semibold text-slate-800">판매자 요약</h2>
-                </div>
-                <span className="text-xs font-semibold text-slate-500">실시간 집계</span>
-              </div>
-
-              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <div className="flex items-center justify-between rounded-xl border border-orange-200/70 bg-orange-50/70 px-3 py-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-orange-700">
-                    <span className="h-2 w-2 rounded-full bg-orange-500" />
-                    판매자수(명)
-                  </div>
-                  <span className="text-xl font-semibold text-orange-600 tabular-nums" style={{ fontFamily: 'monospace' }}>
-                    {sellersBalance.length.toLocaleString()}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl border border-emerald-200/70 bg-emerald-50/70 px-3 py-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                    에스크로 총량(USDT)
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Image
-                      src="/icon-tether.png"
-                      alt="Tether"
-                      width={16}
-                      height={16}
-                      className="h-4 w-4"
-                    />
-                    <span className="text-xl font-semibold text-[#409192] tabular-nums" style={{ fontFamily: 'monospace' }}>
-                      {animatedTotalUsdtBalance.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </div>
+          
 
             {/* 지정가로 구매주문하기 */}
             {/*
@@ -5333,7 +5080,7 @@ const fetchBuyOrders = async () => {
 
 
             {sellersBalance.length > 0 && (
-              <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-start gap-4 mt-4">
+              <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-stretch gap-4 mt-4">
 
                 {sellersBalance.map((seller, index) => (
                   <div key={index}
@@ -5349,7 +5096,7 @@ const fetchBuyOrders = async () => {
                     */
 
                     // seller.buyOrder.status = 'ordered' or 'paymentRequested' - red border and pulse animation
-                    className={`relative w-full self-start flex flex-col xl:flex-row xl:flex-wrap items-start justify-start gap-5
+                    className={`relative w-full h-full flex flex-col xl:flex-row xl:flex-wrap items-start justify-start gap-5
                     p-5 rounded-2xl shadow-[0_18px_45px_-36px_rgba(15,23,42,0.25)]
                     border text-slate-800
                     ${SELLER_CARD_TONES[index % SELLER_CARD_TONES.length].card}
@@ -5380,17 +5127,17 @@ const fetchBuyOrders = async () => {
                     `}
                   >
 
-                    <div className={`w-full xl:basis-full flex flex-wrap items-center justify-between gap-4 rounded-xl border px-5 py-4 ${SELLER_CARD_TONES[index % SELLER_CARD_TONES.length].header}`}>
-                      <div className="flex items-center gap-4">
+                    <div className={`w-full xl:basis-full flex items-center justify-between gap-4 rounded-xl border px-5 py-4 ${SELLER_CARD_TONES[index % SELLER_CARD_TONES.length].header}`}>
+                      <div className="flex items-center gap-4 min-w-0">
                         <div className="relative">
                           <Image
                             src={seller.avatar || "/icon-seller.png"}
                             alt="Seller"
-                            width={48}
-                            height={48}
-                            className="h-12 w-12 rounded-2xl object-cover shadow-md ring-2 ring-white/80"
+                            width={40}
+                            height={40}
+                            className="h-10 w-10 rounded-2xl object-cover shadow-md ring-2 ring-white/80"
                           />
-                          <span className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-white bg-emerald-400 shadow-sm" />
+                          <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white bg-emerald-400 shadow-sm" />
                         </div>
                         <div className="flex flex-col">
                           <span className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">
@@ -5402,7 +5149,7 @@ const fetchBuyOrders = async () => {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0">
                         {seller.walletAddress === address && (
                           <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700 shadow-sm">
                             나의 판매자계정
@@ -5464,7 +5211,7 @@ const fetchBuyOrders = async () => {
                                           border border-slate-200 bg-slate-50 rounded-full px-2.5 py-1
                                           ">
                                             <span className="text-[11px] font-semibold text-slate-600">
-                                              고정가격
+                                              고정
                                             </span>
                                           </div>
 
@@ -5565,7 +5312,7 @@ const fetchBuyOrders = async () => {
                                         border border-slate-200 bg-slate-50 rounded-full px-2.5 py-1
                                         ">
                                           <span className="text-[11px] font-semibold text-slate-600">
-                                            고정가격
+                                            고정
                                           </span>
                                         </div>
                                       )}
@@ -5856,7 +5603,7 @@ const fetchBuyOrders = async () => {
                                     bg-slate-800
                                     ">
                                       <span className="text-xs text-slate-100">
-                                        고정가격
+                                        고정
                                       </span>
                                     </div>
                                   )}
