@@ -1701,6 +1701,25 @@ export default function OrangeXPage() {
                                         )}
                                     </div>
                                 )}
+                                <Link
+                                    href="https://www.orangex.center/ko/p2p-buyer"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[linear-gradient(135deg,#fbbf24,#fb923c,#f97316)] px-8 py-4 text-base font-semibold text-white shadow-[0_18px_45px_-22px_rgba(249,115,22,0.65)] transition hover:brightness-110 sm:w-auto sm:min-w-[240px]"
+                                >
+                                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
+                                        <svg
+                                            width="18"
+                                            height="18"
+                                            viewBox="0 0 24 24"
+                                            fill="currentColor"
+                                            aria-hidden="true"
+                                        >
+                                            <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8Z" />
+                                        </svg>
+                                    </span>
+                                    간편구매하기
+                                </Link>
                             </div>
 
                             <div className="grid gap-4 lg:grid-cols-2">
