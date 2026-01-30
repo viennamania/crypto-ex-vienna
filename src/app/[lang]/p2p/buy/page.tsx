@@ -3582,7 +3582,7 @@ const fetchBuyOrders = async () => {
   const [sellersBalance, setSellersBalance] = useState([] as any[]);
   const [sellersBalanceRefreshing, setSellersBalanceRefreshing] = useState(false);
   const [sellersBalanceLastUpdatedAt, setSellersBalanceLastUpdatedAt] = useState<Date | null>(null);
-  const SELLERS_BALANCE_POLL_INTERVAL = 5000;
+  const SELLERS_BALANCE_POLL_INTERVAL = 30000;
   const fetchSellersBalance = async () => {
     setSellersBalanceRefreshing(true);
     try {
@@ -4245,7 +4245,7 @@ const fetchBuyOrders = async () => {
 
   return (
 
-    <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-4xl bg-white text-slate-800 antialiased">
+    <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-4xl bg-white text-slate-800 antialiased [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:rounded-md">
 
       <AutoConnect
           client={client}
@@ -4376,7 +4376,7 @@ const fetchBuyOrders = async () => {
             <button
               type="button"
               onClick={() => router.push('/' + params.lang + '/p2p')}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path
@@ -4402,13 +4402,13 @@ const fetchBuyOrders = async () => {
 
         <div className="w-full grid grid-cols-1 gap-2 lg:grid-cols-2 lg:items-start mb-4">
           <div className="w-full">
-            <div className="relative w-full flex flex-col lg:flex-row items-start lg:items-center justify-between gap-2
+            <div className="relative w-full flex flex-col items-start justify-start gap-3
             rounded-lg border border-slate-200 bg-white p-3">
-              <div className="relative w-full flex flex-row items-center justify-start gap-3">
+              <div className="relative w-full flex flex-col items-start justify-start gap-2">
                 <button
                   onClick={() => router.push('/' + params.lang + '/p2p')}
-                  className="group inline-flex items-center justify-center gap-3 rounded-full border border-slate-200
-                  bg-white px-4 py-2 text-slate-700 transition hover:bg-slate-50"
+                  className="group inline-flex items-center justify-center gap-2 rounded-md border border-slate-200
+                  bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   <Image
                     src="/logo-orangex.png"
@@ -4419,7 +4419,7 @@ const fetchBuyOrders = async () => {
                   />
                   <span className="text-sm font-semibold text-slate-700">OrangeX</span>
                 </button>
-                <div className="hidden sm:flex flex-col">
+                <div className="flex flex-col">
                   <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500">P2P BUY</span>
                   <span className="text-base font-semibold text-slate-900">구매 센터</span>
                 </div>
@@ -4429,16 +4429,16 @@ const fetchBuyOrders = async () => {
               {address && !loadingUser && (
 
 
-                <div className="relative w-full flex flex-wrap items-center justify-end gap-2">
+                <div className="relative w-full flex flex-col items-start gap-2">
               
               {user?.nickname && (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => {
                       router.push('/' + params.lang + '/p2p/profile-settings');
                     }}
-                    className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white
-                    px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:px-4 sm:text-sm"
+                    className="group inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white
+                    px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:text-xs"
                   >
                     {user?.seller?.totalPaymentConfirmedUsdtAmount > 20 && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold tracking-[0.18em] text-amber-800">
@@ -4485,7 +4485,7 @@ const fetchBuyOrders = async () => {
                     </div>
                   </button>
                   <span
-                    className={`inline-flex min-w-[160px] items-center justify-center rounded-full border px-4 py-1.5 text-sm font-semibold ${
+                    className={`inline-flex min-w-[140px] items-center justify-center rounded-md border px-3 py-1 text-[11px] font-semibold ${
                       user?.buyer?.status === 'confirmed'
                         ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                         : 'border-amber-200 bg-amber-50 text-amber-700'
@@ -4502,7 +4502,7 @@ const fetchBuyOrders = async () => {
                   onClick={() => {
                     router.push('/' + params.lang + '/p2p/buyer-settings');
                   }}
-                  className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:px-4 sm:text-sm"
+                  className="group inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:text-xs"
                 >
                   <div className="flex flex-row items-center justify-center gap-2">
                     <Image
@@ -4710,7 +4710,7 @@ const fetchBuyOrders = async () => {
                             connectButton={{
                               label: "지갑 연결하기",
                               className:
-                                "inline-flex w-full items-center justify-center rounded-md border border-slate-200 bg-white px-6 py-3 text-base font-medium text-slate-800 transition hover:border-slate-400 hover:text-slate-900",
+                                "inline-flex w-full items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-800 transition hover:border-slate-400 hover:text-slate-900",
                             }}
                           />
                         </div>
@@ -4734,7 +4734,7 @@ const fetchBuyOrders = async () => {
                               <button
                                 type="button"
                                 onClick={handleCopyWallet}
-                                className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-semibold shadow-sm transition ${
+                                className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
                                   walletCopied
                                     ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
                                     : 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300'
@@ -4783,7 +4783,7 @@ const fetchBuyOrders = async () => {
                           onClick={() => {
                             router.push('/' + params.lang + '/p2p/profile-settings');
                           }}
-                          className="inline-flex w-full items-center justify-center rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto sm:self-start"
+                          className="inline-flex w-full items-center justify-center rounded-md border border-slate-900 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800 sm:w-auto sm:self-start"
                         >
                           프로필 설정하기
                         </button>
@@ -4810,7 +4810,7 @@ const fetchBuyOrders = async () => {
                           onClick={() => {
                             router.push('/' + params.lang + '/p2p/buyer-settings');
                           }}
-                          className="inline-flex w-full items-center justify-center rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto sm:self-start"
+                          className="inline-flex w-full items-center justify-center rounded-md border border-slate-900 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800 sm:w-auto sm:self-start"
                         >
                           구매자 설정하기
                         </button>
@@ -5179,232 +5179,154 @@ const fetchBuyOrders = async () => {
                     `}
                   >
 
-                    <div className={`w-full xl:basis-full flex items-center justify-between gap-4 rounded-md border px-4 py-3 ${SELLER_CARD_TONES[index % SELLER_CARD_TONES.length].header}`}>
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="relative">
-                          <Image
-                            src={seller.avatar || "/icon-seller.png"}
-                            alt="Seller"
-                            width={40}
-                            height={40}
-                            className="h-10 w-10 rounded-2xl object-cover shadow-md ring-2 ring-white/80"
-                          />
-                          <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white bg-emerald-400 shadow-sm" />
+                    <div className={`w-full xl:basis-full flex flex-col gap-3 rounded-md border px-4 py-3 ${SELLER_CARD_TONES[index % SELLER_CARD_TONES.length].header}`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="relative">
+                            <Image
+                              src={seller.avatar || "/icon-seller.png"}
+                              alt="Seller"
+                              width={40}
+                              height={40}
+                              className="h-10 w-10 rounded-2xl object-cover shadow-md ring-2 ring-white/80"
+                            />
+                            <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white bg-emerald-400 shadow-sm" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">
+                              Seller
+                            </span>
+                            <span className="text-xl font-bold text-slate-900 tracking-tight">
+                              {seller.nickname}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">
-                            Seller
-                          </span>
-                          <span className="text-xl font-bold text-slate-900 tracking-tight">
-                            {seller.nickname}
-                          </span>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
                         {seller.walletAddress === address && (
-                          <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700 shadow-sm">
+                          <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                             나의 판매자계정
                           </div>
                         )}
+                      </div>
 
-                        {seller.seller?.usdtToKrwRate && (
-                          <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-2 shadow-sm">
-                            <div className="flex flex-col items-start justify-center gap-1">
-                              <div className="w-full flex flex-row items-center justify-start gap-2">
-                                <div className="w-full flex flex-row items-center justify-between gap-2">
-                                  <span className="text-xs text-slate-500 font-semibold tracking-tight whitespace-nowrap mr-2">
-                                    판매 금액
-                                  </span>
+                      {seller.seller?.usdtToKrwRate && (
+                        <div className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-md border border-slate-200/80 bg-white px-3 py-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                              판매 금액
+                            </span>
+                            <span className="text-lg font-semibold text-slate-900 tabular-nums" style={{ fontFamily: 'monospace' }}>
+                              {usdtKrwRateAnimationArray[index]?.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            </span>
+                            <span className="text-[11px] text-slate-500">KRW</span>
 
-                                  <span className="text-2xl font-semibold text-slate-900 mr-2 tabular-nums"
-                                    style={{ fontFamily: 'monospace' }}>
-                                    {
-                                    //seller.seller?.usdtToKrwRate.toLocaleString()
-                                    usdtKrwRateAnimationArray[index]?.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                                    }
-                                  </span>
-
-                                  {seller.seller?.priceSettingMethod === 'market' ? (
-                                    <div className="flex flex-col items-center justify-center gap-1">
-                                      {seller.seller?.market === 'upbit' && (
-                                        <Image
-                                          src="/icon-market-upbit.png"
-                                          alt="Upbit"
-                                          width={20}
-                                          height={20}
-                                          className="w-5 h-5"
-                                        />
-                                      )}
-                                      {seller.seller?.market === 'bithumb' && (
-                                        <Image
-                                          src="/icon-market-bithumb.png"
-                                          alt="Bithumb"
-                                          width={20}
-                                          height={20}
-                                          className="w-5 h-5"
-                                        />
-                                      )}
-                                      {seller.seller?.market === 'korbit' && (
-                                        <Image
-                                          src="/icon-market-korbit.png"
-                                          alt="Korbit"
-                                          width={20}
-                                          height={20}
-                                          className="w-5 h-5"
-                                        />
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div className="flex flex-col items-center justify-center gap-1">
-                                      {seller.walletAddress === address ? (
-                                        <div className="flex flex-row items-center justify-center gap-2">
-                                          <div className="flex flex-col items-center justify-center gap-1
-                                          border border-slate-200 bg-slate-50 rounded-full px-2.5 py-1
-                                          ">
-                                            <span className="text-[11px] font-semibold text-slate-600">
-                                              고정
-                                            </span>
-                                          </div>
-
-                                          {
-                                          seller.seller?.buyOrder?.status !== 'ordered'
-                                          && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
-                                            <>
-                                              <button
-                                                onClick={() => {
-                                                  updateUsdtToKrwRate(
-                                                    index,
-                                                    seller.seller._id,
-                                                    seller.seller.usdtToKrwRate + 1,
-                                                  );
-                                                }}
-                                                disabled={updatingUsdtToKrwRateArray[index]}
-                                                className={`
-                                                  ${updatingUsdtToKrwRateArray[index]
-                                                  ? 'text-gray-400 cursor-not-allowed'
-                                                  : 'text-green-600 hover:text-green-700 hover:shadow-green-500/50 cursor-pointer'
-                                                  }
-                                                `}
-                                              >
-                                                ▲
-                                              </button>
-                                              <button
-                                                onClick={() => {
-                                                  updateUsdtToKrwRate(
-                                                    index,
-                                                    seller.seller._id,
-                                                    seller.seller.usdtToKrwRate - 1,
-                                                  );
-                                                }}
-                                                disabled={updatingUsdtToKrwRateArray[index]}
-                                                className={`
-                                                  ${updatingUsdtToKrwRateArray[index]
-                                                  ? 'text-gray-400 cursor-not-allowed'
-                                                  : 'text-red-600 hover:text-red-700 hover:shadow-red-500/50 cursor-pointer'
-                                                  }
-                                                `}
-                                              >
-                                                ▼
-                                              </button>
-                                            </>
-                                          )}
-
-                                          {/*
-                                          {
-                                          seller.seller?.buyOrder?.status !== 'ordered'
-                                          && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
-                                            <button
-                                              onClick={() => {
-                                                updateUsdtToKrwRate(
-                                                  index,
-                                                  seller.seller._id,
-                                                  Math.round(upbitUsdtToKrwRate),
-                                                );
-                                              }}
-                                              disabled={updatingUsdtToKrwRateArray[index]}
-                                              className={`
-                                                ${updatingUsdtToKrwRateArray[index]
-                                                ? 'text-gray-400 cursor-not-allowed'
-                                                : 'text-blue-600 hover:text-blue-700 hover:shadow-blue-500/50 cursor-pointer'
-                                                }
-                                              `}
-                                            >
-                                              ⬤
-                                            </button>
-                                          )}
-
-
-                                          {
-                                          seller.seller?.buyOrder?.status !== 'ordered'
-                                          && seller.seller?.buyOrder?.status !== 'paymentRequested' && (
-                                            <button
-                                              onClick={() => {
-                                                updateUsdtToKrwRate(
-                                                  index,
-                                                  seller.seller._id,
-                                                  seller.seller.usdtToKrwRate - 1,
-                                                );
-                                              }}
-                                              disabled={updatingUsdtToKrwRateArray[index]}
-                                              className={`
-                                                ${updatingUsdtToKrwRateArray[index]
-                                                ? 'text-gray-400 cursor-not-allowed'
-                                                : 'text-red-600 hover:text-red-700 hover:shadow-red-500/50 cursor-pointer'
-                                                }
-                                              `}
-                                            >
-                                              ▼
-                                            </button>
-                                          )}
-                                          */}
-                                        </div>
-                                      ) : (
-                                        <div className="flex flex-col items-center justify-center gap-1
-                                        border border-slate-200 bg-slate-50 rounded-full px-2.5 py-1
-                                        ">
-                                          <span className="text-[11px] font-semibold text-slate-600">
-                                            고정
-                                          </span>
-                                        </div>
-                                      )}
-
+                            {seller.seller?.priceSettingMethod === 'market' ? (
+                              <>
+                                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                                  시장가
+                                </span>
+                                {seller.seller?.market === 'upbit' && (
+                                  <Image
+                                    src="/icon-market-upbit.png"
+                                    alt="Upbit"
+                                    width={18}
+                                    height={18}
+                                    className="h-4 w-4"
+                                  />
+                                )}
+                                {seller.seller?.market === 'bithumb' && (
+                                  <Image
+                                    src="/icon-market-bithumb.png"
+                                    alt="Bithumb"
+                                    width={18}
+                                    height={18}
+                                    className="h-4 w-4"
+                                  />
+                                )}
+                                {seller.seller?.market === 'korbit' && (
+                                  <Image
+                                    src="/icon-market-korbit.png"
+                                    alt="Korbit"
+                                    width={18}
+                                    height={18}
+                                    className="h-4 w-4"
+                                  />
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                                  고정
+                                </span>
+                                {seller.walletAddress === address &&
+                                  seller.seller?.buyOrder?.status !== 'ordered' &&
+                                  seller.seller?.buyOrder?.status !== 'paymentRequested' && (
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={() => {
+                                          updateUsdtToKrwRate(
+                                            index,
+                                            seller.seller._id,
+                                            seller.seller.usdtToKrwRate + 1,
+                                          );
+                                        }}
+                                        disabled={updatingUsdtToKrwRateArray[index]}
+                                        className={`text-[11px] ${
+                                          updatingUsdtToKrwRateArray[index]
+                                            ? 'text-gray-400 cursor-not-allowed'
+                                            : 'text-green-600 hover:text-green-700 cursor-pointer'
+                                        }`}
+                                      >
+                                        ▲
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          updateUsdtToKrwRate(
+                                            index,
+                                            seller.seller._id,
+                                            seller.seller.usdtToKrwRate - 1,
+                                          );
+                                        }}
+                                        disabled={updatingUsdtToKrwRateArray[index]}
+                                        className={`text-[11px] ${
+                                          updatingUsdtToKrwRateArray[index]
+                                            ? 'text-gray-400 cursor-not-allowed'
+                                            : 'text-red-600 hover:text-red-700 cursor-pointer'
+                                        }`}
+                                      >
+                                        ▼
+                                      </button>
                                     </div>
                                   )}
-
-                                </div>
-                              </div>
-
-                            </div>
-
-                            <div className="flex flex-col items-center justify-center">
-                              <button
-                                onClick={() => {
-                                  const sellerUrl = `${window.location.origin}/${params.lang}/escrow/${seller.seller.escrowWalletAddress}`;
-                                  navigator.clipboard.writeText(sellerUrl);
-                                  alert('판매자 URL이 클립보드에 복사되었습니다.');
-                                }}
-                                className="rounded-full border border-slate-200/70 bg-white/90 p-1 text-slate-600 shadow-sm hover:text-slate-800"
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-5 w-5"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9 9-4.03 9-9z"
-                                  />
-                                </svg>
-                              </button>
-                            </div>
+                              </>
+                            )}
                           </div>
-                        )}
-                      </div>
+
+                          <button
+                            onClick={() => {
+                              const sellerUrl = `${window.location.origin}/${params.lang}/escrow/${seller.seller.escrowWalletAddress}`;
+                              navigator.clipboard.writeText(sellerUrl);
+                              alert('판매자 URL이 클립보드에 복사되었습니다.');
+                            }}
+                            className="rounded-full border border-slate-200/70 bg-white/90 p-1 text-slate-600 hover:text-slate-800"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9 9-4.03 9-9z"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
                     </div>
 
 

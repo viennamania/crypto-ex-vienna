@@ -5126,7 +5126,7 @@ const fetchBuyOrders = async () => {
                 </div>
               )}
 
-              <div className="w-full flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="w-full flex flex-col gap-3">
                 <div className="flex items-stretch gap-3">
                   <div className="flex aspect-square shrink-0 self-stretch items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
                     <Image
@@ -5247,6 +5247,23 @@ const fetchBuyOrders = async () => {
                     )}
                   </div>
                 </div>
+
+                {saleRateValue != null && (
+                  <div className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                        판매금액
+                      </span>
+                      <span className="text-base font-semibold text-slate-900 tabular-nums">
+                        {saleRateValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                      </span>
+                      <span className="text-[11px] text-slate-500">KRW</span>
+                    </div>
+                    <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                      {activeSeller?.seller?.priceSettingMethod === 'market' ? '시장가' : '고정'}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex flex-col items-start gap-2 sm:items-end">
                   <div className="flex items-center gap-2">
