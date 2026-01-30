@@ -2,18 +2,15 @@
 'use client';
 
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 
 import { toast } from 'react-hot-toast';
-import { client } from '../../../client';
+import { client, clientId } from '../../../client';
 
 
 import {
     //ThirdwebProvider,
-    ConnectButton,
-  
-    useConnect,
-  
     useReadContract,
   
     useActiveWallet,
@@ -26,6 +23,7 @@ import {
     useSetActiveWallet,
 
     AutoConnect,
+    useConnectModal,
     
 } from "thirdweb/react";
 
@@ -48,7 +46,6 @@ import {
 import {
   createWallet,
   inAppWallet,
-  getWalletBalance,
 } from "thirdweb/wallets";
 
 import Image from 'next/image';
@@ -56,6 +53,7 @@ import Image from 'next/image';
 import AppBarComponent from "@/components/Appbar/AppBar";
 import { getDictionary } from "../../../dictionaries";
 import { useClientWallets } from "@/lib/useClientWallets";
+import { useClientSettings } from "@/components/ClientSettingsProvider";
 
 
 
@@ -78,7 +76,7 @@ import {
 
 
 
-const walletAuthOptions = ["phone", "email"];
+const walletAuthOptions = ["phone", "email", "google", "apple", "line", "telegram"];
 
 
 const contractAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"; // USDT on Polygon
@@ -87,17 +85,12 @@ const contractAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"; // USDT on
 const contractAddressArbitrum = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"; // USDT on Arbitrum
 
 type NetworkKey = 'ethereum' | 'polygon' | 'arbitrum' | 'bsc';
-const EMPTY_NATIVE_BALANCES: Record<NetworkKey, number | null> = {
-  ethereum: null,
-  polygon: null,
-  arbitrum: null,
-  bsc: null,
-};
 const NETWORK_OPTIONS: Array<{
   id: NetworkKey;
   label: string;
   chain: Chain;
   contractAddress: string;
+  logo: string;
   nativeSymbol: string;
   decimals: number;
 }> = [
@@ -106,6 +99,7 @@ const NETWORK_OPTIONS: Array<{
     label: 'Ethereum',
     chain: ethereum,
     contractAddress: ethereumContractAddressUSDT,
+    logo: '/logo-chain-ethereum.png',
     nativeSymbol: 'ETH',
     decimals: 6,
   },
@@ -114,6 +108,7 @@ const NETWORK_OPTIONS: Array<{
     label: 'Polygon',
     chain: polygon,
     contractAddress: polygonContractAddressUSDT,
+    logo: '/logo-chain-polygon.png',
     nativeSymbol: 'POL',
     decimals: 6,
   },
@@ -122,6 +117,7 @@ const NETWORK_OPTIONS: Array<{
     label: 'Arbitrum',
     chain: arbitrum,
     contractAddress: arbitrumContractAddressUSDT,
+    logo: '/logo-chain-arbitrum.png',
     nativeSymbol: 'ETH',
     decimals: 6,
   },
@@ -130,10 +126,32 @@ const NETWORK_OPTIONS: Array<{
     label: 'BSC',
     chain: bsc,
     contractAddress: bscContractAddressUSDT,
+    logo: '/logo-chain-bsc.png',
     nativeSymbol: 'BNB',
     decimals: 18,
   },
 ];
+
+const TRANSFERS_PAGE_SIZE = 10;
+
+type UsdtTransfer = {
+  transaction_hash?: string;
+  block_timestamp?: number | string;
+  from_address?: string;
+  to_address?: string;
+  amount?: string | number;
+  value?: string | number;
+  token_address?: string;
+  contract_address?: string;
+  token_decimals?: number;
+  decimals?: number;
+  token_symbol?: string;
+  symbol?: string;
+  token_metadata?: {
+    symbol?: string;
+    decimals?: number;
+  };
+};
 
 
 
@@ -168,10 +186,14 @@ import path from 'path';
 
 export default function SendUsdt({ params }: any) {
 
+  const lang = params?.lang ?? 'ko';
+  const { loading: clientSettingsLoading } = useClientSettings();
   const { wallet, wallets, smartAccountEnabled } = useClientWallets({
     authOptions: walletAuthOptions,
     sponsorGas: true,
+    defaultSmsCountryCode: 'KR',
   });
+  const { connect: openConnectModal, isConnecting } = useConnectModal();
 
   //console.log("wallet", wallet);
   //console.log("wallets", wallets);
@@ -318,14 +340,22 @@ export default function SendUsdt({ params }: any) {
 
 
   const activeAccount = useActiveAccount();
-
-  const address = activeAccount?.address;
+  const activeWallet = useActiveWallet();
+  const account = activeWallet?.getAccount?.() ?? activeAccount;
+  const address = account?.address;
 
 
   const [balance, setBalance] = useState(0);
-  const [nativeBalances, setNativeBalances] = useState<Record<NetworkKey, number | null>>(
-    EMPTY_NATIVE_BALANCES
-  );
+  const [animatedBalance, setAnimatedBalance] = useState(0);
+  const balanceRef = useRef(0);
+  const transfersScopeRef = useRef<string | null>(null);
+  const [transfers, setTransfers] = useState<UsdtTransfer[]>([]);
+  const [transfersLoading, setTransfersLoading] = useState(false);
+  const [transfersError, setTransfersError] = useState<string | null>(null);
+  const [transfersPage, setTransfersPage] = useState(0);
+  const [transfersHasMore, setTransfersHasMore] = useState(false);
+  const [showTransferConfirm, setShowTransferConfirm] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   const [amount, setAmount] = useState(0);
   const [amountInput, setAmountInput] = useState('');
@@ -357,6 +387,122 @@ export default function SendUsdt({ params }: any) {
     }
     const fixed = value.toFixed(decimals);
     return fixed.replace(/\.?0+$/, '');
+  };
+
+  const formatTokenAmount = (rawValue: string | number | undefined, decimals: number) => {
+    if (rawValue === undefined || rawValue === null) {
+      return '0';
+    }
+    const rawString = String(rawValue);
+    if (rawString.includes('.')) {
+      const numericValue = Number(rawString);
+      if (!Number.isFinite(numericValue)) {
+        return rawString;
+      }
+      return numericValue.toFixed(decimals).replace(/\.?0+$/, '');
+    }
+    try {
+      const raw = BigInt(rawString);
+      const base = 10n ** BigInt(decimals);
+      const whole = raw / base;
+      const fraction = raw % base;
+      if (fraction === 0n) {
+        return whole.toString();
+      }
+      const fractionText = fraction.toString().padStart(decimals, '0').replace(/0+$/, '');
+      return `${whole.toString()}.${fractionText}`;
+    } catch (error) {
+      const numericValue = Number(rawString);
+      if (!Number.isFinite(numericValue)) {
+        return rawString;
+      }
+      return numericValue.toFixed(decimals).replace(/\.?0+$/, '');
+    }
+  };
+
+  const formatTimestamp = (value?: string | number) => {
+    if (!value) {
+      return '-';
+    }
+    const numericValue = typeof value === 'string' ? Number(value) : value;
+    let msValue: number | null = null;
+    if (Number.isFinite(numericValue)) {
+      msValue = numericValue > 1e12 ? numericValue : numericValue * 1000;
+    } else if (typeof value === 'string') {
+      const parsed = Date.parse(value);
+      if (!Number.isNaN(parsed)) {
+        msValue = parsed;
+      }
+    }
+    if (msValue === null) {
+      return '-';
+    }
+    return new Date(msValue).toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const shortenValue = (value?: string, leading = 6, trailing = 4) => {
+    if (!value) {
+      return '-';
+    }
+    if (value.length <= leading + trailing) {
+      return value;
+    }
+    return `${value.slice(0, leading)}...${value.slice(-trailing)}`;
+  };
+
+  const resolveTransferAmount = (transfer: UsdtTransfer) =>
+    transfer.amount ?? transfer.value ?? '0';
+
+  const resolveTransferDecimals = (transfer: UsdtTransfer) =>
+    transfer.token_metadata?.decimals ??
+    transfer.token_decimals ??
+    transfer.decimals ??
+    selectedNetworkConfig.decimals;
+
+  const resolveTransferSymbol = (transfer: UsdtTransfer) =>
+    transfer.token_metadata?.symbol ??
+    transfer.token_symbol ??
+    transfer.symbol ??
+    'USDT';
+
+  const resolveTransferDirection = (transfer: UsdtTransfer) => {
+    if (!address) {
+      return 'unknown';
+    }
+    const from = transfer.from_address?.toLowerCase();
+    const to = transfer.to_address?.toLowerCase();
+    const walletLower = address.toLowerCase();
+    if (to && to === walletLower) {
+      return 'in';
+    }
+    if (from && from === walletLower) {
+      return 'out';
+    }
+    return 'unknown';
+  };
+
+  const getExplorerTxUrl = (hash?: string) => {
+    if (!hash) {
+      return null;
+    }
+    switch (selectedNetwork) {
+      case 'ethereum':
+        return `https://etherscan.io/tx/${hash}`;
+      case 'polygon':
+        return `https://polygonscan.com/tx/${hash}`;
+      case 'arbitrum':
+        return `https://arbiscan.io/tx/${hash}`;
+      case 'bsc':
+        return `https://bscscan.com/tx/${hash}`;
+      default:
+        return `https://polygonscan.com/tx/${hash}`;
+    }
   };
 
   const handleAmountChange = (value: string) => {
@@ -418,6 +564,8 @@ export default function SendUsdt({ params }: any) {
     };
 
     if (address) {
+      balanceRef.current = 0;
+      setAnimatedBalance(0);
       setBalance(0);
       getBalance();
     }
@@ -432,66 +580,124 @@ export default function SendUsdt({ params }: any) {
 
   } , [address, contract, selectedNetworkConfig.decimals]);
 
-
   useEffect(() => {
-    if (!address) {
+    const from = balanceRef.current;
+    const to = balance;
+    if (from === to) {
       return;
     }
 
-    let isActive = true;
-    setNativeBalances(EMPTY_NATIVE_BALANCES);
+    const durationMs = 650;
+    const startTime = performance.now();
+    let rafId = 0;
 
-    const fetchNativeBalances = async () => {
-      try {
-        const results = await Promise.all(
-          NETWORK_OPTIONS.map(async (option) => {
-            try {
-              const result = await getWalletBalance({
-                address,
-                client,
-                chain: option.chain,
-              });
-              const numericValue = result
-                ? Number(result.value) / 10 ** result.decimals
-                : 0;
-              return [option.id, numericValue] as const;
-            } catch (error) {
-              console.error(`Error fetching native balance for ${option.label}`, error);
-              return [option.id, null] as const;
-            }
-          })
-        );
-
-        if (!isActive) {
-          return;
-        }
-
-        setNativeBalances((prev) => {
-          const next = { ...prev };
-          results.forEach(([id, value]) => {
-            next[id] = value;
-          });
-          return next;
-        });
-      } catch (error) {
-        console.error('Error fetching native balances', error);
+    const tick = (now: number) => {
+      const progress = Math.min((now - startTime) / durationMs, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const nextValue = from + (to - from) * eased;
+      setAnimatedBalance(nextValue);
+      if (progress < 1) {
+        rafId = requestAnimationFrame(tick);
+      } else {
+        balanceRef.current = to;
       }
     };
 
-    fetchNativeBalances();
-    const interval = setInterval(fetchNativeBalances, 10000);
+    rafId = requestAnimationFrame(tick);
 
     return () => {
-      isActive = false;
-      clearInterval(interval);
+      cancelAnimationFrame(rafId);
     };
-  }, [address]);
+  }, [balance]);
 
+  useEffect(() => {
+    if (!address || !clientId) {
+      setTransfers([]);
+      setTransfersPage(0);
+      setTransfersHasMore(false);
+      setTransfersError(null);
+      transfersScopeRef.current = null;
+      return;
+    }
 
+    const scopeKey = `${address}-${selectedNetworkConfig.chain.id}-${selectedNetworkConfig.contractAddress}`;
+    let shouldFetch = true;
+    if (transfersScopeRef.current !== scopeKey) {
+      transfersScopeRef.current = scopeKey;
+      setTransfers([]);
+      setTransfersHasMore(false);
+      setTransfersError(null);
+      if (transfersPage !== 0) {
+        setTransfersPage(0);
+        shouldFetch = false;
+      }
+    }
 
+    if (!shouldFetch) {
+      return;
+    }
 
+    const controller = new AbortController();
+    const clientIdValue = clientId;
 
+    const fetchTransfers = async () => {
+      setTransfersLoading(true);
+      setTransfersError(null);
+      try {
+        const url = new URL('https://insight.thirdweb.com/v1/tokens/transfers');
+        url.searchParams.append('chain_id', String(selectedNetworkConfig.chain.id));
+        url.searchParams.set('owner_address', address);
+        url.searchParams.append('contract_address', selectedNetworkConfig.contractAddress);
+        url.searchParams.append('token_types', 'erc20');
+        url.searchParams.set('metadata', 'true');
+        url.searchParams.set('sort_order', 'desc');
+        url.searchParams.set('limit', String(TRANSFERS_PAGE_SIZE));
+        url.searchParams.set('page', String(transfersPage));
 
+        const response = await fetch(url.toString(), {
+          headers: clientIdValue ? { 'x-client-id': clientIdValue } : undefined,
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Failed to fetch transfers');
+        }
+
+        const payload = await response.json();
+        const items =
+          (Array.isArray(payload?.data) && payload.data) ||
+          (Array.isArray(payload?.data?.transfers) && payload.data.transfers) ||
+          (Array.isArray(payload?.result) && payload.result) ||
+          [];
+        const meta = payload?.meta ?? payload?.data?.meta ?? null;
+        const currentPage = typeof meta?.page === 'number' ? meta.page : transfersPage;
+        setTransfers(items as UsdtTransfer[]);
+        const totalPages =
+          typeof meta?.total_pages === 'number' ? meta.total_pages : null;
+        if (totalPages !== null) {
+          const nextPageIndex = typeof currentPage === 'number' ? currentPage + 1 : transfersPage + 1;
+          setTransfersHasMore(nextPageIndex < totalPages);
+        } else {
+          setTransfersHasMore(items.length >= TRANSFERS_PAGE_SIZE);
+        }
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') {
+          return;
+        }
+        console.error('Failed to fetch transfers', error);
+        setTransfersError('USDT 입출금 내역을 불러오지 못했습니다.');
+      } finally {
+        setTransfersLoading(false);
+      }
+    };
+
+    fetchTransfers();
+
+    return () => {
+      controller.abort();
+    };
+  }, [address, clientId, selectedNetworkConfig.chain.id, selectedNetworkConfig.contractAddress, transfersPage]);
 
 
   const [user, setUser] = useState(
@@ -698,7 +904,7 @@ export default function SendUsdt({ params }: any) {
         /*
         const { transactionHash } = await sendTransaction({
           
-          account: activeAccount as any,
+          account: account as any,
 
           transaction,
         });
@@ -706,7 +912,7 @@ export default function SendUsdt({ params }: any) {
         // sendAndConfirmTransaction
         const { transactionHash } = await sendAndConfirmTransaction({
           transaction: transaction,
-          account: activeAccount as any,
+          account: account as any,
         });
 
         
@@ -847,48 +1053,161 @@ export default function SendUsdt({ params }: any) {
 
 
 
-  if (!address) {
+  if (clientSettingsLoading) {
     return (
-      <main className="min-h-[100vh] bg-[radial-gradient(120%_120%_at_0%_0%,#fff7ed_0%,#fef2f2_38%,#eff6ff_78%,#f8fafc_100%)] px-4 py-8">
-        <AutoConnect
-            client={client}
-            wallets={[wallet]}
-        />
+      <main className="min-h-[100vh] bg-white px-4 py-8">
         <div className="mx-auto flex min-h-[70vh] max-w-screen-sm items-center justify-center text-center">
-          <p className="text-2xl font-semibold text-rose-600 sm:text-3xl">
-            지갑 연결이 필요합니다. 연결 후 이용하십시오.
+          <p className="text-lg font-semibold text-slate-600 sm:text-2xl">
+            클라이언트 설정을 확인 중입니다...
           </p>
         </div>
       </main>
     );
   }
 
+  if (!smartAccountEnabled) {
+    return (
+      <main className="min-h-[100vh] bg-white px-4 py-8">
+        <div className="mx-auto flex min-h-[70vh] max-w-screen-sm items-center justify-center text-center">
+          <p className="text-lg font-semibold text-rose-600 sm:text-2xl">
+            스마트 어카운트가 비활성화되어 있습니다. 관리자에게 문의해주세요.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!address) {
+    return (
+      <main className="min-h-[100vh] bg-white px-4 py-8">
+        <AutoConnect client={client} wallets={wallets.length ? wallets : [wallet]} />
+        <div className="mx-auto flex min-h-[70vh] max-w-screen-sm items-center justify-center">
+        <div className="w-full max-w-md mx-auto p-6 text-center">
+            <div className="flex flex-col items-center gap-3">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
+                OrangeX
+              </span>
+              <Image
+                src="/logo-orangex.png"
+                alt="OrangeX"
+                width={160}
+                height={48}
+                className="h-10 w-auto"
+                priority
+              />
+            </div>
+            <div className="mx-auto mt-6 flex h-16 w-16 items-center justify-center rounded-md border border-slate-200 bg-white">
+              <Image src="/logo-wallet.png" alt="Wallet" width={32} height={32} className="h-8 w-8" />
+            </div>
+            <h2 className="mt-4 text-xl font-semibold text-slate-900 sm:text-2xl">
+              지갑 연결이 필요합니다
+            </h2>
+            <p className="mt-2 text-sm text-slate-500">
+              USDT 출금을 위해 지갑을 연결해 주세요.
+            </p>
+            {connectError && (
+              <p className="mt-3 text-xs font-semibold text-rose-600">
+                {connectError}
+              </p>
+            )}
+            <button
+              type="button"
+              disabled={isConnecting}
+              onClick={async () => {
+                try {
+                  setConnectError(null);
+                  await openConnectModal({
+                    client,
+                    wallets: wallets.length ? wallets : [wallet],
+                    chain: selectedNetworkConfig.chain,
+                    theme: "light",
+                    size: "wide",
+                    title: "로그인",
+                    titleIcon: "/logo-orangex.png",
+                    showThirdwebBranding: false,
+                    welcomeScreen: {
+                      title: "OrangeX",
+                      subtitle: "간편하게 지갑을 연결하고 USDT 출금을 시작하세요.",
+                      img: {
+                        src: "/logo-orangex.png",
+                        width: 220,
+                        height: 68,
+                      },
+                    },
+                    locale: "ko_KR",
+                  });
+                } catch (error) {
+                  const message =
+                    error instanceof Error ? error.message : '지갑 연결에 실패했습니다.';
+                  setConnectError(message);
+                }
+              }}
+              className="mt-5 inline-flex w-full items-center justify-center rounded-md border border-slate-200 bg-white px-6 py-3 text-base font-medium text-slate-800 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:text-slate-400"
+            >
+              {isConnecting ? '연결 중...' : '지갑 연결하기'}
+            </button>
+          </div>
+        </div>
+        <footer className="relative mt-10 border-t border-slate-200 bg-white px-6 py-12 text-center text-slate-600">
+          <div className="mx-auto flex max-w-3xl flex-col items-center gap-6">
+            <Image
+              src="/logo-orangex.png"
+              alt="OrangeX"
+              width={180}
+              height={56}
+              className="h-10 w-auto"
+            />
+            <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-slate-500">
+              <Link href={`/${lang}/terms-of-service`} className="hover:text-slate-900">
+                이용약관
+              </Link>
+              <span className="text-slate-300">|</span>
+              <Link href={`/${lang}/privacy-policy`} className="hover:text-slate-900">
+                개인정보처리방침
+              </Link>
+              <span className="text-slate-300">|</span>
+              <Link href={`/${lang}/refund-policy`} className="hover:text-slate-900">
+                환불·분쟁 정책
+              </Link>
+            </div>
+            <p className="max-w-2xl text-xs leading-relaxed text-slate-400">
+              리스크 고지: 가상자산 결제에는 가격 변동 및 네트워크 지연 등 위험이 수반될 수 있습니다.
+              결제 전에 수수료·환율·정산 조건을 확인해 주세요.
+            </p>
+            <div className="text-sm text-slate-500">
+              <p>이메일 : help@orangex.center</p>
+              <p>주소 : 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
+            </div>
+            <p className="text-xs text-slate-400">Copyright © OrangeX All Rights Reserved</p>
+          </div>
+        </footer>
+      </main>
+    );
+  }
+
   return (
 
-    <main className="min-h-[100vh] bg-[radial-gradient(120%_120%_at_0%_0%,#fff7ed_0%,#fef2f2_38%,#eff6ff_78%,#f8fafc_100%)] px-4 py-8">
+    <main className="min-h-[100vh] bg-white px-4 py-8">
 
 
-      <AutoConnect
-          client={client}
-          wallets={[wallet]}
-      />
+      <AutoConnect client={client} wallets={[wallet]} />
 
 
-      <div className="w-full max-w-screen-sm mx-auto">
+      <div className="w-full max-w-md mx-auto">
         
-        <div className="rounded-[32px] border border-slate-200/70 bg-white/85 p-6 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
+        <div className="py-2">
 
   
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <button
-              onClick={() => window.history.back()}
-              className="group inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-100">
-                <Image
-                  src="/icon-back.png"
-                  alt="Back"
-                  width={18}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button
+            onClick={() => window.history.back()}
+            className="group inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white">
+              <Image
+                src="/icon-back.png"
+                alt="Back"
+                width={18}
                   height={18}
                   className="rounded-full"
                 />
@@ -898,50 +1217,68 @@ export default function SendUsdt({ params }: any) {
 
           </div>
 
-          <div className="mt-5 flex flex-col gap-1">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-200/70 bg-emerald-50 shadow-sm">
-                <Image
-                  src="/logo-tether.svg"
-                  alt="USDT"
-                  width={24}
-                  height={24}
-                  className="w-6 h-6"
-                />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                  Wallet Transfer
-                </span>
-                <span className="text-xl font-semibold text-slate-900">
-                  {Withdraw_USDT}
-                </span>
-              </div>
+        <div className="mt-6 flex flex-col gap-1">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white">
+              <Image
+                src="/logo-tether.svg"
+                alt="USDT"
+                width={24}
+                height={24}
+                className="w-6 h-6"
+              />
             </div>
-            <p className="text-sm text-slate-500">보안 기준을 충족한 사용자만 출금할 수 있습니다.</p>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">
+                Wallet Transfer
+              </span>
+              <span className="text-xl font-medium text-slate-900">
+                {Withdraw_USDT}
+              </span>
+            </div>
           </div>
+          <p className="text-sm text-slate-500">보안 기준을 충족한 사용자만 출금할 수 있습니다.</p>
+        </div>
 
-          <div className="mt-5 flex flex-col gap-2 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.4)]">
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+          <div className="mt-6 flex flex-col gap-2 border-t border-slate-200 pt-4">
+            <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">
               네트워크 선택
             </span>
-            <select
-              value={selectedNetwork}
-              onChange={(e) => setSelectedNetwork(e.target.value as NetworkKey)}
-              disabled={sending}
-              className={`w-full rounded-xl border px-3 py-2 text-base font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
-                sending
-                  ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
-                  : 'border-slate-200 bg-white text-slate-800'
-              }`}
+            <div
+              role="radiogroup"
               aria-label="네트워크 선택"
+              className="grid grid-cols-2 gap-2"
             >
-              {NETWORK_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              {NETWORK_OPTIONS.map((option) => {
+                const isSelected = option.id === selectedNetwork;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    disabled={sending}
+                    onClick={() => setSelectedNetwork(option.id)}
+                    className={`relative flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/10 ${
+                      sending
+                        ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                        : 'bg-transparent text-slate-800 hover:border-slate-400'
+                    } ${isSelected ? 'border-slate-900 bg-slate-50 text-slate-900' : 'border-slate-200'}`}
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white sm:h-10 sm:w-10">
+                      <Image
+                        src={option.logo}
+                        alt={`${option.label} logo`}
+                        width={28}
+                        height={28}
+                        className="h-6 w-6 object-contain"
+                      />
+                    </span>
+                    <span className="text-xs font-medium text-slate-900 sm:text-sm">{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
             <p className="text-xs text-slate-500">
               선택한 네트워크 기준으로 잔고와 출금이 처리됩니다.
             </p>
@@ -950,14 +1287,14 @@ export default function SendUsdt({ params }: any) {
               
 
           {address && (
-            <div className="mt-6 rounded-2xl border border-slate-200/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(240,253,250,0.85))] p-4 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.45)]">
+            <div className="mt-6 border-t border-slate-200 pt-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">
                     My Wallet
                   </span>
                   <button
-                    className="text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-2 transition hover:text-slate-900"
+                    className="text-sm font-medium text-slate-700 underline decoration-slate-300 underline-offset-2 transition hover:text-slate-900"
                     onClick={() => {
                       navigator.clipboard.writeText(address);
                       toast.success(Copied_Wallet_Address);
@@ -966,87 +1303,47 @@ export default function SendUsdt({ params }: any) {
                     {address.substring(0, 6)}...{address.substring(address.length - 4)}
                   </button>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mr-1 sm:mr-2">
                   {smartAccountEnabled && (
-                    <div className="relative">
-                      <span className="absolute -inset-1 rounded-full bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.75),rgba(249,115,22,0.25),transparent_70%)] blur-lg" />
-                      <span className="relative inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 px-3 py-1 text-[11px] font-bold text-white shadow-[0_12px_28px_-16px_rgba(249,115,22,0.9)]">
-                        <span className="inline-flex h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.95)]" />
+                    <>
+                      <span className="text-[11px] font-medium text-slate-500">
                         스마트 어카운트
                       </span>
-                    </div>
+                      <span className="text-xs font-medium text-amber-600">
+                        가스비 0원, 즉시 전송.
+                      </span>
+                    </>
                   )}
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200/70 bg-white shadow-sm">
-                    <Image
-                      src="/icon-shield.png"
-                      alt="Wallet"
-                      width={20}
-                      height={20}
-                      className="w-5 h-5"
-                    />
-                  </div>
                 </div>
               </div>
               <div className="mt-3 flex items-baseline justify-end gap-2">
-                <span className="text-3xl sm:text-4xl font-semibold text-emerald-700 tabular-nums"
+                <span
+                  className="text-3xl sm:text-4xl font-medium text-emerald-700 tabular-nums"
                   style={{ fontFamily: 'monospace' }}
                 >
-                  {Number(balance).toFixed(3)}
+                  {Number(animatedBalance).toFixed(3)}
                 </span>
-                <span className="text-sm font-semibold text-slate-500">USDT</span>
+                <span className="text-sm font-medium text-slate-500">USDT</span>
               </div>
             </div>
           )}
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {NETWORK_OPTIONS.map((option) => {
-              const value = nativeBalances[option.id];
-              return (
-                <div
-                  key={option.id}
-                  className="rounded-2xl border border-slate-200/70 bg-white/85 px-4 py-3 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.35)]"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                      {option.label}
-                    </span>
-                    {option.id === selectedNetwork && (
-                      <span className="rounded-full border border-emerald-200/70 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
-                        선택됨
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-2 flex items-baseline justify-between gap-2">
-                    <span className="text-lg font-semibold text-slate-800 tabular-nums">
-                      {value == null
-                        ? '...'
-                        : value.toFixed(4)}
-                    </span>
-                    <span className="text-xs font-semibold text-slate-400">
-                      {option.nativeSymbol}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-6 flex flex-col gap-5 rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.5)]">
+          <div className="mt-8 flex flex-col gap-5 border-t border-slate-200 pt-4">
             <div className="flex flex-col gap-1">
-              <span className="text-sm font-semibold text-slate-900">출금 요청</span>
+              <span className="text-sm font-medium text-slate-900">출금 요청</span>
               <p className="text-sm text-slate-500">{Enter_the_amount_and_recipient_address}</p>
             </div>
 
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-3">
-                  <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  <label className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">
                     Amount
                   </label>
                   <button
                     type="button"
                     onClick={handleMaxAmount}
-                    className="text-xs font-semibold text-emerald-600 underline decoration-emerald-200 underline-offset-2 transition hover:text-emerald-700"
+                    className="text-xs font-medium text-emerald-600 underline decoration-emerald-200 underline-offset-2 transition hover:text-emerald-700"
                   >
                     잔고 전체 선택
                   </button>
@@ -1058,7 +1355,7 @@ export default function SendUsdt({ params }: any) {
                     inputMode="decimal"
                     placeholder="0.00"
                     className={`
-                      w-full rounded-2xl border px-4 py-4 pr-20 text-right text-3xl font-semibold text-slate-900 shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)] focus:outline-none focus:ring-2 focus:ring-emerald-400
+                      w-full rounded-md border px-4 py-4 pr-20 text-right text-3xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-400
                       ${sending ? 'border-slate-200 bg-slate-100 text-slate-400' : 'border-slate-200 bg-white'}
                     `}
                     value={amountInput}
@@ -1068,7 +1365,7 @@ export default function SendUsdt({ params }: any) {
                     USDT
                   </span>
                 </div>
-                <div className="text-xs font-semibold text-slate-400">
+                <div className="text-xs font-medium text-slate-400">
                   사용 가능: {formatAmountInput(maxAmount, selectedNetworkConfig.decimals)} USDT
                 </div>
               </div>
@@ -1084,7 +1381,7 @@ export default function SendUsdt({ params }: any) {
 
                         className="
                           
-                          w-56 rounded-xl border border-slate-200 bg-white px-3 py-2 text-base font-semibold text-slate-800 shadow-sm "
+                          w-56 rounded-md border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-800 "
                           
                         value={
                           recipient?.nickname
@@ -1149,7 +1446,7 @@ export default function SendUsdt({ params }: any) {
                         disabled={true}
                         type="text"
                         placeholder={User_wallet_address}
-                        className="w-80 xl:w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600"
+                        className="w-80 xl:w-full rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600"
                         value={recipient?.walletAddress}
                         onChange={(e) => {
         
@@ -1192,7 +1489,7 @@ export default function SendUsdt({ params }: any) {
                         disabled={sending}
                         type="text"
                         placeholder={User_wallet_address}
-                        className="w-80 xl:w-96 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"
+                        className="w-80 xl:w-96 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800"
                         value={recipient.walletAddress}
                         onChange={(e) => setRecipient({
                           ...recipient,
@@ -1326,88 +1623,212 @@ export default function SendUsdt({ params }: any) {
 
                 <button
                   disabled={!address || !recipient?.walletAddress || !amount || sending || !verifiedOtp}
-                  onClick={sendUsdt}
-                  className={`mt-2 w-full rounded-2xl px-4 py-3 text-lg font-semibold transition-all duration-200 ease-in-out
-
+                  onClick={() => setShowTransferConfirm(true)}
+                  className={`mt-2 w-full rounded-md border px-4 py-3 text-lg font-medium transition-all duration-200 ease-in-out
+                      ${sending ? 'animate-pulse' : ''}
                       ${
                       !address || !recipient?.walletAddress || !amount || sending || !verifiedOtp
-                      ?'bg-slate-200 text-slate-400'
-                      : 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-[0_20px_40px_-22px_rgba(16,185,129,0.7)] hover:from-emerald-500 hover:to-emerald-400 hover:-translate-y-0.5'
+                      ?'border-slate-200 bg-white text-slate-300'
+                      : 'border-slate-900 bg-white text-slate-900 hover:border-slate-600 hover:text-slate-700'
                       }
-                    
                     `}
                 >
                     {Send_USDT}
                 </button>
 
-                <div className="w-full flex flex-row gap-2 text-sm font-semibold text-slate-600">
-
-                  {/* sending rotate animation with white color*/}
-                  {sending && (
-                    <div className="
-                      w-5 h-5
-                      border-2 border-slate-400
-                      rounded-full
-                      animate-spin
-                    ">
-                      <Image
-                        src="/icon-loading.png"
-                        alt="loading"
-                        width={20}
-                        height={20}
-                      />
-                    </div>
-                  )}
-                  <div>
-                    {sending ? Sending : ''}
-                  </div>
-
-                </div>
-
           </div>
 
-
-
-          {address && (
-            <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-200/70 pt-4">
-              <span className="text-xs font-semibold text-slate-400">보안 로그인을 확인했습니다.</span>
-              <ConnectButton
-                client={client}
-                wallets={wallets}
-                chain={selectedNetworkConfig.chain}
-
-                theme={"light"}
-
-                // button color is dark skyblue convert (49, 103, 180) to hex
-                connectButton={{
-                    style: {
-                        backgroundColor: "#0047ab", // cobalt blue
-                        color: "#f3f4f6", // gray-300
-                        padding: "2px 10px",
-                        borderRadius: "10px",
-                        fontSize: "14px",
-                        width: "60x",
-                        height: "38px",
-                    },
-                    label: "웹3 로그인",
-                }}
-
-                connectModal={{
-                    size: "wide", 
-                    //size: "compact",
-                    titleIcon: "https://crypto-ex-vienna.vercel.app/logo.png",                           
-                    showThirdwebBranding: false,
-                }}
-
-                locale={"ko_KR"}
-                //locale={"en_US"}
-              />
+          <div className="mt-8 border-t border-slate-200 pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span className="text-sm font-medium text-slate-900">USDT 입출금 내역</span>
+                <p className="text-xs text-slate-500">선택한 네트워크 기준 최신순</p>
+              </div>
+              <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">
+                {selectedNetworkConfig.label}
+              </span>
             </div>
-          )}
+
+            {transfersLoading && (
+              <div className="mt-4 text-xs font-semibold text-slate-500">
+                내역을 불러오는 중입니다...
+              </div>
+            )}
+
+            {!transfersLoading && transfersError && (
+              <div className="mt-4 text-xs font-semibold text-rose-600">
+                {transfersError}
+              </div>
+            )}
+
+            {!transfersLoading && !transfersError && transfers.length === 0 && (
+              <div className="mt-4 text-xs font-semibold text-slate-500">
+                아직 USDT 입출금 내역이 없습니다.
+              </div>
+            )}
+
+            {!transfersLoading && !transfersError && transfers.length > 0 && (
+              <div className="mt-4 divide-y divide-slate-200">
+                {transfers.map((transfer, index) => {
+                  const direction = resolveTransferDirection(transfer);
+                  const isIncoming = direction === 'in';
+                  const label = isIncoming ? '입금' : direction === 'out' ? '출금' : '이동';
+                  const amountText = formatTokenAmount(
+                    resolveTransferAmount(transfer),
+                    resolveTransferDecimals(transfer)
+                  );
+                  const symbol = resolveTransferSymbol(transfer);
+                  const fromText = shortenValue(transfer.from_address);
+                  const toText = shortenValue(transfer.to_address);
+                  const timeText = formatTimestamp(transfer.block_timestamp);
+                  const hashText = shortenValue(transfer.transaction_hash, 10, 8);
+                  const txUrl = getExplorerTxUrl(transfer.transaction_hash);
+                  const tone =
+                    direction === 'in'
+                      ? 'border-emerald-200/70 bg-emerald-50 text-emerald-700'
+                      : direction === 'out'
+                      ? 'border-rose-200/70 bg-rose-50 text-rose-600'
+                      : 'border-slate-200/70 bg-slate-100 text-slate-600';
+                  const amountTone =
+                    direction === 'in'
+                      ? 'text-emerald-700'
+                      : direction === 'out'
+                      ? 'text-rose-600'
+                      : 'text-slate-700';
+
+                  return (
+                    <div
+                      key={transfer.transaction_hash || `${index}-${transfer.block_timestamp}`}
+                      className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                <span className={`inline-flex min-w-[56px] items-center justify-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${tone}`}>
+                  {label}
+                </span>
+                        <div className="flex flex-col text-xs text-slate-500">
+                          <span>{timeText}</span>
+                          {txUrl && hashText !== '-' ? (
+                            <a
+                              href={txUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[11px] text-slate-400 underline decoration-slate-300 underline-offset-2 transition hover:text-slate-600"
+                            >
+                              Tx {hashText}
+                            </a>
+                          ) : (
+                            <span className="text-[11px] text-slate-400">Tx {hashText}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-start gap-1 text-left sm:items-end sm:text-right">
+                        <span className={`text-base font-medium ${amountTone}`}>
+                          {isIncoming ? '+' : direction === 'out' ? '-' : ''}
+                          {amountText} {symbol}
+                        </span>
+                        {(fromText !== '-' || toText !== '-') && (
+                          <span className="text-[11px] text-slate-400">
+                            {fromText} → {toText}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!transfersLoading && !transfersError && transfers.length > 0 && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-slate-500">
+                  페이지 {transfersPage + 1}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTransfersPage((prev) => Math.max(0, prev - 1))}
+                    disabled={transfersLoading || transfersPage === 0}
+                    className="rounded-md border border-slate-200 bg-white px-4 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                  >
+                    이전
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTransfersPage((prev) => prev + 1)}
+                    disabled={transfersLoading || !transfersHasMore}
+                    className="rounded-md border border-slate-200 bg-white px-4 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                  >
+                    다음
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          
+
 
         </div>
 
       </div>
+
+      {showTransferConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6"
+          role="dialog"
+          aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setShowTransferConfirm(false);
+            }
+          }}
+        >
+          <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6">
+            <h3 className="text-lg font-medium text-slate-900">전송 확인</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              아래 내용으로 USDT를 전송합니다. 확인 후 진행해주세요.
+            </p>
+
+            <div className="mt-4 space-y-3 rounded-md border border-slate-200 px-4 py-3 text-sm text-slate-700">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">Network</span>
+                <span className="font-medium text-slate-900">{selectedNetworkConfig.label}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">To</span>
+                <span className="font-medium text-slate-900">{shortenValue(recipient?.walletAddress)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">Amount</span>
+                <span className="font-medium text-emerald-700">
+                  {formatAmountInput(amount, selectedNetworkConfig.decimals)} USDT
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowTransferConfirm(false)}
+                className="flex-1 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                disabled={sending}
+                onClick={async () => {
+                  setShowTransferConfirm(false);
+                  await sendUsdt();
+                }}
+                className="flex-1 rounded-md border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+              >
+                확인 후 전송
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </main>
 

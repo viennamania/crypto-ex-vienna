@@ -28,9 +28,17 @@ type InAppAuthOption =
   | 'passkey'
   | 'wallet';
 
+type InAppWalletOptions = Parameters<typeof inAppWallet>[0];
+type SupportedSmsCountry = Exclude<
+  NonNullable<NonNullable<InAppWalletOptions>["auth"]>["defaultSmsCountryCode"],
+  undefined
+>;
+
 type UseClientWalletsOptions = {
   authOptions?: string[];
   sponsorGas?: boolean;
+  defaultSmsCountryCode?: SupportedSmsCountry;
+  allowedSmsCountryCodes?: SupportedSmsCountry[];
 };
 
 const isInAppAuthOption = (value: string): value is InAppAuthOption =>
@@ -69,7 +77,12 @@ const resolveChain = (value: NetworkKey) => {
 };
 
 export function useClientWallets(options: UseClientWalletsOptions = {}) {
-  const { authOptions = [], sponsorGas = false } = options;
+  const {
+    authOptions = [],
+    sponsorGas = false,
+    defaultSmsCountryCode,
+    allowedSmsCountryCodes,
+  } = options;
   const { chain, smartAccountEnabled } = useClientSettings();
   const activeChain = resolveChain(chain);
   const normalizedAuthOptions = useMemo(
@@ -79,8 +92,18 @@ export function useClientWallets(options: UseClientWalletsOptions = {}) {
   const authKey = normalizedAuthOptions.join('|');
 
   const wallet = useMemo(() => {
+    const authConfig =
+      normalizedAuthOptions.length > 0
+        ? {
+            auth: {
+              options: normalizedAuthOptions,
+              ...(defaultSmsCountryCode ? { defaultSmsCountryCode } : {}),
+              ...(allowedSmsCountryCodes ? { allowedSmsCountryCodes } : {}),
+            },
+          }
+        : {};
     if (!smartAccountEnabled) {
-      return inAppWallet();
+      return inAppWallet(authConfig);
     }
 
 
@@ -98,13 +121,11 @@ export function useClientWallets(options: UseClientWalletsOptions = {}) {
 
 
     return inAppWallet({
-
-      
+      ...authConfig,
       smartAccount: {
         sponsorGas,
         chain: activeChain,
       },
-      
 
       /*
       executionMode: {
@@ -116,13 +137,22 @@ export function useClientWallets(options: UseClientWalletsOptions = {}) {
 
     });
 
-  }, [smartAccountEnabled, sponsorGas, activeChain]);
+  }, [
+    smartAccountEnabled,
+    sponsorGas,
+    activeChain,
+    normalizedAuthOptions,
+    defaultSmsCountryCode,
+    allowedSmsCountryCodes,
+  ]);
 
   const wallets = useMemo(() => {
     const config: Parameters<typeof inAppWallet>[0] = {};
     if (normalizedAuthOptions.length > 0) {
       config.auth = {
         options: normalizedAuthOptions,
+        ...(defaultSmsCountryCode ? { defaultSmsCountryCode } : {}),
+        ...(allowedSmsCountryCodes ? { allowedSmsCountryCodes } : {}),
       };
     }
     if (smartAccountEnabled) {
@@ -132,7 +162,15 @@ export function useClientWallets(options: UseClientWalletsOptions = {}) {
       };
     }
     return [inAppWallet(config)];
-  }, [authKey, normalizedAuthOptions, smartAccountEnabled, sponsorGas, activeChain]);
+  }, [
+    authKey,
+    normalizedAuthOptions,
+    smartAccountEnabled,
+    sponsorGas,
+    activeChain,
+    defaultSmsCountryCode,
+    allowedSmsCountryCodes,
+  ]);
 
   return {
     wallet,
