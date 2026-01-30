@@ -357,6 +357,9 @@ export default function OrangeXPage() {
     const sellerCtaTone = !hasWallet
         ? 'border-orange-200/90 bg-[linear-gradient(135deg,rgba(255,247,237,0.98),rgba(255,237,213,0.98))] text-orange-800 ring-1 ring-orange-200/70 shadow-[0_18px_40px_-24px_rgba(249,115,22,0.65)]'
         : 'border-slate-200/80 bg-white/80 text-slate-600 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.2)]';
+    const heroCtaClass =
+        'inline-flex w-full items-center justify-center gap-3 whitespace-nowrap rounded-full bg-[color:var(--accent)] px-8 py-4 text-base font-semibold text-white shadow-[0_18px_45px_-20px_rgba(249,115,22,0.9)] transition hover:bg-[color:var(--accent-deep)] sm:w-auto sm:min-w-[240px]';
+    const heroCtaDisabledClass = `${heroCtaClass} cursor-not-allowed opacity-70 hover:bg-[color:var(--accent)]`;
     const chainBadgeMap: Record<string, { label: string; icon: string; tone: string; ring: string }> = {
         polygon: {
             label: '폴리곤',
@@ -1660,7 +1663,7 @@ export default function OrangeXPage() {
                             <div className="flex flex-col gap-4 sm:flex-row">
                                 <Link
                                     href={buyPageHref}
-                                    className="inline-flex w-full items-center justify-center gap-3 whitespace-nowrap rounded-full bg-[color:var(--accent)] px-8 py-4 text-base font-semibold text-white shadow-[0_18px_45px_-20px_rgba(249,115,22,0.9)] transition hover:bg-[color:var(--accent-deep)] sm:w-auto sm:min-w-[220px]"
+                                    className={heroCtaClass}
                                 >
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
                                         <path d="M6 6h15l-1.5 9h-13L6 6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1672,7 +1675,7 @@ export default function OrangeXPage() {
                                 {canStartSeller ? (
                                     <Link
                                         href={sellerPageHref}
-                                        className="inline-flex w-full items-center justify-center gap-3 whitespace-nowrap rounded-full border border-slate-300/80 bg-white/80 px-8 py-4 text-base font-semibold text-slate-900 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)] transition hover:bg-white sm:w-auto sm:min-w-[240px]"
+                                        className={heroCtaClass}
                                     >
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
                                             <path d="M12 2l7 7-7 7-7-7 7-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1685,17 +1688,25 @@ export default function OrangeXPage() {
                                         {needsSellerSetup ? (
                                             <Link
                                                 href={sellerSetupHref}
-                                                className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[color:var(--accent)] px-8 py-4 text-base font-semibold text-white shadow-[0_18px_45px_-22px_rgba(249,115,22,0.9)] transition hover:brightness-110 sm:w-auto sm:min-w-[240px]"
+                                                className={heroCtaClass}
                                             >
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
+                                                    <path d="M12 2l7 7-7 7-7-7 7-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                    <path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
                                                 판매하기
                                             </Link>
                                         ) : (
                                             <span
-                                                className={`relative inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border px-8 py-4 text-base font-semibold tracking-tight sm:w-auto sm:min-w-[240px] ${sellerCtaTone}`}
+                                                className={`relative ${heroCtaDisabledClass}`}
                                             >
                                                 {!hasWallet && (
                                                     <span className="pointer-events-none absolute -right-6 -top-4 h-10 w-10 rounded-full bg-orange-300/40 blur-2xl" />
                                                 )}
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
+                                                    <path d="M12 2l7 7-7 7-7-7 7-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                    <path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
                                                 <span className="relative">{sellerCtaLabel}</span>
                                             </span>
                                         )}
@@ -1705,19 +1716,11 @@ export default function OrangeXPage() {
                                     href="https://www.orangex.center/ko/p2p-buyer"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[linear-gradient(135deg,#fbbf24,#fb923c,#f97316)] px-8 py-4 text-base font-semibold text-white shadow-[0_18px_45px_-22px_rgba(249,115,22,0.65)] transition hover:brightness-110 sm:w-auto sm:min-w-[240px]"
+                                    className={heroCtaClass}
                                 >
-                                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
-                                        <svg
-                                            width="18"
-                                            height="18"
-                                            viewBox="0 0 24 24"
-                                            fill="currentColor"
-                                            aria-hidden="true"
-                                        >
-                                            <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8Z" />
-                                        </svg>
-                                    </span>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
+                                        <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
                                     간편구매하기
                                 </Link>
                             </div>
