@@ -197,16 +197,16 @@ interface BuyOrder {
 const walletAuthOptions = ["google", "email"];
 const SELLER_CARD_TONES = [
   {
-    card: "border-sky-200/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(224,242,254,0.7))]",
-    header: "border-sky-200/80 bg-sky-50/80",
+    card: "border-slate-200 bg-white",
+    header: "border-slate-200 bg-slate-50",
   },
   {
-    card: "border-amber-200/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,237,213,0.7))]",
-    header: "border-amber-200/80 bg-amber-50/80",
+    card: "border-slate-200 bg-white",
+    header: "border-slate-200 bg-slate-50",
   },
   {
-    card: "border-emerald-200/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(220,252,231,0.7))]",
-    header: "border-emerald-200/80 bg-emerald-50/80",
+    card: "border-slate-200 bg-white",
+    header: "border-slate-200 bg-slate-50",
   },
 ];
 
@@ -216,6 +216,7 @@ export default function Index({ params }: any) {
 
   const searchParams = useSearchParams();
   const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
+  const availableWallets = wallets.length ? wallets : [wallet];
  
   ////////const wallet = searchParams.get('wallet');
 
@@ -3579,71 +3580,75 @@ const fetchBuyOrders = async () => {
 
   // /api/user/getAllSellersForBalance
   const [sellersBalance, setSellersBalance] = useState([] as any[]);
+  const [sellersBalanceRefreshing, setSellersBalanceRefreshing] = useState(false);
+  const [sellersBalanceLastUpdatedAt, setSellersBalanceLastUpdatedAt] = useState<Date | null>(null);
+  const SELLERS_BALANCE_POLL_INTERVAL = 5000;
   const fetchSellersBalance = async () => {
-    const response = await fetch('/api/user/getAllSellersForBalance', {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(
-        {
-          storecode: "admin",
-          limit: 100,
-          page: 1,
-        }
-      )
-    });
-
-    const data = await response.json();
-
-    ///console.log('getAllSellersForBalance data', data);
-
-    if (data.result) {
-      
-      //setSellersBalance(data.result.users);
-
-      // if seller.walletAddress of data.result.users is address,
-      // then order first
-      // and others is ordered by seller.usdtToKrwRate ascending
-      /*
-      const sortedSellers = data.result.users.sort((a: any, b: any) => {
-        if (a.walletAddress === address) return -1;
-        if (b.walletAddress === address) return 1;
-        return 0;
-      });
-      */
-
-
-      const sortedSellers = data.result.users;
-      const pricedSellers = sortedSellers.filter((seller: any) => {
-        const rate = Number(seller?.seller?.usdtToKrwRate ?? 0);
-        return rate > 0;
+    setSellersBalanceRefreshing(true);
+    try {
+      const response = await fetch('/api/user/getAllSellersForBalance', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(
+          {
+            storecode: "admin",
+            limit: 100,
+            page: 1,
+          }
+        )
       });
 
-      // if walletAddress is address, then order first
-      // and then others is ordered by seller.totalPaymentConfirmedUsdtAmount descending
+      const data = await response.json();
 
-      /*
-      const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
-        if (a.walletAddress === address) return -1;
-        if (b.walletAddress === address) return 1;
-        return a.seller?.usdtToKrwRate - b.seller?.usdtToKrwRate;
-      });
-      */
+      ///console.log('getAllSellersForBalance data', data);
 
-      /*
-      const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
-        if (a.walletAddress === address) return -1;
-        if (b.walletAddress === address) return 1;
-        return b.totalPaymentConfirmedUsdtAmount - a.totalPaymentConfirmedUsdtAmount;
-      });
-      */
-      // remove walletAddress is a address from sortedSellers
-      const filteredSellers = pricedSellers.filter((seller: any) => seller.walletAddress !== address);
-      // sort filteredSellers by totalPaymentConfirmedUsdtAmount descending
-      filteredSellers.sort((a: any, b: any) => {
-        return b.totalPaymentConfirmedUsdtAmount - a.totalPaymentConfirmedUsdtAmount;
-      });
+      if (data.result) {
+        //setSellersBalance(data.result.users);
+
+        // if seller.walletAddress of data.result.users is address,
+        // then order first
+        // and others is ordered by seller.usdtToKrwRate ascending
+        /*
+        const sortedSellers = data.result.users.sort((a: any, b: any) => {
+          if (a.walletAddress === address) return -1;
+          if (b.walletAddress === address) return 1;
+          return 0;
+        });
+        */
+
+
+        const sortedSellers = data.result.users;
+        const pricedSellers = sortedSellers.filter((seller: any) => {
+          const rate = Number(seller?.seller?.usdtToKrwRate ?? 0);
+          return rate > 0;
+        });
+
+        // if walletAddress is address, then order first
+        // and then others is ordered by seller.totalPaymentConfirmedUsdtAmount descending
+
+        /*
+        const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
+          if (a.walletAddress === address) return -1;
+          if (b.walletAddress === address) return 1;
+          return a.seller?.usdtToKrwRate - b.seller?.usdtToKrwRate;
+        });
+        */
+
+        /*
+        const finalSortedSellers = sortedSellers.sort((a: any, b: any) => {
+          if (a.walletAddress === address) return -1;
+          if (b.walletAddress === address) return 1;
+          return b.totalPaymentConfirmedUsdtAmount - a.totalPaymentConfirmedUsdtAmount;
+        });
+        */
+        // remove walletAddress is a address from sortedSellers
+        const filteredSellers = pricedSellers.filter((seller: any) => seller.walletAddress !== address);
+        // sort filteredSellers by totalPaymentConfirmedUsdtAmount descending
+        filteredSellers.sort((a: any, b: any) => {
+          return b.totalPaymentConfirmedUsdtAmount - a.totalPaymentConfirmedUsdtAmount;
+        });
 
 
 
@@ -3664,11 +3669,17 @@ const fetchBuyOrders = async () => {
       */
       
 
-      //setSellersBalance(finalSortedSellers);
-      setSellersBalance(filteredSellers);
+        //setSellersBalance(finalSortedSellers);
+        setSellersBalance(filteredSellers);
+        setSellersBalanceLastUpdatedAt(new Date());
 
-    } else {
-      console.error('Error fetching sellers balance');
+      } else {
+        console.error('Error fetching sellers balance');
+      }
+    } catch (error) {
+      console.error('Error fetching sellers balance', error);
+    } finally {
+      setSellersBalanceRefreshing(false);
     }
   };
   useEffect(() => {
@@ -3679,12 +3690,32 @@ const fetchBuyOrders = async () => {
     }
     */
 
-    fetchSellersBalance();
-    // interval to fetch every 10 seconds
-    const interval = setInterval(() => {
-      fetchSellersBalance();
-    }, 10000);
-    return () => clearInterval(interval);
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const startPolling = () => {
+      if (interval) return;
+      interval = setInterval(fetchSellersBalance, SELLERS_BALANCE_POLL_INTERVAL);
+    };
+    const stopPolling = () => {
+      if (!interval) return;
+      clearInterval(interval);
+      interval = null;
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchSellersBalance();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    handleVisibilityChange();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [address]);
 
 
@@ -4193,7 +4224,7 @@ const fetchBuyOrders = async () => {
 
   if (address && loadingUser) {
     return (
-      <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-4xl bg-white">
         <div className="py-0 w-full flex flex-col items-center justify-center gap-4">
 
           <Image
@@ -4214,11 +4245,11 @@ const fetchBuyOrders = async () => {
 
   return (
 
-    <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800 antialiased">
+    <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-4xl bg-white text-slate-800 antialiased">
 
       <AutoConnect
           client={client}
-          wallets={[wallet]}
+          wallets={availableWallets}
       />
 
 
@@ -4326,7 +4357,7 @@ const fetchBuyOrders = async () => {
 
 
       <div className="py-0 w-full">
-        <div className="mb-4 w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-4 w-full rounded-lg border border-slate-200 bg-white p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600">
@@ -4372,7 +4403,7 @@ const fetchBuyOrders = async () => {
         <div className="w-full grid grid-cols-1 gap-2 lg:grid-cols-2 lg:items-start mb-4">
           <div className="w-full">
             <div className="relative w-full flex flex-col lg:flex-row items-start lg:items-center justify-between gap-2
-            rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+            rounded-lg border border-slate-200 bg-white p-3">
               <div className="relative w-full flex flex-row items-center justify-start gap-3">
                 <button
                   onClick={() => router.push('/' + params.lang + '/p2p')}
@@ -4545,7 +4576,7 @@ const fetchBuyOrders = async () => {
 
           </div>
 
-          <section className="w-full lg:col-span-1 self-start rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+          <section className="w-full lg:col-span-1 self-start rounded-lg border border-slate-200 bg-white p-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600">
@@ -4638,35 +4669,55 @@ const fetchBuyOrders = async () => {
           </section>
           
         </div>
-      <div className="w-full grid grid-cols-1 gap-2 lg:grid-cols-2 lg:items-start mb-4">
+          <div className="w-full grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-start mb-4">
         <div className="w-full flex flex-col gap-2">
                     {!address && (
-                      <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                              <path d="M12 7v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                              <circle cx="12" cy="17" r="1.5" fill="currentColor" />
-                              <path d="M10.3 4.5h3.4L21 20H3L10.3 4.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </div>
-                          <div className="flex flex-col">
-                            <p className="text-sm font-semibold text-slate-900">웹3 로그인이 필요합니다</p>
-                            <p className="text-xs text-slate-600">로그인 후 구매 기능을 이용할 수 있습니다.</p>
-                          </div>
+                      <div className="rounded-lg border border-slate-200 bg-white p-6 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
+                            OrangeX
+                          </span>
+                          <Image
+                            src="/logo-orangex.png"
+                            alt="OrangeX"
+                            width={160}
+                            height={48}
+                            className="h-10 w-auto"
+                          />
                         </div>
-                        <button
-                          onClick={() => {
-                            router.push('/' + params.lang + '/web3login');
-                          }}
-                          className="inline-flex w-full items-center justify-center rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto sm:self-start"
-                        >
-                          웹3 로그인하기
-                        </button>
+                        <div className="mx-auto mt-6 flex h-16 w-16 items-center justify-center rounded-md border border-slate-200 bg-white">
+                          <Image src="/logo-wallet.png" alt="Wallet" width={32} height={32} className="h-8 w-8" />
+                        </div>
+                        <h2 className="mt-4 text-xl font-semibold text-slate-900 sm:text-2xl">
+                          지갑 연결이 필요합니다
+                        </h2>
+                        <p className="mt-2 text-sm text-slate-500">
+                          USDT 출금을 위해 지갑을 연결해 주세요.
+                        </p>
+                        <div className="mt-5">
+                          <ConnectButton
+                            client={client}
+                            wallets={availableWallets}
+                            chain={
+                              chain === "ethereum"
+                                ? ethereum
+                                : chain === "polygon"
+                                ? polygon
+                                : chain === "arbitrum"
+                                ? arbitrum
+                                : bsc
+                            }
+                            connectButton={{
+                              label: "지갑 연결하기",
+                              className:
+                                "inline-flex w-full items-center justify-center rounded-md border border-slate-200 bg-white px-6 py-3 text-base font-medium text-slate-800 transition hover:border-slate-400 hover:text-slate-900",
+                            }}
+                          />
+                        </div>
                       </div>
                     )}
                     {address && (
-                      <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                      <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
                         <div className="flex items-start gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -4712,7 +4763,7 @@ const fetchBuyOrders = async () => {
                       </div>
                     )}
                     {address && !loadingUser && (!user || !user?.nickname) && (
-                      <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                      <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
                         <div className="flex items-start gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -4739,7 +4790,7 @@ const fetchBuyOrders = async () => {
                       </div>
                     )}
                     {address && !loadingUser && user?.nickname && !user?.buyer && (
-                      <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                      <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
                         <div className="flex items-start gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -4766,7 +4817,7 @@ const fetchBuyOrders = async () => {
                       </div>
                     )}
                   </div>
-        <section className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <section className="w-full rounded-lg border border-slate-200 bg-white p-4">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <Image
@@ -5082,7 +5133,7 @@ const fetchBuyOrders = async () => {
 
 
             {sellersBalance.length > 0 && (
-              <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-stretch gap-4 mt-4">
+              <div className="w-full grid grid-cols-1 md:grid-cols-2 items-stretch gap-4 mt-4">
 
                 {sellersBalance.map((seller, index) => (
                   <div key={index}
@@ -5098,9 +5149,8 @@ const fetchBuyOrders = async () => {
                     */
 
                     // seller.buyOrder.status = 'ordered' or 'paymentRequested' - red border and pulse animation
-                    className={`relative w-full h-full flex flex-col xl:flex-row xl:flex-wrap items-start justify-start gap-5
-                    p-5 rounded-2xl shadow-[0_18px_45px_-36px_rgba(15,23,42,0.25)]
-                    border text-slate-800
+                    className={`relative w-full h-full flex flex-col xl:flex-row xl:flex-wrap items-start justify-start gap-4
+                    p-4 rounded-lg border text-slate-800
                     ${SELLER_CARD_TONES[index % SELLER_CARD_TONES.length].card}
                     
                     ${(
@@ -5129,7 +5179,7 @@ const fetchBuyOrders = async () => {
                     `}
                   >
 
-                    <div className={`w-full xl:basis-full flex items-center justify-between gap-4 rounded-xl border px-5 py-4 ${SELLER_CARD_TONES[index % SELLER_CARD_TONES.length].header}`}>
+                    <div className={`w-full xl:basis-full flex items-center justify-between gap-4 rounded-md border px-4 py-3 ${SELLER_CARD_TONES[index % SELLER_CARD_TONES.length].header}`}>
                       <div className="flex items-center gap-4 min-w-0">
                         <div className="relative">
                           <Image
@@ -5689,21 +5739,55 @@ const fetchBuyOrders = async () => {
 
                             <div className="w-full flex flex-col items-center justify-center gap-2">
 
-                              <div className="w-full flex flex-row items-center justify-right gap-2">
-                                <Image
-                                  src="/icon-tether.png"
-                                  alt="USDT"
-                                  width={20}
-                                  height={20}
-                                  className="w-5 h-5"
-                                />
-                                <span className="text-3xl xl:text-2xl text-slate-900 font-semibold tracking-tight tabular-nums"
-                                  style={{ fontFamily: 'monospace' }}>
-                                  {
-                                    //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                                    currentUsdtBalanceArray[index]?.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                              <div className="w-full flex flex-row items-center justify-between gap-2">
+                                <div className="flex flex-row items-center justify-start gap-2">
+                                  <Image
+                                    src="/icon-tether.png"
+                                    alt="USDT"
+                                    width={20}
+                                    height={20}
+                                    className="w-5 h-5"
+                                  />
+                                  <span
+                                    className="text-3xl xl:text-2xl text-slate-900 font-semibold tracking-tight tabular-nums"
+                                    style={{ fontFamily: 'monospace' }}
+                                  >
+                                    {
+                                      //Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                                      currentUsdtBalanceArray[index]?.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 
+                                    }
+                                  </span>
+                                </div>
+                                <span
+                                  title={
+                                    sellersBalanceLastUpdatedAt
+                                      ? `최근 업데이트 ${sellersBalanceLastUpdatedAt.toLocaleTimeString('ko-KR')}`
+                                      : '실시간 업데이트'
                                   }
+                                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600"
+                                >
+                                  <svg
+                                    aria-hidden="true"
+                                    viewBox="0 0 24 24"
+                                    className={`h-3 w-3 ${sellersBalanceRefreshing ? 'animate-spin text-slate-500' : 'text-slate-300'}`}
+                                    fill="none"
+                                  >
+                                    <path
+                                      d="M20 12a8 8 0 1 1-2.343-5.657"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                    />
+                                    <path
+                                      d="M20 4v6h-6"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                  업데이트
                                 </span>
                               </div>
 
