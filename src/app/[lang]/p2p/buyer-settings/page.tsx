@@ -22,6 +22,7 @@ import {
 
     useConnectedWallets,
     useSetActiveWallet,
+    useConnectModal,
 } from "thirdweb/react";
 
 
@@ -44,6 +45,7 @@ import { balanceOf, transfer } from "thirdweb/extensions/erc20";
 
 import AppBarComponent from "@/components/Appbar/AppBar";
 import { getDictionary } from "../../../dictionaries";
+import { ORANGEX_CONNECT_OPTIONS, ORANGEX_WELCOME_SCREEN } from "@/lib/orangeXConnectModal";
 
 
 import { useQRCode } from 'next-qrcode';
@@ -308,6 +310,19 @@ export default function SettingsPage({ params }: any) {
     const smartAccount = useActiveAccount();
 
     const address = smartAccount?.address;
+
+    const { connect: openConnectModal, isConnecting } = useConnectModal();
+    const [connectError, setConnectError] = useState<string | null>(null);
+
+    const connectChain = chain === "ethereum"
+        ? ethereum
+        : chain === "polygon"
+        ? polygon
+        : chain === "arbitrum"
+        ? arbitrum
+        : chain === "bsc"
+        ? bsc
+        : arbitrum;
 
     const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '-';
 
@@ -1034,7 +1049,7 @@ export default function SettingsPage({ params }: any) {
 
     return (
 
-        <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+        <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-md mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
             <AutoConnect client={client} wallets={[wallet]} />
 
             <div className="py-0 w-full">
@@ -1084,15 +1099,58 @@ export default function SettingsPage({ params }: any) {
                 {!address ? (
                     <div className="w-full">
                         <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-6 text-center shadow-sm">
-                            <p className="text-base font-semibold text-slate-600">
-                                로그인해서 지갑을 연결하세요.
+                            <div className="flex flex-col items-center gap-3">
+                                <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
+                                    OrangeX
+                                </span>
+                                <Image
+                                    src="/logo-orangex.png"
+                                    alt="OrangeX"
+                                    width={160}
+                                    height={48}
+                                    className="h-10 w-auto"
+                                    priority
+                                />
+                            </div>
+                            <div className="mx-auto mt-6 flex h-16 w-16 items-center justify-center rounded-md border border-slate-200 bg-white">
+                                <Image src="/logo-wallet.png" alt="Wallet" width={32} height={32} className="h-8 w-8" />
+                            </div>
+                            <h2 className="mt-4 text-xl font-semibold text-slate-900 sm:text-2xl">
+                                지갑 연결이 필요합니다
+                            </h2>
+                            <p className="mt-2 text-sm text-slate-500">
+                                구매자 설정을 위해 지갑을 연결해 주세요.
                             </p>
+                            {connectError && (
+                                <p className="mt-3 text-xs font-semibold text-rose-600">
+                                    {connectError}
+                                </p>
+                            )}
                             <button
                                 type="button"
-                                onClick={() => router.push(`/${params.lang}/web3login`)}
-                                className="mt-4 inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                                disabled={isConnecting}
+                                onClick={async () => {
+                                    try {
+                                        setConnectError(null);
+                                        await openConnectModal({
+                                            client,
+                                            wallets: [wallet],
+                                            chain: connectChain,
+                                            ...ORANGEX_CONNECT_OPTIONS,
+                                            welcomeScreen: {
+                                                ...ORANGEX_WELCOME_SCREEN,
+                                                subtitle: "간편하게 지갑을 연결하고 구매자 설정을 시작하세요.",
+                                            },
+                                        });
+                                    } catch (error) {
+                                        const message =
+                                            error instanceof Error ? error.message : '지갑 연결에 실패했습니다.';
+                                        setConnectError(message);
+                                    }
+                                }}
+                                className="mt-5 inline-flex w-full items-center justify-center rounded-md border border-slate-200 bg-white px-6 py-3 text-base font-medium text-slate-800 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:text-slate-400"
                             >
-                                웹3 로그인 이동
+                                {isConnecting ? '연결 중...' : '지갑 연결하기'}
                             </button>
                         </div>
                     </div>
