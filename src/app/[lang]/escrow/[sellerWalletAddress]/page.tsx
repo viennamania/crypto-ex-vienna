@@ -4690,7 +4690,7 @@ const fetchBuyOrders = async () => {
 
   if (address && loadingUser) {
     return (
-      <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-xl bg-white">
         <div className="py-0 w-full flex flex-col items-center justify-center gap-4">
 
           <Image
@@ -4759,15 +4759,12 @@ const fetchBuyOrders = async () => {
 
   return (
 
-    <main className="relative overflow-hidden p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-[radial-gradient(120%_120%_at_0%_0%,#fff7ed_0%,#fef2f2_38%,#eff6ff_78%,#ecfeff_100%)]">
+    <main className="relative p-4 pb-10 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-xl bg-white text-slate-800 [&_[class*='shadow-']]:shadow-none [&_[class*='bg-gradient']]:bg-none [&_[class*='bg-gradient']]:bg-white [&_[class*='bg-gradient']]:text-slate-700 [&_[class*='bg-gradient']]:border [&_[class*='bg-gradient']]:border-slate-200 [&_[class*='rounded-2xl']]:rounded-lg [&_[class*='rounded-full']]:rounded-md">
 
       <AutoConnect
           client={client}
           wallets={[wallet]}
       />
-
-      <div className="pointer-events-none absolute -right-24 -top-32 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.25)_0%,transparent_70%)] blur-2xl" />
-      <div className="pointer-events-none absolute -left-24 bottom-[-120px] h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.25)_0%,transparent_70%)] blur-2xl" />
 
       {bannerAds.length > 0 && (
         <>
@@ -4780,11 +4777,9 @@ const fetchBuyOrders = async () => {
                 rel="noreferrer"
                 className="group"
               >
-                <div className="relative w-56 aspect-[2/1] overflow-hidden rounded-2xl border border-white/80 bg-white/80 shadow-[0_22px_60px_-36px_rgba(15,23,42,0.6)]">
+                <div className="relative w-56 aspect-[2/1] overflow-hidden rounded-lg border border-slate-200 bg-white">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={ad.image} alt={ad.title} className="h-full w-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/40 opacity-70" />
-                  <div className="absolute -bottom-10 -right-10 h-24 w-24 rounded-full bg-amber-300/40 blur-2xl" />
                 </div>
               </a>
             ))}
@@ -4799,11 +4794,9 @@ const fetchBuyOrders = async () => {
                 rel="noreferrer"
                 className="group"
               >
-                <div className="relative w-56 aspect-[2/1] overflow-hidden rounded-2xl border border-white/80 bg-white/80 shadow-[0_22px_60px_-36px_rgba(15,23,42,0.6)]">
+                <div className="relative w-56 aspect-[2/1] overflow-hidden rounded-lg border border-slate-200 bg-white">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={ad.image} alt={ad.title} className="h-full w-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-white/40 opacity-70" />
-                  <div className="absolute -top-10 -left-10 h-24 w-24 rounded-full bg-sky-300/40 blur-2xl" />
                 </div>
               </a>
             ))}
@@ -4812,6 +4805,13 @@ const fetchBuyOrders = async () => {
       )}
 
       <div className="relative z-10 w-full">
+        <header className="mb-6 flex flex-col gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">
+            Escrow
+          </span>
+          <h1 className="text-2xl font-semibold text-slate-900">결제확인</h1>
+          <p className="text-sm text-slate-500">에스크로 거래 진행 및 결제 상태를 확인합니다.</p>
+        </header>
 
 
 
@@ -4916,7 +4916,7 @@ const fetchBuyOrders = async () => {
           <button
             type="button"
             onClick={() => router.push(`/${params.lang}/p2p`)}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+            className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200"
           >
             <svg
               width="16"
@@ -4940,7 +4940,7 @@ const fetchBuyOrders = async () => {
             <button
               type="button"
               onClick={() => router.push(`/${params.lang}/p2p/buy`)}
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-2 text-sm font-semibold text-white shadow-[0_18px_45px_-25px_rgba(249,115,22,0.8)] transition hover:-translate-y-0.5 hover:shadow-[0_26px_60px_-32px_rgba(249,115,22,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60"
+              className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200"
             >
               <svg
                 width="16"
@@ -4962,14 +4962,7 @@ const fetchBuyOrders = async () => {
           )}
         </div>
 
-        <div className="w-full flex flex-col items-center justify-center gap-3 mb-6
-        p-5
-        bg-white/80
-        border border-slate-200/70
-        rounded-2xl
-        shadow-[0_24px_60px_-45px_rgba(15,23,42,0.6)]
-        backdrop-blur
-        ">
+        <div className="w-full flex flex-col items-center justify-center gap-3 mb-6 p-4 border border-slate-200 rounded-lg bg-white">
 
           <div className="w-full flex flex-row items-center justify-center gap-2">
             {/* 홈으로 가기 svg icon button */}
@@ -5012,10 +5005,10 @@ const fetchBuyOrders = async () => {
                   {isOwnerSeller && (
                     <button
                       type="button"
-                      className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-orange-200 bg-orange-50/80 px-3 py-2 text-xs font-semibold text-orange-600 shadow-[0_10px_24px_-18px_rgba(249,115,22,0.6)] transition hover:bg-orange-100/80 sm:w-auto sm:px-4 sm:text-sm"
+                      className="inline-flex w-full items-center justify-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto sm:px-4 sm:text-sm"
                       onClick={() => router.push(`/${params.lang}/p2p/seller-settings`)}
                     >
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-orange-300/70 bg-white text-orange-600 shadow-[0_6px_14px_-10px_rgba(249,115,22,0.7)]">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600">
                         <svg
                           width="16"
                           height="16"
@@ -7628,59 +7621,50 @@ const fetchBuyOrders = async () => {
                               </div>
                               {/* 로그인을 해야 구매할 수 있습니다. */}
                               {!address && (
-                                <div className="w-full flex flex-col items-center justify-center mt-2">
-                                  <div className="text-sm text-red-600">
-                                    로그인을 해야 구매할 수 있습니다.
-                                  </div>
-
-                                  <div className="relative mt-3 inline-flex items-center justify-center">
-                                    <span className="login-cta-glow" aria-hidden="true" />
-                                    <span className="login-cta-ring" aria-hidden="true" />
-                                    <div className="relative z-10 login-cta-bounce">
+                                <div className="w-full flex flex-col items-center justify-center mt-4">
+                                  <div className="w-full max-w-md mx-auto p-6 text-center border border-slate-200 rounded-lg bg-white">
+                                    <div className="flex flex-col items-center gap-3">
+                                      <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
+                                        OrangeX
+                                      </span>
+                                      <Image
+                                        src="/logo-orangex.png"
+                                        alt="OrangeX"
+                                        width={160}
+                                        height={48}
+                                        className="h-10 w-auto"
+                                      />
+                                    </div>
+                                    <div className="mx-auto mt-6 flex h-16 w-16 items-center justify-center rounded-md border border-slate-200 bg-white">
+                                      <Image src="/logo-wallet.png" alt="Wallet" width={32} height={32} className="h-8 w-8" />
+                                    </div>
+                                    <h2 className="mt-4 text-xl font-semibold text-slate-900 sm:text-2xl">
+                                      지갑 연결이 필요합니다
+                                    </h2>
+                                    <p className="mt-2 text-sm text-slate-500">
+                                      USDT 출금을 위해 지갑을 연결해 주세요.
+                                    </p>
+                                    <div className="mt-5">
                                       <ConnectButton
                                         client={client}
-                                        wallets={wallets}
-
-                                        /*
-                                        accountAbstraction={{
-                                          chain: arbitrum,
-                                          sponsorGas: false
-                                        }}
-                                        */
-                                        
-                                        theme={"light"}
-
-                                        // button color is dark skyblue convert (49, 103, 180) to hex
+                                        wallets={wallets.length ? wallets : [wallet]}
+                                        chain={
+                                          chain === "ethereum"
+                                            ? ethereum
+                                            : chain === "polygon"
+                                            ? polygon
+                                            : chain === "arbitrum"
+                                            ? arbitrum
+                                            : bsc
+                                        }
                                         connectButton={{
-                                            style: {
-                                                backgroundColor: "#3167b4", // dark skyblue
-                                                color: "#f3f4f6", // light gray
-                                                padding: "2px 10px",
-                                                borderRadius: "10px",
-                                                fontSize: "14px",
-                                                fontWeight: 700,
-                                                width: "60x",
-                                                height: "38px",
-                                                boxShadow: "0 18px 32px -16px rgba(49, 103, 180, 0.9)",
-                                                letterSpacing: "0.02em",
-                                            },
-                                            label: "웹3 로그인",
+                                          label: "지갑 연결하기",
+                                          className:
+                                            "inline-flex w-full items-center justify-center rounded-md border border-slate-200 bg-white px-6 py-3 text-base font-medium text-slate-800 transition hover:border-slate-400 hover:text-slate-900",
                                         }}
-
-                                        connectModal={{
-                                          size: "wide", 
-                                          //size: "compact",
-                                          titleIcon: "https://loot.menu/logo.png",                           
-                                          showThirdwebBranding: false,
-                                        }}
-
-                                        locale={"ko_KR"}
-                                        //locale={"en_US"}
                                       />
                                     </div>
                                   </div>
-
-
                                 </div>
                               )}
 
@@ -9724,18 +9708,18 @@ const fetchBuyOrders = async () => {
         {/* ?limit=10&page=1 */}
         {/* submit button */}
         {/* totalPage = Math.ceil(totalCount / limit) */}
-        <div className="
-        mt-4 flex-row items-center justify-center gap-4">
-
-
-          <div className="flex flex-row items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-600">
+          <div className="flex items-center gap-2">
+            <label htmlFor="escrow-page-size" className="sr-only">
+              페이지 크기
+            </label>
             <select
+              id="escrow-page-size"
               value={limitValue}
               onChange={(e) =>
                 router.push(`/${params.lang}/escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(e.target.value)}&page=${pageValue}`)
               }
-
-              className="text-sm bg-slate-50 text-slate-700 px-2 py-1 rounded-md border border-slate-200"
+              className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600"
             >
               <option value={10}>10</option>
               <option value={20}>20</option>
@@ -9744,10 +9728,9 @@ const fetchBuyOrders = async () => {
             </select>
           </div>
 
-          {/* 처음으로 */}
           <button
             disabled={Number(pageValue) <= 1}
-            className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) <= 1 ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
+            className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
             onClick={() => {
               router.push(`/${params.lang}/escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=1`)
             }}
@@ -9755,51 +9738,39 @@ const fetchBuyOrders = async () => {
             처음으로
           </button>
 
-
           <button
             disabled={Number(pageValue) <= 1}
-            className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) <= 1 ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
+            className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
             onClick={() => {
-
               router.push(`/${params.lang}/escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Number(pageValue) - 1}`)
-
-
             }}
           >
             이전
           </button>
 
-
-          <span className="text-sm text-slate-500">
+          <span className="px-2 text-xs text-slate-500">
             {pageValue} / {Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue))}
           </span>
 
-
           <button
             disabled={Number(pageValue) >= Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue))}
-            className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) >= Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue)) ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
+            className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
             onClick={() => {
-
               router.push(`/${params.lang}/escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Number(pageValue) + 1}`)
-
             }}
           >
             다음
           </button>
 
-          {/* 마지막으로 */}
           <button
             disabled={Number(pageValue) >= Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue))}
-            className={`text-sm text-white px-4 py-2 rounded-md ${Number(pageValue) >= Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue)) ? 'bg-gray-500' : 'bg-green-500 hover:bg-green-600'}`}
+            className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
             onClick={() => {
-
               router.push(`/${params.lang}/escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue))}`)
-
             }}
           >
             마지막으로
           </button>
-
         </div>
 
         {bannerAds.length > 0 && (
