@@ -1306,11 +1306,11 @@ export default function SendUsdt({ params }: any) {
                 <div className="flex items-center gap-2 mr-1 sm:mr-2">
                   {smartAccountEnabled && (
                     <>
-                      <span className="text-[11px] font-medium text-slate-500">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700">
                         스마트 어카운트
                       </span>
-                      <span className="text-xs font-medium text-amber-600">
-                        가스비 0원, 즉시 전송.
+                      <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
+                        가스비 0원, 즉시 전송
                       </span>
                     </>
                   )}
