@@ -4843,8 +4843,8 @@ const fetchBuyOrders = async () => {
           <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">
             Escrow
           </span>
-          <h1 className="text-2xl font-semibold text-slate-900">결제확인</h1>
-          <p className="text-sm text-slate-500">에스크로 거래 진행 및 결제 상태를 확인합니다.</p>
+          <h1 className="text-2xl font-semibold text-slate-900">판매자 상세</h1>
+          <p className="text-sm text-slate-500">판매자 정보와 에스크로 진행 상태를 확인합니다.</p>
         </header>
 
 
