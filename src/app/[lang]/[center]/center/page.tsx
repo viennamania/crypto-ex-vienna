@@ -107,6 +107,8 @@ import {
 } from "@/app/config/contractAddresses";
 
 
+import { ConnectButton } from '@/components/OrangeXConnectButton';
+
 interface BuyOrder {
   _id: string;
   createdAt: string;

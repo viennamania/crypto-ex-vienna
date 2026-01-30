@@ -53,6 +53,7 @@ import Image from 'next/image';
 import AppBarComponent from "@/components/Appbar/AppBar";
 import { getDictionary } from "../../../dictionaries";
 import { useClientWallets } from "@/lib/useClientWallets";
+import { ORANGEX_CONNECT_OPTIONS, ORANGEX_WELCOME_SCREEN } from "@/lib/orangeXConnectModal";
 import { useClientSettings } from "@/components/ClientSettingsProvider";
 
 
@@ -354,6 +355,7 @@ export default function SendUsdt({ params }: any) {
   const [transfersError, setTransfersError] = useState<string | null>(null);
   const [transfersPage, setTransfersPage] = useState(0);
   const [transfersHasMore, setTransfersHasMore] = useState(false);
+  const [transfersRefreshToken, setTransfersRefreshToken] = useState(0);
   const [showTransferConfirm, setShowTransferConfirm] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
 
@@ -697,7 +699,14 @@ export default function SendUsdt({ params }: any) {
     return () => {
       controller.abort();
     };
-  }, [address, clientId, selectedNetworkConfig.chain.id, selectedNetworkConfig.contractAddress, transfersPage]);
+  }, [
+    address,
+    clientId,
+    selectedNetworkConfig.chain.id,
+    selectedNetworkConfig.contractAddress,
+    transfersPage,
+    transfersRefreshToken,
+  ]);
 
 
   const [user, setUser] = useState(
@@ -1120,21 +1129,11 @@ export default function SendUsdt({ params }: any) {
                     client,
                     wallets: wallets.length ? wallets : [wallet],
                     chain: selectedNetworkConfig.chain,
-                    theme: "light",
-                    size: "wide",
-                    title: "로그인",
-                    titleIcon: "/logo-orangex.png",
-                    showThirdwebBranding: false,
+                    ...ORANGEX_CONNECT_OPTIONS,
                     welcomeScreen: {
-                      title: "OrangeX",
+                      ...ORANGEX_WELCOME_SCREEN,
                       subtitle: "간편하게 지갑을 연결하고 USDT 출금을 시작하세요.",
-                      img: {
-                        src: "/logo-orangex.png",
-                        width: 220,
-                        height: 68,
-                      },
                     },
-                    locale: "ko_KR",
                   });
                 } catch (error) {
                   const message =
@@ -1305,14 +1304,22 @@ export default function SendUsdt({ params }: any) {
                 </div>
                 <div className="flex items-center gap-2 mr-1 sm:mr-2">
                   {smartAccountEnabled && (
-                    <>
-                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700">
-                        스마트 어카운트
+                    <span className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50/90 px-3 py-1.5 shadow-[0_0_0_1px_rgba(251,191,36,0.15)]">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white">
+                        <svg
+                          aria-hidden="true"
+                          viewBox="0 0 24 24"
+                          className="h-3.5 w-3.5"
+                          fill="currentColor"
+                        >
+                          <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+                        </svg>
                       </span>
-                      <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
-                        가스비 0원, 즉시 전송
+                      <span className="flex flex-col leading-tight">
+                        <span className="text-[11px] font-semibold text-amber-800">스마트 어카운트</span>
+                        <span className="text-[10px] font-medium text-amber-600">가스비 0원 · 즉시 전송</span>
                       </span>
-                    </>
+                    </span>
                   )}
                 </div>
               </div>
@@ -1644,9 +1651,39 @@ export default function SendUsdt({ params }: any) {
                 <span className="text-sm font-medium text-slate-900">USDT 입출금 내역</span>
                 <p className="text-xs text-slate-500">선택한 네트워크 기준 최신순</p>
               </div>
-              <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">
-                {selectedNetworkConfig.label}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">
+                  {selectedNetworkConfig.label}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setTransfersRefreshToken((prev) => prev + 1)}
+                  disabled={transfersLoading}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1 text-[11px] font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:text-slate-400"
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className={`h-3 w-3 ${transfersLoading ? 'animate-spin text-slate-500' : 'text-slate-400'}`}
+                    fill="none"
+                  >
+                    <path
+                      d="M20 12a8 8 0 1 1-2.343-5.657"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M20 4v6h-6"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  새로고침
+                </button>
+              </div>
             </div>
 
             {transfersLoading && (

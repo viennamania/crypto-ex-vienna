@@ -44,7 +44,6 @@ import {
 } from "thirdweb";
 
 import {
-  ConnectButton,
   useActiveAccount,
   useActiveWallet,
   useWalletBalance,
@@ -53,9 +52,7 @@ import {
 
   useConnectedWallets,
 
-  AutoConnect,
-
-} from "thirdweb/react";
+  AutoConnect} from 'thirdweb/react';
 
 
 
@@ -108,6 +105,8 @@ import { Connect } from "twilio/lib/twiml/VoiceResponse";
 import { useClientWallets } from "@/lib/useClientWallets";
 
 
+import { ConnectButton } from '@/components/OrangeXConnectButton';
+
 const walletAuthOptions = ["google", "email", "phone"];
 
 type NetworkKey = "ethereum" | "polygon" | "arbitrum" | "bsc";
@@ -124,7 +123,10 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
   const { Canvas } = useQRCode();
 
   const router = useRouter();
-  const { wallet, wallets, smartAccountEnabled } = useClientWallets({ authOptions: walletAuthOptions });
+  const { wallet, wallets, smartAccountEnabled } = useClientWallets({
+    authOptions: walletAuthOptions,
+    sponsorGas: true,
+  });
 
 
   /*

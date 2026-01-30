@@ -32,10 +32,8 @@ import {
 } from "thirdweb/chains";
 
 import {
-  ConnectButton,
   useActiveAccount,
-  useActiveWallet,
-} from "thirdweb/react";
+  useActiveWallet} from 'thirdweb/react';
 import { inAppWallet } from "thirdweb/wallets";
 
 
@@ -49,6 +47,8 @@ import { balanceOf, transfer } from "thirdweb/extensions/erc20";
 
 
 
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 interface SellOrder {
   _id: string;

@@ -14,18 +14,17 @@ import {
 } from "thirdweb/chains";
 
 import {
-    ConnectButton,
     useActiveAccount,
     useActiveWallet,
     useSetActiveWallet,
     useConnectedWallets,
     useDisconnect,
-    useConnectModal,
-} from "thirdweb/react";
+    useConnectModal} from 'thirdweb/react';
 import { inAppWallet } from "thirdweb/wallets";
 
 
 import { getUserPhoneNumber } from "thirdweb/wallets/in-app";
+import { ORANGEX_CONNECT_OPTIONS } from "@/lib/orangeXConnectModal";
 
 
 import Image from 'next/image';
@@ -63,6 +62,8 @@ import { getDictionary } from "../../../dictionaries";
 
 
 
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 export default function SettingsPage({ params }: any) {
 
@@ -185,9 +186,7 @@ export default function SettingsPage({ params }: any) {
         chain: arbitrum,
         client,
         wallets,
-        size: 'compact',
-        showThirdwebBranding: false,
-        theme: 'light',
+        ...ORANGEX_CONNECT_OPTIONS,
       });
     };
 

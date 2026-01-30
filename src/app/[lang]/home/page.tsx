@@ -32,7 +32,6 @@ import {
 
 
 import {
-  ConnectButton,
   useActiveAccount,
   useActiveWallet,
   useWalletBalance,
@@ -54,6 +53,8 @@ import {
 
 
 import { getUserPhoneNumber } from "thirdweb/wallets/in-app";
+import { ConnectButton } from "@/components/OrangeXConnectButton";
+import { ORANGEX_WELCOME_SCREEN } from "@/lib/orangeXConnectModal";
 
 
 import { balanceOf, transfer } from "thirdweb/extensions/erc20";
@@ -2744,23 +2745,34 @@ const fetchBuyOrders = async () => {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">
-                      Web3 Login
-                    </span>
                     <span className="text-lg font-semibold text-slate-900">
-                      지갑을 연결하고 안전하게 거래하세요
+                      {ORANGEX_WELCOME_SCREEN.title}
                     </span>
                     <span className="text-sm text-slate-600">
-                      비수탁 로그인 · 서명 기반 인증 · 실시간 보안 모니터링
+                      {ORANGEX_WELCOME_SCREEN.subtitle}
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={() => router.push('/' + params.lang + '/web3login')}
-                  className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_-22px_rgba(16,185,129,0.7)] transition hover:-translate-y-0.5 hover:bg-emerald-500"
-                >
-                  웹3 로그인
-                </button>
+                <div className="flex w-full justify-start md:w-auto md:justify-end">
+                  <ConnectButton
+                    client={client}
+                    wallets={wallets}
+                    chain={
+                      chain === "ethereum"
+                        ? ethereum
+                        : chain === "polygon"
+                        ? polygon
+                        : chain === "arbitrum"
+                        ? arbitrum
+                        : bsc
+                    }
+                    connectButton={{
+                      label: "지갑 연결하기",
+                      className:
+                        "inline-flex items-center justify-center rounded-full border-emerald-600 bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_-22px_rgba(16,185,129,0.7)] transition hover:-translate-y-0.5 hover:bg-emerald-500",
+                    }}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -7612,5 +7624,3 @@ const TradeDetail = (
       </div>
     );
   };
-
-

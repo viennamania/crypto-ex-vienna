@@ -57,6 +57,7 @@ import { balanceOf, transfer } from "thirdweb/extensions/erc20";
 
 
 import { getUserPhoneNumber } from "thirdweb/wallets/in-app";
+import { ORANGEX_CONNECT_OPTIONS } from "@/lib/orangeXConnectModal";
 
 
 import { toast } from 'react-hot-toast';
@@ -129,39 +130,7 @@ export default function Index({ params }: any) {
       chain: arbitrum,
       client,
       wallets,
-
-
-
-      showThirdwebBranding: false,
-      theme: 'light',
-      
-      /*
-      appMetadata: {
-        name: "GoodTether",
-        description: "GoodTether",
-        url: "https://gold.goodtether.com",
-        //icons: ["https://gold.goodtether.com/logo.png"],
-      },
-      */
-
-      size: 'compact',
-
-      /*
-      size: 'wide',
-
-      welcomeScreen: {
-        title: "Custom Title",
-        subtitle: "Custom Subtitle",
-        img: {
-          src: "https://example.com/image.png",
-          width: 100,
-          height: 100,
-        },
-      },
-      */
-    
-     //locale: 'en_US',
-     locale: 'ko_KR',
+      ...ORANGEX_CONNECT_OPTIONS,
       
     });
   };

@@ -32,17 +32,13 @@ import {
 } from "thirdweb/chains";
 
 import {
-  ConnectButton,
   useActiveAccount,
   useActiveWallet,
   useWalletBalance,
 
   useSetActiveWallet,
 
-  useConnectedWallets,
-
-
-} from "thirdweb/react";
+  useConnectedWallets} from 'thirdweb/react';
 
 import {
   inAppWallet,
@@ -90,6 +86,8 @@ import {
 } from "../../../../../client";
 
 
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 interface BuyOrder {
   _id: string;

@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { AutoConnect, ConnectButton, useActiveAccount, useActiveWallet } from 'thirdweb/react';
+import { AutoConnect, useActiveAccount, useActiveWallet } from 'thirdweb/react';
 
 import { useClientWallets } from '@/lib/useClientWallets';
 import { client } from '@/app/client';
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 const USER_STORECODE = 'admin';
 const DEFAULT_AVATAR = '/profile-default.png';

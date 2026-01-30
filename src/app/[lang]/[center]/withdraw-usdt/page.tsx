@@ -13,7 +13,6 @@ import {
 
 import {
     //ThirdwebProvider,
-    ConnectButton,
   
     useConnect,
   
@@ -26,9 +25,7 @@ import {
 
     useConnectedWallets,
 
-    useSetActiveWallet,
-    
-} from "thirdweb/react";
+    useSetActiveWallet} from 'thirdweb/react';
 
 
 
@@ -99,6 +96,8 @@ import {
 
 
 
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 export default function SendUsdt({ params }: any) {
 

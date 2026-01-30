@@ -9,7 +9,6 @@ import { client } from '../client';
 
 import {
     //ThirdwebProvider,
-    ConnectButton,
   
     useConnect,
   
@@ -18,9 +17,7 @@ import {
     useActiveWallet,
 
     useActiveAccount,
-    useSendBatchTransaction,
-    
-} from "thirdweb/react";
+    useSendBatchTransaction} from 'thirdweb/react';
 
 import {
     polygon,
@@ -87,6 +84,8 @@ import { useRouter }from "next//navigation";
 
 
 
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 export default function SendUsdt() {
 

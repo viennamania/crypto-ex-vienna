@@ -15,7 +15,6 @@ import { createThirdwebClient } from "thirdweb";
 
 import {
   //ThirdwebProvider,
-  ConnectButton,
 
   AutoConnect,
 
@@ -34,9 +33,7 @@ import {
 
   lightTheme,
 
-  useConnectModal,
-  
-} from "thirdweb/react";
+  useConnectModal} from 'thirdweb/react';
 
 import {
   inAppWallet,
@@ -105,6 +102,8 @@ import { paymentUrl } from "../../config/payment";
 import { version } from "../../config/version";
 
 
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 const storecode = "admin";
 

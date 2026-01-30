@@ -21,12 +21,10 @@ import {
 } from "thirdweb/chains";
 
 import {
-    ConnectButton,
     useActiveAccount,
     useActiveWallet,
     useConnectedWallets,
-    useSetActiveWallet,
-} from "thirdweb/react";
+    useSetActiveWallet} from 'thirdweb/react';
 
 import {
   inAppWallet,
@@ -71,6 +69,8 @@ import { IncomingPhoneNumberContextImpl } from "twilio/lib/rest/api/v2010/accoun
 import { add } from "thirdweb/extensions/farcaster/keyGateway";
 
 
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 interface BuyOrder {
   _id: string;

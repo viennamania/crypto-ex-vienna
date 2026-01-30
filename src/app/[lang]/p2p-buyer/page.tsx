@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { AutoConnect, ConnectButton, useActiveAccount, useActiveWallet } from 'thirdweb/react';
+import { AutoConnect, useActiveAccount, useActiveWallet } from 'thirdweb/react';
 
 import { useClientWallets } from '@/lib/useClientWallets';
 import { client } from '@/app/client';
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 const PRICE_POLL_MS = 8000;
 const BANNER_PLACEMENT = 'p2p-home';

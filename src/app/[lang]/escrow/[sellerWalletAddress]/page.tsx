@@ -43,7 +43,6 @@ import {
 
 
 import {
-  ConnectButton,
 
   useActiveAccount,
   useActiveWallet,
@@ -53,9 +52,7 @@ import {
 
   useConnectedWallets,
 
-  AutoConnect,
-
-} from "thirdweb/react";
+  AutoConnect} from 'thirdweb/react';
 
 import {
   inAppWallet,
@@ -115,6 +112,8 @@ import { useAnimatedNumber } from "@/components/useAnimatedNumber";
 
 
 
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 interface BuyOrder {
   _id: string;

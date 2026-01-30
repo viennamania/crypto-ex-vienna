@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { AutoConnect, ConnectButton, useActiveAccount, useActiveWallet } from 'thirdweb/react';
+import { AutoConnect, useActiveAccount, useActiveWallet } from 'thirdweb/react';
 import { ethereum, polygon, arbitrum, bsc } from 'thirdweb/chains';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 
 import { client } from '../../client';
 import { useClientWallets } from '@/lib/useClientWallets';
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 type NetworkKey = 'ethereum' | 'polygon' | 'arbitrum' | 'bsc';
 

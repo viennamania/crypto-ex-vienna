@@ -34,17 +34,13 @@ import {
 } from "thirdweb/chains";
 
 import {
-  ConnectButton,
   useActiveAccount,
   useActiveWallet,
   useWalletBalance,
 
   useSetActiveWallet,
 
-  useConnectedWallets,
-
-
-} from "thirdweb/react";
+  useConnectedWallets} from 'thirdweb/react';
 
 import {
   inAppWallet,
@@ -80,6 +76,8 @@ import { get } from "http";
 import { useSearchParams } from 'next/navigation';
 
 
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 /*
     {

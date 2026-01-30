@@ -35,12 +35,10 @@ import {
 } from "thirdweb/chains";
 
 import {
-  ConnectButton,
   useActiveAccount,
   useActiveWallet,
   useConnectedWallets,
-  useSetActiveWallet,
-} from "thirdweb/react";
+  useSetActiveWallet} from 'thirdweb/react';
 
 import {
   inAppWallet,
@@ -60,6 +58,8 @@ import { add } from "thirdweb/extensions/farcaster/keyGateway";
 import AppBarComponent from "@/components/Appbar/AppBar";
 import { getDictionary } from "../../../dictionaries";
 
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 interface SellOrder {
   _id: string;

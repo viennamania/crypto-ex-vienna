@@ -25,10 +25,8 @@ import {
 } from "thirdweb/chains";
 
 import {
-    ConnectButton,
     useActiveAccount,
-    useActiveWallet,
-} from "thirdweb/react";
+    useActiveWallet} from 'thirdweb/react';
 
 import {
   inAppWallet,
@@ -68,6 +66,8 @@ import { Pay } from 'twilio/lib/twiml/VoiceResponse';
 
 
 
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 interface SellOrder {
   _id: string;

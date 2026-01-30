@@ -27,17 +27,13 @@ import {
 } from "thirdweb";
 
 import {
-  ConnectButton,
   useActiveAccount,
   useActiveWallet,
   useWalletBalance,
 
   useSetActiveWallet,
 
-  useConnectedWallets,
-
-
-} from "thirdweb/react";
+  useConnectedWallets} from 'thirdweb/react';
 
 import {
   inAppWallet,
@@ -158,6 +154,8 @@ import {
 } from "@/app/config/contractAddresses";
 
 
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 export default function Index({ params }: any) {
 

@@ -6,10 +6,7 @@ import { toast } from 'react-hot-toast';
 import { client } from "../client";
 
 import {
-  ConnectButton,
-  useActiveWallet,
-  
-} from "thirdweb/react";
+  useActiveWallet} from 'thirdweb/react';
 
 import {
   inAppWallet,
@@ -51,6 +48,8 @@ const DynamicAppWithNoSSR = dynamic(() => import("../../components/Chat"), {
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { add } from 'thirdweb/extensions/farcaster/keyGateway';
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 // /chat?tradeId=
 // get parameter from url

@@ -6,10 +6,12 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useActiveAccount, useActiveWallet } from 'thirdweb/react';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
-import { ConnectButton } from 'thirdweb/react';
+
 
 import { useClientWallets } from '@/lib/useClientWallets';
 import { client } from '@/app/client';
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 const SENDBIRD_APP_ID = process.env.SENDBIRD_APP_ID || '';
 const USER_STORECODE = 'admin';

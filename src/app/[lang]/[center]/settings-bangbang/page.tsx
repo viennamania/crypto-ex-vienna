@@ -21,13 +21,11 @@ import {
 } from "thirdweb/chains";
 
 import {
-    ConnectButton,
     useActiveAccount,
     useActiveWallet,
 
     useConnectedWallets,
-    useSetActiveWallet,
-} from "thirdweb/react";
+    useSetActiveWallet} from 'thirdweb/react';
 
 
 import {
@@ -83,6 +81,8 @@ import {
 
 
 
+
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 export default function SettingsPage({ params }: any) {
 
