@@ -828,11 +828,37 @@ export default function Index({ params }: any) {
   const [sellerChatLoading, setSellerChatLoading] = useState(false);
   const [sellerChatError, setSellerChatError] = useState<string | null>(null);
   const [globalBannerAds, setGlobalBannerAds] = useState<BannerAd[]>([]);
+  const [visibleBannerAds, setVisibleBannerAds] = useState<BannerAd[]>([]);
+  const [visibleBannerAdsRight, setVisibleBannerAdsRight] = useState<BannerAd[]>([]);
   const chatUnreadTotalRef = useRef<number | null>(null);
   const chatInitializedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const pickRandomAds = (ads: BannerAd[], count: number) => {
+      if (ads.length <= count) {
+        return { picked: ads, remaining: [] as BannerAd[] };
+      }
+      const pool = [...ads];
+      const picked: BannerAd[] = [];
+      for (let i = 0; i < count; i += 1) {
+        const index = Math.floor(Math.random() * pool.length);
+        const [item] = pool.splice(index, 1);
+        if (item) {
+          picked.push(item);
+        }
+      }
+      return { picked, remaining: pool };
+    };
+
+    const pickSideAds = (ads: BannerAd[]) => {
+      const { picked: left, remaining } = pickRandomAds(ads, 3);
+      const rightSource = remaining.length ? remaining : ads;
+      const { picked: right } = pickRandomAds(rightSource, 3);
+      return { left, right };
+    };
 
     const fetchGlobalAds = async () => {
       try {
@@ -881,6 +907,9 @@ export default function Index({ params }: any) {
 
         if (active) {
           setGlobalBannerAds(normalized);
+          const { left, right } = pickSideAds(normalized);
+          setVisibleBannerAds(left);
+          setVisibleBannerAdsRight(right);
         }
       } catch (error) {
         // ignore
@@ -888,9 +917,13 @@ export default function Index({ params }: any) {
     };
 
     fetchGlobalAds();
+    intervalId = setInterval(fetchGlobalAds, 10000);
 
     return () => {
       active = false;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
   }, []);
 
@@ -4751,7 +4784,8 @@ const fetchBuyOrders = async () => {
         .map((point) => `${point.x},${point.y}`)
         .join(' ')} L ${dailyTradeChartWidth} ${dailyTradeChartHeight} Z`
     : '';
-  const bannerAds = globalBannerAds;
+  const bannerAds = visibleBannerAds;
+  const bannerAdsRight = visibleBannerAdsRight;
 
 
 
@@ -4786,7 +4820,7 @@ const fetchBuyOrders = async () => {
           </aside>
 
           <aside className="pointer-events-auto hidden xl:flex fixed right-6 top-28 z-20 flex-col gap-4">
-            {bannerAds.map((ad) => (
+            {bannerAdsRight.map((ad) => (
               <a
                 key={`right-${ad.id}`}
                 href={ad.link}
