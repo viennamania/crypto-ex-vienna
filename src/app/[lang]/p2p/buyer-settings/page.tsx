@@ -718,11 +718,12 @@ export default function SettingsPage({ params }: any) {
           console.log(transactionResult);
             */
   
-          const nextBuyerStatus = buyer?.status === 'confirmed' ? 'confirmed' : 'pending';
+          const nextBuyerStatus = 'confirmed';
           const nextBankInfo = {
             ...(buyer?.bankInfo || {}),
-            status: 'pending',
+            status: 'approved',
             submittedAt: new Date().toISOString(),
+            approvedAt: new Date().toISOString(),
             rejectionReason: '',
           };
 
@@ -865,9 +866,10 @@ export default function SettingsPage({ params }: any) {
                 ...(buyer || {}),
                 kyc: {
                     ...(buyer?.kyc || {}),
-                    status: 'pending',
+                    status: 'approved',
                     idImageUrl: uploadedUrl,
                     submittedAt: new Date().toISOString(),
+                    reviewedAt: new Date().toISOString(),
                 },
             };
 
@@ -1008,11 +1010,11 @@ export default function SettingsPage({ params }: any) {
     const kycStatus = buyer?.kyc?.status || (kycImageUrl ? 'pending' : 'none');
     const kycStatusLabel =
         kycStatus === 'approved'
-            ? '승인완료'
+            ? '등록완료'
             : kycStatus === 'rejected'
-            ? '승인거절'
+            ? '등록거절'
             : kycStatus === 'pending'
-            ? '심사중'
+            ? '등록중'
             : '미제출';
     const bankInfoStatus =
         buyer?.bankInfo?.status ||
@@ -1023,11 +1025,11 @@ export default function SettingsPage({ params }: any) {
             : 'none');
     const bankInfoStatusLabel =
         bankInfoStatus === 'approved'
-            ? '승인완료'
+            ? '등록완료'
             : bankInfoStatus === 'rejected'
-            ? '승인거절'
+            ? '등록거절'
             : bankInfoStatus === 'pending'
-            ? '심사중'
+            ? '등록중'
             : '미제출';
 
     return (
@@ -1300,7 +1302,7 @@ export default function SettingsPage({ params }: any) {
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-semibold text-slate-900">입금할 계좌 정보</span>
-                                                <span className="text-xs text-slate-500">계좌 정보 제출 후 심사됩니다.</span>
+                                                <span className="text-xs text-slate-500">계좌 등록 즉시 구매 가능합니다.</span>
                                             </div>
                                         </div>
                                         <span
@@ -1584,7 +1586,7 @@ export default function SettingsPage({ params }: any) {
                                             />
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-semibold text-slate-900">신분증 인증 (KYC)</span>
+                                            <span className="text-sm font-semibold text-slate-900">신분증 등록 (KYC)</span>
                                             <span className="text-xs text-slate-500">주민증/운전면허증/여권 중 1장 업로드</span>
                                         </div>
                                     </div>
@@ -1607,7 +1609,7 @@ export default function SettingsPage({ params }: any) {
                                     {kycStatus === 'pending' ? (
                                         <>
                                             <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-amber-50/80 px-4 py-3 text-sm text-amber-700 shadow-sm">
-                                                <span className="font-semibold">심사 신청이 접수되었습니다.</span>
+                                                <span className="font-semibold">등록이 접수되었습니다.</span>
                                                 <span className="text-xs">
                                                     신청 시간: {buyer?.kyc?.submittedAt ? new Date(buyer.kyc.submittedAt).toLocaleString() : '-'}
                                                 </span>
@@ -1626,9 +1628,9 @@ export default function SettingsPage({ params }: any) {
                                     ) : kycStatus === 'approved' ? (
                                         <>
                                             <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-700 shadow-sm">
-                                                <span className="font-semibold">승인된 신분증입니다.</span>
+                                                <span className="font-semibold">등록된 신분증입니다.</span>
                                                 <span className="mt-1 text-xs text-emerald-600">
-                                                    승인 시간: {buyer?.kyc?.reviewedAt ? new Date(buyer.kyc.reviewedAt).toLocaleString() : '-'}
+                                                    등록 시간: {buyer?.kyc?.reviewedAt ? new Date(buyer.kyc.reviewedAt).toLocaleString() : '-'}
                                                 </span>
                                             </div>
                                             {kycPreview && (
@@ -1671,7 +1673,7 @@ export default function SettingsPage({ params }: any) {
                                                 </div>
                                             )}
                                             <p className="text-xs text-slate-500">
-                                                업로드 후 심사까지 영업일 기준 1-2일 소요될 수 있습니다.
+                                                업로드 즉시 사용 가능합니다.
                                             </p>
                                             <button
                                                 type="button"
@@ -1683,7 +1685,7 @@ export default function SettingsPage({ params }: any) {
                                                         : 'bg-slate-900 text-white hover:bg-slate-800'
                                                 }`}
                                             >
-                                                {kycSubmitting ? '심사 신청 중...' : '심사신청하기'}
+                                                {kycSubmitting ? '등록 중...' : '등록하기'}
                                             </button>
                                         </>
                                     )}

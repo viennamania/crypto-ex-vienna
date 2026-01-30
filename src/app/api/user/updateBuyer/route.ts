@@ -19,19 +19,57 @@ export async function POST(request: NextRequest) {
     accountHolder
   } = body;
 
+  const nowIso = new Date().toISOString();
+  const bankNameValue = bankName ?? body?.buyer?.bankInfo?.bankName ?? body?.buyer?.depositBankName;
+  const accountNumberValue = accountNumber ?? body?.buyer?.bankInfo?.accountNumber ?? body?.buyer?.depositBankAccountNumber;
+  const accountHolderValue = accountHolder ?? body?.buyer?.bankInfo?.accountHolder ?? body?.buyer?.depositName;
+  const hasBankInfo = Boolean(bankNameValue && accountNumberValue && accountHolderValue);
+  const isExplicitRejected = buyerStatus === 'rejected' || body?.buyer?.status === 'rejected';
+  const resolvedBuyerStatus = isExplicitRejected
+    ? 'rejected'
+    : hasBankInfo
+    ? 'confirmed'
+    : (buyerStatus || body?.buyer?.status || 'pending');
+
+  const resolvedBankInfo = {
+    ...(body.buyer?.bankInfo || {}),
+    bankName: bankNameValue,
+    accountNumber: accountNumberValue,
+    accountHolder: accountHolderValue,
+    ...(hasBankInfo
+      ? {
+          status: 'approved',
+          approvedAt: body?.buyer?.bankInfo?.approvedAt || nowIso,
+          rejectionReason: '',
+        }
+      : {}),
+  };
+
+  const hasKycImage = Boolean(body?.buyer?.kyc?.idImageUrl);
+  const resolvedKyc = body?.buyer?.kyc
+    ? {
+        ...(body.buyer.kyc || {}),
+        ...(hasKycImage
+          ? {
+              status: 'approved',
+              reviewedAt: body?.buyer?.kyc?.reviewedAt || nowIso,
+            }
+          : {}),
+      }
+    : undefined;
+
   
   const result = await updateBuyer({
     storecode: storecode,
     walletAddress: walletAddress,
     buyer: {
-        ...body.buyer,
-        status: buyerStatus,
-        bankInfo: {
-            ...body.buyer?.bankInfo,
-            bankName: bankName,
-            accountNumber: accountNumber,
-            accountHolder: accountHolder,
-        }
+        ...(body.buyer || {}),
+        status: resolvedBuyerStatus,
+        bankInfo: resolvedBankInfo,
+        depositBankName: bankNameValue ?? body?.buyer?.depositBankName,
+        depositBankAccountNumber: accountNumberValue ?? body?.buyer?.depositBankAccountNumber,
+        depositName: accountHolderValue ?? body?.buyer?.depositName,
+        ...(resolvedKyc ? { kyc: resolvedKyc } : {}),
     },
   });
 
