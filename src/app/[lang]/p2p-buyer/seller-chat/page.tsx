@@ -83,6 +83,11 @@ export default function SellerChatPage() {
   const [sellerUsdtRate, setSellerUsdtRate] = useState<number | null>(null);
   const [sellerLoading, setSellerLoading] = useState(false);
   const [sellerError, setSellerError] = useState<string | null>(null);
+  const [buyKrwInput, setBuyKrwInput] = useState('');
+  const [buyUsdtInput, setBuyUsdtInput] = useState('');
+  const [buying, setBuying] = useState(false);
+  const [buyStatus, setBuyStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [buyStatusMessage, setBuyStatusMessage] = useState('');
   const [marketPrice, setMarketPrice] = useState<number | null>(null);
   const [marketUpdatedAt, setMarketUpdatedAt] = useState<string | null>(null);
   const promoSentRef = useRef(new Set<string>());
@@ -109,9 +114,112 @@ export default function SellerChatPage() {
       ? `시장가(${marketLabel})`
       : '고정가';
 
-  const goBuy = () => {
-    if (!sellerId) return;
-    router.push(`/${lang}/escrow/${sellerId}`);
+  const goBuy = async () => {
+    if (!isLoggedIn) {
+      setBuyStatus('error');
+      setBuyStatusMessage('웹3 지갑을 먼저 연결해주세요.');
+      return;
+    }
+    if (!sellerId) {
+      setBuyStatus('error');
+      setBuyStatusMessage('판매자 정보를 찾을 수 없습니다.');
+      return;
+    }
+    if (!effectiveRate) {
+      setBuyStatus('error');
+      setBuyStatusMessage('가격 정보를 불러오지 못했습니다.');
+      return;
+    }
+
+    const krwRaw = Number((buyKrwInput || '0').replace(/,/g, '')) || 0;
+    const usdtRaw = Number(buyUsdtInput || '0') || 0;
+
+    const derivedUsdt =
+      usdtRaw > 0
+        ? Math.floor(usdtRaw * 100) / 100
+        : krwRaw > 0
+          ? Math.floor((krwRaw / effectiveRate) * 100) / 100
+          : 0;
+    const derivedKrw =
+      krwRaw > 0
+        ? krwRaw
+        : derivedUsdt > 0
+          ? Math.round(derivedUsdt * effectiveRate)
+          : 0;
+
+    if (!derivedUsdt || derivedUsdt <= 0 || !derivedKrw || derivedKrw <= 0) {
+      setBuyStatus('error');
+      setBuyStatusMessage('구매할 금액이나 수량을 입력해주세요.');
+      return;
+    }
+
+    if (derivedUsdt > 100000) {
+      setBuyStatus('error');
+      setBuyStatusMessage('구매 수량은 100,000 USDT 이하로 입력해주세요.');
+      return;
+    }
+
+    setBuying(true);
+    setBuyStatus('loading');
+    setBuyStatusMessage('구매 주문을 생성하는 중입니다...');
+
+    try {
+      const response = await fetch('/api/order/buyOrderPrivateSale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          buyerWalletAddress: address,
+          sellerWalletAddress: sellerId,
+          usdtAmount: derivedUsdt,
+          krwAmount: derivedKrw,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.message || '구매 주문 생성에 실패했습니다.');
+      }
+
+      setBuyStatus('success');
+      setBuyStatusMessage('구매 주문이 생성되었습니다.');
+      setBuyUsdtInput('');
+      setBuyKrwInput('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '구매 주문 생성에 실패했습니다.';
+      setBuyStatus('error');
+      setBuyStatusMessage(message);
+    } finally {
+      setBuying(false);
+    }
+  };
+
+  const effectiveRate =
+    typeof sellerUsdtRate === 'number'
+      ? sellerUsdtRate
+      : typeof marketPrice === 'number'
+        ? marketPrice
+        : null;
+
+  const handleKrwChange = (value: string) => {
+    const onlyDigits = value.replace(/[^0-9]/g, '');
+    setBuyKrwInput(onlyDigits);
+    if (effectiveRate) {
+      const usdt = Number(onlyDigits || '0') / effectiveRate;
+      setBuyUsdtInput(usdt > 0 ? usdt.toFixed(4) : '');
+    } else {
+      setBuyUsdtInput('');
+    }
+  };
+
+  const handleUsdtChange = (value: string) => {
+    const sanitized = value.replace(/[^0-9.]/g, '');
+    setBuyUsdtInput(sanitized);
+    if (effectiveRate) {
+      const krw = Number(sanitized || '0') * effectiveRate;
+      setBuyKrwInput(Number.isFinite(krw) && krw > 0 ? Math.round(krw).toString() : '');
+    } else {
+      setBuyKrwInput('');
+    }
   };
 
   useEffect(() => {
@@ -545,40 +653,168 @@ export default function SellerChatPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="mt-4 rounded-2xl border border-black/10 bg-gradient-to-r from-black via-black to-black text-white shadow-[0_24px_60px_-34px_rgba(0,0,0,0.75)]">
-                    <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                      <div className="space-y-1">
-                        <p className="text-[11px] uppercase tracking-[0.2em] text-white/60">
-                          USDT Buy
+                  <div className="mt-3 rounded-3xl border border-slate-200/80 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-5 text-slate-800 shadow-[0_24px_60px_-34px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-500">
+                          Quick Order
                         </p>
-                        <p className="text-base font-semibold">이 판매자에게서 USDT 구매하기</p>
-                        <p className="text-sm text-white/80">
-                          단가 {formatNumber(sellerUsdtRate ?? undefined, 0)} KRW / USDT · {priceTypeLabel}
-                        </p>
+                        <p className="mt-1 text-lg font-semibold text-slate-900">USDT 구매하기</p>
                       </div>
+                      <div className="flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-[0_10px_26px_-20px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/70">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.12)]" />
+                        실시간 단가 {effectiveRate ? `${formatNumber(effectiveRate, 0)} KRW` : '-'}
+                      </div>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <label className="block text-xs font-semibold text-slate-500">
+                        결제할 원화금액
+                      </label>
+                      <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_10px_28px_-24px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/70">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={
+                            buyKrwInput
+                              ? Number(buyKrwInput).toLocaleString('ko-KR')
+                              : ''
+                          }
+                          onChange={(e) => handleKrwChange(e.target.value.replace(/,/g, ''))}
+                          placeholder="원화 금액을 입력하세요"
+                          disabled={!isLoggedIn || buying}
+                          className={`
+                            w-full border-0 px-4 py-3 pr-16 text-right text-lg font-extrabold tracking-tight placeholder:text-slate-400 focus:outline-none focus:ring-2
+                            ${isLoggedIn && !buying
+                              ? 'bg-white text-slate-900 focus:ring-blue-500'
+                              : 'cursor-not-allowed bg-slate-100 text-slate-400 focus:ring-0'}
+                          `}
+                        />
+                        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">
+                          KRW
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <label className="block text-xs font-semibold text-slate-500">
+                        구매할 USDT 수량
+                      </label>
+                      <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_10px_28px_-24px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/70">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={buyUsdtInput}
+                          onChange={(e) => handleUsdtChange(e.target.value)}
+                          placeholder="구매할 USDT 수량을 입력하세요"
+                          disabled={!isLoggedIn || buying}
+                          className={`
+                            w-full border-0 px-4 py-3 pr-16 text-right text-lg font-extrabold tracking-tight placeholder:text-slate-400 focus:outline-none focus:ring-2
+                            ${isLoggedIn && !buying
+                              ? 'bg-white text-slate-900 focus:ring-blue-500'
+                              : 'cursor-not-allowed bg-slate-100 text-slate-400 focus:ring-0'}
+                          `}
+                        />
+                        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">
+                          USDT
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-4">
                       <button
                         type="button"
                         onClick={goBuy}
-                        className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black shadow-[0_14px_34px_-18px_rgba(255,255,255,0.7)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-18px_rgba(255,255,255,0.9)] active:translate-y-0"
+                        disabled={
+                          !isLoggedIn
+                          || !sellerId
+                          || !effectiveRate
+                          || (!buyKrwInput && !buyUsdtInput)
+                          || buying
+                        }
+                        className={`
+                          group flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition
+                          ${
+                            !isLoggedIn
+                            || !sellerId
+                            || !effectiveRate
+                            || (!buyKrwInput && !buyUsdtInput)
+                            || buying
+                            ? 'cursor-not-allowed bg-slate-100 text-slate-400 border border-slate-200'
+                            : 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-500 text-white shadow-[0_18px_45px_-16px_rgba(37,99,235,0.65)] hover:-translate-y-0.5 hover:shadow-[0_28px_60px_-18px_rgba(37,99,235,0.85)] active:translate-y-0'}
+                        `}
                       >
-                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-white transition group-hover:scale-105">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            className="h-5 w-5"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M12 4v16m0 0-5-5m5 5 5-5"
-                            />
-                          </svg>
-                        </span>
-                        <span className="whitespace-nowrap">USDT 구매</span>
+                        {buying ? (
+                          <>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              className="h-5 w-5 animate-spin"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M12 4v2m0 12v2m8-8h-2M6 12H4m11.314-5.314-1.414 1.414M8.1 15.9l-1.414 1.414m0-11.314L8.1 8.1m7.8 7.8 1.414 1.414"
+                              />
+                            </svg>
+                            이동 중...
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              className="h-5 w-5"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M3.5 5h1.75l.6 3m0 0 .9 4H17l2-7H6.25m0 0H20.5"
+                              />
+                              <circle cx="9.5" cy="18.5" r="1.25" />
+                              <circle cx="16" cy="18.5" r="1.25" />
+                            </svg>
+                            USDT 구매하기
+                          </>
+                        )}
                       </button>
+                      {!isLoggedIn && (
+                        <p className="mt-2 text-xs text-slate-500">
+                          웹3 지갑을 연결하면 빠르게 구매를 진행할 수 있습니다.
+                        </p>
+                      )}
+                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 ring-1 ring-slate-200/70">
+                          최소 1 USDT
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 ring-1 ring-slate-200/70">
+                          최대 100,000 USDT
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 ring-1 ring-slate-200/70">
+                          실시간 시세 반영
+                        </span>
+                      </div>
+                      {buyStatus !== 'idle' && (
+                        <p
+                          className={`mt-2 text-xs ${
+                            buyStatus === 'success'
+                              ? 'text-emerald-600'
+                              : buyStatus === 'error'
+                                ? 'text-rose-500'
+                                : 'text-slate-500'
+                          }`}
+                        >
+                          {buyStatusMessage}
+                        </p>
+                      )}
+                      {!effectiveRate && (
+                        <p className="mt-2 text-xs text-rose-500">
+                          판매자 가격 정보를 불러오지 못했습니다.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
