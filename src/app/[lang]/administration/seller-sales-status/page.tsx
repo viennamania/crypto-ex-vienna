@@ -570,6 +570,18 @@ export default function SellerSalesStatusPage() {
         </div>
       </main>
 
+      {/* 항상 보이는 판매내역 열기 버튼 (플로팅) */}
+      {!showSalesPanel && (
+        <button
+          type="button"
+          onClick={() => setShowSalesPanel(true)}
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_-12px_rgba(15,23,42,0.5)] hover:bg-slate-800"
+        >
+          <Image src="/icon-history.png" alt="history" width={18} height={18} className="h-4 w-4" />
+          판매내역보기
+        </button>
+      )}
+
       {/* 판매내역 패널 */}
       {showSalesPanel && (
         <div className="fixed inset-0 z-50 flex">
