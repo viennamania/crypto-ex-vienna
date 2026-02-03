@@ -2409,6 +2409,14 @@ export default function Index({ params }: any) {
                   </button>
                   <button
                     onClick={() => {
+                      router.push('/' + params.lang + '/administration/seller-sales-status');
+                    }}
+                    className="bg-amber-500 text-sm font-semibold text-white px-4 py-2 rounded-lg shadow-sm hover:bg-amber-600"
+                  >
+                    판매현황
+                  </button>
+                  <button
+                    onClick={() => {
                       router.push('/' + params.lang + '/administration/support-settings');
                     }}
                     className="bg-white text-sm text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50"

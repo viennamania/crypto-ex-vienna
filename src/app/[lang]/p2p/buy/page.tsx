@@ -5268,22 +5268,32 @@ const fetchBuyOrders = async () => {
                               const escrowWalletAddress = seller.seller?.escrowWalletAddress || seller.walletAddress;
                               router.push(`/${params.lang}/escrow/${escrowWalletAddress}`);
                             }}
-                            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                            className="seller-contact-cta group relative inline-flex items-center gap-1.5 overflow-hidden rounded-full border border-amber-300/70 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 px-3 py-1.5 text-[11px] font-semibold text-amber-900 shadow-[0_10px_30px_rgba(251,191,36,0.35)] transition-all duration-300 hover:scale-[1.05] hover:border-amber-400 hover:shadow-[0_14px_36px_rgba(251,191,36,0.45)] focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1 active:scale-[0.98]"
                           >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 20 20"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="1.6"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="h-3.5 w-3.5"
+                            <span
+                              className="pointer-events-none absolute inset-0 rounded-full bg-amber-200/40 opacity-90 blur-md animate-[seller-glow_2.8s_ease-in-out_infinite]"
                               aria-hidden="true"
-                            >
-                              <path d="M8 11h4m-8-6h12a2 2 0 012 2v5a2 2 0 01-2 2H9l-4 3v-3H4a2 2 0 01-2-2V7a2 2 0 012-2z" />
-                            </svg>
-                            판매자에게 문의하기
+                            />
+                            <span
+                              className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-white/0 via-white/65 to-white/0 animate-[seller-shimmer_2.4s_ease-in-out_infinite]"
+                              aria-hidden="true"
+                            />
+                            <span className="relative z-10 flex items-center gap-1.5">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                              >
+                                <path d="M8 11h4m-8-6h12a2 2 0 012 2v5a2 2 0 01-2 2H9l-4 3v-3H4a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                              </svg>
+                              판매자에게 문의하기
+                            </span>
                           </button>
                         </div>
                       </div>
@@ -9898,6 +9908,30 @@ const fetchBuyOrders = async () => {
             />
         </ModalUser>
 
+        <style jsx global>{`
+          @keyframes seller-shimmer {
+            0% {
+              transform: translateX(-120%);
+            }
+            50% {
+              transform: translateX(120%);
+            }
+            100% {
+              transform: translateX(120%);
+            }
+          }
+          @keyframes seller-glow {
+            0%,
+            100% {
+              opacity: 0.35;
+              transform: scale(0.96);
+            }
+            50% {
+              opacity: 0.9;
+              transform: scale(1.04);
+            }
+          }
+        `}</style>
 
     </main>
 
