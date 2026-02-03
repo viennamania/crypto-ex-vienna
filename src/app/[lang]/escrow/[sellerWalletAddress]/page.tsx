@@ -206,7 +206,11 @@ type SellerChatItem = {
 
 const walletAuthOptions = ["google", "email", "phone"];
 
-const SENDBIRD_APP_ID = process.env.SENDBIRD_APP_ID || '';
+// 클라이언트에서 접근 가능한 공개 App ID가 비어 있으면 기본값으로 설정
+const SENDBIRD_APP_ID =
+  process.env.NEXT_PUBLIC_SENDBIRD_APP_ID ||
+  process.env.SENDBIRD_APP_ID ||
+  'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
 
 type BannerAd = {
   id: string;
@@ -10565,8 +10569,14 @@ const SendbirdChatEmbed = ({
               <GroupChannel channelUrl={channelUrl} />
             </SendbirdProvider>
           ) : (
-            <div className="flex h-full items-center justify-center text-sm text-slate-500">
-              채팅을 준비 중입니다.
+            <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-slate-500 px-4 text-center">
+              <span className="font-semibold">채팅을 준비 중입니다.</span>
+              {isLoading && <span className="text-xs text-slate-400">세션/채널을 설정 중...</span>}
+              {errorMessage && (
+                <div className="w-full max-w-sm rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  {errorMessage}
+                </div>
+              )}
             </div>
           )}
         </div>
