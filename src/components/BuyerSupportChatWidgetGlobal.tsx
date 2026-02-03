@@ -5,7 +5,7 @@ import { useActiveAccount, useActiveWallet } from 'thirdweb/react';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 
-const SENDBIRD_APP_ID = process.env.SENDBIRD_APP_ID || '';
+const NEXT_PUBLIC_SENDBIRD_APP_ID = process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
 const SUPPORT_ADMIN_ID = process.env.NEXT_PUBLIC_SENDBIRD_MANAGER_ID || 'orangexManager';
 const USER_STORECODE = 'admin';
 
@@ -268,7 +268,7 @@ const BuyerSupportChatWidgetGlobal = () => {
               </div>
             ) : (
               <SendbirdProvider
-                appId={SENDBIRD_APP_ID}
+                appId={NEXT_PUBLIC_SENDBIRD_APP_ID}
                 userId={address}
                 accessToken={sessionToken}
                 theme="light"

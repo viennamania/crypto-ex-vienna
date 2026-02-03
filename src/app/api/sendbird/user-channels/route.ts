@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 
-const APPLICATION_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
-const API_BASE = `https://api-${APPLICATION_ID}.sendbird.com/v3`;
+const APPLICATION_ID =
+  process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
+const API_BASE = APPLICATION_ID ? `https://api-${APPLICATION_ID}.sendbird.com/v3` : '';
 const REQUEST_TIMEOUT_MS = Number(process.env.SENDBIRD_REQUEST_TIMEOUT_MS ?? 8000);
 
 const logSendbird = (
@@ -77,6 +78,9 @@ export async function POST(request: Request) {
     const headers = getHeaders();
     if (!headers) {
         return NextResponse.json({ error: 'Sendbird API token is missing.' }, { status: 500 });
+    }
+    if (!APPLICATION_ID) {
+        return NextResponse.json({ error: 'Sendbird application id is missing.' }, { status: 500 });
     }
 
     const body = (await request.json().catch(() => null)) as {

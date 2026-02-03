@@ -13,7 +13,7 @@ import { client } from '@/app/client';
 
 import { ConnectButton } from '@/components/OrangeXConnectButton';
 
-const SENDBIRD_APP_ID = process.env.SENDBIRD_APP_ID || '';
+const NEXT_PUBLIC_SENDBIRD_APP_ID = process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
 const USER_STORECODE = 'admin';
 
 const formatNumber = (value: number | undefined, digits = 2) => {
@@ -562,6 +562,10 @@ export default function SellerChatPage() {
       if (!isLoggedIn || !sellerId) {
         return;
       }
+      if (!NEXT_PUBLIC_SENDBIRD_APP_ID) {
+        setErrorMessage('채팅 앱 ID가 설정되지 않았습니다. NEXT_PUBLIC_SENDBIRD_APP_ID를 확인해주세요.');
+        return;
+      }
       if (sessionToken && channelUrl) {
         return;
       }
@@ -595,7 +599,11 @@ export default function SellerChatPage() {
         });
         if (!sessionResponse.ok) {
           const error = await sessionResponse.json().catch(() => null);
-          throw new Error(error?.error || '세션 토큰을 발급하지 못했습니다.');
+          throw new Error(
+            error?.error
+              ? `세션 토큰 오류: ${error.error}`
+              : `세션 토큰 발급 실패 (status ${sessionResponse.status})`,
+          );
         }
         const sessionData = (await sessionResponse.json()) as { sessionToken?: string };
         if (!sessionData.sessionToken) {
@@ -612,7 +620,11 @@ export default function SellerChatPage() {
         });
         if (!channelResponse.ok) {
           const error = await channelResponse.json().catch(() => null);
-          throw new Error(error?.error || '채팅 채널을 생성하지 못했습니다.');
+          throw new Error(
+            error?.error
+              ? `채널 생성 오류: ${error.error}`
+              : `채팅 채널 생성 실패 (status ${channelResponse.status})`,
+          );
         }
         const channelData = (await channelResponse.json()) as { channelUrl?: string };
 
@@ -1179,6 +1191,11 @@ export default function SellerChatPage() {
                     }}
                     locale="ko_KR"
                   />
+                  {errorMessage && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                      {errorMessage}
+                    </div>
+                  )}
                 </div>
               ) : errorMessage ? (
                 <p className="mt-3 px-5 text-sm text-rose-500">{errorMessage}</p>
@@ -1191,7 +1208,7 @@ export default function SellerChatPage() {
               ) : (
                 <div className="mt-4 h-[520px]">
                   <SendbirdProvider
-                    appId={SENDBIRD_APP_ID}
+                    appId={NEXT_PUBLIC_SENDBIRD_APP_ID}
                     userId={address}
                     accessToken={sessionToken}
                     theme="light"

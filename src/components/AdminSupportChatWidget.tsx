@@ -6,7 +6,7 @@ import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 import GroupChannelList from '@sendbird/uikit-react/GroupChannelList';
 
-const SENDBIRD_APP_ID = process.env.SENDBIRD_APP_ID || '';
+const NEXT_PUBLIC_SENDBIRD_APP_ID = process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
 const ADMIN_CHAT_ID = 'orangexManager';
 
 const AdminSupportChatWidget = () => {
@@ -151,7 +151,7 @@ const AdminSupportChatWidget = () => {
               </div>
             ) : (
               <SendbirdProvider
-                appId={SENDBIRD_APP_ID}
+                appId={NEXT_PUBLIC_SENDBIRD_APP_ID}
                 userId={ADMIN_CHAT_ID}
                 accessToken={adminSessionToken}
                 theme="light"

@@ -24,7 +24,7 @@ const bodyFont = Manrope({
     variable: '--font-body',
 });
 
-const SENDBIRD_APP_ID = process.env.SENDBIRD_APP_ID || '';
+const NEXT_PUBLIC_SENDBIRD_APP_ID = process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
 const SUPPORT_ADMIN_ID = 'orangexManager';
 const SUPPORT_REQUEST_TIMEOUT_MS = 12000;
 

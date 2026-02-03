@@ -207,10 +207,10 @@ type SellerChatItem = {
 const walletAuthOptions = ["google", "email", "phone"];
 
 // 클라이언트에서 접근 가능한 공개 App ID가 비어 있으면 기본값으로 설정
-const SENDBIRD_APP_ID =
+const NEXT_PUBLIC_SENDBIRD_APP_ID =
+  process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID ||
   process.env.NEXT_PUBLIC_SENDBIRD_APP_ID ||
-  process.env.SENDBIRD_APP_ID ||
-  'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
+  '';
 
 type BannerAd = {
   id: string;
@@ -10602,7 +10602,7 @@ const SendbirdChatEmbed = ({
         <div className="h-[520px] overflow-hidden rounded-xl border border-slate-200">
           {sessionToken && channelUrl ? (
             <SendbirdProvider
-              appId={SENDBIRD_APP_ID}
+              appId={NEXT_PUBLIC_SENDBIRD_APP_ID}
               userId={buyerWalletAddress}
               accessToken={sessionToken}
               theme="light"

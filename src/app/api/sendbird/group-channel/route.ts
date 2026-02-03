@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 
-const APPLICATION_ID = 'CCD67D05-55A6-4CA2-A6B1-187A5B62EC9D';
-const API_BASE = `https://api-${APPLICATION_ID}.sendbird.com/v3`;
+const APPLICATION_ID =
+  process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
+const API_BASE = APPLICATION_ID ? `https://api-${APPLICATION_ID}.sendbird.com/v3` : '';
 const DEFAULT_PROFILE_URL = 'https://crypto-ex-vienna.vercel.app/logo.png';
 const REQUEST_TIMEOUT_MS = Number(process.env.SENDBIRD_REQUEST_TIMEOUT_MS ?? 8000);
 
@@ -109,9 +110,12 @@ export async function POST(request: Request) {
         sellerId?: string;
     } | null;
 
-    if (!body?.buyerId || !body?.sellerId) {
-        return NextResponse.json({ error: 'buyerId and sellerId are required.' }, { status: 400 });
-    }
+  if (!body?.buyerId || !body?.sellerId) {
+    return NextResponse.json({ error: 'buyerId and sellerId are required.' }, { status: 400 });
+  }
+  if (!APPLICATION_ID) {
+    return NextResponse.json({ error: 'Sendbird application id is missing.' }, { status: 500 });
+  }
 
     if (body.buyerId === body.sellerId) {
         return NextResponse.json({ error: 'buyerId and sellerId must differ.' }, { status: 400 });
