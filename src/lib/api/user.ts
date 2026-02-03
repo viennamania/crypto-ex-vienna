@@ -1801,10 +1801,12 @@ export async function getAllUsersByStorecode(
     storecode,
     limit,
     page,
+    includeUnverified = false,
   }: {
     storecode: string;
     limit: number;
     page: number;
+    includeUnverified?: boolean;
   }
 ): Promise<ResultProps> {
 
@@ -1823,7 +1825,7 @@ export async function getAllUsersByStorecode(
       {
         storecode: { $regex: storecode, $options: 'i' },
         walletAddress: { $exists: true, $ne: null },
-        verified: true,
+        ...(includeUnverified ? {} : { verified: true }),
       },
       {
         limit: limit,
@@ -1837,9 +1839,9 @@ export async function getAllUsersByStorecode(
     .toArray();
   const totalCount = await collection.countDocuments(
     {
-      storecode: storecode,
+      storecode: { $regex: storecode, $options: 'i' },
       walletAddress: { $exists: true, $ne: null },
-      verified: true,
+      ...(includeUnverified ? {} : { verified: true }),
     }
   );
   return {

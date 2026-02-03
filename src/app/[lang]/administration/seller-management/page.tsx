@@ -12,6 +12,10 @@ export default function SellerManagementPage() {
 
   const [sellers, setSellers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const [totalCount, setTotalCount] = useState(0);
 
   const fetchSellers = async () => {
     setLoading(true);
@@ -23,12 +27,14 @@ export default function SellerManagementPage() {
         },
         body: JSON.stringify({
           storecode: '',
-          limit: 200,
-          page: 1,
+          limit: pageSize,
+          page,
+          includeUnverified: true,
         }),
       });
       const data = await response.json();
       const users = data?.result?.users || [];
+      setTotalCount(data?.result?.totalCount ?? users.length);
       const sellerUsers = users.filter((user: any) => Boolean(user?.seller));
       sellerUsers.sort((a: any, b: any) => {
         const aTime = new Date(a?.seller?.kyc?.submittedAt || 0).getTime();
@@ -45,7 +51,23 @@ export default function SellerManagementPage() {
 
   useEffect(() => {
     fetchSellers();
-  }, []);
+  }, [page]);
+
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredSellers = normalizedSearch
+    ? sellers.filter((user) => {
+        const fields = [
+          user?.nickname,
+          user?.walletAddress,
+          user?.seller?.bankInfo?.bankName,
+          user?.seller?.status,
+          user?.seller?.bankInfo?.status,
+        ]
+          .filter(Boolean)
+          .map((v) => String(v).toLowerCase());
+        return fields.some((field) => field.includes(normalizedSearch));
+      })
+    : sellers;
 
   return (
     <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-lg mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
@@ -59,15 +81,76 @@ export default function SellerManagementPage() {
             <Image src="/icon-back.png" alt="Back" width={20} height={20} className="rounded-full" />
           </button>
           <span className="font-semibold">판매자 관리</span>
+          <button
+            type="button"
+            onClick={fetchSellers}
+            disabled={loading}
+            className={`ml-auto inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition ${
+              loading ? 'cursor-not-allowed opacity-60' : 'hover:-translate-y-0.5 hover:shadow-md'
+            }`}
+          >
+            {loading ? (
+              <svg
+                className="h-3.5 w-3.5 animate-spin text-slate-500"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="12" cy="12" r="10" className="opacity-25" />
+                <path d="M12 2a10 10 0 0 1 10 10" className="opacity-75" />
+              </svg>
+            ) : (
+              <svg
+                className="h-3.5 w-3.5 text-slate-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 2v6h-6" />
+                <path d="M3 22v-6h6" />
+                <path d="M21 8a9 9 0 0 0-15-6.7L3 5" />
+                <path d="M3 16a9 9 0 0 0 15 6.7L21 19" />
+              </svg>
+            )}
+            새로고침
+          </button>
         </div>
 
         <div className="w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <Image src="/icon-seller.png" alt="Seller" width={24} height={24} className="h-6 w-6" />
               <h2 className="text-lg font-bold text-slate-900">판매자 목록</h2>
             </div>
-            <span className="text-sm font-semibold text-slate-600">{sellers.length} 명</span>
+            <span className="text-sm font-semibold text-slate-600">
+              {filteredSellers.length} / {totalCount} 명
+            </span>
+            <div className="ml-auto flex w-full items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm sm:w-80">
+              <Image src="/icon-search.png" alt="Search" width={16} height={16} className="h-4 w-4 opacity-70" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="지갑주소, 닉네임, 은행, 상태 검색"
+                className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-200"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="mt-4">
@@ -93,7 +176,7 @@ export default function SellerManagementPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sellers.map((sellerUser, index) => {
+                  {filteredSellers.map((sellerUser, index) => {
                     const sellerStatus = sellerUser?.seller?.status;
                     const normalizedSellerStatus = sellerStatus === 'confirmed' ? 'confirmed' : 'pending';
                     const kycStatus =
@@ -224,6 +307,46 @@ export default function SellerManagementPage() {
               </table>
             )}
           </div>
+
+          {!loading && (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+              <span>
+                {totalCount === 0
+                  ? '0건'
+                  : `${(page - 1) * pageSize + 1} - ${Math.min(page * pageSize, totalCount)} / ${totalCount}건`}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1 || loading}
+                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                    page <= 1 || loading
+                      ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                      : 'border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:shadow'
+                  }`}
+                >
+                  ← 이전
+                </button>
+                <span className="px-2 text-xs font-semibold text-slate-500">페이지 {page}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const maxPage = Math.max(1, Math.ceil(totalCount / pageSize));
+                    setPage((p) => Math.min(maxPage, p + 1));
+                  }}
+                  disabled={page >= Math.ceil(totalCount / pageSize) || loading}
+                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                    page >= Math.ceil(totalCount / pageSize) || loading
+                      ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                      : 'border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:shadow'
+                  }`}
+                >
+                  다음 →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </main>

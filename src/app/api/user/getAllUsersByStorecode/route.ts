@@ -1,9 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-	getAllUsersByStorecodeAndVerified,
-} from '@lib/api/user';
-import { get } from "http";
+import { getAllUsersByStorecode } from '@lib/api/user';
 
 
 
@@ -16,16 +13,18 @@ export async function POST(request: NextRequest) {
     storecode,
     limit,
     page,
+    includeUnverified = false,
   } = body;
 
 
   //console.log("walletAddress", walletAddress);
 
 
-  const result = await getAllUsersByStorecodeAndVerified({
+  const result = await getAllUsersByStorecode({
     storecode,
     limit: limit || 100,
     page: page || 1,
+    includeUnverified,
   });
 
  
