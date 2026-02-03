@@ -88,6 +88,11 @@ export default function SellerChatPage() {
   const [buying, setBuying] = useState(false);
   const [buyStatus, setBuyStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [buyStatusMessage, setBuyStatusMessage] = useState('');
+  const [recentOrderInfo, setRecentOrderInfo] = useState<{
+    usdtAmount: number;
+    krwAmount: number;
+    createdAt: string;
+  } | null>(null);
   const [marketPrice, setMarketPrice] = useState<number | null>(null);
   const [marketUpdatedAt, setMarketUpdatedAt] = useState<string | null>(null);
   const promoSentRef = useRef(new Set<string>());
@@ -113,6 +118,31 @@ export default function SellerChatPage() {
     sellerProfile?.seller?.priceSettingMethod === 'market'
       ? `시장가(${marketLabel})`
       : '고정가';
+  const sellerBuyOrderStatus = sellerProfile?.seller?.buyOrder?.status as string | undefined;
+  const statusLabelMap: Record<string, string> = {
+    accepted: '주문 수락됨',
+    paymentRequested: '입금 요청됨',
+    paymentConfirmed: '입금 확인됨',
+    cancelled: '취소됨',
+    ordered: '주문 완료',
+  };
+  const statusColorMap: Record<string, string> = {
+    accepted: 'bg-amber-500 shadow-[0_0_0_6px_rgba(245,158,11,0.15)]',
+    paymentRequested: 'bg-blue-500 shadow-[0_0_0_6px_rgba(59,130,246,0.15)]',
+    paymentConfirmed: 'bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.15)]',
+    cancelled: 'bg-rose-500 shadow-[0_0_0_6px_rgba(244,63,94,0.15)]',
+    ordered: 'bg-slate-500 shadow-[0_0_0_6px_rgba(100,116,139,0.15)]',
+  };
+  const sellerStatusLabel =
+    (sellerBuyOrderStatus && statusLabelMap[sellerBuyOrderStatus]) || '주문 없음';
+  const sellerStatusDotClass =
+    (sellerBuyOrderStatus && statusColorMap[sellerBuyOrderStatus]) || 'bg-slate-300';
+  const sellerStatusTimestamp =
+    sellerProfile?.seller?.buyOrder?.paymentRequestedAt ||
+    sellerProfile?.seller?.buyOrder?.acceptedAt ||
+    sellerProfile?.seller?.buyOrder?.createdAt ||
+    '';
+  const isPaymentRequested = sellerBuyOrderStatus === 'paymentRequested';
 
   const goBuy = async () => {
     if (!isLoggedIn) {
@@ -184,10 +214,16 @@ export default function SellerChatPage() {
       setBuyStatusMessage('구매 주문이 생성되었습니다.');
       setBuyUsdtInput('');
       setBuyKrwInput('');
+      setRecentOrderInfo({
+        usdtAmount: derivedUsdt,
+        krwAmount: derivedKrw,
+        createdAt: new Date().toISOString(),
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : '구매 주문 생성에 실패했습니다.';
       setBuyStatus('error');
       setBuyStatusMessage(message);
+      setRecentOrderInfo(null);
     } finally {
       setBuying(false);
     }
@@ -305,14 +341,16 @@ export default function SellerChatPage() {
   useEffect(() => {
     let active = true;
 
-    const fetchSellerProfile = async () => {
+    const fetchSellerProfile = async (isInitial = false) => {
       if (!sellerId) {
         setSellerProfile(null);
         setSellerEscrow(null);
         setSellerError(null);
         return;
       }
-      setSellerLoading(true);
+      if (isInitial) {
+        setSellerLoading(true);
+      }
       setSellerError(null);
       try {
         const response = await fetch('/api/user/getSellerSummary', {
@@ -356,10 +394,14 @@ export default function SellerChatPage() {
       }
     };
 
-    fetchSellerProfile();
+    fetchSellerProfile(true);
+    const intervalId = window.setInterval(() => {
+      fetchSellerProfile(false);
+    }, 15000);
 
     return () => {
       active = false;
+      window.clearInterval(intervalId);
     };
   }, [sellerId]);
 
@@ -652,6 +694,23 @@ export default function SellerChatPage() {
                         </span>
                       </span>
                     </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs uppercase tracking-[0.2em] text-black/50">
+                        판매자 주문 상태
+                      </span>
+                      <span className="flex items-center gap-2 text-sm font-semibold text-black">
+                        <span className={`h-2.5 w-2.5 rounded-full ${sellerStatusDotClass}`} />
+                        {sellerStatusLabel}
+                      </span>
+                    </div>
+                    {sellerBuyOrderStatus && sellerStatusTimestamp && (
+                      <div className="flex items-center justify-between text-xs text-black/60">
+                        <span className="text-[11px] uppercase tracking-[0.2em]">최근 업데이트</span>
+                        <span className="font-semibold text-black/70">
+                          {formatUpdatedTime(sellerStatusTimestamp)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="mt-3 rounded-3xl border border-slate-200/80 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-5 text-slate-800 shadow-[0_24px_60px_-34px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/50">
                     <div className="flex items-center justify-between">
@@ -666,6 +725,40 @@ export default function SellerChatPage() {
                         실시간 단가 {effectiveRate ? `${formatNumber(effectiveRate, 0)} KRW` : '-'}
                       </div>
                     </div>
+                    {isPaymentRequested && (
+                      <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                        <div className="flex items-center gap-2 font-semibold">
+                          <span className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_0_6px_rgba(245,158,11,0.18)]" />
+                          입금 요청 상태입니다. 아래 계좌로 입금해 주세요.
+                        </div>
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-semibold text-amber-800">
+                          <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100">
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">은행</p>
+                            <p className="mt-1 text-sm">{sellerProfile?.seller?.bankInfo?.bankName || '-'}</p>
+                          </div>
+                          <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100">
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">예금주</p>
+                            <p className="mt-1 text-sm">{sellerProfile?.seller?.bankInfo?.accountHolder || '-'}</p>
+                          </div>
+                          <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100 col-span-2">
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">계좌번호</p>
+                            <p className="mt-1 text-sm font-bold">{sellerProfile?.seller?.bankInfo?.accountNumber || '-'}</p>
+                          </div>
+                          <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100">
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">입금액</p>
+                            <p className="mt-1 text-sm font-bold">
+                              {formatNumber(sellerProfile?.seller?.buyOrder?.krwAmount, 0)} KRW
+                            </p>
+                          </div>
+                          <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100">
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">주문 수량</p>
+                            <p className="mt-1 text-sm font-bold">
+                              {formatNumber(sellerProfile?.seller?.buyOrder?.usdtAmount, 2)} USDT
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <div className="mt-3 space-y-2">
                       <label className="block text-xs font-semibold text-slate-500">
                         결제할 원화금액
@@ -674,14 +767,14 @@ export default function SellerChatPage() {
                         <input
                           type="text"
                           inputMode="numeric"
-                          value={
-                            buyKrwInput
-                              ? Number(buyKrwInput).toLocaleString('ko-KR')
-                              : ''
-                          }
-                          onChange={(e) => handleKrwChange(e.target.value.replace(/,/g, ''))}
-                          placeholder="원화 금액을 입력하세요"
-                          disabled={!isLoggedIn || buying}
+                        value={
+                          buyKrwInput
+                            ? Number(buyKrwInput).toLocaleString('ko-KR')
+                            : ''
+                        }
+                        onChange={(e) => handleKrwChange(e.target.value.replace(/,/g, ''))}
+                        placeholder="원화 금액을 입력하세요"
+                        disabled={!isLoggedIn || buying || isPaymentRequested}
                           className={`
                             w-full border-0 px-4 py-3 pr-16 text-right text-lg font-extrabold tracking-tight placeholder:text-slate-400 focus:outline-none focus:ring-2
                             ${isLoggedIn && !buying
@@ -702,10 +795,10 @@ export default function SellerChatPage() {
                         <input
                           type="text"
                           inputMode="decimal"
-                          value={buyUsdtInput}
-                          onChange={(e) => handleUsdtChange(e.target.value)}
-                          placeholder="구매할 USDT 수량을 입력하세요"
-                          disabled={!isLoggedIn || buying}
+                        value={buyUsdtInput}
+                        onChange={(e) => handleUsdtChange(e.target.value)}
+                        placeholder="구매할 USDT 수량을 입력하세요"
+                        disabled={!isLoggedIn || buying || isPaymentRequested}
                           className={`
                             w-full border-0 px-4 py-3 pr-16 text-right text-lg font-extrabold tracking-tight placeholder:text-slate-400 focus:outline-none focus:ring-2
                             ${isLoggedIn && !buying
@@ -718,7 +811,7 @@ export default function SellerChatPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="mt-4">
+                      <div className="mt-4">
                       <button
                         type="button"
                         onClick={goBuy}
@@ -728,6 +821,7 @@ export default function SellerChatPage() {
                           || !effectiveRate
                           || (!buyKrwInput && !buyUsdtInput)
                           || buying
+                          || isPaymentRequested
                         }
                         className={`
                           group flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition
@@ -781,11 +875,6 @@ export default function SellerChatPage() {
                           </>
                         )}
                       </button>
-                      {!isLoggedIn && (
-                        <p className="mt-2 text-xs text-slate-500">
-                          웹3 지갑을 연결하면 빠르게 구매를 진행할 수 있습니다.
-                        </p>
-                      )}
                       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
                         <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 ring-1 ring-slate-200/70">
                           최소 1 USDT
@@ -797,23 +886,63 @@ export default function SellerChatPage() {
                           실시간 시세 반영
                         </span>
                       </div>
-                      {buyStatus !== 'idle' && (
-                        <p
-                          className={`mt-2 text-xs ${
-                            buyStatus === 'success'
-                              ? 'text-emerald-600'
-                              : buyStatus === 'error'
-                                ? 'text-rose-500'
-                                : 'text-slate-500'
-                          }`}
-                        >
-                          {buyStatusMessage}
+                      {!isLoggedIn && (
+                        <p className="mt-2 text-xs text-slate-500">
+                          웹3 지갑을 연결하면 빠르게 구매를 진행할 수 있습니다.
                         </p>
                       )}
                       {!effectiveRate && (
                         <p className="mt-2 text-xs text-rose-500">
                           판매자 가격 정보를 불러오지 못했습니다.
                         </p>
+                      )}
+                      {buyStatus !== 'idle' && (
+                        <div
+                          className={`mt-3 rounded-2xl border px-3 py-3 text-xs font-semibold ${
+                            buyStatus === 'success'
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                              : buyStatus === 'error'
+                                ? 'border-rose-200 bg-rose-50 text-rose-700'
+                                : 'border-slate-200 bg-slate-50 text-slate-600'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 text-sm">
+                            {buyStatus === 'success' && (
+                              <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.14)]" />
+                            )}
+                            {buyStatus === 'error' && (
+                              <span className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_0_6px_rgba(244,63,94,0.14)]" />
+                            )}
+                            {buyStatus === 'loading' && (
+                              <span className="h-2 w-2 rounded-full bg-slate-400 animate-pulse" />
+                            )}
+                            <span>{buyStatusMessage}</span>
+                          </div>
+                          {buyStatus === 'success' && recentOrderInfo && (
+                            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] font-medium">
+                          <div className="rounded-xl bg-white/70 px-3 py-2 text-slate-700 ring-1 ring-emerald-100">
+                            <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
+                              주문 상태
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-emerald-700">
+                              입금요청
+                            </p>
+                          </div>
+                              <div className="rounded-xl bg-white/70 px-3 py-2 text-slate-700 ring-1 ring-emerald-100">
+                                <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
+                                  주문 금액
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                  {formatNumber(recentOrderInfo.krwAmount, 0)} KRW /{' '}
+                                  {formatNumber(recentOrderInfo.usdtAmount, 2)} USDT
+                                </p>
+                                <p className="text-[10px] text-slate-500">
+                                  생성 {formatUpdatedTime(recentOrderInfo.createdAt)}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
