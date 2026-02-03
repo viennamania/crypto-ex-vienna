@@ -61,8 +61,7 @@ const maskWalletAddress = (addr?: string) => {
 
 const maskName = (name?: string) => {
   if (!name) return '-';
-  if (name.length === 1) return `${name}*`;
-  return `${name.slice(0, 1)}*${'*'.repeat(Math.max(0, name.length - 2))}${name.slice(-1)}`;
+  return `${name.slice(0, 1)}${'*'.repeat(Math.max(1, name.length - 1))}`;
 };
 
 export default function SellerChatPage() {
@@ -721,7 +720,7 @@ export default function SellerChatPage() {
                     </div>
                     <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-slate-100">
                       <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">거래 ID</p>
-                      <p className="font-semibold">{item.tradeId ? `****${String(item.tradeId).slice(-4)}` : '-'}</p>
+                      <p className="font-semibold">{item.tradeId || '-'}</p>
                     </div>
                   </div>
                 </div>

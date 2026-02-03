@@ -2667,17 +2667,25 @@ setAgreementForCancelTrade(
           });
           
 
-          // update sellersBalance seller.buyOrder.status to 'paymentConfirmed'
-          /*
+          // update sellersBalance seller.buyOrder.status to 'paymentConfirmed' 즉시 반영
           setSellersBalance((prev) =>
-            prev.map((seller) =>
-              seller.walletAddress === address
-                ? { ...seller, seller: { ...seller.seller, buyOrder: { ...seller.seller.buyOrder, status: 'paymentConfirmed' } } }
-                : seller
-
-            )
+            prev.map((seller, idx) =>
+              idx === index
+                ? {
+                    ...seller,
+                    seller: {
+                      ...seller.seller,
+                      buyOrder: {
+                        ...(seller.seller?.buyOrder || {}),
+                        status: 'paymentConfirmed',
+                        paymentConfirmedAt: new Date().toISOString(),
+                        transactionHash,
+                      },
+                    },
+                  }
+                : seller,
+            ),
           );
-          */
 
 
 
@@ -2695,7 +2703,7 @@ setAgreementForCancelTrade(
 
     } catch (error) {
       console.error('Error:', error);
-      //toast.error('결제확인이 실패했습니다.');
+      toast.error('결제확인이 실패했습니다.');
     }
 
 
@@ -4716,12 +4724,56 @@ const fetchBuyOrders = async () => {
 
   return (
 
-    <main className="relative p-4 pb-10 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-xl bg-white text-slate-800 [&_[class*='shadow-']]:shadow-none [&_[class*='bg-gradient']]:bg-none [&_[class*='bg-gradient']]:bg-white [&_[class*='bg-gradient']]:text-slate-700 [&_[class*='bg-gradient']]:border [&_[class*='bg-gradient']]:border-slate-200 [&_[class*='rounded-2xl']]:rounded-lg [&_[class*='rounded-full']]:rounded-md">
+    <main className="relative p-4 pb-10 min-h-[100vh] flex flex-col items-center justify-start gap-4 mx-auto w-full max-w-xl bg-white text-slate-800 [&_[class*='shadow-']]:shadow-none [&_[class*='bg-gradient']]:bg-none [&_[class*='bg-gradient']]:bg-white [&_[class*='bg-gradient']]:text-slate-700 [&_[class*='bg-gradient']]:border [&_[class*='bg-gradient']]:border-slate-200 [&_[class*='rounded-2xl']]:rounded-lg [&_[class*='rounded-full']]:rounded-md">
 
       <AutoConnect
           client={client}
           wallets={[wallet]}
       />
+
+      {!address && (
+        <div className="mb-4 w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-slate-800 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+                Web3
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold">웹3 지갑으로 로그인해 주세요</span>
+                <span className="text-xs text-slate-500">
+                  판매자 상세와 거래 기능을 사용하려면 지갑 연결이 필요합니다.
+                </span>
+              </div>
+            </div>
+            <div className="w-full sm:w-auto">
+              <ConnectButton
+                client={client}
+                wallets={wallets.length ? wallets : wallet ? [wallet] : []}
+                theme="light"
+                connectButton={{
+                  label: '웹3 로그인',
+                  style: {
+                    background: '#111827',
+                    color: '#ffffff',
+                    border: '1px solid rgba(17,24,39,0.12)',
+                    width: '100%',
+                    minWidth: '160px',
+                    height: '44px',
+                    borderRadius: '9999px',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                  },
+                }}
+                connectModal={{
+                  size: 'wide',
+                  showThirdwebBranding: false,
+                }}
+                locale="ko_KR"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {bannerAds.length > 0 && (
         <>
