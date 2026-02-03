@@ -731,6 +731,9 @@ export default function SellerChatPage() {
                           <span className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_0_6px_rgba(245,158,11,0.18)]" />
                           입금 요청 상태입니다. 아래 계좌로 입금해 주세요.
                         </div>
+                        <p className="mt-1 text-xs font-semibold text-amber-800">
+                          10분내로 입금하지 않으면 자동 취소됩니다.
+                        </p>
                         <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-semibold text-amber-800">
                           <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100">
                             <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">은행</p>
