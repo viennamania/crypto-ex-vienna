@@ -54,6 +54,17 @@ const maskAccountNumber = (accountNumber?: string) => {
   return `${masked}${visible}`;
 };
 
+const maskWalletAddress = (addr?: string) => {
+  if (!addr || addr.length < 10) return '-';
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+};
+
+const maskName = (name?: string) => {
+  if (!name) return '-';
+  if (name.length === 1) return `${name}*`;
+  return `${name.slice(0, 1)}*${'*'.repeat(Math.max(0, name.length - 2))}${name.slice(-1)}`;
+};
+
 export default function SellerChatPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -96,6 +107,12 @@ export default function SellerChatPage() {
   const [marketPrice, setMarketPrice] = useState<number | null>(null);
   const [marketUpdatedAt, setMarketUpdatedAt] = useState<string | null>(null);
   const promoSentRef = useRef(new Set<string>());
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyOrders, setHistoryOrders] = useState<any[]>([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyHasMore, setHistoryHasMore] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const historyContainerRef = useRef<HTMLDivElement | null>(null);
 
   const displaySellerName = sellerProfile?.nickname || sellerName;
   const isMarketPrice = sellerProfile?.seller?.priceSettingMethod === 'market';
@@ -405,6 +422,67 @@ export default function SellerChatPage() {
     };
   }, [sellerId]);
 
+  // 거래내역 로드
+  const fetchHistory = async (nextPage = 1) => {
+    if (historyLoading || !sellerId) return;
+    const escrowWalletAddress = sellerProfile?.seller?.escrowWalletAddress || sellerId;
+    if (!escrowWalletAddress) return;
+    setHistoryLoading(true);
+    try {
+      const response = await fetch('/api/order/getAllBuyOrdersBySellerEscrowWallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: escrowWalletAddress,
+          limit: 10,
+          page: nextPage,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.result?.orders) {
+        throw new Error(data?.error || '거래내역을 불러오지 못했습니다.');
+      }
+      const newOrders = Array.isArray(data.result.orders) ? data.result.orders : [];
+      setHistoryOrders((prev) => (nextPage === 1 ? newOrders : [...prev, ...newOrders]));
+      const totalCount = data?.result?.totalCount ?? newOrders.length;
+      const loadedCount = (nextPage - 1) * 10 + newOrders.length;
+      setHistoryHasMore(loadedCount < totalCount);
+      setHistoryPage(nextPage);
+    } catch (error) {
+      console.error('fetchHistory error', error);
+      setHistoryHasMore(false);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // 패널 열릴 때 초기 로드
+  useEffect(() => {
+    if (showHistory) {
+      fetchHistory(1);
+    } else {
+      setHistoryOrders([]);
+      setHistoryHasMore(true);
+      setHistoryPage(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showHistory, sellerId]);
+
+  // 무한 스크롤
+  useEffect(() => {
+    const el = historyContainerRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      if (!historyHasMore || historyLoading) return;
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      if (scrollTop + clientHeight >= scrollHeight - 120) {
+        fetchHistory(historyPage + 1);
+      }
+    };
+    el.addEventListener('scroll', onScroll);
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [historyHasMore, historyLoading, historyPage]);
+
   useEffect(() => {
     let active = true;
 
@@ -566,6 +644,106 @@ export default function SellerChatPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-black sm:bg-[radial-gradient(120%_120%_at_50%_0%,#ffffff_0%,#f0f0f3_45%,#dadce1_100%)]">
+      {/* 거래내역 슬라이드 패널 */}
+      <div
+        className={`fixed inset-0 z-30 flex transition duration-300 ${showHistory ? 'pointer-events-auto' : 'pointer-events-none'}`}
+        aria-hidden={!showHistory}
+      >
+        <div
+          className={`relative h-full w-full max-w-md bg-white shadow-2xl ring-1 ring-black/10 transform transition duration-300 ${
+            showHistory ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                거래내역
+              </span>
+              <span className="text-base font-semibold text-slate-900">
+                {displaySellerName || '판매자'}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowHistory(false)}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              닫기
+            </button>
+          </div>
+          <div
+            ref={historyContainerRef}
+            className="h-[calc(100%-56px)] overflow-y-auto px-4 py-4 space-y-3"
+          >
+            {historyOrders.length === 0 && !historyLoading ? (
+              <div className="flex h-full flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-10 text-sm text-slate-500">
+                거래내역이 없습니다.
+              </div>
+            ) : (
+              historyOrders.map((item: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm ring-1 ring-slate-100"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          item.status === 'paymentConfirmed'
+                            ? 'bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.18)]'
+                            : item.status === 'paymentRequested'
+                              ? 'bg-amber-500 shadow-[0_0_0_6px_rgba(245,158,11,0.18)]'
+                              : 'bg-slate-400'
+                        }`}
+                      />
+                      <span className="text-xs font-semibold text-slate-700">
+                        {item.status || '미정'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-500">
+                      {item.createdAt ? new Date(item.createdAt).toLocaleString('ko-KR') : '-'}
+                    </span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-700">
+                    <div className="rounded-xl bg-slate-50 px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">USDT</p>
+                      <p className="font-semibold">{formatNumber(item.usdtAmount, 2)} USDT</p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">KRW</p>
+                      <p className="font-semibold">{formatNumber(item.krwAmount, 0)} KRW</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-slate-100">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">바이어</p>
+                      <p className="font-semibold">
+                        {maskName(item.buyerName)} ({maskWalletAddress(item.buyerWalletAddress)})
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-slate-100">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">거래 ID</p>
+                      <p className="font-semibold">{item.tradeId ? `****${String(item.tradeId).slice(-4)}` : '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+            {historyLoading && (
+              <div className="flex items-center justify-center py-3 text-xs text-slate-500">
+                불러오는 중...
+              </div>
+            )}
+            {!historyHasMore && historyOrders.length > 0 && (
+              <div className="py-3 text-center text-[11px] text-slate-500">마지막 거래까지 확인했습니다.</div>
+            )}
+          </div>
+        </div>
+        {/* 오른쪽 클릭 차단용 투명 레이어 */}
+        <div
+          className={`flex-1 bg-black/10 transition duration-300 ${showHistory ? 'opacity-100' : 'opacity-0'}`}
+          onClick={() => setShowHistory(false)}
+        />
+      </div>
+
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-0 pt-6 pb-0 sm:px-5 sm:py-10">
         <main className="flex flex-1 flex-col overflow-hidden bg-white sm:rounded-[32px] sm:border sm:border-black/10 sm:shadow-[0_34px_90px_-50px_rgba(15,15,18,0.45)] sm:ring-1 sm:ring-black/10">
           <div className="flex flex-1 flex-col gap-6 px-5 pt-8 pb-6">
@@ -595,8 +773,14 @@ export default function SellerChatPage() {
                   </p>
                   <p className="text-lg font-semibold tracking-tight">판매자 정보</p>
                 </div>
-                <div className="rounded-2xl border border-black/10 bg-black/5 px-3 py-2 text-xs font-semibold text-black/70">
-                  정보 확인
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowHistory(true)}
+                    className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
+                  >
+                    거래내역 보기
+                  </button>
                 </div>
               </div>
               {!sellerId ? (
