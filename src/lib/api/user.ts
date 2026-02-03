@@ -2627,13 +2627,21 @@ export async function getAllSellersForBalanceInquiry(
     storecode: { $regex: String(storecode), $options: 'i' },
     walletAddress: { $exists: true, $ne: null },
     seller: { $exists: true, $ne: null },
-    'seller.status': 'confirmed',
-    'seller.enabled': true,
-    'seller.escrowWalletAddress': { $exists: true, $ne: null },
   };
 
   if (escrowWalletAddress) {
-    matchQuery['seller.escrowWalletAddress'] = escrowWalletAddress;
+    // Allow matching by escrowWalletAddress or the seller's own walletAddress when escrow is missing.
+    // Use case-insensitive exact match to avoid checksum/uppercase mismatch.
+    const addressRegex = { $regex: `^${escrowWalletAddress}$`, $options: 'i' };
+    matchQuery.$or = [
+      { 'seller.escrowWalletAddress': addressRegex },
+      { walletAddress: addressRegex },
+    ];
+    // Do not enforce status/enabled filters when a specific address is requested.
+  } else {
+    matchQuery['seller.status'] = 'confirmed';
+    matchQuery['seller.enabled'] = true;
+    matchQuery['seller.escrowWalletAddress'] = { $exists: true, $ne: null };
   }
 
   const users = await collection

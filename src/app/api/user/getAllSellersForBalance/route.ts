@@ -42,7 +42,7 @@ import {
 
 export async function POST(request: NextRequest) {
 
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
 
   const {
     storecode,
@@ -51,17 +51,37 @@ export async function POST(request: NextRequest) {
     escrowWalletAddress,
   } = body;
 
-  //console.log("getAllStores request body", body);
+  if (!storecode) {
+    return NextResponse.json(
+      { error: 'storecode is required' },
+      { status: 400 },
+    );
+  }
 
+  let result: any;
+  try {
+    result = await getAllSellersForBalanceInquiry({
+      storecode: storecode || "",
+      limit: limit || 100,
+      page: page || 1,
+      escrowWalletAddress,
+    });
+  } catch (error) {
+    console.error("getAllSellersForBalanceInquiry failed:", JSON.stringify(error));
+    return NextResponse.json(
+      { error: 'Failed to load seller balances', detail: String(error) },
+      { status: 500 },
+    );
+  }
 
-  const result = await getAllSellersForBalanceInquiry({
-    storecode: storecode || "",
-    limit: limit || 100,
-    page: page || 1,
-    escrowWalletAddress,
-  });
-
-  //console.log("getAllSellersForBalanceInquiry result", result);
+  if (!result?.users?.length) {
+    console.warn('getAllSellersForBalanceInquiry empty result', {
+      storecode,
+      limit,
+      page,
+      escrowWalletAddress,
+    });
+  }
 
   /*
     {
@@ -164,11 +184,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error("Error in getAllStoresForBalance:", JSON.stringify(error));
+    return NextResponse.json(
+      { error: 'Failed to fetch seller balances from chain', detail: String(error) },
+      { status: 500 },
+    );
   }
 
   //console.log("Final getAllSellersForBalance result", result);
 
- 
+
   return NextResponse.json({
 
     result,
