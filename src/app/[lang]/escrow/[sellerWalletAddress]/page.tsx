@@ -6568,7 +6568,7 @@ const fetchBuyOrders = async () => {
                               <span className="text-sm text-slate-800 font-semibold">
                                 {seller.seller?.bankInfo?.bankName}
                               </span>
-                              {seller.walletAddress === address ? (
+                              {seller.walletAddress && address && seller.walletAddress.toLowerCase() === address.toLowerCase() ? (
                                 <span className="text-sm text-slate-700">
                                   {seller.seller?.bankInfo?.accountNumber}
                                 </span>
@@ -6580,7 +6580,7 @@ const fetchBuyOrders = async () => {
                                   }
                                 </span>
                               )}
-                              {seller.walletAddress === address ? (
+                              {seller.walletAddress && address && seller.walletAddress.toLowerCase() === address.toLowerCase() ? (
                                 <span className="text-sm font-semibold text-slate-800">
                                   {seller.seller?.bankInfo?.accountHolder}
                                 </span>
@@ -6679,7 +6679,7 @@ const fetchBuyOrders = async () => {
                                   formatKrwValue(seller.seller?.buyOrder.krwAmount) + ' 원 입금을 진행중입니다.'}
                                 </span>
                               )}
-                              {seller.seller?.buyOrder?.buyer?.walletAddress === address && (
+                            {seller.seller?.buyOrder?.buyer?.walletAddress && address && seller.seller?.buyOrder?.buyer?.walletAddress.toLowerCase() === address.toLowerCase() && (
                                 <span className="text-sm font-semibold">
                                   {'판매자가 ' +
                                   formatKrwValue(seller.seller?.buyOrder.krwAmount) + ' 원 입금을 기다리고 있습니다.'}
@@ -6687,7 +6687,10 @@ const fetchBuyOrders = async () => {
                               )}
 
 
-                              {(seller.walletAddress === address || seller.seller?.buyOrder?.buyer?.walletAddress === address)
+                              {(
+                                (seller.walletAddress && address && seller.walletAddress.toLowerCase() === address.toLowerCase()) ||
+                                (seller.seller?.buyOrder?.buyer?.walletAddress && address && seller.seller?.buyOrder?.buyer?.walletAddress.toLowerCase() === address.toLowerCase())
+                              )
                               ? (
                                 <span className="text-sm">
                                   입금자명: {seller.seller?.buyOrder?.buyer?.depositName || '알수없음'}
@@ -6700,7 +6703,7 @@ const fetchBuyOrders = async () => {
                             </div>
                           </div>
 
-                          {seller.seller?.buyOrder?.buyer?.walletAddress === address && (
+                              {seller.seller?.buyOrder?.buyer?.walletAddress && address && seller.seller?.buyOrder?.buyer?.walletAddress.toLowerCase() === address.toLowerCase() && (
                               <div className="w-full flex flex-col items-start justify-center gap-1
                               border-t border-amber-200/70 pt-2
                               ">

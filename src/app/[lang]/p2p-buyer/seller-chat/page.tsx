@@ -109,6 +109,11 @@ export default function SellerChatPage() {
       ? `시장가(${marketLabel})`
       : '고정가';
 
+  const goBuy = () => {
+    if (!sellerId) return;
+    router.push(`/${lang}/escrow/${sellerId}`);
+  };
+
   useEffect(() => {
     if (!isLoggedIn) {
       setSessionToken(null);
@@ -538,6 +543,42 @@ export default function SellerChatPage() {
                           {priceTypeLabel}
                         </span>
                       </span>
+                    </div>
+                  </div>
+                  <div className="mt-4 rounded-2xl border border-black/10 bg-gradient-to-r from-black via-black to-black text-white shadow-[0_24px_60px_-34px_rgba(0,0,0,0.75)]">
+                    <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                      <div className="space-y-1">
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-white/60">
+                          USDT Buy
+                        </p>
+                        <p className="text-base font-semibold">이 판매자에게서 USDT 구매하기</p>
+                        <p className="text-sm text-white/80">
+                          단가 {formatNumber(sellerUsdtRate ?? undefined, 0)} KRW / USDT · {priceTypeLabel}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={goBuy}
+                        className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black shadow-[0_14px_34px_-18px_rgba(255,255,255,0.7)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-18px_rgba(255,255,255,0.9)] active:translate-y-0"
+                      >
+                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-white transition group-hover:scale-105">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            className="h-5 w-5"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M12 4v16m0 0-5-5m5 5 5-5"
+                            />
+                          </svg>
+                        </span>
+                        <span className="whitespace-nowrap">USDT 구매</span>
+                      </button>
                     </div>
                   </div>
                 </div>
