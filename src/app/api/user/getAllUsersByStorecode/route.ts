@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
     limit,
     page,
     includeUnverified = false,
+    searchTerm = '',
   } = body;
 
 
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest) {
     limit: limit || 100,
     page: page || 1,
     includeUnverified,
+    searchTerm,
   });
 
  

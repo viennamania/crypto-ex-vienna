@@ -3606,6 +3606,7 @@ const fetchBuyOrders = async () => {
   const [sellersBalance, setSellersBalance] = useState([] as any[]);
   const [sellersBalanceRefreshing, setSellersBalanceRefreshing] = useState(false);
   const [sellersBalanceLastUpdatedAt, setSellersBalanceLastUpdatedAt] = useState<Date | null>(null);
+  const [sellerSearch, setSellerSearch] = useState('');
   const SELLERS_BALANCE_POLL_INTERVAL = 30000;
   const fetchSellersBalance = async () => {
     setSellersBalanceRefreshing(true);
@@ -4170,6 +4171,23 @@ const fetchBuyOrders = async () => {
     }
     setPlacingCustomBuyOrder(false);
   };
+
+  // seller search filter
+  const normalizedSellerSearch = sellerSearch.trim().toLowerCase();
+  const matchesSellerSearch = (seller: any) => {
+    if (!normalizedSellerSearch) return true;
+    const fields = [
+      seller?.nickname,
+      seller?.walletAddress,
+      seller?.seller?.bankInfo?.bankName,
+      seller?.seller?.bankInfo?.accountNumber,
+      seller?.seller?.status,
+    ]
+      .filter(Boolean)
+      .map((v: any) => String(v).toLowerCase());
+    return fields.some((f: string) => f.includes(normalizedSellerSearch));
+  };
+  const filteredSellersBalance = sellersBalance.filter(matchesSellerSearch);
 
 
 
@@ -5156,10 +5174,53 @@ const fetchBuyOrders = async () => {
 
 
 
-            {sellersBalance.length > 0 && (
+            <div className="mt-4 w-full rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                  <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.12)]" />
+                  판매자 검색
+                </div>
+                <div className="flex w-full items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm md:w-96">
+                  <svg
+                    className="h-4 w-4 text-slate-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-3.5-3.5" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={sellerSearch}
+                    onChange={(e) => setSellerSearch(e.target.value)}
+                    placeholder="닉네임, 지갑주소, 은행명, 상태 검색"
+                    className="w-full bg-transparent text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                  />
+                  {sellerSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setSellerSearch('')}
+                      className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-200"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <span className="text-xs font-semibold text-slate-500">
+                  {filteredSellersBalance.length} / {sellersBalance.length}명
+                </span>
+              </div>
+            </div>
+
+            {filteredSellersBalance.length > 0 && (
               <div className="w-full grid grid-cols-1 md:grid-cols-2 items-stretch gap-4 mt-4">
 
                 {sellersBalance.map((seller, index) => {
+                  if (!matchesSellerSearch(seller)) return null;
                   const buyOrderStatus = seller?.seller?.buyOrder?.status as string | undefined;
                   const statusLabel = buyOrderStatus
                     ? SELLER_STATUS_LABEL[buyOrderStatus] ?? '거래 진행중'
@@ -5174,7 +5235,7 @@ const fetchBuyOrders = async () => {
 
                   return (
                     <div
-                      key={index}
+                      key={seller.walletAddress || index}
                       className={`relative w-full h-full flex flex-col items-start justify-start gap-3
                       rounded-lg border border-slate-200/80 bg-white/80 px-4 py-4 text-slate-800 shadow-[0_1px_0_rgba(15,23,42,0.04)] border-l-2 border-l-slate-300
                       

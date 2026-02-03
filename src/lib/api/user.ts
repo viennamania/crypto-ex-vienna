@@ -1802,11 +1802,13 @@ export async function getAllUsersByStorecode(
     limit,
     page,
     includeUnverified = false,
+    searchTerm = '',
   }: {
     storecode: string;
     limit: number;
     page: number;
     includeUnverified?: boolean;
+    searchTerm?: string;
   }
 ): Promise<ResultProps> {
 
@@ -1820,30 +1822,37 @@ export async function getAllUsersByStorecode(
 
   // if storecode is empty, return all users
 
+  const matchQuery: Record<string, any> = {
+    storecode: { $regex: storecode, $options: 'i' },
+    walletAddress: { $exists: true, $ne: null },
+    seller: { $exists: true },
+    ...(includeUnverified ? {} : { verified: true }),
+  };
+
+  const trimmedSearch = (searchTerm || '').trim();
+  if (trimmedSearch) {
+    const searchRegex = { $regex: trimmedSearch, $options: 'i' };
+    matchQuery.$or = [
+      { nickname: searchRegex },
+      { walletAddress: searchRegex },
+      { 'seller.bankInfo.bankName': searchRegex },
+      { 'seller.bankInfo.accountNumber': searchRegex },
+      { 'seller.status': searchRegex },
+    ];
+  }
+
   const users = await collection
     .find<UserProps>(
-      {
-        storecode: { $regex: storecode, $options: 'i' },
-        walletAddress: { $exists: true, $ne: null },
-        ...(includeUnverified ? {} : { verified: true }),
-      },
+      matchQuery,
       {
         limit: limit,
         skip: (page - 1) * limit,
       },
     )
-    
     .sort({ nickname: 1 })
-
-
     .toArray();
-  const totalCount = await collection.countDocuments(
-    {
-      storecode: { $regex: storecode, $options: 'i' },
-      walletAddress: { $exists: true, $ne: null },
-      ...(includeUnverified ? {} : { verified: true }),
-    }
-  );
+
+  const totalCount = await collection.countDocuments(matchQuery);
   return {
     totalCount,
     totalResult: totalCount,

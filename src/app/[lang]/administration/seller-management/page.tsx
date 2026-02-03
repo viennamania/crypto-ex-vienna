@@ -30,6 +30,7 @@ export default function SellerManagementPage() {
           limit: pageSize,
           page,
           includeUnverified: true,
+          searchTerm,
         }),
       });
       const data = await response.json();
@@ -53,21 +54,7 @@ export default function SellerManagementPage() {
     fetchSellers();
   }, [page]);
 
-  const normalizedSearch = searchTerm.trim().toLowerCase();
-  const filteredSellers = normalizedSearch
-    ? sellers.filter((user) => {
-        const fields = [
-          user?.nickname,
-          user?.walletAddress,
-          user?.seller?.bankInfo?.bankName,
-          user?.seller?.status,
-          user?.seller?.bankInfo?.status,
-        ]
-          .filter(Boolean)
-          .map((v) => String(v).toLowerCase());
-        return fields.some((field) => field.includes(normalizedSearch));
-      })
-    : sellers;
+  const filteredSellers = sellers; // 서버 필터 결과 사용
 
   return (
     <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-lg mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
