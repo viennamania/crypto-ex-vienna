@@ -322,7 +322,7 @@ export default function SellerSalesStatusPage() {
         </div>
 
         <div className="w-full rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-2 pb-3">
+          <div className="flex items-center justify-between gap-3 pb-3">
             <div className="flex items-center gap-2">
               <Image src="/icon-seller.png" alt="Seller" width={22} height={22} className="h-5 w-5" />
               <h2 className="text-base font-bold text-slate-900">판매자 판매 진행상태</h2>
@@ -338,12 +338,15 @@ export default function SellerSalesStatusPage() {
               불러오는 중입니다... (정보는 아래에서 계속 볼 수 있어요)
             </div>
           </div>
-          <div className="flex justify-end mb-3">
+          <div className="mb-4">
             <button
               type="button"
               onClick={() => setShowSalesPanel(true)}
-              className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
             >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+                <path d="M4 6h12M4 10h12M4 14h6" strokeLinecap="round" />
+              </svg>
               판매내역보기
             </button>
           </div>
@@ -571,16 +574,14 @@ export default function SellerSalesStatusPage() {
       </main>
 
       {/* 항상 보이는 판매내역 열기 버튼 (플로팅) */}
-      {!showSalesPanel && (
-        <button
-          type="button"
-          onClick={() => setShowSalesPanel(true)}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_-12px_rgba(15,23,42,0.5)] hover:bg-slate-800"
-        >
-          <Image src="/icon-history.png" alt="history" width={18} height={18} className="h-4 w-4" />
-          판매내역보기
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => setShowSalesPanel(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_-12px_rgba(15,23,42,0.5)] hover:bg-slate-800"
+      >
+        <Image src="/icon-history.png" alt="history" width={18} height={18} className="h-4 w-4" />
+        판매내역보기
+      </button>
 
       {/* 판매내역 패널 */}
       {showSalesPanel && (

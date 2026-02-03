@@ -349,24 +349,25 @@ export default function SellerSalesStatusDetailPage() {
   };
 
   return (
-    <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-md mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
-      <div className="w-full space-y-4">
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <button
-            type="button"
-            onClick={() => router.push(`/${lang}/administration/seller-sales-status`)}
-            className="flex items-center justify-center rounded-full border border-slate-200/70 bg-white/95 p-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <Image src="/icon-back.png" alt="Back" width={20} height={20} className="rounded-full" />
-          </button>
-          <span className="font-semibold">판매자 판매현황 상세</span>
-          {seller && (
-            <>
-              <span className="text-slate-400">/</span>
-              <span className="text-slate-500 font-mono text-[11px]">{truncate(seller.walletAddress)}</span>
-            </>
-          )}
-        </div>
+    <>
+      <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-md mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+        <div className="w-full space-y-4">
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <button
+              type="button"
+              onClick={() => router.push(`/${lang}/administration/seller-sales-status`)}
+              className="flex items-center justify-center rounded-full border border-slate-200/70 bg-white/95 p-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <Image src="/icon-back.png" alt="Back" width={20} height={20} className="rounded-full" />
+            </button>
+            <span className="font-semibold">판매자 판매현황 상세</span>
+            {seller && (
+              <>
+                <span className="text-slate-400">/</span>
+                <span className="text-slate-500 font-mono text-[11px]">{truncate(seller.walletAddress)}</span>
+              </>
+            )}
+          </div>
 
         <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
           {loading && (
@@ -666,8 +667,19 @@ export default function SellerSalesStatusDetailPage() {
             </div>
           )}
         </div>
-      </div>
-    </main>
+        </div>
+      </main>
+
+      {/* 항상 보이는 판매내역 버튼 (플로팅) */}
+      <button
+        type="button"
+        onClick={() => router.push(`/${lang}/administration/seller-sales-status`)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_-12px_rgba(15,23,42,0.5)] hover:bg-slate-800"
+      >
+        <Image src="/icon-history.png" alt="history" width={18} height={18} className="h-4 w-4" />
+        판매내역보기
+      </button>
+    </>
   );
 }
 
