@@ -210,6 +210,30 @@ const SELLER_CARD_TONES = [
   },
 ];
 
+const SELLER_STATUS_LABEL: Record<string, string> = {
+  accepted: '주문 수락됨',
+  paymentRequested: '입금 요청',
+  paymentConfirmed: '입금 확인',
+  cancelled: '거래 취소',
+  ordered: '주문 대기',
+};
+
+const SELLER_STATUS_BADGE: Record<string, string> = {
+  accepted: 'border-amber-200 bg-amber-50 text-amber-800',
+  paymentRequested: 'border-blue-200 bg-blue-50 text-blue-800',
+  paymentConfirmed: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  cancelled: 'border-rose-200 bg-rose-50 text-rose-800',
+  ordered: 'border-slate-200 bg-slate-50 text-slate-700',
+};
+
+const SELLER_STATUS_DOT: Record<string, string> = {
+  accepted: 'bg-amber-500 shadow-[0_0_0_6px_rgba(245,158,11,0.16)]',
+  paymentRequested: 'bg-blue-500 shadow-[0_0_0_6px_rgba(59,130,246,0.16)]',
+  paymentConfirmed: 'bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.16)]',
+  cancelled: 'bg-rose-500 shadow-[0_0_0_6px_rgba(244,63,94,0.16)]',
+  ordered: 'bg-slate-400 shadow-[0_0_0_6px_rgba(148,163,184,0.16)]',
+};
+
 
 
 export default function Index({ params }: any) {
@@ -5135,189 +5159,206 @@ const fetchBuyOrders = async () => {
             {sellersBalance.length > 0 && (
               <div className="w-full grid grid-cols-1 md:grid-cols-2 items-stretch gap-4 mt-4">
 
-                {sellersBalance.map((seller, index) => (
-                  <div key={index}
+                {sellersBalance.map((seller, index) => {
+                  const buyOrderStatus = seller?.seller?.buyOrder?.status as string | undefined;
+                  const statusLabel = buyOrderStatus
+                    ? SELLER_STATUS_LABEL[buyOrderStatus] ?? '거래 진행중'
+                    : '거래 가능';
+                  const statusBadgeClass = buyOrderStatus
+                    ? SELLER_STATUS_BADGE[buyOrderStatus] ?? 'border-slate-200 bg-slate-50 text-slate-700'
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-800';
+                  const statusDotClass = buyOrderStatus
+                    ? SELLER_STATUS_DOT[buyOrderStatus] ?? 'bg-slate-400'
+                    : 'bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.16)]';
+                  const isMyOrder = seller?.seller?.buyOrder?.walletAddress === address;
 
-                    // if currentUsdtBalanceArray[index] is changed, then animate the background color
+                  return (
+                    <div
+                      key={index}
+                      className={`relative w-full h-full flex flex-col items-start justify-start gap-3
+                      rounded-lg border border-slate-200/80 bg-white/80 px-4 py-4 text-slate-800 shadow-[0_1px_0_rgba(15,23,42,0.04)] border-l-2 border-l-slate-300
+                      
+                      ${(
+                        (seller.seller.buyOrder?.status === 'ordered'
+                        || seller.seller.buyOrder?.status === 'paymentRequested')
+                      && (seller.walletAddress !== address && seller.seller?.buyOrder?.walletAddress !== address)
+                      ) ?
+                        'border-l-red-400' : ''
+                      }
+                      
+                      ${seller.walletAddress === address
+                      ? 'border-l-amber-400' : ''
+                      }
 
-                    /*
-                    className="w-full flex flex-row items-start justify-between gap-4
-                    bg-white/80
-                    p-4 rounded-lg shadow-md
-                    backdrop-blur-md
-                    ">
-                    */
+                      ${(
+                        (seller.seller.buyOrder?.status === 'ordered' ||
+                        seller.seller?.buyOrder?.status === 'paymentRequested')
+                      && seller.seller?.buyOrder?.walletAddress === address)
+                      ? 'border-l-yellow-400' : ''
+                      }
 
-                    // seller.buyOrder.status = 'ordered' or 'paymentRequested' - red border and pulse animation
-                    className={`relative w-full h-full flex flex-col items-start justify-start gap-3
-                    rounded-lg border border-slate-200/80 bg-white/80 px-4 py-4 text-slate-800 shadow-[0_1px_0_rgba(15,23,42,0.04)] border-l-2 border-l-slate-300
-                    
-                    ${(
-                      (seller.seller.buyOrder?.status === 'ordered'
-                      || seller.seller.buyOrder?.status === 'paymentRequested')
-                    && (seller.walletAddress !== address && seller.seller?.buyOrder?.walletAddress !== address)
-                    ) ?
-                      'border-l-red-400' : ''
-                    }
-                    
-                    ${seller.walletAddress === address
-                    ? 'border-l-amber-400' : ''
-                    }
+                      `}
+                    >
 
-                    ${
-                    (
-                      (seller.seller.buyOrder?.status === 'ordered' ||
-                      seller.seller?.buyOrder?.status === 'paymentRequested')
-                    && seller.seller?.buyOrder?.walletAddress === address)
-                    ? 'border-l-yellow-400' : ''
-                    }
-
-                    `}
-                  >
-
-                    <div className="w-full flex flex-col gap-3">
-                      <div className="flex items-end justify-between gap-3 pb-2 border-b border-slate-100">
-                        <div className="flex items-center gap-2">
-                          <div className="h-9 w-9 overflow-hidden rounded-full border border-slate-200 bg-slate-50">
-                            <Image
-                              src={seller.avatar || "/icon-seller.png"}
-                              alt={seller.nickname || "Seller"}
-                              width={36}
-                              height={36}
-                              className="h-9 w-9 object-cover"
-                            />
+                      <div className="w-full flex flex-col gap-3">
+                        <div className="flex items-end justify-between gap-3 pb-2 border-b border-slate-100">
+                          <div className="flex items-center gap-2">
+                            <div className="h-9 w-9 overflow-hidden rounded-full border border-slate-200 bg-slate-50">
+                              <Image
+                                src={seller.avatar || "/icon-seller.png"}
+                                alt={seller.nickname || "Seller"}
+                                width={36}
+                                height={36}
+                                className="h-9 w-9 object-cover"
+                              />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                                판매자
+                              </span>
+                              <span className="max-w-[180px] truncate text-sm font-semibold text-slate-900">
+                                {seller.nickname || "Seller"}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex flex-col">
+                          <div className="flex flex-col items-end gap-0.5 text-right">
                             <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                              판매자
+                              판매금액
                             </span>
-                            <span className="max-w-[180px] truncate text-sm font-semibold text-slate-900">
-                              {seller.nickname || "Seller"}
-                            </span>
+                            <div className="flex items-baseline justify-end gap-2">
+                              <span className="text-base font-semibold text-slate-900 tabular-nums leading-tight tracking-tight" style={{ fontFamily: 'monospace' }}>
+                                {(usdtKrwRateAnimationArray[index] ?? seller.seller?.usdtToKrwRate ?? 0)
+                                  .toFixed(0)
+                                  .replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                              </span>
+                              <span className="text-[11px] text-slate-500">KRW</span>
+                              <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                                {seller.seller?.priceSettingMethod === 'market' ? '시장가' : '고정가'}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-0.5 text-right">
+
+                        <div className="flex items-center justify-between">
                           <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                            판매금액
+                            거래상태
                           </span>
-                          <div className="flex items-baseline justify-end gap-2">
-                            <span className="text-base font-semibold text-slate-900 tabular-nums leading-tight tracking-tight" style={{ fontFamily: 'monospace' }}>
-                              {(usdtKrwRateAnimationArray[index] ?? seller.seller?.usdtToKrwRate ?? 0)
-                                .toFixed(0)
-                                .replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                            </span>
-                            <span className="text-[11px] text-slate-500">KRW</span>
-                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                              {seller.seller?.priceSettingMethod === 'market' ? '시장가' : '고정가'}
-                            </span>
-                          </div>
+                          <span className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${statusBadgeClass}`}>
+                            <span className={`h-2 w-2 rounded-full ${statusDotClass}`} />
+                            <span>{statusLabel}</span>
+                            {isMyOrder && (
+                              <span className="rounded-full bg-black/5 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                                내 주문
+                              </span>
+                            )}
+                          </span>
                         </div>
-                      </div>
 
-                      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                          에스크로 잔고
-                        </span>
-                        <span className="text-base font-semibold text-slate-900 tabular-nums" style={{ fontFamily: 'monospace' }}>
-                          {(currentUsdtBalanceArray[index] ?? 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} USDT
-                        </span>
-                      </div>
-
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <div className="flex items-start justify-between rounded-md border border-slate-200 px-3 py-2">
-                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
-                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                            정상거래
-                          </div>
-                          <div className="text-right text-[11px] text-slate-500">
-                            <div className="font-medium text-slate-700 tabular-nums">
-                              {Number(seller.seller?.totalPaymentConfirmedCount ?? 0).toLocaleString()}건
-                            </div>
-                            <div className="tabular-nums text-slate-600">
-                              {Number(seller.seller?.totalPaymentConfirmedUsdtAmount ?? 0).toLocaleString()} USDT
-                            </div>
-                          </div>
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                            에스크로 잔고
+                          </span>
+                          <span className="text-base font-semibold text-slate-900 tabular-nums" style={{ fontFamily: 'monospace' }}>
+                            {(currentUsdtBalanceArray[index] ?? 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} USDT
+                          </span>
                         </div>
-                        <div className="flex items-start justify-between rounded-md border border-slate-200 px-3 py-2">
-                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
-                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-400" />
-                            중재거래
-                          </div>
-                          <div className="text-right text-[11px] text-slate-500">
-                            <div className="font-medium text-slate-700 tabular-nums">
-                              {Number(seller.seller?.totalDisputeResolvedCount ?? 0).toLocaleString()}건
+
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div className="flex items-start justify-between rounded-md border border-slate-200 px-3 py-2">
+                            <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                              정상거래
                             </div>
-                            <div className="tabular-nums text-slate-600">
-                              {Number(seller.seller?.totalDisputeResolvedUsdtAmount ?? 0).toLocaleString()} USDT
+                            <div className="text-right text-[11px] text-slate-500">
+                              <div className="font-medium text-slate-700 tabular-nums">
+                                {Number(seller.seller?.totalPaymentConfirmedCount ?? 0).toLocaleString()}건
+                              </div>
+                              <div className="tabular-nums text-slate-600">
+                                {Number(seller.seller?.totalPaymentConfirmedUsdtAmount ?? 0).toLocaleString()} USDT
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-start justify-between rounded-md border border-slate-200 px-3 py-2">
+                            <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-400" />
+                              중재거래
+                            </div>
+                            <div className="text-right text-[11px] text-slate-500">
+                              <div className="font-medium text-slate-700 tabular-nums">
+                                {Number(seller.seller?.totalDisputeResolvedCount ?? 0).toLocaleString()}건
+                              </div>
+                              <div className="tabular-nums text-slate-600">
+                                {Number(seller.seller?.totalDisputeResolvedUsdtAmount ?? 0).toLocaleString()} USDT
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                          프로모션
-                        </span>
-                        <p className="text-sm text-slate-700 break-words">
-                          {seller.seller?.promotionText || '프로모션이 없습니다.'}
-                        </p>
-                        <div className="flex items-center justify-end">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const escrowWalletAddress = seller.seller?.escrowWalletAddress || seller.walletAddress;
-                              router.push(`/${params.lang}/escrow/${escrowWalletAddress}`);
-                            }}
-                            className="seller-contact-cta group relative inline-flex items-center gap-1.5 overflow-hidden rounded-full border border-amber-300/70 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 px-3 py-1.5 text-[11px] font-semibold text-amber-900 shadow-[0_10px_30px_rgba(251,191,36,0.35)] transition-all duration-300 hover:scale-[1.05] hover:border-amber-400 hover:shadow-[0_14px_36px_rgba(251,191,36,0.45)] focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1 active:scale-[0.98]"
-                          >
-                            <span
-                              className="pointer-events-none absolute inset-0 rounded-full bg-amber-200/40 opacity-90 blur-md animate-[seller-glow_2.8s_ease-in-out_infinite]"
-                              aria-hidden="true"
-                            />
-                            <span
-                              className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-white/0 via-white/65 to-white/0 animate-[seller-shimmer_2.4s_ease-in-out_infinite]"
-                              aria-hidden="true"
-                            />
-                            <span className="relative z-10 flex items-center gap-1.5">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 20 20"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.6"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="h-3.5 w-3.5"
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                            프로모션
+                          </span>
+                          <p className="text-sm text-slate-700 break-words">
+                            {seller.seller?.promotionText || '프로모션이 없습니다.'}
+                          </p>
+                          <div className="flex items-center justify-end">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const escrowWalletAddress = seller.seller?.escrowWalletAddress || seller.walletAddress;
+                                router.push(`/${params.lang}/escrow/${escrowWalletAddress}`);
+                              }}
+                              className="seller-contact-cta group relative inline-flex items-center gap-1.5 overflow-hidden rounded-full border border-amber-300/70 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 px-3 py-1.5 text-[11px] font-semibold text-amber-900 shadow-[0_10px_30px_rgba(251,191,36,0.35)] transition-all duration-300 hover:scale-[1.05] hover:border-amber-400 hover:shadow-[0_14px_36px_rgba(251,191,36,0.45)] focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1 active:scale-[0.98]"
+                            >
+                              <span
+                                className="pointer-events-none absolute inset-0 rounded-full bg-amber-200/40 opacity-90 blur-md animate-[seller-glow_2.8s_ease-in-out_infinite]"
                                 aria-hidden="true"
-                              >
-                                <path d="M8 11h4m-8-6h12a2 2 0 012 2v5a2 2 0 01-2 2H9l-4 3v-3H4a2 2 0 01-2-2V7a2 2 0 012-2z" />
-                              </svg>
-                              판매자에게 문의하기
-                            </span>
-                          </button>
+                              />
+                              <span
+                                className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-white/0 via-white/65 to-white/0 animate-[seller-shimmer_2.4s_ease-in-out_infinite]"
+                                aria-hidden="true"
+                              />
+                              <span className="relative z-10 flex items-center gap-1.5">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 20 20"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="1.6"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  className="h-3.5 w-3.5"
+                                  aria-hidden="true"
+                                >
+                                  <path d="M8 11h4m-8-6h12a2 2 0 012 2v5a2 2 0 01-2 2H9l-4 3v-3H4a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                                </svg>
+                                판매자에게 문의하기
+                              </span>
+                            </button>
+                          </div>
                         </div>
                       </div>
+
+
+
+                      
+                      {/* if seller nickname is 'seller', then show withdraw button */}
+                      {/*
+                      {seller.nickname === 'seller' && (
+                        <button
+                          onClick={() => {
+                            router.push('/' + params.lang + '/admin/withdraw-vault?walletAddress=' + seller.walletAddress);
+                          }}
+                          className="bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
+                        >
+                          출금하기
+                        </button>
+                      )}
+                      */}
+
                     </div>
-
-
-
-                    
-                    {/* if seller nickname is 'seller', then show withdraw button */}
-                    {/*
-                    {seller.nickname === 'seller' && (
-                      <button
-                        onClick={() => {
-                          router.push('/' + params.lang + '/admin/withdraw-vault?walletAddress=' + seller.walletAddress);
-                        }}
-                        className="bg-[#3167b4] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#3167b4]/80"
-                      >
-                        출금하기
-                      </button>
-                    )}
-                    */}
-
-                  </div>
-                ))}
+                  );
+                })}
 
               </div>
             )}
