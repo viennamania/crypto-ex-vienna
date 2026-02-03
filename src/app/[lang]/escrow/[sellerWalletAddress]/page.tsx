@@ -1830,118 +1830,18 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
 
   const cancelTrade = async (orderId: string, index: number) => {
 
-
-
     if (cancellings[index]) {
       return;
     }
-
-
 
     setCancellings(
       cancellings.map((item, i) => i === index ? true : item)
     );
 
+    const reason = cancelTradeReason[index] || '관리자에 의한 취소';
 
-    // if escrowWallet is exists, call cancelTradeBySellerWithEscrow API
-    const buyOrder = buyOrders[index];
-
-    if (buyOrder?.escrowWallet && buyOrder?.escrowWallet?.transactionHash) {
-
-      try {
-
-      const result = await fetch('/api/order/cancelTradeBySellerWithEscrow', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          orderId: orderId,
-          storecode: "admin",
-          walletAddress: address,
-          cancelTradeReason: cancelTradeReason[index],
-        })
-
-      });
-
-      const data = await result.json();
-      //console.log('cancelTradeBySellerWithEscrow data', data);
-
-
-      if (data.result) {
-
-        toast.success(Order_has_been_cancelled);
-
-        playSong();
-
-        await fetch('/api/order/getAllBuyOrders', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(
-            {
-              storecode: searchStorecode,
-              limit: Number(limitValue),
-              page: Number(pageValue),
-              walletAddress: address,
-              searchMyOrders: searchMyOrders,
-              searchOrderStatusCancelled: searchOrderStatusCancelled,
-              searchOrderStatusCompleted: searchOrderStatusCompleted,
-
-              searchStoreName: searchStoreName,
-
-              fromDate: searchFromDate,
-              toDate: searchToDate,
-            }
-          )
-        }).then(async (response) => {
-          const data = await response.json();
-          //console.log('data', data);
-          if (data.result) {
-            setBuyOrders(data.result.orders);
-
-            ////setTotalCount(data.result.totalCount);
-
-            setBuyOrderStats({
-              totalCount: data.result.totalCount,
-              totalKrwAmount: data.result.totalKrwAmount,
-              totalUsdtAmount: data.result.totalUsdtAmount,
-              totalSettlementCount: data.result.totalSettlementCount,
-              totalSettlementAmount: data.result.totalSettlementAmount,
-              totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-              totalFeeAmount: data.result.totalFeeAmount,
-              totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-              totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-              totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
-
-              totalByBuyerDepositName: data.result.totalByBuyerDepositName,
-              totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
-            });
-
-          }
-        });
-
-      } else {
-        toast.error('판매취소에 실패했습니다.');
-      }
-
-
-
-
-      } catch (error) {
-        console.error('Error cancelling trade with escrow:', error);
-        toast.error('판매취소에 실패했습니다.');
-        setCancellings(
-          cancellings.map((item, i) => i === index ? false : item)
-        );
-        return;
-    }
-
-
-    } else {
-
-      const response = await fetch('/api/order/cancelTradeBySeller', {
+    try {
+      const response = await fetch('/api/order/cancelBuyOrderByAdmin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -1950,28 +1850,52 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
           orderId: orderId,
           storecode: "admin",
           walletAddress: address,
-          cancelTradeReason: cancelTradeReason[index],
+          cancelTradeReason: reason,
         })
       });
 
-      if (!response.ok) {
-        toast.error('판매취소에 실패했습니다.');
-        setCancellings(
-          cancellings.map((item, i) => i === index ? false : item)
-        );
-        return;
-      }
-
       const data = await response.json();
-
-      ///console.log('data', data);
 
       if (data.result) {
 
         toast.success(Order_has_been_cancelled);
 
-        //playSong();
+        playSong();
 
+        const cancelledAt = new Date().toISOString();
+
+        setBuyOrders((prev) =>
+          prev.map((item) =>
+            item._id === orderId
+              ? {
+                  ...item,
+                  status: 'cancelled',
+                  cancelledAt,
+                  cancelTradeReason: reason,
+                  canceller: 'admin',
+                }
+              : item
+          )
+        );
+
+        setSellersBalance((prev) =>
+          prev.map((seller) =>
+            seller?.seller?.buyOrder?._id === orderId
+              ? {
+                  ...seller,
+                  seller: {
+                    ...seller.seller,
+                    buyOrder: {
+                      ...seller.seller.buyOrder,
+                      status: 'cancelled',
+                      cancelledAt,
+                      cancelTradeReason: reason,
+                    },
+                  },
+                }
+              : seller
+          )
+        );
 
         await fetch('/api/order/getAllBuyOrders', {
           method: 'POST',
@@ -1996,11 +1920,8 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
           )
         }).then(async (response) => {
           const data = await response.json();
-          //console.log('data', data);
           if (data.result) {
             setBuyOrders(data.result.orders);
-
-            //setTotalCount(data.result.totalCount);
 
             setBuyOrderStats({
               totalCount: data.result.totalCount,
@@ -2017,8 +1938,6 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
               totalByBuyerDepositName: data.result.totalByBuyerDepositName,
               totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
             });
-
-
           }
         });
 
@@ -2026,12 +1945,12 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
         toast.error('판매취소에 실패했습니다.');
       }
 
-
+    } catch (error) {
+      console.error('Error cancelling trade:', error);
+      toast.error('판매취소에 실패했습니다.');
     }
 
-
-
-    setAgreementForCancelTrade(
+setAgreementForCancelTrade(
       agreementForCancelTrade.map((item, i) => i === index ? false : item)
     );
 

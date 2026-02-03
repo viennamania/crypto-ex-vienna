@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 
@@ -133,6 +133,73 @@ export default function SellerSalesStatusPage() {
   const [appliedActiveOnly, setAppliedActiveOnly] = useState(false);
   const [appliedMinBalance, setAppliedMinBalance] = useState<number | null>(null);
 
+  // 판매내역 패널 상태
+  type SaleEntry = {
+    _id: string;
+    tradeId?: string;
+    status?: string;
+    createdAt?: string;
+    seller?: { nickname?: string };
+    buyer?: { nickname?: string; depositName?: string };
+    krwAmount?: number;
+    usdtAmount?: number;
+  };
+  const [showSalesPanel, setShowSalesPanel] = useState(false);
+  const [sales, setSales] = useState<SaleEntry[]>([]);
+  const [salesLoading, setSalesLoading] = useState(false);
+  const [salesPage, setSalesPage] = useState(1);
+  const [salesHasMore, setSalesHasMore] = useState(true);
+  const [salesSearch, setSalesSearch] = useState('');
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const fetchSales = async (page = 1, append = false, search = '') => {
+    if (salesLoading) return;
+    setSalesLoading(true);
+    try {
+      const res = await fetch('/api/order/getAllBuyOrders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: '',
+          limit: 20,
+          page,
+          searchStoreName: search || undefined,
+        }),
+      });
+      const data = await res.json();
+      const list: SaleEntry[] = data?.result?.orders || [];
+      setSales((prev) => (append ? [...prev, ...list] : list));
+      setSalesHasMore(list.length === 20);
+      setSalesPage(page);
+    } catch (e) {
+      console.error('fetchSales error', e);
+    } finally {
+      setSalesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showSalesPanel) {
+      fetchSales(1, false, salesSearch);
+    }
+  }, [showSalesPanel]);
+
+  useEffect(() => {
+    if (!showSalesPanel) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && salesHasMore && !salesLoading) {
+          fetchSales(salesPage + 1, true, salesSearch);
+        }
+      },
+      { root: null, rootMargin: '200px', threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [showSalesPanel, salesHasMore, salesLoading, salesPage, salesSearch]);
+
   const fetchSellers = async () => {
     setLoading(true);
     try {
@@ -206,20 +273,21 @@ export default function SellerSalesStatusPage() {
   }, [sellers]);
 
   return (
-    <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
-      <div className="w-full space-y-4">
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="flex items-center justify-center rounded-full border border-slate-200/70 bg-white/95 p-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <Image src="/icon-back.png" alt="Back" width={20} height={20} className="rounded-full" />
-          </button>
-          <span className="font-semibold">판매자 판매현황</span>
-          <span className="text-slate-400">/</span>
-          <span className="text-slate-500">전체 {summary.total}명</span>
-        </div>
+    <>
+      <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+        <div className="w-full space-y-4">
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="flex items-center justify-center rounded-full border border-slate-200/70 bg-white/95 p-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <Image src="/icon-back.png" alt="Back" width={20} height={20} className="rounded-full" />
+            </button>
+            <span className="font-semibold">판매자 판매현황</span>
+            <span className="text-slate-400">/</span>
+            <span className="text-slate-500">전체 {summary.total}명</span>
+          </div>
 
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm">
@@ -259,18 +327,25 @@ export default function SellerSalesStatusPage() {
               <Image src="/icon-seller.png" alt="Seller" width={22} height={22} className="h-5 w-5" />
               <h2 className="text-base font-bold text-slate-900">판매자 판매 진행상태</h2>
             </div>
-            {loading && (
-              <div className="flex items-center gap-1 text-xs text-slate-500">
-                <Image
-                  src="/icon-loading.png"
-                  alt="Loading"
-                  width={16}
-                  height={16}
-                  className="h-4 w-4 animate-spin"
-                />
-                불러오는 중
-              </div>
-            )}
+            <div className="flex items-center gap-1 text-xs text-slate-500 min-h-[20px]">
+              <Image
+                src="/icon-loading.png"
+                alt="Loading"
+                width={16}
+                height={16}
+                className="h-4 w-4 animate-spin"
+              />
+              불러오는 중입니다... (정보는 아래에서 계속 볼 수 있어요)
+            </div>
+          </div>
+          <div className="flex justify-end mb-3">
+            <button
+              type="button"
+              onClick={() => setShowSalesPanel(true)}
+              className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
+            >
+              판매내역보기
+            </button>
           </div>
 
           {sellers.length === 0 && !loading ? (
@@ -492,7 +567,108 @@ export default function SellerSalesStatusPage() {
           </div>
           )}
         </div>
-      </div>
-    </main>
+        </div>
+      </main>
+
+      {/* 판매내역 패널 */}
+      {showSalesPanel && (
+        <div className="fixed inset-0 z-50 flex">
+          <div
+            className="w-full max-w-sm bg-white shadow-2xl h-full overflow-y-auto border-r border-slate-200 animate-[slideRight_0.25s_ease-out]"
+          >
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <Image src="/icon-history.png" alt="history" width={20} height={20} className="h-5 w-5" />
+                <h3 className="text-sm font-semibold text-slate-900">판매내역 (최신순)</h3>
+              </div>
+              <button
+                onClick={() => setShowSalesPanel(false)}
+                className="text-slate-400 hover:text-slate-600 text-xl leading-none"
+                aria-label="close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-3 border-b border-slate-200">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  fetchSales(1, false, salesSearch);
+                }}
+                className="flex items-center gap-2"
+              >
+                <input
+                  value={salesSearch}
+                  onChange={(e) => setSalesSearch(e.target.value)}
+                  placeholder="거래ID / 닉네임 / 매장명"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 whitespace-nowrap"
+                >
+                  검색
+                </button>
+              </form>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {sales.map((sale: SaleEntry) => (
+                <div key={sale._id} className="p-3 flex flex-col gap-1 text-sm text-slate-800">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[11px] text-slate-500">#{sale.tradeId || sale._id}</span>
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                      {sale.status || '-'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600">{sale.seller?.nickname || '판매자'}</span>
+                    <span className="text-slate-600">{sale.buyer?.nickname || sale.buyer?.depositName || '구매자'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[13px] text-slate-700">
+                    <span>{(sale.krwAmount || 0).toLocaleString()} KRW</span>
+                    <span className="font-mono text-[12px]">{(sale.usdtAmount || 0).toLocaleString()} USDT</span>
+                  </div>
+                  <span className="text-[11px] text-slate-500">
+                    {sale.createdAt ? formatDateTime(sale.createdAt) : ''}
+                  </span>
+                </div>
+              ))}
+              {salesLoading && (
+                <div className="p-3 flex items-center gap-2 text-xs text-slate-500">
+                  <Image
+                    src="/icon-loading.png"
+                    alt="Loading"
+                    width={16}
+                    height={16}
+                    className="h-4 w-4 animate-spin"
+                  />
+                  불러오는 중...
+                </div>
+              )}
+              <div ref={sentinelRef} />
+              {!salesLoading && sales.length === 0 && (
+                <div className="p-4 text-sm text-slate-500">판매 내역이 없습니다.</div>
+              )}
+            </div>
+          </div>
+          <div className="flex-1 bg-black/40" onClick={() => setShowSalesPanel(false)} />
+        </div>
+      )}
+
+      <style jsx global>{`
+        @keyframes slideRight {
+          from {
+            transform: translateX(-100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+    </>
   );
 }
