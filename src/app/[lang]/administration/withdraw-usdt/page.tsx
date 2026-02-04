@@ -393,6 +393,7 @@ export default function SendUsdt({ params }: any) {
   const [memberLoading, setMemberLoading] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
   const [consentChecked, setConsentChecked] = useState(false);
+  const [footerTab, setFooterTab] = useState<'withdraw' | 'deposit' | 'history'>('withdraw');
   const [recipient, setRecipient] = useState({
     _id: '',
     id: 0,
@@ -1374,7 +1375,7 @@ export default function SendUsdt({ params }: any) {
 
   return (
 
-    <main className="min-h-[100vh] bg-white px-4 py-8">
+    <main className="min-h-[100vh] bg-white px-4 py-8 pb-28">
 
 
       <AutoConnect client={client} wallets={[wallet]} />
@@ -1523,6 +1524,7 @@ export default function SendUsdt({ params }: any) {
             </div>
           )}
 
+          {footerTab === 'withdraw' && (
           <div className="mt-8 flex flex-col gap-5 border-t border-slate-200 pt-4">
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium text-slate-900">출금 요청</span>
@@ -2069,7 +2071,9 @@ export default function SendUsdt({ params }: any) {
                 </button>
 
           </div>
+          )}
 
+          {footerTab === 'history' && (
           <div className="mt-8 border-t border-slate-200 pt-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
@@ -2226,6 +2230,45 @@ export default function SendUsdt({ params }: any) {
               </div>
             )}
           </div>
+          )}
+
+          {footerTab === 'deposit' && (
+            <div className="mt-8 border-t border-slate-200 pt-4">
+              <div className="flex flex-col items-center gap-3 text-center">
+                <span className="text-sm font-semibold text-slate-900">입금하기</span>
+                <p className="text-xs text-slate-500">아래 QR을 스캔해 지갑 주소로 입금하세요.</p>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  {address ? (
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(address)}`}
+                      alt="Deposit QR"
+                      width={220}
+                      height={220}
+                      className="rounded-lg"
+                      style={{ width: 220, height: 220 }}
+                    />
+                  ) : (
+                    <div className="h-[220px] w-[220px] rounded-lg bg-slate-100" />
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                  <span>{address ? `${address.substring(0, 10)}...${address.substring(address.length - 6)}` : '지갑 주소를 불러오는 중'}</span>
+                  {address && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(address);
+                        toast.success(Copied_Wallet_Address);
+                      }}
+                      className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:border-slate-400"
+                    >
+                      복사
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           
 
@@ -2440,6 +2483,58 @@ export default function SendUsdt({ params }: any) {
           }
         }
       `}</style>
+
+      <nav className="fixed bottom-0 left-1/2 z-40 w-full max-w-md -translate-x-1/2 border-t border-slate-200 bg-white/95 backdrop-blur px-3 py-3 sm:max-w-lg md:max-w-xl">
+        <div className="mx-auto flex w-full flex-nowrap items-center justify-center gap-2 overflow-x-auto whitespace-nowrap">
+          {[
+            {
+              key: 'withdraw',
+              label: '출금하기',
+              icon: (
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M12 5v14m0 0 4-4m-4 4-4-4" strokeLinecap="round" strokeLinejoin="round" />
+                  <rect x="4" y="3" width="16" height="6" rx="2" />
+                </svg>
+              ),
+            },
+            {
+              key: 'deposit',
+              label: '입금하기',
+              icon: (
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M12 19V5m0 0-4 4m4-4 4 4" strokeLinecap="round" strokeLinejoin="round" />
+                  <rect x="4" y="15" width="16" height="4" rx="1.5" />
+                </svg>
+              ),
+            },
+            {
+              key: 'history',
+              label: '전송내역',
+              icon: (
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <circle cx="12" cy="12" r="8" />
+                  <path d="M12 8v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ),
+            },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => {
+                setFooterTab(tab.key as any);
+              }}
+              className={`flex flex-1 min-w-[110px] items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition ${
+                footerTab === tab.key
+                  ? 'border-slate-900 bg-slate-900 text-white shadow-md'
+                  : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
+              } sm:flex-none sm:w-auto`}
+            >
+              {tab.icon}
+              <span className="whitespace-nowrap">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
 
     </main>
 
