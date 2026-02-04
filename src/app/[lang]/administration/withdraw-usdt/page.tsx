@@ -394,6 +394,11 @@ export default function SendUsdt({ params }: any) {
   const [memberError, setMemberError] = useState<string | null>(null);
   const [consentChecked, setConsentChecked] = useState(false);
   const [footerTab, setFooterTab] = useState<'withdraw' | 'deposit' | 'history'>('withdraw');
+  const footerTabLabel = useMemo(() => {
+    if (footerTab === 'withdraw') return '출금하기';
+    if (footerTab === 'deposit') return '입금하기';
+    return '전송내역';
+  }, [footerTab]);
   const [recipient, setRecipient] = useState({
     _id: '',
     id: 0,
@@ -1421,7 +1426,7 @@ export default function SendUsdt({ params }: any) {
                 Wallet Transfer
               </span>
               <span className="text-xl font-medium text-slate-900">
-                {Withdraw_USDT}
+                {footerTabLabel}
               </span>
             </div>
           </div>
@@ -1447,22 +1452,22 @@ export default function SendUsdt({ params }: any) {
                     aria-checked={isSelected}
                     disabled={sending}
                     onClick={() => setSelectedNetwork(option.id)}
-                    className={`relative flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/10 ${
+                    className={`relative flex w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/10 ${
                       sending
                         ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
                         : 'bg-transparent text-slate-800 hover:border-slate-400'
-                    } ${isSelected ? 'border-slate-900 bg-slate-50 text-slate-900' : 'border-slate-200'}`}
+                    } ${isSelected ? 'border-slate-900 bg-slate-50 text-slate-900 shadow-[0_0_0_1px_rgba(15,23,42,0.06)]' : 'border-slate-200'}`}
                   >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white sm:h-10 sm:w-10">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-white">
                       <Image
                         src={option.logo}
                         alt={`${option.label} logo`}
-                        width={28}
-                        height={28}
-                        className="h-6 w-6 object-contain"
+                        width={20}
+                        height={20}
+                        className="h-5 w-5 object-contain"
                       />
                     </span>
-                    <span className="text-xs font-medium text-slate-900 sm:text-sm">{option.label}</span>
+                    <span className="text-[13px] font-semibold text-slate-900">{option.label}</span>
                   </button>
                 );
               })}
