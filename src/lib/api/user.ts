@@ -1043,33 +1043,64 @@ export async function getOneByVirtualAccount(
 
 
 export async function getOneByWalletAddress(
-  storecode: string,
+  storecode: string | undefined,
   walletAddress: string,
 ): Promise<UserProps | null> {
-
-  //console.log('getOneByWalletAddress walletAddress: ' + walletAddress);
+  if (!walletAddress) return null;
 
   const client = await clientPromise;
-
   const collection = client.db(dbName).collection('users');
 
+  //const normalized = walletAddress.toLowerCase();
+  const normalized = walletAddress.trim();
 
+  const filter: any = {
+    walletAddress: { $regex: `^${normalized}$`, $options: 'i' },
+  };
 
+  if (storecode) {
+    filter.storecode = storecode;
+  }
 
-  // id is number
-
-  const results = await collection.findOne<UserProps>(
-    {
-      storecode: storecode,
-      walletAddress: walletAddress
-    },
-  );
-
-
-  //console.log('getOneByWalletAddress results: ' + results);
-
+  const results = await collection.findOne<UserProps>(filter);
   return results;
+}
 
+export async function searchUsersByNickname(
+  storecode: string | undefined,
+  keyword: string,
+  limit = 20,
+): Promise<UserProps[]> {
+  if (!keyword || keyword.trim().length < 1) return [];
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  const filter: any = {
+    nickname: { $regex: keyword.trim(), $options: 'i' },
+  };
+
+  if (storecode) {
+    filter.storecode = storecode;
+  }
+
+  return collection
+    .find<UserProps>(filter, {
+      projection: {
+        _id: 0,
+        id: 1,
+        email: 1,
+        nickname: 1,
+        avatar: 1,
+        mobile: 1,
+        walletAddress: 1,
+        createdAt: 1,
+        settlementAmountOfFee: 1,
+        storecode: 1,
+      },
+      limit,
+    })
+    .toArray();
 }
 
 

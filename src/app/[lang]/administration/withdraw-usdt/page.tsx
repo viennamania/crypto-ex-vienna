@@ -154,6 +154,26 @@ type UsdtTransfer = {
   };
 };
 
+type FavoriteWallet = {
+  _id?: string;
+  ownerWalletAddress?: string;
+  walletAddress: string;
+  label?: string | null;
+  chainId?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type MemberSearchResult = {
+  id?: number | string;
+  email?: string;
+  nickname?: string;
+  avatar?: string;
+  mobile?: string;
+  walletAddress?: string;
+  storecode?: string;
+};
+
 
 
 
@@ -357,7 +377,32 @@ export default function SendUsdt({ params }: any) {
   const [transfersHasMore, setTransfersHasMore] = useState(false);
   const [transfersRefreshToken, setTransfersRefreshToken] = useState(0);
   const [showTransferConfirm, setShowTransferConfirm] = useState(false);
+  const [transferModalPhase, setTransferModalPhase] = useState<'confirm' | 'processing' | 'result'>('confirm');
+  const [transferResult, setTransferResult] = useState<{ ok: boolean; message: string }>({ ok: false, message: '' });
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [favoriteWallets, setFavoriteWallets] = useState<FavoriteWallet[]>([]);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [favoriteSaving, setFavoriteSaving] = useState(false);
+  const [favoriteError, setFavoriteError] = useState<string | null>(null);
+  const [favoriteLabel, setFavoriteLabel] = useState('');
+  const [favoriteHit, setFavoriteHit] = useState<FavoriteWallet | null>(null);
+  const [memberKeyword, setMemberKeyword] = useState('');
+  const [memberResults, setMemberResults] = useState<MemberSearchResult[]>([]);
+  const [memberLoading, setMemberLoading] = useState(false);
+  const [memberError, setMemberError] = useState<string | null>(null);
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [recipient, setRecipient] = useState({
+    _id: '',
+    id: 0,
+    email: '',
+    nickname: '',
+    avatar: '',
+    mobile: '',
+    walletAddress: '',
+    createdAt: '',
+    settlementAmountOfFee: '',
+  });
+  const userLookupNonce = useRef(0);
 
   const [amount, setAmount] = useState(0);
   const [amountInput, setAmountInput] = useState('');
@@ -550,19 +595,12 @@ export default function SendUsdt({ params }: any) {
   }, [maxAmount, selectedNetworkConfig.decimals]);
 
   useEffect(() => {
-
-    // get the balance
     const getBalance = async () => {
-
-
       const result = await balanceOf({
-        //contract,
-        contract: contract,
-        address: address || "",
+        contract,
+        address: address || '',
       });
-
       setBalance(Number(result) / 10 ** selectedNetworkConfig.decimals);
-
     };
 
     if (address) {
@@ -574,13 +612,10 @@ export default function SendUsdt({ params }: any) {
 
     const interval = setInterval(() => {
       if (address) getBalance();
-    } , 5000);
+    }, 5000);
 
     return () => clearInterval(interval);
-
-  //} , [address, contract, params.center]);
-
-  } , [address, contract, selectedNetworkConfig.decimals]);
+  }, [address, contract, selectedNetworkConfig.decimals]);
 
   useEffect(() => {
     const from = balanceRef.current;
@@ -708,6 +743,26 @@ export default function SendUsdt({ params }: any) {
     transfersRefreshToken,
   ]);
 
+  useEffect(() => {
+    if (!address) {
+      setFavoriteWallets([]);
+      return;
+    }
+    fetchFavoriteWallets();
+  }, [address]);
+
+  useEffect(() => {
+    if (!recipient.walletAddress) {
+      setFavoriteHit(null);
+      return;
+    }
+    const normalized = recipient.walletAddress.toLowerCase();
+    const cached = favoriteWallets.find(
+      (fav) => fav.walletAddress?.toLowerCase() === normalized,
+    );
+    setFavoriteHit(cached ?? null);
+  }, [recipient.walletAddress, favoriteWallets]);
+
 
   const [user, setUser] = useState(
     {
@@ -720,6 +775,7 @@ export default function SendUsdt({ params }: any) {
       walletAddress: '',
       createdAt: '',
       settlementAmountOfFee: '',
+      storecode: '',
     }
   );
 
@@ -739,7 +795,24 @@ export default function SendUsdt({ params }: any) {
         }),
       });
 
-      const data = await response.json();
+      if (!response.ok) {
+        console.error('getUser failed', response.status, response.statusText);
+        return;
+      }
+
+      const raw = await response.text();
+      if (!raw) {
+        console.error('getUser returned empty body');
+        return;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch (err) {
+        console.error('getUser invalid JSON', err);
+        return;
+      }
 
 
       setUser(data.result);
@@ -749,77 +822,6 @@ export default function SendUsdt({ params }: any) {
     getUser();
 
   }, [address]);
-
-
-
-  // get list of user wallets from api
-  const [users, setUsers] = useState([
-    {
-      _id: '',
-      id: 0,
-      email: '',
-      avatar: '',
-      nickname: '',
-      mobile: '',
-      walletAddress: '',
-      createdAt: '',
-      settlementAmountOfFee: '',
-    }
-  ]);
-
-  const [totalCountOfUsers, setTotalCountOfUsers] = useState(0);
-
-  useEffect(() => {
-
-    if (!address) return;
-
-    const getUsers = async () => {
-
-      const response = await fetch('/api/user/getAllUsers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}),
-      });
-
-      const data = await response.json();
-
-      //console.log("getUsers", data);
-
-
-      ///setUsers(data.result.users);
-      // set users except the current user
-
-      setUsers(data.result.users.filter((user: any) => user.walletAddress !== address));
-
-
-
-      setTotalCountOfUsers(data.result.totalCount);
-
-    };
-
-    getUsers();
-
-
-  }, [address]);
-
-
-
-
-
-
-  const [recipient, setRecipient] = useState({
-    _id: '',
-    id: 0,
-    email: '',
-    nickname: '',
-    avatar: '',
-    mobile: '',
-    walletAddress: '',
-    createdAt: '',
-    settlementAmountOfFee: '',
-  });
 
 
 
@@ -835,6 +837,7 @@ export default function SendUsdt({ params }: any) {
   //////const [verifiedOtp, setVerifiedOtp] = useState(false);
 
   const [verifiedOtp, setVerifiedOtp] = useState(true);
+  const [addressError, setAddressError] = useState<string | null>(null);
 
 
   const [isSendedOtp, setIsSendedOtp] = useState(false);
@@ -849,30 +852,37 @@ export default function SendUsdt({ params }: any) {
 
 
   const [sending, setSending] = useState(false);
-  const sendUsdt = async () => {
+  const sendUsdt = async (): Promise<boolean> => {
     if (sending) {
-      return;
+      return false;
     }
 
 
     if (!recipient.walletAddress) {
       toast.error('Please enter a valid address');
-      return;
+      return false;
+    }
+
+    const isEthAddress = /^0x[a-fA-F0-9]{40}$/.test(recipient.walletAddress);
+    if (!isEthAddress) {
+      toast.error('받는사람 지갑주소가 올바른 이더리움 형식이 아닙니다.');
+      return false;
     }
 
     if (!amount) {
       toast.error('Please enter a valid amount');
-      return;
+      return false;
     }
 
     //console.log('amount', amount, "balance", balance);
 
     if (Number(amount) > balance) {
       toast.error('Insufficient balance');
-      return;
+      return false;
     }
 
     setSending(true);
+    let ok = false;
 
     try {
 
@@ -948,6 +958,16 @@ export default function SendUsdt({ params }: any) {
 
           setAmount(0); // reset amount
           setAmountInput('');
+          setRecipient((prev) => ({
+            ...prev,
+            walletAddress: '',
+            nickname: '',
+            email: '',
+            avatar: '',
+            mobile: '',
+          }));
+          setFavoriteHit(null);
+          setConsentChecked(false);
 
           // refresh balance
 
@@ -961,6 +981,7 @@ export default function SendUsdt({ params }: any) {
           setBalance(Number(result) / 10 ** selectedNetworkConfig.decimals);
 
 
+          ok = true;
         } else {
 
           toast.error(Failed_to_send_USDT);
@@ -979,6 +1000,7 @@ export default function SendUsdt({ params }: any) {
     }
 
     setSending(false);
+    return ok;
   };
 
 
@@ -996,67 +1018,230 @@ export default function SendUsdt({ params }: any) {
       }),
     });
 
-    const data = await response.json();
+    if (!response.ok) {
+      console.error('getUserByWalletAddress failed', response.status, response.statusText);
+      return null;
+    }
 
-    //console.log("getUserByWalletAddress", data);
+    const raw = await response.text();
+    if (!raw) {
+      console.error('getUserByWalletAddress returned empty body');
+      return null;
+    }
 
-    return data.result;
+    try {
+      const data = JSON.parse(raw);
+      return data?.result ?? null;
+    } catch (err) {
+      console.error('getUserByWalletAddress invalid JSON', err);
+      return null;
+    }
 
   };
+
+  const fetchFavoriteWallets = async () => {
+    if (!address) {
+      setFavoriteWallets([]);
+      setFavoriteHit(null);
+      return;
+    }
+
+    setFavoriteLoading(true);
+    setFavoriteError(null);
+    try {
+      const response = await fetch('/api/favorite-wallets/list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ownerWalletAddress: address,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json();
+      const list = Array.isArray(data?.result) ? data.result : [];
+      setFavoriteWallets(list);
+      if (recipient.walletAddress) {
+        const found = list.find(
+          (fav: FavoriteWallet) =>
+            fav.walletAddress?.toLowerCase() === recipient.walletAddress.toLowerCase(),
+        );
+        setFavoriteHit(found ?? null);
+      }
+    } catch (error) {
+      console.error('Failed to load favorite wallets', error);
+      setFavoriteError('자주 쓰는 지갑을 불러오지 못했습니다.');
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
+  const addFavoriteWallet = async () => {
+    if (!address || !recipient.walletAddress) {
+      toast.error('지갑 주소를 입력해 주세요.');
+      return;
+    }
+
+    const isEthAddress = /^0x[a-fA-F0-9]{40}$/.test(recipient.walletAddress);
+    if (!isEthAddress) {
+      toast.error('이더리움 지갑주소 형식이 아닙니다.');
+      return;
+    }
+
+    setFavoriteSaving(true);
+    try {
+      const response = await fetch('/api/favorite-wallets/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ownerWalletAddress: address,
+          walletAddress: recipient.walletAddress,
+          label: favoriteLabel.trim() || recipient.nickname || '즐겨찾기 지갑',
+          chainId: selectedNetworkConfig.chain.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      toast.success('자주 쓰는 지갑에 추가했습니다.');
+      setFavoriteLabel('');
+      await fetchFavoriteWallets();
+      setFavoriteHit({
+        walletAddress: recipient.walletAddress,
+        label: favoriteLabel.trim() || recipient.nickname || '즐겨찾기 지갑',
+        chainId: selectedNetworkConfig.chain.id,
+      });
+    } catch (error) {
+      console.error('Failed to save favorite wallet', error);
+      toast.error('즐겨찾기 저장에 실패했습니다.');
+    } finally {
+      setFavoriteSaving(false);
+    }
+  };
+
+  const removeFavoriteWallet = async (walletAddress: string) => {
+    if (!address) return;
+    setFavoriteSaving(true);
+    try {
+      const response = await fetch('/api/favorite-wallets/remove', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ownerWalletAddress: address,
+          walletAddress,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      setFavoriteWallets((prev) => prev.filter((item) => item.walletAddress !== walletAddress));
+    } catch (error) {
+      console.error('Failed to remove favorite wallet', error);
+      toast.error('즐겨찾기 삭제에 실패했습니다.');
+    } finally {
+      setFavoriteSaving(false);
+    }
+  };
+
+  const searchMembers = async () => {
+    const keyword = memberKeyword.trim();
+    if (!keyword) {
+      setMemberResults([]);
+      setMemberError('검색어를 입력하세요.');
+      return;
+    }
+    setMemberLoading(true);
+    setMemberError(null);
+    try {
+      const response = await fetch('/api/user/searchByNickname', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storecode: user?.storecode,
+          nickname: keyword,
+          limit: 20,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json();
+      setMemberResults(Array.isArray(data?.result) ? data.result : []);
+    } catch (error) {
+      console.error('Failed to search members', error);
+      setMemberError('회원 검색에 실패했습니다.');
+    } finally {
+      setMemberLoading(false);
+    }
+  };
   
-  ///const [wantToReceiveWalletAddress, setWantToReceiveWalletAddress] = useState(false);
-
-
-  const [wantToReceiveWalletAddress, setWantToReceiveWalletAddress] = useState(true);
+  const [recipientMode, setRecipientMode] = useState<'manual' | 'favorites' | 'member'>('manual');
 
 
 
   const [isWhateListedUser, setIsWhateListedUser] = useState(false);
+  const isTrustedRecipient = useMemo(
+    () => Boolean(favoriteHit) || isWhateListedUser,
+    [favoriteHit, isWhateListedUser],
+  );
 
   
   useEffect(() => {
+    const wallet = recipient?.walletAddress?.trim();
 
-    if (!recipient?.walletAddress) {
+    if (!wallet) {
+      setIsWhateListedUser(false);
+      setConsentChecked(false);
       return;
     }
 
-    // check recipient.walletAddress is in the user list
-    getUserByWalletAddress(recipient?.walletAddress)
-    .then((data) => {
-        
-        //console.log("data============", data);
-  
-        const checkUser = data
+    const nonce = ++userLookupNonce.current;
 
-        if (checkUser) {
-          setIsWhateListedUser(true);
+    getUserByWalletAddress(wallet).then((data) => {
+      // ignore stale responses if user changed wallet while request was pending
+      if (nonce !== userLookupNonce.current) return;
 
-          setRecipient(checkUser as any);
+      const checkUser = data;
 
-        } else {
-          setIsWhateListedUser(false);
-
-          setRecipient({
-
-
-            _id: '',
-            id: 0,
-            email: '',
-            nickname: '',
-            avatar: '',
-            mobile: '',
-            walletAddress: recipient?.walletAddress,
-            createdAt: '',
-            settlementAmountOfFee: '',
-
-          });
-
-
-        }
-
+      if (checkUser) {
+        setIsWhateListedUser(true);
+        setConsentChecked(true);
+        setRecipient((prev) => ({
+          ...prev,
+          ...checkUser,
+          walletAddress: wallet,
+        }));
+      } else {
+        setIsWhateListedUser(false);
+        setConsentChecked(false);
+        setRecipient((prev) => ({
+          ...prev,
+          walletAddress: wallet,
+          nickname: '',
+          email: '',
+          avatar: '',
+          mobile: '',
+        }));
+      }
     });
-
-  } , [recipient?.walletAddress]);
+  }, [recipient?.walletAddress]);
   
 
 
@@ -1376,183 +1561,399 @@ export default function SendUsdt({ params }: any) {
                   사용 가능: {formatAmountInput(maxAmount, selectedNetworkConfig.decimals)} USDT
                 </div>
               </div>
-            
-
-              
-              
-                  {!wantToReceiveWalletAddress ? (
-                    <>
-                    <div className='w-full flex flex-row gap-4 items-center justify-between'>
-                      <select
-                        disabled={sending}
-
-                        className="
-                          
-                          w-56 rounded-md border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-800 "
-                          
-                        value={
-                          recipient?.nickname
-                        }
-
-
-                        onChange={(e) => {
-
-                          const selectedUser = users.find((user) => user.nickname === e.target.value) as any;
-
-                          console.log("selectedUser", selectedUser);
-
-                          setRecipient(selectedUser);
-
-                        } } 
-
-                      >
-                        <option value="">{Select_a_user}</option>
-                        
-
-                        {users.map((user) => (
-                          <option key={user.id} value={user.nickname}>{user.nickname}</option>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="inline-flex rounded-full bg-slate-100 p-1">
+                        {[
+                          { key: 'manual', label: '직접 입력' },
+                          { key: 'favorites', label: '자주 쓰는 지갑' },
+                          { key: 'member', label: '회원 검색' },
+                        ].map((tab) => (
+                          <button
+                            key={tab.key}
+                            type="button"
+                            onClick={() => setRecipientMode(tab.key as any)}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition ${
+                              recipientMode === tab.key
+                                ? 'bg-white text-slate-900 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
                         ))}
-                      </select>
-
-                      {/* select user profile image */}
-
-                      <div className="w-full flex flex-row gap-2 items-center justify-center">
-                        <Image
-                          src={recipient?.avatar || '/profile-default.png'}
-                          alt="profile"
-                          width={38}
-                          height={38}
-                          className="rounded-full border border-slate-200 bg-white"
-                          style={{
-                            objectFit: 'cover',
-                            width: '38px',
-                            height: '38px',
-                          }}
-                        />
-
-                        {recipient?.walletAddress && (
-                          <Image
-                            src="/verified.png"
-                            alt="check"
-                            width={28}
-                            height={28}
-                          />
-                        )}
-
                       </div>
-
-                      
-
-
+                      <span className="text-xs text-slate-500">
+                        주소를 직접 입력하거나 즐겨찾기/회원 검색에서 선택하세요.
+                      </span>
                     </div>
-                
 
-                      {/* input wallet address */}
-                      
-                      <input
-                        disabled={true}
-                        type="text"
-                        placeholder={User_wallet_address}
-                        className="w-80 xl:w-full rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600"
-                        value={recipient?.walletAddress}
-                        onChange={(e) => {
-        
-                          
-                          
-                            getUserByWalletAddress(e.target.value)
-
-                            .then((data) => {
-
-                              //console.log("data", data);
-
-                              const checkUser = data;
-
-                              if (checkUser) {
-                                setRecipient(checkUser as any);
-                              } else {
-                                
-                                setRecipient({
-                                  ...recipient,
-                                  walletAddress: e.target.value,
-                                });
-                                
-                              }
-
-                            });
-
-                        } }
-                      />
-
-
-            
-
-
-                  </>
-
-                  ) : (
-
-                    <div className='flex flex-col gap-4 items-center justify-between'>
-                      <input
+                    {recipientMode === 'manual' ? (
+                      <div className="flex flex-col gap-4 items-center justify-between">
+                        <input
                         disabled={sending}
                         type="text"
                         placeholder={User_wallet_address}
                         className="w-80 xl:w-96 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800"
                         value={recipient.walletAddress}
-                        onChange={(e) => setRecipient({
-                          ...recipient,
-                          walletAddress: e.target.value,
-                        })}
-                      />
-
-                      {isWhateListedUser ? (
-                        <div className="flex flex-row gap-2 items-center justify-center rounded-full border border-emerald-200/70 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
-
-
-                          <Image
-                            src={recipient.avatar || '/profile-default.png'}
-                            alt="profile"
-                            width={30}
-                            height={30}
-                            className="rounded-full"
-                            style={{
-                              objectFit: 'cover',
-                              width: '38px',
-                              height: '38px',
-                            }}
-                          />
-                          <div>{recipient?.nickname}</div>
-                          <Image
-                            src="/verified.png"
-                            alt="check"
-                            width={30}
-                            height={30}
-                          />
-                          
-                        </div>
-                      ) : (
-                        <>
-
-                        {recipient?.walletAddress && (
-                          <div className='flex flex-row gap-2 items-start justify-center rounded-xl border border-rose-200/70 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600'>
-                            {/* dot icon */}
-                            <div className="mt-1 h-2.5 w-2.5 rounded-full bg-rose-500"></div>
-                            <div>
-                              {This_address_is_not_white_listed}
-                              <br />
-                              {If_you_are_sure_please_click_the_send_button}
-                            </div>
+                          onChange={(e) => {
+                            const next = e.target.value.trim();
+                            const isEth = /^0x[a-fA-F0-9]{40}$/.test(next);
+                            setAddressError(next ? (isEth ? null : '이더리움 지갑주소 형식이 아닙니다.') : null);
+                            setRecipient({
+                              ...recipient,
+                              walletAddress: next,
+                            });
+                            if (!isEth) {
+                              setFavoriteHit(null);
+                            }
+                          }}
+                        />
+                      {addressError && (
+                        <p className="text-xs font-semibold text-rose-500">{addressError}</p>
+                      )}
+                      {favoriteHit && (
+                        <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-[11px]">
+                            ★
+                          </span>
+                          <div className="flex flex-col">
+                            <span>자주 쓰는 지갑으로 등록됨</span>
+                            <span className="text-[11px] font-normal text-emerald-700/80">
+                              {favoriteHit.label || favoriteHit.walletAddress.substring(0, 10) + '...'}
+                            </span>
                           </div>
-
-                        )}
-
-                        </>
+                        </div>
                       )}
 
+                      <div className="w-full flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                        <input
+                          disabled={
+                            favoriteSaving ||
+                            sending ||
+                            !recipient.walletAddress ||
+                            Boolean(addressError)
+                          }
+                          type="text"
+                          placeholder="별칭 (선택)"
+                          className="flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800"
+                          value={favoriteLabel}
+                          onChange={(e) => setFavoriteLabel(e.target.value)}
+                        />
+                          <button
+                            type="button"
+                            disabled={
+                              favoriteSaving ||
+                              sending ||
+                              !recipient.walletAddress ||
+                              Boolean(addressError)
+                            }
+                            onClick={addFavoriteWallet}
+                            className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
+                              favoriteSaving || sending || !recipient.walletAddress || addressError
+                                ? 'border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                                : 'border border-emerald-300 bg-emerald-50 text-emerald-700 hover:border-emerald-400'
+                            }`}
+                          >
+                            {favoriteSaving ? '저장 중...' : '즐겨찾기 추가'}
+                          </button>
+                        </div>
 
+                        {isWhateListedUser ? (
+                          <div className="w-full rounded-xl border border-emerald-200/70 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 shadow-[0_6px_14px_rgba(16,185,129,0.12)]">
+                            <div className="flex items-center gap-2">
+                              <Image
+                                src={recipient.avatar || '/profile-default.png'}
+                                alt="profile"
+                                width={36}
+                                height={36}
+                                className="rounded-full border border-emerald-200 bg-white"
+                                style={{ objectFit: 'cover' }}
+                              />
+                              <div className="flex flex-col leading-tight">
+                                <span className="text-sm font-bold">{recipient?.nickname || '등록 회원'}</span>
+                                <span className="text-[11px] text-emerald-700/80">
+                                  {recipient.walletAddress
+                                    ? `${recipient.walletAddress.substring(0, 6)}...${recipient.walletAddress.substring(recipient.walletAddress.length - 4)}`
+                                    : ''}
+                                </span>
+                              </div>
+                              <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white">
+                                <Image src="/verified.png" alt="verified" width={14} height={14} />
+                                등록 회원
+                              </span>
+                            </div>
+                            <div className="mt-2 grid grid-cols-1 gap-1 text-[11px] text-emerald-700/90 sm:grid-cols-2">
+                              {recipient.email && (
+                                <span>이메일: {recipient.email.replace(/(.{2}).*(@.*)/, '$1***$2')}</span>
+                              )}
+                              {recipient.mobile && (
+                                <span>연락처: {recipient.mobile.replace(/(\\d{3})\\d{4}(\\d{4})/, '$1****$2')}</span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {recipient?.walletAddress && (
+                              <div className='flex flex-col gap-1 rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700'>
+                                <div className="flex items-center gap-2">
+                                  <div className="h-2.5 w-2.5 rounded-full bg-amber-500"></div>
+                                  <span>등록된 회원 지갑주소가 아닙니다.</span>
+                                </div>
+                                <span className="text-[11px] font-medium text-amber-700/90">
+                                  주소가 정확한지 다시 확인하거나, 신규 주소라면 위험을 확인한 뒤 전송하세요.
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        )}
 
-                    </div>
+                        {!isTrustedRecipient && recipient.walletAddress && !addressError && (
+                          <div className="flex flex-col gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-3 text-xs text-rose-700">
+                            <div className="flex items-center gap-2 font-semibold">
+                              <div className="h-2.5 w-2.5 rounded-full bg-rose-500"></div>
+                              <span>주의: 자주 쓰는 지갑/등록 회원이 아닌 주소입니다.</span>
+                            </div>
+                            <p className="text-[11px] leading-relaxed">
+                              오입금 시 복구가 불가능하며 모든 책임은 본인에게 있습니다. 주소를 다시 한 번 확인한 후 동의해주세요.
+                            </p>
+                            <label className="inline-flex items-center gap-2 text-[11px] font-semibold">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 rounded border border-rose-300 text-rose-600 focus:ring-rose-400"
+                                checked={consentChecked}
+                                onChange={(e) => setConsentChecked(e.target.checked)}
+                              />
+                              위험을 이해했고 본인 책임으로 전송함에 동의합니다.
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {recipientMode === 'favorites' && (
+                          <div className="flex flex-col gap-3">
+                            {favoriteLoading && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                                {[1, 2, 3, 4].map((i) => (
+                                  <div
+                                    key={i}
+                                    className="animate-pulse rounded-xl border border-slate-200 bg-slate-50 p-3 h-24"
+                                  />
+                                ))}
+                              </div>
+                            )}
 
-                  )} 
+                            {favoriteError && (
+                              <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
+                                {favoriteError}
+                              </div>
+                            )}
+
+                            {!favoriteLoading && !favoriteError && favoriteWallets.length === 0 && (
+                              <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center">
+                                <span className="text-sm font-semibold text-slate-700">등록된 즐겨찾기 지갑이 없습니다.</span>
+                                <p className="text-xs text-slate-500">자주 사용하는 주소를 추가해 두면 빠르게 선택할 수 있습니다.</p>
+                                <button
+                                  type="button"
+                                  onClick={() => setRecipientMode('manual')}
+                                  className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-slate-400"
+                                >
+                                  주소 추가하러 가기
+                                </button>
+                              </div>
+                            )}
+
+                            {!favoriteLoading && favoriteWallets.length > 0 && (
+                              <div className="overflow-hidden rounded-xl border border-slate-200 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
+                                <div className="grid grid-cols-[1.5fr_1.4fr_0.9fr_0.9fr] gap-3 bg-slate-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                  <span>별칭</span>
+                                  <span>지갑주소</span>
+                                  <span>체인</span>
+                                  <span className="text-right pr-1">동작</span>
+                                </div>
+                                <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                                  {favoriteWallets.map((fav, idx) => {
+                                    const masked = `${fav.walletAddress.substring(0, 6)}...${fav.walletAddress.substring(fav.walletAddress.length - 4)}`;
+                                    return (
+                                      <div
+                                        key={`${fav.walletAddress}-${fav.label ?? ''}-${idx}`}
+                                        className="grid grid-cols-[1.5fr_1.4fr_0.9fr_0.9fr] items-center gap-3 px-4 py-3 bg-white transition duration-300 ease-out hover:bg-slate-50 animate-[fadeIn_0.35s_ease]"
+                                        style={{ animationDelay: `${idx * 30}ms` }}
+                                      >
+                                        <div className="text-sm font-semibold text-slate-900 truncate">
+                                          {fav.label || '즐겨찾기'}
+                                        </div>
+                                        <div className="text-xs font-medium text-slate-800">{masked}</div>
+                                        <div className="text-[11px] text-slate-600">
+                                          {fav.chainId ? `Chain ${fav.chainId}` : '-'}
+                                        </div>
+                                        <div className="flex items-center justify-end gap-1.5">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setRecipient({
+                                                ...recipient,
+                                                walletAddress: fav.walletAddress,
+                                                nickname: fav.label || recipient.nickname,
+                                              });
+                                              setRecipientMode('manual');
+                                              setAddressError(null);
+                                              setFavoriteHit(fav);
+                                            }}
+                                            className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 hover:border-emerald-400"
+                                          >
+                                            사용
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => navigator.clipboard.writeText(fav.walletAddress)}
+                                            className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-600 hover:border-slate-400"
+                                          >
+                                            복사
+                                          </button>
+                                          <button
+                                            type="button"
+                                            disabled={favoriteSaving}
+                                            onClick={() => removeFavoriteWallet(fav.walletAddress)}
+                                            className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] text-rose-500 hover:border-rose-300"
+                                          >
+                                            삭제
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {recipientMode === 'member' && (
+                          <div className="flex flex-col gap-3 w-full">
+                            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                              <input
+                                type="text"
+                                placeholder="회원 닉네임(아이디)으로 검색"
+                                className="flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800"
+                                value={memberKeyword}
+                                onChange={(e) => setMemberKeyword(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    searchMembers();
+                                  }
+                                }}
+                              />
+                              <button
+                                type="button"
+                                disabled={memberLoading || !memberKeyword.trim()}
+                                onClick={searchMembers}
+                                className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
+                                  memberLoading || !memberKeyword.trim()
+                                    ? 'border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                                    : 'border border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+                                }`}
+                              >
+                                {memberLoading ? '검색 중...' : '검색'}
+                              </button>
+                            </div>
+
+                            {memberError && (
+                              <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
+                                {memberError}
+                              </div>
+                            )}
+
+                            {!memberLoading && memberResults.length === 0 && !memberError && (
+                              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                                검색 결과가 없습니다. 닉네임을 다시 확인해 주세요.
+                              </div>
+                            )}
+
+                            {memberResults.length > 0 && (
+                              <div className="overflow-hidden rounded-xl border border-slate-200 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
+                                <div className="grid grid-cols-[1.5fr_1.2fr_1.5fr_0.8fr] gap-3 bg-slate-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                  <span>회원</span>
+                                  <span>지갑주소</span>
+                                  <span>연락처</span>
+                                  <span className="text-right pr-1">선택</span>
+                                </div>
+                                <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                                  {memberResults.map((m, idx) => {
+                                    const masked = m.walletAddress
+                                      ? `${m.walletAddress.substring(0, 6)}...${m.walletAddress.substring(m.walletAddress.length - 4)}`
+                                      : '지갑 미등록';
+                                    const maskedMobile = m.mobile
+                                      ? m.mobile.replace(/(\\d{3})\\d{3,4}(\\d{4})/, '$1****$2')
+                                      : '-';
+                                    const maskedEmail = m.email
+                                      ? m.email.replace(/(.{2}).*(@.*)/, '$1***$2')
+                                      : '-';
+                                    return (
+                                      <div
+                                        key={`${m.walletAddress}-${m.nickname}-${m.id}-${idx}`}
+                                        className="grid grid-cols-[1.5fr_1.2fr_1.5fr_0.8fr] items-center gap-3 px-4 py-3 bg-white transition duration-300 ease-out hover:bg-slate-50 animate-[fadeIn_0.35s_ease]"
+                                        style={{ animationDelay: `${idx * 30}ms` }}
+                                      >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                          <Image
+                                            src={m.avatar || '/profile-default.png'}
+                                            alt="profile"
+                                            width={36}
+                                            height={36}
+                                            className="rounded-full border border-slate-200 bg-white"
+                                          />
+                                          <div className="min-w-0">
+                                            <div className="text-sm font-semibold text-slate-900 truncate">
+                                              {m.nickname || '회원'}
+                                            </div>
+                                            <div className="text-[11px] text-slate-500 truncate">
+                                              {maskedEmail}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div className="text-xs font-medium text-slate-800">{masked}</div>
+                                        <div className="text-[11px] text-slate-600">{maskedMobile}</div>
+                                        <div className="flex items-center justify-end">
+                                          <button
+                                            type="button"
+                                            disabled={!m.walletAddress}
+                                            onClick={() => {
+                                              if (!m.walletAddress) return;
+                                              setRecipient((prev) => ({
+                                                ...prev,
+                                                walletAddress: m.walletAddress || '',
+                                                nickname: m.nickname || '',
+                                                email: m.email || '',
+                                                avatar: m.avatar || '',
+                                                mobile: m.mobile || '',
+                                              }));
+                                              setIsWhateListedUser(!!m.walletAddress);
+                                              setRecipientMode('manual');
+                                              setAddressError(null);
+                                            }}
+                                            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                                              m.walletAddress
+                                                ? 'border border-emerald-300 bg-emerald-50 text-emerald-700 hover:border-emerald-400'
+                                                : 'border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                                            }`}
+                                          >
+                                            선택
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
 
                 </div>
 
@@ -1629,13 +2030,24 @@ export default function SendUsdt({ params }: any) {
 
 
                 <button
-                  disabled={!address || !recipient?.walletAddress || !amount || sending || !verifiedOtp}
-                  onClick={() => setShowTransferConfirm(true)}
+                  disabled={
+                    !address ||
+                    !recipient?.walletAddress ||
+                    !amount ||
+                    sending ||
+                    !verifiedOtp ||
+                    (!isTrustedRecipient && !consentChecked)
+                  }
+                  onClick={() => {
+                    setTransferModalPhase('confirm');
+                    setTransferResult({ ok: false, message: '' });
+                    setShowTransferConfirm(true);
+                  }}
                   className={`mt-2 w-full rounded-md border px-4 py-3 text-lg font-medium transition-all duration-200 ease-in-out
                       ${sending ? 'animate-pulse' : ''}
                       ${
-                      !address || !recipient?.walletAddress || !amount || sending || !verifiedOtp
-                      ?'border-slate-200 bg-white text-slate-300'
+                      !address || !recipient?.walletAddress || !amount || sending || !verifiedOtp || (!isTrustedRecipient && !consentChecked)
+                      ?'border-slate-200 bg-white text-slate-300 cursor-not-allowed'
                       : 'border-slate-900 bg-white text-slate-900 hover:border-slate-600 hover:text-slate-700'
                       }
                     `}
@@ -1815,15 +2227,17 @@ export default function SendUsdt({ params }: any) {
           role="dialog"
           aria-modal="true"
           onClick={(event) => {
-            if (event.target === event.currentTarget) {
+            if (event.target === event.currentTarget && transferModalPhase !== 'processing') {
               setShowTransferConfirm(false);
+              setTransferModalPhase('confirm');
+              setTransferResult({ ok: false, message: '' });
             }
           }}
         >
-          <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6">
-            <h3 className="text-lg font-medium text-slate-900">전송 확인</h3>
+          <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-medium text-slate-900">USDT 전송</h3>
             <p className="mt-1 text-sm text-slate-500">
-              아래 내용으로 USDT를 전송합니다. 확인 후 진행해주세요.
+              아래 정보를 확인하고 전송을 진행하세요.
             </p>
 
             <div className="mt-4 space-y-3 rounded-md border border-slate-200 px-4 py-3 text-sm text-slate-700">
@@ -1843,25 +2257,89 @@ export default function SendUsdt({ params }: any) {
               </div>
             </div>
 
+            {transferModalPhase === 'processing' && (
+              <div className="mt-4 flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+                전송 중입니다... 네트워크 확인이 끝날 때까지 창을 닫지 마세요.
+              </div>
+            )}
+
+            {transferModalPhase === 'result' && (
+              <div
+                className={`mt-4 flex items-start gap-3 rounded-md border px-3 py-2 text-sm font-semibold ${
+                  transferResult.ok
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : 'border-rose-200 bg-rose-50 text-rose-700'
+                }`}
+              >
+                <span
+                  className={`mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full ${
+                    transferResult.ok ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                  }`}
+                >
+                  {transferResult.ok ? '✓' : '!'}
+                </span>
+                <span>{transferResult.message || (transferResult.ok ? '전송이 완료되었습니다.' : '전송에 실패했습니다.')}</span>
+              </div>
+            )}
+
             <div className="mt-5 flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setShowTransferConfirm(false)}
-                className="flex-1 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                disabled={sending}
-                onClick={async () => {
+                disabled={transferModalPhase === 'processing'}
+                onClick={() => {
                   setShowTransferConfirm(false);
-                  await sendUsdt();
+                  setTransferModalPhase('confirm');
+                  setTransferResult({ ok: false, message: '' });
                 }}
-                className="flex-1 rounded-md border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                className={`flex-1 rounded-md border px-4 py-2 text-sm font-medium transition ${
+                  transferModalPhase === 'processing'
+                    ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'
+                }`}
               >
-                확인 후 전송
+                {transferModalPhase === 'result' ? '닫기' : '취소'}
               </button>
+              {transferModalPhase === 'confirm' && (
+                <button
+                  type="button"
+                  disabled={sending}
+                  onClick={async () => {
+                    setTransferModalPhase('processing');
+                    const ok = await sendUsdt();
+                    setTransferResult({
+                      ok,
+                      message: ok ? '전송이 완료되었습니다.' : '전송에 실패했습니다. 다시 시도해주세요.',
+                    });
+                    setTransferModalPhase('result');
+                  }}
+                  className="flex-1 rounded-md border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                >
+                  확인 후 전송
+                </button>
+              )}
+              {transferModalPhase === 'processing' && (
+                <button
+                  type="button"
+                  disabled
+                  className="flex-1 rounded-md border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-400"
+                >
+                  전송 중...
+                </button>
+              )}
+              {transferModalPhase === 'result' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTransferConfirm(false);
+                    setTransferModalPhase('confirm');
+                    setTransferResult({ ok: false, message: '' });
+                  }}
+                  className="flex-1 rounded-md border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+                >
+                  확인
+                </button>
+              )}
             </div>
           </div>
         </div>

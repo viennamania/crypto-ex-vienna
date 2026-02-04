@@ -23,17 +23,21 @@ export async function POST(request: NextRequest) {
 
 
 
-  const client = createThirdwebClient({
-    secretKey: process.env.THIRDWEB_SECRET_KEY || "",
-  });
- 
-  const user = await getUser({
-    client,
-    walletAddress: walletAddress,
-    //walletAddress: "0xF1b051dceb3Aab2f8e35805F134e373b709382aA", // For testing purposes
-  });
-
-  console.log("user", user);
+  // optional: verify existence on-chain via thirdweb, but do not block if it fails
+  try {
+    const client = createThirdwebClient({
+      secretKey: process.env.THIRDWEB_SECRET_KEY || "",
+    });
+  
+    const user = await getUser({
+      client,
+      walletAddress: walletAddress,
+    });
+  
+    console.log("thirdweb user lookup", user);
+  } catch (error) {
+    console.warn("thirdweb user lookup failed (non-blocking)", error);
+  }
 
 
 
