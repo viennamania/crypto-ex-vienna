@@ -327,15 +327,23 @@ export default function SellerSalesStatusPage() {
               <Image src="/icon-seller.png" alt="Seller" width={22} height={22} className="h-5 w-5" />
               <h2 className="text-base font-bold text-slate-900">판매자 판매 진행상태</h2>
             </div>
-            <div className="flex items-center gap-1 text-xs text-slate-500 min-h-[20px]">
-              <Image
-                src="/icon-loading.png"
-                alt="Loading"
-                width={16}
-                height={16}
-                className="h-4 w-4 animate-spin"
-              />
-              불러오는 중입니다... (정보는 아래에서 계속 볼 수 있어요)
+            <div className="min-h-[20px] text-xs text-slate-500">
+              {loading ? (
+                <div className="flex items-center gap-1">
+                  <Image
+                    src="/icon-loading.png"
+                    alt="Loading"
+                    width={16}
+                    height={16}
+                    className="h-4 w-4 animate-spin"
+                  />
+                  불러오는 중입니다...
+                </div>
+              ) : lastUpdated ? (
+                <span>업데이트: {formatDateTime(lastUpdated.toISOString())}</span>
+              ) : (
+                <span>최신 데이터 준비됨</span>
+              )}
             </div>
           </div>
           <div className="mb-4">

@@ -51,17 +51,12 @@ export async function POST(request: NextRequest) {
     escrowWalletAddress,
   } = body;
 
-  if (!storecode) {
-    return NextResponse.json(
-      { error: 'storecode is required' },
-      { status: 400 },
-    );
-  }
+  const storecodeValue = storecode || 'admin';
 
   let result: any;
   try {
     result = await getAllSellersForBalanceInquiry({
-      storecode: storecode || "",
+      storecode: storecodeValue,
       limit: limit || 100,
       page: page || 1,
       escrowWalletAddress,
@@ -76,7 +71,7 @@ export async function POST(request: NextRequest) {
 
   if (!result?.users?.length) {
     console.warn('getAllSellersForBalanceInquiry empty result', {
-      storecode,
+      storecode: storecodeValue,
       limit,
       page,
       escrowWalletAddress,
