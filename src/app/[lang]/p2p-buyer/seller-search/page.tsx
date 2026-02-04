@@ -326,7 +326,11 @@ export default function SellerSearchPage() {
                   <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-orange-600">
                     광고
                   </p>
-                  <div className="mt-3 rounded-3xl border border-black/10 bg-white px-4 py-4 shadow-[0_18px_40px_-26px_rgba(0,0,0,0.22)]">
+                  <div className="ad-flash-card relative mt-3 overflow-hidden rounded-3xl border border-black/10 bg-white px-4 py-4 shadow-[0_18px_40px_-26px_rgba(0,0,0,0.22)]">
+                    <span
+                      aria-hidden
+                      className="ad-shine pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-orange-200/35 to-transparent"
+                    />
                     {(() => {
                       const bankInfo = adSeller?.seller?.bankInfo || {};
                       const usdtRate = adSeller?.seller?.usdtToKrwRate;
@@ -411,18 +415,23 @@ export default function SellerSearchPage() {
                               </div>
                             </div>
                             <div className="rounded-2xl border border-orange-300 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-100 px-3 py-3 shadow-[0_12px_26px_-18px_rgba(249,115,22,0.45)]">
-                              <div className="flex items-center gap-2">
-                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500 text-sm font-bold text-white shadow-[0_6px_14px_-8px_rgba(249,115,22,0.6)]">
-                                  ₮
-                                </span>
-                                <div className="flex flex-col">
-                                  <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-orange-700">
-                                    USDT 판매금액
-                                  </p>
-                                  <p className="mt-0.5 text-lg font-extrabold text-orange-900 drop-shadow-[0_2px_4px_rgba(249,115,22,0.25)]">
-                                    {usdtRateLabel}
-                                  </p>
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500 text-sm font-bold text-white shadow-[0_6px_14px_-8px_rgba(249,115,22,0.6)]">
+                                    ₮
+                                  </span>
+                                  <div className="flex flex-col">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-orange-700">
+                                      USDT 판매금액
+                                    </p>
+                                    <p className="mt-0.5 text-lg font-extrabold text-orange-900 drop-shadow-[0_2px_4px_rgba(249,115,22,0.25)]">
+                                      {usdtRateLabel}
+                                    </p>
+                                  </div>
                                 </div>
+                                <span className="inline-flex h-8 items-center rounded-full bg-white/80 px-3 text-[11px] font-semibold text-orange-800 shadow-[0_6px_16px_-10px_rgba(249,115,22,0.35)]">
+                                  {adSeller?.seller?.priceSettingMethod === 'market' ? '시장가' : '지정가'}
+                                </span>
                               </div>
                             </div>
                             <div className="pt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -567,18 +576,23 @@ export default function SellerSearchPage() {
                           </div>
                         </div>
                         <div className="rounded-2xl border border-orange-300 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-100 px-3 py-3 shadow-[0_12px_26px_-18px_rgba(249,115,22,0.45)]">
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500 text-sm font-bold text-white shadow-[0_6px_14px_-8px_rgba(249,115,22,0.6)]">
-                              ₮
-                            </span>
-                            <div className="flex flex-col">
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-orange-700">
-                                USDT 판매금액
-                              </p>
-                              <p className="mt-0.5 text-lg font-extrabold text-orange-900 drop-shadow-[0_2px_4px_rgba(249,115,22,0.25)]">
-                                {usdtRateLabel}
-                              </p>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500 text-sm font-bold text-white shadow-[0_6px_14px_-8px_rgba(249,115,22,0.6)]">
+                                ₮
+                              </span>
+                              <div className="flex flex-col">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-orange-700">
+                                  USDT 판매금액
+                                </p>
+                                <p className="mt-0.5 text-lg font-extrabold text-orange-900 drop-shadow-[0_2px_4px_rgba(249,115,22,0.25)]">
+                                  {usdtRateLabel}
+                                </p>
+                              </div>
                             </div>
+                            <span className="inline-flex h-8 items-center rounded-full bg-white/80 px-3 text-[11px] font-semibold text-orange-800 shadow-[0_6px_16px_-10px_rgba(249,115,22,0.35)]">
+                              {seller?.seller?.priceSettingMethod === 'market' ? '시장가' : '지정가'}
+                            </span>
                           </div>
                         </div>
                         <div className="pt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -620,7 +634,7 @@ export default function SellerSearchPage() {
             </section>
           </div>
           <div className="mt-auto px-0 sm:px-5">
-            <footer className="mx-0 rounded-none bg-[#1f1f1f] px-0 py-6 pb-0 text-center text-xs text-[#9aa3b2] sm:-mx-5 sm:rounded-b-[32px] sm:px-5 sm:pb-8">
+            <footer className="mx-0 rounded-none bg-[#2f2f2f] px-0 py-6 pb-0 text-center text-xs text-[#c4c6cc] sm:-mx-5 sm:rounded-b-[32px] sm:px-5 sm:pb-8">
               <div className="px-5 sm:px-0">
               <div className="flex flex-col items-center gap-2">
                 <p className="text-2xl font-semibold tracking-tight text-[#ff8a1f]">
@@ -660,6 +674,10 @@ export default function SellerSearchPage() {
         </main>
       </div>
     </div>
+    <div
+      aria-hidden
+      className="pointer-events-none fixed bottom-[68px] left-0 right-0 z-30 h-10 bg-gradient-to-t from-[#2f2f2f] via-[#2f2f2fd8] to-transparent sm:bottom-[76px]"
+    />
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-gradient-to-r from-[#0f172a] to-[#0b1220] px-3 pb-3 pt-2 shadow-[0_-10px_30px_rgba(0,0,0,0.25)] sm:px-6 sm:pb-4 sm:pt-3">
       <div className="mx-auto flex w-full max-w-lg items-stretch justify-center gap-3 sm:max-w-xl md:max-w-2xl">
         {[
@@ -712,6 +730,37 @@ export default function SellerSearchPage() {
         </p>
       )}
     </nav>
+    <style jsx global>{`
+      @keyframes adFlash {
+        0%,
+        100% {
+          box-shadow: 0 18px 40px -26px rgba(249, 115, 22, 0.22), 0 0 0 0 rgba(249, 115, 22, 0.18);
+        }
+        50% {
+          box-shadow: 0 22px 46px -24px rgba(249, 115, 22, 0.32), 0 0 0 10px rgba(249, 115, 22, 0.08);
+        }
+      }
+      @keyframes adShine {
+        0% {
+          transform: translateX(-120%);
+          opacity: 0;
+        }
+        40%,
+        60% {
+          opacity: 0.35;
+        }
+        100% {
+          transform: translateX(120%);
+          opacity: 0;
+        }
+      }
+      .ad-flash-card {
+        animation: adFlash 2.2s ease-in-out infinite;
+      }
+      .ad-shine {
+        animation: adShine 2.4s linear infinite;
+      }
+    `}</style>
     </>
   );
 }
