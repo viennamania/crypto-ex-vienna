@@ -23,6 +23,7 @@ type SellerResult = {
       accountHolder?: string;
     };
     usdtToKrwRate?: number;
+    priceSettingMethod?: 'market' | 'fixed' | string;
   };
 };
 
