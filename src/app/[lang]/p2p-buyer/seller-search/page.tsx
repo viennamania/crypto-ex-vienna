@@ -58,6 +58,7 @@ export default function SellerSearchPage() {
   const params = useParams<{ lang?: string }>();
   const langParam = params?.lang;
   const lang = Array.isArray(langParam) ? langParam[0] : langParam || 'ko';
+  const ownerWalletAddress = searchParams?.get('buyer') || searchParams?.get('wallet') || 'guest';
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SellerResult[]>([]);
@@ -65,13 +66,30 @@ export default function SellerSearchPage() {
   const [searched, setSearched] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [adSeller, setAdSeller] = useState<SellerResult | null>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [favLoading, setFavLoading] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  const displayedResults = useMemo(() => {
+    if (showFavoritesOnly) {
+      return results.filter((r) =>
+        favorites.includes((r.walletAddress || '').toLowerCase()),
+      );
+    }
+    return results;
+  }, [results, favorites, showFavoritesOnly]);
 
   const resultCountLabel = useMemo(() => {
     if (!searched) {
       return '';
     }
-    return `${results.length}건`;
-  }, [results.length, searched]);
+    return `${displayedResults.length}건${showFavoritesOnly ? ' (관심)' : ''}`;
+  }, [displayedResults.length, searched, showFavoritesOnly]);
+
+  const headerTitle = useMemo(
+    () => (showFavoritesOnly ? '관심 판매자' : '판매자 찾기'),
+    [showFavoritesOnly],
+  );
 
   const searchByParam = searchParams?.get('searchBy');
   const searchBy =
@@ -151,76 +169,140 @@ export default function SellerSearchPage() {
     setAdSeller(results[randomIndex]);
   }, [results]);
 
+  const loadFavorites = async () => {
+    if (!ownerWalletAddress) return;
+    setFavLoading(true);
+    try {
+      const res = await fetch('/api/favorite-sellers/list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerWalletAddress }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const list = Array.isArray(data?.result) ? data.result : [];
+      setFavorites(list.map((f: any) => f.sellerWalletAddress?.toLowerCase()).filter(Boolean));
+    } catch (e) {
+      console.error('favorite list error', e);
+    } finally {
+      setFavLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFavorites();
+  }, [ownerWalletAddress]);
+
+  const toggleFavorite = async (seller: SellerResult) => {
+    if (!seller.walletAddress) return;
+    const addr = seller.walletAddress.toLowerCase();
+    const isFav = favorites.includes(addr);
+    try {
+      if (isFav) {
+        await fetch('/api/favorite-sellers/remove', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ownerWalletAddress, sellerWalletAddress: seller.walletAddress }),
+        });
+        setFavorites((prev) => prev.filter((a) => a !== addr));
+      } else {
+        await fetch('/api/favorite-sellers/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ownerWalletAddress,
+            sellerWalletAddress: seller.walletAddress,
+            sellerNickname: seller.nickname,
+            storecode: USER_STORECODE,
+          }),
+        });
+        setFavorites((prev) => [...prev, addr]);
+      }
+    } catch (e) {
+      console.error('favorite toggle error', e);
+    }
+  };
+
   return (
+    <>
     <div className="flex min-h-screen flex-col bg-white text-black sm:bg-[radial-gradient(120%_120%_at_50%_0%,#ffffff_0%,#f0f0f3_45%,#dadce1_100%)]">
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-0 pt-6 pb-0 sm:px-5 sm:py-10">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-0 pt-6 pb-24 sm:px-5 sm:py-10">
         <main className="flex flex-1 flex-col overflow-hidden bg-white sm:rounded-[32px] sm:border sm:border-black/10 sm:shadow-[0_34px_90px_-50px_rgba(15,15,18,0.45)] sm:ring-1 sm:ring-black/10">
           <div className="flex flex-1 flex-col gap-6 px-5 pt-8 pb-6">
             <header className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold tracking-tight">판매자 찾기</h1>
+                <h1 className="text-2xl font-semibold tracking-tight">{headerTitle}</h1>
                 <button
                   type="button"
                   onClick={() => router.push(`/${lang}/p2p-buyer`)}
                   className="rounded-full border border-black/10 px-3 py-1 text-xs font-semibold text-black/60"
-                >
-                  뒤로
-                </button>
-              </div>
+              >
+                뒤로
+              </button>
+            </div>
               <p className="text-sm text-black/60">
-                {searchBy === 'nickname'
-                  ? '판매자 회원 아이디로 판매자를 조회합니다.'
-                  : '판매자 은행계좌의 예금주 이름으로 판매자를 조회합니다.'}
+                {showFavoritesOnly
+                  ? '즐겨찾기에 등록한 판매자만 표시합니다.'
+                  : searchBy === 'nickname'
+                    ? '판매자 회원 아이디로 판매자를 조회합니다.'
+                    : '판매자 은행계좌의 예금주 이름으로 판매자를 조회합니다.'}
               </p>
+              <div className="flex items-center gap-2 text-xs text-black/50">
+                <span className="rounded-full border border-black/10 bg-white/60 px-2 py-1 font-semibold">
+                  즐겨찾기 {favorites.length}명
+                </span>
+                {favLoading && <span className="text-[11px] text-black/40">동기화 중...</span>}
+              </div>
             </header>
 
-            <section className="py-4 text-black pb-14">
-              <form
-                className="flex flex-col gap-3"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  handleSearch();
-                }}
-              >
-                <div className="relative flex h-16 flex-1 items-center border-b-2 border-black/80 bg-transparent px-0">
-                  <span className="absolute left-0 top-1/2 flex h-8 w-8 -translate-y-1/2 -mt-2 items-center justify-center rounded-full bg-white text-black/70">
-                    🔎
-                  </span>
-                  <input
-                    value={query}
-                    onChange={(event) => setQuery(sanitizeQuery(event.target.value))}
-                    placeholder={
-                      searchBy === 'nickname'
-                        ? '판매자 회원 아이디를 입력하세요'
-                        : '판매자 계좌 예금주 이름을 입력하세요'
-                    }
-                    inputMode={isNicknameSearch ? ('latin' as any) : 'text'}
-                    pattern={isNicknameSearch ? '[a-z0-9]*' : '[A-Za-z가-힣]*'}
-                    lang={isNicknameSearch ? 'en' : 'ko'}
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    className="h-full w-full bg-transparent pl-12 pr-2 pt-1 pb-4 text-center text-lg font-extrabold leading-relaxed text-black placeholder:font-extrabold placeholder:text-black focus:outline-none sm:text-lg sm:text-left"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={!query.trim()}
-                  className="flex h-16 w-full shrink-0 items-center justify-center gap-2 rounded-full border border-black/10 bg-white px-6 text-lg font-extrabold leading-none text-black shadow-[0_12px_28px_-22px_rgba(0,0,0,0.25)] disabled:cursor-not-allowed disabled:opacity-40"
+            {!showFavoritesOnly && (
+              <section className="py-4 text-black pb-10">
+                <form
+                  className="flex flex-col gap-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleSearch();
+                  }}
                 >
-                  <span className="text-base">👤</span>
-                  판매자 찾기
-                </button>
-              </form>
-              <p className="mt-4 text-xs text-black/60">
-                {searchBy === 'nickname'
-                  ? '판매자 회원 아이디로 판매자를 조회합니다.'
-                  : '은행 계좌 예금주 이름으로 판매자를 조회합니다.'}
-              </p>
-              {errorMessage && (
-                <p className="mt-2 text-xs text-rose-500">{errorMessage}</p>
-              )}
-            </section>
+                  <div className="relative flex h-16 flex-1 items-center border-b-2 border-black/80 bg-transparent px-0">
+                    <span className="absolute left-0 top-1/2 -mt-2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white text-black/70">
+                      🔎
+                    </span>
+                    <input
+                      value={query}
+                      onChange={(event) => setQuery(sanitizeQuery(event.target.value))}
+                      placeholder={
+                        searchBy === 'nickname'
+                          ? '판매자 회원 아이디를 입력하세요'
+                          : '판매자 계좌 예금주 이름을 입력하세요'
+                      }
+                      inputMode={isNicknameSearch ? ('latin' as any) : 'text'}
+                      pattern={isNicknameSearch ? '[a-z0-9]*' : '[A-Za-z가-힣]*'}
+                      lang={isNicknameSearch ? 'en' : 'ko'}
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      className="h-full w-full bg-transparent pl-12 pr-2 pt-1 pb-4 text-center text-lg font-extrabold leading-relaxed text-black placeholder:font-extrabold placeholder:text-black focus:outline-none sm:text-lg sm:text-left"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={!query.trim()}
+                    className="flex h-16 w-full shrink-0 items-center justify-center gap-2 rounded-full border border-black/10 bg-white px-6 text-lg font-extrabold leading-none text-black shadow-[0_12px_28px_-22px_rgba(0,0,0,0.25)] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <span className="text-base">👤</span>
+                    판매자 찾기
+                  </button>
+                </form>
+                <p className="mt-4 text-xs text-black/60">
+                  {searchBy === 'nickname'
+                    ? '판매자 회원 아이디로 판매자를 조회합니다.'
+                    : '은행 계좌 예금주 이름으로 판매자를 조회합니다.'}
+                </p>
+                {errorMessage && (
+                  <p className="mt-2 text-xs text-rose-500">{errorMessage}</p>
+                )}
+              </section>
+            )}
 
             <section className="border-y border-black/10 bg-transparent px-0 py-6 text-black">
               <div className="flex items-center justify-between">
@@ -239,7 +321,7 @@ export default function SellerSearchPage() {
                   검색 결과가 없습니다.
                 </p>
               )}
-              {searched && !loading && adSeller && (
+              {!showFavoritesOnly && searched && !loading && adSeller && (
                 <div className="mt-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-orange-600">
                     광고
@@ -328,19 +410,41 @@ export default function SellerSearchPage() {
                                 </p>
                               </div>
                             </div>
-                            <div className="rounded-2xl border border-orange-200 bg-orange-50/80 px-3 py-2">
-                              <p className="text-[10px] uppercase tracking-[0.2em] text-orange-600">
-                                USDT 판매금액
-                              </p>
-                              <p className="mt-1 text-sm font-semibold text-orange-900">
-                                {usdtRateLabel}
-                              </p>
+                            <div className="rounded-2xl border border-orange-300 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-100 px-3 py-3 shadow-[0_12px_26px_-18px_rgba(249,115,22,0.45)]">
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500 text-sm font-bold text-white shadow-[0_6px_14px_-8px_rgba(249,115,22,0.6)]">
+                                  ₮
+                                </span>
+                                <div className="flex flex-col">
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-orange-700">
+                                    USDT 판매금액
+                                  </p>
+                                  <p className="mt-0.5 text-lg font-extrabold text-orange-900 drop-shadow-[0_2px_4px_rgba(249,115,22,0.25)]">
+                                    {usdtRateLabel}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                            <div className="pt-1">
+                            <div className="pt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleFavorite(adSeller)}
+                                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                                    favorites.includes((adSeller.walletAddress || '').toLowerCase())
+                                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                                      : 'border-black/10 bg-white text-black/70 hover:border-emerald-200 hover:text-emerald-700'
+                                  }`}
+                                >
+                                  {favorites.includes((adSeller.walletAddress || '').toLowerCase())
+                                    ? '즐겨찾기 해제'
+                                    : '즐겨찾기 등록'}
+                                </button>
+                              </div>
                               {adChatHref ? (
                                 <Link
                                   href={adChatHref}
-                                  className="inline-flex w-full items-center justify-center rounded-full border border-orange-200 bg-white px-4 py-2 text-sm font-semibold text-orange-700 shadow-[0_10px_24px_-16px_rgba(249,115,22,0.35)]"
+                                  className="inline-flex w-full items-center justify-center rounded-full border border-orange-200 bg-white px-4 py-2 text-sm font-semibold text-orange-700 shadow-[0_10px_24px_-16px_rgba(249,115,22,0.35)] sm:w-auto"
                                 >
                                   판매자에게 문의하기
                                 </Link>
@@ -348,7 +452,7 @@ export default function SellerSearchPage() {
                                 <button
                                   type="button"
                                   disabled
-                                  className="inline-flex w-full items-center justify-center rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-black/40"
+                                  className="inline-flex w-full items-center justify-center rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-black/40 sm:w-auto"
                                 >
                                   판매자에게 문의하기
                                 </button>
@@ -371,7 +475,7 @@ export default function SellerSearchPage() {
                 </div>
               )}
               <div className={adSeller ? 'mt-6 grid gap-4' : 'mt-4 grid gap-4'}>
-                {results
+                {displayedResults
                   .filter((seller) => {
                     if (!adSeller) {
                       return true;
@@ -421,9 +525,9 @@ export default function SellerSearchPage() {
                             <p className="mt-1 text-base font-semibold text-black">{displayName}</p>
                           </div>
                         </div>
-                        <span className="rounded-full border border-black/10 bg-black/5 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-black/60">
-                          Verified
-                        </span>
+                      <span className="rounded-full border border-black/10 bg-black/5 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-black/60">
+                        Verified
+                       </span>
                       </div>
                       <div className="mt-4 grid gap-3 text-sm text-black/80">
                         <div className="grid grid-cols-2 gap-3">
@@ -462,19 +566,39 @@ export default function SellerSearchPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="rounded-2xl border border-orange-200 bg-orange-50/80 px-3 py-2">
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-orange-600">
-                            USDT 판매금액
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-orange-900">
-                            {usdtRateLabel}
-                          </p>
+                        <div className="rounded-2xl border border-orange-300 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-100 px-3 py-3 shadow-[0_12px_26px_-18px_rgba(249,115,22,0.45)]">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500 text-sm font-bold text-white shadow-[0_6px_14px_-8px_rgba(249,115,22,0.6)]">
+                              ₮
+                            </span>
+                            <div className="flex flex-col">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-orange-700">
+                                USDT 판매금액
+                              </p>
+                              <p className="mt-0.5 text-lg font-extrabold text-orange-900 drop-shadow-[0_2px_4px_rgba(249,115,22,0.25)]">
+                                {usdtRateLabel}
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                        <div className="pt-1">
+                        <div className="pt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => toggleFavorite(seller)}
+                              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                                favorites.includes((seller.walletAddress || '').toLowerCase())
+                                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                                  : 'border-black/10 bg-white text-black/70 hover:border-emerald-200 hover:text-emerald-700'
+                              }`}
+                            >
+                              {favorites.includes((seller.walletAddress || '').toLowerCase()) ? '즐겨찾기 해제' : '즐겨찾기 등록'}
+                            </button>
+                          </div>
                           {chatHref ? (
                             <Link
                               href={chatHref}
-                              className="inline-flex w-full items-center justify-center rounded-full border border-black bg-black px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_28px_-18px_rgba(0,0,0,0.35)]"
+                              className="inline-flex w-full items-center justify-center rounded-full border border-black bg-black px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_28px_-18px_rgba(0,0,0,0.35)] sm:w-auto"
                             >
                               판매자에게 문의하기
                             </Link>
@@ -482,7 +606,7 @@ export default function SellerSearchPage() {
                             <button
                               type="button"
                               disabled
-                              className="inline-flex w-full items-center justify-center rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-black/40"
+                              className="inline-flex w-full items-center justify-center rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-black/40 sm:w-auto"
                             >
                               판매자에게 문의하기
                             </button>
@@ -536,5 +660,58 @@ export default function SellerSearchPage() {
         </main>
       </div>
     </div>
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-gradient-to-r from-[#0f172a] to-[#0b1220] px-3 pb-3 pt-2 shadow-[0_-10px_30px_rgba(0,0,0,0.25)] sm:px-6 sm:pb-4 sm:pt-3">
+      <div className="mx-auto flex w-full max-w-lg items-stretch justify-center gap-3 sm:max-w-xl md:max-w-2xl">
+        {[
+          {
+            key: 'all',
+            label: '판매자 찾기',
+            icon: (
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M10 3h10v10M14 13H4V3h10v10Z" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M5 19h5m0 0-2-2m2 2-2 2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ),
+            onClick: () => setShowFavoritesOnly(false),
+            active: !showFavoritesOnly,
+          },
+          {
+            key: 'fav',
+            label: '관심 판매자',
+            icon: (
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path
+                  d="M12 20s-6-3.5-6-9a4 4 0 0 1 7-2.5A4 4 0 0 1 18 11c0 5.5-6 9-6 9Z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ),
+            onClick: () => setShowFavoritesOnly(true),
+            active: showFavoritesOnly,
+          },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={tab.onClick}
+            className={`flex flex-1 min-w-[120px] items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold transition-all duration-200 shadow-md ${
+              tab.active
+                ? 'bg-white text-[#0f172a] shadow-[0_16px_34px_-18px_rgba(255,255,255,0.55)]'
+                : 'bg-white/10 text-white/85 ring-1 ring-white/15 hover:bg-white/15 hover:text-white'
+            }`}
+          >
+            {tab.icon}
+            <span className="whitespace-nowrap">{tab.label}</span>
+          </button>
+        ))}
+      </div>
+      {showFavoritesOnly && favorites.length === 0 && (
+        <p className="mt-2 text-center text-[11px] text-black/50">
+          아직 등록한 관심 판매자가 없습니다.
+        </p>
+      )}
+    </nav>
+    </>
   );
 }
