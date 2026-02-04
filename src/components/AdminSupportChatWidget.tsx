@@ -120,7 +120,7 @@ const AdminSupportChatWidget = () => {
   }
 
   return (
-    <div className="fixed bottom-16 right-6 z-50 flex flex-col items-end gap-3 md:bottom-10">
+    <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-3 md:bottom-14">
       {adminChatOpen && (
         <div
           className="w-[360px] max-w-[90vw] overflow-hidden rounded-2xl border border-slate-200/70 bg-white/95 shadow-[0_30px_70px_-40px_rgba(15,23,42,0.7)] backdrop-blur md:w-[520px] md:max-w-[75vw] lg:w-[720px] lg:max-w-[65vw] xl:w-[840px] xl:max-w-[60vw]"
