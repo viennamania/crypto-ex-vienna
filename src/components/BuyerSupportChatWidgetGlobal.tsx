@@ -239,7 +239,7 @@ const BuyerSupportChatWidgetGlobal = () => {
   }
 
   return (
-    <div className="fixed bottom-[44px] left-[44px] z-50 flex flex-col items-start gap-3">
+    <div className="fixed bottom-28 left-6 z-50 flex flex-col items-start gap-3">
       {isOpen && (
         <div className="w-[340px] max-w-[90vw] overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_24px_60px_-40px_rgba(0,0,0,0.5)]">
           <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
