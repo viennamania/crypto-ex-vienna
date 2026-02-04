@@ -47,6 +47,14 @@ export default function SellerDetailPage() {
   ];
   const [selectedBankRejectionReason, setSelectedBankRejectionReason] = useState('');
   const [customBankRejectionReason, setCustomBankRejectionReason] = useState('');
+  const [feeWalletAddress, setFeeWalletAddress] = useState('');
+  const [feeRate, setFeeRate] = useState('');
+  const [savingFee, setSavingFee] = useState(false);
+  const [feeLogs, setFeeLogs] = useState<any[]>([]);
+  const [initialFee, setInitialFee] = useState<{ walletAddress: string; rate: number | '' }>({
+    walletAddress: '',
+    rate: '',
+  });
 
   const fetchUser = async () => {
     if (!walletAddress) {
@@ -93,7 +101,49 @@ export default function SellerDetailPage() {
         setCustomBankRejectionReason(user.seller.bankInfo.rejectionReason);
       }
     }
+    if (user?.seller?.platformFee) {
+      setFeeWalletAddress(user.seller.platformFee.walletAddress || '');
+      setFeeRate(
+        user.seller.platformFee.rate !== undefined && user.seller.platformFee.rate !== null
+          ? String(user.seller.platformFee.rate)
+          : ''
+      );
+      setInitialFee({
+        walletAddress: user.seller.platformFee.walletAddress || '',
+        rate:
+          user.seller.platformFee.rate !== undefined && user.seller.platformFee.rate !== null
+            ? user.seller.platformFee.rate
+            : '',
+      });
+    } else {
+      setFeeWalletAddress('');
+      setFeeRate('');
+      setInitialFee({ walletAddress: '', rate: '' });
+    }
   }, [user]);
+
+  const fetchFeeLogs = async () => {
+    if (!walletAddress) return;
+    try {
+      const res = await fetch('/api/user/getPlatformFeeLogs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: user?.storecode || storecode,
+          walletAddress,
+          limit: 50,
+        }),
+      });
+      const data = await res.json();
+      setFeeLogs(Array.isArray(data?.result) ? data.result : []);
+    } catch (error) {
+      console.error('Failed to load platform fee logs', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchFeeLogs();
+  }, [walletAddress, user?.storecode]);
 
   const seller = user?.seller || {};
   const sellerStatus: SellerStatus = seller?.status;
@@ -118,6 +168,78 @@ export default function SellerDetailPage() {
         reason,
       },
     ];
+  };
+
+  const handleSavePlatformFee = async () => {
+    if (!walletAddress || !seller) return;
+    const rateNum = Number(feeRate);
+    if (Number.isNaN(rateNum) || rateNum < 0) {
+      toast.error('수수료율을 0 이상 숫자로 입력하세요.');
+      return;
+    }
+    if (!feeWalletAddress.trim()) {
+      toast.error('수수료를 받을 지갑주소를 입력하세요.');
+      return;
+    }
+    setSavingFee(true);
+    try {
+      const updatedSeller = {
+        ...seller,
+        platformFee: {
+          walletAddress: feeWalletAddress.trim(),
+          rate: rateNum,
+        },
+      };
+
+      await fetch('/api/user/updatePlatformFee', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storecode: user?.storecode || storecode,
+          walletAddress,
+          feeWalletAddress: feeWalletAddress.trim(),
+          feeRate: rateNum,
+          changedBy: 'admin',
+        }),
+      });
+
+      // seller 객체에도 최신 값 반영
+      await fetch('/api/user/updateSellerInfo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storecode: user?.storecode || storecode,
+          walletAddress,
+          sellerStatus: seller?.status,
+          bankName: seller?.bankInfo?.bankName || '',
+          accountNumber: seller?.bankInfo?.accountNumber || '',
+          accountHolder: seller?.bankInfo?.accountHolder || '',
+          seller: {
+            ...seller,
+            platformFee: {
+              walletAddress: feeWalletAddress.trim(),
+              rate: rateNum,
+            },
+          },
+        }),
+      });
+
+      toast.success('플랫폼 수수료 정보가 저장되었습니다.');
+      await fetchUser();
+      await fetchFeeLogs();
+      setInitialFee({
+        walletAddress: feeWalletAddress.trim(),
+        rate: rateNum,
+      });
+    } catch (error) {
+      console.error('Save platform fee failed', error);
+      toast.error('수수료 정보를 저장하지 못했습니다.');
+    }
+    setSavingFee(false);
   };
 
   useEffect(() => {
@@ -704,6 +826,111 @@ export default function SellerDetailPage() {
                 </button>
               </div>
             </div>
+
+            <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M4 10h16M4 14h16M7 6h2m6 0h2m-7 12h3" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="8" cy="8" r="1.5" />
+                      <circle cx="16" cy="8" r="1.5" />
+                    </svg>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-slate-900">플랫폼 수수료 설정</span>
+                    <span className="text-xs text-slate-500">판매 시 플랫폼이 받을 지갑주소와 수수료율(%)</span>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <div className="md:col-span-2">
+                  <label className="text-xs font-semibold text-slate-600">수수료 수취 지갑주소</label>
+                  <input
+                    type="text"
+                    value={feeWalletAddress}
+                    onChange={(e) => setFeeWalletAddress(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
+                    placeholder="0x..."
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600">수수료율 (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={feeRate}
+                    onChange={(e) => setFeeRate(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
+                    placeholder="예: 0.50"
+                  />
+                </div>
+              </div>
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleSavePlatformFee}
+                  disabled={
+                    savingFee ||
+                    (!feeWalletAddress.trim() && initialFee.walletAddress === '') ||
+                    (feeWalletAddress.trim() === initialFee.walletAddress &&
+                      (initialFee.rate === '' ? feeRate === '' : Number(feeRate) === initialFee.rate))
+                  }
+                  className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition
+                    disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400
+                    border-slate-900 bg-slate-900 text-white hover:bg-slate-800"
+                >
+                  {savingFee ? '저장 중...' : '수수료 저장'}
+                </button>
+              </div>
+
+              <div className="mt-4">
+                <p className="text-xs font-semibold text-slate-700">변경 로그</p>
+                {feeLogs.length === 0 ? (
+                  <p className="mt-2 text-xs text-slate-500">로그가 없습니다.</p>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    {feeLogs.map((log, idx) => {
+                      const prevRate = log?.prev?.rate ?? '-';
+                      const nextRate = log?.next?.rate ?? '-';
+                      const prevAddr = log?.prev?.walletAddress ?? '-';
+                      const nextAddr = log?.next?.walletAddress ?? '-';
+                      return (
+                        <div
+                          key={`${log.changedAt || idx}`}
+                          className="flex flex-col gap-1 rounded-xl border border-slate-200/70 bg-slate-50/70 px-3 py-2 text-xs text-slate-700"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 font-semibold">
+                              {new Date(log.changedAt).toLocaleString()}
+                            </span>
+                            <span className="text-slate-500">by {log.changedBy || 'admin'}</span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-slate-500">지갑:</span>
+                            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 font-semibold">{prevAddr}</span>
+                            <span className="text-slate-400">→</span>
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-700">
+                              {nextAddr}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-slate-500">수수료율:</span>
+                            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 font-semibold">{prevRate}%</span>
+                            <span className="text-slate-400">→</span>
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-700">
+                              {nextRate}%
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
         )}
       </div>
