@@ -380,6 +380,7 @@ export default function SendUsdt({ params }: any) {
   const [transferModalPhase, setTransferModalPhase] = useState<'confirm' | 'processing' | 'result'>('confirm');
   const [transferResult, setTransferResult] = useState<{ ok: boolean; message: string }>({ ok: false, message: '' });
   const [showJackpot, setShowJackpot] = useState(false);
+  const [lastSentAmount, setLastSentAmount] = useState<number | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [favoriteWallets, setFavoriteWallets] = useState<FavoriteWallet[]>([]);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
@@ -957,6 +958,7 @@ export default function SendUsdt({ params }: any) {
 
           toast.success(USDT_sent_successfully);
 
+          setLastSentAmount(amount);
           setAmount(0); // reset amount
           setAmountInput('');
           setRecipient((prev) => ({
@@ -2383,7 +2385,7 @@ export default function SendUsdt({ params }: any) {
             </div>
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="animate-[scaleIn_0.4s_ease] rounded-2xl bg-white/80 px-6 py-3 text-xl font-black text-emerald-700 shadow-[0_15px_60px_rgba(16,185,129,0.35)] backdrop-blur">
-                {formatAmountInput(amount, selectedNetworkConfig.decimals)} USDT 전송 완료
+                {Number((lastSentAmount ?? amount) || 0).toFixed(3)} USDT 전송 완료
               </div>
             </div>
           </div>
