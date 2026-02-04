@@ -1735,12 +1735,26 @@ export default function SendUsdt({ params }: any) {
                         {recipientMode === 'favorites' && (
                           <div className="flex flex-col gap-3">
                             {favoriteLoading && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                              <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
                                 {[1, 2, 3, 4].map((i) => (
                                   <div
                                     key={i}
-                                    className="animate-pulse rounded-xl border border-slate-200 bg-slate-50 p-3 h-24"
-                                  />
+                                    className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-[0_6px_18px_rgba(15,23,42,0.05)]"
+                                  >
+                                    <div
+                                      className="absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 animate-[shimmer_1.4s_linear_infinite]"
+                                      style={{ backgroundSize: '200% 100%' }}
+                                    />
+                                    <div className="relative flex flex-col gap-2">
+                                      <div className="h-3 w-24 rounded-full bg-slate-200" />
+                                      <div className="h-4 w-40 rounded-full bg-slate-200" />
+                                      <div className="flex gap-2">
+                                        <div className="h-8 w-14 rounded-md bg-slate-200" />
+                                        <div className="h-8 w-14 rounded-md bg-slate-200" />
+                                        <div className="h-8 w-14 rounded-md bg-slate-200" />
+                                      </div>
+                                    </div>
+                                  </div>
                                 ))}
                               </div>
                             )}
@@ -2347,13 +2361,30 @@ export default function SendUsdt({ params }: any) {
       )}
 
       {showJackpot && (
-        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
-          <div className="relative h-40 w-40">
-            <div className="absolute inset-0 animate-[spin_1.8s_linear_infinite] rounded-full border-4 border-emerald-500/70 border-t-transparent blur-[1px]" />
-            <div className="absolute inset-3 animate-[spin_2.6s_linear_infinite_reverse] rounded-full border-4 border-emerald-400/60 border-t-transparent blur-[1px]" />
-            <div className="absolute inset-6 animate-pulse rounded-full bg-emerald-500/20" />
-            <div className="absolute inset-0 flex items-center justify-center text-center text-2xl font-black text-emerald-700 drop-shadow-[0_8px_12px_rgba(16,185,129,0.25)]">
-              JACKPOT!
+        <div className="pointer-events-none fixed inset-0 z-50">
+          <div className="absolute inset-0 animate-[fadeIn_0.3s_ease] bg-transparent">
+            {/* Confetti layers */}
+            <div className="absolute inset-0 overflow-hidden">
+              {[...Array(60)].map((_, i) => (
+                <span
+                  key={i}
+                  className="absolute h-1 w-3 rounded-[2px]"
+                  style={{
+                    top: `${Math.random() * 100}%`,
+                    left: `${Math.random() * 100}%`,
+                    backgroundColor: ['#10b981', '#06b6d4', '#f59e0b', '#ef4444'][i % 4],
+                    opacity: 0.85,
+                    transform: `rotate(${Math.random() * 360}deg)`,
+                    animation: `confetti-fall ${1200 + Math.random() * 800}ms ease-out forwards`,
+                    animationDelay: `${Math.random() * 200}ms`,
+                  }}
+                />
+              ))}
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="animate-[scaleIn_0.4s_ease] rounded-2xl bg-white/80 px-6 py-3 text-xl font-black text-emerald-700 shadow-[0_15px_60px_rgba(16,185,129,0.35)] backdrop-blur">
+                {formatAmountInput(amount, selectedNetworkConfig.decimals)} USDT 전송 완료
+              </div>
             </div>
           </div>
         </div>
@@ -2370,12 +2401,40 @@ export default function SendUsdt({ params }: any) {
             transform: translateY(0);
           }
         }
+        @keyframes confetti-fall {
+          from {
+            transform: translateY(-10vh) rotate(0deg);
+            opacity: 1;
+          }
+          to {
+            transform: translateY(90vh) rotate(360deg);
+            opacity: 0;
+          }
+        }
+        @keyframes scaleIn {
+          from {
+            transform: scale(0.85);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
         @keyframes spin_reverse {
           from {
             transform: rotate(0deg);
           }
           to {
             transform: rotate(-360deg);
+          }
+        }
+        @keyframes shimmer {
+          0% {
+            background-position: 200% 0;
+          }
+          100% {
+            background-position: -200% 0;
           }
         }
       `}</style>
