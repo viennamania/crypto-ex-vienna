@@ -379,6 +379,7 @@ export default function SendUsdt({ params }: any) {
   const [showTransferConfirm, setShowTransferConfirm] = useState(false);
   const [transferModalPhase, setTransferModalPhase] = useState<'confirm' | 'processing' | 'result'>('confirm');
   const [transferResult, setTransferResult] = useState<{ ok: boolean; message: string }>({ ok: false, message: '' });
+  const [showJackpot, setShowJackpot] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [favoriteWallets, setFavoriteWallets] = useState<FavoriteWallet[]>([]);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
@@ -1766,10 +1767,9 @@ export default function SendUsdt({ params }: any) {
 
                             {!favoriteLoading && favoriteWallets.length > 0 && (
                               <div className="overflow-hidden rounded-xl border border-slate-200 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
-                                <div className="grid grid-cols-[1.5fr_1.4fr_0.9fr_0.9fr] gap-3 bg-slate-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                <div className="grid grid-cols-[1.5fr_1.6fr_1fr] gap-3 bg-slate-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                                   <span>별칭</span>
                                   <span>지갑주소</span>
-                                  <span>체인</span>
                                   <span className="text-right pr-1">동작</span>
                                 </div>
                                 <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
@@ -1778,16 +1778,13 @@ export default function SendUsdt({ params }: any) {
                                     return (
                                       <div
                                         key={`${fav.walletAddress}-${fav.label ?? ''}-${idx}`}
-                                        className="grid grid-cols-[1.5fr_1.4fr_0.9fr_0.9fr] items-center gap-3 px-4 py-3 bg-white transition duration-300 ease-out hover:bg-slate-50 animate-[fadeIn_0.35s_ease]"
-                                        style={{ animationDelay: `${idx * 30}ms` }}
+                                        className="grid grid-cols-[1.5fr_1.6fr_1fr] items-center gap-3 px-4 py-3 bg-white transition duration-500 ease-out hover:bg-slate-50 animate-[fadeInUp_0.4s_ease]"
+                                        style={{ animationDelay: `${idx * 40}ms` }}
                                       >
                                         <div className="text-sm font-semibold text-slate-900 truncate">
                                           {fav.label || '즐겨찾기'}
                                         </div>
                                         <div className="text-xs font-medium text-slate-800">{masked}</div>
-                                        <div className="text-[11px] text-slate-600">
-                                          {fav.chainId ? `Chain ${fav.chainId}` : '-'}
-                                        </div>
                                         <div className="flex items-center justify-end gap-1.5">
                                           <button
                                             type="button"
@@ -1801,14 +1798,14 @@ export default function SendUsdt({ params }: any) {
                                               setAddressError(null);
                                               setFavoriteHit(fav);
                                             }}
-                                            className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 hover:border-emerald-400"
+                                            className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 hover:border-emerald-400 whitespace-nowrap"
                                           >
                                             사용
                                           </button>
                                           <button
                                             type="button"
                                             onClick={() => navigator.clipboard.writeText(fav.walletAddress)}
-                                            className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-600 hover:border-slate-400"
+                                            className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-600 hover:border-slate-400 whitespace-nowrap"
                                           >
                                             복사
                                           </button>
@@ -1816,7 +1813,7 @@ export default function SendUsdt({ params }: any) {
                                             type="button"
                                             disabled={favoriteSaving}
                                             onClick={() => removeFavoriteWallet(fav.walletAddress)}
-                                            className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] text-rose-500 hover:border-rose-300"
+                                            className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] text-rose-500 hover:border-rose-300 whitespace-nowrap"
                                           >
                                             삭제
                                           </button>
@@ -2311,6 +2308,10 @@ export default function SendUsdt({ params }: any) {
                       ok,
                       message: ok ? '전송이 완료되었습니다.' : '전송에 실패했습니다. 다시 시도해주세요.',
                     });
+                    if (ok) {
+                      setShowJackpot(true);
+                      setTimeout(() => setShowJackpot(false), 2500);
+                    }
                     setTransferModalPhase('result');
                   }}
                   className="flex-1 rounded-md border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
@@ -2344,6 +2345,40 @@ export default function SendUsdt({ params }: any) {
           </div>
         </div>
       )}
+
+      {showJackpot && (
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
+          <div className="relative h-40 w-40">
+            <div className="absolute inset-0 animate-[spin_1.8s_linear_infinite] rounded-full border-4 border-emerald-500/70 border-t-transparent blur-[1px]" />
+            <div className="absolute inset-3 animate-[spin_2.6s_linear_infinite_reverse] rounded-full border-4 border-emerald-400/60 border-t-transparent blur-[1px]" />
+            <div className="absolute inset-6 animate-pulse rounded-full bg-emerald-500/20" />
+            <div className="absolute inset-0 flex items-center justify-center text-center text-2xl font-black text-emerald-700 drop-shadow-[0_8px_12px_rgba(16,185,129,0.25)]">
+              JACKPOT!
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx global>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes spin_reverse {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(-360deg);
+          }
+        }
+      `}</style>
 
     </main>
 
