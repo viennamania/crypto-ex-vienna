@@ -46,37 +46,21 @@ const nextConfig = {
     ]
   },
   
-
-
-
-  /*
+  // Allow pop-up windows (e.g., OAuth / web3 login) to call window.close
+  // by relaxing COOP for opened tabs while keeping same-origin protections.
   async headers() {
     return [
       {
-        // Apply these headers to all routes in your application
         source: '/(.*)',
         headers: [
           {
-            key: 'Access-Control-Allow-Origin',
-            //value: 'https://gpgpu-lac.vercel.app', // Allow requests from this origin
-            
-            //value: '*', // Allow requests from this origin
-            //https://vienna-mania.vercel.app, http://localhost:3000
-
-            ///value: 'https://vienna-mania.vercel.app, http://localhost:3000', // Allow requests from this origin
-
-            value: 'https://vienna-mania.vercel.app', // Allow requests from this origin
-
-
-
-
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin-allow-popups',
           },
-       
         ],
       },
     ];
   },
-  */
   
 
   
