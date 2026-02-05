@@ -68,17 +68,16 @@ export default function SellerSearchPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [adSeller, setAdSeller] = useState<SellerResult | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [favoriteDetails, setFavoriteDetails] = useState<SellerResult[]>([]);
   const [favLoading, setFavLoading] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   const displayedResults = useMemo(() => {
     if (showFavoritesOnly) {
-      return results.filter((r) =>
-        favorites.includes((r.walletAddress || '').toLowerCase()),
-      );
+      return favoriteDetails;
     }
     return results;
-  }, [results, favorites, showFavoritesOnly]);
+  }, [results, favoriteDetails, showFavoritesOnly]);
 
   const favoriteBadgeCount = showFavoritesOnly ? displayedResults.length : favorites.length;
 
@@ -172,6 +171,31 @@ export default function SellerSearchPage() {
     setAdSeller(results[randomIndex]);
   }, [results]);
 
+  const fetchSellerSummary = async (walletAddress: string): Promise<SellerResult | null> => {
+    if (!walletAddress) return null;
+    try {
+      const res = await fetch('/api/user/getSellerSummary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storecode: USER_STORECODE, walletAddress }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const user = data?.result?.user;
+      if (!user) return null;
+      return {
+        id: user?.id ?? user?._id,
+        nickname: user?.nickname,
+        avatar: user?.avatar,
+        walletAddress: user?.walletAddress,
+        seller: (user as any)?.seller,
+        currentUsdtBalance: data?.result?.currentUsdtBalance,
+      };
+    } catch (err) {
+      console.error('favorite summary error', err);
+      return null;
+    }
+  };
+
   const loadFavorites = async () => {
     if (!ownerWalletAddress) return;
     setFavLoading(true);
@@ -191,6 +215,8 @@ export default function SellerSearchPage() {
         ),
       );
       setFavorites(unique);
+      const details = await Promise.all(unique.map((addr) => fetchSellerSummary(addr)));
+      setFavoriteDetails(details.filter(Boolean) as SellerResult[]);
     } catch (e) {
       console.error('favorite list error', e);
     } finally {
@@ -214,6 +240,9 @@ export default function SellerSearchPage() {
           body: JSON.stringify({ ownerWalletAddress, sellerWalletAddress: seller.walletAddress }),
         });
         setFavorites((prev) => prev.filter((a) => a !== addr));
+        setFavoriteDetails((prev) =>
+          prev.filter((item) => (item.walletAddress || '').toLowerCase() !== addr),
+        );
       } else {
         await fetch('/api/favorite-sellers/add', {
           method: 'POST',
@@ -226,6 +255,15 @@ export default function SellerSearchPage() {
           }),
         });
         setFavorites((prev) => [...prev, addr]);
+        const summary = await fetchSellerSummary(seller.walletAddress);
+        if (summary) {
+          setFavoriteDetails((prev) => {
+            const exists = prev.some(
+              (item) => (item.walletAddress || '').toLowerCase() === addr,
+            );
+            return exists ? prev : [...prev, summary];
+          });
+        }
       }
     } catch (e) {
       console.error('favorite toggle error', e);
@@ -718,7 +756,10 @@ export default function SellerSearchPage() {
                 />
               </svg>
             ),
-            onClick: () => setShowFavoritesOnly(true),
+            onClick: () => {
+              setShowFavoritesOnly(true);
+              loadFavorites();
+            },
             active: showFavoritesOnly,
           },
         ].map((tab) => (
