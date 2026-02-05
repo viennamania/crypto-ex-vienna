@@ -600,24 +600,15 @@ export default function P2PBuyerPage() {
         <main className="flex flex-1 flex-col overflow-hidden bg-white sm:rounded-[32px] sm:border sm:border-black/10 sm:shadow-[0_34px_90px_-50px_rgba(15,15,18,0.45)] sm:ring-1 sm:ring-black/10">
           <div className="flex flex-1 flex-col gap-6 px-5 pt-8 pb-6">
             <section className="flex items-center justify-between gap-4 px-1">
-              <div className="min-w-0">
-                <p className="truncate text-xl font-extrabold text-black">
-                  {latestNotice?.title || latestNotice?.summary || '공지사항'}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <Link
-                  href={`/${lang}/p2p-buyer/notice`}
-                  className="flex items-center gap-2 rounded-full border border-black/10 px-3 py-1 text-xs font-semibold text-black/60"
-                >
-                  공지사항 보러가기
-                  <span className="text-base text-black/60">›</span>
-                </Link>
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-500 opacity-70"></span>
-                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-500"></span>
-                </span>
-              </div>
+              <Link
+                href={`/${lang}`}
+                className="flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-black shadow-sm transition hover:border-black/20 hover:text-black/80"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="m4 10 8-6 8 6v9a1 1 0 0 1-1 1h-4.5a.5.5 0 0 1-.5-.5V14a2 2 0 0 0-4 0v5.5a.5.5 0 0 1-.5.5H5a1 1 0 0 1-1-1Z" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="whitespace-nowrap">홈으로 가기</span>
+              </Link>
             </section>
 
             <header className="flex flex-col gap-3">

@@ -80,6 +80,8 @@ export default function SellerSearchPage() {
     return results;
   }, [results, favorites, showFavoritesOnly]);
 
+  const favoriteBadgeCount = showFavoritesOnly ? displayedResults.length : favorites.length;
+
   const resultCountLabel = useMemo(() => {
     if (!searched) {
       return '';
@@ -181,7 +183,14 @@ export default function SellerSearchPage() {
       });
       const data = await res.json().catch(() => ({}));
       const list = Array.isArray(data?.result) ? data.result : [];
-      setFavorites(list.map((f: any) => f.sellerWalletAddress?.toLowerCase()).filter(Boolean));
+      const unique = Array.from(
+        new Set(
+          list
+            .map((f: any) => f.sellerWalletAddress?.toLowerCase())
+            .filter(Boolean),
+        ),
+      );
+      setFavorites(unique);
     } catch (e) {
       console.error('favorite list error', e);
     } finally {
@@ -246,16 +255,16 @@ export default function SellerSearchPage() {
               <p className="text-sm text-black/60">
                 {showFavoritesOnly
                   ? '즐겨찾기에 등록한 판매자만 표시합니다.'
-                  : searchBy === 'nickname'
-                    ? '판매자 회원 아이디로 판매자를 조회합니다.'
-                    : '판매자 은행계좌의 예금주 이름으로 판매자를 조회합니다.'}
-              </p>
-              <div className="flex items-center gap-2 text-xs text-black/50">
-                <span className="rounded-full border border-black/10 bg-white/60 px-2 py-1 font-semibold">
-                  즐겨찾기 {favorites.length}명
-                </span>
-                {favLoading && <span className="text-[11px] text-black/40">동기화 중...</span>}
-              </div>
+              : searchBy === 'nickname'
+                ? '판매자 회원 아이디로 판매자를 조회합니다.'
+                : '판매자 은행계좌의 예금주 이름으로 판매자를 조회합니다.'}
+            </p>
+            <div className="flex items-center gap-2 text-xs text-black/50">
+              <span className="rounded-full border border-black/10 bg-white/60 px-2 py-1 font-semibold">
+                즐겨찾기 {favoriteBadgeCount}명
+              </span>
+              {favLoading && <span className="text-[11px] text-black/40">동기화 중...</span>}
+            </div>
             </header>
 
             {!showFavoritesOnly && (
