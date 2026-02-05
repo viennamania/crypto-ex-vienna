@@ -183,7 +183,7 @@ export default function SellerSearchPage() {
       });
       const data = await res.json().catch(() => ({}));
       const list = Array.isArray(data?.result) ? data.result : [];
-      const unique = Array.from(
+      const unique: string[] = Array.from(
         new Set(
           list
             .map((f: any) => f.sellerWalletAddress?.toLowerCase())
