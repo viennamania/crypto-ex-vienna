@@ -230,16 +230,19 @@ export default function SellerSearchPage() {
         <main className="flex flex-1 flex-col overflow-hidden bg-white sm:rounded-[32px] sm:border sm:border-black/10 sm:shadow-[0_34px_90px_-50px_rgba(15,15,18,0.45)] sm:ring-1 sm:ring-black/10">
           <div className="flex flex-1 flex-col gap-6 px-5 pt-8 pb-6">
             <header className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold tracking-tight">{headerTitle}</h1>
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => router.push(`/${lang}/p2p-buyer`)}
-                  className="rounded-full border border-black/10 px-3 py-1 text-xs font-semibold text-black/60"
-              >
-                뒤로
-              </button>
-            </div>
+                  className="flex items-center gap-1 rounded-full border border-black/15 bg-white px-3 py-1.5 text-xs font-semibold text-black shadow-sm transition hover:border-black/25 hover:text-black/90"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="m14 18-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="whitespace-nowrap">뒤로가기</span>
+                </button>
+                <h1 className="text-2xl font-semibold tracking-tight">{headerTitle}</h1>
+              </div>
               <p className="text-sm text-black/60">
                 {showFavoritesOnly
                   ? '즐겨찾기에 등록한 판매자만 표시합니다.'

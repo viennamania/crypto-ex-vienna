@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import { AutoConnect, useActiveAccount, useActiveWallet } from 'thirdweb/react';
 
 import { useClientWallets } from '@/lib/useClientWallets';
@@ -51,6 +51,7 @@ const formatPrice = (value: number | null) => {
 
 export default function P2PBuyerPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const params = useParams<{ lang?: string }>();
   const langParam = params?.lang;
   const lang = Array.isArray(langParam) ? langParam[0] : langParam || 'ko';
@@ -75,6 +76,43 @@ export default function P2PBuyerPage() {
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const isNicknameSearch = SELLER_SEARCH_BY === 'nickname';
+  const navItems = [
+    {
+      key: 'home',
+      label: '구매 홈',
+      href: `/${lang}/p2p-buyer`,
+      active: pathname === `/${lang}/p2p-buyer`,
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="m4 10 8-6 8 6v9a1 1 0 0 1-1 1h-4.5a.5.5 0 0 1-.5-.5V14a2 2 0 0 0-4 0v5.5a.5.5 0 0 1-.5.5H5a1 1 0 0 1-1-1Z" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
+      key: 'seller-search',
+      label: '판매자 찾기',
+      href: `/${lang}/p2p-buyer/seller-search`,
+      active: pathname?.includes('/p2p-buyer/seller-search'),
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <circle cx="11" cy="11" r="5" />
+          <path d="m15.5 15.5 3.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
+      key: 'settings',
+      label: '구매자 설정',
+      href: `/${lang}/p2p-buyer/buyer-settings`,
+      active: pathname?.includes('/p2p-buyer/buyer-settings'),
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+  ];
 
   const formatIntegerWithCommas = (value: string) =>
     value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -844,6 +882,29 @@ export default function P2PBuyerPage() {
           </div>
         </main>
       </div>
+
+      <div
+        aria-hidden
+        className="pointer-events-none fixed bottom-[68px] left-0 right-0 z-30 h-10 bg-gradient-to-t from-[#2f2f2f] via-[#2f2f2fd8] to-transparent sm:bottom-[76px]"
+      />
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-gradient-to-r from-[#0f172a] to-[#0b1220] px-3 pb-3 pt-2 shadow-[0_-10px_30px_rgba(0,0,0,0.25)] sm:px-6 sm:pb-4 sm:pt-3">
+        <div className="mx-auto flex w-full max-w-lg items-stretch justify-center gap-3 sm:max-w-xl md:max-w-2xl">
+          {navItems.map((tab) => (
+            <Link
+              key={tab.key}
+              href={tab.href}
+              className={`flex flex-1 min-w-[110px] items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold transition-all duration-200 shadow-md ${
+                tab.active
+                  ? 'bg-white text-[#0f172a] shadow-[0_16px_34px_-18px_rgba(255,255,255,0.55)]'
+                  : 'bg-white/10 text-white/85 ring-1 ring-white/15 hover:bg-white/15 hover:text-white'
+              }`}
+            >
+              {tab.icon}
+              <span className="whitespace-nowrap">{tab.label}</span>
+            </Link>
+          ))}
+        </div>
+      </nav>
 
     </div>
   );
