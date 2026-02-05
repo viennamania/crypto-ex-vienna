@@ -601,7 +601,11 @@ export default function P2PBuyerPage() {
           <div className="flex flex-1 flex-col gap-6 px-5 pt-8 pb-6">
             <section className="flex items-center justify-between gap-4 px-1">
               <Link
-                href={`/${lang}`}
+                
+                //href={`/${lang}/p2p`}
+                // https://www.orangex.center/[lang]/p2p 로 이동하도록 수정 요청됨
+                href={`/${lang}/p2p`}
+
                 className="flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-black shadow-sm transition hover:border-black/20 hover:text-black/80"
               >
                 <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
