@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useActiveAccount, useActiveWallet } from 'thirdweb/react';
@@ -112,6 +112,9 @@ export default function SellerChatPage() {
   const [historyHasMore, setHistoryHasMore] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(false);
   const historyContainerRef = useRef<HTMLDivElement | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => () => { isMountedRef.current = false; }, []);
 
   const displaySellerName = sellerProfile?.nickname || sellerName;
   const isMarketPrice = sellerProfile?.seller?.priceSettingMethod === 'market';
@@ -235,6 +238,7 @@ export default function SellerChatPage() {
         krwAmount: derivedKrw,
         createdAt: new Date().toISOString(),
       });
+      fetchSellerProfile();
     } catch (error) {
       const message = error instanceof Error ? error.message : '구매 주문 생성에 실패했습니다.';
       setBuyStatus('error');
@@ -354,17 +358,16 @@ export default function SellerChatPage() {
     };
   }, [marketIdForPrice]);
 
-  useEffect(() => {
-    let active = true;
-
-    const fetchSellerProfile = async (isInitial = false) => {
+  const fetchSellerProfile = useCallback(
+    async (options?: { showLoading?: boolean }) => {
       if (!sellerId) {
+        if (!isMountedRef.current) return;
         setSellerProfile(null);
         setSellerEscrow(null);
         setSellerError(null);
         return;
       }
-      if (isInitial) {
+      if (options?.showLoading) {
         setSellerLoading(true);
       }
       setSellerError(null);
@@ -381,45 +384,45 @@ export default function SellerChatPage() {
         if (!response.ok) {
           throw new Error(data?.error || '판매자 정보를 불러오지 못했습니다.');
         }
-        if (active) {
-          setSellerProfile(data?.result?.user || null);
-          setSellerEscrow(
-            typeof data?.result?.currentUsdtBalance === 'number'
-              ? data.result.currentUsdtBalance
-              : null,
-          );
-          setSellerUsdtRate(
-            typeof data?.result?.user?.seller?.usdtToKrwRate === 'number'
-              ? data.result.user.seller.usdtToKrwRate
-              : null,
-          );
-        }
+        if (!isMountedRef.current) return;
+        setSellerProfile(data?.result?.user || null);
+        setSellerEscrow(
+          typeof data?.result?.currentUsdtBalance === 'number'
+            ? data.result.currentUsdtBalance
+            : null,
+        );
+        setSellerUsdtRate(
+          typeof data?.result?.user?.seller?.usdtToKrwRate === 'number'
+            ? data.result.user.seller.usdtToKrwRate
+            : null,
+        );
       } catch (error) {
-        if (active) {
-          setSellerProfile(null);
-          setSellerEscrow(null);
-          setSellerUsdtRate(null);
-          setSellerError(
-            error instanceof Error ? error.message : '판매자 정보를 불러오지 못했습니다.',
-          );
-        }
+        if (!isMountedRef.current) return;
+        setSellerProfile(null);
+        setSellerEscrow(null);
+        setSellerUsdtRate(null);
+        setSellerError(
+          error instanceof Error ? error.message : '판매자 정보를 불러오지 못했습니다.',
+        );
       } finally {
-        if (active) {
+        if (options?.showLoading && isMountedRef.current) {
           setSellerLoading(false);
         }
       }
-    };
+    },
+    [sellerId],
+  );
 
-    fetchSellerProfile(true);
+  useEffect(() => {
+    fetchSellerProfile({ showLoading: true });
     const intervalId = window.setInterval(() => {
-      fetchSellerProfile(false);
-    }, 15000);
+      fetchSellerProfile({ showLoading: false });
+    }, 8000);
 
     return () => {
-      active = false;
       window.clearInterval(intervalId);
     };
-  }, [sellerId]);
+  }, [fetchSellerProfile]);
 
   // 거래내역 로드
   const fetchHistory = async (nextPage = 1) => {

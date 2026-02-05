@@ -228,6 +228,12 @@ export default function SellerSearchPage() {
     loadFavorites();
   }, [ownerWalletAddress]);
 
+  useEffect(() => {
+    if (showFavoritesOnly) {
+      loadFavorites();
+    }
+  }, [showFavoritesOnly]);
+
   const toggleFavorite = async (seller: SellerResult) => {
     if (!seller.walletAddress) return;
     const addr = seller.walletAddress.toLowerCase();
@@ -756,10 +762,7 @@ export default function SellerSearchPage() {
                 />
               </svg>
             ),
-            onClick: () => {
-              setShowFavoritesOnly(true);
-              loadFavorites();
-            },
+            onClick: () => setShowFavoritesOnly(true),
             active: showFavoritesOnly,
           },
         ].map((tab) => (
