@@ -2387,7 +2387,7 @@ export default function Index({ params }: any) {
                     onClick={() => {
                       router.push('/' + params.lang + '/administration/member');
                     }}
-                    className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800"
+                    className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800 whitespace-nowrap"
                   >
                     회원관리
                   </button>
@@ -2395,7 +2395,7 @@ export default function Index({ params }: any) {
                     onClick={() => {
                       router.push('/' + params.lang + '/administration/buyer-management');
                     }}
-                    className="bg-white text-sm text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50"
+                    className="bg-white text-sm text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 whitespace-nowrap"
                   >
                     구매자 관리
                   </button>
@@ -2403,7 +2403,7 @@ export default function Index({ params }: any) {
                     onClick={() => {
                       router.push('/' + params.lang + '/administration/seller-management');
                     }}
-                    className="bg-white text-sm text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50"
+                    className="bg-white text-sm text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 whitespace-nowrap"
                   >
                     판매자 관리
                   </button>
@@ -2411,7 +2411,7 @@ export default function Index({ params }: any) {
                     onClick={() => {
                       router.push('/' + params.lang + '/administration/seller-sales-status');
                     }}
-                    className="bg-amber-500 text-sm font-semibold text-white px-4 py-2 rounded-lg shadow-sm hover:bg-amber-600"
+                    className="bg-amber-500 text-sm font-semibold text-white px-4 py-2 rounded-lg shadow-sm hover:bg-amber-600 whitespace-nowrap"
                   >
                     판매현황
                   </button>
@@ -2419,9 +2419,17 @@ export default function Index({ params }: any) {
                     onClick={() => {
                       router.push('/' + params.lang + '/administration/support-settings');
                     }}
-                    className="bg-white text-sm text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50"
+                    className="bg-white text-sm text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 whitespace-nowrap"
                   >
                     상담원 설정
+                  </button>
+                  <button
+                    onClick={() => {
+                      router.push('/' + params.lang + '/administration/agent-management');
+                    }}
+                    className="bg-white text-sm text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 whitespace-nowrap"
+                  >
+                    에이전트 관리
                   </button>
                 </div>
 
