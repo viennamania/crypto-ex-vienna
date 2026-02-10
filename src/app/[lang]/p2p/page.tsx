@@ -8,6 +8,8 @@ import { Manrope, Playfair_Display } from 'next/font/google';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 import { AutoConnect, useActiveAccount } from 'thirdweb/react';
+import { arbitrum, bsc, ethereum, polygon } from 'thirdweb/chains';
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 import { useClientWallets } from '@/lib/useClientWallets';
 import { client } from '@/app/client';
 
@@ -392,6 +394,14 @@ export default function OrangeXPage() {
         tone: 'text-slate-700',
         ring: 'border-slate-200/80 bg-white/90',
     };
+    const activeChain =
+        chain === 'ethereum'
+            ? ethereum
+            : chain === 'arbitrum'
+            ? arbitrum
+            : chain === 'bsc'
+            ? bsc
+            : polygon;
     const isSupportEligible = Boolean(walletAddress);
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
     const [animatedStats, setAnimatedStats] = useState(() => STAT_ITEMS.map(() => 0));
@@ -1843,12 +1853,36 @@ export default function OrangeXPage() {
                                             )}
                                         </div>
                                     </div>
-                                    <Link
-                                        href={`/${lang}/web3login`}
-                                        className="inline-flex min-w-[140px] items-center justify-center rounded-full bg-slate-900 px-6 py-2.5 text-xs font-semibold text-white shadow-[0_18px_40px_-22px_rgba(15,23,42,0.55)] transition hover:bg-slate-800 hover:shadow-[0_22px_48px_-24px_rgba(15,23,42,0.6)] whitespace-nowrap"
-                                    >
-                                        {walletAddress ? '내 지갑 보기' : '웹3 로그인'}
-                                    </Link>
+                                    {walletAddress ? (
+                                        <div className="inline-flex min-w-[200px] items-center justify-center gap-3 rounded-full bg-slate-900 px-6 py-2.5 text-xs font-semibold text-white shadow-[0_18px_40px_-22px_rgba(15,23,42,0.55)]">
+                                            <span className="flex h-2 w-2 rounded-full bg-emerald-400" />
+                                            <span className="hidden sm:inline">지갑 연결됨</span>
+                                            <span className="text-[11px] font-mono tracking-tight">
+                                                {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                                            </span>
+                                            <span className="flex items-center gap-1 rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[10px] font-semibold">
+                                                <Image
+                                                    src={chainBadge.icon}
+                                                    alt={`${chainBadge.label} 아이콘`}
+                                                    width={14}
+                                                    height={14}
+                                                    className="h-3.5 w-3.5 object-contain"
+                                                />
+                                                <span className="hidden sm:inline">{chainBadge.label}</span>
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <ConnectButton
+                                            client={client}
+                                            wallets={[wallet]}
+                                            chain={activeChain}
+                                            connectButton={{
+                                                label: '웹3 로그인',
+                                                className:
+                                                    'inline-flex min-w-[140px] items-center justify-center rounded-full bg-slate-900 px-6 py-2.5 text-xs font-semibold text-white hover:text-white shadow-[0_18px_40px_-22px_rgba(15,23,42,0.55)] transition-all duration-200 transform-gpu hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-[0_22px_48px_-24px_rgba(15,23,42,0.6)] whitespace-nowrap',
+                                            }}
+                                        />
+                                    )}
                                 </div>
                             </div>
 
