@@ -16,6 +16,10 @@ export default function SellerManagementPage() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [totalCount, setTotalCount] = useState(0);
+  const [agentsMap, setAgentsMap] = useState<Record<string, { agentName?: string; agentLogo?: string }>>({});
+  const [agentsList, setAgentsList] = useState<any[]>([]);
+  const [agentModalOpen, setAgentModalOpen] = useState(false);
+  const [agentModalTargetWallet, setAgentModalTargetWallet] = useState<string | null>(null);
 
   const fetchSellers = async () => {
     setLoading(true);
@@ -50,14 +54,40 @@ export default function SellerManagementPage() {
     setLoading(false);
   };
 
+  const fetchAgents = async () => {
+    try {
+      const res = await fetch('/api/agents?limit=500');
+      if (!res.ok) return;
+      const data = await res.json();
+      const map: Record<string, { agentName?: string; agentLogo?: string }> = {};
+      const list: any[] = data?.items || [];
+      list.forEach((agent: any) => {
+        if (!agent?.agentcode) return;
+        map[agent.agentcode] = {
+          agentName: agent.agentName,
+          agentLogo: agent.agentLogo,
+        };
+      });
+      setAgentsMap(map);
+      setAgentsList(list);
+    } catch (e) {
+      console.error('Error fetching agents', e);
+    }
+  };
+
   useEffect(() => {
     fetchSellers();
   }, [page]);
 
+  useEffect(() => {
+    fetchAgents();
+  }, []);
+
   const filteredSellers = sellers; // 서버 필터 결과 사용
 
   return (
-    <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-lg mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+    <>
+    <main className="p-6 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
       <div className="w-full">
         <div className="flex items-center gap-2 text-sm text-slate-600 mb-4">
           <button
@@ -153,6 +183,7 @@ export default function SellerManagementPage() {
                 <thead className="bg-slate-50 text-slate-700 text-xs font-bold uppercase border-b">
                   <tr>
                     <th className="px-4 py-2 text-left">프로필</th>
+                    <th className="px-4 py-2 text-left">에이전트</th>
                     <th className="px-4 py-2 text-left">지갑주소</th>
                     <th className="px-4 py-2 text-left">상태</th>
                     <th className="px-4 py-2 text-left">계좌정보</th>
@@ -169,6 +200,12 @@ export default function SellerManagementPage() {
                     const kycStatus =
                       sellerUser?.seller?.kyc?.status ||
                       (sellerUser?.seller?.kyc?.idImageUrl ? 'pending' : 'none');
+                    const agentcode =
+                      sellerUser?.agentcode ||
+                      sellerUser?.seller?.agentcode ||
+                      sellerUser?.store?.agentcode ||
+                      '';
+                    const agentInfo = agentcode ? agentsMap[agentcode] : undefined;
                     const bankInfo = sellerUser?.seller?.bankInfo;
                     const bankInfoStatus =
                       bankInfo?.status || (bankInfo?.accountNumber ? 'pending' : 'none');
@@ -215,6 +252,45 @@ export default function SellerManagementPage() {
                               <span className="text-[11px] text-slate-500">{initials}</span>
                             </div>
                           </div>
+                        </td>
+                        <td className="px-4 py-2">
+                          {agentInfo ? (
+                            <div className="flex items-center gap-2">
+                              <div className="relative h-8 w-8 overflow-hidden rounded-full border border-slate-200 bg-slate-50">
+                                {agentInfo.agentLogo ? (
+                                  <Image
+                                    src={agentInfo.agentLogo}
+                                    alt={agentInfo.agentName || 'agent'}
+                                    fill
+                                    sizes="32px"
+                                    className="object-cover"
+                                  />
+                                ) : (
+                                  <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-600">
+                                    {agentcode.slice(0, 2).toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-slate-900 truncate">
+                                  {agentInfo.agentName || agentcode || '-'}
+                                </p>
+                                <p className="text-[11px] font-mono text-slate-500 truncate">{agentcode}</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-500">-</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAgentModalTargetWallet(sellerUser.walletAddress);
+                              setAgentModalOpen(true);
+                            }}
+                            className="mt-1 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
+                          >
+                            변경
+                          </button>
                         </td>
                         <td className="px-4 py-2 text-slate-700 text-xs">
                           {sellerUser?.walletAddress?.substring(0, 6)}...
@@ -337,5 +413,87 @@ export default function SellerManagementPage() {
         </div>
       </div>
     </main>
+    {agentModalOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+        <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_30px_120px_-60px_rgba(15,23,42,0.65)]">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Agent</p>
+              <h3 className="text-lg font-bold text-slate-900">에이전트 변경</h3>
+            </div>
+            <button
+              onClick={() => {
+                setAgentModalOpen(false);
+                setAgentModalTargetWallet(null);
+              }}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              닫기
+            </button>
+          </div>
+          <div className="max-h-[70vh] overflow-y-auto px-5 pb-5 pt-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {agentsList.map((agent) => (
+                <button
+                  key={agent.agentcode}
+                  onClick={async () => {
+                    if (!agentModalTargetWallet) return;
+                    try {
+                      const res = await fetch('/api/user/updateAgentcode', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          walletAddress: agentModalTargetWallet,
+                          agentcode: agent.agentcode,
+                        }),
+                      });
+                      if (!res.ok) {
+                        const msg = (await res.json())?.error || '변경에 실패했습니다';
+                        alert(msg);
+                        return;
+                      }
+                      await fetchSellers();
+                      setAgentModalOpen(false);
+                      setAgentModalTargetWallet(null);
+                    } catch (e) {
+                      console.error(e);
+                      alert('변경에 실패했습니다');
+                    }
+                  }}
+                  className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+                >
+                  <div className="relative h-12 w-12 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                    {agent.agentLogo ? (
+                      <Image
+                        src={agent.agentLogo}
+                        alt={agent.agentName}
+                        fill
+                        className="object-cover"
+                        sizes="48px"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-600">
+                        {agent.agentName?.slice(0, 2)?.toUpperCase() || 'AG'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-900">{agent.agentName || agent.agentcode}</p>
+                    <p className="text-[11px] font-mono text-slate-500">{agent.agentcode}</p>
+                    <p className="mt-1 line-clamp-2 text-xs text-slate-600">
+                      {agent.agentDescription || '설명 없음'}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            {agentsList.length === 0 && (
+              <div className="py-6 text-center text-sm text-slate-500">에이전트가 없습니다.</div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
