@@ -428,6 +428,8 @@ export default function OrangeXPage() {
     const [noticeItems, setNoticeItems] = useState<NoticeSummary[]>([]);
     const [noticeLoading, setNoticeLoading] = useState(false);
     const [noticeError, setNoticeError] = useState<string | null>(null);
+    const [agentCode, setAgentCode] = useState<string | null>(null);
+    const isAgent = Boolean(agentCode);
     const newsTickerRef = useRef<HTMLDivElement | null>(null);
     const newsTickerPauseUntilRef = useRef(0);
     const newsTickerOffsetRef = useRef(0);
@@ -542,11 +544,12 @@ export default function OrangeXPage() {
 
                 const data = (await response.json()) as {
                     result?: { 
-                        seller?: { escrowWalletAddress?: string }; 
+                        agentcode?: string;
+                        seller?: { escrowWalletAddress?: string; agentcode?: string }; 
                         escrowWalletAddress?: string;
                         avatar?: string;
                         nickname?: string;
-                        user?: { nickname?: string };
+                        user?: { nickname?: string; agentcode?: string };
                     };
                 };
 
@@ -554,9 +557,15 @@ export default function OrangeXPage() {
                     data?.result?.seller?.escrowWalletAddress ||
                     data?.result?.escrowWalletAddress ||
                     null;
+                const nextAgentCode =
+                    data?.result?.agentcode ||
+                    data?.result?.user?.agentcode ||
+                    data?.result?.seller?.agentcode ||
+                    null;
 
                 if (isMounted) {
                     setSellerEscrowWalletAddress(nextEscrowWallet);
+                    setAgentCode(nextAgentCode);
                     const nextAvatar = data?.result?.avatar || '';
                     const nicknameSeed =
                         (data?.result?.nickname || data?.result?.user?.nickname || '').trim();
@@ -570,6 +579,7 @@ export default function OrangeXPage() {
             } catch {
                 if (isMounted) {
                     setSellerEscrowWalletAddress(null);
+                    setAgentCode(null);
                     setProfileAvatarUrl('');
                     setProfileInitial(walletAddress.replace(/^0x/i, '').slice(0, 2).toUpperCase());
                     setProfileNickname('');
@@ -1829,11 +1839,11 @@ export default function OrangeXPage() {
                                                 />
                                             )}
                                         </div>
-                                        <div className="flex flex-col gap-1.5">
-                                            {!walletAddress && (
-                                                <span className="text-base font-semibold text-slate-900 sm:text-lg">
-                                                    지갑을 연결하고 보호된 결제를 시작하세요
-                                                </span>
+                                    <div className="flex flex-col gap-1.5">
+                                        {!walletAddress && (
+                                            <span className="text-base font-semibold text-slate-900 sm:text-lg">
+                                                지갑을 연결하고 보호된 결제를 시작하세요
+                                            </span>
                                             )}
                                             {walletAddress ? (
                                                 <span className="text-lg font-semibold text-slate-900 sm:text-xl">
@@ -1885,6 +1895,31 @@ export default function OrangeXPage() {
                                     )}
                                 </div>
                             </div>
+
+                            {isAgent && (
+                              <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/80 p-4 shadow-[0_16px_36px_-28px_rgba(16,185,129,0.6)]">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white">
+                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                        <path d="M12 2l7 7-7 7-7-7 7-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        <path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                      </svg>
+                                    </span>
+                                    <span>당신은 에이전트 권한이 있습니다.</span>
+                                  </div>
+                                  <Link
+                                    href={`/${lang}/p2p/seller-management`}
+                                    className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-[0_14px_32px_-22px_rgba(16,185,129,0.7)] transition hover:bg-emerald-500"
+                                  >
+                                    소속 판매자 관리하기
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                      <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                  </Link>
+                                </div>
+                              </div>
+                            )}
 
                             <div className="flex flex-wrap gap-3 text-xs font-semibold text-slate-500">
                                 <span className="rounded-full border border-slate-200/80 bg-white/80 px-4 py-2">에스크로 보호</span>
