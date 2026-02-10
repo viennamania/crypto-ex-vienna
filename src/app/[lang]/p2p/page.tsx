@@ -1713,9 +1713,7 @@ export default function OrangeXPage() {
                                     </div>
                                 )}
                                 <Link
-                                    href="https://www.orangex.center/ko/p2p-buyer"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                    href={`/${lang}/p2p-buyer`}
                                     className={heroCtaClass}
                                 >
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="inline-block">
