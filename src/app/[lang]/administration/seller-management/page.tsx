@@ -2,17 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation';
 
 export default function SellerManagementPage() {
   const params = useParams<{ lang?: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const langParam = params?.lang;
   const lang = Array.isArray(langParam) ? langParam[0] : langParam || 'ko';
 
   const [sellers, setSellers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [agentFilter, setAgentFilter] = useState('');
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [totalCount, setTotalCount] = useState(0);
@@ -20,6 +23,10 @@ export default function SellerManagementPage() {
   const [agentsList, setAgentsList] = useState<any[]>([]);
   const [agentModalOpen, setAgentModalOpen] = useState(false);
   const [agentModalTargetWallet, setAgentModalTargetWallet] = useState<string | null>(null);
+  const [agentSearch, setAgentSearch] = useState('');
+  const [agentFilterModalOpen, setAgentFilterModalOpen] = useState(false);
+  const [agentFilterSearch, setAgentFilterSearch] = useState('');
+  const [initializedFromParams, setInitializedFromParams] = useState(false);
 
   const fetchSellers = async () => {
     setLoading(true);
@@ -35,6 +42,7 @@ export default function SellerManagementPage() {
           page,
           includeUnverified: true,
           searchTerm,
+          agentcode: agentFilter || undefined,
         }),
       });
       const data = await response.json();
@@ -76,14 +84,51 @@ export default function SellerManagementPage() {
   };
 
   useEffect(() => {
+    if (!initializedFromParams) return;
     fetchSellers();
-  }, [page]);
+  }, [page, searchTerm, agentFilter, initializedFromParams]);
 
   useEffect(() => {
     fetchAgents();
   }, []);
 
-  const filteredSellers = sellers; // 서버 필터 결과 사용
+  useEffect(() => {
+    if (initializedFromParams) return;
+    const qParam = searchParams.get('q') ?? '';
+    const agentParam = searchParams.get('agent') ?? '';
+    const pageParam = Number(searchParams.get('page') ?? '1');
+    setSearchTerm(qParam);
+    setAgentFilter(agentParam);
+    setPage(!Number.isNaN(pageParam) && pageParam > 0 ? pageParam : 1);
+    setInitializedFromParams(true);
+  }, [searchParams, initializedFromParams]);
+
+  useEffect(() => {
+    if (!initializedFromParams) return;
+    const params = new URLSearchParams();
+    if (searchTerm.trim()) params.set('q', searchTerm.trim());
+    if (agentFilter) params.set('agent', agentFilter);
+    if (page > 1) params.set('page', String(page));
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [searchTerm, agentFilter, page, initializedFromParams, pathname, router]);
+
+  const filteredSellers = sellers; // 서버 검색/필터 결과 사용
+  const filteredAgents = agentsList.filter((agent) => {
+    const q = agentSearch.trim().toLowerCase();
+    if (!q) return true;
+    const target = `${agent.agentName || ''} ${agent.agentcode || ''}`.toLowerCase();
+    return target.includes(q);
+  });
+  const filteredAgentFilters = agentsList.filter((agent) => {
+    const q = agentFilterSearch.trim().toLowerCase();
+    if (!q) return true;
+    const target = `${agent.agentName || ''} ${agent.agentcode || ''}`.toLowerCase();
+    return target.includes(q);
+  });
+  const selectedAgentInfo = agentFilter
+    ? agentsList.find((agent) => agent.agentcode === agentFilter)
+    : null;
 
   return (
     <>
@@ -146,27 +191,63 @@ export default function SellerManagementPage() {
             <span className="text-sm font-semibold text-slate-600">
               {filteredSellers.length} / {totalCount} 명
             </span>
-            <div className="ml-auto flex w-full items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm sm:w-80">
-              <Image src="/icon-search.png" alt="Search" width={16} height={16} className="h-4 w-4 opacity-70" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="지갑주소, 닉네임, 은행, 상태 검색"
-                className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm('')}
-                  className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-200"
-                >
-                  Clear
-                </button>
-              )}
+            <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm sm:min-w-[260px]">
+                <Image src="/icon-search.png" alt="Search" width={16} height={16} className="h-4 w-4 opacity-70" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="지갑주소, 닉네임, 은행, 상태 검색"
+                  className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm('')}
+                    className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-200"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setAgentFilterModalOpen(true)}
+                className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
+              >
+                <span className="text-xs whitespace-nowrap text-slate-600">에이전트</span>
+                <div className="flex items-center gap-2">
+                  <div className="relative h-8 w-8 overflow-hidden rounded-full border border-slate-200 bg-slate-50">
+                    {selectedAgentInfo?.agentLogo ? (
+                      <Image
+                        src={selectedAgentInfo.agentLogo}
+                        alt={selectedAgentInfo.agentName || 'agent'}
+                        fill
+                        sizes="32px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-slate-600">
+                        {(selectedAgentInfo?.agentName || selectedAgentInfo?.agentcode || '전체').slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="text-left">
+                    <p className="text-xs font-semibold text-slate-800 truncate max-w-[120px]">
+                      {selectedAgentInfo?.agentName || ''}
+                    </p>
+                    <p className="text-[11px] font-mono text-slate-500 truncate max-w-[120px]">
+                      {selectedAgentInfo?.agentcode || ''}
+                    </p>
+                  </div>
+                  
+                </div>
+              </button>
             </div>
           </div>
 
@@ -432,8 +513,29 @@ export default function SellerManagementPage() {
             </button>
           </div>
           <div className="max-h-[70vh] overflow-y-auto px-5 pb-5 pt-3">
+            <div className="mb-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <Image src="/icon-search.png" alt="Search" width={16} height={16} className="h-4 w-4 opacity-70" />
+              <input
+                value={agentSearch}
+                onChange={(e) => setAgentSearch(e.target.value)}
+                placeholder="에이전트명 또는 코드 검색"
+                className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+              />
+              {agentSearch && (
+                <button
+                  type="button"
+                  onClick={() => setAgentSearch('')}
+                  className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <div className="mb-3 text-xs font-semibold text-slate-500">
+              {filteredAgents.length}개 결과
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {agentsList.map((agent) => (
+              {filteredAgents.map((agent) => (
                 <button
                   key={agent.agentcode}
                   onClick={async () => {
@@ -487,8 +589,107 @@ export default function SellerManagementPage() {
                 </button>
               ))}
             </div>
-            {agentsList.length === 0 && (
-              <div className="py-6 text-center text-sm text-slate-500">에이전트가 없습니다.</div>
+            {filteredAgents.length === 0 && (
+              <div className="py-6 text-center text-sm text-slate-500">검색 결과가 없습니다.</div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    {agentFilterModalOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+        <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_30px_120px_-60px_rgba(15,23,42,0.65)]">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Agent Filter</p>
+              <h3 className="text-lg font-bold text-slate-900">에이전트 선택</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              {agentFilter && (
+                <button
+                  onClick={() => {
+                    setAgentFilter('');
+                    setPage(1);
+                    setAgentFilterModalOpen(false);
+                  }}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  전체
+                </button>
+              )}
+              <button
+                onClick={() => setAgentFilterModalOpen(false)}
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+          <div className="max-h-[70vh] overflow-y-auto px-5 pb-5 pt-3">
+            <div className="mb-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <Image src="/icon-search.png" alt="Search" width={16} height={16} className="h-4 w-4 opacity-70" />
+              <input
+                value={agentFilterSearch}
+                onChange={(e) => setAgentFilterSearch(e.target.value)}
+                placeholder="에이전트명 또는 코드 검색"
+                className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+              />
+              {agentFilterSearch && (
+                <button
+                  type="button"
+                  onClick={() => setAgentFilterSearch('')}
+                  className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <div className="mb-3 text-xs font-semibold text-slate-500">
+              {filteredAgentFilters.length}개 결과
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {filteredAgentFilters.map((agent) => (
+                <button
+                  key={agent.agentcode}
+                  onClick={() => {
+                    setAgentFilter(agent.agentcode);
+                    setPage(1);
+                    setAgentFilterModalOpen(false);
+                  }}
+                  className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+                >
+                  <div className="relative h-12 w-12 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                    {agent.agentLogo ? (
+                      <Image
+                        src={agent.agentLogo}
+                        alt={agent.agentName}
+                        fill
+                        className="object-cover"
+                        sizes="48px"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-600">
+                        {agent.agentName?.slice(0, 2)?.toUpperCase() || 'AG'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-900">{agent.agentName || agent.agentcode}</p>
+                    <p className="text-[11px] font-mono text-slate-500">{agent.agentcode}</p>
+                    <p className="mt-1 line-clamp-2 text-xs text-slate-600">
+                      {agent.agentDescription || '설명 없음'}
+                    </p>
+                  </div>
+                  {agentFilter === agent.agentcode && (
+                    <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+                      선택됨
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            {filteredAgentFilters.length === 0 && (
+              <div className="py-6 text-center text-sm text-slate-500">검색 결과가 없습니다.</div>
             )}
           </div>
         </div>

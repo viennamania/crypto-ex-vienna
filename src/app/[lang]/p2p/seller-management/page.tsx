@@ -34,6 +34,7 @@ export default function SellerManagementByAgentPage() {
   const [agentDescription, setAgentDescription] = useState<string | null>(null);
   const [sellers, setSellers] = useState<SellerUser[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<{ nickname?: string; avatar?: string } | null>(null);
 
   const isConnected = Boolean(walletAddress);
 
@@ -52,9 +53,20 @@ export default function SellerManagementByAgentPage() {
         data?.result?.user?.agentcode ||
         data?.result?.seller?.agentcode ||
         null;
+      const nickname =
+        data?.result?.nickname ||
+        data?.result?.user?.nickname ||
+        data?.result?.seller?.nickname ||
+        undefined;
+      const avatar =
+        data?.result?.avatar ||
+        data?.result?.user?.avatar ||
+        data?.result?.seller?.avatar ||
+        undefined;
       setAgentcode(code);
       setAgentName(data?.result?.agentName || null);
       setAgentLogo(data?.result?.agentLogo || null);
+      setUserProfile({ nickname, avatar });
     } catch (e) {
       setError(e instanceof Error ? e.message : '유저 정보를 불러오지 못했습니다.');
     }
@@ -152,7 +164,34 @@ export default function SellerManagementByAgentPage() {
               </div>
             </div>
           )}
-          <div className="ml-auto flex items-center gap-2 text-xs text-slate-600">
+          <div className="ml-auto flex items-center gap-3 text-xs text-slate-600">
+            {isConnected && (
+              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
+                <div className="relative h-8 w-8 overflow-hidden rounded-full bg-slate-100">
+                  {userProfile?.avatar ? (
+                    <Image
+                      src={userProfile.avatar}
+                      alt={userProfile.nickname || 'me'}
+                      fill
+                      sizes="32px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-slate-700">
+                      {(userProfile?.nickname || walletAddress || 'NA').slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-col leading-tight">
+                  <span className="text-[11px] font-semibold text-slate-800">
+                    {userProfile?.nickname || '아이디 없음'}
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-600">
+                    {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : '주소 없음'}
+                  </span>
+                </div>
+              </div>
+            )}
             <span className="rounded-full bg-white px-3 py-1 font-semibold shadow-sm">
               연결 상태: {isConnected ? '연결됨' : '미연결'}
             </span>
