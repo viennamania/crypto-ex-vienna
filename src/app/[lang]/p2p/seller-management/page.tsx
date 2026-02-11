@@ -5,6 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { AutoConnect, useActiveAccount } from 'thirdweb/react';
+import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
+import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 
 import { useClientWallets } from '@/lib/useClientWallets';
 import { client } from '@/app/client';
@@ -69,6 +71,14 @@ export default function SellerManagementByAgentPage() {
   const [statusSaving, setStatusSaving] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [bankStatusForm, setBankStatusForm] = useState<'approved' | 'rejected' | 'pending' | 'none'>('none');
+  const [chatModalOpen, setChatModalOpen] = useState(false);
+  const [chatSeller, setChatSeller] = useState<SellerUser | null>(null);
+  const [chatSessionToken, setChatSessionToken] = useState<string | null>(null);
+  const [chatChannelUrl, setChatChannelUrl] = useState<string | null>(null);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatEnsuringChannel, setChatEnsuringChannel] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [chatView, setChatView] = useState<'chat'>('chat');
   const currentStatus = statusModalSeller?.seller?.status === 'confirmed' ? 'confirmed' : 'pending';
   const isStatusUnchanged = statusModalSeller ? statusForm === currentStatus : true;
 
@@ -163,6 +173,63 @@ export default function SellerManagementByAgentPage() {
     setStatusModalSeller(seller);
     setStatusError(null);
     setStatusModalOpen(true);
+  };
+
+  const openChatModal = async (seller: SellerUser) => {
+    setChatSeller(seller);
+    setChatModalOpen(true);
+    setChatChannelUrl(null);
+    setChatError(null);
+    setChatSessionToken(null);
+    setChatView('chat');
+    if (!walletAddress) {
+      setChatError('지갑을 연결해야 채팅할 수 있습니다.');
+      return;
+    }
+
+    try {
+      setChatLoading(true);
+      setChatEnsuringChannel(true);
+
+      // 1) 서버에서 두 유저를 생성/보장하고 distinct 1:1 채널을 확보
+      const channelRes = await fetch('/api/sendbird/group-channel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buyerId: walletAddress, sellerId: seller.walletAddress }),
+      });
+      if (!channelRes.ok) {
+        const msg = (await channelRes.json().catch(() => null))?.error || '채팅 채널을 만들지 못했습니다.';
+        throw new Error(msg);
+      }
+      const channelData = await channelRes.json();
+      const channelUrl = channelData?.channelUrl;
+      if (!channelUrl) {
+        throw new Error('채널 URL이 응답에 없습니다.');
+      }
+
+      // 2) 내 세션 토큰 발급
+      const tokenRes = await fetch('/api/sendbird/session-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: walletAddress,
+          nickname: userProfile?.nickname || walletAddress,
+        }),
+      });
+      if (!tokenRes.ok) {
+        const msg = (await tokenRes.json().catch(() => null))?.error || '채팅 세션을 만들지 못했습니다.';
+        throw new Error(msg);
+      }
+      const tokenData = await tokenRes.json();
+
+      setChatChannelUrl(channelUrl);
+      setChatSessionToken(tokenData.sessionToken);
+    } catch (e) {
+      setChatError(e instanceof Error ? e.message : '채팅을 불러오지 못했습니다.');
+    } finally {
+      setChatLoading(false);
+      setChatEnsuringChannel(false);
+    }
   };
 
   const handleSaveBank = async () => {
@@ -476,18 +543,19 @@ export default function SellerManagementByAgentPage() {
                       <th className="px-4 py-2 text-left">판매금액</th>
                       <th className="px-4 py-2 text-left">KYC</th>
                       <th className="px-4 py-2 text-left">은행</th>
+                      <th className="px-4 py-2 text-right">채팅</th>
                     </tr>
                   </thead>
                   <tbody className="text-sm">
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-4 text-center text-slate-500">
+                        <td colSpan={7} className="px-4 py-4 text-center text-slate-500">
                           불러오는 중...
                         </td>
                       </tr>
                     ) : sellers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-4 text-center text-slate-500">
+                        <td colSpan={7} className="px-4 py-4 text-center text-slate-500">
                           소속 판매자가 없습니다.
                         </td>
                       </tr>
@@ -624,6 +692,17 @@ export default function SellerManagementByAgentPage() {
                                     은행 정보 수정
                                   </button>
                                 </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => openChatModal(seller)}
+                                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
+                                >
+                                  채팅하기
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -826,6 +905,82 @@ export default function SellerManagementByAgentPage() {
             </button>
             {isBankUnchanged && (
               <p className="text-[11px] text-amber-600">변경된 내용이 있어야 저장할 수 있습니다.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    {chatModalOpen && chatSeller && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+        <div className="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_30px_120px_-60px_rgba(15,23,42,0.65)]">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Chat</p>
+              <h3 className="text-lg font-bold text-slate-900">판매자와 채팅</h3>
+              <div className="mt-2 flex items-center gap-3">
+                <div className="relative h-9 w-9 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                  {chatSeller.avatar ? (
+                    <Image
+                      src={chatSeller.avatar}
+                      alt={chatSeller.nickname || 'avatar'}
+                      fill
+                      sizes="36px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-600">
+                      {(chatSeller.nickname || chatSeller.walletAddress).slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 truncate">
+                    {chatSeller.nickname || '닉네임 없음'}
+                  </p>
+                  <p className="text-[11px] font-mono text-slate-500 truncate">
+                    {chatSeller.walletAddress.slice(0, 6)}...{chatSeller.walletAddress.slice(-4)}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setChatModalOpen(false);
+                setChatSeller(null);
+                setChatSessionToken(null);
+                setChatChannelUrl(null);
+              }}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              닫기
+            </button>
+          </div>
+          <div className="px-5 py-4">
+            {chatError && (
+              <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                {chatError}
+              </div>
+            )}
+            {!chatError && (chatLoading || chatEnsuringChannel || !chatSessionToken || !chatChannelUrl) && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                {chatLoading || !chatSessionToken
+                  ? '채팅 세션을 준비 중입니다...'
+                  : chatEnsuringChannel
+                  ? '1:1 채널을 준비 중입니다...'
+                  : '채널을 불러오는 중입니다...'}
+              </div>
+            )}
+            {!chatError && chatSessionToken && chatChannelUrl && walletAddress && (
+              <SendbirdProvider
+                appId={process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || ''}
+                userId={walletAddress}
+                accessToken={chatSessionToken}
+                theme="light"
+              >
+                <div className="h-[520px] overflow-hidden rounded-xl border border-slate-200 bg-white">
+                  <GroupChannel channelUrl={chatChannelUrl} />
+                </div>
+              </SendbirdProvider>
             )}
           </div>
         </div>
