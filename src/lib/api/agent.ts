@@ -102,9 +102,10 @@ export async function getAgentByAgentcode(
   const client = await clientPromise;
   const collection = client.db(dbName).collection('agents');
 
-  const result = await collection.findOne<any>(
-    { agentcode: agentcode }
-  );
+  // match case-insensitively to tolerate mixed-case query params
+  const result = await collection.findOne<any>({
+    agentcode: { $regex: `^${agentcode}$`, $options: 'i' },
+  });
 
   //console.log('getAgentByAgentcode result: ' + JSON.stringify(result));
 

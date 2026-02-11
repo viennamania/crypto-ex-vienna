@@ -103,9 +103,15 @@ export default function SellerTradeStatusPage() {
         data?.result?.user?.avatar ||
         data?.result?.seller?.avatar ||
         undefined;
-      setAgentcode(code);
-      setAgentName(data?.result?.agentName || null);
-      setAgentLogo(data?.result?.agentLogo || null);
+      if (code) setAgentcode(code);
+
+      // 유저 데이터에 에이전트 정보가 없으면 기존 값을 덮어쓰지 않는다 (로딩 중 깜빡임 방지)
+      if (data?.result?.agentName) {
+        setAgentName(data.result.agentName);
+      }
+      if (data?.result?.agentLogo) {
+        setAgentLogo(data.result.agentLogo);
+      }
       setUserProfile({ nickname, avatar });
     } catch (e) {
       setError(e instanceof Error ? e.message : '유저 정보를 불러오지 못했습니다.');
@@ -195,11 +201,8 @@ export default function SellerTradeStatusPage() {
 
   useEffect(() => {
     fetchOrders();
-  }, [agentcode, page, searchTerm]);
-
-  useEffect(() => {
     fetchAgentDetail();
-  }, [agentcode]);
+  }, [agentcode, page, searchTerm]);
 
   const stats = useMemo(() => {
     const pending = orders.filter((o) => o.status !== 'paymentConfirmed' && o.status !== 'completed').length;
