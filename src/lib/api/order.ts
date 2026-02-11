@@ -6421,23 +6421,24 @@ export async function getAllBuyOrdersForAgent(
     limit = 1000;
   }
 
-  const results = await collection.find<UserProps>(
-    {
-      agentcode: { $regex: agentcode, $options: 'i' },
+  const agentcodeFilter = { $regex: agentcode, $options: 'i' };
 
-      //status: 'paymentConfirmed',
-      status: { $in: ['ordered', 'accepted', 'paymentRequested', ] },
-      //paymentConfirmedAt: { $gte: startDate, $lt: endDate },
-      nickname: { $regex: searchNickname, $options: 'i' },
+  const baseMatch: Record<string, unknown> = {
+    // agentcode can be stored at root or under seller.agentcode; include both
+    $or: [
+      { agentcode: agentcodeFilter },
+      { 'seller.agentcode': agentcodeFilter },
+    ],
+  };
 
-      'buyer.walletAddress': { $regex: walletAddress, $options: 'i' },
+  if (searchNickname) {
+    baseMatch.nickname = { $regex: searchNickname, $options: 'i' };
+  }
+  if (walletAddress) {
+    baseMatch['buyer.walletAddress'] = { $regex: walletAddress, $options: 'i' };
+  }
 
-      'store.bankInfo.accountNumber': { $regex: '', $options: 'i' }, // no search for bank account number
-
-      'buyer.depositName': { $regex: '', $options: 'i' }, // no search for deposit name
-
-    },
-  )
+  const results = await collection.find<UserProps>(baseMatch)
     .sort({ paymentConfirmedAt: -1 })
     .limit(limit).skip((page - 1) * limit).toArray();
   
@@ -6448,33 +6449,11 @@ export async function getAllBuyOrdersForAgent(
 
 
   // get total count of orders
-  const totalCount = await collection.countDocuments(
-    {
-      agentcode: { $regex: agentcode, $options: 'i' },
-      //status: 'paymentConfirmed',
-      status: { $in: ['ordered', 'accepted', 'paymentRequested', ] },
-      //paymentConfirmedAt: { $gte: startDate, $lt: endDate },
-      nickname: { $regex: searchNickname, $options: 'i' },
-      'buyer.walletAddress': { $regex: walletAddress, $options: 'i' },
-      'store.bankInfo.accountNumber': { $regex: '', $options: 'i' }, // no search for bank account number
-      'buyer.depositName': { $regex: '', $options: 'i' }, // no search for deposit name
-    }
-  );
+  const totalCount = await collection.countDocuments(baseMatch);
   //console.log('getAllBuyOrdersForAgent totalCount: ' + totalCount);
   // sum of krwAmount
   const totalKrwAmount = await collection.aggregate([
-    {
-      $match: {
-        agentcode: { $regex: agentcode, $options: 'i' },
-        //status: 'paymentConfirmed',
-        status: { $in: ['ordered', 'accepted', 'paymentRequested', ] },
-        //paymentConfirmedAt: { $gte: startDate, $lt: endDate },
-        nickname: { $regex: searchNickname, $options: 'i' },
-        'buyer.walletAddress': { $regex: walletAddress, $options: 'i' },
-        'store.bankInfo.accountNumber': { $regex: '', $options: 'i' }, // no search for bank account number
-        'buyer.depositName': { $regex: '', $options: 'i' }, // no search for deposit name
-      }
-    },
+    { $match: baseMatch },
     {
       $group: {
         _id: null,
@@ -6484,18 +6463,7 @@ export async function getAllBuyOrdersForAgent(
   ]).toArray();
   // sum of usdtAmount
   const totalUsdtAmount = await collection.aggregate([
-    {
-      $match: {
-        agentcode: { $regex: agentcode, $options: 'i' },
-        //status: 'paymentConfirmed',
-        status: { $in: ['ordered', 'accepted', 'paymentRequested', ] },
-        //paymentConfirmedAt: { $gte: startDate, $lt: endDate },
-        nickname: { $regex: searchNickname, $options: 'i' },
-        'buyer.walletAddress': { $regex: walletAddress, $options: 'i' },
-        'store.bankInfo.accountNumber': { $regex: '', $options: 'i' }, // no search for bank account number
-        'buyer.depositName': { $regex: '', $options: 'i' }, // no search for deposit name
-      }
-    },
+    { $match: baseMatch },
     {
       $group: {
         _id: null,

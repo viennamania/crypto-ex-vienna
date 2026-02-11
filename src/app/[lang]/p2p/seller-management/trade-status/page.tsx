@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useSearchParams } from 'next/navigation';
 import { AutoConnect, useActiveAccount } from 'thirdweb/react';
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 import { useClientWallets } from '@/lib/useClientWallets';
 import { client } from '@/app/client';
@@ -255,8 +256,19 @@ export default function SellerTradeStatusPage() {
         </div>
 
         {!isConnected && (
-          <div className="mt-6 rounded-2xl border border-amber-200/70 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            지갑을 연결하면 거래 상태를 조회할 수 있습니다.
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200/70 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <span>지갑을 연결하면 거래 상태를 조회할 수 있습니다.</span>
+            <ConnectButton
+              client={client}
+              wallets={[wallet]}
+              theme="light"
+              locale="ko_KR"
+              connectButton={{
+                label: '지갑 연결하기',
+                className:
+                  'inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 shadow-sm transition hover:-translate-y-0.5 hover:shadow hover:text-amber-800 hover:bg-amber-50',
+              }}
+            />
           </div>
         )}
 
@@ -317,8 +329,18 @@ export default function SellerTradeStatusPage() {
                 {orders.length} / {totalCount || orders.length} 건
               </span>
               <div className="ml-auto flex items-center gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPage(1);
+                    fetchOrders();
+                  }}
+                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
+                >
+                  새로고침
+                </button>
                 <span className="rounded-full bg-emerald-50 px-2 py-1 font-semibold text-emerald-700">
-                  입금요청/대기 건 관리
+                  전체 거래 현황
                 </span>
               </div>
             </div>
@@ -331,13 +353,14 @@ export default function SellerTradeStatusPage() {
 
             <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-4 py-3">
-                <p className="text-sm font-semibold text-slate-800">입금 대기/진행 거래</p>
+                <p className="text-sm font-semibold text-slate-800">전체 거래 목록</p>
               </div>
               <div className="max-h-[70vh] overflow-y-auto">
                 <table className="min-w-full border-collapse">
                   <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-600">
                     <tr>
                       <th className="px-4 py-2 text-left">거래</th>
+                      <th className="px-4 py-2 text-left">판매자</th>
                       <th className="px-4 py-2 text-left">구매자</th>
                       <th className="px-4 py-2 text-left">금액</th>
                       <th className="px-4 py-2 text-left">상태</th>
@@ -376,6 +399,18 @@ export default function SellerTradeStatusPage() {
                             <td className="px-4 py-3">
                               <div className="flex flex-col gap-1">
                                 <span className="text-sm font-semibold text-slate-900">
+                                  {order.seller?.nickname || '닉네임 없음'}
+                                </span>
+                                <span className="text-[11px] font-mono text-slate-500">
+                                  {order.seller?.walletAddress
+                                    ? `${order.seller.walletAddress.slice(0, 6)}...${order.seller.walletAddress.slice(-4)}`
+                                    : '-'}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col gap-1">
+                                <span className="text-sm font-semibold text-slate-900">
                                   {order.buyer?.nickname || '닉네임 없음'}
                                 </span>
                                 <span className="text-[11px] font-mono text-slate-500">
@@ -389,11 +424,13 @@ export default function SellerTradeStatusPage() {
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              <div className="text-sm font-semibold text-slate-900">
-                                {order.krwAmount?.toLocaleString() ?? '-'} 원
-                              </div>
-                              <div className="text-xs text-slate-600">
-                                {order.usdtAmount?.toLocaleString() ?? '-'} USDT · 환율 {order.rate?.toLocaleString() ?? '-'}
+                              <div className="inline-flex flex-col gap-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                                <span className="text-sm font-bold text-slate-900">
+                                  ₩ {order.krwAmount?.toLocaleString() ?? '-'}
+                                </span>
+                                <span className="text-[11px] font-mono text-slate-600">
+                                  {order.usdtAmount?.toLocaleString() ?? '-'} USDT · 환율 {order.rate?.toLocaleString() ?? '-'}
+                                </span>
                               </div>
                             </td>
                             <td className="px-4 py-3">
