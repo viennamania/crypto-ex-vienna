@@ -35,6 +35,42 @@ export default function SellerManagementByAgentPage() {
   const [sellers, setSellers] = useState<SellerUser[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{ nickname?: string; avatar?: string } | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const [totalCount, setTotalCount] = useState(0);
+  const [bankModalOpen, setBankModalOpen] = useState(false);
+  const [bankModalSeller, setBankModalSeller] = useState<SellerUser | null>(null);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [statusModalSeller, setStatusModalSeller] = useState<SellerUser | null>(null);
+  const [statusForm, setStatusForm] = useState<'confirmed' | 'pending'>('pending');
+  const bankOptions = [
+    '국민은행',
+    '카카오뱅크',
+    '케이뱅크',
+    '토스뱅크',
+    '신한은행',
+    '우리은행',
+    '농협',
+    '기업은행',
+    '하나은행',
+    '부산은행',
+    '경남은행',
+    '대구은행',
+    '광주은행',
+    '전북은행',
+    '수협',
+    '씨티은행',
+    '우체국',
+  ];
+  const [bankForm, setBankForm] = useState({ bankName: '', accountNumber: '', accountHolder: '' });
+  const [bankSaving, setBankSaving] = useState(false);
+  const [bankError, setBankError] = useState<string | null>(null);
+  const [statusSaving, setStatusSaving] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [bankStatusForm, setBankStatusForm] = useState<'approved' | 'rejected' | 'pending' | 'none'>('none');
+  const currentStatus = statusModalSeller?.seller?.status === 'confirmed' ? 'confirmed' : 'pending';
+  const isStatusUnchanged = statusModalSeller ? statusForm === currentStatus : true;
 
   const isConnected = Boolean(walletAddress);
 
@@ -80,15 +116,173 @@ export default function SellerManagementByAgentPage() {
       const res = await fetch('/api/user/getSellersByAgentcode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentcode, limit: 200 }),
+        body: JSON.stringify({
+          agentcode,
+          limit: pageSize,
+          page,
+          searchTerm: searchTerm.trim(),
+        }),
       });
       if (!res.ok) throw new Error('판매자 목록을 불러오지 못했습니다.');
       const data = await res.json();
       setSellers(data?.items || []);
+      setTotalCount(data?.totalCount ?? data?.result?.totalCount ?? data?.items?.length ?? 0);
     } catch (e) {
       setError(e instanceof Error ? e.message : '판매자 목록을 불러오지 못했습니다.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openBankModal = (seller: SellerUser) => {
+    const bankInfo = seller?.seller?.bankInfo || {};
+    setBankForm({
+      bankName: bankInfo.bankName || '',
+      accountNumber: bankInfo.accountNumber || '',
+      accountHolder: bankInfo.accountHolder || '',
+    });
+    const status = bankInfo?.status === 'approved' || bankInfo?.status === 'rejected' || bankInfo?.status === 'pending'
+      ? bankInfo.status
+      : 'none';
+    setBankStatusForm(status);
+    setBankModalSeller(seller);
+    setBankError(null);
+    setBankModalOpen(true);
+  };
+
+  const isBankUnchanged = bankModalSeller
+    ? (bankModalSeller.seller?.bankInfo?.bankName || '') === bankForm.bankName &&
+      (bankModalSeller.seller?.bankInfo?.accountNumber || '') === bankForm.accountNumber &&
+      (bankModalSeller.seller?.bankInfo?.accountHolder || '') === bankForm.accountHolder &&
+      ((bankModalSeller.seller?.bankInfo?.status as string) || 'none') === bankStatusForm
+    : true;
+
+  const openStatusModal = (seller: SellerUser) => {
+    const status = seller?.seller?.status === 'confirmed' ? 'confirmed' : 'pending';
+    setStatusForm(status);
+    setStatusModalSeller(seller);
+    setStatusError(null);
+    setStatusModalOpen(true);
+  };
+
+  const handleSaveBank = async () => {
+    if (!bankModalSeller) return;
+    const prev = bankModalSeller.seller?.bankInfo || {};
+    if (
+      (prev.bankName || '') === bankForm.bankName &&
+      (prev.accountNumber || '') === bankForm.accountNumber &&
+      (prev.accountHolder || '') === bankForm.accountHolder &&
+      ((prev.status as string) || 'none') === bankStatusForm
+    ) {
+      setBankError('변경된 내용이 없습니다.');
+      return;
+    }
+    setBankSaving(true);
+    setBankError(null);
+    try {
+      const updatedSeller = {
+        ...(bankModalSeller.seller || {}),
+        bankInfo: {
+          bankName: bankForm.bankName,
+          accountNumber: bankForm.accountNumber,
+          accountHolder: bankForm.accountHolder,
+          status: bankStatusForm,
+        },
+        bankInfoHistory: [
+          ...(Array.isArray(bankModalSeller.seller?.bankInfoHistory) ? bankModalSeller.seller.bankInfoHistory : []),
+          {
+            bankName: bankForm.bankName,
+            accountNumber: bankForm.accountNumber,
+            accountHolder: bankForm.accountHolder,
+            status: bankStatusForm,
+            updatedAt: new Date().toISOString(),
+            updatedBy: walletAddress || 'self',
+          },
+        ],
+        bankInfoStatusHistory: [
+          ...(Array.isArray(bankModalSeller.seller?.bankInfoStatusHistory)
+            ? bankModalSeller.seller.bankInfoStatusHistory
+            : []),
+          {
+            status: bankStatusForm,
+            updatedAt: new Date().toISOString(),
+            updatedBy: walletAddress || 'self',
+          },
+        ],
+      };
+
+      const res = await fetch('/api/user/updateSellerInfo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: bankModalSeller.storecode || 'admin',
+          walletAddress: bankModalSeller.walletAddress,
+          seller: updatedSeller,
+          bankName: bankForm.bankName,
+          accountNumber: bankForm.accountNumber,
+          accountHolder: bankForm.accountHolder,
+        }),
+      });
+      if (!res.ok) {
+        const msg = (await res.json())?.error || '은행 정보를 저장하지 못했습니다.';
+        throw new Error(msg);
+      }
+      await fetchSellers();
+      setBankModalOpen(false);
+      setBankModalSeller(null);
+    } catch (e) {
+      setBankError(e instanceof Error ? e.message : '저장 실패');
+    } finally {
+      setBankSaving(false);
+    }
+  };
+
+  const handleSaveStatus = async () => {
+    if (!statusModalSeller) return;
+    setStatusSaving(true);
+    setStatusError(null);
+    try {
+      const current = statusModalSeller?.seller?.status === 'confirmed' ? 'confirmed' : 'pending';
+      if (statusForm === current) {
+        setStatusError('변경된 상태가 없습니다.');
+        return;
+      }
+      const updatedSeller = {
+        ...(statusModalSeller.seller || {}),
+        status: statusForm,
+        statusHistory: [
+          ...(Array.isArray(statusModalSeller.seller?.statusHistory)
+            ? statusModalSeller.seller.statusHistory
+            : []),
+          {
+            status: statusForm,
+            updatedAt: new Date().toISOString(),
+            updatedBy: walletAddress || 'self',
+          },
+        ],
+      };
+
+      const res = await fetch('/api/user/updateSellerInfo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: statusModalSeller.storecode || 'admin',
+          walletAddress: statusModalSeller.walletAddress,
+          seller: updatedSeller,
+          sellerStatus: statusForm,
+        }),
+      });
+      if (!res.ok) {
+        const msg = (await res.json())?.error || '상태를 저장하지 못했습니다.';
+        throw new Error(msg);
+      }
+      await fetchSellers();
+      setStatusModalOpen(false);
+      setStatusModalSeller(null);
+    } catch (e) {
+      setStatusError(e instanceof Error ? e.message : '저장 실패');
+    } finally {
+      setStatusSaving(false);
     }
   };
 
@@ -118,7 +312,7 @@ export default function SellerManagementByAgentPage() {
   useEffect(() => {
     fetchSellers();
     fetchAgentDetail();
-  }, [agentcode]);
+  }, [agentcode, page, searchTerm]);
 
   const stats = useMemo(() => {
     const total = sellers.length;
@@ -128,6 +322,7 @@ export default function SellerManagementByAgentPage() {
   }, [sellers]);
 
   return (
+    <>
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
       <AutoConnect client={client} wallets={[wallet]} />
       <div className="mx-auto max-w-6xl px-4 pb-14 pt-8 sm:px-6 lg:px-10">
@@ -197,6 +392,35 @@ export default function SellerManagementByAgentPage() {
             </span>
           </div>
         </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm sm:min-w-[260px]">
+            <Image src="/icon-search.png" alt="Search" width={16} height={16} className="h-4 w-4 opacity-70" />
+            <input
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
+              placeholder="닉네임, 지갑주소 등 검색"
+              className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setPage(1);
+                }}
+                className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-200"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <span className="text-xs font-semibold text-slate-600">
+            {sellers.length} / {totalCount || sellers.length} 명
+          </span>
+        </div>
         {agentDescription && (
           <div className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm">
             {agentDescription}
@@ -247,8 +471,9 @@ export default function SellerManagementByAgentPage() {
                   <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-600">
                     <tr>
                       <th className="px-4 py-2 text-left">프로필</th>
-                      <th className="px-4 py-2 text-left">지갑주소</th>
+                      <th className="px-4 py-2 text-left">에스크로 지갑</th>
                       <th className="px-4 py-2 text-left">상태</th>
+                      <th className="px-4 py-2 text-left">판매금액</th>
                       <th className="px-4 py-2 text-left">KYC</th>
                       <th className="px-4 py-2 text-left">은행</th>
                     </tr>
@@ -256,13 +481,13 @@ export default function SellerManagementByAgentPage() {
                   <tbody className="text-sm">
                     {loading ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-4 text-center text-slate-500">
+                        <td colSpan={6} className="px-4 py-4 text-center text-slate-500">
                           불러오는 중...
                         </td>
                       </tr>
                     ) : sellers.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-4 text-center text-slate-500">
+                        <td colSpan={6} className="px-4 py-4 text-center text-slate-500">
                           소속 판매자가 없습니다.
                         </td>
                       </tr>
@@ -311,17 +536,35 @@ export default function SellerManagementByAgentPage() {
                               </div>
                             </td>
                             <td className="px-4 py-3 text-xs font-mono text-slate-700">
-                              {seller.walletAddress}
+                              {seller?.seller?.escrowWalletAddress
+                                ? `${seller.seller.escrowWalletAddress.slice(0, 6)}...${seller.seller.escrowWalletAddress.slice(-4)}`
+                                : '-'}
                             </td>
                             <td className="px-4 py-3">
-                              <span
-                                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
-                                  status === 'confirmed'
-                                    ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
-                                    : 'border-amber-200/80 bg-amber-50 text-amber-700'
-                                }`}
-                              >
-                                {status === 'confirmed' ? '판매가능' : '대기'}
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                                    status === 'confirmed'
+                                      ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                                      : 'border-amber-200/80 bg-amber-50 text-amber-700'
+                                  }`}
+                                >
+                                  {status === 'confirmed' ? '판매가능' : '대기'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => openStatusModal(seller)}
+                                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
+                                >
+                                  상태 변경
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                                {seller?.seller?.usdtToKrwRate
+                                  ? `${Number(seller.seller.usdtToKrwRate).toLocaleString()} KRW/USDT`
+                                  : '-'}
                               </span>
                             </td>
                             <td className="px-4 py-3">
@@ -346,19 +589,42 @@ export default function SellerManagementByAgentPage() {
                               </span>
                             </td>
                             <td className="px-4 py-3">
-                              <span
-                                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
-                                  bankInfo?.status === 'approved'
-                                    ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
-                                    : bankInfo?.status === 'rejected'
-                                    ? 'border-rose-200/80 bg-rose-50 text-rose-700'
-                                    : bankInfo?.status === 'pending'
-                                    ? 'border-amber-200/80 bg-amber-50 text-amber-700'
-                                    : 'border-slate-200/80 bg-slate-50 text-slate-600'
-                                }`}
-                              >
-                                {bankLabel}
-                              </span>
+                              <div className="flex flex-col gap-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span
+                                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                                      bankInfo?.status === 'approved'
+                                        ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                                        : bankInfo?.status === 'rejected'
+                                        ? 'border-rose-200/80 bg-rose-50 text-rose-700'
+                                        : bankInfo?.status === 'pending'
+                                        ? 'border-amber-200/80 bg-amber-50 text-amber-700'
+                                        : 'border-slate-200/80 bg-slate-50 text-slate-600'
+                                    }`}
+                                  >
+                                    {bankLabel}
+                                  </span>
+                                  {bankInfo?.bankName && (
+                                    <span className="text-xs font-semibold text-slate-800">
+                                      {bankInfo.bankName} · {bankInfo.accountHolder}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-3">
+                                  {bankInfo?.accountNumber && (
+                                    <span className="text-[11px] font-mono text-slate-600">
+                                      {bankInfo.accountNumber}
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => openBankModal(seller)}
+                                    className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
+                                  >
+                                    은행 정보 수정
+                                  </button>
+                                </div>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -367,10 +633,313 @@ export default function SellerManagementByAgentPage() {
                   </tbody>
                 </table>
               </div>
+              {!loading && sellers.length > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
+                  <span>
+                    {totalCount === 0
+                      ? '0건'
+                      : `${(page - 1) * pageSize + 1} - ${Math.min(page * pageSize, totalCount)} / ${totalCount}건`}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page <= 1 || loading}
+                      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                        page <= 1 || loading
+                          ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                          : 'border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:shadow'
+                      }`}
+                    >
+                      ← 이전
+                    </button>
+                    <span className="px-2 text-xs font-semibold text-slate-500">페이지 {page}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const maxPage = Math.max(1, Math.ceil((totalCount || sellers.length) / pageSize));
+                        setPage((p) => Math.min(maxPage, p + 1));
+                      }}
+                      disabled={page >= Math.ceil((totalCount || sellers.length) / pageSize) || loading}
+                      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                        page >= Math.ceil((totalCount || sellers.length) / pageSize) || loading
+                          ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                          : 'border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:shadow'
+                      }`}
+                    >
+                      다음 →
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
       </div>
     </main>
+    {bankModalOpen && bankModalSeller && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+        <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_30px_120px_-60px_rgba(15,23,42,0.65)]">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Bank Info</p>
+              <h3 className="text-lg font-bold text-slate-900">은행 정보 수정</h3>
+              <div className="mt-2 flex items-center gap-3">
+                <div className="relative h-9 w-9 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                  {bankModalSeller.avatar ? (
+                    <Image
+                      src={bankModalSeller.avatar}
+                      alt={bankModalSeller.nickname || 'avatar'}
+                      fill
+                      sizes="36px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-600">
+                      {(bankModalSeller.nickname || bankModalSeller.walletAddress).slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 truncate">
+                    {bankModalSeller.nickname || '닉네임 없음'}
+                  </p>
+                  <p className="text-[11px] font-mono text-slate-500 truncate">
+                    {bankModalSeller.walletAddress.slice(0, 6)}...{bankModalSeller.walletAddress.slice(-4)}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setBankModalOpen(false);
+                setBankModalSeller(null);
+              }}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              닫기
+            </button>
+          </div>
+          <div className="space-y-3 px-5 py-4">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-600">은행명</label>
+              <select
+                value={bankForm.bankName}
+                onChange={(e) => setBankForm((p) => ({ ...p, bankName: e.target.value }))}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-slate-400 focus:outline-none"
+              >
+                <option value="">은행을 선택하세요</option>
+                {bankOptions.map((bank) => (
+                  <option key={bank} value={bank}>
+                    {bank}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-slate-500">은행 목록에서 선택하세요.</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-600">은행 상태</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: 'none', label: '미제출', tone: 'border-slate-200 bg-slate-50 text-slate-700' },
+                  { key: 'pending', label: '심사중', tone: 'border-amber-200 bg-amber-50 text-amber-700' },
+                  { key: 'approved', label: '승인', tone: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
+                  { key: 'rejected', label: '거절', tone: 'border-rose-200 bg-rose-50 text-rose-700' },
+                ].map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setBankStatusForm(opt.key as any)}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      bankStatusForm === opt.key
+                        ? `${opt.tone} shadow-sm`
+                        : 'border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:shadow'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-slate-500">상태에 따라 지급 가능 여부가 반영됩니다.</p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-600">계좌번호</label>
+              <input
+                value={bankForm.accountNumber}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\\D+/g, '');
+                  setBankForm((p) => ({ ...p, accountNumber: digits }));
+                }}
+                onKeyDown={(e) => {
+                  const allow = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'];
+                  if (allow.includes(e.key)) return;
+                  if (!/^[0-9]$/.test(e.key)) e.preventDefault();
+                }}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-slate-400 focus:outline-none"
+                placeholder="계좌번호 입력"
+                inputMode="numeric"
+                pattern="\\d*"
+              />
+              <p className="text-[11px] text-slate-500">숫자만 입력됩니다.</p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-600">예금주</label>
+              <input
+                value={bankForm.accountHolder}
+                onChange={(e) => setBankForm((p) => ({ ...p, accountHolder: e.target.value }))}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-slate-400 focus:outline-none"
+                placeholder="예금주 입력"
+              />
+              <p className="text-[11px] text-slate-500">통장 예금주 성함을 입력하세요.</p>
+            </div>
+            {Array.isArray(bankModalSeller.seller?.bankInfoHistory) && bankModalSeller.seller.bankInfoHistory.length > 0 && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <p className="text-[11px] font-semibold text-slate-600 mb-1">변경 이력</p>
+                <div className="max-h-40 space-y-1 overflow-y-auto text-[11px] text-slate-600">
+                  {[...bankModalSeller.seller.bankInfoHistory].reverse().map((item: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between gap-2 rounded-lg bg-white px-2 py-1">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-800">
+                          {item.bankName} · {item.accountHolder} · {item.status || '미제출'}
+                        </p>
+                        <p className="font-mono text-slate-500">{item.accountNumber}</p>
+                      </div>
+                      <span className="text-[10px] text-slate-500">
+                        {item.updatedAt ? new Date(item.updatedAt).toLocaleString() : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {bankError && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                {bankError}
+              </div>
+            )}
+            <button
+              disabled={bankSaving || isBankUnchanged}
+              onClick={handleSaveBank}
+              className="w-full rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:opacity-70"
+            >
+              {bankSaving ? '저장 중...' : '저장'}
+            </button>
+            {isBankUnchanged && (
+              <p className="text-[11px] text-amber-600">변경된 내용이 있어야 저장할 수 있습니다.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    {statusModalOpen && statusModalSeller && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_30px_120px_-60px_rgba(15,23,42,0.65)]">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Status</p>
+              <h3 className="text-lg font-bold text-slate-900">판매자 상태 변경</h3>
+              <div className="mt-2 flex items-center gap-3">
+                <div className="relative h-9 w-9 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                  {statusModalSeller.avatar ? (
+                    <Image
+                      src={statusModalSeller.avatar}
+                      alt={statusModalSeller.nickname || 'avatar'}
+                      fill
+                      sizes="36px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-600">
+                      {(statusModalSeller.nickname || statusModalSeller.walletAddress).slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 truncate">
+                    {statusModalSeller.nickname || '닉네임 없음'}
+                  </p>
+                  <p className="text-[11px] font-mono text-slate-500 truncate">
+                    {statusModalSeller.walletAddress.slice(0, 6)}...{statusModalSeller.walletAddress.slice(-4)}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setStatusModalOpen(false);
+                setStatusModalSeller(null);
+              }}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              닫기
+            </button>
+          </div>
+            <div className="space-y-3 px-5 py-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-600">상태</label>
+                <div className="flex gap-2">
+                  <button
+                  type="button"
+                  onClick={() => setStatusForm('confirmed')}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${
+                    statusForm === 'confirmed'
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : 'border-slate-200 bg-white text-slate-700'
+                  }`}
+                >
+                  판매가능
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusForm('pending')}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${
+                    statusForm === 'pending'
+                      ? 'border-amber-200 bg-amber-50 text-amber-700'
+                      : 'border-slate-200 bg-white text-slate-700'
+                  }`}
+                >
+                  대기
+                </button>
+              </div>
+                  <p className="text-[11px] text-slate-500">상태를 변경하면 즉시 반영됩니다.</p>
+                  {isStatusUnchanged && (
+                    <p className="text-[11px] text-amber-600">현재 상태와 동일합니다. 다른 상태를 선택하세요.</p>
+                  )}
+              </div>
+            {Array.isArray(statusModalSeller.seller?.statusHistory) &&
+              statusModalSeller.seller.statusHistory.length > 0 && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] font-semibold text-slate-600 mb-1">상태 이력</p>
+                  <div className="max-h-32 space-y-1 overflow-y-auto text-[11px] text-slate-600">
+                    {[...statusModalSeller.seller.statusHistory].reverse().map((item: any, idx: number) => (
+                      <div key={idx} className="flex items-center justify-between rounded-lg bg-white px-2 py-1">
+                        <span className="font-semibold text-slate-800">
+                          {item.status === 'confirmed' ? '판매가능' : '대기'}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {item.updatedAt ? new Date(item.updatedAt).toLocaleString() : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+                {statusError && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                    {statusError}
+                  </div>
+                )}
+            <button
+              disabled={statusSaving || isStatusUnchanged}
+              onClick={handleSaveStatus}
+              className="w-full rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:opacity-70"
+            >
+              {statusSaving ? '저장 중...' : '저장'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
