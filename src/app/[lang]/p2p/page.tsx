@@ -229,6 +229,13 @@ const STATUS_LABELS: Record<string, string> = {
     ordered: '대기',
 };
 
+type AgentSummary = {
+    agentcode: string;
+    agentName?: string;
+    agentLogo?: string;
+    adminWalletAddress?: string;
+};
+
 const TRADE_STYLES: Record<
     TradeTone,
     { label: string; badge: string; accent: string; glow: string }
@@ -430,6 +437,8 @@ export default function OrangeXPage() {
     const [noticeError, setNoticeError] = useState<string | null>(null);
     const [agentCode, setAgentCode] = useState<string | null>(null);
     const isAgent = Boolean(agentCode);
+    const [myAgents, setMyAgents] = useState<AgentSummary[]>([]);
+    const [myAgentsLoading, setMyAgentsLoading] = useState(false);
     const newsTickerRef = useRef<HTMLDivElement | null>(null);
     const newsTickerPauseUntilRef = useRef(0);
     const newsTickerOffsetRef = useRef(0);
@@ -961,6 +970,31 @@ export default function OrangeXPage() {
 
         return () => window.cancelAnimationFrame(frame);
     }, []);
+
+    useEffect(() => {
+        const fetchAgents = async () => {
+            if (!walletAddress) {
+                setMyAgents([]);
+                return;
+            }
+            setMyAgentsLoading(true);
+            try {
+                const res = await fetch(
+                    `/api/agents?adminWalletAddress=${encodeURIComponent(walletAddress)}&limit=20`,
+                );
+                if (!res.ok) throw new Error('에이전트를 불러오지 못했습니다.');
+                const data = await res.json();
+                setMyAgents(Array.isArray(data?.items) ? data.items : []);
+            } catch (error) {
+                console.warn('Failed to load my agents', error);
+                setMyAgents([]);
+            } finally {
+                setMyAgentsLoading(false);
+            }
+        };
+
+        fetchAgents();
+    }, [walletAddress]);
 
     useEffect(() => {
         let isMounted = true;
@@ -1896,29 +1930,74 @@ export default function OrangeXPage() {
                                 </div>
                             </div>
 
-                            {isAgent && (
-                              <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/80 p-4 shadow-[0_16px_36px_-28px_rgba(16,185,129,0.6)]">
-                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                  <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
-                                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white">
-                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                        <path d="M12 2l7 7-7 7-7-7 7-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                        <path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                      </svg>
-                                    </span>
-                                    <span>당신은 에이전트 권한이 있습니다.</span>
-                                  </div>
-                                  <Link
-                                    href={`/${lang}/p2p/seller-management`}
-                                    className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-[0_14px_32px_-22px_rgba(16,185,129,0.7)] transition hover:bg-emerald-500"
-                                  >
-                                    소속 판매자 관리하기
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                      <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                    </svg>
-                                  </Link>
+                            {walletAddress && (
+                                <div className="mt-4 space-y-3 rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.35)]">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                                                <Image src="/icon-shield.png" alt="Agent" width={18} height={18} />
+                                            </span>
+                                            <div className="flex flex-col leading-tight">
+                                                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                                    My Agents
+                                                </span>
+                                                <span className="text-sm font-semibold text-slate-900">
+                                                    내 지갑이 관리자인 에이전트
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <span className="text-[11px] font-semibold text-slate-500">
+                                            {myAgentsLoading ? '불러오는 중...' : `${myAgents.length}개`}
+                                        </span>
+                                    </div>
+                                    {myAgentsLoading ? (
+                                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                                            에이전트 목록을 불러오는 중입니다...
+                                        </div>
+                                    ) : myAgents.length === 0 ? (
+                                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                                            내 지갑이 관리자인 에이전트가 없습니다.
+                                        </div>
+                                    ) : (
+                                        <div className="grid gap-3 md:grid-cols-2">
+                                            {myAgents.map((agent) => (
+                                                <Link
+                                                    key={agent.agentcode}
+                                                    href={`/${lang}/p2p/seller-management?agentcode=${encodeURIComponent(agent.agentcode)}`}
+                                                    className="group flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                                                >
+                                                    <div className="relative h-10 w-10 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                                                        {agent.agentLogo ? (
+                                                            <Image
+                                                                src={agent.agentLogo}
+                                                                alt={agent.agentName || agent.agentcode}
+                                                                fill
+                                                                sizes="40px"
+                                                                className="object-cover"
+                                                            />
+                                                        ) : (
+                                                            <span className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-slate-700">
+                                                                {agent.agentName?.slice(0, 2)?.toUpperCase() ||
+                                                                    agent.agentcode.slice(0, 2).toUpperCase()}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-sm font-semibold text-slate-900 truncate">
+                                                            {agent.agentName || '에이전트'}
+                                                        </p>
+                                                        <p className="text-[11px] font-mono text-slate-600">
+                                                            {agent.agentcode}
+                                                        </p>
+                                                    </div>
+                                                    <span className="text-[11px] font-semibold text-emerald-700">
+                                                        소속 판매자 관리 →
+                                                    </span>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                              </div>
                             )}
 
                             <div className="flex flex-wrap gap-3 text-xs font-semibold text-slate-500">

@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { AutoConnect, useActiveAccount } from 'thirdweb/react';
+import { ConnectButton } from '@/components/OrangeXConnectButton';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 
@@ -24,6 +25,8 @@ export default function SellerManagementByAgentPage() {
   const params = useParams<{ lang?: string }>();
   const langParam = params?.lang;
   const lang = Array.isArray(langParam) ? langParam[0] : langParam || 'ko';
+  const searchParams = useSearchParams();
+  const agentcodeParam = searchParams?.get('agentcode') || null;
 
   const { wallet, wallets } = useClientWallets();
   const activeAccount = useActiveAccount();
@@ -94,7 +97,7 @@ export default function SellerManagementByAgentPage() {
       });
       if (!res.ok) throw new Error('유저 정보를 불러오지 못했습니다.');
       const data = await res.json();
-      const code =
+      const codeFromUser =
         data?.result?.agentcode ||
         data?.result?.user?.agentcode ||
         data?.result?.seller?.agentcode ||
@@ -109,9 +112,33 @@ export default function SellerManagementByAgentPage() {
         data?.result?.user?.avatar ||
         data?.result?.seller?.avatar ||
         undefined;
-      setAgentcode(code);
-      setAgentName(data?.result?.agentName || null);
-      setAgentLogo(data?.result?.agentLogo || null);
+
+      let nextAgentCode = agentcodeParam || codeFromUser;
+      let nextAgentName = data?.result?.agentName || null;
+      let nextAgentLogo = data?.result?.agentLogo || null;
+      let nextAgentDescription = data?.result?.agentDescription || null;
+
+      // Fallback: if agentcode is missing, try to find agent where adminWalletAddress matches my wallet
+      if (!nextAgentCode && walletAddress) {
+        const agentRes = await fetch(
+          `/api/agents?adminWalletAddress=${encodeURIComponent(walletAddress)}&limit=1`,
+        );
+        if (agentRes.ok) {
+          const agentData = await agentRes.json();
+          const agent = Array.isArray(agentData?.items) ? agentData.items[0] : null;
+          if (agent?.agentcode) {
+            nextAgentCode = agent.agentcode;
+            nextAgentName = agent.agentName || nextAgentName;
+            nextAgentLogo = agent.agentLogo || nextAgentLogo;
+            nextAgentDescription = agent.agentDescription || nextAgentDescription;
+          }
+        }
+      }
+
+      setAgentcode(nextAgentCode);
+      setAgentName(nextAgentName);
+      setAgentLogo(nextAgentLogo);
+      setAgentDescription(nextAgentDescription);
       setUserProfile({ nickname, avatar });
     } catch (e) {
       setError(e instanceof Error ? e.message : '유저 정보를 불러오지 못했습니다.');
@@ -374,7 +401,13 @@ export default function SellerManagementByAgentPage() {
 
   useEffect(() => {
     fetchUser();
-  }, [walletAddress]);
+  }, [walletAddress, agentcodeParam]);
+
+  useEffect(() => {
+    if (agentcodeParam) {
+      setAgentcode(agentcodeParam);
+    }
+  }, [agentcodeParam]);
 
   useEffect(() => {
     fetchSellers();
@@ -402,7 +435,7 @@ export default function SellerManagementByAgentPage() {
           </Link>
           <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">소속 판매자 관리</h1>
           <Link
-            href={`/${lang}/p2p/seller-management/trade-status`}
+            href={`/${lang}/p2p/seller-management/trade-status?agentcode=${agentcode ?? ''}`}
             className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
           >
             거래 상태 보기 →
@@ -501,8 +534,19 @@ export default function SellerManagementByAgentPage() {
         )}
 
         {!isConnected && (
-          <div className="mt-6 rounded-2xl border border-amber-200/70 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            지갑을 연결하면 소속 판매자를 조회할 수 있습니다.
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200/70 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <span>지갑을 연결하면 소속 판매자를 조회할 수 있습니다.</span>
+            <ConnectButton
+              client={client}
+              wallets={[wallet]}
+              theme="light"
+              locale="ko_KR"
+              connectButton={{
+                label: '지갑 연결하기',
+                className:
+                  'inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 shadow-sm transition hover:-translate-y-0.5 hover:shadow hover:text-amber-800 hover:bg-amber-50',
+              }}
+            />
           </div>
         )}
 

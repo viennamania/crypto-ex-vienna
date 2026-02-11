@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { AutoConnect, useActiveAccount } from 'thirdweb/react';
 
 import { useClientWallets } from '@/lib/useClientWallets';
@@ -51,14 +51,17 @@ export default function SellerTradeStatusPage() {
   const params = useParams<{ lang?: string }>();
   const langParam = params?.lang;
   const lang = Array.isArray(langParam) ? langParam[0] : langParam || 'ko';
+  const searchParams = useSearchParams();
+  const agentcodeParam = searchParams?.get('agentcode') || null;
 
   const { wallet } = useClientWallets();
   const activeAccount = useActiveAccount();
   const walletAddress = activeAccount?.address ?? '';
 
-  const [agentcode, setAgentcode] = useState<string | null>(null);
+  const [agentcode, setAgentcode] = useState<string | null>(agentcodeParam || null);
   const [agentName, setAgentName] = useState<string | null>(null);
   const [agentLogo, setAgentLogo] = useState<string | null>(null);
+  const [agentDescription, setAgentDescription] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{ nickname?: string; avatar?: string } | null>(null);
 
   const [orders, setOrders] = useState<BuyOrder[]>([]);
@@ -85,6 +88,7 @@ export default function SellerTradeStatusPage() {
       if (!res.ok) throw new Error('유저 정보를 불러오지 못했습니다.');
       const data = await res.json();
       const code =
+        agentcodeParam ||
         data?.result?.agentcode ||
         data?.result?.user?.agentcode ||
         data?.result?.seller?.agentcode ||
@@ -105,6 +109,25 @@ export default function SellerTradeStatusPage() {
       setUserProfile({ nickname, avatar });
     } catch (e) {
       setError(e instanceof Error ? e.message : '유저 정보를 불러오지 못했습니다.');
+    }
+  };
+
+  const fetchAgentDetail = async () => {
+    if (!agentcode) return;
+    try {
+      const res = await fetch('/api/agent/getOneAgent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentcode }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const agent = data?.result;
+      setAgentName(agent?.agentName || agentName);
+      setAgentLogo(agent?.agentLogo || agentLogo);
+      setAgentDescription(agent?.agentDescription || null);
+    } catch {
+      /* ignore */
     }
   };
 
@@ -162,11 +185,21 @@ export default function SellerTradeStatusPage() {
 
   useEffect(() => {
     fetchUser();
-  }, [walletAddress]);
+  }, [walletAddress, agentcodeParam]);
+
+  useEffect(() => {
+    if (agentcodeParam) {
+      setAgentcode(agentcodeParam);
+    }
+  }, [agentcodeParam]);
 
   useEffect(() => {
     fetchOrders();
   }, [agentcode, page, searchTerm]);
+
+  useEffect(() => {
+    fetchAgentDetail();
+  }, [agentcode]);
 
   const stats = useMemo(() => {
     const pending = orders.filter((o) => o.status !== 'paymentConfirmed' && o.status !== 'completed').length;
@@ -207,7 +240,7 @@ export default function SellerTradeStatusPage() {
           )}
           <div className="ml-auto flex items-center gap-2">
             <Link
-              href={`/${lang}/p2p/seller-management`}
+              href={`/${lang}/p2p/seller-management${agentcode ? `?agentcode=${encodeURIComponent(agentcode)}` : ''}`}
               className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
             >
               ← 소속 판매자 관리

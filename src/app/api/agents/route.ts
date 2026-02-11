@@ -55,12 +55,13 @@ const generateAgentCode = async () => {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const search = searchParams.get('search')?.trim() ?? '';
+  const adminWalletAddress = searchParams.get('adminWalletAddress')?.trim() ?? '';
   const limit = Math.min(100, Math.max(1, Number(searchParams.get('limit')) || 50));
   const skip = Math.max(0, Number(searchParams.get('skip')) || 0);
 
   const collection = await getCollection();
 
-  const query =
+  const query: Record<string, unknown> =
     search.length > 0
       ? {
           $or: [
@@ -69,6 +70,10 @@ export async function GET(request: NextRequest) {
           ],
         }
       : {};
+
+  if (adminWalletAddress) {
+    query.adminWalletAddress = { $regex: `^${adminWalletAddress}$`, $options: 'i' };
+  }
 
   const pipeline = [
     { $match: query },

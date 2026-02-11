@@ -1,8 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-	getOneByWalletAddress,
-} from '@lib/api/user';
+import { getOneByWalletAddress } from '@lib/api/user';
 
 import {
   createThirdwebClient,
@@ -49,10 +47,12 @@ export async function POST(request: NextRequest) {
 
 
 
-  const result = await getOneByWalletAddress(
-    storecode,
-    walletAddress
-  );
+  let result = await getOneByWalletAddress(storecode, walletAddress);
+
+  // If not found under the provided storecode, fall back to global lookup to cover agent/admin records.
+  if (!result && storecode) {
+    result = await getOneByWalletAddress(undefined, walletAddress);
+  }
 
 
  
