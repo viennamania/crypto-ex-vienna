@@ -33,7 +33,7 @@ export default function SellerManagementByAgentPage() {
   const walletAddress = activeAccount?.address ?? '';
 
   const [loading, setLoading] = useState(false);
-  const [agentcode, setAgentcode] = useState<string | null>(null);
+  const [agentcode, setAgentcode] = useState<string | null>(agentcodeParam || null);
   const [agentName, setAgentName] = useState<string | null>(null);
   const [agentLogo, setAgentLogo] = useState<string | null>(null);
   const [agentDescription, setAgentDescription] = useState<string | null>(null);
@@ -135,10 +135,10 @@ export default function SellerManagementByAgentPage() {
         }
       }
 
-      setAgentcode(nextAgentCode);
-      setAgentName(nextAgentName);
-      setAgentLogo(nextAgentLogo);
-      setAgentDescription(nextAgentDescription);
+      if (nextAgentCode) setAgentcode(nextAgentCode);
+      if (nextAgentName) setAgentName(nextAgentName);
+      if (nextAgentLogo) setAgentLogo(nextAgentLogo);
+      if (nextAgentDescription !== null) setAgentDescription(nextAgentDescription);
       setUserProfile({ nickname, avatar });
     } catch (e) {
       setError(e instanceof Error ? e.message : '유저 정보를 불러오지 못했습니다.');
