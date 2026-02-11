@@ -401,6 +401,12 @@ export default function SellerManagementByAgentPage() {
             ← P2P 홈
           </Link>
           <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">소속 판매자 관리</h1>
+          <Link
+            href={`/${lang}/p2p/seller-management/trade-status`}
+            className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
+          >
+            거래 상태 보기 →
+          </Link>
           {agentcode && (
             <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 shadow-sm">
               <div className="relative h-8 w-8 overflow-hidden rounded-full border border-emerald-200 bg-white">
