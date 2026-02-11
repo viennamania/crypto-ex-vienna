@@ -9,6 +9,10 @@ export async function POST(request: Request) {
         page?: number;
         limit?: number;
         searchTerm?: string;
+        status?: string;
+        hasBankInfo?: 'all' | 'yes' | 'no';
+        startDate?: string;
+        endDate?: string;
       }
     | null;
 
@@ -16,6 +20,10 @@ export async function POST(request: Request) {
   const page = Number(body?.page || 1);
   const limit = Number(body?.limit || 10);
   const searchTerm = body?.searchTerm?.trim() || '';
+  const status = body?.status || 'all';
+  const hasBankInfo = (body?.hasBankInfo as 'all' | 'yes' | 'no') || 'all';
+  const startDate = body?.startDate || '';
+  const endDate = body?.endDate || '';
 
   if (!agentcode) {
     return NextResponse.json({ error: 'agentcode is required.' }, { status: 400 });
@@ -25,11 +33,13 @@ export async function POST(request: Request) {
     const data = await getAllBuyOrdersForAgent({
       limit: Math.max(1, Math.min(100, limit)),
       page: Math.max(1, page),
-      startDate: '',
-      endDate: '',
+      startDate,
+      endDate,
       searchNickname: searchTerm,
       walletAddress: searchTerm,
       agentcode,
+      status,
+      hasBankInfo,
     });
 
     return NextResponse.json({

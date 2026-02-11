@@ -6388,6 +6388,8 @@ export async function getAllBuyOrdersForAgent(
     searchNickname,
     walletAddress,
     agentcode,
+    status,
+    hasBankInfo,
   }: {
     limit: number;
     page: number;
@@ -6396,16 +6398,12 @@ export async function getAllBuyOrdersForAgent(
     searchNickname: string,
     walletAddress: string;
     agentcode: string;
+    status?: string;
+    hasBankInfo?: 'all' | 'yes' | 'no';
   }
 ): Promise<any> {
-  if (!startDate) {
-    startDate = new Date(0).toISOString();
-  }
-  if (!endDate) {
-    endDate = new Date().toISOString();
-  }
-  //console.log('getAllBuyOrdersForAgent startDate: ' + startDate);
-  //console.log('getAllBuyOrdersForAgent endDate: ' + endDate);
+  const start = startDate?.trim?.() || '';
+  const end = endDate?.trim?.() || '';
 
 
 
@@ -6436,6 +6434,26 @@ export async function getAllBuyOrdersForAgent(
   }
   if (walletAddress) {
     baseMatch['buyer.walletAddress'] = { $regex: walletAddress, $options: 'i' };
+  }
+  // status filter
+  const defaultStatuses = ['ordered', 'accepted', 'paymentRequested', 'paymentConfirmed', 'completed', 'cancelled'];
+  if (status && status !== 'all') {
+    baseMatch.status = status;
+  } else {
+    baseMatch.status = { $in: defaultStatuses };
+  }
+  // bank info filter
+  if (hasBankInfo === 'yes') {
+    baseMatch['seller.bankInfo.bankName'] = { $exists: true, $ne: '' };
+  } else if (hasBankInfo === 'no') {
+    baseMatch['seller.bankInfo.bankName'] = { $in: [null, ''] };
+  }
+  // date range (createdAt)
+  if (start || end) {
+    const range: Record<string, string> = {};
+    if (start) range.$gte = start;
+    if (end) range.$lte = end;
+    baseMatch.createdAt = range;
   }
 
   const results = await collection.find<UserProps>(baseMatch)

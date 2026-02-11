@@ -74,6 +74,9 @@ export default function SellerTradeStatusPage() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [hasBankInfo, setHasBankInfo] = useState<'all' | 'yes' | 'no'>('all');
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
   const [depositingId, setDepositingId] = useState<string | null>(null);
 
   const isConnected = Boolean(walletAddress);
@@ -151,6 +154,10 @@ export default function SellerTradeStatusPage() {
           page,
           limit: pageSize,
           searchTerm: searchTerm.trim(),
+          status: statusFilter,
+          hasBankInfo,
+          startDate: dateRange.start,
+          endDate: dateRange.end,
         }),
       });
       if (!res.ok) {
@@ -203,7 +210,7 @@ export default function SellerTradeStatusPage() {
   useEffect(() => {
     fetchOrders();
     fetchAgentDetail();
-  }, [agentcode, page, searchTerm]);
+  }, [agentcode, page, searchTerm, statusFilter, hasBankInfo, dateRange]);
 
   const stats = useMemo(() => {
     const pending = orders.filter((o) => o.status !== 'paymentConfirmed' && o.status !== 'completed').length;
@@ -290,7 +297,7 @@ export default function SellerTradeStatusPage() {
                 <p className="mt-2 text-2xl font-bold text-emerald-800">{stats.confirmed} 건</p>
               </div>
               <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 shadow-sm">
-                <p className="text-xs font-semibold text-indigo-600">대기 총액 (원)</p>
+                <p className="text-xs font-semibold text-indigo-600">총 거래 금액 (원)</p>
                 <p className="mt-2 text-2xl font-bold text-indigo-900">
                   {totalKrwAmount.toLocaleString()}
                 </p>
@@ -324,6 +331,57 @@ export default function SellerTradeStatusPage() {
                     Clear
                   </button>
                 )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-700 shadow-sm focus:outline-none"
+                >
+                  <option value="all">전체 상태</option>
+                  <option value="ordered">주문접수</option>
+                  <option value="accepted">판매자수락</option>
+                  <option value="paymentRequested">입금요청</option>
+                  <option value="paymentConfirmed">입금완료</option>
+                  <option value="completed">정산완료</option>
+                  <option value="cancelled">취소</option>
+                </select>
+                <select
+                  value={hasBankInfo}
+                  onChange={(e) => {
+                    setHasBankInfo(e.target.value as 'all' | 'yes' | 'no');
+                    setPage(1);
+                  }}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-700 shadow-sm focus:outline-none"
+                >
+                  <option value="all">은행정보 전체</option>
+                  <option value="yes">은행정보 있음</option>
+                  <option value="no">은행정보 없음</option>
+                </select>
+                <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1.5 shadow-sm">
+                  <input
+                    type="date"
+                    value={dateRange.start}
+                    onChange={(e) => {
+                      setDateRange((p) => ({ ...p, start: e.target.value }));
+                      setPage(1);
+                    }}
+                    className="w-28 text-[11px] text-slate-700 focus:outline-none"
+                  />
+                  <span className="text-[11px] text-slate-500">~</span>
+                  <input
+                    type="date"
+                    value={dateRange.end}
+                    onChange={(e) => {
+                      setDateRange((p) => ({ ...p, end: e.target.value }));
+                      setPage(1);
+                    }}
+                    className="w-28 text-[11px] text-slate-700 focus:outline-none"
+                  />
+                </div>
               </div>
               <span className="text-xs font-semibold text-slate-600">
                 {orders.length} / {totalCount || orders.length} 건
@@ -377,8 +435,8 @@ export default function SellerTradeStatusPage() {
                       </tr>
                     ) : orders.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-4 text-center text-slate-500">
-                          진행중인 거래가 없습니다.
+                        <td colSpan={7} className="px-4 py-4 text-center text-slate-500">
+                          표시할 거래가 없습니다.
                         </td>
                       </tr>
                     ) : (
