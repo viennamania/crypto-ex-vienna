@@ -8778,7 +8778,7 @@ export async function acceptBuyOrderPrivateSale(
         storecode: 'admin',
         walletAddress: sellerWalletAddress
       },
-      { projection: { storecode: 1, nickname: 1, avatar: 1, seller: 1 } }
+      { projection: { storecode: 1, nickname: 1, avatar: 1, seller: 1, agentcode: 1 } }
     );
 
     if (!seller) {
@@ -8860,6 +8860,7 @@ export async function acceptBuyOrderPrivateSale(
         depositCompleted: false,
       },
       seller: {
+        agentcode: seller.agentcode || '',
         walletAddress: sellerEscrowWalletAddress,
         nickname: seller.nickname || '',
         avatar: seller.avatar || '',
