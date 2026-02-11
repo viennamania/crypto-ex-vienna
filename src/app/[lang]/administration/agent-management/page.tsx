@@ -137,32 +137,6 @@ export default function AgentManagementPage() {
     }
   };
 
-  const handleDelete = async (id?: string, agentcode?: string) => {
-    if (!id && !agentcode) return;
-    if (!confirm('이 에이전트를 삭제할까요?')) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      if (id) params.set('id', id);
-      if (agentcode) params.set('agentcode', agentcode);
-      const res = await fetch(`/api/agents?${params.toString()}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const msg = (await res.json())?.error || '삭제에 실패했습니다.';
-        throw new Error(msg);
-      }
-      await loadAgents();
-      if (editingId === id) {
-        setForm(emptyForm);
-        setEditingId(null);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '삭제 실패');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleEdit = (agent: Agent) => {
     setForm({
       agentcode: agent.agentcode,
@@ -183,12 +157,10 @@ export default function AgentManagementPage() {
     });
   }, [adminUsers, adminUserQuery]);
 
-  const selectedAdminLabel = useMemo(() => {
-    if (!form.adminWalletAddress) return '선택 안 됨';
-    const match = adminUsers.find((u) => u.walletAddress === form.adminWalletAddress);
-    if (match?.nickname) return `${match.nickname} · ${form.adminWalletAddress}`;
-    return form.adminWalletAddress;
-  }, [form.adminWalletAddress, adminUsers]);
+  const selectedAdmin = useMemo(
+    () => adminUsers.find((u) => u.walletAddress === form.adminWalletAddress),
+    [adminUsers, form.adminWalletAddress],
+  );
 
   const AccentCard = ({
     label,
@@ -229,7 +201,7 @@ export default function AgentManagementPage() {
               </p>
               <h1 className="mt-1 text-3xl font-bold text-slate-900 sm:text-4xl">Agent Management</h1>
               <p className="mt-2 text-sm text-slate-600">
-                에이전트 온보딩 · 수정 · 삭제를 한 곳에서 관리합니다.
+                에이전트 온보딩과 수정을 한 곳에서 관리합니다.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -374,18 +346,12 @@ export default function AgentManagementPage() {
                           : '-'}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end">
                           <button
                             onClick={() => handleEdit(agent)}
                             className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
                           >
                             편집
-                          </button>
-                          <button
-                            onClick={() => handleDelete(agent._id, agent.agentcode)}
-                            className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50"
-                          >
-                            삭제
                           </button>
                         </div>
                       </td>
@@ -484,27 +450,57 @@ export default function AgentManagementPage() {
                       }}
                       className="text-sm"
                     />
-                    <p className="text-[11px] text-slate-500">이미지 선택 시 Vercel Blob으로 자동 업로드됩니다.</p>
+                    <p className="text-[11px] text-slate-500">이미지 선택 시 자동 업로드됩니다.</p>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-600">관리 지갑 선택</label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAdminModal(true)}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
-                >
-                  목록에서 선택
-                </button>
-                <span className="truncate text-xs font-semibold text-slate-600">{selectedAdminLabel}</span>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-600">관리 지갑 선택</label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminModal(true)}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 whitespace-nowrap"
+                  >
+                    목록에서 선택
+                  </button>
+                  {selectedAdmin ? (
+                    <div className="flex min-w-0 items-center gap-2">
+                      <div className="relative h-8 w-8 overflow-hidden rounded-full bg-slate-100">
+                        {selectedAdmin.avatar ? (
+                          <Image
+                            src={selectedAdmin.avatar}
+                            alt={selectedAdmin.nickname || 'avatar'}
+                            fill
+                            sizes="32px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-slate-600">
+                            {(selectedAdmin.nickname || selectedAdmin.walletAddress).slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-slate-800">
+                          {selectedAdmin.nickname || '닉네임 없음'}
+                        </p>
+                        <p className="truncate text-[11px] font-mono text-slate-500">
+                          {selectedAdmin.walletAddress.length > 18
+                            ? `${selectedAdmin.walletAddress.slice(0, 6)}...${selectedAdmin.walletAddress.slice(-4)}`
+                            : selectedAdmin.walletAddress}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-xs font-semibold text-slate-500">선택 안 됨</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  회원 목록에서 관리 지갑을 선택합니다.
+                </p>
               </div>
-              <p className="text-[11px] text-slate-500">
-                storecode=admin 회원 목록에서 관리 지갑을 선택합니다.
-              </p>
-            </div>
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-600">설명</label>
