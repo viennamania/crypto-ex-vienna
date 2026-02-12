@@ -109,6 +109,9 @@ const storecode = "admin";
 
 
 const walletAuthOptions = ["google", "email"];
+const showTradeSummary = false;
+const showP2PBuy = false;
+const showBuyerSummary = false;
 
 
 export default function Index({ params }: any) {
@@ -1217,6 +1220,8 @@ export default function Index({ params }: any) {
 
 
        
+            {showP2PBuy && (
+            <>
             {/* total number of trades, total buy amount krw, total usdt amount */}
             <div className="w-full flex flex-col items-start justify-start gap-2  bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
 
@@ -1270,6 +1275,7 @@ export default function Index({ params }: any) {
 
 
 
+              {showBuyerSummary && (
               <div className="w-full flex flex-row items-center justify-end gap-2">
 
                 <div className="w-full mt-4">
@@ -1437,8 +1443,11 @@ export default function Index({ params }: any) {
                 </div>
 
               </div>
+              )}
 
             </div>
+            </>
+            )}
 
             {version !== 'bangbang' && (
             <div className="hidden w-full flex-col items-start justify-start gap-2  bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
@@ -1607,6 +1616,8 @@ export default function Index({ params }: any) {
 
 
             {/* total number of trades, total buy amount krw, total usdt amount */}
+            {showTradeSummary && (
+            <>
             <div className="w-full flex flex-col items-start justify-start gap-2  bg-white/95 border border-slate-200/80 rounded-2xl p-5 shadow-sm">
 
               <div className="w-full flex flex-col xl:flex-row items-center justify-start gap-2">
@@ -1894,10 +1905,8 @@ export default function Index({ params }: any) {
               */}
 
             </div>
-
-
-
-
+            </>
+            )}
 
             {/* total number of trades, total buy amount krw, total usdt amount */}
             {version !== 'bangbang' && (
@@ -2219,7 +2228,7 @@ export default function Index({ params }: any) {
                     height={35}
                     className="w-6 h-6"
                   />
-                  <h2 className="text-lg font-bold text-slate-900">구매회원</h2>
+                  <h2 className="text-lg font-bold text-slate-900">전체회원 관리</h2>
                 </div>
 
                 <div className="w-full flex flex-row items-center justify-end gap-2">
@@ -2230,22 +2239,6 @@ export default function Index({ params }: any) {
                     className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800 whitespace-nowrap"
                   >
                     회원관리
-                  </button>
-                  <button
-                    onClick={() => {
-                      router.push('/' + params.lang + '/administration/buyer-management');
-                    }}
-                    className="bg-white text-sm text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 whitespace-nowrap"
-                  >
-                    구매자 관리
-                  </button>
-                  <button
-                    onClick={() => {
-                      router.push('/' + params.lang + '/administration/seller-management');
-                    }}
-                    className="bg-white text-sm text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 whitespace-nowrap"
-                  >
-                    판매자 관리
                   </button>
                   <button
                     onClick={() => {
@@ -2275,88 +2268,151 @@ export default function Index({ params }: any) {
 
               </div>
 
-
-
-
-              {/* latest buyers talble */}
-              <div className="w-full mt-4">
-                <div className="flex flex-row items-center justify-start gap-2">
-                  {/* dot */}
-                  <div className="w-2 h-2 bg-slate-900 rounded-full"></div>
-                  <h2 className="text-lg font-bold text-slate-900">총 회원수</h2>
-                  <p className="text-lg text-slate-600 font-bold">
-                    {totalSummary.totalNumberOfBuyers} 명
-                  </p>
-                  {loadingSummary && (
-                    <Image
-                      src="/icon-loading.png"
-                      alt="Loading"
-                      width={20}
-                      height={20}
-                      className="w-5 h-5 animate-spin"
-                    />
-                  )}
-
+              {/* 구매자 관리 별도 배치 */}
+              <div className="w-full mt-3 flex flex-col gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/80 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-sm text-slate-700">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                  <span className="font-semibold">구매자 관리 빠른 실행</span>
+                  <span className="text-xs text-slate-500">구매자 전용 심사·설정 이동</span>
                 </div>
-                <table className="min-w-full
-                  border-collapse
-                  border border-slate-200
-                  rounded-lg
-                  overflow-hidden
-                  shadow-sm
-                ">
-                  <thead
-                    className="bg-slate-50
-                      text-slate-700
-                      text-sm
-                      font-bold
-                      uppercase
-                      border-b
-                    "
+                <button
+                  onClick={() => {
+                    router.push('/' + params.lang + '/administration/buyer-management');
+                  }}
+                  className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md whitespace-nowrap"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   >
-                    <tr>
-                      
-                      <th className="px-4 py-2 text-left">회원아이디</th>
-                      <th className="px-4 py-2 text-left">가맹점</th>
-                      <th className="px-4 py-2 text-left">입금자명</th>
-                      <th className="
-                        hidden xl:block
-                        px-4 py-2 text-left">은행</th>
-                      {/*
-                      <th className="px-4 py-2 text-left">가입일</th>
-                      */}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {totalSummary.totalNumberOfBuyers > 0 && totalSummary.latestBuyers.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="px-4 py-2 text-center">
-                          최근 구매회원이 없습니다.
-                        </td>
-                      </tr>
-                    )}
-                    {totalSummary.latestBuyers.map((buyer, index) => (
-                      <tr key={index} className="border-b hover:bg-slate-50">
-                        <td className="px-4 py-2 text-slate-900 font-medium">{buyer.nickname}</td>
-                        <td className="px-4 py-2 text-slate-900 font-medium">
-                          {buyer?.store?.storeName}
-                        </td>
-                        
-                        <td className="px-4 py-2 text-slate-900 font-medium">{buyer?.buyer.depositName}</td>
-                        <td className="
-                          hidden xl:block
-                          px-4 py-2 text-slate-900 font-medium">
-                          {buyer?.buyer.depositBankName}
-                        </td>
-                        {/*
-                        <td className="px-4 py-2">{new Date(buyer.createdAt).toLocaleDateString()}</td>
-                        */}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
+                    <path d="M12 5v14" />
+                    <path d="M5 12h14" />
+                  </svg>
+                  구매자 관리로 이동
+                </button>
               </div>
+
+              {/* 관리자 관리 별도 배치 */}
+              <div className="w-full mt-3 flex flex-col gap-2 rounded-2xl border border-slate-200/80 bg-indigo-50/80 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-sm text-slate-700">
+                  <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                  <span className="font-semibold">관리자 관리</span>
+                  <span className="text-xs text-slate-500">어드민 권한 부여/조회</span>
+                </div>
+                <button
+                  onClick={() => {
+                    router.push('/' + params.lang + '/administration/admin-management');
+                  }}
+                  className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md whitespace-nowrap"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 5v14" />
+                    <path d="M5 12h14" />
+                  </svg>
+                  관리자 관리로 이동
+                </button>
+              </div>
+
+              {/* 판매자 관리 별도 배치 */}
+              <div className="w-full mt-3 flex flex-col gap-2 rounded-2xl border border-slate-200/80 bg-amber-50/80 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-sm text-slate-700">
+                  <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                  <span className="font-semibold">판매자 관리</span>
+                  <span className="text-xs text-slate-500">판매자 심사·정보 관리</span>
+                </div>
+                <button
+                  onClick={() => {
+                    router.push('/' + params.lang + '/administration/seller-management');
+                  }}
+                  className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md whitespace-nowrap"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 5v14" />
+                    <path d="M5 12h14" />
+                  </svg>
+                  판매자 관리로 이동
+                </button>
+              </div>
+
+
+
+
+              {showBuyerSummary && (
+                <>
+                  {/* latest buyers table */}
+                  <div className="w-full mt-4">
+                    <div className="flex flex-row items-center justify-start gap-2">
+                      {/* dot */}
+                      <div className="w-2 h-2 bg-slate-900 rounded-full"></div>
+                      <h2 className="text-lg font-bold text-slate-900">총 회원수</h2>
+                      <p className="text-lg text-slate-600 font-bold">
+                        {totalSummary.totalNumberOfBuyers} 명
+                      </p>
+                      {loadingSummary && (
+                        <Image
+                          src="/icon-loading.png"
+                          alt="Loading"
+                          width={20}
+                          height={20}
+                          className="w-5 h-5 animate-spin"
+                        />
+                      )}
+                    </div>
+                    <table className="min-w-full border-collapse border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+                      <thead className="bg-slate-50 text-slate-700 text-sm font-bold uppercase border-b">
+                        <tr>
+                          <th className="px-4 py-2 text-left">회원아이디</th>
+                          <th className="px-4 py-2 text-left">가맹점</th>
+                          <th className="px-4 py-2 text-left">입금자명</th>
+                          <th className="hidden xl:block px-4 py-2 text-left">은행</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {totalSummary.totalNumberOfBuyers > 0 && totalSummary.latestBuyers.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="px-4 py-2 text-center">
+                              최근 구매회원이 없습니다.
+                            </td>
+                          </tr>
+                        )}
+                        {totalSummary.latestBuyers.map((buyer, index) => (
+                          <tr key={index} className="border-b hover:bg-slate-50">
+                            <td className="px-4 py-2 text-slate-900 font-medium">{buyer.nickname}</td>
+                            <td className="px-4 py-2 text-slate-900 font-medium">
+                              {buyer?.store?.storeName}
+                            </td>
+                            <td className="px-4 py-2 text-slate-900 font-medium">{buyer?.buyer.depositName}</td>
+                            <td className="hidden xl:block px-4 py-2 text-slate-900 font-medium">
+                              {buyer?.buyer.depositBankName}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
 
             </div>
 

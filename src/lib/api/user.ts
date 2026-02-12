@@ -1837,6 +1837,8 @@ export async function getAllUsersByStorecode(
     sortField = 'nickname',
     agentcode = '',
     userType = 'all',
+    role = '',
+    requireProfile = true,
   }: {
     storecode: string;
     limit: number;
@@ -1846,6 +1848,8 @@ export async function getAllUsersByStorecode(
     sortField?: 'nickname' | 'createdAt';
     agentcode?: string;
     userType?: 'seller' | 'buyer' | 'all';
+    role?: string;
+    requireProfile?: boolean;
   }
 ): Promise<ResultProps> {
 
@@ -1869,9 +1873,14 @@ export async function getAllUsersByStorecode(
   const conditions: any[] = [
     { storecode: { $regex: storecode, $options: 'i' } },
     { walletAddress: { $exists: true, $ne: null } },
-    roleCondition,
+    ...(requireProfile ? [roleCondition] : []),
     ...(includeUnverified ? [] : [{ verified: true }]),
   ];
+
+  const trimmedRole = (role || '').trim();
+  if (trimmedRole) {
+    conditions.push({ role: { $regex: trimmedRole, $options: 'i' } });
+  }
 
   const trimmedAgentcode = (agentcode || '').trim();
   if (trimmedAgentcode) {
@@ -2810,6 +2819,34 @@ export async function updateSellerEnabled(
     }
   );
   
+}
+
+// updateUserRole
+export async function updateUserRole({
+  storecode,
+  walletAddress,
+  role,
+}: {
+  storecode?: string;
+  walletAddress: string;
+  role: string;
+}) {
+  if (!walletAddress || !role) {
+    return null;
+  }
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  const walletRegex = { $regex: `^${walletAddress}$`, $options: 'i' };
+
+  const updateResult = await collection.findOneAndUpdate(
+    { walletAddress: walletRegex },
+    { $set: { role } },
+    { returnDocument: 'after' },
+  );
+
+  return updateResult?.value || null;
 }
 
 

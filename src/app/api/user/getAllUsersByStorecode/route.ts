@@ -18,6 +18,8 @@ export async function POST(request: NextRequest) {
     sortField = 'nickname',
     agentcode = '',
     userType = 'all',
+    role = '',
+    requireProfile = true,
   } = body;
 
 
@@ -33,6 +35,8 @@ export async function POST(request: NextRequest) {
     sortField,
     agentcode,
     userType,
+    role,
+    requireProfile,
   });
 
  
