@@ -4,12 +4,22 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useActiveAccount, useActiveWallet } from 'thirdweb/react';
+import { getContract } from 'thirdweb';
+import { balanceOf } from 'thirdweb/extensions/erc20';
+import { arbitrum, bsc, ethereum, polygon } from 'thirdweb/chains';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 
 
 import { useClientWallets } from '@/lib/useClientWallets';
 import { client } from '@/app/client';
+import {
+  chain,
+  ethereumContractAddressUSDT,
+  polygonContractAddressUSDT,
+  arbitrumContractAddressUSDT,
+  bscContractAddressUSDT,
+} from '@/app/config/contractAddresses';
 
 import { ConnectButton } from '@/components/OrangeXConnectButton';
 
@@ -125,6 +135,22 @@ export default function SellerChatPage() {
     bithumb: '빗썸',
     korbit: '코빗',
   };
+  const chainObject =
+    chain === 'polygon'
+      ? polygon
+      : chain === 'arbitrum'
+      ? arbitrum
+      : chain === 'bsc'
+      ? bsc
+      : ethereum;
+  const usdtContractAddress =
+    chain === 'polygon'
+      ? polygonContractAddressUSDT
+      : chain === 'arbitrum'
+      ? arbitrumContractAddressUSDT
+      : chain === 'bsc'
+      ? bscContractAddressUSDT
+      : ethereumContractAddressUSDT;
   const marketIconMap: Record<string, string> = {
     upbit: '/icon-market-upbit.png',
     bithumb: '/icon-market-bithumb.png',
@@ -138,6 +164,27 @@ export default function SellerChatPage() {
       ? `시장가(${marketLabel})`
       : '고정가';
   const sellerBuyOrderStatus = sellerProfile?.seller?.buyOrder?.status as string | undefined;
+
+  const fetchEscrowBalanceOnChain = useCallback(
+    async (wallet: string) => {
+      if (!wallet) return null;
+      try {
+        const contract = getContract({
+          client,
+          chain: chainObject,
+          address: usdtContractAddress,
+        });
+        const balance = await balanceOf({ contract, address: wallet });
+        // assume USDT 6 decimals on all target chains
+        const normalized = Number(balance) / 10 ** 6;
+        return normalized;
+      } catch (e) {
+        console.error('fetchEscrowBalanceOnChain error', e);
+        return null;
+      }
+    },
+    [chainObject, usdtContractAddress],
+  );
   const statusLabelMap: Record<string, string> = {
     accepted: '주문 수락됨',
     paymentRequested: '입금 요청됨',
@@ -362,6 +409,9 @@ export default function SellerChatPage() {
     async (options?: { showLoading?: boolean }) => {
       if (!sellerId) {
         if (!isMountedRef.current) return;
+        if (options?.showLoading) {
+          setSellerLoading(false);
+        }
         setSellerProfile(null);
         setSellerEscrow(null);
         setSellerError(null);
@@ -381,10 +431,19 @@ export default function SellerChatPage() {
           }),
         });
         const data = await response.json().catch(() => ({}));
+
+
+        //console.log('Seller summary response data:', data);
+
         if (!response.ok) {
           throw new Error(data?.error || '판매자 정보를 불러오지 못했습니다.');
         }
-        if (!isMountedRef.current) return;
+        
+        // 이게 왜 필요하지????
+        //if (!isMountedRef.current) return;
+
+
+
         setSellerProfile(data?.result?.user || null);
         setSellerEscrow(
           typeof data?.result?.currentUsdtBalance === 'number'
@@ -396,6 +455,8 @@ export default function SellerChatPage() {
             ? data.result.user.seller.usdtToKrwRate
             : null,
         );
+        setSellerError(null);
+        setSellerLoading(false);
       } catch (error) {
         if (!isMountedRef.current) return;
         setSellerProfile(null);
@@ -404,8 +465,9 @@ export default function SellerChatPage() {
         setSellerError(
           error instanceof Error ? error.message : '판매자 정보를 불러오지 못했습니다.',
         );
+        setSellerLoading(false);
       } finally {
-        if (options?.showLoading && isMountedRef.current) {
+        if (isMountedRef.current) {
           setSellerLoading(false);
         }
       }
@@ -417,12 +479,31 @@ export default function SellerChatPage() {
     fetchSellerProfile({ showLoading: true });
     const intervalId = window.setInterval(() => {
       fetchSellerProfile({ showLoading: false });
-    }, 8000);
+    }, 10000);
 
     return () => {
       window.clearInterval(intervalId);
     };
   }, [fetchSellerProfile]);
+
+  // on-chain escrow balance polling
+  useEffect(() => {
+    if (!sellerId) return;
+    let active = true;
+    const poll = async () => {
+      const wallet = sellerProfile?.seller?.escrowWalletAddress || sellerId;
+      const onChain = await fetchEscrowBalanceOnChain(wallet);
+      if (active && typeof onChain === 'number') {
+        setSellerEscrow(onChain);
+      }
+    };
+    poll();
+    const interval = setInterval(poll, 12000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [sellerId, sellerProfile?.seller?.escrowWalletAddress, fetchEscrowBalanceOnChain]);
 
   // 거래내역 로드
   const fetchHistory = async (nextPage = 1) => {
@@ -848,14 +929,29 @@ export default function SellerChatPage() {
                         {sellerProfile?.seller?.bankInfo?.accountHolder || '-'}
                       </span>
                     </div>
+                    {sellerProfile?.seller?.bankInfo?.bankName === '연락처송금' && sellerProfile?.seller?.bankInfo?.contactMemo && (
+                      <div className="flex items-start justify-between border-b border-black/10 pb-2">
+                        <span className="text-xs uppercase tracking-[0.2em] text-black/50">
+                          연락처 메모
+                        </span>
+                        <span className="text-sm font-semibold text-black text-right whitespace-pre-line">
+                          {sellerProfile.seller.bankInfo.contactMemo}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between border-b border-black/10 pb-2">
                       <span className="text-xs uppercase tracking-[0.2em] text-black/50">
                         에스크로 수량
                       </span>
-                      <span className="text-sm font-semibold text-black">
-                        {typeof sellerEscrow === 'number'
-                          ? `${formatNumber(sellerEscrow, 6)} USDT`
-                          : '-'}
+                      <span className="flex items-baseline gap-1 text-lg font-bold text-emerald-700 tabular-nums">
+                        {typeof sellerEscrow === 'number' ? (
+                          <>
+                            {formatNumber(sellerEscrow, 6)}
+                            <span className="text-[11px] font-semibold text-slate-500">USDT</span>
+                          </>
+                        ) : (
+                          '-'
+                        )}
                       </span>
                     </div>
                     <div className="flex items-center justify-between border-b border-black/10 pb-2">
@@ -927,24 +1023,44 @@ export default function SellerChatPage() {
                       <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                         <div className="flex items-center gap-2 font-semibold">
                           <span className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_0_6px_rgba(245,158,11,0.18)]" />
-                          입금 요청 상태입니다. 아래 계좌로 입금해 주세요.
+                          {sellerProfile?.seller?.bankInfo?.bankName === '연락처송금'
+                            ? '판매자에게 연락처송금 안내를 확인해 주세요.'
+                            : '입금 요청 상태입니다. 아래 계좌로 입금해 주세요.'}
                         </div>
                         <p className="mt-1 text-xs font-semibold text-amber-800">
-                          10분내로 입금하지 않으면 자동 취소됩니다.
+                          {sellerProfile?.seller?.bankInfo?.bankName === '연락처송금'
+                            ? '안내된 연락처 방식으로 송금하지 않으면 주문이 자동 취소됩니다.'
+                            : '10분내로 입금하지 않으면 자동 취소됩니다.'}
                         </p>
                         <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-semibold text-amber-800">
                           <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100">
                             <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">은행</p>
-                            <p className="mt-1 text-sm">{sellerProfile?.seller?.bankInfo?.bankName || '-'}</p>
+                            <p className="mt-1 text-sm">
+                              {sellerProfile?.seller?.bankInfo?.bankName || '-'}
+                            </p>
                           </div>
                           <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100">
                             <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">예금주</p>
-                            <p className="mt-1 text-sm">{sellerProfile?.seller?.bankInfo?.accountHolder || '-'}</p>
+                            <p className="mt-1 text-sm">
+                              {sellerProfile?.seller?.bankInfo?.accountHolder || '-'}
+                            </p>
                           </div>
                           <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100 col-span-2">
                             <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">계좌번호</p>
-                            <p className="mt-1 text-sm font-bold">{sellerProfile?.seller?.bankInfo?.accountNumber || '-'}</p>
+                            <p className="mt-1 text-sm font-bold">
+                              {sellerProfile?.seller?.bankInfo?.accountNumber || '-'}
+                            </p>
                           </div>
+                          {sellerProfile?.seller?.bankInfo?.bankName === '연락처송금' && (
+                            <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100 col-span-2">
+                              <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">연락처 메모</p>
+                              <p className="mt-1 text-sm font-bold whitespace-pre-line">
+                                {sellerProfile?.seller?.bankInfo?.contactMemo?.trim()
+                                  ? sellerProfile.seller.bankInfo.contactMemo
+                                  : '-'}
+                              </p>
+                            </div>
+                          )}
                           <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100">
                             <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">입금액</p>
                             <p className="mt-1 text-sm font-bold">

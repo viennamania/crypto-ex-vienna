@@ -17,10 +17,12 @@ type SellerResult = {
   walletAddress?: string;
   currentUsdtBalance?: number;
   seller?: {
+    enabled?: boolean;
     bankInfo?: {
       bankName?: string;
       accountNumber?: string;
       accountHolder?: string;
+      contactMemo?: string | null;
     };
     usdtToKrwRate?: number;
     priceSettingMethod?: 'market' | 'fixed' | string;
@@ -138,7 +140,9 @@ export default function SellerSearchPage() {
       if (!response.ok) {
         throw new Error(data?.error || '판매자 조회에 실패했습니다.');
       }
-      setResults((data?.result?.users as SellerResult[]) || []);
+      const fetched = (data?.result?.users as SellerResult[]) || [];
+      const enabledOnly = fetched.filter((u) => u?.seller?.enabled === true);
+      setResults(enabledOnly);
     } catch (error) {
       setResults([]);
       setErrorMessage(

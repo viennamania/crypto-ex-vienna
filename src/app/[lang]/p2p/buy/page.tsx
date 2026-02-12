@@ -3648,7 +3648,8 @@ const fetchBuyOrders = async () => {
         const sortedSellers = data.result.users;
         const pricedSellers = sortedSellers.filter((seller: any) => {
           const rate = Number(seller?.seller?.usdtToKrwRate ?? 0);
-          return rate > 0;
+          const enabled = seller?.seller?.enabled === true;
+          return rate > 0 && enabled;
         });
 
         // if walletAddress is address, then order first
@@ -4875,7 +4876,7 @@ const fetchBuyOrders = async () => {
                         <span className="text-xs font-semibold text-slate-500">실시간 집계</span>
                       </div>
 
-                      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <div className="mt-3 grid grid-cols-1 gap-3">
                         <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
                           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
                             <span className="h-2 w-2 rounded-full bg-slate-400" />
