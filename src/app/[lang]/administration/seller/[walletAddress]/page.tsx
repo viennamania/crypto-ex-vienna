@@ -309,6 +309,11 @@ export default function SellerDetailPage() {
     if (!walletAddress || !seller) {
       return;
     }
+    // 승인할 때는 이전에 선택한 거절 사유를 초기화해 혼동을 줄인다.
+    if (decision === 'approved') {
+      setSelectedBankRejectionReason('');
+      setCustomBankRejectionReason('');
+    }
     if (decision === 'rejected' && !selectedBankRejectionReason) {
       toast.error('거절 사유를 선택해 주세요.');
       return;
@@ -607,17 +612,34 @@ export default function SellerDetailPage() {
 
               <div className="mt-4 flex flex-col gap-2 text-sm text-slate-600">
                 {seller?.bankInfo?.bankName ? (
-                  <>
-                    <span>은행: {seller?.bankInfo?.bankName}</span>
-                    <span>계좌번호: {seller?.bankInfo?.accountNumber}</span>
-                    <span>예금주: {seller?.bankInfo?.accountHolder}</span>
-                  </>
+                  seller?.bankInfo?.bankName === '연락처송금' ? (
+                    <>
+                      <span className="font-semibold text-emerald-700">입금 방법: 연락처송금</span>
+                      <span className="text-xs text-slate-600">
+                        계좌 대신 연락처로 송금 요청을 받는 방식입니다.
+                      </span>
+                      {seller?.bankInfo?.contactMemo && (
+                        <div className="mt-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 shadow-sm">
+                          <p className="text-[11px] font-semibold text-emerald-800">안내 메모</p>
+                          <p className="whitespace-pre-line text-sm text-emerald-900 leading-snug">
+                            {seller.bankInfo.contactMemo}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <span>은행: {seller?.bankInfo?.bankName}</span>
+                      <span>계좌번호: {seller?.bankInfo?.accountNumber}</span>
+                      <span>예금주: {seller?.bankInfo?.accountHolder}</span>
+                    </>
+                  )
                 ) : (
                   <span>등록된 계좌 정보가 없습니다.</span>
                 )}
               </div>
 
-              {seller?.bankInfo?.accountNumber && (
+              {seller?.bankInfo?.bankName && (
                 <div className="mt-4 rounded-xl border border-slate-200/80 bg-slate-50/80 p-4">
                   <p className="text-sm font-semibold text-slate-700">거절 사유 선택</p>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -652,9 +674,14 @@ export default function SellerDetailPage() {
                       />
                     </div>
                   )}
-                  {seller?.bankInfo?.rejectionReason && (
+                  {seller?.bankInfo?.rejectionReason && bankInfoStatus === 'rejected' && (
                     <p className="mt-2 text-xs text-slate-500">
                       현재 사유: {seller.bankInfo.rejectionReason}
+                    </p>
+                  )}
+                  {bankInfoStatus !== 'rejected' && (
+                    <p className="mt-2 text-[11px] text-slate-400">
+                      * 승인 시 선택된 거절 사유는 저장되지 않습니다.
                     </p>
                   )}
                 </div>
@@ -664,9 +691,9 @@ export default function SellerDetailPage() {
                 <button
                   type="button"
                   onClick={() => handleBankDecision('approved')}
-                  disabled={bankDecisionLoading !== null || !seller?.bankInfo?.accountNumber}
+                  disabled={bankDecisionLoading !== null || !seller?.bankInfo?.bankName}
                   className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
-                    bankDecisionLoading || !seller?.bankInfo?.accountNumber
+                    bankDecisionLoading || !seller?.bankInfo?.bankName
                       ? 'bg-emerald-100 text-emerald-300'
                       : 'bg-emerald-600 text-white hover:bg-emerald-500'
                   }`}
@@ -678,13 +705,13 @@ export default function SellerDetailPage() {
                   onClick={() => handleBankDecision('rejected')}
                   disabled={
                     bankDecisionLoading !== null ||
-                    !seller?.bankInfo?.accountNumber ||
+                    !seller?.bankInfo?.bankName ||
                     !selectedBankRejectionReason ||
                     (selectedBankRejectionReason === '기타' && !customBankRejectionReason.trim())
                   }
                   className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
                     bankDecisionLoading ||
-                    !seller?.bankInfo?.accountNumber ||
+                    !seller?.bankInfo?.bankName ||
                     !selectedBankRejectionReason ||
                     (selectedBankRejectionReason === '기타' && !customBankRejectionReason.trim())
                       ? 'bg-rose-100 text-rose-300'
