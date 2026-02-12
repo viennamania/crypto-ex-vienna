@@ -15,6 +15,8 @@ export async function POST(request: NextRequest) {
     page,
     includeUnverified = false,
     searchTerm = '',
+    sortField = 'nickname',
+    agentcode = '',
   } = body;
 
 
@@ -27,6 +29,8 @@ export async function POST(request: NextRequest) {
     page: page || 1,
     includeUnverified,
     searchTerm,
+    sortField,
+    agentcode,
   });
 
  

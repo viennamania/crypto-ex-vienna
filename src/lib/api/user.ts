@@ -1834,12 +1834,16 @@ export async function getAllUsersByStorecode(
     page,
     includeUnverified = false,
     searchTerm = '',
+    sortField = 'nickname',
+    agentcode = '',
   }: {
     storecode: string;
     limit: number;
     page: number;
     includeUnverified?: boolean;
     searchTerm?: string;
+    sortField?: 'nickname' | 'createdAt';
+    agentcode?: string;
   }
 ): Promise<ResultProps> {
 
@@ -1853,24 +1857,44 @@ export async function getAllUsersByStorecode(
 
   // if storecode is empty, return all users
 
-  const matchQuery: Record<string, any> = {
-    storecode: { $regex: storecode, $options: 'i' },
-    walletAddress: { $exists: true, $ne: null },
-    seller: { $exists: true },
-    ...(includeUnverified ? {} : { verified: true }),
-  };
+  const conditions: any[] = [
+    { storecode: { $regex: storecode, $options: 'i' } },
+    { walletAddress: { $exists: true, $ne: null } },
+    { seller: { $exists: true } },
+    ...(includeUnverified ? [] : [{ verified: true }]),
+  ];
+
+  const trimmedAgentcode = (agentcode || '').trim();
+  if (trimmedAgentcode) {
+    const agentRegex = { $regex: trimmedAgentcode, $options: 'i' };
+    conditions.push({
+      $or: [
+        { agentcode: agentRegex },
+        { 'seller.agentcode': agentRegex },
+        { 'store.agentcode': agentRegex },
+      ],
+    });
+  }
 
   const trimmedSearch = (searchTerm || '').trim();
   if (trimmedSearch) {
     const searchRegex = { $regex: trimmedSearch, $options: 'i' };
-    matchQuery.$or = [
-      { nickname: searchRegex },
-      { walletAddress: searchRegex },
-      { 'seller.bankInfo.bankName': searchRegex },
-      { 'seller.bankInfo.accountNumber': searchRegex },
-      { 'seller.status': searchRegex },
-    ];
+    conditions.push({
+      $or: [
+        { nickname: searchRegex },
+        { walletAddress: searchRegex },
+        { 'seller.bankInfo.bankName': searchRegex },
+        { 'seller.bankInfo.accountNumber': searchRegex },
+        { 'seller.status': searchRegex },
+      ],
+    });
   }
+
+  const matchQuery =
+    conditions.length > 1 ? { $and: conditions } : conditions[0] || {};
+
+  const sortQuery: Record<string, 1 | -1> =
+    sortField === 'createdAt' ? { createdAt: -1 } : { nickname: 1 };
 
   const users = await collection
     .find<UserProps>(
@@ -1880,7 +1904,7 @@ export async function getAllUsersByStorecode(
         skip: (page - 1) * limit,
       },
     )
-    .sort({ nickname: 1 })
+    .sort(sortQuery)
     .toArray();
 
   const totalCount = await collection.countDocuments(matchQuery);
@@ -2012,6 +2036,39 @@ export async function getBestSellers(
 
 
 
+
+// agentcode change history
+export async function getAgentcodeChangeHistory({
+  walletAddress,
+  limit,
+  page,
+}: {
+  walletAddress: string;
+  limit: number;
+  page: number;
+}) {
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('agent_change_logs');
+
+  const query = { walletAddress };
+  const items = await collection
+    .find(
+      query,
+      {
+        limit,
+        skip: (page - 1) * limit,
+      },
+    )
+    .sort({ changedAt: -1 })
+    .toArray();
+
+  const totalCount = await collection.countDocuments(query);
+
+  return {
+    totalCount,
+    items,
+  };
+}
 
 export async function getUserWalletPrivateKeyByWalletAddress(
   walletAddress: string,
