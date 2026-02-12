@@ -717,11 +717,21 @@ export default function SettingsPage({ params }: any) {
 
     // 은행명, 계좌번호, 예금주
     const [bankName, setBankName] = useState("");
-
     const [accountNumber, setAccountNumber] = useState("");
     const [accountHolder, setAccountHolder] = useState("");
+    const [useContactTransfer, setUseContactTransfer] = useState(false);
 
     const [applying, setApplying] = useState(false);
+
+    // 기존 계좌 정보가 연락처송금으로 저장된 경우 UI 상태도 맞춰준다.
+    useEffect(() => {
+      if (seller?.bankInfo?.bankName === '연락처송금') {
+        setUseContactTransfer(true);
+        setBankName('');
+        setAccountNumber('');
+        setAccountHolder('');
+      }
+    }, [seller?.bankInfo?.bankName]);
 
 
     const apply = async () => {
@@ -729,7 +739,11 @@ export default function SettingsPage({ params }: any) {
         return;
       }
 
-      if (!bankName || !accountNumber || !accountHolder) {
+      const selectedBankName = useContactTransfer ? '연락처송금' : bankName;
+      const selectedAccountNumber = useContactTransfer ? '' : accountNumber;
+      const selectedAccountHolder = useContactTransfer ? '' : accountHolder;
+
+      if (!selectedBankName || (!useContactTransfer && (!selectedAccountNumber || !selectedAccountHolder))) {
         toast.error('Please enter bank name, account number, and account holder');
         return;
       }
@@ -739,9 +753,9 @@ export default function SettingsPage({ params }: any) {
       try {
         const nextBankInfo = {
           ...(seller?.bankInfo || {}),
-          bankName: bankName,
-          accountNumber: accountNumber,
-          accountHolder: accountHolder,
+          bankName: selectedBankName,
+          accountNumber: selectedAccountNumber,
+          accountHolder: selectedAccountHolder,
           status: 'pending',
           submittedAt: new Date().toISOString(),
           rejectionReason: '',
@@ -763,9 +777,9 @@ export default function SettingsPage({ params }: any) {
             storecode: storecode,
             walletAddress: address,
             sellerStatus: nextSellerStatus,
-            bankName: bankName,
-            accountNumber: accountNumber,
-            accountHolder: accountHolder,
+            bankName: selectedBankName,
+            accountNumber: selectedAccountNumber,
+            accountHolder: selectedAccountHolder,
             seller: updatedSeller,
           }),
         });
@@ -861,9 +875,9 @@ export default function SettingsPage({ params }: any) {
             storecode: storecode,
             walletAddress: address,
             sellerStatus: nextSellerStatus,
-            bankName: seller?.bankInfo?.bankName || bankName || '',
-            accountNumber: seller?.bankInfo?.accountNumber || accountNumber || '',
-            accountHolder: seller?.bankInfo?.accountHolder || accountHolder || '',
+            bankName: seller?.bankInfo?.bankName || (useContactTransfer ? '연락처송금' : bankName) || '',
+            accountNumber: seller?.bankInfo?.accountNumber || (useContactTransfer ? '' : accountNumber) || '',
+            accountHolder: seller?.bankInfo?.accountHolder || (useContactTransfer ? '' : accountHolder) || '',
             seller: updatedSeller,
           }),
         });
@@ -1785,11 +1799,15 @@ export default function SettingsPage({ params }: any) {
 
                                     <div className="mt-3 flex flex-col gap-1 text-sm text-slate-600">
                                         {seller?.bankInfo?.bankName ? (
-                                            <>
-                                                <span>은행: {seller?.bankInfo?.bankName}</span>
-                                                <span>계좌번호: {seller?.bankInfo?.accountNumber}</span>
-                                                <span>예금주: {seller?.bankInfo?.accountHolder}</span>
-                                            </>
+                                            seller?.bankInfo?.bankName === '연락처송금' ? (
+                                                <span className="font-semibold text-emerald-700">입금 방법: 연락처송금</span>
+                                            ) : (
+                                                <>
+                                                    <span>은행: {seller?.bankInfo?.bankName}</span>
+                                                    <span>계좌번호: {seller?.bankInfo?.accountNumber}</span>
+                                                    <span>예금주: {seller?.bankInfo?.accountHolder}</span>
+                                                </>
+                                            )
                                         ) : (
                                             <span>등록된 계좌 정보가 없습니다.</span>
                                         )}
@@ -1888,11 +1906,34 @@ export default function SettingsPage({ params }: any) {
 
                                 {/* 은행명, 계좌번호, 예금주 */}
                                 <div className='flex flex-col gap-2 items-start justify-between w-full'>
+                                    <div className="flex w-full flex-row items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-2 shadow-sm">
+                                        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 accent-emerald-600"
+                                                checked={useContactTransfer}
+                                                disabled={applying || bankInfoStatus === 'pending'}
+                                                onChange={(e) => {
+                                                    const checked = e.target.checked;
+                                                    setUseContactTransfer(checked);
+                                                    if (checked) {
+                                                        setBankName('');
+                                                        setAccountNumber('');
+                                                        setAccountHolder('');
+                                                    }
+                                                }}
+                                            />
+                                            연락처송금으로 받기
+                                        </label>
+                                        <span className="text-xs text-slate-500">
+                                            연락처송금을 선택하면 은행/계좌 정보 없이 송금 요청을 받습니다.
+                                        </span>
+                                    </div>
                                     <select
-                                        disabled={!address || bankInfoStatus === 'pending' || applying}
+                                        disabled={!address || bankInfoStatus === 'pending' || applying || useContactTransfer}
                                         className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm
                                         focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                                        value={bankName}
+                                        value={useContactTransfer ? '' : bankName}
                                         onChange={(e) => {
                                             setBankName(e.target.value);
                                         }}
@@ -1972,7 +2013,7 @@ export default function SettingsPage({ params }: any) {
                                     </select>
 
                                     <input 
-                                        disabled={applying || bankInfoStatus === 'pending'}
+                                        disabled={applying || bankInfoStatus === 'pending' || useContactTransfer}
                                         className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                                         placeholder={Enter_your_account_number}
                                         value={accountNumber}
@@ -1985,7 +2026,7 @@ export default function SettingsPage({ params }: any) {
                                         }}
                                     />
                                     <input 
-                                        disabled={applying || bankInfoStatus === 'pending'}
+                                        disabled={applying || bankInfoStatus === 'pending' || useContactTransfer}
                                         className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                                         placeholder={Enter_your_account_holder}
                                         value={accountHolder}
@@ -1994,6 +2035,11 @@ export default function SettingsPage({ params }: any) {
                                             setAccountHolder(e.target.value);
                                         }}
                                     />
+                                    {useContactTransfer && (
+                                        <p className="text-xs text-emerald-600 font-semibold">
+                                            계좌 정보 없이 연락처송금으로 신청합니다.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 

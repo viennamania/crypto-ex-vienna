@@ -6229,32 +6229,40 @@ const fetchBuyOrders = async () => {
                             />
                             */}
                             <div className="flex flex-col items-start justify-center gap-0">
-                              <span className="text-sm text-slate-800 font-semibold">
-                                {seller.seller?.bankInfo?.bankName}
-                              </span>
-                              {seller.walletAddress === address ? (
-                                <span className="text-sm text-slate-700">
-                                  {seller.seller?.bankInfo?.accountNumber}
+                              {seller.seller?.bankInfo?.bankName === '연락처송금' ? (
+                                <span className="text-sm font-semibold text-emerald-700">
+                                  연락처송금
                                 </span>
                               ) : (
-                                <span className="text-sm text-slate-700">
-                                  {seller.seller?.bankInfo?.accountNumber.length > 5
-                                    ? seller.seller?.bankInfo?.accountNumber.substring(0, 5) +'****'
-                                    : seller.seller?.bankInfo?.accountNumber
-                                  }
-                                </span>
-                              )}
-                              {seller.walletAddress === address ? (
-                                <span className="text-sm font-semibold text-slate-800">
-                                  {seller.seller?.bankInfo?.accountHolder}
-                                </span>
-                              ) : (
-                                <span className="text-sm font-semibold text-slate-800">
-                                  {seller.seller?.bankInfo?.accountHolder.length > 2
-                                    ? seller.seller?.bankInfo?.accountHolder.substring(0, 1) +'**'
-                                    : seller.seller?.bankInfo?.accountHolder
-                                  }
-                                </span>
+                                <>
+                                  <span className="text-sm text-slate-800 font-semibold">
+                                    {seller.seller?.bankInfo?.bankName}
+                                  </span>
+                                  {seller.walletAddress === address ? (
+                                    <span className="text-sm text-slate-700">
+                                      {seller.seller?.bankInfo?.accountNumber}
+                                    </span>
+                                  ) : (
+                                    <span className="text-sm text-slate-700">
+                                      {seller.seller?.bankInfo?.accountNumber.length > 5
+                                        ? seller.seller?.bankInfo?.accountNumber.substring(0, 5) +'****'
+                                        : seller.seller?.bankInfo?.accountNumber
+                                      }
+                                    </span>
+                                  )}
+                                  {seller.walletAddress === address ? (
+                                    <span className="text-sm font-semibold text-slate-800">
+                                      {seller.seller?.bankInfo?.accountHolder}
+                                    </span>
+                                  ) : (
+                                    <span className="text-sm font-semibold text-slate-800">
+                                      {seller.seller?.bankInfo?.accountHolder.length > 2
+                                        ? seller.seller?.bankInfo?.accountHolder.substring(0, 1) +'**'
+                                        : seller.seller?.bankInfo?.accountHolder
+                                      }
+                                    </span>
+                                  )}
+                                </>
                               )}
                             </div>
 
@@ -6374,30 +6382,35 @@ const fetchBuyOrders = async () => {
                                   입금자명과 입금액이 일치해야 입금확인이 처리됩니다.
                                 </span>
 
-                                <div className="flex flex-col items-start justify-center
-                                  gap-0 mt-1
-                                ">
-                                
-                                  <span className="text-sm text-slate-700 font-semibold">
-                                    {seller.seller?.bankInfo?.bankName}
-                                  </span>
-                                  <div className="flex flex-row items-center justify-start gap-2">
-                                    <span className="text-sm text-slate-700 font-semibold">
-                                      {seller.seller?.bankInfo?.accountNumber}
+                                <div className="flex flex-col items-start justify-center gap-0 mt-1">
+                                  {seller.seller?.bankInfo?.bankName === '연락처송금' ? (
+                                    <span className="text-sm font-semibold text-emerald-700">
+                                      연락처송금으로 입금 요청되었습니다.
                                     </span>
-                                    <button
-                                      className="text-sm text-amber-700 underline hover:text-amber-800"
-                                      onClick={() => {
-                                        navigator.clipboard.writeText(seller.seller?.bankInfo?.accountNumber || '');
-                                        toast.success("계좌번호가 복사되었습니다.");
-                                      } }
-                                    >
-                                      ⧉
-                                    </button>
-                                  </div>
-                                  <span className="text-sm font-semibold text-slate-700">
-                                    {seller.seller?.bankInfo?.accountHolder}
-                                  </span>
+                                  ) : (
+                                    <>
+                                      <span className="text-sm text-slate-700 font-semibold">
+                                        {seller.seller?.bankInfo?.bankName}
+                                      </span>
+                                      <div className="flex flex-row items-center justify-start gap-2">
+                                        <span className="text-sm text-slate-700 font-semibold">
+                                          {seller.seller?.bankInfo?.accountNumber}
+                                        </span>
+                                        <button
+                                          className="text-sm text-amber-700 underline hover:text-amber-800"
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(seller.seller?.bankInfo?.accountNumber || '');
+                                            toast.success("계좌번호가 복사되었습니다.");
+                                          } }
+                                        >
+                                          ⧉
+                                        </button>
+                                      </div>
+                                      <span className="text-sm font-semibold text-slate-700">
+                                        {seller.seller?.bankInfo?.accountHolder}
+                                      </span>
+                                    </>
+                                  )}
                                 </div>
 
                                 {/* 10분내로 입금하지 않으면 주문이 자동취소됩니다. */}
@@ -8840,12 +8853,20 @@ const fetchBuyOrders = async () => {
 
                             {/* seller bank info */}
                             <div className="flex flex-row gap-2 items-center justify-end">
-                              <span className="text-sm text-zinc-500">
-                                {item.seller?.bankInfo?.bankName}
-                              </span>
-                              <span className="text-lg text-gray-800 font-bold">
-                                {item.seller?.bankInfo?.accountHolder}
-                              </span>
+                              {item.seller?.bankInfo?.bankName === '연락처송금' ? (
+                                <span className="text-sm font-semibold text-emerald-600">
+                                  연락처송금
+                                </span>
+                              ) : (
+                                <>
+                                  <span className="text-sm text-zinc-500">
+                                    {item.seller?.bankInfo?.bankName}
+                                  </span>
+                                  <span className="text-lg text-gray-800 font-bold">
+                                    {item.seller?.bankInfo?.accountHolder}
+                                  </span>
+                                </>
+                              )}
                             </div>
 
                             {/* paymentAmount */}
@@ -8933,12 +8954,20 @@ const fetchBuyOrders = async () => {
 
 
                                 <div className="flex flex-row gap-1 items-center justify-end">
-                                  <div className="text-sm text-slate-400">
-                                    {item.seller?.bankInfo?.bankName}
-                                  </div>
-                                  <div className="text-lg text-slate-200 font-bold">
-                                    {item.seller?.bankInfo?.accountHolder}
-                                  </div>
+                                  {item.seller?.bankInfo?.bankName === '연락처송금' ? (
+                                    <div className="text-sm font-semibold text-emerald-400">
+                                      연락처송금
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="text-sm text-slate-400">
+                                        {item.seller?.bankInfo?.bankName}
+                                      </div>
+                                      <div className="text-lg text-slate-200 font-bold">
+                                        {item.seller?.bankInfo?.accountHolder}
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                                 {/*
                                 <div className="flex flex-row items-end justify-start text-sm text-zinc-500">
@@ -9528,14 +9557,20 @@ const fetchBuyOrders = async () => {
                                   {item?.paymentMethod === 'bank' && (
 
                                     <div className="flex flex-col gap-2 items-center justify-center">
-                                      <div className="flex flex-row gap-2 items-center justify-center">
-                                        <span className="text-sm text-zinc-500">
-                                          {item.seller?.bankInfo?.accountHolder}
-                                        </span>
-                                        <span className="text-sm text-zinc-500">
-                                          {item.seller?.bankInfo?.bankName}
-                                        </span>
-                                      </div>
+                                      {item.seller?.bankInfo?.bankName === '연락처송금' ? (
+                                        <div className="text-sm font-semibold text-emerald-600">
+                                          연락처송금
+                                        </div>
+                                      ) : (
+                                        <div className="flex flex-row gap-2 items-center justify-center">
+                                          <span className="text-sm text-zinc-500">
+                                            {item.seller?.bankInfo?.accountHolder}
+                                          </span>
+                                          <span className="text-sm text-zinc-500">
+                                            {item.seller?.bankInfo?.bankName}
+                                          </span>
+                                        </div>
+                                      )}
                                       {/*
                                       <span className="text-sm text-zinc-500">
                                         {

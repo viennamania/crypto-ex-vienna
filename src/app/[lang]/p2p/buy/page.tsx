@@ -571,6 +571,7 @@ export default function Index({ params }: any) {
 
 
   const router = useRouter();
+  const isContactTransferBank = (bankInfo: any) => bankInfo?.bankName === '연락처송금';
 
 
 
@@ -7021,12 +7022,20 @@ const fetchBuyOrders = async () => {
 
                             {/* seller bank info */}
                             <div className="flex flex-row gap-2 items-center justify-end">
-                              <span className="text-sm text-zinc-500">
-                                {item.seller?.bankInfo?.bankName}
-                              </span>
-                              <span className="text-lg text-gray-800 font-bold">
-                                {item.seller?.bankInfo?.accountHolder}
-                              </span>
+                              {isContactTransferBank(item.seller?.bankInfo) ? (
+                                <span className="text-sm font-semibold text-emerald-600">
+                                  연락처송금
+                                </span>
+                              ) : (
+                                <>
+                                  <span className="text-sm text-zinc-500">
+                                    {item.seller?.bankInfo?.bankName}
+                                  </span>
+                                  <span className="text-lg text-gray-800 font-bold">
+                                    {item.seller?.bankInfo?.accountHolder}
+                                  </span>
+                                </>
+                              )}
                             </div>
 
                             {/* paymentAmount */}
@@ -7114,12 +7123,20 @@ const fetchBuyOrders = async () => {
 
 
                                 <div className="flex flex-row gap-1 items-center justify-end">
-                                  <div className="text-sm text-slate-600">
-                                    {item.seller?.bankInfo?.bankName}
-                                  </div>
-                                  <div className="text-lg text-slate-800 font-bold">
-                                    {item.seller?.bankInfo?.accountHolder}
-                                  </div>
+                                  {isContactTransferBank(item.seller?.bankInfo) ? (
+                                    <div className="text-sm font-semibold text-emerald-600">
+                                      연락처송금
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="text-sm text-slate-600">
+                                        {item.seller?.bankInfo?.bankName}
+                                      </div>
+                                      <div className="text-lg text-slate-800 font-bold">
+                                        {item.seller?.bankInfo?.accountHolder}
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                                 {/*
                                 <div className="flex flex-row items-end justify-start text-sm text-zinc-500">
@@ -7709,14 +7726,20 @@ const fetchBuyOrders = async () => {
                                   {item?.paymentMethod === 'bank' && (
 
                                     <div className="flex flex-col gap-2 items-center justify-center">
-                                      <div className="flex flex-row gap-2 items-center justify-center">
-                                        <span className="text-sm text-zinc-500">
-                                          {item.seller?.bankInfo?.accountHolder}
-                                        </span>
-                                        <span className="text-sm text-zinc-500">
-                                          {item.seller?.bankInfo?.bankName}
-                                        </span>
-                                      </div>
+                                      {isContactTransferBank(item.seller?.bankInfo) ? (
+                                        <div className="text-sm font-semibold text-emerald-600">
+                                          연락처송금
+                                        </div>
+                                      ) : (
+                                        <div className="flex flex-row gap-2 items-center justify-center">
+                                          <span className="text-sm text-zinc-500">
+                                            {item.seller?.bankInfo?.accountHolder}
+                                          </span>
+                                          <span className="text-sm text-zinc-500">
+                                            {item.seller?.bankInfo?.bankName}
+                                          </span>
+                                        </div>
+                                      )}
                                       {/*
                                       <span className="text-sm text-zinc-500">
                                         {
