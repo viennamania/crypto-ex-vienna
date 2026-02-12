@@ -583,6 +583,7 @@ export default function SettingsPage({ params }: any) {
                 setEditedNickname('');
                 setAccountHolder('');
                 setAccountNumber('');
+                setContactMemo('');
                 setKycImageUrl(null);
                 setKycPreview(null);
                 setKycFile(null);
@@ -719,6 +720,7 @@ export default function SettingsPage({ params }: any) {
     const [bankName, setBankName] = useState("");
     const [accountNumber, setAccountNumber] = useState("");
     const [accountHolder, setAccountHolder] = useState("");
+    const [contactMemo, setContactMemo] = useState("");
     const [useContactTransfer, setUseContactTransfer] = useState(false);
 
     const [applying, setApplying] = useState(false);
@@ -730,6 +732,9 @@ export default function SettingsPage({ params }: any) {
         setBankName('');
         setAccountNumber('');
         setAccountHolder('');
+        setContactMemo(seller?.bankInfo?.contactMemo || '');
+      } else {
+        setContactMemo(seller?.bankInfo?.contactMemo || '');
       }
     }, [seller?.bankInfo?.bankName]);
 
@@ -742,6 +747,7 @@ export default function SettingsPage({ params }: any) {
       const selectedBankName = useContactTransfer ? '연락처송금' : bankName;
       const selectedAccountNumber = useContactTransfer ? '' : accountNumber;
       const selectedAccountHolder = useContactTransfer ? '' : accountHolder;
+      const selectedContactMemo = useContactTransfer ? contactMemo : '';
 
       if (!selectedBankName || (!useContactTransfer && (!selectedAccountNumber || !selectedAccountHolder))) {
         toast.error('Please enter bank name, account number, and account holder');
@@ -756,6 +762,7 @@ export default function SettingsPage({ params }: any) {
           bankName: selectedBankName,
           accountNumber: selectedAccountNumber,
           accountHolder: selectedAccountHolder,
+          contactMemo: selectedContactMemo,
           status: 'pending',
           submittedAt: new Date().toISOString(),
           rejectionReason: '',
@@ -780,6 +787,7 @@ export default function SettingsPage({ params }: any) {
             bankName: selectedBankName,
             accountNumber: selectedAccountNumber,
             accountHolder: selectedAccountHolder,
+            contactMemo: selectedContactMemo,
             seller: updatedSeller,
           }),
         });
@@ -878,6 +886,7 @@ export default function SettingsPage({ params }: any) {
             bankName: seller?.bankInfo?.bankName || (useContactTransfer ? '연락처송금' : bankName) || '',
             accountNumber: seller?.bankInfo?.accountNumber || (useContactTransfer ? '' : accountNumber) || '',
             accountHolder: seller?.bankInfo?.accountHolder || (useContactTransfer ? '' : accountHolder) || '',
+            contactMemo: seller?.bankInfo?.contactMemo || (useContactTransfer ? contactMemo : '') || '',
             seller: updatedSeller,
           }),
         });
@@ -1799,17 +1808,24 @@ export default function SettingsPage({ params }: any) {
 
                                     <div className="mt-3 flex flex-col gap-1 text-sm text-slate-600">
                                         {seller?.bankInfo?.bankName ? (
-                                            seller?.bankInfo?.bankName === '연락처송금' ? (
-                                                <span className="font-semibold text-emerald-700">입금 방법: 연락처송금</span>
-                                            ) : (
-                                                <>
-                                                    <span>은행: {seller?.bankInfo?.bankName}</span>
-                                                    <span>계좌번호: {seller?.bankInfo?.accountNumber}</span>
-                                                    <span>예금주: {seller?.bankInfo?.accountHolder}</span>
-                                                </>
-                                            )
+                                          seller?.bankInfo?.bankName === '연락처송금' ? (
+                                            <>
+                                              <span className="font-semibold text-emerald-700">입금 방법: 연락처송금</span>
+                                              {seller?.bankInfo?.contactMemo && (
+                                                <span className="text-xs text-slate-600 mt-0.5">
+                                                  내용: {seller.bankInfo.contactMemo}
+                                                </span>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <>
+                                              <span>은행: {seller?.bankInfo?.bankName}</span>
+                                              <span>계좌번호: {seller?.bankInfo?.accountNumber}</span>
+                                              <span>예금주: {seller?.bankInfo?.accountHolder}</span>
+                                            </>
+                                          )
                                         ) : (
-                                            <span>등록된 계좌 정보가 없습니다.</span>
+                                          <span>등록된 계좌 정보가 없습니다.</span>
                                         )}
                                         {bankInfoStatus === 'approved' && (
                                             <span className="text-xs text-emerald-600">
@@ -1920,6 +1936,7 @@ export default function SettingsPage({ params }: any) {
                                                         setBankName('');
                                                         setAccountNumber('');
                                                         setAccountHolder('');
+                                                        setContactMemo(seller?.bankInfo?.contactMemo || '');
                                                     }
                                                 }}
                                             />
@@ -1929,6 +1946,23 @@ export default function SettingsPage({ params }: any) {
                                             연락처송금을 선택하면 은행/계좌 정보 없이 송금 요청을 받습니다.
                                         </span>
                                     </div>
+                                    {useContactTransfer && (
+                                        <div className="w-full rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm shadow-sm">
+                                            <label className="text-xs font-semibold text-emerald-700">내용</label>
+                                            <textarea
+                                                disabled={applying || bankInfoStatus === 'pending'}
+                                                className="mt-1 w-full resize-none rounded-lg border border-emerald-100 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                                rows={2}
+                                                placeholder="연락처송금 안내 메시지를 입력하세요."
+                                                value={contactMemo}
+                                                onChange={(e) => setContactMemo(e.target.value)}
+                                                maxLength={200}
+                                            />
+                                            <div className="mt-1 text-right text-[11px] text-emerald-600">
+                                                {contactMemo.length}/200
+                                            </div>
+                                        </div>
+                                    )}
                                     <select
                                         disabled={!address || bankInfoStatus === 'pending' || applying || useContactTransfer}
                                         className="w-full rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm

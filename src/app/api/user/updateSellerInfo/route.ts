@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
     bankName,
     accountNumber,
     accountHolder,
+    contactMemo,
   } = body;
 
   const result = await updateSeller({
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest) {
         bankName: bankName,
         accountNumber: accountNumber,
         accountHolder: accountHolder,
+        contactMemo: contactMemo,
       },
     },
   });

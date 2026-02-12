@@ -7023,9 +7023,16 @@ const fetchBuyOrders = async () => {
                             {/* seller bank info */}
                             <div className="flex flex-row gap-2 items-center justify-end">
                               {isContactTransferBank(item.seller?.bankInfo) ? (
-                                <span className="text-sm font-semibold text-emerald-600">
-                                  연락처송금
-                                </span>
+                                <div className="flex flex-col items-end gap-0.5">
+                                  <span className="text-sm font-semibold text-emerald-600">
+                                    연락처송금
+                                  </span>
+                                  {item.seller?.bankInfo?.contactMemo && (
+                                    <span className="text-xs text-slate-500 text-right">
+                                      {item.seller.bankInfo.contactMemo}
+                                    </span>
+                                  )}
+                                </div>
                               ) : (
                                 <>
                                   <span className="text-sm text-zinc-500">
@@ -7124,8 +7131,15 @@ const fetchBuyOrders = async () => {
 
                                 <div className="flex flex-row gap-1 items-center justify-end">
                                   {isContactTransferBank(item.seller?.bankInfo) ? (
-                                    <div className="text-sm font-semibold text-emerald-600">
-                                      연락처송금
+                                    <div className="flex flex-col items-end gap-0.5">
+                                      <span className="text-sm font-semibold text-emerald-600">
+                                        연락처송금
+                                      </span>
+                                      {item.seller?.bankInfo?.contactMemo && (
+                                        <span className="text-xs text-slate-500 text-right">
+                                          {item.seller.bankInfo.contactMemo}
+                                        </span>
+                                      )}
                                     </div>
                                   ) : (
                                     <>
@@ -7727,8 +7741,15 @@ const fetchBuyOrders = async () => {
 
                                     <div className="flex flex-col gap-2 items-center justify-center">
                                       {isContactTransferBank(item.seller?.bankInfo) ? (
-                                        <div className="text-sm font-semibold text-emerald-600">
-                                          연락처송금
+                                        <div className="flex flex-col items-center gap-1">
+                                          <span className="text-sm font-semibold text-emerald-600">
+                                            연락처송금
+                                          </span>
+                                          {item.seller?.bankInfo?.contactMemo && (
+                                            <span className="text-xs text-slate-500 text-center">
+                                              {item.seller.bankInfo.contactMemo}
+                                            </span>
+                                          )}
                                         </div>
                                       ) : (
                                         <div className="flex flex-row gap-2 items-center justify-center">
@@ -9346,6 +9367,11 @@ const fetchBuyOrders = async () => {
 
                         <div className="mb-4 flex flex-col items-start text-sm ">
                           {Payment}: {Bank_Transfer} ({item.seller?.bankInfo?.bankName})
+                          {isContactTransferBank(item.seller?.bankInfo) && item.seller?.bankInfo?.contactMemo && (
+                            <span className="mt-1 text-xs text-slate-600">
+                              {item.seller.bankInfo.contactMemo}
+                            </span>
+                          )}
                         </div>
 
 

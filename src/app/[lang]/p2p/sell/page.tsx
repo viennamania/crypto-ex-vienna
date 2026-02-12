@@ -6230,9 +6230,16 @@ const fetchBuyOrders = async () => {
                             */}
                             <div className="flex flex-col items-start justify-center gap-0">
                               {seller.seller?.bankInfo?.bankName === '연락처송금' ? (
-                                <span className="text-sm font-semibold text-emerald-700">
-                                  연락처송금
-                                </span>
+                                <>
+                                  <span className="text-sm font-semibold text-emerald-700">
+                                    연락처송금
+                                  </span>
+                                  {seller.seller?.bankInfo?.contactMemo && (
+                                    <span className="text-xs text-slate-600">
+                                      {seller.seller.bankInfo.contactMemo}
+                                    </span>
+                                  )}
+                                </>
                               ) : (
                                 <>
                                   <span className="text-sm text-slate-800 font-semibold">
@@ -6384,9 +6391,16 @@ const fetchBuyOrders = async () => {
 
                                 <div className="flex flex-col items-start justify-center gap-0 mt-1">
                                   {seller.seller?.bankInfo?.bankName === '연락처송금' ? (
-                                    <span className="text-sm font-semibold text-emerald-700">
-                                      연락처송금으로 입금 요청되었습니다.
-                                    </span>
+                                    <div className="flex flex-col items-start gap-1">
+                                      <span className="text-sm font-semibold text-emerald-700">
+                                        연락처송금으로 입금 요청되었습니다.
+                                      </span>
+                                      {seller.seller?.bankInfo?.contactMemo && (
+                                        <span className="text-xs text-slate-600">
+                                          {seller.seller.bankInfo.contactMemo}
+                                        </span>
+                                      )}
+                                    </div>
                                   ) : (
                                     <>
                                       <span className="text-sm text-slate-700 font-semibold">
@@ -8955,8 +8969,15 @@ const fetchBuyOrders = async () => {
 
                                 <div className="flex flex-row gap-1 items-center justify-end">
                                   {item.seller?.bankInfo?.bankName === '연락처송금' ? (
-                                    <div className="text-sm font-semibold text-emerald-400">
-                                      연락처송금
+                                    <div className="flex flex-col items-end gap-0.5">
+                                      <span className="text-sm font-semibold text-emerald-400">
+                                        연락처송금
+                                      </span>
+                                      {item.seller?.bankInfo?.contactMemo && (
+                                        <span className="text-xs text-slate-300 text-right">
+                                          {item.seller.bankInfo.contactMemo}
+                                        </span>
+                                      )}
                                     </div>
                                   ) : (
                                     <>
@@ -9558,8 +9579,15 @@ const fetchBuyOrders = async () => {
 
                                     <div className="flex flex-col gap-2 items-center justify-center">
                                       {item.seller?.bankInfo?.bankName === '연락처송금' ? (
-                                        <div className="text-sm font-semibold text-emerald-600">
-                                          연락처송금
+                                        <div className="flex flex-col items-center gap-1">
+                                          <span className="text-sm font-semibold text-emerald-600">
+                                            연락처송금
+                                          </span>
+                                          {item.seller?.bankInfo?.contactMemo && (
+                                            <span className="text-xs text-slate-500 text-center">
+                                              {item.seller.bankInfo.contactMemo}
+                                            </span>
+                                          )}
                                         </div>
                                       ) : (
                                         <div className="flex flex-row gap-2 items-center justify-center">
@@ -11177,6 +11205,11 @@ const fetchBuyOrders = async () => {
 
                         <div className="mb-4 flex flex-col items-start text-sm text-slate-200">
                           {Payment}: {Bank_Transfer} ({item.seller?.bankInfo?.bankName})
+                          {item.seller?.bankInfo?.bankName === '연락처송금' && item.seller?.bankInfo?.contactMemo && (
+                            <span className="mt-1 text-xs text-slate-300">
+                              {item.seller.bankInfo.contactMemo}
+                            </span>
+                          )}
                         </div>
 
 
