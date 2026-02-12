@@ -1860,7 +1860,8 @@ export async function getAllUsersByStorecode(
   const conditions: any[] = [
     { storecode: { $regex: storecode, $options: 'i' } },
     { walletAddress: { $exists: true, $ne: null } },
-    { seller: { $exists: true } },
+    // buyer 관리 화면에서도 사용되므로 seller 또는 buyer 중 하나라도 있어야 한다.
+    { $or: [{ seller: { $exists: true } }, { buyer: { $exists: true } }] },
     ...(includeUnverified ? [] : [{ verified: true }]),
   ];
 
