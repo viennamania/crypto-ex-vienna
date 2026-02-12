@@ -2835,18 +2835,32 @@ export async function updateUserRole({
     return null;
   }
 
+  const targetWallet = String(walletAddress).trim();
+  if (!targetWallet) return null;
+
+  const escapeRegex = (value: string) => value.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
 
-  const walletRegex = { $regex: `^${walletAddress}$`, $options: 'i' };
+  const walletRegex = { $regex: `^${escapeRegex(targetWallet)}$`, $options: 'i' };
+  const primaryFilter = storecode ? { walletAddress: walletRegex, storecode } : { walletAddress: walletRegex };
+  let filterUsed = primaryFilter;
 
-  const updateResult = await collection.findOneAndUpdate(
-    { walletAddress: walletRegex },
-    { $set: { role } },
-    { returnDocument: 'after' },
-  );
+  let result = await collection.updateOne(primaryFilter, { $set: { role } });
 
-  return updateResult?.value || null;
+  if (result.matchedCount === 0) {
+    // 2차 시도: storecode를 제거하고 지갑주소만으로 매칭
+    const fallbackFilter = { walletAddress: walletRegex };
+    result = await collection.updateOne(fallbackFilter, { $set: { role } });
+    if (result.matchedCount === 0) {
+      return null;
+    }
+    filterUsed = fallbackFilter;
+  }
+
+  const updated = await collection.findOne(filterUsed);
+  return updated || null;
 }
 
 

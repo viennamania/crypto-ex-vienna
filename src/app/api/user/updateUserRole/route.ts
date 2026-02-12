@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   try {
     const updatedUser = await updateUserRole({ storecode, walletAddress, role });
     if (!updatedUser) {
-      return NextResponse.json({ error: "사용자 정보를 업데이트할 수 없습니다." }, { status: 400 });
+      return NextResponse.json({ error: "사용자 정보를 업데이트할 수 없습니다.", debug: { walletAddress, storecode } }, { status: 400 });
     }
     return NextResponse.json({ user: updatedUser });
   } catch (error) {
