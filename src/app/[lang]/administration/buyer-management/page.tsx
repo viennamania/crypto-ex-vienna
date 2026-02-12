@@ -42,6 +42,7 @@ export default function BuyerManagementPage() {
           page,
           includeUnverified: true,
           searchTerm,
+          userType: 'buyer',
         }),
       });
       const data = await response.json();

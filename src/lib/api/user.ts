@@ -1836,6 +1836,7 @@ export async function getAllUsersByStorecode(
     searchTerm = '',
     sortField = 'nickname',
     agentcode = '',
+    userType = 'all',
   }: {
     storecode: string;
     limit: number;
@@ -1844,6 +1845,7 @@ export async function getAllUsersByStorecode(
     searchTerm?: string;
     sortField?: 'nickname' | 'createdAt';
     agentcode?: string;
+    userType?: 'seller' | 'buyer' | 'all';
   }
 ): Promise<ResultProps> {
 
@@ -1857,11 +1859,17 @@ export async function getAllUsersByStorecode(
 
   // if storecode is empty, return all users
 
+  const roleCondition =
+    userType === 'seller'
+      ? { seller: { $exists: true } }
+      : userType === 'buyer'
+      ? { buyer: { $exists: true } }
+      : { $or: [{ seller: { $exists: true } }, { buyer: { $exists: true } }] };
+
   const conditions: any[] = [
     { storecode: { $regex: storecode, $options: 'i' } },
     { walletAddress: { $exists: true, $ne: null } },
-    // buyer 관리 화면에서도 사용되므로 seller 또는 buyer 중 하나라도 있어야 한다.
-    { $or: [{ seller: { $exists: true } }, { buyer: { $exists: true } }] },
+    roleCondition,
     ...(includeUnverified ? [] : [{ verified: true }]),
   ];
 

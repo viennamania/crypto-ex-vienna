@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
     searchTerm = '',
     sortField = 'nickname',
     agentcode = '',
+    userType = 'all',
   } = body;
 
 
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
     searchTerm,
     sortField,
     agentcode,
+    userType,
   });
 
  

@@ -60,6 +60,7 @@ export default function SellerManagementPage() {
           searchTerm,
           agentcode: agentFilter || undefined,
           sortField: 'createdAt',
+          userType: 'seller',
         }),
       });
       const data = await response.json();
@@ -453,7 +454,6 @@ export default function SellerManagementPage() {
                     <th className="px-4 py-2 text-left">사용여부</th>
                     <th className="px-4 py-2 text-left">상태</th>
                     <th className="px-4 py-2 text-left">계좌정보</th>
-                    <th className="px-4 py-2 text-left">계좌정보 신청시간</th>
                     <th className="px-4 py-2 text-left">KYC</th>
                     <th className="px-4 py-2 text-left">상세</th>
                   </tr>
@@ -620,10 +620,10 @@ export default function SellerManagementPage() {
                             </span>
                             <span className="text-xs text-slate-600">{bankName}</span>
                             <span className="text-xs text-slate-500">{maskedAccount}</span>
+                            <span className="text-[11px] text-slate-500">
+                              {bankInfoSubmittedAt ? new Date(bankInfoSubmittedAt).toLocaleString() : '-'}
+                            </span>
                           </div>
-                        </td>
-                        <td className="px-4 py-2 text-xs text-slate-600">
-                          {bankInfoSubmittedAt ? new Date(bankInfoSubmittedAt).toLocaleString() : '-'}
                         </td>
                         <td className="px-4 py-2">
                           <div className="flex flex-col gap-1">
