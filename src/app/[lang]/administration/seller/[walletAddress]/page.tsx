@@ -292,6 +292,7 @@ export default function SellerDetailPage() {
           bankName: seller?.bankInfo?.bankName || '',
           accountNumber: seller?.bankInfo?.accountNumber || '',
           accountHolder: seller?.bankInfo?.accountHolder || '',
+          contactMemo: seller?.bankInfo?.contactMemo || '',
           seller: updatedSeller,
         }),
       });
@@ -356,6 +357,7 @@ export default function SellerDetailPage() {
           bankName: seller?.bankInfo?.bankName || '',
           accountNumber: seller?.bankInfo?.accountNumber || '',
           accountHolder: seller?.bankInfo?.accountHolder || '',
+          contactMemo: seller?.bankInfo?.contactMemo || '',
           seller: updatedSeller,
         }),
       });
@@ -393,6 +395,7 @@ export default function SellerDetailPage() {
           bankName: seller?.bankInfo?.bankName || '',
           accountNumber: seller?.bankInfo?.accountNumber || '',
           accountHolder: seller?.bankInfo?.accountHolder || '',
+          contactMemo: seller?.bankInfo?.contactMemo || '',
           seller: updatedSeller,
         }),
       });
