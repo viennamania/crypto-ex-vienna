@@ -713,7 +713,7 @@ export default function SellerManagementPage() {
     </main>
     {agentModalOpen && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-        <div className="w-full max-w-3xl max-h-[85vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_30px_120px_-60px_rgba(15,23,42,0.65)] flex flex-col">
+        <div className="w-full max-w-3xl max-h-[60vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_30px_120px_-60px_rgba(15,23,42,0.65)] flex flex-col">
           <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Agent</p>
@@ -729,7 +729,7 @@ export default function SellerManagementPage() {
               닫기
             </button>
           </div>
-          <div className="flex-1 overflow-hidden px-5 pb-5 pt-3">
+          <div className="flex-1 overflow-auto px-5 pb-3 pt-3">
             {selectedSellerForAgentModal && (
               <div className="mb-3 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                 <div className="relative h-12 w-12 overflow-hidden rounded-xl border border-slate-200 bg-slate-900 text-white">
@@ -981,7 +981,9 @@ export default function SellerManagementPage() {
                 </div>
               </div>
             </div>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+          </div>
+          <div className="border-t border-slate-200 bg-white px-5 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-3 text-sm text-slate-700">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-slate-500">현재</span>
@@ -1088,9 +1090,9 @@ export default function SellerManagementPage() {
                               store: updatedUser?.store ?? (s.store
                                 ? { ...s.store, agentcode: selectedAgentcode }
                                 : s.store),
-                            storeInfo: updatedUser?.storeInfo ?? (s.storeInfo
-                              ? { ...s.storeInfo, agentcode: selectedAgentcode }
-                              : s.storeInfo),
+                              storeInfo: updatedUser?.storeInfo ?? (s.storeInfo
+                                ? { ...s.storeInfo, agentcode: selectedAgentcode }
+                                : s.storeInfo),
                             }
                           : s,
                       ),
