@@ -113,7 +113,7 @@ export default function SellerManagementPage() {
   useEffect(() => {
     if (initializedFromParams) return;
     const qParam = searchParams.get('q') ?? '';
-    const agentParam = searchParams.get('agent') ?? '';
+    const agentParam = searchParams.get('agentcode') ?? searchParams.get('agent') ?? '';
     const pageParam = Number(searchParams.get('page') ?? '1');
     const statusParam = searchParams.get('status') ?? 'all';
     const normalizedStatus =
@@ -129,7 +129,7 @@ export default function SellerManagementPage() {
     if (!initializedFromParams) return;
     const params = new URLSearchParams();
     if (searchTerm.trim()) params.set('q', searchTerm.trim());
-    if (agentFilter) params.set('agent', agentFilter);
+    if (agentFilter) params.set('agentcode', agentFilter);
     if (page > 1) params.set('page', String(page));
     if (statusFilter !== 'all') params.set('status', statusFilter);
     const query = params.toString();
@@ -154,7 +154,10 @@ export default function SellerManagementPage() {
     return target.includes(q);
   });
   const selectedAgentInfo = agentFilter
-    ? agentsList.find((agent) => agent.agentcode === agentFilter)
+    ? agentsList.find((agent) => agent.agentcode === agentFilter) ||
+      (agentsMap[agentFilter]
+        ? { agentcode: agentFilter, ...agentsMap[agentFilter] }
+        : { agentcode: agentFilter })
     : null;
   const selectedSellerForAgentModal = agentModalTargetWallet
     ? sellers.find((seller) => seller.walletAddress === agentModalTargetWallet)
