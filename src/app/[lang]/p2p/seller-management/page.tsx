@@ -462,6 +462,12 @@ export default function SellerManagementByAgentPage() {
           >
             거래 상태 보기 →
           </Link>
+          <Link
+            href={`/${lang}/p2p/seller-management/escrow-wallets?agentcode=${agentcode ?? ''}`}
+            className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
+          >
+            에스크로 지갑관리 →
+          </Link>
           {agentcode && (
             <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 shadow-sm">
               <div className="relative h-8 w-8 overflow-hidden rounded-full border border-emerald-200 bg-white">
