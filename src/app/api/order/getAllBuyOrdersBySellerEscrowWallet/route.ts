@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
     startDate,
     endDate,
     walletAddress,
+    requesterWalletAddress,
   } = body;
 
   if (!walletAddress) {
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest) {
     startDate,
     endDate,
     walletAddress,
+    requesterWalletAddress,
   });
 
   return NextResponse.json({ result });

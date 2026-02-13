@@ -4792,6 +4792,90 @@ export async function getAllBuyOrdersBySeller(
 
 // getAllBuyOrdersBySellerEscrowWallet
 // returns all orders matched by seller.escrow wallet address (any status)
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const maskPersonName = (value?: string) => {
+  const source = (value || '').trim();
+  if (!source) {
+    return '구매자';
+  }
+  if (source.length < 2) {
+    return source;
+  }
+  return `${source[0]}${'*'.repeat(source.length - 1)}`;
+};
+
+const maskPhoneNumber = (value?: string) => {
+  const source = (value || '').trim();
+  if (!source) {
+    return source;
+  }
+  const digits = source.replace(/\D/g, '');
+  if (digits.length < 7) {
+    return `${source[0]}***`;
+  }
+  const head = digits.slice(0, 3);
+  const tail = digits.slice(-4);
+  return `${head}****${tail}`;
+};
+
+const maskWalletAddress = (value?: string) => {
+  const source = (value || '').trim();
+  if (!source) {
+    return source;
+  }
+  if (source.length <= 12) {
+    return source;
+  }
+  return `${source.substring(0, 6)}...${source.substring(source.length - 4)}`;
+};
+
+const maskBankAccountNumber = (value?: string) => {
+  const source = (value || '').trim();
+  if (!source) {
+    return source;
+  }
+  const digits = source.replace(/\D/g, '');
+  if (digits.length < 6) {
+    return `${source.substring(0, 1)}***`;
+  }
+  return `${digits.substring(0, 3)}****${digits.substring(digits.length - 2)}`;
+};
+
+const maskBuyerInfoForOrder = (order: any) => {
+  const nextOrder = { ...order };
+  const nextBuyer = nextOrder?.buyer && typeof nextOrder.buyer === 'object'
+    ? { ...nextOrder.buyer }
+    : {};
+
+  const baseName = nextOrder?.nickname || nextBuyer?.nickname || nextBuyer?.depositName || '구매자';
+  const maskedName = maskPersonName(baseName);
+
+  nextOrder.nickname = maskedName;
+
+  nextBuyer.nickname = maskPersonName(nextBuyer?.nickname || baseName);
+  if (nextBuyer?.depositName) {
+    nextBuyer.depositName = maskPersonName(nextBuyer.depositName);
+  }
+  if (nextBuyer?.mobile) {
+    nextBuyer.mobile = maskPhoneNumber(nextBuyer.mobile);
+  }
+  if (nextBuyer?.walletAddress) {
+    nextBuyer.walletAddress = maskWalletAddress(nextBuyer.walletAddress);
+  }
+  if (nextBuyer?.depositBankAccountNumber) {
+    nextBuyer.depositBankAccountNumber = maskBankAccountNumber(nextBuyer.depositBankAccountNumber);
+  }
+  if (nextBuyer?.depositBanktAccountNumber) {
+    nextBuyer.depositBanktAccountNumber = maskBankAccountNumber(nextBuyer.depositBanktAccountNumber);
+  }
+
+  nextOrder.buyer = nextBuyer;
+  nextOrder.buyerInfoMasked = true;
+
+  return nextOrder;
+};
+
 export async function getAllBuyOrdersBySellerEscrowWallet(
   {
     limit,
@@ -4799,16 +4883,19 @@ export async function getAllBuyOrdersBySellerEscrowWallet(
     startDate,
     endDate,
     walletAddress,
+    requesterWalletAddress,
   }: {
     limit: number;
     page: number;
     startDate?: string;
     endDate?: string;
     walletAddress: string;
+    requesterWalletAddress?: string;
   }
 ): Promise<any> {
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
+  const usersCollection = client.db(dbName).collection('users');
 
   if (limit > 1000) {
     limit = 1000;
@@ -4836,12 +4923,37 @@ export async function getAllBuyOrdersBySellerEscrowWallet(
     matchQuery.createdAt = createdAtFilter;
   }
 
-  const results = await collection
+  const rawOrders = await collection
     .find<UserProps>(matchQuery)
     .sort({ createdAt: -1 })
     .limit(limit)
     .skip((page - 1) * limit)
     .toArray();
+
+  const ownerCandidate = await usersCollection.findOne<{ walletAddress?: string }>(
+    {
+      'seller.escrowWalletAddress': {
+        $regex: `^${escapeRegex(walletAddress)}$`,
+        $options: 'i',
+      },
+    },
+    {
+      projection: {
+        walletAddress: 1,
+      },
+    },
+  );
+
+  const ownerWalletAddress = ownerCandidate?.walletAddress || '';
+  const isOwnerView = Boolean(
+    requesterWalletAddress &&
+    ownerWalletAddress &&
+    requesterWalletAddress.toLowerCase() === ownerWalletAddress.toLowerCase(),
+  );
+
+  const orders = isOwnerView
+    ? rawOrders.map((order: any) => ({ ...order, buyerInfoMasked: false }))
+    : rawOrders.map((order: any) => maskBuyerInfoForOrder(order));
 
   const totalCount = await collection.countDocuments(matchQuery);
 
@@ -4863,7 +4975,10 @@ export async function getAllBuyOrdersBySellerEscrowWallet(
     totalCount,
     totalKrwAmount: totalKrwAmountAgg?.[0]?.totalKrwAmount || 0,
     totalUsdtAmount: totalUsdtAmountAgg?.[0]?.totalUsdtAmount || 0,
-    orders: results,
+    orders,
+    buyerInfoMasked: !isOwnerView,
+    ownerWalletAddress,
+    isOwnerView,
   };
 }
 
@@ -4965,19 +5080,9 @@ export async function getDailyBuyOrderBySeller(
   }
 
 ): Promise<any> {
-
-  console.log('getDailyKrwAmountBySeller startDate: ' + startDate);
-  console.log('getDailyKrwAmountBySeller endDate: ' + endDate);
-  /*
-  getDailyKrwAmountBySeller startDate: 2025-03-01
-  getDailyKrwAmountBySeller endDate: 2025-03-13
-  */
-
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
 
-  // sum of krwAmount by day
-  /*
   const results = await collection.aggregate([
     {
       $match: {
@@ -4988,30 +5093,8 @@ export async function getDailyBuyOrderBySeller(
     },
     {
       $group: {
-        _id: { $dateToString: { format: '%Y-%m-%d', date: '$paymentConfirmedAt' } },
-        totalKrwAmount: { $sum: '$krwAmount' },
-      }
-    }
-  ]).toArray();
-  */
-  /*
-      errmsg: "PlanExecutor error during aggregation :: caused by :: $dateToString parameter 'date' must be coercible to date",
-    code: 4997901,
-    */
-
-  // count of distinct walletAddress by day
-
-  const results = await collection.aggregate([
-    {
-      $match: {
-        'seller.walletAddress': walletAddress,
-        status: 'paymentConfirmed',
-        paymentConfirmedAt: { $gte: startDate, $lt: endDate },
-      }
-    },
-    {
-      $group: {
-        _id: { $dateToString: { format: '%Y-%m-%d', date: { $toDate: '$paymentConfirmedAt' } } },
+        // Group by Korean date (UTC+9) to align with dashboard labels.
+        _id: { $dateToString: { format: '%Y-%m-%d', date: { $add: [ { $toDate: '$paymentConfirmedAt' }, 9 * 60 * 60 * 1000 ] } } },
         totalKrwAmount: { $sum: '$krwAmount' },
         totalUsdtAmount: { $sum: '$usdtAmount' },
         trades: { $sum: 1 },

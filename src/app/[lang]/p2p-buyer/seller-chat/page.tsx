@@ -517,6 +517,7 @@ export default function SellerChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletAddress: escrowWalletAddress,
+          requesterWalletAddress: address,
           limit: 10,
           page: nextPage,
         }),

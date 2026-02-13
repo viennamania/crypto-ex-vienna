@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, act, useRef, useMemo } from "react";
+import { useState, useEffect, use, act, useRef, useMemo, type ReactNode } from "react";
 
 import Image from "next/image";
 
@@ -146,6 +146,7 @@ interface BuyOrder {
 
 
   buyer: any;
+  buyerInfoMasked?: boolean;
 
   canceller: string;
 
@@ -329,6 +330,147 @@ const maskBuyerId = (value?: string | null) => {
     return name;
   }
   return `${name[0]}${'*'.repeat(name.length - 1)}`;
+};
+
+const getTradeStatusLabel = (status?: string) => {
+  if (status === 'ordered') return '주문접수';
+  if (status === 'accepted') return '결제대기';
+  if (status === 'paymentRequested') return '결제요청';
+  if (status === 'paymentConfirmed') return '결제확인';
+  if (status === 'completed') return '거래완료';
+  if (status === 'cancelled') return '취소됨';
+  return '-';
+};
+
+const getTradeStatusBadgeClass = (status?: string) => {
+  if (status === 'ordered') return 'border-slate-300 bg-slate-100 text-slate-700';
+  if (status === 'accepted') return 'border-sky-300 bg-sky-100 text-sky-700';
+  if (status === 'paymentRequested') return 'border-amber-300 bg-amber-100 text-amber-700';
+  if (status === 'paymentConfirmed') return 'border-blue-300 bg-blue-100 text-blue-700';
+  if (status === 'completed') return 'border-emerald-300 bg-emerald-100 text-emerald-700';
+  if (status === 'cancelled') return 'border-rose-300 bg-rose-100 text-rose-700';
+  return 'border-slate-300 bg-slate-100 text-slate-600';
+};
+
+const formatTradeHistoryTime = (value?: string) => {
+  if (!value) {
+    return '-';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+  return date.toLocaleString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const formatShortWalletAddress = (value?: string | null) => {
+  if (!value) {
+    return '-';
+  }
+  const wallet = value.trim();
+  if (wallet.length <= 12) {
+    return wallet;
+  }
+  return `${wallet.substring(0, 6)}...${wallet.substring(wallet.length - 4)}`;
+};
+
+const URL_TOKEN_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+
+const splitTrailingPunctuation = (value: string) => {
+  const match = value.match(/([),.;!?]+)$/);
+  if (!match) {
+    return { core: value, trailing: '' };
+  }
+  return {
+    core: value.slice(0, -match[1].length),
+    trailing: match[1],
+  };
+};
+
+const renderTextWithAutoLinks = (text?: string | null): ReactNode => {
+  if (!text) {
+    return null;
+  }
+
+  const lines = text.split(/\r?\n/);
+
+  return lines.map((line, lineIndex) => {
+    const tokens = line.split(URL_TOKEN_REGEX);
+
+    return (
+      <span key={`line-${lineIndex}`}>
+        {tokens.map((token, tokenIndex) => {
+          const isUrl = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/i.test(token);
+
+          if (!isUrl) {
+            return <span key={`text-${lineIndex}-${tokenIndex}`}>{token}</span>;
+          }
+
+          const { core, trailing } = splitTrailingPunctuation(token);
+          const href = /^https?:\/\//i.test(core) ? core : `https://${core}`;
+
+          return (
+            <span key={`link-${lineIndex}-${tokenIndex}`}>
+              <a
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                className="font-bold underline decoration-emerald-500/70 underline-offset-2 break-all hover:text-emerald-900"
+              >
+                {core}
+              </a>
+              {trailing}
+            </span>
+          );
+        })}
+        {lineIndex < lines.length - 1 && <br />}
+      </span>
+    );
+  });
+};
+
+type DailyTradePoint = {
+  dateKey: string;
+  day: string;
+  value: number;
+  usdtAmount: number;
+  krwAmount: number;
+};
+
+type DailyTradeApiItem = {
+  _id?: string;
+  trades?: number;
+  totalUsdtAmount?: number;
+  totalKrwAmount?: number;
+};
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const KOREAN_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+const getKstDateKeyByOffset = (offset: number) => {
+  const shifted = new Date(Date.now() + KST_OFFSET_MS + offset * ONE_DAY_MS);
+  return shifted.toISOString().slice(0, 10);
+};
+
+const buildEmptyDailyTradeHistory = (): DailyTradePoint[] => {
+  const baseMs = Date.now() + KST_OFFSET_MS;
+  return Array.from({ length: 7 }, (_, index) => {
+    const shifted = new Date(baseMs + (index - 6) * ONE_DAY_MS);
+    const dateKey = shifted.toISOString().slice(0, 10);
+    return {
+      dateKey,
+      day: KOREAN_WEEKDAYS[shifted.getUTCDay()] || '',
+      value: 0,
+      usdtAmount: 0,
+      krwAmount: 0,
+    };
+  });
 };
 
 
@@ -1325,9 +1467,9 @@ export default function Index({ params }: any) {
   const [pageValue, setPageValue] = useState(page || 1);
   */
 
- const [limitValue, setLimitValue] = useState(20);
+ const [limitValue, setLimitValue] = useState(5);
   useEffect(() => {
-    const limit = searchParams.get('limit') || 20;
+    const limit = searchParams.get('limit') || 5;
     const nextLimit = Number(limit);
     setLimitValue((prev) => (Object.is(prev, nextLimit) ? prev : nextLimit));
   }, [searchParams]);
@@ -1366,6 +1508,7 @@ export default function Index({ params }: any) {
   //const [totalCount, setTotalCount] = useState(0);
     
   const [buyOrders, setBuyOrders] = useState<BuyOrder[]>([]);
+  const [tradeHistoryBuyerMaskedByApi, setTradeHistoryBuyerMaskedByApi] = useState(true);
 
 
 
@@ -1459,7 +1602,21 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
 
 
 
+  const [dailyTradeHistory, setDailyTradeHistory] = useState<DailyTradePoint[]>(() => buildEmptyDailyTradeHistory());
+  const [todayTradeCount, setTodayTradeCount] = useState(0);
+  const recent7DayUsdtAmount = useMemo(
+    () => dailyTradeHistory.reduce((sum, item) => sum + (item.usdtAmount || 0), 0),
+    [dailyTradeHistory],
+  );
+  const recent7DayKrwAmount = useMemo(
+    () => dailyTradeHistory.reduce((sum, item) => sum + (item.krwAmount || 0), 0),
+    [dailyTradeHistory],
+  );
+
   const animatedTotalCount = useAnimatedNumber(buyOrderStats.totalCount);
+  const animatedTodayTradeCount = useAnimatedNumber(todayTradeCount);
+  const animatedRecent7DayUsdtAmount = useAnimatedNumber(recent7DayUsdtAmount, { decimalPlaces: 3 });
+  const animatedRecent7DayKrwAmount = useAnimatedNumber(recent7DayKrwAmount);
   const animatedTotalUsdtAmount = useAnimatedNumber(buyOrderStats.totalUsdtAmount, { decimalPlaces: 3 });
   const animatedTotalKrwAmount = useAnimatedNumber(buyOrderStats.totalKrwAmount);
 
@@ -3310,6 +3467,7 @@ setAgreementForCancelTrade(
             limit: Number(limitValue),
             page: Number(pageValue),
             walletAddress: sellerWalletAddress,
+            requesterWalletAddress: address,
             startDate: searchFromDate,
             endDate: searchToDate,
           }
@@ -3387,6 +3545,7 @@ setAgreementForCancelTrade(
       setBuyOrders(data.result.orders);
 
       if (isSellerHistory) {
+        setTradeHistoryBuyerMaskedByApi(Boolean(data?.result?.buyerInfoMasked));
         setBuyOrderStats({
           totalCount: data.result.totalCount,
           totalKrwAmount: data.result.totalKrwAmount,
@@ -3402,6 +3561,7 @@ setAgreementForCancelTrade(
           totalReaultGroupByBuyerDepositNameCount: 0,
         });
       } else {
+        setTradeHistoryBuyerMaskedByApi(true);
         setBuyOrderStats({
           totalCount: data.result.totalCount,
           totalKrwAmount: data.result.totalKrwAmount,
@@ -3465,6 +3625,104 @@ setAgreementForCancelTrade(
     searchFromDate,
     searchToDate
 ]);
+
+
+
+  useEffect(() => {
+    if (!sellerWalletAddress) {
+      setDailyTradeHistory(buildEmptyDailyTradeHistory());
+      setTodayTradeCount(0);
+      return;
+    }
+
+    let mounted = true;
+
+    const fetchDailyTradeHistory = async () => {
+      const emptyHistory = buildEmptyDailyTradeHistory();
+
+      try {
+        const startDate = emptyHistory[0]?.dateKey;
+        const endDate = getKstDateKeyByOffset(1);
+
+        if (!startDate) {
+          return;
+        }
+
+        const response = await fetch('/api/order/getDailyBuyOrdersForSeller', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            startDate,
+            endDate,
+            walletAddress: sellerWalletAddress,
+          }),
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+        const rows: DailyTradeApiItem[] = Array.isArray(data?.result) ? data.result : [];
+        const dailySummaryByDate = new Map<
+          string,
+          {
+            trades: number;
+            totalUsdtAmount: number;
+            totalKrwAmount: number;
+          }
+        >();
+
+        rows.forEach((item) => {
+          if (!item?._id) {
+            return;
+          }
+
+          const trades = Number(item.trades ?? 0);
+          const totalUsdtAmount = Number(item.totalUsdtAmount ?? 0);
+          const totalKrwAmount = Number(item.totalKrwAmount ?? 0);
+
+          dailySummaryByDate.set(item._id, {
+            trades: Number.isFinite(trades) ? trades : 0,
+            totalUsdtAmount: Number.isFinite(totalUsdtAmount) ? totalUsdtAmount : 0,
+            totalKrwAmount: Number.isFinite(totalKrwAmount) ? totalKrwAmount : 0,
+          });
+        });
+
+        const nextHistory = emptyHistory.map((item) => {
+          const summary = dailySummaryByDate.get(item.dateKey);
+          return {
+            ...item,
+            value: summary?.trades || 0,
+            usdtAmount: summary?.totalUsdtAmount || 0,
+            krwAmount: summary?.totalKrwAmount || 0,
+          };
+        });
+
+        if (!mounted) {
+          return;
+        }
+
+        setDailyTradeHistory(nextHistory);
+        setTodayTradeCount(nextHistory[nextHistory.length - 1]?.value || 0);
+      } catch (error) {
+        console.error('Error fetching daily trade history for seller', error);
+      }
+    };
+
+    fetchDailyTradeHistory();
+
+    const interval = setInterval(() => {
+      fetchDailyTradeHistory();
+    }, 15000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [sellerWalletAddress]);
 
 
 
@@ -4680,15 +4938,6 @@ const fetchBuyOrders = async () => {
   const shareLabel = !sellerProfileLoaded
     ? '... 판매자 공유하기'
     : (activeSeller?.nickname ? `${activeSeller.nickname} 판매자 공유하기` : null);
-  const dailyTradeHistory = [
-    { day: '월', value: 58 },
-    { day: '화', value: 92 },
-    { day: '수', value: 74 },
-    { day: '목', value: 126 },
-    { day: '금', value: 98 },
-    { day: '토', value: 140 },
-    { day: '일', value: 112 },
-  ];
   const dailyTradeMax = Math.max(...dailyTradeHistory.map((item) => item.value), 1);
   const dailyTradeChartWidth = 320;
   const dailyTradeChartHeight = 96;
@@ -4724,7 +4973,18 @@ const fetchBuyOrders = async () => {
 
   return (
 
-    <main className="relative p-4 pb-10 min-h-[100vh] flex flex-col items-center justify-start gap-4 mx-auto w-full max-w-xl bg-white text-slate-800 [&_[class*='shadow-']]:shadow-none [&_[class*='bg-gradient']]:bg-none [&_[class*='bg-gradient']]:bg-white [&_[class*='bg-gradient']]:text-slate-700 [&_[class*='bg-gradient']]:border [&_[class*='bg-gradient']]:border-slate-200 [&_[class*='rounded-2xl']]:rounded-lg [&_[class*='rounded-full']]:rounded-md">
+    <main
+      className="escrow-detail-page relative min-h-[100vh] w-full bg-slate-100 px-4 pb-12 pt-6 text-slate-800 sm:px-6 lg:px-8"
+      style={{ fontFamily: '"SUIT Variable", "Pretendard", "Noto Sans KR", sans-serif' }}
+    >
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[340px] overflow-hidden"
+      >
+        <div className="absolute -left-20 -top-24 h-72 w-72 rounded-full bg-orange-300/30 blur-3xl" />
+        <div className="absolute right-0 top-2 h-72 w-72 rounded-full bg-sky-300/25 blur-3xl" />
+      </div>
 
       <AutoConnect
           client={client}
@@ -4732,15 +4992,15 @@ const fetchBuyOrders = async () => {
       />
 
       {!address && (
-        <div className="mb-4 w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-slate-800 shadow-sm">
+        <div className="relative z-10 mx-auto mb-5 w-full max-w-5xl rounded-3xl border border-slate-200/90 bg-white/90 px-4 py-4 text-slate-800 shadow-[0_24px_64px_-42px_rgba(15,23,42,0.45)] backdrop-blur-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold tracking-[0.12em] text-white">
                 Web3
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-semibold">웹3 지갑으로 로그인해 주세요</span>
-                <span className="text-xs text-slate-500">
+                <span className="text-sm font-semibold text-slate-900">웹3 지갑으로 로그인해 주세요</span>
+                <span className="text-xs text-slate-500/90">
                   판매자 상세와 거래 기능을 사용하려면 지갑 연결이 필요합니다.
                 </span>
               </div>
@@ -4753,15 +5013,16 @@ const fetchBuyOrders = async () => {
                 connectButton={{
                   label: '웹3 로그인',
                   style: {
-                    background: '#111827',
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
                     color: '#ffffff',
-                    border: '1px solid rgba(17,24,39,0.12)',
+                    border: '1px solid rgba(15,23,42,0.25)',
                     width: '100%',
                     minWidth: '160px',
                     height: '44px',
                     borderRadius: '9999px',
                     fontWeight: 700,
                     fontSize: '14px',
+                    boxShadow: '0 14px 34px -20px rgba(15,23,42,0.8)',
                   },
                 }}
                 connectModal={{
@@ -4813,12 +5074,12 @@ const fetchBuyOrders = async () => {
         </>
       )}
 
-      <div className="relative z-10 w-full">
-        <header className="mb-6 flex flex-col gap-2">
+      <div className="relative z-10 mx-auto w-full max-w-5xl">
+        <header className="mb-6 rounded-3xl border border-slate-200/80 bg-white/85 px-5 py-5 shadow-[0_28px_75px_-45px_rgba(15,23,42,0.55)] backdrop-blur-sm sm:px-6">
           <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">
             Escrow
           </span>
-          <h1 className="text-2xl font-semibold text-slate-900">판매자 상세</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">판매자 상세</h1>
           <p className="text-sm text-slate-500">판매자 정보와 에스크로 진행 상태를 확인합니다.</p>
         </header>
 
@@ -4920,12 +5181,12 @@ const fetchBuyOrders = async () => {
         */}
 
 
-      <div className="py-0 w-full">
-        <div className="mb-4 flex w-full items-center justify-between gap-2">
+      <div className="w-full space-y-5">
+        <div className="mb-2 flex w-full items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => router.back()}
-            className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200"
           >
             <svg
               width="16"
@@ -4946,7 +5207,7 @@ const fetchBuyOrders = async () => {
           </button>
         </div>
 
-        <div className="w-full flex flex-col items-center justify-center gap-3 mb-6 p-4 border border-slate-200 rounded-lg bg-white">
+        <div className="w-full flex flex-col items-center justify-center gap-3 rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-[0_26px_65px_-46px_rgba(15,23,42,0.58)] sm:p-5">
 
           <div className="w-full flex flex-row items-center justify-center gap-2">
             {/* 홈으로 가기 svg icon button */}
@@ -4969,112 +5230,112 @@ const fetchBuyOrders = async () => {
             */}
 
             <div className="w-full flex flex-col gap-4">
-              <div className="w-full flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto sm:justify-start">
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 shadow-sm
-                    ${isOwnerSeller ? '' : 'invisible'}`}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path
-                        d="M20 6L9 17l-5-5"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    내 판매자 페이지
-                  </span>
-                  {isOwnerSeller && (
-                    <button
-                      type="button"
-                      className="inline-flex w-full items-center justify-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto sm:px-4 sm:text-sm"
-                      onClick={() => router.push(`/${params.lang}/p2p/seller-settings`)}
-                    >
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600">
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          aria-hidden="true"
-                        >
+              {isOwnerSeller && (
+                <div className="w-full rounded-2xl border border-emerald-300/80 bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-cyan-400/10 px-4 py-3 shadow-[0_20px_48px_-34px_rgba(16,185,129,0.9)]">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-emerald-300/80 bg-white text-emerald-600 shadow-sm">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                           <path
-                            d="M10.5 2h3l.5 2.2a7.6 7.6 0 0 1 1.7.7l2-1.2 2.1 2.1-1.2 2a7.6 7.6 0 0 1 .7 1.7L22 10.5v3l-2.2.5a7.6 7.6 0 0 1-.7 1.7l1.2 2-2.1 2.1-2-1.2a7.6 7.6 0 0 1-1.7.7L13.5 22h-3l-.5-2.2a7.6 7.6 0 0 1-1.7-.7l-2 1.2-2.1-2.1 1.2-2a7.6 7.6 0 0 1-.7-1.7L2 13.5v-3l2.2-.5a7.6 7.6 0 0 1 .7-1.7l-1.2-2 2.1-2.1 2 1.2a7.6 7.6 0 0 1 1.7-.7L10.5 2z"
+                            d="M20 6L9 17l-5-5"
                             stroke="currentColor"
-                            strokeWidth="1.6"
+                            strokeWidth="2.4"
                             strokeLinecap="round"
                             strokeLinejoin="round"
                           />
-                          <circle
-                            cx="12"
-                            cy="12"
-                            r="3"
-                            stroke="currentColor"
-                            strokeWidth="1.6"
-                          />
                         </svg>
                       </span>
-                      내 판매자 설정하기
+                      <div className="flex flex-col">
+                        <span className="text-sm font-extrabold tracking-wide text-emerald-800">내 판매자 페이지</span>
+                        <span className="text-xs font-semibold text-emerald-700/90">
+                          현재 로그인한 지갑이 이 판매자 계정을 직접 관리하고 있습니다.
+                        </span>
+                      </div>
+                    </div>
+                    <span className="rounded-full border border-emerald-300/90 bg-white/90 px-3 py-1 text-[11px] font-bold tracking-[0.14em] text-emerald-700">
+                      OWNER MODE
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="w-full rounded-2xl border border-slate-200/80 bg-slate-50/70 p-3 sm:p-4">
+                <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto sm:justify-start">
+                    {!isOwnerSeller && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+                        공개 판매자 페이지
+                      </span>
+                    )}
+                    {isOwnerSeller && (
+                      <button
+                        type="button"
+                        className="inline-flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 sm:w-auto sm:px-4 sm:text-sm"
+                        onClick={() => router.push(`/${params.lang}/p2p/seller-settings`)}
+                      >
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600">
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M10.5 2h3l.5 2.2a7.6 7.6 0 0 1 1.7.7l2-1.2 2.1 2.1-1.2 2a7.6 7.6 0 0 1 .7 1.7L22 10.5v3l-2.2.5a7.6 7.6 0 0 1-.7 1.7l1.2 2-2.1 2.1-2-1.2a7.6 7.6 0 0 1-1.7.7L13.5 22h-3l-.5-2.2a7.6 7.6 0 0 1-1.7-.7l-2 1.2-2.1-2.1 1.2-2a7.6 7.6 0 0 1-.7-1.7L2 13.5v-3l2.2-.5a7.6 7.6 0 0 1 .7-1.7l-1.2-2 2.1-2.1 2 1.2a7.6 7.6 0 0 1 1.7-.7L10.5 2z"
+                              stroke="currentColor"
+                              strokeWidth="1.6"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="3"
+                              stroke="currentColor"
+                              strokeWidth="1.6"
+                            />
+                          </svg>
+                        </span>
+                        내 판매자 설정하기
+                      </button>
+                    )}
+                  </div>
+                  {shareLabel && (
+                    <button
+                      type="button"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-white sm:w-auto"
+                      onClick={() => {
+                        navigator.clipboard.writeText(window.location.href);
+                        toast.success("링크가 복사되었습니다.");
+                      }}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M15 8a3 3 0 10-6 0v1H7a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-2V8z"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M12 5v6"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      {shareLabel}
                     </button>
                   )}
                 </div>
-                {shareLabel && (
-                  <button
-                    type="button"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:bg-white sm:w-auto sm:py-1"
-                    onClick={() => {
-                      navigator.clipboard.writeText(window.location.href);
-                      toast.success("링크가 복사되었습니다.");
-                    }}
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M15 8a3 3 0 10-6 0v1H7a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-2V8z"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M12 5v6"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    {shareLabel}
-                  </button>
-                )}
               </div>
-              {isOwnerSeller && (
-                <div className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50 px-3 py-2 text-center text-xs font-semibold text-emerald-700 sm:justify-start sm:text-left">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path
-                      d="M12 8v4l3 2"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="9"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    />
-                  </svg>
-                  내가 관리하는 판매자 페이지입니다
-                </div>
-              )}
 
               <div className="w-full flex flex-col gap-3">
                 <div className="flex items-stretch gap-3">
@@ -5534,10 +5795,7 @@ const fetchBuyOrders = async () => {
           
           {/* 오늘 거래 현황 */}
 
-          <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-4
-          border-t border-b border-slate-200
-          py-4
-          ">
+          <div className="w-full flex flex-col items-center justify-between gap-4 rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_20px_45px_-34px_rgba(15,23,42,0.45)] xl:flex-row sm:p-5">
 
             <div className="w-full flex flex-col items-center justify-start gap-2">
 
@@ -5559,14 +5817,13 @@ const fetchBuyOrders = async () => {
                   </div>
                   <div className="text-4xl font-semibold text-slate-800">
                     {
-                      //buyOrderStats.totalCount?.toLocaleString()
-                      animatedTotalCount
+                      Math.round(animatedTodayTradeCount).toLocaleString()
                     }
                   </div>
                 </div>
               </div>
 
-              <div className="w-full max-w-xl rounded-2xl border border-slate-200/70 bg-white/80 px-4 py-3 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.35)] backdrop-blur-sm">
+              <div className="w-full max-w-3xl rounded-2xl border border-slate-200/70 bg-white/80 px-4 py-3 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.35)] backdrop-blur-sm">
                 <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
                   <span>일별 거래 이력</span>
                   <span className="text-slate-400">최근 7일</span>
@@ -5598,7 +5855,7 @@ const fetchBuyOrders = async () => {
                     )}
                     {dailyTradePoints.map((point, index) => (
                       <circle
-                        key={`${dailyTradeHistory[index]?.day}-${point.x}`}
+                        key={`${dailyTradeHistory[index]?.dateKey || 'daily'}-${point.x}`}
                         cx={point.x}
                         cy={point.y}
                         r="3.5"
@@ -5611,14 +5868,14 @@ const fetchBuyOrders = async () => {
                 </div>
                 <div className="mt-2 flex w-full items-center justify-between text-[10px] font-semibold text-slate-500">
                   {dailyTradeHistory.map((item) => (
-                    <span key={item.day}>{item.day}</span>
+                    <span key={item.dateKey}>{item.day}</span>
                   ))}
                 </div>
               </div>
 
-              <div className="flex flex-row items-center justify-center gap-2">
+              <div className="flex w-full flex-col items-stretch justify-center gap-2 sm:flex-row">
 
-                <div className="flex flex-col gap-2 items-center">
+                <div className="flex flex-1 flex-col items-center gap-2 rounded-2xl border border-emerald-200/70 bg-emerald-50/45 py-3">
                   <div className="
                     bg-white/70
                     px-2 py-1 rounded-full
@@ -5646,13 +5903,13 @@ const fetchBuyOrders = async () => {
                         //buyOrderStats.totalUsdtAmount
                         //? buyOrderStats.totalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                         //: '0.000'
-                        animatedTotalUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                        animatedRecent7DayUsdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                       }
                     </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 items-center">
+                <div className="flex flex-1 flex-col items-center gap-2 rounded-2xl border border-amber-200/80 bg-amber-50/45 py-3">
                   <div className="
                     bg-white/70
                     px-2 py-1 rounded-full
@@ -5670,7 +5927,7 @@ const fetchBuyOrders = async () => {
                       style={{ fontFamily: 'monospace' }}>
                       {
                         //buyOrderStats.totalKrwAmount?.toLocaleString()
-                        formatKrwValue(animatedTotalKrwAmount)
+                        formatKrwValue(animatedRecent7DayKrwAmount)
                       }
                     </span>
                   </div>
@@ -6034,7 +6291,29 @@ const fetchBuyOrders = async () => {
           )}
 
           {/* 판매자 대화목록 섹션 */}
-          {!isOwnerSeller && (
+          {isOwnerSeller ? (
+            <div className="w-full rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 px-4 py-4 shadow-[0_20px_50px_-40px_rgba(217,119,6,0.85)]">
+              <div className="flex items-start gap-3">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-200 bg-white text-amber-600 shadow-sm">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M8 10h8M8 14h5M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                <div className="space-y-1">
+                  <p className="text-sm font-extrabold text-amber-800">구매자 - 판매자 대화창 비노출</p>
+                  <p className="text-xs font-semibold text-amber-700/90">
+                    내 판매자 페이지에서는 구매자 - 판매자 대화창을 보여주지 않습니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
             <SendbirdChatEmbed
                 buyerWalletAddress={address}
                 sellerWalletAddress={ownerWalletAddress}
@@ -6606,102 +6885,89 @@ const fetchBuyOrders = async () => {
 
                         {/* seller.seller.bankInfo */}
                         {seller.seller?.bankInfo && (
-                          <div className="w-full flex flex-row items-center justify-start gap-2">
-                            {/*
-                            <Image
-                              src="/icon-bank-transfer.png"
-                              alt="Bank"
-                              width={20}
-                              height={20}
-                              className="w-5 h-5"
-                            />
-                            */}
-                            <div className="flex flex-col items-start justify-center gap-0">
-                              <span className="text-sm text-slate-800 font-semibold">
-                                {seller.seller?.bankInfo?.bankName}
-                              </span>
-                              {seller.walletAddress && address && seller.walletAddress.toLowerCase() === address.toLowerCase() ? (
-                                <span className="text-sm text-slate-700">
-                                  {seller.seller?.bankInfo?.accountNumber}
+                          <div className="w-full grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+                            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5">
+                              <div className="mb-1 flex items-center gap-2">
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                  입금정보
                                 </span>
+                              </div>
+                              {seller.seller?.bankInfo?.bankName === '연락처송금' ? (
+                                <div className="flex flex-col gap-2">
+                                  <span className="text-sm font-bold text-emerald-700">
+                                    연락처송금
+                                  </span>
+                                  {seller.seller?.bankInfo?.contactMemo?.trim() ? (
+                                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold leading-relaxed text-emerald-800 break-words">
+                                      {renderTextWithAutoLinks(seller.seller.bankInfo.contactMemo)}
+                                    </div>
+                                  ) : (
+                                    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
+                                      연락처송금 안내 메모가 없습니다.
+                                    </div>
+                                  )}
+                                </div>
                               ) : (
-                                <span className="text-sm text-slate-700">
-                                  {seller.seller?.bankInfo?.accountNumber.length > 5
-                                    ? seller.seller?.bankInfo?.accountNumber.substring(0, 5) +'****'
-                                    : seller.seller?.bankInfo?.accountNumber
-                                  }
-                                </span>
-                              )}
-                              {seller.walletAddress && address && seller.walletAddress.toLowerCase() === address.toLowerCase() ? (
-                                <span className="text-sm font-semibold text-slate-800">
-                                  {seller.seller?.bankInfo?.accountHolder}
-                                </span>
-                              ) : (
-                                <span className="text-sm font-semibold text-slate-800">
-                                  {seller.seller?.bankInfo?.accountHolder.length > 2
-                                    ? seller.seller?.bankInfo?.accountHolder.substring(0, 1) +'**'
-                                    : seller.seller?.bankInfo?.accountHolder
-                                  }
-                                </span>
+                                <div className="flex flex-col items-start justify-center gap-0.5">
+                                  <span className="text-sm font-semibold text-slate-800">
+                                    {seller.seller?.bankInfo?.bankName || '-'}
+                                  </span>
+                                  {seller.walletAddress && address && seller.walletAddress.toLowerCase() === address.toLowerCase() ? (
+                                    <span className="text-sm text-slate-700">
+                                      {seller.seller?.bankInfo?.accountNumber || '-'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-sm text-slate-700">
+                                      {(seller.seller?.bankInfo?.accountNumber?.length ?? 0) > 5
+                                        ? `${seller.seller?.bankInfo?.accountNumber?.substring(0, 5)}****`
+                                        : (seller.seller?.bankInfo?.accountNumber || '-')
+                                      }
+                                    </span>
+                                  )}
+                                  {seller.walletAddress && address && seller.walletAddress.toLowerCase() === address.toLowerCase() ? (
+                                    <span className="text-sm font-semibold text-slate-800">
+                                      {seller.seller?.bankInfo?.accountHolder || '-'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-sm font-semibold text-slate-800">
+                                      {(seller.seller?.bankInfo?.accountHolder?.length ?? 0) > 2
+                                        ? `${seller.seller?.bankInfo?.accountHolder?.substring(0, 1)}**`
+                                        : (seller.seller?.bankInfo?.accountHolder || '-')
+                                      }
+                                    </span>
+                                  )}
+                                </div>
                               )}
                             </div>
 
-
-                            {/* seller?.autoProcessDeposit */}
-                            {/* toggleAutoProcessDeposit */}
-                            <div className="flex flex-col items-start justify-center ml-4 gap-1">
-
+                            <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5">
                               <span className="w-full flex text-sm font-semibold text-slate-800">
                                 자동입금처리
                               </span>
                               {seller.seller?.autoProcessDeposit ? (
-                                <div className="w-full flex flex-col items-center justify-center">
+                                <div className="mt-1 w-full flex flex-col items-start justify-center">
                                   <div className="flex text-xs text-emerald-800 font-semibold
                                   bg-emerald-100/90 border border-emerald-200 rounded-lg px-2 py-1 text-center
                                   ">
                                     활성화 상태
                                   </div>
-                                  {/* 설명 */}
-                                  <div className="text-xs text-slate-700 mt-1">
+                                  <div className="text-xs text-slate-700 mt-1 leading-relaxed">
                                     구매자가 입금을 하면 자동으로 입금확인이 처리됩니다.
                                   </div>
                                 </div>
                               ) : (
-                                <div className="w-full flex flex-col items-center justify-center">
+                                <div className="mt-1 w-full flex flex-col items-start justify-center">
                                   <div className="flex text-xs text-red-700 font-semibold
                                   bg-red-100/90 border border-red-200 rounded-lg px-2 py-1 text-center
                                   ">
                                     비활성화 상태
                                   </div>
-                                  {/* 설명 */}
-                                  <div className="text-xs text-slate-700 mt-1">
+                                  <div className="text-xs text-slate-700 mt-1 leading-relaxed">
                                     구매자가 입금을 하면 판매자가 수동으로 입금확인을 합니다.
                                   </div>
                                 </div>
                               )}
-
-                              {/*
-                              {seller.walletAddress === address && (
-                                <button
-                                  onClick={() => {
-                                      const currentValue = seller?.seller.autoProcessDeposit;
-                                      toggleAutoProcessDeposit(currentValue)
-                                  }}
-                                  className={`
-                                    ${seller.seller?.autoProcessDeposit
-                                    ? 'bg-red-900/50 text-red-300 hover:bg-red-800/70 border-red-700 hover:shadow-red-500/50 cursor-pointer'
-                                    : 'bg-emerald-900/50 text-emerald-300 hover:bg-emerald-800/70 border-emerald-700 hover:shadow-emerald-500/50 cursor-pointer'
-                                    }
-                                    rounded-lg border text-xs px-2 py-1 text-center font-semibold
-                                  `}
-                                  disabled={togglingAutoProcessDeposit}
-                                >
-                                  {seller.seller?.autoProcessDeposit ? '비활성화 하기' : '활성화 하기'}
-                                </button>
-                              )}
-                              */}
                             </div>
-
                           </div>
                         )}
 
@@ -7551,7 +7817,7 @@ const fetchBuyOrders = async () => {
                               {/* 로그인을 해야 구매할 수 있습니다. */}
                               {!address && (
                                 <div className="w-full flex flex-col items-center justify-center mt-4">
-                                  <div className="w-full max-w-md mx-auto p-6 text-center border border-slate-200 rounded-lg bg-white">
+                                  <div className="w-full max-w-md mx-auto p-6 text-center border border-sky-200 rounded-2xl bg-sky-50/75">
                                     <div className="flex flex-col items-center gap-3">
                                       <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
                                         OrangeX
@@ -7570,29 +7836,16 @@ const fetchBuyOrders = async () => {
                                     <h2 className="mt-4 text-xl font-semibold text-slate-900 sm:text-2xl">
                                       지갑 연결이 필요합니다
                                     </h2>
-                                    <p className="mt-2 text-sm text-slate-500">
-                                      USDT 출금을 위해 지갑을 연결해 주세요.
+                                    <p className="mt-2 text-sm text-slate-600">
+                                      상단의 웹3 로그인 버튼에서 지갑을 연결해 주세요.
                                     </p>
-                                    <div className="mt-5">
-                                      <ConnectButton
-                                        client={client}
-                                        wallets={wallets.length ? wallets : [wallet]}
-                                        chain={
-                                          chain === "ethereum"
-                                            ? ethereum
-                                            : chain === "polygon"
-                                            ? polygon
-                                            : chain === "arbitrum"
-                                            ? arbitrum
-                                            : bsc
-                                        }
-                                        connectButton={{
-                                          label: "지갑 연결하기",
-                                          className:
-                                            "inline-flex w-full items-center justify-center rounded-md border border-slate-200 bg-white px-6 py-3 text-base font-medium text-slate-800 transition hover:border-slate-400 hover:text-slate-900",
-                                        }}
-                                      />
-                                    </div>
+                                    <button
+                                      type="button"
+                                      className="mt-5 inline-flex items-center justify-center rounded-full border border-sky-300 bg-white px-5 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100"
+                                      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                                    >
+                                      상단 로그인 영역으로 이동
+                                    </button>
                                   </div>
                                 </div>
                               )}
@@ -8328,63 +8581,186 @@ const fetchBuyOrders = async () => {
           </div>
 
 
-          <div className="
-            mt-6
-            w-full overflow-x-auto">
+          <div className="mt-6 w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-[0_28px_70px_-44px_rgba(15,23,42,0.6)]">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 px-4 py-3 text-white">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/15">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M8 7h8M8 12h8M8 17h5M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                <span className="text-sm font-bold tracking-wide">거래내역</span>
+                <span className="rounded-full border border-white/25 bg-white/10 px-2 py-0.5 text-[10px] font-semibold">
+                  최신순
+                </span>
+              </div>
+              <span className="text-xs font-semibold text-slate-200">
+                총 {buyOrders.length.toLocaleString()}건
+              </span>
+            </div>
 
-            <table className="w-full table-auto border-collapse border border-black/10 text-sm text-black">
-              <thead className="bg-black text-white text-xs uppercase tracking-widest">
-                <tr>
-                  <th className="px-3 py-2 text-left font-semibold">거래번호</th>
-                  <th className="px-3 py-2 text-left font-semibold">거래시간</th>
-                  <th className="px-3 py-2 text-left font-semibold">구매자</th>
-                  <th className="px-3 py-2 text-right font-semibold">USDT</th>
-                  <th className="px-3 py-2 text-right font-semibold">KRW</th>
-                  <th className="px-3 py-2 text-left font-semibold">상태</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-black/10 bg-white">
-                {buyOrders.map((item, index) => (
-                  <tr
-                    key={`minimal-${index}`}
-                    className={index % 2 === 0 ? 'bg-white' : 'bg-[#f7f7f7]'}
-                  >
-                    <td className="px-3 py-2 font-semibold text-black">#{item.tradeId}</td>
-                    <td className="px-3 py-2 text-black">
-                      {item?.createdAt
-                        ? new Date(item.createdAt).toLocaleString('ko-KR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            month: '2-digit',
-                            day: '2-digit',
-                          })
-                        : '-'}
-                    </td>
-                    <td className="px-3 py-2 text-black">
-                      {maskBuyerId(item?.nickname || item?.buyer?.nickname)}
-                    </td>
-                    <td className="px-3 py-2 text-right font-semibold text-black">
-                      {typeof item?.usdtAmount === 'number'
-                        ? item.usdtAmount.toLocaleString()
-                        : '-'}
-                    </td>
-                    <td className="px-3 py-2 text-right font-semibold text-black">
-                      {typeof item?.krwAmount === 'number'
-                        ? formatKrwValue(item.krwAmount)
-                        : '-'}
-                    </td>
-                    <td className="px-3 py-2 text-black">
-                      {item.status === 'ordered' && '주문접수'}
-                      {item.status === 'accepted' && '결제대기'}
-                      {item.status === 'paymentRequested' && '결제요청'}
-                      {item.status === 'paymentConfirmed' && '결제확인'}
-                      {item.status === 'completed' && '거래완료'}
-                      {!item.status && '-'}
-                    </td>
+            {!tradeHistoryBuyerMaskedByApi ? (
+              <div className="flex items-center gap-2 border-b border-emerald-200/80 bg-emerald-50/90 px-4 py-2 text-xs font-semibold text-emerald-700">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                내 판매자 페이지 운영 모드: 구매자 상세 정보가 표시됩니다.
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 border-b border-slate-200/90 bg-slate-50/90 px-4 py-2 text-xs font-semibold text-slate-600">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M12 8v5"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="12" cy="16" r="1" fill="currentColor" />
+                </svg>
+                공개 보기 모드: 구매자 정보는 마스킹되어 표시됩니다.
+              </div>
+            )}
+
+            <div className="w-full overflow-x-auto">
+              <table className="min-w-[860px] w-full table-auto border-collapse text-sm text-slate-700">
+                <thead className="bg-slate-100/95 text-[11px] uppercase tracking-[0.16em] text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-semibold">거래번호</th>
+                    <th className="px-4 py-3 text-left font-semibold">거래시간</th>
+                    <th className="px-4 py-3 text-left font-semibold">구매자</th>
+                    <th className="px-4 py-3 text-right font-semibold">USDT</th>
+                    <th className="px-4 py-3 text-right font-semibold">KRW</th>
+                    <th className="px-4 py-3 text-left font-semibold">상태</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {buyOrders.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-10 text-center text-sm font-medium text-slate-500">
+                        거래내역이 없습니다.
+                      </td>
+                    </tr>
+                  )}
+
+                  {buyOrders.map((item, index) => {
+                    const buyerBaseName =
+                      item?.nickname ||
+                      item?.buyer?.nickname ||
+                      item?.buyer?.depositName ||
+                      '구매자';
+                    const buyerDepositName = item?.buyer?.depositName || '-';
+                    const buyerWalletAddress = item?.buyer?.walletAddress || item?.walletAddress || '';
+                    const buyerMobile = item?.buyer?.mobile || '';
+                    const buyerBankName = item?.buyer?.depositBankName || '-';
+                    const buyerBankAccount =
+                      item?.buyer?.depositBankAccountNumber ||
+                      item?.buyer?.depositBanktAccountNumber ||
+                      '-';
+                    const isMaskedBuyerInfo = Boolean(
+                      typeof item?.buyerInfoMasked === 'boolean'
+                        ? item.buyerInfoMasked
+                        : tradeHistoryBuyerMaskedByApi,
+                    );
+                    const buyerDisplayName = isMaskedBuyerInfo
+                      ? maskBuyerId(buyerBaseName)
+                      : buyerBaseName;
+                    const buyerDisplayDepositName = isMaskedBuyerInfo
+                      ? maskBuyerId(buyerDepositName)
+                      : buyerDepositName;
+                    const buyerDisplayMobile = isMaskedBuyerInfo
+                      ? maskBuyerId(buyerMobile)
+                      : buyerMobile;
+                    const buyerDisplayWalletAddress = isMaskedBuyerInfo
+                      ? maskBuyerId(formatShortWalletAddress(buyerWalletAddress))
+                      : formatShortWalletAddress(buyerWalletAddress);
+                    const buyerDisplayBankAccount = isMaskedBuyerInfo
+                      ? maskBuyerId(String(buyerBankAccount))
+                      : String(buyerBankAccount);
+
+                    return (
+                      <tr
+                        key={`minimal-${index}`}
+                        className="transition-colors hover:bg-slate-50/90"
+                      >
+                        <td className="px-4 py-3">
+                          <span className="font-semibold text-slate-900">
+                            #{item.tradeId || '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          {formatTradeHistoryTime(item?.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-slate-800">
+                          <div className="flex flex-col">
+                            <span className="font-semibold">{buyerDisplayName}</span>
+                            {!isMaskedBuyerInfo ? (
+                              <>
+                                <span className="text-[11px] text-slate-600">
+                                  입금자명: {buyerDisplayDepositName}
+                                </span>
+                                {buyerDisplayMobile && (
+                                  <span className="text-[11px] text-slate-600">
+                                    연락처: {buyerDisplayMobile}
+                                  </span>
+                                )}
+                                <span className="text-[11px] text-slate-600" title={buyerWalletAddress}>
+                                  지갑: {buyerDisplayWalletAddress}
+                                </span>
+                                <span className="text-[11px] text-slate-600">
+                                  계좌: {buyerBankName} {buyerDisplayBankAccount}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-[11px] text-slate-500">개인정보 보호 마스킹</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                          {typeof item?.usdtAmount === 'number'
+                            ? item.usdtAmount.toLocaleString()
+                            : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                          {typeof item?.krwAmount === 'number'
+                            ? formatKrwValue(item.krwAmount)
+                            : '-'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getTradeStatusBadgeClass(
+                              item?.status,
+                            )}`}
+                          >
+                            {getTradeStatusLabel(item?.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
             <div className="hidden">
             <table className="w-full table-auto border-collapse border border-slate-300 rounded-md">
@@ -9650,6 +10026,7 @@ const fetchBuyOrders = async () => {
               }
               className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600"
             >
+              <option value={5}>5</option>
               <option value={10}>10</option>
               <option value={20}>20</option>
               <option value={50}>50</option>
