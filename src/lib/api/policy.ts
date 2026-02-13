@@ -1,5 +1,6 @@
 import clientPromise from '../mongodb';
 import { dbName } from '../mongodb';
+import { normalizePolicyContentToHtml } from '../policyContent';
 
 export type Policy = {
   _id?: any;
@@ -9,19 +10,6 @@ export type Policy = {
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
-};
-
-const normalizeContent = (value?: string[] | string) => {
-  if (Array.isArray(value)) {
-    return value.filter((item) => item.trim().length > 0);
-  }
-  if (!value) {
-    return [];
-  }
-  return String(value)
-    .split('\n')
-    .map((item) => item.trim())
-    .filter(Boolean);
 };
 
 export async function getPolicyBySlug(slug: string) {
@@ -44,7 +32,7 @@ export async function upsertPolicy(data: Policy) {
   const payload = {
     slug: data.slug,
     title: data.title || '',
-    content: normalizeContent(data.content),
+    content: normalizePolicyContentToHtml(data.content),
     isActive: data.isActive !== false,
     updatedAt: now,
   };

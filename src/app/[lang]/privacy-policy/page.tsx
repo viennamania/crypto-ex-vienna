@@ -3,6 +3,7 @@ import Image from 'next/image';
 import type { CSSProperties } from 'react';
 import { Manrope, Playfair_Display } from 'next/font/google';
 import { getPolicyBySlug } from '@/lib/api/policy';
+import { hasMeaningfulPolicyContent, normalizePolicyContentToHtml } from '@/lib/policyContent';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,22 +19,12 @@ const bodyFont = Manrope({
   variable: '--font-body',
 });
 
-const normalizeContent = (value?: string[] | string) => {
-  if (Array.isArray(value)) {
-    return value.filter((line) => line.trim().length > 0);
-  }
-  if (!value) return [];
-  return String(value)
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-};
-
 export default async function PrivacyPolicyPage({ params }: { params: { lang?: string } }) {
   const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang ?? 'ko';
   const policy = await getPolicyBySlug('privacy-policy');
   const title = policy?.title?.trim() || '개인정보처리방침';
-  const content = normalizeContent(policy?.content);
+  const contentHtml = normalizePolicyContentToHtml(policy?.content);
+  const hasContent = hasMeaningfulPolicyContent(contentHtml);
   const updatedAt = policy?.updatedAt || policy?.createdAt;
   const updatedDate = updatedAt ? String(updatedAt).slice(0, 10) : '';
 
@@ -97,16 +88,15 @@ export default async function PrivacyPolicyPage({ params }: { params: { lang?: s
         </header>
 
         <section className="mt-10 rounded-2xl border border-slate-200/70 bg-white/90 px-6 py-8 shadow-[0_18px_45px_-35px_rgba(15,23,42,0.4)]">
-          {content.length === 0 ? (
+          {!hasContent ? (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-white/80 px-5 py-8 text-center text-sm text-slate-500">
               등록된 개인정보처리방침이 없습니다. 관리자에서 내용을 추가해 주세요.
             </div>
           ) : (
-            <div className="space-y-4 text-sm leading-relaxed text-slate-700">
-              {content.map((line, index) => (
-                <p key={`privacy-${index}`}>{line}</p>
-              ))}
-            </div>
+            <div
+              className="policy-richtext text-sm leading-relaxed text-slate-700 [&_a]:text-blue-600 [&_a]:underline [&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-200 [&_blockquote]:pl-4 [&_h1]:my-4 [&_h1]:text-2xl [&_h1]:font-semibold [&_h2]:my-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:my-3 [&_h3]:text-lg [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:my-3 [&_ol]:list-decimal [&_p]:my-3 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-slate-100 [&_pre]:p-3 [&_ul]:my-3 [&_ul]:list-disc"
+              dangerouslySetInnerHTML={{ __html: contentHtml }}
+            />
           )}
         </section>
       </main>

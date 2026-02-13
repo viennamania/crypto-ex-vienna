@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { hasMeaningfulPolicyContent, normalizePolicyContentToHtml } from '@/lib/policyContent';
 
 type PolicyResponse = {
   title?: string;
@@ -14,19 +15,6 @@ type PolicyPageProps = {
   slug: string;
   title: string;
   description: string;
-};
-
-const normalizeContent = (value?: string[] | string) => {
-  if (Array.isArray(value)) {
-    return value.filter((line) => line.trim().length > 0);
-  }
-  if (!value) {
-    return [];
-  }
-  return String(value)
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
 };
 
 export default function P2PBuyerPolicyPage({ slug, title, description }: PolicyPageProps) {
@@ -74,7 +62,8 @@ export default function P2PBuyerPolicyPage({ slug, title, description }: PolicyP
     };
   }, [slug]);
 
-  const content = useMemo(() => normalizeContent(policy?.content), [policy]);
+  const contentHtml = useMemo(() => normalizePolicyContentToHtml(policy?.content), [policy]);
+  const hasContent = useMemo(() => hasMeaningfulPolicyContent(contentHtml), [contentHtml]);
   const displayTitle = policy?.title?.trim() || title;
   const updatedAt = policy?.updatedAt || policy?.createdAt;
   const updatedDate = updatedAt ? String(updatedAt).slice(0, 10) : '';
@@ -108,17 +97,16 @@ export default function P2PBuyerPolicyPage({ slug, title, description }: PolicyP
               {!loading && errorMessage && (
                 <p className="text-sm text-rose-500">{errorMessage}</p>
               )}
-              {!loading && !errorMessage && content.length === 0 && (
+              {!loading && !errorMessage && !hasContent && (
                 <p className="text-sm text-black/70">
                   등록된 정책 내용이 없습니다. 관리자에서 내용을 추가해 주세요.
                 </p>
               )}
-              {!loading && !errorMessage && content.length > 0 && (
-                <div className="space-y-3 text-sm leading-relaxed text-black/80">
-                  {content.map((line, index) => (
-                    <p key={`${slug}-${index}`}>{line}</p>
-                  ))}
-                </div>
+              {!loading && !errorMessage && hasContent && (
+                <div
+                  className="policy-richtext text-sm leading-relaxed text-black/80 [&_a]:text-blue-600 [&_a]:underline [&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-black/20 [&_blockquote]:pl-4 [&_h1]:my-4 [&_h1]:text-2xl [&_h1]:font-semibold [&_h2]:my-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:my-3 [&_h3]:text-lg [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:my-3 [&_ol]:list-decimal [&_p]:my-3 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-black/5 [&_pre]:p-3 [&_ul]:my-3 [&_ul]:list-disc"
+                  dangerouslySetInnerHTML={{ __html: contentHtml }}
+                />
               )}
             </section>
           </div>
