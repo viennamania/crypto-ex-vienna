@@ -74,6 +74,26 @@ const maskName = (name?: string) => {
   return `${name.slice(0, 1)}${'*'.repeat(Math.max(1, name.length - 1))}`;
 };
 
+const getObjectIdString = (value: unknown) => {
+  if (!value) return '';
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'object') {
+    const candidate = value as { $oid?: unknown; toString?: () => string };
+    if (typeof candidate.$oid === 'string') {
+      return candidate.$oid;
+    }
+    if (typeof candidate.toString === 'function') {
+      const text = candidate.toString();
+      if (text && text !== '[object Object]') {
+        return text;
+      }
+    }
+  }
+  return '';
+};
+
 const LINKABLE_TOKEN_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
 const URL_ONLY_REGEX = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/i;
 const EMAIL_ONLY_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
@@ -168,6 +188,8 @@ export default function SellerChatPage() {
   const [buyKrwInput, setBuyKrwInput] = useState('');
   const [buyUsdtInput, setBuyUsdtInput] = useState('');
   const [buying, setBuying] = useState(false);
+  const [cancelingBuyOrder, setCancelingBuyOrder] = useState(false);
+  const [showCancelWarningModal, setShowCancelWarningModal] = useState(false);
   const [buyStatus, setBuyStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [buyStatusMessage, setBuyStatusMessage] = useState('');
   const [recentOrderInfo, setRecentOrderInfo] = useState<{
@@ -226,6 +248,15 @@ export default function SellerChatPage() {
       ? `시장가(${marketLabel})`
       : '고정가';
   const sellerBuyOrderStatus = sellerProfile?.seller?.buyOrder?.status as string | undefined;
+  const currentBuyOrder = sellerProfile?.seller?.buyOrder;
+  const currentBuyOrderId = getObjectIdString(currentBuyOrder?._id);
+  const currentBuyerWalletAddress = String(
+    currentBuyOrder?.buyer?.walletAddress || currentBuyOrder?.walletAddress || '',
+  );
+  const isBuyerOfCurrentOrder =
+    Boolean(address)
+    && Boolean(currentBuyerWalletAddress)
+    && address.toLowerCase() === currentBuyerWalletAddress.toLowerCase();
 
   const fetchEscrowBalanceOnChain = useCallback(
     async (wallet: string) => {
@@ -271,6 +302,8 @@ export default function SellerChatPage() {
     sellerProfile?.seller?.buyOrder?.createdAt ||
     '';
   const isPaymentRequested = sellerBuyOrderStatus === 'paymentRequested';
+  const canCancelCurrentBuyOrder =
+    isPaymentRequested && isBuyerOfCurrentOrder && Boolean(currentBuyOrderId);
   const isContactTransfer = sellerProfile?.seller?.bankInfo?.bankName === '연락처송금';
   const contactTransferMemo = String(sellerProfile?.seller?.bankInfo?.contactMemo || '').trim();
 
@@ -358,6 +391,69 @@ export default function SellerChatPage() {
     } finally {
       setBuying(false);
     }
+  };
+
+  const cancelMyBuyOrder = async () => {
+    if (!isLoggedIn || !address) {
+      setBuyStatus('error');
+      setBuyStatusMessage('웹3 지갑을 먼저 연결해주세요.');
+      return;
+    }
+
+    if (!sellerId || !currentBuyOrderId || !canCancelCurrentBuyOrder) {
+      setShowCancelWarningModal(false);
+      setBuyStatus('error');
+      setBuyStatusMessage('취소 가능한 구매 주문을 찾을 수 없습니다.');
+      return;
+    }
+
+    setCancelingBuyOrder(true);
+    setBuyStatus('loading');
+    setBuyStatusMessage('구매 주문을 취소하는 중입니다...');
+
+    try {
+      const response = await fetch('/api/order/cancelPrivateBuyOrderByBuyer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: currentBuyOrderId,
+          buyerWalletAddress: address,
+          sellerWalletAddress: sellerId,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data?.result) {
+        throw new Error(data?.error || '구매 주문 취소에 실패했습니다.');
+      }
+
+      setBuyStatus('success');
+      setBuyStatusMessage('구매 주문이 취소되었습니다.');
+      setRecentOrderInfo(null);
+      setShowCancelWarningModal(false);
+      fetchSellerProfile({ showLoading: false });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '구매 주문 취소에 실패했습니다.';
+      setBuyStatus('error');
+      setBuyStatusMessage(message);
+      setShowCancelWarningModal(false);
+    } finally {
+      setCancelingBuyOrder(false);
+    }
+  };
+
+  const openCancelBuyOrderModal = () => {
+    if (!isLoggedIn || !address) {
+      setBuyStatus('error');
+      setBuyStatusMessage('웹3 지갑을 먼저 연결해주세요.');
+      return;
+    }
+    if (!sellerId || !currentBuyOrderId || !canCancelCurrentBuyOrder) {
+      setBuyStatus('error');
+      setBuyStatusMessage('취소 가능한 구매 주문을 찾을 수 없습니다.');
+      return;
+    }
+    setShowCancelWarningModal(true);
   };
 
   const effectiveRate =
@@ -1012,7 +1108,7 @@ export default function SellerChatPage() {
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-700">
                           에스크로 수량
                         </p>
-                        <p className="mt-2 flex items-end gap-1 text-[28px] font-black leading-none tracking-tight text-emerald-700 tabular-nums">
+                        <p className="mt-2 flex w-full items-end justify-end gap-1 text-right text-[28px] font-black leading-none tracking-tight text-emerald-700 tabular-nums">
                           {typeof sellerEscrow === 'number' ? formatNumber(sellerEscrow, 2) : '-'}
                           {typeof sellerEscrow === 'number' && (
                             <span className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-800/80">
@@ -1028,7 +1124,7 @@ export default function SellerChatPage() {
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-700">
                           USDT 판매금액
                         </p>
-                        <p className="mt-2 flex items-end gap-1 whitespace-nowrap text-[28px] font-black leading-none tracking-tight text-indigo-700 tabular-nums">
+                        <p className="mt-2 flex w-full items-end justify-end gap-1 whitespace-nowrap text-right text-[28px] font-black leading-none tracking-tight text-indigo-700 tabular-nums">
                           {typeof sellerUsdtRate === 'number'
                             ? formatNumber(sellerUsdtRate, 0)
                             : '-'}
@@ -1155,6 +1251,18 @@ export default function SellerChatPage() {
                             </p>
                           </div>
                         </div>
+                        {canCancelCurrentBuyOrder && (
+                          <div className="mt-3">
+                            <button
+                              type="button"
+                              onClick={openCancelBuyOrderModal}
+                              disabled={cancelingBuyOrder}
+                              className="inline-flex items-center justify-center rounded-xl border border-rose-300 bg-white px-4 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {cancelingBuyOrder ? '구매 주문 취소 중...' : '구매 주문 취소하기'}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                     <div className="mt-3 space-y-2">
@@ -1219,6 +1327,7 @@ export default function SellerChatPage() {
                           || !effectiveRate
                           || (!buyKrwInput && !buyUsdtInput)
                           || buying
+                          || cancelingBuyOrder
                           || isPaymentRequested
                         }
                         className={`
@@ -1229,6 +1338,7 @@ export default function SellerChatPage() {
                             || !effectiveRate
                             || (!buyKrwInput && !buyUsdtInput)
                             || buying
+                            || cancelingBuyOrder
                             ? 'cursor-not-allowed bg-slate-100 text-slate-400 border border-slate-200'
                             : 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-500 text-white shadow-[0_18px_45px_-16px_rgba(37,99,235,0.65)] hover:-translate-y-0.5 hover:shadow-[0_28px_60px_-18px_rgba(37,99,235,0.85)] active:translate-y-0'}
                         `}
@@ -1317,15 +1427,16 @@ export default function SellerChatPage() {
                             <span>{buyStatusMessage}</span>
                           </div>
                           {buyStatus === 'success' && recentOrderInfo && (
-                            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] font-medium">
-                          <div className="rounded-xl bg-white/70 px-3 py-2 text-slate-700 ring-1 ring-emerald-100">
-                            <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
-                              주문 상태
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-emerald-700">
-                              입금요청
-                            </p>
-                          </div>
+                            <div className="mt-2">
+                              <div className="grid grid-cols-2 gap-2 text-[11px] font-medium">
+                                <div className="rounded-xl bg-white/70 px-3 py-2 text-slate-700 ring-1 ring-emerald-100">
+                                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
+                                    주문 상태
+                                  </p>
+                                  <p className="mt-1 text-sm font-semibold text-emerald-700">
+                                    입금요청
+                                  </p>
+                                </div>
                               <div className="rounded-xl bg-white/70 px-3 py-2 text-slate-700 ring-1 ring-emerald-100">
                                 <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
                                   주문 금액
@@ -1338,6 +1449,19 @@ export default function SellerChatPage() {
                                   생성 {formatUpdatedTime(recentOrderInfo.createdAt)}
                                 </p>
                               </div>
+                              </div>
+                              {canCancelCurrentBuyOrder && (
+                                <div className="mt-2">
+                                  <button
+                                    type="button"
+                                    onClick={openCancelBuyOrderModal}
+                                    disabled={cancelingBuyOrder}
+                                    className="inline-flex items-center justify-center rounded-xl border border-rose-300 bg-white px-3 py-1.5 text-[11px] font-bold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {cancelingBuyOrder ? '구매 주문 취소 중...' : '구매 주문 취소하기'}
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1449,6 +1573,57 @@ export default function SellerChatPage() {
               )}
             </section>
           </div>
+          {showCancelWarningModal && (
+            <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
+              <button
+                type="button"
+                aria-label="닫기"
+                onClick={() => {
+                  if (!cancelingBuyOrder) {
+                    setShowCancelWarningModal(false);
+                  }
+                }}
+                className="absolute inset-0 bg-black/45 backdrop-blur-[1px]"
+              />
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="cancel-buyorder-warning-title"
+                className="relative w-full max-w-md rounded-2xl border border-rose-100 bg-white p-5 shadow-[0_30px_80px_-36px_rgba(15,23,42,0.7)]"
+              >
+                <div className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-rose-700">
+                  Warning
+                </div>
+                <h2
+                  id="cancel-buyorder-warning-title"
+                  className="mt-3 text-lg font-bold tracking-tight text-slate-900"
+                >
+                  구매 주문을 취소할까요?
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-slate-700">
+                  구매 주문을 취소하면 구매자 평점에 반영됩니다. 신중하게 진행해 주세요.
+                </p>
+                <div className="mt-5 flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCancelWarningModal(false)}
+                    disabled={cancelingBuyOrder}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    닫기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelMyBuyOrder}
+                    disabled={cancelingBuyOrder}
+                    className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {cancelingBuyOrder ? '취소 진행 중...' : '평점 반영 확인 후 취소'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="mt-auto px-0 sm:px-5">
             <footer className="mx-0 rounded-none bg-[#1f1f1f] px-0 py-6 pb-0 text-center text-xs text-[#9aa3b2] sm:-mx-5 sm:rounded-b-[32px] sm:px-5 sm:pb-8">
               <div className="px-5 sm:px-0">

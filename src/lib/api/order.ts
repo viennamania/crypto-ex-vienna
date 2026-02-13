@@ -3274,6 +3274,99 @@ export async function deleteBuyOrder(
 
 
 
+// cancel private sale buy order by buyer
+export async function cancelPrivateBuyOrderByBuyer(
+  {
+    orderId,
+    buyerWalletAddress,
+    sellerWalletAddress,
+  }: {
+    orderId: string;
+    buyerWalletAddress: string;
+    sellerWalletAddress: string;
+  }
+): Promise<boolean> {
+  if (!ObjectId.isValid(orderId)) {
+    return false;
+  }
+
+  if (!buyerWalletAddress || !sellerWalletAddress) {
+    return false;
+  }
+
+  const client = await clientPromise;
+  const buyordersCollection = client.db(dbName).collection('buyorders');
+  const usersCollection = client.db(dbName).collection('users');
+  const objectId = new ObjectId(orderId);
+
+  const order = await buyordersCollection.findOne<any>(
+    { _id: objectId },
+    { projection: { walletAddress: 1, buyer: 1, privateSale: 1, status: 1 } },
+  );
+
+  if (!order || order.privateSale !== true) {
+    return false;
+  }
+
+  const orderBuyerWalletAddress = order?.buyer?.walletAddress || order?.walletAddress || '';
+  if (
+    !orderBuyerWalletAddress
+    || String(orderBuyerWalletAddress).toLowerCase() !== String(buyerWalletAddress).toLowerCase()
+  ) {
+    return false;
+  }
+
+  if (order.status !== 'paymentRequested') {
+    return false;
+  }
+
+  const now = new Date().toISOString();
+  const cancelResult = await buyordersCollection.updateOne(
+    {
+      _id: objectId,
+      status: 'paymentRequested',
+      walletAddress: order.walletAddress,
+    },
+    {
+      $set: {
+        status: 'cancelled',
+        cancelledAt: now,
+        cancelTradeReason: '구매자 요청 취소',
+        canceller: 'buyer',
+      },
+    },
+  );
+
+  if (cancelResult.modifiedCount !== 1) {
+    return false;
+  }
+
+  await usersCollection.updateOne(
+    {
+      walletAddress: sellerWalletAddress,
+      storecode: 'admin',
+      'seller.buyOrder._id': objectId,
+    },
+    {
+      $set: {
+        'seller.buyOrder.status': 'cancelled',
+        'seller.buyOrder.cancelledAt': now,
+        'seller.buyOrder.cancelTradeReason': '구매자 요청 취소',
+      },
+    },
+  );
+
+  await usersCollection.updateOne(
+    {
+      walletAddress: order.walletAddress,
+      storecode: 'admin',
+    },
+    { $set: { 'buyer.buyOrderStatus': 'cancelled' } },
+  );
+
+  return true;
+}
+
 // get sell orders order by createdAt desc
 export async function getBuyOrdersForSeller(
 
