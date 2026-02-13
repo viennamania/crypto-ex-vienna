@@ -1930,7 +1930,7 @@ export default function OrangeXPage() {
                                 </div>
                             </div>
 
-                            {walletAddress && (
+                            {walletAddress && !myAgentsLoading && myAgents.length > 0 && (
                                 <div className="mt-4 space-y-3 rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.35)]">
                                     <div className="flex items-center justify-between gap-3">
                                         <div className="flex items-center gap-2">
@@ -1947,56 +1947,46 @@ export default function OrangeXPage() {
                                             </div>
                                         </div>
                                         <span className="text-[11px] font-semibold text-slate-500">
-                                            {myAgentsLoading ? '불러오는 중...' : `${myAgents.length}개`}
+                                            {myAgents.length}개
                                         </span>
                                     </div>
-                                    {myAgentsLoading ? (
-                                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-                                            에이전트 목록을 불러오는 중입니다...
-                                        </div>
-                                    ) : myAgents.length === 0 ? (
-                                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-                                            내 지갑이 관리자인 에이전트가 없습니다.
-                                        </div>
-                                    ) : (
-                                        <div className="grid gap-3 md:grid-cols-2">
-                                            {myAgents.map((agent) => (
-                                                <Link
-                                                    key={agent.agentcode}
-                                                    href={`/${lang}/p2p/seller-management?agentcode=${encodeURIComponent(agent.agentcode)}`}
-                                                    className="group flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                                                >
-                                                    <div className="relative h-10 w-10 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                                                        {agent.agentLogo ? (
-                                                            <Image
-                                                                src={agent.agentLogo}
-                                                                alt={agent.agentName || agent.agentcode}
-                                                                fill
-                                                                sizes="40px"
-                                                                className="object-cover"
-                                                            />
-                                                        ) : (
-                                                            <span className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-slate-700">
-                                                                {agent.agentName?.slice(0, 2)?.toUpperCase() ||
-                                                                    agent.agentcode.slice(0, 2).toUpperCase()}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="min-w-0 flex-1">
-                                                        <p className="text-sm font-semibold text-slate-900 truncate">
-                                                            {agent.agentName || '에이전트'}
-                                                        </p>
-                                                        <p className="text-[11px] font-mono text-slate-600">
-                                                            {agent.agentcode}
-                                                        </p>
-                                                    </div>
-                                                    <span className="text-[11px] font-semibold text-emerald-700">
-                                                        소속 판매자 관리 →
-                                                    </span>
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    )}
+                                    <div className="grid gap-3 md:grid-cols-2">
+                                        {myAgents.map((agent) => (
+                                            <Link
+                                                key={agent.agentcode}
+                                                href={`/${lang}/p2p/seller-management?agentcode=${encodeURIComponent(agent.agentcode)}`}
+                                                className="group flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                                            >
+                                                <div className="relative h-10 w-10 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                                                    {agent.agentLogo ? (
+                                                        <Image
+                                                            src={agent.agentLogo}
+                                                            alt={agent.agentName || agent.agentcode}
+                                                            fill
+                                                            sizes="40px"
+                                                            className="object-cover"
+                                                        />
+                                                    ) : (
+                                                        <span className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-slate-700">
+                                                            {agent.agentName?.slice(0, 2)?.toUpperCase() ||
+                                                                agent.agentcode.slice(0, 2).toUpperCase()}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-sm font-semibold text-slate-900 truncate">
+                                                        {agent.agentName || '에이전트'}
+                                                    </p>
+                                                    <p className="text-[11px] font-mono text-slate-600">
+                                                        {agent.agentcode}
+                                                    </p>
+                                                </div>
+                                                <span className="text-[11px] font-semibold text-emerald-700">
+                                                    소속 판매자 관리 →
+                                                </span>
+                                            </Link>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
 
