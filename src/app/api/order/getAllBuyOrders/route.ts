@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
     searchStoreName,
 
     privateSale,
+    privateSaleMode,
 
     searchBuyer,
     searchDepositName,
@@ -79,6 +80,10 @@ export async function POST(request: NextRequest) {
       searchStoreName: searchStoreName || "",
 
       privateSale: privateSale || false,
+      privateSaleMode:
+        privateSaleMode === "all" || privateSaleMode === "private" || privateSaleMode === "normal"
+          ? privateSaleMode
+          : undefined,
 
       searchBuyer: searchBuyer || "",
       searchDepositName: searchDepositName || "",

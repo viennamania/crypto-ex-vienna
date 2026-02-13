@@ -149,11 +149,17 @@ export default function SellerSalesStatusPage() {
   const [salesLoading, setSalesLoading] = useState(false);
   const [salesPage, setSalesPage] = useState(1);
   const [salesHasMore, setSalesHasMore] = useState(true);
+  const [salesReadyForPaging, setSalesReadyForPaging] = useState(false);
   const [salesSearch, setSalesSearch] = useState('');
+  const [salesPrivateSaleMode, setSalesPrivateSaleMode] = useState<'all' | 'normal' | 'private'>('all');
+  const salesLoadingRef = useRef(false);
+  const salesPanelScrollRef = useRef<HTMLElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const fetchSales = async (page = 1, append = false, search = '') => {
-    if (salesLoading) return;
+    if (append && (!salesHasMore || !salesReadyForPaging)) return;
+    if (salesLoadingRef.current) return;
+    salesLoadingRef.current = true;
     setSalesLoading(true);
     try {
       const res = await fetch('/api/order/getAllBuyOrders', {
@@ -164,6 +170,7 @@ export default function SellerSalesStatusPage() {
           limit: 20,
           page,
           searchStoreName: search || undefined,
+          privateSaleMode: salesPrivateSaleMode,
         }),
       });
       const data = await res.json();
@@ -171,34 +178,72 @@ export default function SellerSalesStatusPage() {
       setSales((prev) => (append ? [...prev, ...list] : list));
       setSalesHasMore(list.length === 20);
       setSalesPage(page);
+      if (!append) {
+        setSalesReadyForPaging(true);
+      }
     } catch (e) {
       console.error('fetchSales error', e);
     } finally {
+      salesLoadingRef.current = false;
       setSalesLoading(false);
     }
   };
 
   useEffect(() => {
     if (showSalesPanel) {
+      setSalesHasMore(true);
+      setSalesPage(1);
+      setSalesReadyForPaging(false);
       fetchSales(1, false, salesSearch);
     }
   }, [showSalesPanel]);
 
   useEffect(() => {
     if (!showSalesPanel) return;
+    setSalesHasMore(true);
+    setSalesPage(1);
+    setSalesReadyForPaging(false);
+    fetchSales(1, false, salesSearch);
+  }, [salesPrivateSaleMode]);
+
+  useEffect(() => {
+    if (!showSalesPanel) return;
+    if (!salesReadyForPaging) return;
+    const root = salesPanelScrollRef.current;
     const el = sentinelRef.current;
-    if (!el) return;
+    if (!root || !el) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && salesHasMore && !salesLoading) {
           fetchSales(salesPage + 1, true, salesSearch);
         }
       },
-      { root: null, rootMargin: '200px', threshold: 0 }
+      { root, rootMargin: '200px 0px', threshold: 0 }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [showSalesPanel, salesHasMore, salesLoading, salesPage, salesSearch]);
+  }, [showSalesPanel, salesReadyForPaging, salesHasMore, salesLoading, salesPage, salesSearch, salesPrivateSaleMode]);
+
+  useEffect(() => {
+    if (!showSalesPanel) return;
+    const prevOverflow = document.body.style.overflow;
+    const prevTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowSalesPanel(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.touchAction = prevTouchAction;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [showSalesPanel]);
 
   const fetchSellers = async () => {
     setLoading(true);
@@ -272,112 +317,157 @@ export default function SellerSalesStatusPage() {
     }).length;
   }, [sellers]);
 
+  const totalCompleted = useMemo(() => {
+    return sellers.filter((seller) => getSaleState(seller).key === 'done').length;
+  }, [sellers]);
+
+  const totalCancelled = useMemo(() => {
+    return sellers.filter((seller) => getSaleState(seller).key === 'cancelled').length;
+  }, [sellers]);
+
+  const completionRate = useMemo(() => {
+    const resolved = totalCompleted + totalCancelled;
+    if (resolved === 0) return 0;
+    return Number(((totalCompleted / resolved) * 100).toFixed(1));
+  }, [totalCompleted, totalCancelled]);
+
   return (
     <>
-      <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
-        <div className="w-full space-y-4">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="flex items-center justify-center rounded-full border border-slate-200/70 bg-white/95 p-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <Image src="/icon-back.png" alt="Back" width={20} height={20} className="rounded-full" />
-            </button>
-            <span className="font-semibold">판매자 판매현황</span>
-            <span className="text-slate-400">/</span>
-            <span className="text-slate-500">전체 {summary.total}명</span>
-          </div>
+      <main className="relative min-h-[100vh] overflow-x-hidden bg-gradient-to-br from-slate-100 via-slate-50 to-cyan-50 px-4 py-6 text-slate-800">
+        <div className="pointer-events-none absolute -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-cyan-200/35 blur-3xl" />
+        <div className="pointer-events-none absolute right-8 top-24 h-56 w-56 rounded-full bg-emerald-200/30 blur-3xl" />
 
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">총 판매자</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">{summary.total.toLocaleString()} 명</p>
-            <p className="mt-1 text-xs text-slate-500">판매 권한이 활성화된 모든 판매자 수</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">활성 거래</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">{totalActive.toLocaleString()} 건</p>
-            <p className="mt-1 text-xs text-slate-500">진행중(매칭~전송중) 상태의 판매자</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">에스크로 USDT</p>
-              <button
-                type="button"
-                onClick={fetchSellers}
-                className="text-[11px] font-semibold text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline"
-              >
-                새로고침
-              </button>
-            </div>
-            <p className="mt-1 text-2xl font-bold text-slate-900">
-              {(summary.totalCurrentUsdtBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
-              USDT
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              {lastUpdated ? `업데이트: ${formatDateTime(lastUpdated.toISOString())}` : '업데이트 대기중'}
-            </p>
-          </div>
-        </div>
-
-        <div className="w-full rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-3 pb-3">
-            <div className="flex items-center gap-2">
-              <Image src="/icon-seller.png" alt="Seller" width={22} height={22} className="h-5 w-5" />
-              <h2 className="text-base font-bold text-slate-900">판매자 판매 진행상태</h2>
-            </div>
-            <div className="min-h-[20px] text-xs text-slate-500">
-              {loading ? (
-                <div className="flex items-center gap-1">
-                  <Image
-                    src="/icon-loading.png"
-                    alt="Loading"
-                    width={16}
-                    height={16}
-                    className="h-4 w-4 animate-spin"
-                  />
-                  불러오는 중입니다...
+        <div className="relative mx-auto w-full max-w-screen-2xl space-y-4">
+          <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-5 shadow-[0_20px_55px_-35px_rgba(15,23,42,0.45)] backdrop-blur">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 rounded-full bg-cyan-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-cyan-700">
+                  Seller Control Room
                 </div>
-              ) : lastUpdated ? (
-                <span>업데이트: {formatDateTime(lastUpdated.toISOString())}</span>
-              ) : (
-                <span>최신 데이터 준비됨</span>
-              )}
+                <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">판매자 판매현황</h1>
+                <p className="text-sm text-slate-600">실시간 거래 흐름, 에스크로 잔고, 완료 성과를 한 화면에서 확인합니다.</p>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                    전체 {summary.total.toLocaleString()}명
+                  </span>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                    활성 {totalActive.toLocaleString()}건
+                  </span>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                    완료율 {completionRate.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSalesPanel(true)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_-12px_rgba(15,23,42,0.6)] transition hover:-translate-y-0.5 hover:bg-slate-800"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+                    <path d="M4 6h12M4 10h12M4 14h6" strokeLinecap="round" />
+                  </svg>
+                  판매내역보기
+                </button>
+                <button
+                  type="button"
+                  onClick={fetchSellers}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+                    <path d="M16 10a6 6 0 1 1-1.757-4.243M16 4v3.5h-3.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  새로고침
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/${lang}/administration`)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
+                >
+                  <Image src="/icon-home.png" alt="Home" width={16} height={16} className="h-4 w-4" />
+                  홈으로
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">총 판매자</p>
+              <p className="mt-1 text-3xl font-black tracking-tight text-slate-900">{summary.total.toLocaleString()} 명</p>
+              <p className="mt-1 text-xs text-slate-500">판매 권한이 활성화된 사용자</p>
+            </div>
+            <div className="rounded-2xl border border-cyan-200/80 bg-gradient-to-br from-cyan-50 to-white p-4 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-600">활성 거래</p>
+              <p className="mt-1 text-3xl font-black tracking-tight text-cyan-900">{totalActive.toLocaleString()} 건</p>
+              <p className="mt-1 text-xs text-cyan-700/80">매칭~전송중 상태 기준</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-600">에스크로 총 잔고</p>
+              <p className="mt-1 text-3xl font-black tracking-tight text-emerald-900">
+                {(summary.totalCurrentUsdtBalance || 0).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{' '}
+                USDT
+              </p>
+              <p className="mt-1 text-xs text-emerald-700/80">전체 판매자 보관 잔고 합계</p>
+            </div>
+            <div className="rounded-2xl border border-violet-200/80 bg-gradient-to-br from-violet-50 to-white p-4 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-600">완료율</p>
+              <p className="mt-1 text-3xl font-black tracking-tight text-violet-900">{completionRate.toFixed(1)}%</p>
+              <p className="mt-1 text-xs text-violet-700/80">
+                완료 {totalCompleted.toLocaleString()} / 취소 {totalCancelled.toLocaleString()}
+              </p>
             </div>
           </div>
-          <div className="mb-4">
-            <button
-              type="button"
-              onClick={() => setShowSalesPanel(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-                <path d="M4 6h12M4 10h12M4 14h6" strokeLinecap="round" />
-              </svg>
-              판매내역보기
-            </button>
-          </div>
+
+          <div className="w-full rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_20px_45px_-35px_rgba(15,23,42,0.5)] sm:p-5">
+            <div className="mb-4 flex flex-col gap-2 border-b border-slate-200/70 pb-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <Image src="/icon-seller.png" alt="Seller" width={22} height={22} className="h-5 w-5" />
+                <h2 className="text-base font-bold text-slate-900">판매자 판매 진행상태</h2>
+              </div>
+              <div className="min-h-[20px] text-xs font-medium text-slate-500">
+                {loading ? (
+                  <div className="flex items-center gap-1">
+                    <Image
+                      src="/icon-loading.png"
+                      alt="Loading"
+                      width={16}
+                      height={16}
+                      className="h-4 w-4 animate-spin"
+                    />
+                    불러오는 중입니다...
+                  </div>
+                ) : lastUpdated ? (
+                  <span>업데이트: {formatDateTime(lastUpdated.toISOString())}</span>
+                ) : (
+                  <span>최신 데이터 준비됨</span>
+                )}
+              </div>
+            </div>
 
           {sellers.length === 0 && !loading ? (
-            <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-sm text-slate-500">
+            <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-sm text-slate-500">
               <Image src="/icon-info.png" alt="Empty" width={36} height={36} className="h-9 w-9 opacity-70" />
               판매 진행 정보를 표시할 판매자가 없습니다.
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="flex flex-col gap-2 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-4 shadow-inner">
+                <div className="flex flex-wrap items-center gap-2 lg:gap-3">
                   <input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="닉네임 / 지갑주소 / 에스크로주소 / TID"
-                    className="w-full md:w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none md:w-64"
                   />
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as any)}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm focus:border-cyan-400 focus:outline-none"
                   >
                     <option value="all">전체 상태</option>
                     <option value="accepted">매칭됨</option>
@@ -387,7 +477,7 @@ export default function SellerSalesStatusPage() {
                     <option value="cancelled">취소됨</option>
                     <option value="idle">대기중</option>
                   </select>
-                  <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800">
+                  <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm">
                     <input
                       type="checkbox"
                       checked={activeOnly}
@@ -403,7 +493,7 @@ export default function SellerSalesStatusPage() {
                       value={minBalance}
                       onChange={(e) => setMinBalance(e.target.value)}
                       placeholder="최소 에스크로 USDT"
-                      className="w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
+                      className="w-48 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none"
                     />
                     <span className="text-xs text-slate-500">USDT 이상</span>
                   </div>
@@ -416,7 +506,7 @@ export default function SellerSalesStatusPage() {
                         setAppliedActiveOnly(activeOnly);
                         setAppliedMinBalance(minBalance === '' ? null : Number(minBalance));
                       }}
-                      className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                      className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
                     >
                       검색하기
                     </button>
@@ -432,27 +522,27 @@ export default function SellerSalesStatusPage() {
                         setAppliedActiveOnly(false);
                         setAppliedMinBalance(null);
                       }}
-                      className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                      className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
                     >
                       초기화
                     </button>
                   </div>
                 </div>
-                <div className="text-xs text-slate-500">
+                <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-xs font-medium text-slate-500">
                   검색 결과: {displayedSellers.length.toLocaleString()} / {sellers.length.toLocaleString()} 명
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse">
-                  <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+              <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+                <table className="min-w-[1180px] w-full border-collapse">
+                  <thead className="bg-slate-100/95 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                     <tr>
-                      <th className="px-4 py-2 text-left">판매자</th>
-                      <th className="px-4 py-2 text-left">진행상태</th>
-                      <th className="px-4 py-2 text-left">진행중 거래</th>
-                      <th className="px-4 py-2 text-left">누적 완료</th>
-                      <th className="px-4 py-2 text-left">에스크로 잔고</th>
-                      <th className="px-4 py-2 text-left">액션</th>
+                      <th className="px-4 py-3 text-left">판매자</th>
+                      <th className="px-4 py-3 text-left">진행상태</th>
+                      <th className="px-4 py-3 text-left">진행중 거래</th>
+                      <th className="px-4 py-3 text-left">누적 완료</th>
+                      <th className="px-4 py-3 text-left">에스크로 잔고</th>
+                      <th className="px-4 py-3 text-left">액션</th>
                     </tr>
                   </thead>
                 <tbody>
@@ -465,8 +555,8 @@ export default function SellerSalesStatusPage() {
                     const totalKrw = seller?.seller?.totalPaymentConfirmedKrwAmount || 0;
 
                     return (
-                      <tr key={seller.walletAddress} className="border-b border-slate-100 hover:bg-slate-50/60">
-                        <td className="px-4 py-3 align-top">
+                      <tr key={seller.walletAddress} className="border-b border-slate-100 transition hover:bg-cyan-50/40">
+                        <td className="px-4 py-4 align-top">
                           <div className="flex items-center gap-3">
                             <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-slate-200 bg-slate-900 text-white">
                               {seller?.avatar ? (
@@ -480,21 +570,18 @@ export default function SellerSalesStatusPage() {
                                 </span>
                               )}
                             </div>
-                            <div className="flex flex-col">
+                            <div className="flex flex-col gap-0.5">
                               <span className="text-sm font-semibold text-slate-900">
                                 {seller?.nickname || '미등록 닉네임'}
                               </span>
                               <span className="text-[11px] text-slate-500 font-mono">
                                 {truncate(seller.walletAddress)}
                               </span>
-                              <span className="text-[11px] text-slate-500">
-                                에스크로: {truncate(seller?.seller?.escrowWalletAddress)}
-                              </span>
                             </div>
                           </div>
                         </td>
 
-                        <td className="px-4 py-3 align-top">
+                        <td className="px-4 py-4 align-top">
                           <div className="flex flex-col gap-1">
                             <span
                               className={`inline-flex w-fit items-center rounded-full border px-3 py-1 text-xs font-semibold ${tone.badge}`}
@@ -516,7 +603,7 @@ export default function SellerSalesStatusPage() {
                           </div>
                         </td>
 
-                        <td className="px-4 py-3 align-top">
+                        <td className="px-4 py-4 align-top">
                           {order ? (
                             <div className="flex flex-col gap-1 text-xs text-slate-700">
                               <span className="font-mono text-[11px] text-slate-500">
@@ -533,37 +620,45 @@ export default function SellerSalesStatusPage() {
                           )}
                         </td>
 
-                        <td className="px-4 py-3 align-top">
-                          <div className="flex flex-col gap-1 text-xs text-slate-700">
-                            <span className="font-semibold text-slate-900">
-                              {totalCount.toLocaleString()}건 완료
+                        <td className="px-4 py-4 align-top">
+                          <div className="flex flex-col gap-2 text-xs text-slate-700">
+                            <span className="inline-flex w-fit items-center rounded-md bg-blue-50 px-2.5 py-1 text-base font-extrabold tabular-nums text-blue-700">
+                              {totalCount.toLocaleString()}건
                             </span>
-                            <span className="text-[11px] text-slate-500">
-                              {totalUsdt.toLocaleString()} USDT / {totalKrw.toLocaleString()} KRW
-                            </span>
+                            <div className="flex flex-col gap-1">
+                              <span className="inline-flex w-fit items-center rounded-md bg-indigo-50 px-2 py-1 text-[13px] font-bold tabular-nums text-indigo-700">
+                                거래량 {totalUsdt.toLocaleString()} USDT
+                              </span>
+                              <span className="inline-flex w-fit items-center rounded-md bg-slate-100 px-2 py-1 text-[13px] font-bold tabular-nums text-slate-700">
+                                거래금액 {totalKrw.toLocaleString()} KRW
+                              </span>
+                            </div>
                           </div>
                         </td>
 
-                        <td className="px-4 py-3 align-top">
-                          <div className="flex flex-col gap-1 text-xs text-slate-700">
-                            <span className="font-semibold text-slate-900">
+                        <td className="px-4 py-4 align-top">
+                          <div className="flex flex-col gap-1.5 text-xs text-slate-700">
+                            <span className="inline-flex w-fit items-center rounded-md bg-emerald-50 px-2.5 py-1 text-base font-extrabold tabular-nums text-emerald-700">
                               {(seller.currentUsdtBalance || 0).toLocaleString(undefined, {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
                               })}{' '}
                               USDT
                             </span>
+                            <span className="text-[11px] text-slate-500 font-mono">
+                              지갑: {truncate(seller?.seller?.escrowWalletAddress)}
+                            </span>
                             <span className="text-[11px] text-slate-500">실시간 에스크로 잔액</span>
                           </div>
                         </td>
 
-                        <td className="px-4 py-3 align-top">
+                        <td className="px-4 py-4 align-top">
                           <div className="flex flex-col gap-2">
                             <button
                               onClick={() =>
                                 router.push(`/${lang}/administration/seller-sales-status/${seller.walletAddress}`)
                               }
-                              className="inline-flex items-center justify-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                              className="inline-flex items-center justify-center rounded-full bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
                             >
                               상세보기
                             </button>
@@ -581,40 +676,38 @@ export default function SellerSalesStatusPage() {
         </div>
       </main>
 
-      {/* 항상 보이는 판매내역 열기 버튼 (플로팅) */}
-      <button
-        type="button"
-        onClick={() => setShowSalesPanel(true)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_-12px_rgba(15,23,42,0.5)] hover:bg-slate-800"
-      >
-        <Image src="/icon-history.png" alt="history" width={18} height={18} className="h-4 w-4" />
-        판매내역보기
-      </button>
-
       {/* 판매내역 패널 */}
       {showSalesPanel && (
-        <div className="fixed inset-0 z-50 flex">
+        <div className="fixed inset-0 z-50">
           <div
-            className="w-full max-w-sm bg-white shadow-2xl h-full overflow-y-auto border-r border-slate-200 animate-[slideRight_0.25s_ease-out]"
+            className="absolute inset-0 bg-black/45 backdrop-blur-[1px]"
+            onClick={() => setShowSalesPanel(false)}
+          />
+          <aside
+            ref={salesPanelScrollRef}
+            className="absolute inset-y-0 right-0 h-full w-full max-w-md overflow-y-auto border-l border-slate-200 bg-white shadow-2xl animate-[slideLeft_0.25s_ease-out]"
           >
-            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-slate-50 to-cyan-50 p-4">
               <div className="flex items-center gap-2">
-                <Image src="/icon-history.png" alt="history" width={20} height={20} className="h-5 w-5" />
+                <Image src="/icon-trade.png" alt="history" width={20} height={20} className="h-5 w-5" />
                 <h3 className="text-sm font-semibold text-slate-900">판매내역 (최신순)</h3>
               </div>
               <button
                 onClick={() => setShowSalesPanel(false)}
-                className="text-slate-400 hover:text-slate-600 text-xl leading-none"
+                className="text-xl leading-none text-slate-400 transition hover:text-slate-600"
                 aria-label="close"
               >
                 ×
               </button>
             </div>
 
-            <div className="p-3 border-b border-slate-200">
+            <div className="border-b border-slate-200 bg-white p-3">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
+                  setSalesHasMore(true);
+                  setSalesPage(1);
+                  setSalesReadyForPaging(false);
                   fetchSales(1, false, salesSearch);
                 }}
                 className="flex items-center gap-2"
@@ -623,11 +716,20 @@ export default function SellerSalesStatusPage() {
                   value={salesSearch}
                   onChange={(e) => setSalesSearch(e.target.value)}
                   placeholder="거래ID / 닉네임 / 매장명"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none"
                 />
+                <select
+                  value={salesPrivateSaleMode}
+                  onChange={(e) => setSalesPrivateSaleMode(e.target.value as 'all' | 'normal' | 'private')}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 focus:border-cyan-400 focus:outline-none"
+                >
+                  <option value="all">전체</option>
+                  <option value="normal">일반</option>
+                  <option value="private">프라이빗</option>
+                </select>
                 <button
                   type="submit"
-                  className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 whitespace-nowrap"
+                  className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
                 >
                   검색
                 </button>
@@ -636,7 +738,7 @@ export default function SellerSalesStatusPage() {
 
             <div className="divide-y divide-slate-100">
               {sales.map((sale: SaleEntry) => (
-                <div key={sale._id} className="p-3 flex flex-col gap-1 text-sm text-slate-800">
+                <div key={sale._id} className="flex flex-col gap-1 bg-white p-3 text-sm text-slate-800 transition hover:bg-slate-50/60">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-[11px] text-slate-500">#{sale.tradeId || sale._id}</span>
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
@@ -668,20 +770,30 @@ export default function SellerSalesStatusPage() {
                   불러오는 중...
                 </div>
               )}
+              {!salesLoading && salesHasMore && sales.length > 0 && (
+                <div className="p-3">
+                  <button
+                    type="button"
+                    onClick={() => fetchSales(salesPage + 1, true, salesSearch)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                  >
+                    더 불러오기
+                  </button>
+                </div>
+              )}
               <div ref={sentinelRef} />
               {!salesLoading && sales.length === 0 && (
                 <div className="p-4 text-sm text-slate-500">판매 내역이 없습니다.</div>
               )}
             </div>
-          </div>
-          <div className="flex-1 bg-black/40" onClick={() => setShowSalesPanel(false)} />
+          </aside>
         </div>
       )}
 
       <style jsx global>{`
-        @keyframes slideRight {
+        @keyframes slideLeft {
           from {
-            transform: translateX(-100%);
+            transform: translateX(100%);
             opacity: 0;
           }
           to {

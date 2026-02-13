@@ -2234,14 +2234,6 @@ export default function Index({ params }: any) {
                 <div className="w-full flex flex-row items-center justify-end gap-2">
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/administration/member');
-                    }}
-                    className="bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800 whitespace-nowrap"
-                  >
-                    회원관리
-                  </button>
-                  <button
-                    onClick={() => {
                       router.push('/' + params.lang + '/administration/seller-sales-status');
                     }}
                     className="bg-amber-500 text-sm font-semibold text-white px-4 py-2 rounded-lg shadow-sm hover:bg-amber-600 whitespace-nowrap"

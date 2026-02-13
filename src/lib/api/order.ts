@@ -2274,6 +2274,7 @@ export async function getBuyOrders(
     searchStoreName,
 
     privateSale,
+    privateSaleMode,
 
     searchBuyer,
     searchDepositName,
@@ -2297,6 +2298,7 @@ export async function getBuyOrders(
     searchStoreName: string;
 
     privateSale: boolean;
+    privateSaleMode?: 'all' | 'private' | 'normal';
 
     searchBuyer: string;
     searchDepositName: string;
@@ -2338,6 +2340,17 @@ export async function getBuyOrders(
     limit = 1000;
   }
 
+  const privateSaleFilter =
+    privateSaleMode === 'all'
+      ? {}
+      : privateSaleMode === 'private'
+        ? { privateSale: true }
+        : privateSaleMode === 'normal'
+          ? { privateSale: { $ne: true } }
+          : privateSale
+            ? { privateSale: true }
+            : { privateSale: { $ne: true } };
+
 
   // status is not 'paymentConfirmed'
 
@@ -2362,7 +2375,7 @@ export async function getBuyOrders(
           : (searchOrderStatusCompleted ? 'paymentConfirmed'
           : { $ne: 'nothing' }))),
 
-        privateSale: privateSale || { $ne: true },
+        ...privateSaleFilter,
         ...(searchStoreName ? { "store.storeName": { $regex: String(searchStoreName), $options: 'i' } } : {}),
         ...(searchBuyer ? { nickname: { $regex: String(searchBuyer), $options: 'i' } } : {}),
         ...(searchDepositName ? { "buyer.depositName": { $regex: String(searchDepositName), $options: 'i' } } : {}),
@@ -2402,7 +2415,7 @@ export async function getBuyOrders(
           : (searchOrderStatusCompleted ? 'paymentConfirmed'
           : { $ne: 'nothing' }))),
 
-        pirvateSale: { $ne: true },
+        ...privateSaleFilter,
 
         ...(searchStoreName ? { "store.storeName": { $regex: String(searchStoreName), $options: 'i' } } : {}),
 
@@ -2478,7 +2491,7 @@ export async function getBuyOrders(
 
         // exclude private sale
         //privateSale: { $ne: true },
-        privateSale: privateSale || { $ne: true },
+        ...privateSaleFilter,
 
 
         // search store name
@@ -2538,7 +2551,7 @@ export async function getBuyOrders(
           : { $ne: 'nothing' }))),
 
         //privateSale: { $ne: true },
-        privateSale: privateSale || { $ne: true },
+        ...privateSaleFilter,
 
         ...(searchStoreName ? { "store.storeName": { $regex: String(searchStoreName), $options: 'i' } } : {}),
 
@@ -2572,7 +2585,7 @@ export async function getBuyOrders(
           status: 'paymentConfirmed',
 
           ///privateSale: { $ne: true },
-          privateSale: privateSale,
+          ...privateSaleFilter,
 
 
           agentcode: { $regex: agentcode, $options: 'i' },
@@ -2627,7 +2640,7 @@ export async function getBuyOrders(
           status: 'paymentConfirmed',
 
           ///privateSale: { $ne: true },
-          privateSale: privateSale,
+          ...privateSaleFilter,
 
 
           agentcode: { $regex: agentcode, $options: 'i' },
@@ -2685,7 +2698,7 @@ export async function getBuyOrders(
           settlement: { $exists: true, $ne: null },
 
           ///privateSale: { $ne: true },
-          privateSale: privateSale,
+          ...privateSaleFilter,
 
 
           agentcode: { $regex: agentcode, $options: 'i' },
@@ -2747,7 +2760,7 @@ export async function getBuyOrders(
           status: 'paymentConfirmed',
 
           //settlement: { $exists: true, $ne: null },
-          privateSale: privateSale,
+          ...privateSaleFilter,
           ...(agentcode ? { agentcode: { $regex: String(agentcode), $options: 'i' } } : {}),
           storecode: { $regex: storecode, $options: 'i' },
           nickname: { $regex: searchBuyer, $options: 'i' },
@@ -2784,7 +2797,7 @@ export async function getBuyOrders(
         $match: {
           status: 'paymentConfirmed',
           //settlement: { $exists: true, $ne: null },
-          privateSale: privateSale,
+          ...privateSaleFilter,
           ...(agentcode ? { agentcode: { $regex: String(agentcode), $options: 'i' } } : {}),
           storecode: { $regex: storecode, $options: 'i' },
           nickname: { $regex: searchBuyer, $options: 'i' },
