@@ -37,6 +37,7 @@ export default function SellerManagementByAgentPage() {
   const [agentName, setAgentName] = useState<string | null>(null);
   const [agentLogo, setAgentLogo] = useState<string | null>(null);
   const [agentDescription, setAgentDescription] = useState<string | null>(null);
+  const [agentAdminWalletAddress, setAgentAdminWalletAddress] = useState<string | null>(null);
   const [sellers, setSellers] = useState<SellerUser[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{ nickname?: string; avatar?: string } | null>(null);
@@ -86,6 +87,19 @@ export default function SellerManagementByAgentPage() {
   const isStatusUnchanged = statusModalSeller ? statusForm === currentStatus : true;
 
   const isConnected = Boolean(walletAddress);
+  const normalizedConnectedWallet = walletAddress.trim().toLowerCase();
+  const normalizedAgentAdminWallet = (agentAdminWalletAddress || '').trim().toLowerCase();
+  const hasAgentAdminWallet = Boolean(normalizedAgentAdminWallet);
+  const isAgentAdminWalletMatched =
+    Boolean(normalizedConnectedWallet) &&
+    hasAgentAdminWallet &&
+    normalizedConnectedWallet === normalizedAgentAdminWallet;
+  const connectedWalletShort = walletAddress
+    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+    : '주소 없음';
+  const agentAdminWalletShort = agentAdminWalletAddress
+    ? `${agentAdminWalletAddress.slice(0, 6)}...${agentAdminWalletAddress.slice(-4)}`
+    : '미등록';
 
   const fetchUser = async () => {
     if (!walletAddress) return;
@@ -139,6 +153,13 @@ export default function SellerManagementByAgentPage() {
       if (nextAgentName) setAgentName(nextAgentName);
       if (nextAgentLogo) setAgentLogo(nextAgentLogo);
       if (nextAgentDescription !== null) setAgentDescription(nextAgentDescription);
+      const nextAdminWallet =
+        data?.result?.adminWalletAddress ||
+        data?.result?.agent?.adminWalletAddress ||
+        null;
+      if (nextAdminWallet) {
+        setAgentAdminWalletAddress(String(nextAdminWallet));
+      }
       setUserProfile({ nickname, avatar });
     } catch (e) {
       setError(e instanceof Error ? e.message : '유저 정보를 불러오지 못했습니다.');
@@ -394,6 +415,7 @@ export default function SellerManagementByAgentPage() {
       setAgentName(agent?.agentName || agentName);
       setAgentLogo(agent?.agentLogo || agentLogo);
       setAgentDescription(agent?.agentDescription || null);
+      setAgentAdminWalletAddress(agent?.adminWalletAddress || null);
     } catch (e) {
       // ignore
     }
@@ -527,6 +549,72 @@ export default function SellerManagementByAgentPage() {
             {sellers.length} / {totalCount || sellers.length} 명
           </span>
         </div>
+
+        {isConnected && agentcode && (
+          <div
+            className={`mt-4 rounded-2xl border px-4 py-3 shadow-sm ${
+              hasAgentAdminWallet
+                ? isAgentAdminWalletMatched
+                  ? 'border-emerald-300 bg-emerald-50'
+                  : 'border-rose-200 bg-rose-50'
+                : 'border-amber-200 bg-amber-50'
+            }`}
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <span
+                className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
+                  hasAgentAdminWallet
+                    ? isAgentAdminWalletMatched
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-rose-600 text-white'
+                    : 'bg-amber-500 text-white'
+                }`}
+              >
+                {hasAgentAdminWallet ? (isAgentAdminWalletMatched ? '✓' : '!') : '?'}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p
+                  className={`text-sm font-extrabold ${
+                    hasAgentAdminWallet
+                      ? isAgentAdminWalletMatched
+                        ? 'text-emerald-900'
+                        : 'text-rose-800'
+                      : 'text-amber-800'
+                  }`}
+                >
+                  {hasAgentAdminWallet
+                    ? isAgentAdminWalletMatched
+                      ? '현재 연결 지갑은 이 페이지 에이전트의 관리자 지갑입니다.'
+                      : '현재 연결 지갑은 이 페이지 에이전트의 관리자 지갑이 아닙니다.'
+                    : '이 에이전트의 관리자 지갑이 아직 등록되지 않았습니다.'}
+                </p>
+                <p className="mt-1 text-xs text-slate-700">
+                  관리자 지갑:
+                  <span className="ml-1 font-mono font-semibold">{agentAdminWalletShort}</span>
+                </p>
+                <p className="text-xs text-slate-700">
+                  내 지갑:
+                  <span className="ml-1 font-mono font-semibold">{connectedWalletShort}</span>
+                </p>
+              </div>
+              <span
+                className={`inline-flex rounded-full px-2 py-1 text-[11px] font-extrabold tracking-[0.08em] ${
+                  hasAgentAdminWallet
+                    ? isAgentAdminWalletMatched
+                      ? 'bg-emerald-700 text-white'
+                      : 'bg-rose-600 text-white'
+                    : 'bg-amber-600 text-white'
+                }`}
+              >
+                {hasAgentAdminWallet
+                  ? isAgentAdminWalletMatched
+                    ? 'ADMIN VERIFIED'
+                    : 'NOT ADMIN'
+                  : 'ADMIN WALLET MISSING'}
+              </span>
+            </div>
+          </div>
+        )}
         {agentDescription && (
           <div className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm">
             {agentDescription}
