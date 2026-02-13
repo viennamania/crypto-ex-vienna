@@ -1216,7 +1216,6 @@ export default function SendUsdt({ params }: any) {
     const nickname = transferRecipientNickname;
     const favoriteLabelValue = favoriteHit?.label?.trim();
     const email = recipient?.email?.trim();
-    const mobile = recipient?.mobile?.trim();
 
     if (favoriteLabelValue && favoriteLabelValue !== nickname) {
       details.push({ label: '즐겨찾기', value: favoriteLabelValue });
@@ -1224,12 +1223,9 @@ export default function SendUsdt({ params }: any) {
     if (email) {
       details.push({ label: '이메일', value: email });
     }
-    if (mobile) {
-      details.push({ label: '연락처', value: mobile });
-    }
 
     return details;
-  }, [favoriteHit?.label, recipient?.email, recipient?.mobile, transferRecipientNickname]);
+  }, [favoriteHit?.label, recipient?.email, transferRecipientNickname]);
 
   
   useEffect(() => {
@@ -1716,9 +1712,6 @@ export default function SendUsdt({ params }: any) {
                             <div className="mt-2 grid grid-cols-1 gap-1 text-[11px] text-emerald-700/90 sm:grid-cols-2">
                               {recipient.email && (
                                 <span>이메일: {recipient.email.replace(/(.{2}).*(@.*)/, '$1***$2')}</span>
-                              )}
-                              {recipient.mobile && (
-                                <span>연락처: {recipient.mobile.replace(/(\\d{3})\\d{4}(\\d{4})/, '$1****$2')}</span>
                               )}
                             </div>
                           </div>
