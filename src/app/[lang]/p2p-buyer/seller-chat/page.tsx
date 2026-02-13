@@ -74,6 +74,68 @@ const maskName = (name?: string) => {
   return `${name.slice(0, 1)}${'*'.repeat(Math.max(1, name.length - 1))}`;
 };
 
+const LINKABLE_TOKEN_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
+const URL_ONLY_REGEX = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/i;
+const EMAIL_ONLY_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+
+const splitTrailingPunctuation = (value: string) => {
+  const match = value.match(/([),.;!?]+)$/);
+  if (!match) {
+    return { core: value, trailing: '' };
+  }
+  return {
+    core: value.slice(0, -match[1].length),
+    trailing: match[1],
+  };
+};
+
+const renderTextWithAutoLinks = (text?: string | null, linkClassName?: string) => {
+  if (!text) {
+    return null;
+  }
+
+  const lines = text.split(/\r?\n/);
+
+  return lines.map((line, lineIndex) => {
+    const tokens = line.split(LINKABLE_TOKEN_REGEX);
+
+    return (
+      <span key={`line-${lineIndex}`}>
+        {tokens.map((token, tokenIndex) => {
+          const { core, trailing } = splitTrailingPunctuation(token);
+          const isUrl = URL_ONLY_REGEX.test(core);
+          const isEmail = EMAIL_ONLY_REGEX.test(core);
+
+          if (!isUrl && !isEmail) {
+            return <span key={`text-${lineIndex}-${tokenIndex}`}>{token}</span>;
+          }
+
+          const href = isEmail
+            ? `mailto:${core}`
+            : (/^https?:\/\//i.test(core) ? core : `https://${core}`);
+
+          return (
+            <span key={`link-${lineIndex}-${tokenIndex}`}>
+              <a
+                href={href}
+                {...(!isEmail ? { target: '_blank', rel: 'noreferrer' } : {})}
+                className={
+                  linkClassName ||
+                  'font-semibold underline decoration-emerald-500/70 underline-offset-2 break-all hover:text-emerald-800'
+                }
+              >
+                {core}
+              </a>
+              {trailing}
+            </span>
+          );
+        })}
+        {lineIndex < lines.length - 1 && <br />}
+      </span>
+    );
+  });
+};
+
 export default function SellerChatPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -209,6 +271,8 @@ export default function SellerChatPage() {
     sellerProfile?.seller?.buyOrder?.createdAt ||
     '';
   const isPaymentRequested = sellerBuyOrderStatus === 'paymentRequested';
+  const isContactTransfer = sellerProfile?.seller?.bankInfo?.bankName === '연락처송금';
+  const contactTransferMemo = String(sellerProfile?.seller?.bankInfo?.contactMemo || '').trim();
 
   const goBuy = async () => {
     if (!isLoggedIn) {
@@ -930,30 +994,54 @@ export default function SellerChatPage() {
                         {sellerProfile?.seller?.bankInfo?.accountHolder || '-'}
                       </span>
                     </div>
-                    {sellerProfile?.seller?.bankInfo?.bankName === '연락처송금' && sellerProfile?.seller?.bankInfo?.contactMemo && (
-                      <div className="flex items-start justify-between border-b border-black/10 pb-2">
-                        <span className="text-xs uppercase tracking-[0.2em] text-black/50">
+                    {isContactTransfer && contactTransferMemo && (
+                      <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 via-white to-teal-50 px-4 py-3 shadow-[0_16px_40px_-30px_rgba(16,185,129,0.75)]">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">
                           연락처 메모
-                        </span>
-                        <span className="text-sm font-semibold text-black text-right whitespace-pre-line">
-                          {sellerProfile.seller.bankInfo.contactMemo}
-                        </span>
+                        </p>
+                        <div className="mt-2 whitespace-pre-wrap break-words text-[15px] font-semibold leading-relaxed text-emerald-950">
+                          {renderTextWithAutoLinks(
+                            contactTransferMemo,
+                            'font-bold underline decoration-emerald-500/80 underline-offset-2 break-all hover:text-emerald-800'
+                          )}
+                        </div>
                       </div>
                     )}
-                    <div className="flex items-center justify-between border-b border-black/10 pb-2">
-                      <span className="text-xs uppercase tracking-[0.2em] text-black/50">
-                        에스크로 수량
-                      </span>
-                      <span className="flex items-baseline gap-1 text-lg font-bold text-emerald-700 tabular-nums">
-                        {typeof sellerEscrow === 'number' ? (
-                          <>
-                            {formatNumber(sellerEscrow, 6)}
-                            <span className="text-[11px] font-semibold text-slate-500">USDT</span>
-                          </>
-                        ) : (
-                          '-'
-                        )}
-                      </span>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 via-white to-teal-50 px-4 py-3 shadow-[0_18px_40px_-30px_rgba(5,150,105,0.9)]">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-700">
+                          에스크로 수량
+                        </p>
+                        <p className="mt-2 flex items-end gap-1 text-[28px] font-black leading-none tracking-tight text-emerald-700 tabular-nums">
+                          {typeof sellerEscrow === 'number' ? formatNumber(sellerEscrow, 2) : '-'}
+                          {typeof sellerEscrow === 'number' && (
+                            <span className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-800/80">
+                              USDT
+                            </span>
+                          )}
+                        </p>
+                        <p className="mt-1 text-[11px] font-semibold text-emerald-800/75">
+                          실시간 잔고
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50 via-white to-blue-50 px-4 py-3 shadow-[0_18px_40px_-30px_rgba(79,70,229,0.7)]">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-700">
+                          USDT 판매금액
+                        </p>
+                        <p className="mt-2 flex items-end gap-1 whitespace-nowrap text-[28px] font-black leading-none tracking-tight text-indigo-700 tabular-nums">
+                          {typeof sellerUsdtRate === 'number'
+                            ? formatNumber(sellerUsdtRate, 0)
+                            : '-'}
+                          {typeof sellerUsdtRate === 'number' && (
+                            <span className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-indigo-800/80">
+                              KRW
+                            </span>
+                          )}
+                        </p>
+                        <p className="mt-1 text-[11px] font-semibold text-indigo-800/75">
+                          {priceTypeLabel}
+                        </p>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between border-b border-black/10 pb-2">
                       <span className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-black/50">
@@ -974,19 +1062,6 @@ export default function SellerChatPage() {
                             업데이트 {formatUpdatedTime(marketUpdatedAt)}
                           </span>
                         )}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs uppercase tracking-[0.2em] text-black/50">
-                        USDT 판매금액
-                      </span>
-                      <span className="text-right text-sm font-semibold text-black">
-                        {typeof sellerUsdtRate === 'number'
-                          ? `${formatNumber(sellerUsdtRate, 0)} KRW`
-                          : '-'}
-                        <span className="mt-1 block text-xs font-medium text-black/50">
-                          {priceTypeLabel}
-                        </span>
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -1052,14 +1127,19 @@ export default function SellerChatPage() {
                               {sellerProfile?.seller?.bankInfo?.accountNumber || '-'}
                             </p>
                           </div>
-                          {sellerProfile?.seller?.bankInfo?.bankName === '연락처송금' && (
-                            <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100 col-span-2">
-                              <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">연락처 메모</p>
-                              <p className="mt-1 text-sm font-bold whitespace-pre-line">
-                                {sellerProfile?.seller?.bankInfo?.contactMemo?.trim()
-                                  ? sellerProfile.seller.bankInfo.contactMemo
-                                  : '-'}
+                          {isContactTransfer && (
+                            <div className="col-span-2 rounded-2xl border border-amber-300/90 bg-gradient-to-br from-amber-50 via-white to-orange-50 px-3.5 py-3 shadow-[0_14px_34px_-26px_rgba(217,119,6,0.9)]">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600">
+                                연락처 메모
                               </p>
+                              <div className="mt-1.5 whitespace-pre-wrap break-words text-[15px] font-bold leading-relaxed text-amber-950">
+                                {contactTransferMemo
+                                  ? renderTextWithAutoLinks(
+                                      contactTransferMemo,
+                                      'font-bold underline decoration-amber-500/80 underline-offset-2 break-all hover:text-amber-700'
+                                    )
+                                  : '-'}
+                              </div>
                             </div>
                           )}
                           <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100">
@@ -1280,6 +1360,36 @@ export default function SellerChatPage() {
                   상담 진행
                 </div>
               </div>
+              {isLoggedIn && buyerNickname && (
+                <div className="mt-3 rounded-2xl border border-sky-200/80 bg-gradient-to-r from-sky-50 via-white to-blue-50 px-4 py-3 shadow-[0_16px_36px_-28px_rgba(14,116,144,0.75)]">
+                  <div className="flex items-center gap-3">
+                    <div className="h-11 w-11 overflow-hidden rounded-full border border-sky-200 bg-white shadow-sm">
+                      {buyerAvatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={buyerAvatar}
+                          alt={buyerNickname}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-sm font-bold text-sky-700">
+                          {(buyerNickname || address || 'ME').slice(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-sky-700">내 정보</p>
+                      <p className="truncate text-sm font-extrabold text-slate-900">{buyerNickname}</p>
+                      <p className="mt-0.5 truncate font-mono text-xs text-slate-600">
+                        {maskWalletAddress(address)}
+                      </p>
+                    </div>
+                    <span className="rounded-full border border-sky-200 bg-white px-2.5 py-1 text-[10px] font-bold tracking-[0.12em] text-sky-700">
+                      BUYER
+                    </span>
+                  </div>
+                </div>
+              )}
               {!sellerId ? (
                 <p className="mt-3 px-5 text-sm text-black/60">판매자 정보를 찾을 수 없습니다.</p>
               ) : !isLoggedIn ? (
