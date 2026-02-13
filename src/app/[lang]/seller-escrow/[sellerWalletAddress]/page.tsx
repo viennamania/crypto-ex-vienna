@@ -5313,7 +5313,9 @@ const fetchBuyOrders = async () => {
                       type="button"
                       className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-white sm:w-auto"
                       onClick={() => {
-                        navigator.clipboard.writeText(window.location.href);
+                        navigator.clipboard.writeText(
+                          `${window.location.origin}/${params.lang}/p2p/seller-chat?sellerId=${activeSeller?.walletAddress}&sellerName=${encodeURIComponent(activeSeller?.nickname || '')}`
+                        );
                         toast.success("링크가 복사되었습니다.");
                       }}
                     >
