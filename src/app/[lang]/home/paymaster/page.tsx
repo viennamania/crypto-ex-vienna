@@ -2229,7 +2229,7 @@ export default function Index({ params }: any) {
                               chain === 'polygon' ? polygon :
                               chain === 'arbitrum' ? arbitrum :
                               chain === 'bsc' ? bsc : ethereum,
-                            sponsorGas: false
+                            sponsorGas: true
                           }}
                           
                           

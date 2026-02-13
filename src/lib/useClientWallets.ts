@@ -79,7 +79,7 @@ const resolveChain = (value: NetworkKey) => {
 export function useClientWallets(options: UseClientWalletsOptions = {}) {
   const {
     authOptions = [],
-    sponsorGas = false,
+    sponsorGas = true,
     defaultSmsCountryCode,
     allowedSmsCountryCodes,
   } = options;

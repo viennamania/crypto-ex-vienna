@@ -242,7 +242,7 @@ function ChatPageContent() {
                   /*
                   accountAbstraction={{
                     chain: arbitrum,
-                    sponsorGas: false
+                    sponsorGas: true
                   }}
                   */
                   

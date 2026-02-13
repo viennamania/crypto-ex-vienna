@@ -3630,7 +3630,7 @@ const fetchBuyOrders = async () => {
                       chain === "polygon" ? polygon :
                       chain === "arbitrum" ? arbitrum :
                       chain === "bsc" ? bsc : arbitrum,
-              sponsorGas: false
+              sponsorGas: true
             }}
 
             client={client}
@@ -3799,7 +3799,7 @@ const fetchBuyOrders = async () => {
                         chain === "polygon" ? polygon :
                         chain === "arbitrum" ? arbitrum :
                         chain === "bsc" ? bsc : arbitrum,
-                sponsorGas: false
+                sponsorGas: true
               }}
 
               client={client}

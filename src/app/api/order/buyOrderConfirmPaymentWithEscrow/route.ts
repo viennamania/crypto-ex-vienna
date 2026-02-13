@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
 
     const wallet = smartWallet({
       chain: chain === "bsc" ? bsc : chain === "arbitrum" ? arbitrum : polygon,
-      sponsorGas: false,
+      sponsorGas: true,
     });
 
     // Connect the smart wallet
