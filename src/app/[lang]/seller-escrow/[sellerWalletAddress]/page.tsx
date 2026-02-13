@@ -438,6 +438,12 @@ const renderTextWithAutoLinks = (text?: string | null): ReactNode => {
   });
 };
 
+const getContactTransferMemo = (sellerItem: any): string => {
+  const directMemo = sellerItem?.seller?.bankInfo?.contactMemo;
+  const fallbackMemo = sellerItem?.seller?.buyOrder?.seller?.bankInfo?.contactMemo;
+  return String(directMemo || fallbackMemo || '').trim();
+};
+
 type DailyTradePoint = {
   dateKey: string;
   day: string;
@@ -6898,12 +6904,12 @@ const fetchBuyOrders = async () => {
                                   <span className="text-sm font-bold text-emerald-700">
                                     연락처송금
                                   </span>
-                                  {seller.seller?.bankInfo?.contactMemo?.trim() ? (
-                                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold leading-relaxed text-emerald-800 break-words">
-                                      {renderTextWithAutoLinks(seller.seller.bankInfo.contactMemo)}
+                                  {getContactTransferMemo(seller) ? (
+                                    <div className="rounded-xl border border-emerald-300 bg-gradient-to-br from-emerald-50 to-teal-50 px-4 py-3 text-sm font-bold leading-relaxed text-emerald-900 break-words shadow-[0_12px_30px_-22px_rgba(5,150,105,0.65)]">
+                                      {renderTextWithAutoLinks(getContactTransferMemo(seller))}
                                     </div>
                                   ) : (
-                                    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
+                                    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
                                       연락처송금 안내 메모가 없습니다.
                                     </div>
                                   )}
@@ -7035,27 +7041,45 @@ const fetchBuyOrders = async () => {
                                 <div className="flex flex-col items-start justify-center
                                   gap-0 mt-1
                                 ">
-                                
-                                  <span className="text-sm text-slate-700 font-semibold">
-                                    {seller.seller?.bankInfo?.bankName}
-                                  </span>
-                                  <div className="flex flex-row items-center justify-start gap-2">
-                                    <span className="text-sm text-slate-700 font-semibold">
-                                      {seller.seller?.bankInfo?.accountNumber}
-                                    </span>
-                                    <button
-                                      className="text-sm text-amber-700 underline hover:text-amber-800"
-                                      onClick={() => {
-                                        navigator.clipboard.writeText(seller.seller?.bankInfo?.accountNumber || '');
-                                        toast.success("계좌번호가 복사되었습니다.");
-                                      } }
-                                    >
-                                      ⧉
-                                    </button>
-                                  </div>
-                                  <span className="text-sm font-semibold text-slate-700">
-                                    {seller.seller?.bankInfo?.accountHolder}
-                                  </span>
+                                  {seller.seller?.bankInfo?.bankName === '연락처송금' ? (
+                                    <div className="w-full rounded-xl border border-emerald-300 bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 px-4 py-3 shadow-[0_18px_40px_-28px_rgba(5,150,105,0.65)]">
+                                      <span className="text-sm font-extrabold text-emerald-800">
+                                        연락처송금 안내
+                                      </span>
+                                      {getContactTransferMemo(seller) ? (
+                                        <div className="mt-2 text-base font-bold leading-relaxed text-emerald-900 break-words">
+                                          {renderTextWithAutoLinks(getContactTransferMemo(seller))}
+                                        </div>
+                                      ) : (
+                                        <div className="mt-2 text-sm font-semibold text-slate-600">
+                                          연락처송금 안내 메모가 없습니다.
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <span className="text-sm text-slate-700 font-semibold">
+                                        {seller.seller?.bankInfo?.bankName}
+                                      </span>
+                                      <div className="flex flex-row items-center justify-start gap-2">
+                                        <span className="text-sm text-slate-700 font-semibold">
+                                          {seller.seller?.bankInfo?.accountNumber}
+                                        </span>
+                                        <button
+                                          className="text-sm text-amber-700 underline hover:text-amber-800"
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(seller.seller?.bankInfo?.accountNumber || '');
+                                            toast.success("계좌번호가 복사되었습니다.");
+                                          } }
+                                        >
+                                          ⧉
+                                        </button>
+                                      </div>
+                                      <span className="text-sm font-semibold text-slate-700">
+                                        {seller.seller?.bankInfo?.accountHolder}
+                                      </span>
+                                    </>
+                                  )}
                                 </div>
 
                                 {/* 10분내로 입금하지 않으면 주문이 자동취소됩니다. */}
