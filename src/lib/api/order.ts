@@ -4916,8 +4916,15 @@ export async function getAllBuyOrdersBySellerEscrowWallet(
     }
   }
 
+  const walletAddressRegex = {
+    $regex: `^${escapeRegex(walletAddress)}$`,
+    $options: 'i',
+  };
   const matchQuery: Record<string, any> = {
-    'seller.walletAddress': walletAddress,
+    $or: [
+      { 'seller.walletAddress': walletAddressRegex },
+      { 'seller.escrowWalletAddress': walletAddressRegex },
+    ],
   };
   if (Object.keys(createdAtFilter).length > 0) {
     matchQuery.createdAt = createdAtFilter;
@@ -4944,7 +4951,7 @@ export async function getAllBuyOrdersBySellerEscrowWallet(
     },
   );
 
-  const ownerWalletAddress = ownerCandidate?.walletAddress || '';
+  const ownerWalletAddress = ownerCandidate?.walletAddress || walletAddress;
   const isOwnerView = Boolean(
     requesterWalletAddress &&
     ownerWalletAddress &&
@@ -5082,11 +5089,22 @@ export async function getDailyBuyOrderBySeller(
 ): Promise<any> {
   const client = await clientPromise;
   const collection = client.db(dbName).collection('buyorders');
+  const normalizedWalletAddress = String(walletAddress || '').trim();
+  if (!normalizedWalletAddress) {
+    return [];
+  }
+  const walletAddressRegex = {
+    $regex: `^${escapeRegex(normalizedWalletAddress)}$`,
+    $options: 'i',
+  };
 
   const results = await collection.aggregate([
     {
       $match: {
-        'seller.walletAddress': walletAddress,
+        $or: [
+          { 'seller.walletAddress': walletAddressRegex },
+          { 'seller.escrowWalletAddress': walletAddressRegex },
+        ],
         status: 'paymentConfirmed',
         paymentConfirmedAt: { $gte: startDate, $lt: endDate },
       }

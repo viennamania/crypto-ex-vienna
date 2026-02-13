@@ -351,7 +351,7 @@ export default function OrangeXPage() {
     const [profileNickname, setProfileNickname] = useState('');
     const sellerPageHref =
         hasWallet && sellerEscrowWalletAddress
-            ? `/${lang}/escrow/${sellerEscrowWalletAddress}`
+            ? `/${lang}/seller-escrow/${walletAddress}`
             : '';
     const sellerSetupHref = `/${lang}/p2p/seller-settings`;
     const canStartSeller = Boolean(hasWallet && sellerEscrowWalletAddress);
@@ -2756,7 +2756,7 @@ export default function OrangeXPage() {
                                             : 0;
                                         const rate = seller?.seller?.usdtToKrwRate;
                                         //const sellerWalletAddress = seller?.walletAddress;
-                                        const sellerWalletAddress = seller?.seller?.escrowWalletAddress;
+                                        const sellerWalletAddress = seller?.walletAddress || seller?.seller?.walletAddress;
                                         const promotionText = seller?.seller?.promotionText || seller?.promotionText;
                                         const priceSettingMethod = seller?.seller?.priceSettingMethod;
                                         const market = seller?.seller?.market;
@@ -2858,7 +2858,7 @@ export default function OrangeXPage() {
                                                         </div>
                                                         {sellerWalletAddress && (
                                                             <a
-                                                                href={`/${lang}/escrow/${sellerWalletAddress}`}
+                                                                href={`/${lang}/seller-escrow/${sellerWalletAddress}`}
                                                                 target="_blank"
                                                                 rel="noreferrer"
                                                                 className="inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] px-3 py-1 text-xs font-semibold text-white shadow-[0_10px_25px_-12px_rgba(249,115,22,0.8)] transition hover:bg-[color:var(--accent-deep)]"

@@ -194,7 +194,7 @@ interface BuyOrder {
 
 
 
-const walletAuthOptions = ["google", "email"];
+const walletAuthOptions = ["google", "email", "phone"];
 const SELLER_CARD_TONES = [
   {
     card: "border-slate-200 bg-white",
@@ -4754,7 +4754,11 @@ const fetchBuyOrders = async () => {
                             connectButton={{
                               label: "지갑 연결하기",
                               className:
-                                "inline-flex w-full items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-800 transition hover:border-slate-400 hover:text-slate-900",
+                                "inline-flex w-full items-center justify-center rounded-xl !border !border-orange-500 !bg-gradient-to-r !from-orange-500 !to-amber-500 px-4 py-3 text-sm font-bold tracking-tight !text-white shadow-md shadow-orange-500/25 transition hover:!from-orange-600 hover:!to-amber-600 hover:shadow-lg hover:shadow-orange-600/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 [&_*]:!text-white hover:[&_*]:!text-white focus-visible:[&_*]:!text-white",
+                              style: {
+                                color: "#ffffff",
+                                WebkitTextFillColor: "#ffffff",
+                              },
                             }}
                           />
                         </div>
@@ -5368,8 +5372,11 @@ const fetchBuyOrders = async () => {
                             <button
                               type="button"
                               onClick={() => {
-                                const escrowWalletAddress = seller.seller?.escrowWalletAddress || seller.walletAddress;
-                                router.push(`/${params.lang}/escrow/${escrowWalletAddress}`);
+                                const sellerOwnerWalletAddress = seller?.walletAddress || seller?.seller?.walletAddress;
+                                if (!sellerOwnerWalletAddress) {
+                                  return;
+                                }
+                                router.push(`/${params.lang}/seller-escrow/${sellerOwnerWalletAddress}`);
                               }}
                               className="seller-contact-cta group relative inline-flex items-center gap-1.5 overflow-hidden rounded-full border border-amber-300/70 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 px-3 py-1.5 text-[11px] font-semibold text-amber-900 shadow-[0_10px_30px_rgba(251,191,36,0.35)] transition-all duration-300 hover:scale-[1.05] hover:border-amber-400 hover:shadow-[0_14px_36px_rgba(251,191,36,0.45)] focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1 active:scale-[0.98]"
                             >

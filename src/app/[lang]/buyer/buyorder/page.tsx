@@ -6003,11 +6003,15 @@ const fetchBuyOrders = async () => {
 
                               {/* share button to share the seller info */}
                               {/* copy to clipboard the seller url */}
-                              {/* /[lang]/escrow/[seller.seller.escrowWalletAddress] */}
+                              {/* /[lang]/seller-escrow/[seller.walletAddress] */}
                               <div className="flex flex-col items-center justify-center">
                                 <button
                                   onClick={() => {
-                                    const sellerUrl = `${window.location.origin}/${params.lang}/escrow/${seller.seller.escrowWalletAddress}`;
+                                    const sellerOwnerWalletAddress = seller?.walletAddress || seller?.seller?.walletAddress;
+                                    if (!sellerOwnerWalletAddress) {
+                                      return;
+                                    }
+                                    const sellerUrl = `${window.location.origin}/${params.lang}/seller-escrow/${sellerOwnerWalletAddress}`;
                                     navigator.clipboard.writeText(sellerUrl);
                                     alert('판매자 URL이 클립보드에 복사되었습니다.');
                                   }}
@@ -7250,9 +7254,13 @@ const fetchBuyOrders = async () => {
                                     )
                                     */
 
-                                    // route to /[lang]/escrow/[sellerWalletAddress]
+                                    // route to /[lang]/seller-escrow/[sellerWalletAddress]
                                     // new window
-                                    window.open(`/${params.lang}/escrow/${seller.seller.escrowWalletAddress}?buyAmount=${buyAmountInputs[index] || 0}`, '_blank');
+                                    const sellerOwnerWalletAddress = seller?.walletAddress || seller?.seller?.walletAddress;
+                                    if (!sellerOwnerWalletAddress) {
+                                      return;
+                                    }
+                                    window.open(`/${params.lang}/seller-escrow/${sellerOwnerWalletAddress}?buyAmount=${buyAmountInputs[index] || 0}`, '_blank');
 
                                   }}
                                   className={`
@@ -12218,5 +12226,4 @@ const TradeDetail = (
       </div>
     );
   };
-
 

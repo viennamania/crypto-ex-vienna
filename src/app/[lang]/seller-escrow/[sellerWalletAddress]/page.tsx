@@ -483,6 +483,7 @@ export default function Index({ params }: any) {
   const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
 
   const sellerWalletAddress = params.sellerWalletAddress;
+  const sellerWalletAddressParam = (sellerWalletAddress || '').trim();
   const buyAmount = params.buyAmount;
 
   const searchParams = useSearchParams();
@@ -929,32 +930,11 @@ export default function Index({ params }: any) {
 
 
   const [ownerWalletAddress, setOwnerWalletAddress] = useState('');
+  const [targetSellerEscrowWalletAddress, setTargetSellerEscrowWalletAddress] = useState('');
   useEffect(() => {
-    if (sellerWalletAddress) {
-      // api call to get sell owner wallet address by sellerEscrowWalletAddress
-      fetch('/api/user/getSellOwnerWalletAddress', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          storecode: "admin",
-          escrowWalletAddress: sellerWalletAddress,
-        }),
-      })
-      .then(response => response.json())
-      .then(data => {
-        
-        
-        ///console.log('getSellOwnerWalletAddress data', data);
-
-
-        if (data.walletAddress) {
-          setOwnerWalletAddress(data.walletAddress);
-        }
-      });
-    }
-  }, [sellerWalletAddress]);
+    setOwnerWalletAddress(sellerWalletAddressParam);
+    setTargetSellerEscrowWalletAddress('');
+  }, [sellerWalletAddressParam]);
 
   const isOwnerSeller = Boolean(
     address &&
@@ -3462,7 +3442,11 @@ setAgreementForCancelTrade(
 
       
 
-      const isSellerHistory = Boolean(sellerWalletAddress);
+      const isSellerHistory = Boolean(sellerWalletAddressParam);
+      const sellerEscrowWalletForHistory = targetSellerEscrowWalletAddress.trim();
+      if (isSellerHistory && !sellerEscrowWalletForHistory) {
+        return;
+      }
       const endpoint = isSellerHistory
         ? '/api/order/getAllBuyOrdersBySellerEscrowWallet'
         : '/api/order/getAllBuyOrders';
@@ -3470,7 +3454,7 @@ setAgreementForCancelTrade(
         ? {
             limit: Number(limitValue),
             page: Number(pageValue),
-            walletAddress: sellerWalletAddress,
+            walletAddress: sellerEscrowWalletForHistory,
             requesterWalletAddress: address,
             startDate: searchFromDate,
             endDate: searchToDate,
@@ -3627,15 +3611,21 @@ setAgreementForCancelTrade(
     pageValue,
     searchStorecode,
     searchFromDate,
-    searchToDate
+    searchToDate,
+    sellerWalletAddressParam,
+    targetSellerEscrowWalletAddress,
 ]);
 
 
 
   useEffect(() => {
-    if (!sellerWalletAddress) {
+    if (!sellerWalletAddressParam) {
       setDailyTradeHistory(buildEmptyDailyTradeHistory());
       setTodayTradeCount(0);
+      return;
+    }
+    const sellerEscrowWalletForHistory = targetSellerEscrowWalletAddress.trim();
+    if (!sellerEscrowWalletForHistory) {
       return;
     }
 
@@ -3660,7 +3650,7 @@ setAgreementForCancelTrade(
           body: JSON.stringify({
             startDate,
             endDate,
-            walletAddress: sellerWalletAddress,
+            walletAddress: sellerEscrowWalletForHistory,
           }),
         });
 
@@ -3726,7 +3716,7 @@ setAgreementForCancelTrade(
       mounted = false;
       clearInterval(interval);
     };
-  }, [sellerWalletAddress]);
+  }, [sellerWalletAddressParam, targetSellerEscrowWalletAddress]);
 
 
 
@@ -4195,7 +4185,7 @@ const fetchBuyOrders = async () => {
             storecode: "admin",
             limit: 100,
             page: 1,
-            escrowWalletAddress: sellerWalletAddress,
+            walletAddress: sellerWalletAddressParam,
           }
         )
       });
@@ -4221,6 +4211,7 @@ const fetchBuyOrders = async () => {
 
 
         const sortedSellers = data.result.users;
+        const targetSellerWallet = sellerWalletAddressParam.toLowerCase();
 
         // if walletAddress is address, then order first
         // and then others is ordered by seller.totalPaymentConfirmedUsdtAmount descending
@@ -4240,8 +4231,14 @@ const fetchBuyOrders = async () => {
           return b.totalPaymentConfirmedUsdtAmount - a.totalPaymentConfirmedUsdtAmount;
         });
         */
-      // find sellerWalletAddress
-        const mySeller = sortedSellers.find((seller: any) => seller.seller.escrowWalletAddress === sellerWalletAddress);
+      // find seller by owner wallet address
+        const mySeller = sortedSellers.find(
+          (seller: any) =>
+            seller?.walletAddress &&
+            seller.walletAddress.toLowerCase() === targetSellerWallet,
+        );
+        const resolvedEscrowWallet = String(mySeller?.seller?.escrowWalletAddress || '').trim();
+        setTargetSellerEscrowWalletAddress(resolvedEscrowWallet);
 
 
         /*
@@ -4289,7 +4286,7 @@ const fetchBuyOrders = async () => {
       fetchSellersBalance();
     }, 10000);
     return () => clearInterval(interval);
-  }, [address]);
+  }, [address, sellerWalletAddressParam]);
 
 
   // sellersBalance.reduce((acc, seller) => acc + seller.currentUsdtBalance, 0)
@@ -10026,7 +10023,7 @@ const fetchBuyOrders = async () => {
               id="escrow-page-size"
               value={limitValue}
               onChange={(e) =>
-                router.push(`/${params.lang}/escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(e.target.value)}&page=${pageValue}`)
+                router.push(`/${params.lang}/seller-escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(e.target.value)}&page=${pageValue}`)
               }
               className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600"
             >
@@ -10042,7 +10039,7 @@ const fetchBuyOrders = async () => {
             disabled={Number(pageValue) <= 1}
             className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
             onClick={() => {
-              router.push(`/${params.lang}/escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=1`)
+              router.push(`/${params.lang}/seller-escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=1`)
             }}
           >
             처음으로
@@ -10052,7 +10049,7 @@ const fetchBuyOrders = async () => {
             disabled={Number(pageValue) <= 1}
             className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
             onClick={() => {
-              router.push(`/${params.lang}/escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Number(pageValue) - 1}`)
+              router.push(`/${params.lang}/seller-escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Number(pageValue) - 1}`)
             }}
           >
             이전
@@ -10066,7 +10063,7 @@ const fetchBuyOrders = async () => {
             disabled={Number(pageValue) >= Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue))}
             className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
             onClick={() => {
-              router.push(`/${params.lang}/escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Number(pageValue) + 1}`)
+              router.push(`/${params.lang}/seller-escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Number(pageValue) + 1}`)
             }}
           >
             다음
@@ -10076,7 +10073,7 @@ const fetchBuyOrders = async () => {
             disabled={Number(pageValue) >= Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue))}
             className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
             onClick={() => {
-              router.push(`/${params.lang}/escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue))}`)
+              router.push(`/${params.lang}/seller-escrow/${params.sellerWalletAddress}?storecode=${searchStorecode}&limit=${Number(limitValue)}&page=${Math.ceil(Number(buyOrderStats.totalCount) / Number(limitValue))}`)
             }}
           >
             마지막으로

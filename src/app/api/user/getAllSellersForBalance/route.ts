@@ -49,9 +49,12 @@ export async function POST(request: NextRequest) {
     limit,
     page,
     escrowWalletAddress,
+    walletAddress,
   } = body;
 
   const storecodeValue = storecode || 'admin';
+
+  const targetWalletAddress = walletAddress || escrowWalletAddress;
 
   let result: any;
   try {
@@ -59,7 +62,7 @@ export async function POST(request: NextRequest) {
       storecode: storecodeValue,
       limit: limit || 100,
       page: page || 1,
-      escrowWalletAddress,
+      escrowWalletAddress: targetWalletAddress,
     });
   } catch (error) {
     console.error("getAllSellersForBalanceInquiry failed:", JSON.stringify(error));
@@ -74,7 +77,7 @@ export async function POST(request: NextRequest) {
       storecode: storecodeValue,
       limit,
       page,
-      escrowWalletAddress,
+      escrowWalletAddress: targetWalletAddress,
     });
   }
 
