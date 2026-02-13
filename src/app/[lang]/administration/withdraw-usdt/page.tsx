@@ -169,7 +169,6 @@ type MemberSearchResult = {
   email?: string;
   nickname?: string;
   avatar?: string;
-  mobile?: string;
   walletAddress?: string;
   storecode?: string;
 };
@@ -1210,6 +1209,27 @@ export default function SendUsdt({ params }: any) {
     () => Boolean(favoriteHit) || isWhateListedUser,
     [favoriteHit, isWhateListedUser],
   );
+  const transferRecipientNickname = recipient?.nickname?.trim() || '';
+  const transferRecipientAvatar = recipient?.avatar || '/profile-default.png';
+  const transferRecipientDetails = useMemo(() => {
+    const details: Array<{ label: string; value: string }> = [];
+    const nickname = transferRecipientNickname;
+    const favoriteLabelValue = favoriteHit?.label?.trim();
+    const email = recipient?.email?.trim();
+    const mobile = recipient?.mobile?.trim();
+
+    if (favoriteLabelValue && favoriteLabelValue !== nickname) {
+      details.push({ label: '즐겨찾기', value: favoriteLabelValue });
+    }
+    if (email) {
+      details.push({ label: '이메일', value: email });
+    }
+    if (mobile) {
+      details.push({ label: '연락처', value: mobile });
+    }
+
+    return details;
+  }, [favoriteHit?.label, recipient?.email, recipient?.mobile, transferRecipientNickname]);
 
   
   useEffect(() => {
@@ -1894,10 +1914,9 @@ export default function SendUsdt({ params }: any) {
 
                             {memberResults.length > 0 && (
                               <div className="overflow-hidden rounded-xl border border-slate-200 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
-                                <div className="grid grid-cols-[1.5fr_1.2fr_1.5fr_0.8fr] gap-3 bg-slate-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                <div className="grid grid-cols-[1.6fr_1.5fr_0.8fr] gap-3 bg-slate-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                                   <span>회원</span>
                                   <span>지갑주소</span>
-                                  <span>연락처</span>
                                   <span className="text-right pr-1">선택</span>
                                 </div>
                                 <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
@@ -1905,16 +1924,13 @@ export default function SendUsdt({ params }: any) {
                                     const masked = m.walletAddress
                                       ? `${m.walletAddress.substring(0, 6)}...${m.walletAddress.substring(m.walletAddress.length - 4)}`
                                       : '지갑 미등록';
-                                    const maskedMobile = m.mobile
-                                      ? m.mobile.replace(/(\\d{3})\\d{3,4}(\\d{4})/, '$1****$2')
-                                      : '-';
                                     const maskedEmail = m.email
                                       ? m.email.replace(/(.{2}).*(@.*)/, '$1***$2')
                                       : '-';
                                     return (
                                       <div
                                         key={`${m.walletAddress}-${m.nickname}-${m.id}-${idx}`}
-                                        className="grid grid-cols-[1.5fr_1.2fr_1.5fr_0.8fr] items-center gap-3 px-4 py-3 bg-white transition duration-300 ease-out hover:bg-slate-50 animate-[fadeIn_0.35s_ease]"
+                                        className="grid grid-cols-[1.6fr_1.5fr_0.8fr] items-center gap-3 px-4 py-3 bg-white transition duration-300 ease-out hover:bg-slate-50 animate-[fadeIn_0.35s_ease]"
                                         style={{ animationDelay: `${idx * 30}ms` }}
                                       >
                                         <div className="flex items-center gap-3 min-w-0">
@@ -1925,17 +1941,16 @@ export default function SendUsdt({ params }: any) {
                                             height={36}
                                             className="rounded-full border border-slate-200 bg-white"
                                           />
-                                          <div className="min-w-0">
-                                            <div className="text-sm font-semibold text-slate-900 truncate">
+                                          <div className="min-w-0 flex flex-col gap-0.5">
+                                            <div className="text-[15px] leading-tight font-extrabold tracking-tight text-slate-900 truncate">
                                               {m.nickname || '회원'}
                                             </div>
-                                            <div className="text-[11px] text-slate-500 truncate">
+                                            <div className="text-[10px] text-slate-500 truncate">
                                               {maskedEmail}
                                             </div>
                                           </div>
                                         </div>
                                         <div className="text-xs font-medium text-slate-800">{masked}</div>
-                                        <div className="text-[11px] text-slate-600">{maskedMobile}</div>
                                         <div className="flex items-center justify-end">
                                           <button
                                             type="button"
@@ -1948,7 +1963,7 @@ export default function SendUsdt({ params }: any) {
                                                 nickname: m.nickname || '',
                                                 email: m.email || '',
                                                 avatar: m.avatar || '',
-                                                mobile: m.mobile || '',
+                                                mobile: '',
                                               }));
                                               setIsWhateListedUser(!!m.walletAddress);
                                               setRecipientMode('manual');
@@ -2284,7 +2299,7 @@ export default function SendUsdt({ params }: any) {
 
       {showTransferConfirm && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6 backdrop-blur-[2px]"
           role="dialog"
           aria-modal="true"
           onClick={(event) => {
@@ -2295,39 +2310,90 @@ export default function SendUsdt({ params }: any) {
             }
           }}
         >
-          <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 shadow-2xl">
-            <h3 className="text-lg font-medium text-slate-900">USDT 전송</h3>
-            <p className="mt-1 text-sm text-slate-500">
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200/90 bg-white/95 p-6 shadow-[0_34px_90px_-46px_rgba(15,23,42,0.75)]">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-28 overflow-hidden">
+              <div className="absolute -left-10 -top-12 h-24 w-24 rounded-full bg-emerald-200/50 blur-2xl" />
+              <div className="absolute right-0 top-0 h-24 w-24 rounded-full bg-sky-200/50 blur-2xl" />
+            </div>
+
+            <h3 className="relative text-[38px] leading-none font-black tracking-tight text-slate-900">USDT 전송</h3>
+            <p className="relative mt-2 text-[15px] font-medium text-slate-500">
               아래 정보를 확인하고 전송을 진행하세요.
             </p>
 
-            <div className="mt-4 space-y-3 rounded-md border border-slate-200 px-4 py-3 text-sm text-slate-700">
+            <div className="relative mt-5 space-y-3 rounded-2xl border border-slate-200/90 bg-slate-50/60 px-4 py-4 text-sm text-slate-700">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">Network</span>
-                <span className="font-medium text-slate-900">{selectedNetworkConfig.label}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">To</span>
-                <span className="font-medium text-slate-900">{shortenValue(recipient?.walletAddress)}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">Amount</span>
-                <span className="font-medium text-emerald-700">
-                  {formatAmountInput(amount, selectedNetworkConfig.decimals)} USDT
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-bold text-slate-900 shadow-sm">
+                  <Image
+                    src={selectedNetworkConfig.logo}
+                    alt={`${selectedNetworkConfig.label} logo`}
+                    width={18}
+                    height={18}
+                    className="h-[18px] w-[18px] rounded-full object-cover"
+                  />
+                  {selectedNetworkConfig.label}
                 </span>
+              </div>
+              <div className="flex items-start justify-between gap-4 border-t border-slate-200/80 pt-3">
+                <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">To</span>
+                <div className="max-w-[72%] text-right flex flex-col items-end">
+                  {transferRecipientNickname && (
+                    <div className="mb-2 inline-flex max-w-full items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/90 px-2.5 py-1.5 shadow-[0_10px_26px_-18px_rgba(16,185,129,0.7)]">
+                      <Image
+                        src={transferRecipientAvatar}
+                        alt="recipient avatar"
+                        width={32}
+                        height={32}
+                        className="h-8 w-8 rounded-full border border-emerald-200 bg-white object-cover"
+                      />
+                      <div className="min-w-0 text-left">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
+                          Member
+                        </div>
+                        <div className="text-sm font-extrabold leading-tight tracking-tight text-emerald-800 truncate">
+                          {transferRecipientNickname}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <span className="block font-medium text-slate-900 break-all">
+                    {recipient?.walletAddress || '-'}
+                  </span>
+                  {transferRecipientDetails.length > 0 && (
+                    <div className="mt-1.5 space-y-0.5">
+                      {transferRecipientDetails.map((item) => (
+                        <div key={`${item.label}-${item.value}`} className="text-[11px] text-slate-500 break-all">
+                          <span className="text-slate-400">{item.label}:</span>{' '}
+                          <span className="font-medium text-slate-600">{item.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/85 px-3 py-3">
+                <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-emerald-600">Amount</span>
+                <div className="mt-1 flex items-end justify-end gap-1">
+                  <span className="text-4xl font-black tracking-tight text-emerald-700 tabular-nums">
+                    {formatAmountInput(amount, selectedNetworkConfig.decimals)}
+                  </span>
+                  <span className="mb-1 text-lg font-extrabold text-emerald-700">USDT</span>
+                </div>
               </div>
             </div>
 
             {transferModalPhase === 'processing' && (
-              <div className="mt-4 flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+              <div className="mt-4 flex items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm font-semibold text-sky-900">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-sky-200 border-t-sky-700" />
                 전송 중입니다... 네트워크 확인이 끝날 때까지 창을 닫지 마세요.
               </div>
             )}
 
             {transferModalPhase === 'result' && (
               <div
-                className={`mt-4 flex items-start gap-3 rounded-md border px-3 py-2 text-sm font-semibold ${
+                className={`mt-4 flex items-start gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold ${
                   transferResult.ok
                     ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                     : 'border-rose-200 bg-rose-50 text-rose-700'
@@ -2344,7 +2410,7 @@ export default function SendUsdt({ params }: any) {
               </div>
             )}
 
-            <div className="mt-5 flex items-center gap-2">
+            <div className="mt-5 flex items-center gap-2.5">
               <button
                 type="button"
                 disabled={transferModalPhase === 'processing'}
@@ -2353,7 +2419,7 @@ export default function SendUsdt({ params }: any) {
                   setTransferModalPhase('confirm');
                   setTransferResult({ ok: false, message: '' });
                 }}
-                className={`flex-1 rounded-md border px-4 py-2 text-sm font-medium transition ${
+                className={`flex-1 rounded-2xl border px-4 py-3 text-[17px] font-bold transition ${
                   transferModalPhase === 'processing'
                     ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'
@@ -2378,7 +2444,7 @@ export default function SendUsdt({ params }: any) {
                     }
                     setTransferModalPhase('result');
                   }}
-                  className="flex-1 rounded-md border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                  className="flex-1 rounded-2xl border border-slate-900 bg-slate-900 px-4 py-3 text-[17px] font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
                 >
                   확인 후 전송
                 </button>
@@ -2387,7 +2453,7 @@ export default function SendUsdt({ params }: any) {
                 <button
                   type="button"
                   disabled
-                  className="flex-1 rounded-md border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-400"
+                  className="flex-1 rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-[17px] font-bold text-slate-400"
                 >
                   전송 중...
                 </button>
@@ -2400,7 +2466,7 @@ export default function SendUsdt({ params }: any) {
                     setTransferModalPhase('confirm');
                     setTransferResult({ ok: false, message: '' });
                   }}
-                  className="flex-1 rounded-md border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+                  className="flex-1 rounded-2xl border border-slate-900 bg-slate-900 px-4 py-3 text-[17px] font-extrabold text-white transition hover:bg-slate-800"
                 >
                   확인
                 </button>

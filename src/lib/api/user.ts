@@ -1092,7 +1092,6 @@ export async function searchUsersByNickname(
         email: 1,
         nickname: 1,
         avatar: 1,
-        mobile: 1,
         walletAddress: 1,
         createdAt: 1,
         settlementAmountOfFee: 1,

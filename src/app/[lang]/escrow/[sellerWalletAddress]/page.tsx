@@ -379,7 +379,9 @@ const formatShortWalletAddress = (value?: string | null) => {
   return `${wallet.substring(0, 6)}...${wallet.substring(wallet.length - 4)}`;
 };
 
-const URL_TOKEN_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+const LINKABLE_TOKEN_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
+const URL_ONLY_REGEX = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/i;
+const EMAIL_ONLY_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
 const splitTrailingPunctuation = (value: string) => {
   const match = value.match(/([),.;!?]+)$/);
@@ -400,26 +402,28 @@ const renderTextWithAutoLinks = (text?: string | null): ReactNode => {
   const lines = text.split(/\r?\n/);
 
   return lines.map((line, lineIndex) => {
-    const tokens = line.split(URL_TOKEN_REGEX);
+    const tokens = line.split(LINKABLE_TOKEN_REGEX);
 
     return (
       <span key={`line-${lineIndex}`}>
         {tokens.map((token, tokenIndex) => {
-          const isUrl = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/i.test(token);
+          const { core, trailing } = splitTrailingPunctuation(token);
+          const isUrl = URL_ONLY_REGEX.test(core);
+          const isEmail = EMAIL_ONLY_REGEX.test(core);
 
-          if (!isUrl) {
+          if (!isUrl && !isEmail) {
             return <span key={`text-${lineIndex}-${tokenIndex}`}>{token}</span>;
           }
 
-          const { core, trailing } = splitTrailingPunctuation(token);
-          const href = /^https?:\/\//i.test(core) ? core : `https://${core}`;
+          const href = isEmail
+            ? `mailto:${core}`
+            : (/^https?:\/\//i.test(core) ? core : `https://${core}`);
 
           return (
             <span key={`link-${lineIndex}-${tokenIndex}`}>
               <a
                 href={href}
-                target="_blank"
-                rel="noreferrer"
+                {...(!isEmail ? { target: "_blank", rel: "noreferrer" } : {})}
                 className="font-bold underline decoration-emerald-500/70 underline-offset-2 break-all hover:text-emerald-900"
               >
                 {core}
