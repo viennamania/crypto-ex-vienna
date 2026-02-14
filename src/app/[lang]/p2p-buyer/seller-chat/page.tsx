@@ -208,11 +208,6 @@ export default function SellerChatPage() {
   const [showCancelWarningModal, setShowCancelWarningModal] = useState(false);
   const [buyStatus, setBuyStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [buyStatusMessage, setBuyStatusMessage] = useState('');
-  const [recentOrderInfo, setRecentOrderInfo] = useState<{
-    usdtAmount: number;
-    krwAmount: number;
-    createdAt: string;
-  } | null>(null);
   const [marketPrice, setMarketPrice] = useState<number | null>(null);
   const [marketUpdatedAt, setMarketUpdatedAt] = useState<string | null>(null);
   const promoSentRef = useRef(new Set<string>());
@@ -447,18 +442,12 @@ export default function SellerChatPage() {
       setBuyStatusMessage('구매 주문이 생성되었습니다.');
       setBuyUsdtInput('');
       setBuyKrwInput('');
-      setRecentOrderInfo({
-        usdtAmount: derivedUsdt,
-        krwAmount: derivedKrw,
-        createdAt: new Date().toISOString(),
-      });
       fetchSellerProfile();
       fetchBuyerSellerTradeStatus({ showLoading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : '구매 주문 생성에 실패했습니다.';
       setBuyStatus('error');
       setBuyStatusMessage(message);
-      setRecentOrderInfo(null);
     } finally {
       setBuying(false);
     }
@@ -509,7 +498,6 @@ export default function SellerChatPage() {
       });
       setBuyStatus('idle');
       setBuyStatusMessage('');
-      setRecentOrderInfo(null);
       setShowCancelWarningModal(false);
       fetchSellerProfile({ showLoading: false });
       fetchBuyerSellerTradeStatus({ showLoading: false });
@@ -1779,20 +1767,15 @@ export default function SellerChatPage() {
                                 판매자 가격 정보를 불러오지 못했습니다.
                               </p>
                             )}
-                            {buyStatus !== 'idle' && (
+                            {buyStatus !== 'idle' && buyStatus !== 'success' && (
                               <div
                                 className={`mt-3 rounded-2xl border px-3 py-3 text-xs font-semibold ${
-                                  buyStatus === 'success'
-                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                    : buyStatus === 'error'
-                                      ? 'border-rose-200 bg-rose-50 text-rose-700'
-                                      : 'border-slate-200 bg-slate-50 text-slate-600'
+                                  buyStatus === 'error'
+                                    ? 'border-rose-200 bg-rose-50 text-rose-700'
+                                    : 'border-slate-200 bg-slate-50 text-slate-600'
                                 }`}
                               >
                                 <div className="flex items-center gap-2 text-sm">
-                                  {buyStatus === 'success' && (
-                                    <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.14)]" />
-                                  )}
                                   {buyStatus === 'error' && (
                                     <span className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_0_6px_rgba(244,63,94,0.14)]" />
                                   )}
@@ -1801,44 +1784,6 @@ export default function SellerChatPage() {
                                   )}
                                   <span>{buyStatusMessage}</span>
                                 </div>
-                                {buyStatus === 'success' && recentOrderInfo && (
-                                  <div className="mt-2">
-                                    <div className="grid grid-cols-2 gap-2 text-[11px] font-medium">
-                                      <div className="rounded-xl bg-white/70 px-3 py-2 text-slate-700 ring-1 ring-emerald-100">
-                                        <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
-                                          주문 상태
-                                        </p>
-                                        <p className="mt-1 text-sm font-semibold text-emerald-700">
-                                          입금요청
-                                        </p>
-                                      </div>
-                                      <div className="rounded-xl bg-white/70 px-3 py-2 text-slate-700 ring-1 ring-emerald-100">
-                                        <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
-                                          주문 금액
-                                        </p>
-                                        <p className="mt-1 text-sm font-semibold text-slate-900">
-                                          {formatNumber(recentOrderInfo.krwAmount, 0)} KRW /{' '}
-                                          {formatNumberFixed(recentOrderInfo.usdtAmount, 3)} USDT
-                                        </p>
-                                        <p className="text-[10px] text-slate-500">
-                                          생성 {formatUpdatedTime(recentOrderInfo.createdAt)}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    {canCancelCurrentBuyOrder && (
-                                      <div className="mt-3 flex justify-end">
-                                        <button
-                                          type="button"
-                                          onClick={openCancelBuyOrderModal}
-                                          disabled={cancelingBuyOrder}
-                                          className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                        >
-                                          {cancelingBuyOrder ? '구매 주문 취소 중...' : '구매 주문 취소하기'}
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
                               </div>
                             )}
                           </div>

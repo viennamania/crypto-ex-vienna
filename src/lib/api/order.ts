@@ -9607,14 +9607,6 @@ export async function acceptBuyOrderPrivateSale(
       return false;
     }
 
-    // if seller.buyOrder.status is 'accepted' or 'paymentRequested', return false
-    if (seller.seller.buyOrder &&
-        (seller.seller.buyOrder.status === 'accepted' ||
-         seller.seller.buyOrder.status === 'paymentRequested')) {
-      console.log('acceptBuyOrderPrivateSale: seller already has an active buy order for walletAddress: ' + sellerWalletAddress);
-      return false;
-    }
-
     const usdtToKrwRate = seller.seller.usdtToKrwRate || 1;
     const sellerEscrowWalletAddress = seller.seller.escrowWalletAddress || '';
 
