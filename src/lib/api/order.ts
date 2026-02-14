@@ -2,6 +2,16 @@ import { use } from 'react';
 import clientPromise from '../mongodb';
 
 import { dbName } from '../mongodb';
+import { createThirdwebClient, Engine, getContract } from 'thirdweb';
+import { transfer } from 'thirdweb/extensions/erc20';
+import { ethereum, polygon, arbitrum, bsc } from 'thirdweb/chains';
+import {
+  chain as configuredChain,
+  ethereumContractAddressUSDT,
+  polygonContractAddressUSDT,
+  arbitrumContractAddressUSDT,
+  bscContractAddressUSDT,
+} from '@/app/config/contractAddresses';
 
 
 // object id
@@ -83,6 +93,79 @@ export interface ResultProps {
   totalCount: number;
   orders: UserProps[];
 }
+
+const resolveEngineWalletAddress = (createdWallet: any): string => {
+  const candidates = [
+    createdWallet?.smartAccountAddress,
+    createdWallet?.address,
+    createdWallet?.walletAddress,
+    createdWallet?.serverWalletAddress,
+    createdWallet?.account?.address,
+  ];
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+};
+
+const resolveSellerEscrowWalletAddress = (orderLike: any): string => {
+  const candidates = [
+    orderLike?.seller?.escrowWalletAddress,
+    orderLike?.seller?.walletAddress,
+  ];
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+};
+
+const resolveBuyerEscrowWalletAddress = (orderLike: any): string => {
+  const candidates = [
+    orderLike?.buyer?.escrowWalletAddress,
+    orderLike?.escrowWallet?.address,
+  ];
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+};
+
+const waitMs = async (ms: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+const resolveUsdtTransferConfig = () => {
+  const currentChain = String(configuredChain || process.env.NEXT_PUBLIC_CHAIN || 'polygon').toLowerCase();
+  if (currentChain === 'ethereum') {
+    return {
+      chain: ethereum,
+      contractAddress: ethereumContractAddressUSDT,
+    };
+  }
+  if (currentChain === 'arbitrum') {
+    return {
+      chain: arbitrum,
+      contractAddress: arbitrumContractAddressUSDT,
+    };
+  }
+  if (currentChain === 'bsc') {
+    return {
+      chain: bsc,
+      contractAddress: bscContractAddressUSDT,
+    };
+  }
+  return {
+    chain: polygon,
+    contractAddress: polygonContractAddressUSDT,
+  };
+};
 
 
 
@@ -729,13 +812,16 @@ export async function cancelBuyOrderByAdmin(
 
 
   // seller user update
-  await userCollection.updateOne(
-    {'seller.escrowWalletAddress': order.seller.walletAddress },
-    { $set: {
-      'seller.buyOrder.status': 'cancelled',
-      'seller.buyOrder.cancelledAt': new Date().toISOString(),
-    } }
-  );
+  const sellerEscrowWalletAddress = resolveSellerEscrowWalletAddress(order);
+  if (sellerEscrowWalletAddress) {
+    await userCollection.updateOne(
+      { 'seller.escrowWalletAddress': sellerEscrowWalletAddress },
+      { $set: {
+        'seller.buyOrder.status': 'cancelled',
+        'seller.buyOrder.cancelledAt': new Date().toISOString(),
+      } }
+    );
+  }
 
 
 
@@ -3283,14 +3369,14 @@ export async function cancelPrivateBuyOrderByBuyer(
   }: {
     orderId: string;
     buyerWalletAddress: string;
-    sellerWalletAddress: string;
+    sellerWalletAddress?: string;
   }
 ): Promise<boolean> {
   if (!ObjectId.isValid(orderId)) {
     return false;
   }
 
-  if (!buyerWalletAddress || !sellerWalletAddress) {
+  if (!buyerWalletAddress) {
     return false;
   }
 
@@ -3301,7 +3387,7 @@ export async function cancelPrivateBuyOrderByBuyer(
 
   const order = await buyordersCollection.findOne<any>(
     { _id: objectId },
-    { projection: { walletAddress: 1, buyer: 1, privateSale: 1, status: 1 } },
+    { projection: { walletAddress: 1, buyer: 1, seller: 1, usdtAmount: 1, privateSale: 1, status: 1 } },
   );
 
   if (!order || order.privateSale !== true) {
@@ -3320,12 +3406,116 @@ export async function cancelPrivateBuyOrderByBuyer(
     return false;
   }
 
+  const buyerEscrowWalletAddress = resolveBuyerEscrowWalletAddress(order);
+  const sellerEscrowWalletAddress = resolveSellerEscrowWalletAddress(order);
+
+  if (!buyerEscrowWalletAddress || !sellerEscrowWalletAddress) {
+    console.error('cancelPrivateBuyOrderByBuyer: escrow wallet address missing', {
+      buyerEscrowWalletAddress,
+      sellerEscrowWalletAddress,
+    });
+    return false;
+  }
+
+  const normalizedUsdtAmount = Math.floor(Number(order?.usdtAmount || 0) * 1000) / 1000;
+  if (!Number.isFinite(normalizedUsdtAmount) || normalizedUsdtAmount <= 0) {
+    console.error('cancelPrivateBuyOrderByBuyer: invalid usdt amount', order?.usdtAmount);
+    return false;
+  }
+
+  const thirdwebSecretKey = process.env.THIRDWEB_SECRET_KEY || '';
+  if (!thirdwebSecretKey) {
+    console.error('cancelPrivateBuyOrderByBuyer: THIRDWEB_SECRET_KEY is missing');
+    return false;
+  }
+
+  const thirdwebClient = createThirdwebClient({ secretKey: thirdwebSecretKey });
+  let rollbackTransactionHash = '';
+  try {
+    const transferConfig = resolveUsdtTransferConfig();
+    const usdtContract = getContract({
+      client: thirdwebClient,
+      chain: transferConfig.chain,
+      address: transferConfig.contractAddress,
+    });
+
+    const buyerEscrowWallet = Engine.serverWallet({
+      client: thirdwebClient,
+      address: buyerEscrowWalletAddress,
+      chain: transferConfig.chain,
+    });
+
+    const rollbackTransaction = transfer({
+      contract: usdtContract,
+      to: sellerEscrowWalletAddress,
+      amount: normalizedUsdtAmount,
+    });
+
+    const { transactionId } = await buyerEscrowWallet.enqueueTransaction({
+      transaction: rollbackTransaction,
+    });
+
+    const hashResult = await Engine.waitForTransactionHash({
+      client: thirdwebClient,
+      transactionId,
+      timeoutInSeconds: 90,
+    });
+    const txHash = typeof hashResult?.transactionHash === 'string' ? hashResult.transactionHash : '';
+    if (!txHash) {
+      throw new Error('empty rollback transaction hash');
+    }
+
+    let transferConfirmed = false;
+    for (let i = 0; i < 25; i += 1) {
+      const txStatus = await Engine.getTransactionStatus({
+        client: thirdwebClient,
+        transactionId,
+      });
+
+      if (txStatus.status === 'FAILED') {
+        throw new Error(txStatus.error || 'rollback transfer failed');
+      }
+
+      if (txStatus.status === 'CONFIRMED') {
+        if (txStatus.onchainStatus !== 'SUCCESS') {
+          throw new Error(`rollback transfer reverted: ${txStatus.onchainStatus}`);
+        }
+        rollbackTransactionHash =
+          typeof txStatus.transactionHash === 'string' && txStatus.transactionHash
+            ? txStatus.transactionHash
+            : txHash;
+        transferConfirmed = true;
+        break;
+      }
+
+      await waitMs(1500);
+    }
+
+    if (!transferConfirmed) {
+      throw new Error('rollback transfer confirmation timeout');
+    }
+  } catch (error) {
+    console.error('cancelPrivateBuyOrderByBuyer: rollback transfer failed', error);
+    return false;
+  }
+
   const now = new Date().toISOString();
+  const buyerWalletCandidates = Array.from(
+    new Set([
+      String(buyerWalletAddress).trim(),
+      String(buyerWalletAddress).trim().toLowerCase(),
+      String(buyerWalletAddress).trim().toUpperCase(),
+    ]),
+  );
   const cancelResult = await buyordersCollection.updateOne(
     {
       _id: objectId,
+      privateSale: true,
       status: 'paymentRequested',
-      walletAddress: order.walletAddress,
+      $or: [
+        { walletAddress: { $in: buyerWalletCandidates } },
+        { 'buyer.walletAddress': { $in: buyerWalletCandidates } },
+      ],
     },
     {
       $set: {
@@ -3333,6 +3523,8 @@ export async function cancelPrivateBuyOrderByBuyer(
         cancelledAt: now,
         cancelTradeReason: '구매자 요청 취소',
         canceller: 'buyer',
+        'buyer.rollbackTransactionHash': rollbackTransactionHash,
+        'seller.rollbackTransactionHash': rollbackTransactionHash,
       },
     },
   );
@@ -3341,30 +3533,426 @@ export async function cancelPrivateBuyOrderByBuyer(
     return false;
   }
 
-  await usersCollection.updateOne(
-    {
-      walletAddress: sellerWalletAddress,
-      storecode: 'admin',
-      'seller.buyOrder._id': objectId,
-    },
-    {
-      $set: {
-        'seller.buyOrder.status': 'cancelled',
-        'seller.buyOrder.cancelledAt': now,
-        'seller.buyOrder.cancelTradeReason': '구매자 요청 취소',
-      },
-    },
+  const sellerWalletCandidates = Array.from(
+    new Set(
+      [
+        typeof sellerWalletAddress === 'string' ? sellerWalletAddress.trim() : '',
+        typeof order?.seller?.walletAddress === 'string' ? order.seller.walletAddress.trim() : '',
+      ].filter(Boolean),
+    ),
   );
+
+  if (sellerWalletCandidates.length > 0) {
+    await usersCollection.updateOne(
+      {
+        walletAddress: { $in: sellerWalletCandidates },
+        storecode: 'admin',
+        'seller.buyOrder._id': objectId,
+      },
+      {
+        $set: {
+          'seller.buyOrder.status': 'cancelled',
+          'seller.buyOrder.cancelledAt': now,
+          'seller.buyOrder.cancelTradeReason': '구매자 요청 취소',
+          'seller.buyOrder.buyer.rollbackTransactionHash': rollbackTransactionHash,
+          'seller.buyOrder.seller.rollbackTransactionHash': rollbackTransactionHash,
+        },
+      },
+    );
+  }
 
   await usersCollection.updateOne(
     {
-      walletAddress: order.walletAddress,
+      walletAddress: orderBuyerWalletAddress,
       storecode: 'admin',
     },
     { $set: { 'buyer.buyOrderStatus': 'cancelled' } },
   );
 
   return true;
+}
+
+export async function completePrivateBuyOrderBySeller(
+  {
+    orderId,
+    sellerWalletAddress,
+  }: {
+    orderId: string;
+    sellerWalletAddress: string;
+  },
+): Promise<{
+  success: boolean;
+  transactionHash?: string;
+  paymentConfirmedAt?: string;
+  error?: string;
+}> {
+  if (!ObjectId.isValid(orderId)) {
+    return { success: false, error: 'INVALID_ORDER_ID' };
+  }
+
+  if (!sellerWalletAddress || !sellerWalletAddress.trim()) {
+    return { success: false, error: 'INVALID_SELLER_WALLET_ADDRESS' };
+  }
+
+  const toWalletCandidates = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return [] as string[];
+    return Array.from(new Set([trimmed, trimmed.toLowerCase(), trimmed.toUpperCase()]));
+  };
+
+  const client = await clientPromise;
+  const buyordersCollection = client.db(dbName).collection('buyorders');
+  const usersCollection = client.db(dbName).collection('users');
+  const objectId = new ObjectId(orderId);
+
+  const order = await buyordersCollection.findOne<any>(
+    { _id: objectId },
+    {
+      projection: {
+        privateSale: 1,
+        status: 1,
+        usdtAmount: 1,
+        walletAddress: 1,
+        buyer: 1,
+        seller: 1,
+      },
+    },
+  );
+
+  if (!order || order.privateSale !== true) {
+    return { success: false, error: 'ORDER_NOT_FOUND' };
+  }
+
+  if (order.status !== 'paymentRequested') {
+    return { success: false, error: 'INVALID_ORDER_STATUS' };
+  }
+
+  const sellerWalletCandidates = toWalletCandidates(sellerWalletAddress);
+  const orderSellerWalletCandidates = toWalletCandidates(
+    typeof order?.seller?.walletAddress === 'string' ? order.seller.walletAddress : '',
+  );
+
+  const sellerMatched = orderSellerWalletCandidates.some((candidate) =>
+    sellerWalletCandidates.includes(candidate),
+  );
+  if (!sellerMatched) {
+    return { success: false, error: 'SELLER_MISMATCH' };
+  }
+
+  const buyerEscrowWalletAddress = resolveBuyerEscrowWalletAddress(order);
+  const orderBuyerWalletAddress =
+    (typeof order?.buyer?.walletAddress === 'string' && order.buyer.walletAddress.trim())
+    || (typeof order?.walletAddress === 'string' ? order.walletAddress.trim() : '');
+
+  if (!buyerEscrowWalletAddress || !orderBuyerWalletAddress) {
+    console.error('completePrivateBuyOrderBySeller: wallet address missing', {
+      buyerEscrowWalletAddress,
+      orderBuyerWalletAddress,
+    });
+    return { success: false, error: 'WALLET_ADDRESS_MISSING' };
+  }
+
+  const normalizedUsdtAmount = Math.floor(Number(order?.usdtAmount || 0) * 1000) / 1000;
+  if (!Number.isFinite(normalizedUsdtAmount) || normalizedUsdtAmount <= 0) {
+    console.error('completePrivateBuyOrderBySeller: invalid usdt amount', order?.usdtAmount);
+    return { success: false, error: 'INVALID_USDT_AMOUNT' };
+  }
+
+  const thirdwebSecretKey = process.env.THIRDWEB_SECRET_KEY || '';
+  if (!thirdwebSecretKey) {
+    console.error('completePrivateBuyOrderBySeller: THIRDWEB_SECRET_KEY is missing');
+    return { success: false, error: 'THIRDWEB_SECRET_KEY_MISSING' };
+  }
+
+  const thirdwebClient = createThirdwebClient({ secretKey: thirdwebSecretKey });
+  let releaseTransactionHash = '';
+  try {
+    const transferConfig = resolveUsdtTransferConfig();
+    const usdtContract = getContract({
+      client: thirdwebClient,
+      chain: transferConfig.chain,
+      address: transferConfig.contractAddress,
+    });
+
+    const buyerEscrowWallet = Engine.serverWallet({
+      client: thirdwebClient,
+      address: buyerEscrowWalletAddress,
+      chain: transferConfig.chain,
+    });
+
+    const releaseTransaction = transfer({
+      contract: usdtContract,
+      to: orderBuyerWalletAddress,
+      amount: normalizedUsdtAmount,
+    });
+
+    const { transactionId } = await buyerEscrowWallet.enqueueTransaction({
+      transaction: releaseTransaction,
+    });
+
+    const hashResult = await Engine.waitForTransactionHash({
+      client: thirdwebClient,
+      transactionId,
+      timeoutInSeconds: 90,
+    });
+    const txHash = typeof hashResult?.transactionHash === 'string' ? hashResult.transactionHash : '';
+    if (!txHash) {
+      throw new Error('empty release transaction hash');
+    }
+
+    let transferConfirmed = false;
+    for (let i = 0; i < 25; i += 1) {
+      const txStatus = await Engine.getTransactionStatus({
+        client: thirdwebClient,
+        transactionId,
+      });
+
+      if (txStatus.status === 'FAILED') {
+        throw new Error(txStatus.error || 'release transfer failed');
+      }
+
+      if (txStatus.status === 'CONFIRMED') {
+        if (txStatus.onchainStatus !== 'SUCCESS') {
+          throw new Error(`release transfer reverted: ${txStatus.onchainStatus}`);
+        }
+        releaseTransactionHash =
+          typeof txStatus.transactionHash === 'string' && txStatus.transactionHash
+            ? txStatus.transactionHash
+            : txHash;
+        transferConfirmed = true;
+        break;
+      }
+
+      await waitMs(1500);
+    }
+
+    if (!transferConfirmed) {
+      throw new Error('release transfer confirmation timeout');
+    }
+  } catch (error) {
+    console.error('completePrivateBuyOrderBySeller: release transfer failed', error);
+    return { success: false, error: 'TRANSFER_FAILED' };
+  }
+
+  const now = new Date().toISOString();
+  const completeResult = await buyordersCollection.updateOne(
+    {
+      _id: objectId,
+      privateSale: true,
+      status: 'paymentRequested',
+      $or: [
+        { 'seller.walletAddress': { $in: sellerWalletCandidates } },
+        { sellerWalletAddress: { $in: sellerWalletCandidates } },
+      ],
+    },
+    {
+      $set: {
+        status: 'paymentConfirmed',
+        paymentConfirmedAt: now,
+        transactionHash: releaseTransactionHash,
+        'buyer.releaseTransactionHash': releaseTransactionHash,
+        'seller.releaseTransactionHash': releaseTransactionHash,
+      },
+    },
+  );
+
+  if (completeResult.modifiedCount !== 1) {
+    return { success: false, error: 'FAILED_TO_UPDATE_ORDER' };
+  }
+
+  await usersCollection.updateOne(
+    {
+      walletAddress: { $in: sellerWalletCandidates },
+      storecode: 'admin',
+      'seller.buyOrder._id': objectId,
+    },
+    {
+      $set: {
+        'seller.buyOrder.status': 'paymentConfirmed',
+        'seller.buyOrder.paymentConfirmedAt': now,
+        'seller.buyOrder.transactionHash': releaseTransactionHash,
+        'seller.buyOrder.buyer.releaseTransactionHash': releaseTransactionHash,
+        'seller.buyOrder.seller.releaseTransactionHash': releaseTransactionHash,
+      },
+    },
+  );
+
+  const buyerWalletCandidates = toWalletCandidates(orderBuyerWalletAddress);
+  if (buyerWalletCandidates.length > 0) {
+    await usersCollection.updateOne(
+      {
+        walletAddress: { $in: buyerWalletCandidates },
+        storecode: 'admin',
+      },
+      {
+        $set: {
+          'buyer.buyOrderStatus': 'paymentConfirmed',
+          buyOrderStatus: 'paymentConfirmed',
+        },
+      },
+    );
+  }
+
+  return {
+    success: true,
+    transactionHash: releaseTransactionHash,
+    paymentConfirmedAt: now,
+  };
+}
+
+// get current private trade status between buyer and seller
+export async function getPrivateTradeStatusByBuyerAndSeller(
+  {
+    buyerWalletAddress,
+    sellerWalletAddress,
+  }: {
+    buyerWalletAddress: string;
+    sellerWalletAddress: string;
+  }
+): Promise<{
+  isTrading: boolean;
+  status: string | null;
+  order: {
+    orderId: string;
+    tradeId: string;
+    status: string;
+    createdAt: string;
+    acceptedAt: string;
+    paymentRequestedAt: string;
+    paymentConfirmedAt: string;
+    cancelledAt: string;
+    krwAmount: number;
+    usdtAmount: number;
+    buyerWalletAddress: string;
+    sellerWalletAddress: string;
+  } | null;
+}> {
+  const emptyResult = {
+    isTrading: false,
+    status: null,
+    order: null,
+  };
+
+  if (!buyerWalletAddress || !sellerWalletAddress) {
+    return emptyResult;
+  }
+
+  const toWalletCandidates = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    return Array.from(new Set([trimmed, trimmed.toLowerCase(), trimmed.toUpperCase()]));
+  };
+
+  try {
+    const client = await clientPromise;
+    const usersCollection = client.db(dbName).collection('users');
+    const buyordersCollection = client.db(dbName).collection('buyorders');
+
+    const buyerWalletCandidates = toWalletCandidates(buyerWalletAddress);
+    const inputSellerWalletCandidates = toWalletCandidates(sellerWalletAddress);
+
+    const sellerUser = await usersCollection.findOne<any>(
+      {
+        storecode: 'admin',
+        walletAddress: { $in: inputSellerWalletCandidates },
+      },
+      {
+        projection: {
+          'seller.escrowWalletAddress': 1,
+        },
+        maxTimeMS: 2500,
+      },
+    );
+
+    const sellerWalletCandidates = new Set<string>(inputSellerWalletCandidates);
+    if (typeof sellerUser?.seller?.escrowWalletAddress === 'string' && sellerUser.seller.escrowWalletAddress.trim()) {
+      for (const candidate of toWalletCandidates(sellerUser.seller.escrowWalletAddress)) {
+        sellerWalletCandidates.add(candidate);
+      }
+    }
+
+    const sellerWalletInOrder = Array.from(sellerWalletCandidates);
+    const tradableStatuses = ['ordered', 'accepted', 'paymentRequested'];
+    const projection = {
+      _id: 1,
+      tradeId: 1,
+      status: 1,
+      createdAt: 1,
+      acceptedAt: 1,
+      paymentRequestedAt: 1,
+      paymentConfirmedAt: 1,
+      cancelledAt: 1,
+      krwAmount: 1,
+      usdtAmount: 1,
+      walletAddress: 1,
+      buyer: 1,
+      seller: 1,
+    };
+
+    const baseMatch = {
+      privateSale: true,
+      $and: [
+        {
+          $or: [
+            { walletAddress: { $in: buyerWalletCandidates } },
+            { 'buyer.walletAddress': { $in: buyerWalletCandidates } },
+          ],
+        },
+        {
+          $or: [
+            { 'seller.walletAddress': { $in: sellerWalletInOrder } },
+            { sellerWalletAddress: { $in: sellerWalletInOrder } },
+          ],
+        },
+      ],
+    };
+
+    const order = await buyordersCollection.findOne<any>(
+      {
+        ...baseMatch,
+        status: { $in: tradableStatuses },
+      },
+      {
+        sort: { createdAt: -1 },
+        projection,
+        maxTimeMS: 3500,
+      },
+    );
+
+    if (!order) {
+      return emptyResult;
+    }
+
+    const status = typeof order?.status === 'string' ? order.status : '';
+
+    const normalizedOrder = {
+      orderId: order?._id?.toString?.() || '',
+      tradeId: typeof order?.tradeId === 'string' ? order.tradeId : '',
+      status,
+      createdAt: typeof order?.createdAt === 'string' ? order.createdAt : '',
+      acceptedAt: typeof order?.acceptedAt === 'string' ? order.acceptedAt : '',
+      paymentRequestedAt: typeof order?.paymentRequestedAt === 'string' ? order.paymentRequestedAt : '',
+      paymentConfirmedAt: typeof order?.paymentConfirmedAt === 'string' ? order.paymentConfirmedAt : '',
+      cancelledAt: typeof order?.cancelledAt === 'string' ? order.cancelledAt : '',
+      krwAmount: typeof order?.krwAmount === 'number' ? order.krwAmount : 0,
+      usdtAmount: typeof order?.usdtAmount === 'number' ? order.usdtAmount : 0,
+      buyerWalletAddress:
+        (typeof order?.buyer?.walletAddress === 'string' && order.buyer.walletAddress)
+        || (typeof order?.walletAddress === 'string' ? order.walletAddress : ''),
+      sellerWalletAddress:
+        (typeof order?.seller?.walletAddress === 'string' && order.seller.walletAddress)
+        || '',
+    };
+
+    return {
+      isTrading: true,
+      status: status || null,
+      order: normalizedOrder,
+    };
+  } catch (error) {
+    console.error('getPrivateTradeStatusByBuyerAndSeller error', error);
+    return emptyResult;
+  }
 }
 
 // get sell orders order by createdAt desc
@@ -3920,17 +4508,20 @@ export async function buyOrderRequestPayment(data: any) {
 
 
       // update seller buyOrderStatus to "paymentRequested"
-      await userCollection.updateOne(
-        {
-          'seller.escrowWalletAddress': buyOrder.seller?.walletAddress,
-        },
-        { $set: {
-          //'seller.buyOrderStatus': 'paymentRequested',
-          'seller.buyOrder' : buyOrder,
-        } }
-      ).finally(() => {
-        console.log('buyOrderRequestPayment seller buyOrderStatus updated to paymentRequested');
-      });
+      const sellerEscrowWalletAddress = resolveSellerEscrowWalletAddress(buyOrder);
+      if (sellerEscrowWalletAddress) {
+        await userCollection.updateOne(
+          {
+            'seller.escrowWalletAddress': sellerEscrowWalletAddress,
+          },
+          { $set: {
+            //'seller.buyOrderStatus': 'paymentRequested',
+            'seller.buyOrder' : buyOrder,
+          } }
+        ).finally(() => {
+          console.log('buyOrderRequestPayment seller buyOrderStatus updated to paymentRequested');
+        });
+      }
 
 
     }
@@ -4060,9 +4651,10 @@ export async function buyOrderConfirmPayment(data: any) {
       } }
     );
 
-    if (orderForSeller && orderForSeller.seller?.walletAddress) {
+    const sellerEscrowWalletAddress = resolveSellerEscrowWalletAddress(orderForSeller);
+    if (sellerEscrowWalletAddress) {
       await userCollection.updateOne(
-        { 'seller.escrowWalletAddress': orderForSeller.seller.walletAddress },
+        { 'seller.escrowWalletAddress': sellerEscrowWalletAddress },
         { $set: {
             'seller.buyOrder.status': 'paymentConfirmed',
             'seller.buyOrder.paymentConfirmedAt': new Date().toISOString(),
@@ -4159,19 +4751,21 @@ export async function buyOrderConfirmPayment(data: any) {
         ]).toArray();
 
 
-        await userCollection.updateOne(
-          {'seller.escrowWalletAddress': order.seller?.walletAddress
-          },
-          { $set: {
-              //'seller.buyOrderStatus': 'paymentConfirmed',
-              'seller.buyOrder.status': 'paymentConfirmed',
-              'seller.buyOrder.paymentConfirmedAt': new Date().toISOString(),
-              'seller.totalPaymentConfirmedCount': totalPaymentConfirmedForSeller[0]?.totalPaymentConfirmedCount || 0,
-              'seller.totalPaymentConfirmedKrwAmount': totalPaymentConfirmedForSeller[0]?.totalKrwAmount || 0,
-              'seller.totalPaymentConfirmedUsdtAmount': totalPaymentConfirmedForSeller[0]?.totalUsdtAmount || 0,
+        const sellerEscrowWalletAddress = resolveSellerEscrowWalletAddress(order);
+        if (sellerEscrowWalletAddress) {
+          await userCollection.updateOne(
+            { 'seller.escrowWalletAddress': sellerEscrowWalletAddress },
+            { $set: {
+                //'seller.buyOrderStatus': 'paymentConfirmed',
+                'seller.buyOrder.status': 'paymentConfirmed',
+                'seller.buyOrder.paymentConfirmedAt': new Date().toISOString(),
+                'seller.totalPaymentConfirmedCount': totalPaymentConfirmedForSeller[0]?.totalPaymentConfirmedCount || 0,
+                'seller.totalPaymentConfirmedKrwAmount': totalPaymentConfirmedForSeller[0]?.totalKrwAmount || 0,
+                'seller.totalPaymentConfirmedUsdtAmount': totalPaymentConfirmedForSeller[0]?.totalUsdtAmount || 0,
+              }
             }
-          }
-        );
+          );
+        }
 
 
 
@@ -4526,16 +5120,19 @@ export async function cancelTradeBySeller(
 
 
     // update user.seller.buyOrder.status to 'cancelled'
-    await userCollection.updateOne(
-      {
-        'seller.escrowWalletAddress': order.seller?.walletAddress
-      },
-      { $set: {
-          //'seller.buyOrderStatus': 'cancelled',
-          'seller.buyOrder.status': 'cancelled',
-          'seller.buyOrder.cancelledAt': new Date().toISOString(),
-        } }
-    );
+    const sellerEscrowWalletAddress = resolveSellerEscrowWalletAddress(order);
+    if (sellerEscrowWalletAddress) {
+      await userCollection.updateOne(
+        {
+          'seller.escrowWalletAddress': sellerEscrowWalletAddress
+        },
+        { $set: {
+            //'seller.buyOrderStatus': 'cancelled',
+            'seller.buyOrder.status': 'cancelled',
+            'seller.buyOrder.cancelledAt': new Date().toISOString(),
+          } }
+      );
+    }
 
 
 
@@ -4941,7 +5538,12 @@ const maskBuyerInfoForOrder = (order: any) => {
     ? { ...nextOrder.buyer }
     : {};
 
-  const baseName = nextOrder?.nickname || nextBuyer?.nickname || nextBuyer?.depositName || '구매자';
+  const baseName = nextOrder?.nickname
+    || nextBuyer?.nickname
+    || nextBuyer?.bankInfo?.depositName
+    || nextBuyer?.depositName
+    || nextBuyer?.bankInfo?.accountHolder
+    || '구매자';
   const maskedName = maskPersonName(baseName);
 
   nextOrder.nickname = maskedName;
@@ -4962,6 +5564,19 @@ const maskBuyerInfoForOrder = (order: any) => {
   if (nextBuyer?.depositBanktAccountNumber) {
     nextBuyer.depositBanktAccountNumber = maskBankAccountNumber(nextBuyer.depositBanktAccountNumber);
   }
+  if (nextBuyer?.bankInfo && typeof nextBuyer.bankInfo === 'object') {
+    const nextBankInfo = { ...nextBuyer.bankInfo };
+    if (nextBankInfo?.depositName) {
+      nextBankInfo.depositName = maskPersonName(nextBankInfo.depositName);
+    }
+    if (nextBankInfo?.accountHolder) {
+      nextBankInfo.accountHolder = maskPersonName(nextBankInfo.accountHolder);
+    }
+    if (nextBankInfo?.accountNumber) {
+      nextBankInfo.accountNumber = maskBankAccountNumber(nextBankInfo.accountNumber);
+    }
+    nextBuyer.bankInfo = nextBankInfo;
+  }
 
   nextOrder.buyer = nextBuyer;
   nextOrder.buyerInfoMasked = true;
@@ -4977,6 +5592,7 @@ export async function getAllBuyOrdersBySellerEscrowWallet(
     endDate,
     walletAddress,
     requesterWalletAddress,
+    status,
   }: {
     limit: number;
     page: number;
@@ -4984,6 +5600,7 @@ export async function getAllBuyOrdersBySellerEscrowWallet(
     endDate?: string;
     walletAddress: string;
     requesterWalletAddress?: string;
+    status?: string | string[];
   }
 ): Promise<any> {
   const client = await clientPromise;
@@ -5019,6 +5636,14 @@ export async function getAllBuyOrdersBySellerEscrowWallet(
       { 'seller.escrowWalletAddress': walletAddressRegex },
     ],
   };
+  if (Array.isArray(status) && status.length > 0) {
+    const validStatuses = status.filter((item) => typeof item === 'string' && item.trim());
+    if (validStatuses.length > 0) {
+      matchQuery.status = { $in: validStatuses };
+    }
+  } else if (typeof status === 'string' && status.trim()) {
+    matchQuery.status = status.trim();
+  }
   if (Object.keys(createdAtFilter).length > 0) {
     matchQuery.createdAt = createdAtFilter;
   }
@@ -8902,12 +9527,15 @@ export async function buyOrderConfirmPaymentCompleted(data: any) {
 
       // update user.seller.buyOrder.transactionHash
       const userCollection = client.db(dbName).collection('users');
-      await userCollection.updateOne(
-        { 'seller.escrowWalletAddress': buyOrder.seller.walletAddress },
-        { $set: {
-            'seller.buyOrder.transactionHash': data.transactionHash,
-        } }
-      );
+      const sellerEscrowWalletAddress = resolveSellerEscrowWalletAddress(buyOrder);
+      if (sellerEscrowWalletAddress) {
+        await userCollection.updateOne(
+          { 'seller.escrowWalletAddress': sellerEscrowWalletAddress },
+          { $set: {
+              'seller.buyOrder.transactionHash': data.transactionHash,
+          } }
+        );
+      }
 
     }
   
@@ -8990,6 +9618,11 @@ export async function acceptBuyOrderPrivateSale(
     const usdtToKrwRate = seller.seller.usdtToKrwRate || 1;
     const sellerEscrowWalletAddress = seller.seller.escrowWalletAddress || '';
 
+    if (!sellerEscrowWalletAddress) {
+      console.log('acceptBuyOrderPrivateSale: seller escrow wallet is missing for walletAddress: ' + sellerWalletAddress);
+      return false;
+    }
+
 
 
     // get buyer information from users collection
@@ -9019,16 +9652,113 @@ export async function acceptBuyOrderPrivateSale(
     
     const tradeId = Math.floor(Math.random() * 900000000) + 100000000 + '';
 
-
-
+    // Keep the submitted order amounts as-is (normalized only for precision),
+    // so UI input values and persisted buyorder values stay identical.
+    const normalizedUsdtAmount = Math.floor(usdtAmount * 1000) / 1000;
     const normalizedKrwAmount =
-      typeof krwAmount === 'number' && Number.isFinite(krwAmount)
+      typeof krwAmount === 'number' && Number.isFinite(krwAmount) && krwAmount > 0
         ? Math.floor(krwAmount)
-        : Math.floor(usdtAmount * usdtToKrwRate);
-    const normalizedUsdtAmount =
-      typeof krwAmount === 'number' && krwAmount > 0 && usdtToKrwRate > 0
-        ? Math.floor((normalizedKrwAmount / usdtToKrwRate) * 100) / 100
-        : usdtAmount;
+        : Math.round(normalizedUsdtAmount * usdtToKrwRate);
+
+    if (!Number.isFinite(normalizedUsdtAmount) || normalizedUsdtAmount <= 0) {
+      console.error('acceptBuyOrderPrivateSale: invalid normalized usdt amount', normalizedUsdtAmount);
+      return false;
+    }
+
+    // create a dedicated buyer escrow smart wallet address (thirdweb server wallet)
+    const thirdwebSecretKey = process.env.THIRDWEB_SECRET_KEY || '';
+    if (!thirdwebSecretKey) {
+      console.log('acceptBuyOrderPrivateSale: THIRDWEB_SECRET_KEY is missing');
+      return false;
+    }
+
+    const thirdwebClient = createThirdwebClient({ secretKey: thirdwebSecretKey });
+
+    let buyerEscrowWalletAddress = '';
+    try {
+      const createdServerWallet = await Engine.createServerWallet({
+        client: thirdwebClient,
+        label: `private-buy-${buyerWalletAddress.slice(0, 8)}-${Date.now()}`,
+      });
+      buyerEscrowWalletAddress = resolveEngineWalletAddress(createdServerWallet);
+    } catch (error) {
+      console.error('acceptBuyOrderPrivateSale: failed to create buyer escrow wallet', error);
+      return false;
+    }
+
+    if (!buyerEscrowWalletAddress) {
+      console.error('acceptBuyOrderPrivateSale: buyer escrow wallet address is empty');
+      return false;
+    }
+
+    let escrowTransferTransactionHash = '';
+    try {
+      const transferConfig = resolveUsdtTransferConfig();
+      const usdtContract = getContract({
+        client: thirdwebClient,
+        chain: transferConfig.chain,
+        address: transferConfig.contractAddress,
+      });
+      const sellerEscrowWallet = Engine.serverWallet({
+        client: thirdwebClient,
+        address: sellerEscrowWalletAddress,
+        chain: transferConfig.chain,
+      });
+      const transferTx = transfer({
+        contract: usdtContract,
+        to: buyerEscrowWalletAddress,
+        amount: normalizedUsdtAmount,
+      });
+
+      const { transactionId } = await sellerEscrowWallet.enqueueTransaction({
+        transaction: transferTx,
+      });
+
+      const hashResult = await Engine.waitForTransactionHash({
+        client: thirdwebClient,
+        transactionId,
+        timeoutInSeconds: 90,
+      });
+      const txHash = typeof hashResult?.transactionHash === 'string' ? hashResult.transactionHash : '';
+      if (!txHash) {
+        throw new Error('empty transaction hash');
+      }
+
+      let transferConfirmed = false;
+      for (let i = 0; i < 25; i += 1) {
+        const txStatus = await Engine.getTransactionStatus({
+          client: thirdwebClient,
+          transactionId,
+        });
+
+        if (txStatus.status === 'FAILED') {
+          throw new Error(txStatus.error || 'engine transaction failed');
+        }
+
+        if (txStatus.status === 'CONFIRMED') {
+          if (txStatus.onchainStatus !== 'SUCCESS') {
+            throw new Error(`engine transaction reverted: ${txStatus.onchainStatus}`);
+          }
+          escrowTransferTransactionHash =
+            typeof txStatus.transactionHash === 'string' && txStatus.transactionHash
+              ? txStatus.transactionHash
+              : txHash;
+          transferConfirmed = true;
+          break;
+        }
+
+        await waitMs(1500);
+      }
+
+      if (!transferConfirmed) {
+        throw new Error('engine transaction confirmation timeout');
+      }
+    } catch (error) {
+      console.error('acceptBuyOrderPrivateSale: escrow transfer failed', error);
+      return false;
+    }
+
+    const nowIso = new Date().toISOString();
 
     const newBuyOrder = {
       tradeId: tradeId,
@@ -9043,18 +9773,23 @@ export async function acceptBuyOrderPrivateSale(
       storecode: 'admin',
       totalAmount: normalizedUsdtAmount,
       status: 'paymentRequested',
-      createdAt: new Date().toISOString(),
-      acceptedAt: new Date().toISOString(),
+      createdAt: nowIso,
+      acceptedAt: nowIso,
+      paymentRequestedAt: nowIso,
       buyer: {
         nickname: buyer.nickname || '',
         avatar: buyer.avatar || '',
         walletAddress: buyerWalletAddress,
+        escrowWalletAddress: buyerEscrowWalletAddress,
+        lockTransactionHash: escrowTransferTransactionHash,
         depositName: buyer.buyer.bankInfo.accountHolder,
         depositCompleted: false,
       },
       seller: {
         agentcode: seller.agentcode || '',
-        walletAddress: sellerEscrowWalletAddress,
+        walletAddress: sellerWalletAddress,
+        escrowWalletAddress: sellerEscrowWalletAddress,
+        lockTransactionHash: escrowTransferTransactionHash,
         nickname: seller.nickname || '',
         avatar: seller.avatar || '',
         storecode: seller.storecode || '',
@@ -9070,11 +9805,25 @@ export async function acceptBuyOrderPrivateSale(
       );
 
       // seller buyOrder update
-      const updateResult = await usersCollection.updateOne(
+      await usersCollection.updateOne(
         { walletAddress: sellerWalletAddress },
         { $set: {
           'seller.buyOrder': buyOrder,
         } }
+      );
+
+      // buyer buyOrderStatus update
+      await usersCollection.updateOne(
+        {
+          walletAddress: buyerWalletAddress,
+          storecode: 'admin',
+        },
+        {
+          $set: {
+            'buyer.buyOrderStatus': 'paymentRequested',
+            buyOrderStatus: 'paymentRequested',
+          },
+        },
       );
 
 

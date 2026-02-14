@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useActiveAccount, useActiveWallet } from 'thirdweb/react';
@@ -25,6 +25,7 @@ import { ConnectButton } from '@/components/OrangeXConnectButton';
 
 const NEXT_PUBLIC_SENDBIRD_APP_ID = process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
 const USER_STORECODE = 'admin';
+const TRADE_STATUS_POLL_INTERVAL_MS = 5000;
 
 const formatNumber = (value: number | undefined, digits = 2) => {
   if (typeof value !== 'number' || Number.isNaN(value)) {
@@ -32,6 +33,16 @@ const formatNumber = (value: number | undefined, digits = 2) => {
   }
   return value.toLocaleString('ko-KR', {
     minimumFractionDigits: 0,
+    maximumFractionDigits: digits,
+  });
+};
+
+const formatNumberFixed = (value: number | undefined, digits = 3) => {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return '-';
+  }
+  return value.toLocaleString('ko-KR', {
+    minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
 };
@@ -49,6 +60,13 @@ const formatUpdatedTime = (value?: string | null) => {
     minute: '2-digit',
     second: '2-digit',
   });
+};
+
+const formatCountdown = (totalSeconds: number) => {
+  const safeSeconds = Math.max(0, totalSeconds);
+  const minutes = Math.floor(safeSeconds / 60).toString().padStart(2, '0');
+  const seconds = (safeSeconds % 60).toString().padStart(2, '0');
+  return `${minutes}:${seconds}`;
 };
 
 const maskAccountNumber = (accountNumber?: string) => {
@@ -72,26 +90,6 @@ const maskWalletAddress = (addr?: string) => {
 const maskName = (name?: string) => {
   if (!name) return '-';
   return `${name.slice(0, 1)}${'*'.repeat(Math.max(1, name.length - 1))}`;
-};
-
-const getObjectIdString = (value: unknown) => {
-  if (!value) return '';
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (typeof value === 'object') {
-    const candidate = value as { $oid?: unknown; toString?: () => string };
-    if (typeof candidate.$oid === 'string') {
-      return candidate.$oid;
-    }
-    if (typeof candidate.toString === 'function') {
-      const text = candidate.toString();
-      if (text && text !== '[object Object]') {
-        return text;
-      }
-    }
-  }
-  return '';
 };
 
 const LINKABLE_TOKEN_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
@@ -156,6 +154,21 @@ const renderTextWithAutoLinks = (text?: string | null, linkClassName?: string) =
   });
 };
 
+type PrivateTradeOrder = {
+  orderId: string;
+  tradeId: string;
+  status: string;
+  createdAt: string;
+  acceptedAt: string;
+  paymentRequestedAt: string;
+  paymentConfirmedAt: string;
+  cancelledAt: string;
+  krwAmount: number;
+  usdtAmount: number;
+  buyerWalletAddress: string;
+  sellerWalletAddress: string;
+};
+
 export default function SellerChatPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -179,6 +192,9 @@ export default function SellerChatPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [buyerNickname, setBuyerNickname] = useState('');
   const [buyerAvatar, setBuyerAvatar] = useState('');
+  const [tradeStatusLoading, setTradeStatusLoading] = useState(false);
+  const [paymentCountdownNow, setPaymentCountdownNow] = useState(() => Date.now());
+  const [currentTradeOrder, setCurrentTradeOrder] = useState<PrivateTradeOrder | null>(null);
   const connectingRef = useRef(false);
   const [sellerProfile, setSellerProfile] = useState<any | null>(null);
   const [sellerEscrow, setSellerEscrow] = useState<number | null>(null);
@@ -207,8 +223,14 @@ export default function SellerChatPage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const historyContainerRef = useRef<HTMLDivElement | null>(null);
   const isMountedRef = useRef(true);
+  const sendbirdSdkInitParams = useMemo(() => ({ localCacheEnabled: false }), []);
 
-  useEffect(() => () => { isMountedRef.current = false; }, []);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const displaySellerName = sellerProfile?.nickname || sellerName;
   const isMarketPrice = sellerProfile?.seller?.priceSettingMethod === 'market';
@@ -247,16 +269,8 @@ export default function SellerChatPage() {
     sellerProfile?.seller?.priceSettingMethod === 'market'
       ? `시장가(${marketLabel})`
       : '고정가';
-  const sellerBuyOrderStatus = sellerProfile?.seller?.buyOrder?.status as string | undefined;
-  const currentBuyOrder = sellerProfile?.seller?.buyOrder;
-  const currentBuyOrderId = getObjectIdString(currentBuyOrder?._id);
-  const currentBuyerWalletAddress = String(
-    currentBuyOrder?.buyer?.walletAddress || currentBuyOrder?.walletAddress || '',
-  );
-  const isBuyerOfCurrentOrder =
-    Boolean(address)
-    && Boolean(currentBuyerWalletAddress)
-    && address.toLowerCase() === currentBuyerWalletAddress.toLowerCase();
+  const currentTradeStatus = currentTradeOrder?.status || '';
+  const currentBuyOrderId = currentTradeOrder?.orderId || '';
 
   const fetchEscrowBalanceOnChain = useCallback(
     async (wallet: string) => {
@@ -282,6 +296,7 @@ export default function SellerChatPage() {
     accepted: '주문 수락됨',
     paymentRequested: '입금 요청됨',
     paymentConfirmed: '입금 확인됨',
+    completed: '거래 완료',
     cancelled: '취소됨',
     ordered: '주문 완료',
   };
@@ -289,23 +304,60 @@ export default function SellerChatPage() {
     accepted: 'bg-amber-500 shadow-[0_0_0_6px_rgba(245,158,11,0.15)]',
     paymentRequested: 'bg-blue-500 shadow-[0_0_0_6px_rgba(59,130,246,0.15)]',
     paymentConfirmed: 'bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.15)]',
+    completed: 'bg-emerald-600 shadow-[0_0_0_6px_rgba(5,150,105,0.16)]',
     cancelled: 'bg-rose-500 shadow-[0_0_0_6px_rgba(244,63,94,0.15)]',
     ordered: 'bg-slate-500 shadow-[0_0_0_6px_rgba(100,116,139,0.15)]',
   };
-  const sellerStatusLabel =
-    (sellerBuyOrderStatus && statusLabelMap[sellerBuyOrderStatus]) || '주문 없음';
-  const sellerStatusDotClass =
-    (sellerBuyOrderStatus && statusColorMap[sellerBuyOrderStatus]) || 'bg-slate-300';
-  const sellerStatusTimestamp =
-    sellerProfile?.seller?.buyOrder?.paymentRequestedAt ||
-    sellerProfile?.seller?.buyOrder?.acceptedAt ||
-    sellerProfile?.seller?.buyOrder?.createdAt ||
+  const tradeStatusLabel =
+    (currentTradeStatus && statusLabelMap[currentTradeStatus]) || '거래가능 상태';
+  const tradeStatusDotClass =
+    (currentTradeStatus && statusColorMap[currentTradeStatus]) || 'bg-slate-300';
+  const tradeStatusTimestamp =
+    currentTradeOrder?.paymentRequestedAt ||
+    currentTradeOrder?.acceptedAt ||
+    currentTradeOrder?.createdAt ||
     '';
-  const isPaymentRequested = sellerBuyOrderStatus === 'paymentRequested';
+  const isPaymentRequested = currentTradeStatus === 'paymentRequested';
+  const isTradeInProgress = ['ordered', 'accepted', 'paymentRequested']
+    .includes(currentTradeStatus);
+  const isTradeStatusResolving = tradeStatusLoading;
+  const currentTradeDisplayOrderNo = currentTradeOrder?.tradeId || currentTradeOrder?.orderId || '';
   const canCancelCurrentBuyOrder =
-    isPaymentRequested && isBuyerOfCurrentOrder && Boolean(currentBuyOrderId);
+    isPaymentRequested && Boolean(currentBuyOrderId);
   const isContactTransfer = sellerProfile?.seller?.bankInfo?.bankName === '연락처송금';
   const contactTransferMemo = String(sellerProfile?.seller?.bankInfo?.contactMemo || '').trim();
+  const maxUsdtByEscrow =
+    typeof sellerEscrow === 'number' && Number.isFinite(sellerEscrow) && sellerEscrow > 0
+      ? Math.floor(sellerEscrow * 1000) / 1000
+      : null;
+  const PAYMENT_COUNTDOWN_MINUTES = 30;
+  const PAYMENT_COUNTDOWN_SECONDS = PAYMENT_COUNTDOWN_MINUTES * 60;
+
+  const paymentRequestedStartMs = useMemo(() => {
+    const value = currentTradeOrder?.paymentRequestedAt;
+    if (!value) {
+      return null;
+    }
+    const parsed = new Date(value).getTime();
+    if (Number.isNaN(parsed)) {
+      return null;
+    }
+    return parsed;
+  }, [currentTradeOrder?.paymentRequestedAt]);
+  const paymentDeadlineMs = paymentRequestedStartMs
+    ? paymentRequestedStartMs + (PAYMENT_COUNTDOWN_SECONDS * 1000)
+    : null;
+  const paymentCountdownSeconds = paymentDeadlineMs
+    ? Math.max(0, Math.ceil((paymentDeadlineMs - paymentCountdownNow) / 1000))
+    : null;
+  const paymentCountdownText =
+    paymentCountdownSeconds === null ? '--:--' : formatCountdown(paymentCountdownSeconds);
+  const paymentCountdownRatio =
+    paymentCountdownSeconds === null
+      ? 0
+      : Math.max(0, Math.min(1, paymentCountdownSeconds / PAYMENT_COUNTDOWN_SECONDS));
+  const isPaymentCountdownUrgent = paymentCountdownSeconds !== null && paymentCountdownSeconds <= 60;
+  const isPaymentCountdownExpired = paymentCountdownSeconds === 0;
 
   const goBuy = async () => {
     if (!isLoggedIn) {
@@ -329,9 +381,9 @@ export default function SellerChatPage() {
 
     const derivedUsdt =
       usdtRaw > 0
-        ? Math.floor(usdtRaw * 100) / 100
+        ? Math.floor(usdtRaw * 1000) / 1000
         : krwRaw > 0
-          ? Math.floor((krwRaw / effectiveRate) * 100) / 100
+          ? Math.floor((krwRaw / effectiveRate) * 1000) / 1000
           : 0;
     const derivedKrw =
       krwRaw > 0
@@ -352,6 +404,14 @@ export default function SellerChatPage() {
       return;
     }
 
+    if (maxUsdtByEscrow !== null && derivedUsdt > maxUsdtByEscrow) {
+      setBuyStatus('error');
+      setBuyStatusMessage(
+        `구매 수량은 판매자 에스크로 수량(${formatNumber(maxUsdtByEscrow, 3)} USDT)을 초과할 수 없습니다.`,
+      );
+      return;
+    }
+
     setBuying(true);
     setBuyStatus('loading');
     setBuyStatusMessage('구매 주문을 생성하는 중입니다...');
@@ -369,9 +429,19 @@ export default function SellerChatPage() {
       });
 
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data?.message || '구매 주문 생성에 실패했습니다.');
+      if (!response.ok || !data?.result) {
+        throw new Error(data?.message || data?.error || '구매 주문 생성에 실패했습니다.');
       }
+
+      const apiOrder =
+        data?.order && typeof data.order === 'object'
+          ? (data.order as PrivateTradeOrder)
+          : null;
+      if (!apiOrder?.status) {
+        throw new Error('구매 주문 상태를 확인하지 못했습니다. 다시 시도해 주세요.');
+      }
+      setCurrentTradeOrder(apiOrder);
+      setPaymentCountdownNow(Date.now());
 
       setBuyStatus('success');
       setBuyStatusMessage('구매 주문이 생성되었습니다.');
@@ -383,6 +453,7 @@ export default function SellerChatPage() {
         createdAt: new Date().toISOString(),
       });
       fetchSellerProfile();
+      fetchBuyerSellerTradeStatus({ showLoading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : '구매 주문 생성에 실패했습니다.';
       setBuyStatus('error');
@@ -427,11 +498,21 @@ export default function SellerChatPage() {
         throw new Error(data?.error || '구매 주문 취소에 실패했습니다.');
       }
 
-      setBuyStatus('success');
-      setBuyStatusMessage('구매 주문이 취소되었습니다.');
+      const nowIso = new Date().toISOString();
+      setCurrentTradeOrder((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          status: 'cancelled',
+          cancelledAt: nowIso,
+        };
+      });
+      setBuyStatus('idle');
+      setBuyStatusMessage('');
       setRecentOrderInfo(null);
       setShowCancelWarningModal(false);
       fetchSellerProfile({ showLoading: false });
+      fetchBuyerSellerTradeStatus({ showLoading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : '구매 주문 취소에 실패했습니다.';
       setBuyStatus('error');
@@ -465,20 +546,65 @@ export default function SellerChatPage() {
 
   const handleKrwChange = (value: string) => {
     const onlyDigits = value.replace(/[^0-9]/g, '');
-    setBuyKrwInput(onlyDigits);
+    if (!onlyDigits) {
+      setBuyKrwInput('');
+      setBuyUsdtInput('');
+      return;
+    }
+
+    const numericKrw = Number(onlyDigits);
+    if (!Number.isFinite(numericKrw) || numericKrw <= 0) {
+      setBuyKrwInput('');
+      setBuyUsdtInput('');
+      return;
+    }
+
     if (effectiveRate) {
-      const usdt = Number(onlyDigits || '0') / effectiveRate;
-      setBuyUsdtInput(usdt > 0 ? usdt.toFixed(4) : '');
+      const maxKrwByEscrow =
+        maxUsdtByEscrow !== null ? Math.floor(maxUsdtByEscrow * effectiveRate) : null;
+      const clampedKrw =
+        maxKrwByEscrow !== null ? Math.min(numericKrw, maxKrwByEscrow) : numericKrw;
+      const usdt = clampedKrw / effectiveRate;
+
+      setBuyKrwInput(clampedKrw > 0 ? clampedKrw.toString() : '');
+      setBuyUsdtInput(usdt > 0 ? usdt.toFixed(3) : '');
     } else {
+      setBuyKrwInput(onlyDigits);
       setBuyUsdtInput('');
     }
   };
 
   const handleUsdtChange = (value: string) => {
     const sanitized = value.replace(/[^0-9.]/g, '');
-    setBuyUsdtInput(sanitized);
+    const dotIndex = sanitized.indexOf('.');
+    const normalizedUsdtInput = dotIndex === -1
+      ? sanitized
+      : `${(sanitized.slice(0, dotIndex).replace(/\./g, '') || '0')}.${sanitized
+          .slice(dotIndex + 1)
+          .replace(/\./g, '')
+          .slice(0, 3)}`;
+    const numericUsdt = Number(normalizedUsdtInput || '0');
+
+    if (
+      maxUsdtByEscrow !== null &&
+      Number.isFinite(numericUsdt) &&
+      numericUsdt > maxUsdtByEscrow
+    ) {
+      const clampedUsdt = maxUsdtByEscrow;
+      const clampedText = clampedUsdt.toFixed(3).replace(/\.?0+$/, '');
+      setBuyUsdtInput(clampedText);
+      if (effectiveRate) {
+        const krw = clampedUsdt * effectiveRate;
+        setBuyKrwInput(Number.isFinite(krw) && krw > 0 ? Math.round(krw).toString() : '');
+      } else {
+        setBuyKrwInput('');
+      }
+      return;
+    }
+
+    setBuyUsdtInput(normalizedUsdtInput);
     if (effectiveRate) {
-      const krw = Number(sanitized || '0') * effectiveRate;
+      const krw = Number(normalizedUsdtInput || '0') * effectiveRate;
       setBuyKrwInput(Number.isFinite(krw) && krw > 0 ? Math.round(krw).toString() : '');
     } else {
       setBuyKrwInput('');
@@ -493,8 +619,23 @@ export default function SellerChatPage() {
       setLoading(false);
       setBuyerNickname('');
       setBuyerAvatar('');
+      setCurrentTradeOrder(null);
+      setTradeStatusLoading(false);
     }
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!isPaymentRequested || !paymentRequestedStartMs) {
+      return;
+    }
+    setPaymentCountdownNow(Date.now());
+    const intervalId = window.setInterval(() => {
+      setPaymentCountdownNow(Date.now());
+    }, 1000);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isPaymentRequested, paymentRequestedStartMs]);
 
   useEffect(() => {
     let active = true;
@@ -645,6 +786,107 @@ export default function SellerChatPage() {
       window.clearInterval(intervalId);
     };
   }, [fetchSellerProfile]);
+
+  const fetchBuyerSellerTradeStatus = useCallback(
+    async (options?: { showLoading?: boolean }) => {
+      const showLoading = options?.showLoading === true;
+      if (!address || !sellerId) {
+        if (showLoading) {
+          setTradeStatusLoading(false);
+        }
+        setCurrentTradeOrder(null);
+        return;
+      }
+
+      const loadingStartedAt = showLoading ? Date.now() : null;
+      if (showLoading) {
+        setTradeStatusLoading(true);
+      }
+
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => {
+        controller.abort();
+      }, 6000);
+
+      try {
+        const response = await fetch('/api/order/getPrivateTradeStatus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            buyerWalletAddress: address,
+            sellerWalletAddress: sellerId,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data?.error || '거래 상태를 불러오지 못했습니다.');
+        }
+        if (!isMountedRef.current) return;
+
+        const nextOrder =
+          data?.result?.order && typeof data.result.order === 'object'
+            ? (data.result.order as PrivateTradeOrder)
+            : null;
+        setCurrentTradeOrder(nextOrder);
+      } catch (error) {
+        if (!isMountedRef.current) return;
+        if (showLoading) {
+          setCurrentTradeOrder(null);
+        }
+      } finally {
+        window.clearTimeout(timeoutId);
+        if (showLoading) {
+          const elapsed = Date.now() - (loadingStartedAt || Date.now());
+          const minimumVisibleMs = 350;
+          if (elapsed < minimumVisibleMs) {
+            await new Promise((resolve) => window.setTimeout(resolve, minimumVisibleMs - elapsed));
+          }
+          if (isMountedRef.current) {
+            setTradeStatusLoading(false);
+          }
+        }
+      }
+    },
+    [address, sellerId],
+  );
+
+  useEffect(() => {
+    fetchBuyerSellerTradeStatus({ showLoading: true });
+    if (!address || !sellerId) {
+      return;
+    }
+    const intervalId = window.setInterval(() => {
+      fetchBuyerSellerTradeStatus({ showLoading: false });
+    }, TRADE_STATUS_POLL_INTERVAL_MS);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [address, fetchBuyerSellerTradeStatus, sellerId]);
+
+  useEffect(() => {
+    if (!address || !sellerId) {
+      return;
+    }
+
+    const syncTradeStatus = () => {
+      fetchBuyerSellerTradeStatus({ showLoading: false });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncTradeStatus();
+      }
+    };
+
+    window.addEventListener('focus', syncTradeStatus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', syncTradeStatus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [address, sellerId, fetchBuyerSellerTradeStatus]);
 
   // on-chain escrow balance polling
   useEffect(() => {
@@ -963,7 +1205,7 @@ export default function SellerChatPage() {
                   <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-700">
                     <div className="rounded-xl bg-slate-50 px-3 py-2">
                       <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">USDT</p>
-                      <p className="font-semibold">{formatNumber(item.usdtAmount, 2)} USDT</p>
+                      <p className="font-semibold">{formatNumberFixed(item.usdtAmount, 3)} USDT</p>
                     </div>
                     <div className="rounded-xl bg-slate-50 px-3 py-2">
                       <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">KRW</p>
@@ -1014,11 +1256,36 @@ export default function SellerChatPage() {
                   뒤로
                 </button>
               </div>
-              <p className="text-sm text-black/60">
-                {displaySellerName
-                  ? `${displaySellerName} 판매자와 채팅을 시작합니다.`
-                  : '판매자와 채팅을 시작합니다.'}
-              </p>
+              {isLoggedIn && buyerNickname && (
+                <div className="rounded-2xl border border-sky-200/80 bg-gradient-to-r from-sky-50 via-white to-blue-50 px-4 py-3 shadow-[0_16px_36px_-28px_rgba(14,116,144,0.75)]">
+                  <div className="flex items-center gap-3">
+                    <div className="h-11 w-11 overflow-hidden rounded-full border border-sky-200 bg-white shadow-sm">
+                      {buyerAvatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={buyerAvatar}
+                          alt={buyerNickname}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-sm font-bold text-sky-700">
+                          {(buyerNickname || address || 'ME').slice(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-sky-700">내 정보</p>
+                      <p className="truncate text-sm font-extrabold text-slate-900">{buyerNickname}</p>
+                      <p className="mt-0.5 truncate font-mono text-xs text-slate-600">
+                        {maskWalletAddress(address)}
+                      </p>
+                    </div>
+                    <span className="rounded-full border border-sky-200 bg-white px-2.5 py-1 text-[10px] font-bold tracking-[0.12em] text-sky-700">
+                      BUYER
+                    </span>
+                  </div>
+                </div>
+              )}
             </header>
 
             <section className="rounded-3xl bg-white/95 p-5 text-black shadow-[0_18px_40px_-24px_rgba(0,0,0,0.25)]">
@@ -1066,30 +1333,43 @@ export default function SellerChatPage() {
                     </div>
                   </div>
                   <div className="mt-4 grid gap-2 text-sm text-black/80">
-                    <div className="flex items-center justify-between border-b border-black/10 pb-2">
-                      <span className="text-xs uppercase tracking-[0.2em] text-black/50">
-                        은행
-                      </span>
-                      <span className="text-sm font-semibold text-black">
-                        {sellerProfile?.seller?.bankInfo?.bankName || '-'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between border-b border-black/10 pb-2">
-                      <span className="text-xs uppercase tracking-[0.2em] text-black/50">
-                        계좌번호
-                      </span>
-                      <span className="text-sm font-semibold text-black">
-                        {maskAccountNumber(sellerProfile?.seller?.bankInfo?.accountNumber)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between border-b border-black/10 pb-2">
-                      <span className="text-xs uppercase tracking-[0.2em] text-black/50">
-                        예금주
-                      </span>
-                      <span className="text-sm font-semibold text-black">
-                        {sellerProfile?.seller?.bankInfo?.accountHolder || '-'}
-                      </span>
-                    </div>
+                    {isContactTransfer ? (
+                      <div className="flex items-center justify-between border-b border-black/10 pb-2">
+                        <span className="text-xs uppercase tracking-[0.2em] text-black/50">
+                          결제방식
+                        </span>
+                        <span className="text-sm font-semibold text-black">
+                          연락처송금
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between border-b border-black/10 pb-2">
+                          <span className="text-xs uppercase tracking-[0.2em] text-black/50">
+                            은행
+                          </span>
+                          <span className="text-sm font-semibold text-black">
+                            {sellerProfile?.seller?.bankInfo?.bankName || '-'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between border-b border-black/10 pb-2">
+                          <span className="text-xs uppercase tracking-[0.2em] text-black/50">
+                            계좌번호
+                          </span>
+                          <span className="text-sm font-semibold text-black">
+                            {maskAccountNumber(sellerProfile?.seller?.bankInfo?.accountNumber)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between border-b border-black/10 pb-2">
+                          <span className="text-xs uppercase tracking-[0.2em] text-black/50">
+                            예금주
+                          </span>
+                          <span className="text-sm font-semibold text-black">
+                            {sellerProfile?.seller?.bankInfo?.accountHolder || '-'}
+                          </span>
+                        </div>
+                      </>
+                    )}
                     {isContactTransfer && contactTransferMemo && (
                       <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 via-white to-teal-50 px-4 py-3 shadow-[0_16px_40px_-30px_rgba(16,185,129,0.75)]">
                         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">
@@ -1160,23 +1440,6 @@ export default function SellerChatPage() {
                         )}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs uppercase tracking-[0.2em] text-black/50">
-                        판매자 주문 상태
-                      </span>
-                      <span className="flex items-center gap-2 text-sm font-semibold text-black">
-                        <span className={`h-2.5 w-2.5 rounded-full ${sellerStatusDotClass}`} />
-                        {sellerStatusLabel}
-                      </span>
-                    </div>
-                    {sellerBuyOrderStatus && sellerStatusTimestamp && (
-                      <div className="flex items-center justify-between text-xs text-black/60">
-                        <span className="text-[11px] uppercase tracking-[0.2em]">최근 업데이트</span>
-                        <span className="font-semibold text-black/70">
-                          {formatUpdatedTime(sellerStatusTimestamp)}
-                        </span>
-                      </div>
-                    )}
                   </div>
                   <div className="mt-3 rounded-3xl border border-slate-200/80 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-5 text-slate-800 shadow-[0_24px_60px_-34px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/50">
                     <div className="flex items-center justify-between">
@@ -1191,73 +1454,177 @@ export default function SellerChatPage() {
                         실시간 단가 {effectiveRate ? `${formatNumber(effectiveRate, 0)} KRW` : '-'}
                       </div>
                     </div>
+                    <div className="mt-3 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                        현재 거래 상태
+                      </span>
+                      <span className="flex items-center gap-2 font-semibold text-slate-900">
+                        <span className={`h-2.5 w-2.5 rounded-full ${tradeStatusDotClass}`} />
+                        {tradeStatusLoading ? '확인 중...' : tradeStatusLabel}
+                      </span>
+                    </div>
+                    {isTradeInProgress && currentTradeDisplayOrderNo && (
+                      <div className="mt-1 flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50 px-3 py-2 text-sm">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                          주문번호
+                        </span>
+                        <span className="font-mono text-sm font-semibold text-slate-900">
+                          {currentTradeDisplayOrderNo}
+                        </span>
+                      </div>
+                    )}
+                    {tradeStatusTimestamp && (
+                      <div className="mt-1 flex items-center justify-end text-[11px] text-slate-500">
+                        최근 업데이트 {formatUpdatedTime(tradeStatusTimestamp)}
+                      </div>
+                    )}
                     {isPaymentRequested && (
-                      <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                        <div className="flex items-center gap-2 font-semibold">
-                          <span className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_0_6px_rgba(245,158,11,0.18)]" />
-                          {sellerProfile?.seller?.bankInfo?.bankName === '연락처송금'
-                            ? '판매자에게 연락처송금 안내를 확인해 주세요.'
-                            : '입금 요청 상태입니다. 아래 계좌로 입금해 주세요.'}
+                      <div className="mt-3 border-t border-slate-200 pt-3 text-sm text-slate-700">
+                        <div className="flex items-start gap-2">
+                          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-amber-500" />
+                          <div>
+                            <p className="font-semibold text-slate-900">
+                              {sellerProfile?.seller?.bankInfo?.bankName === '연락처송금'
+                                ? '판매자가 등록한 연락처송금 안내를 확인해 주세요.'
+                                : '입금 요청 상태입니다. 아래 계좌로 입금해 주세요.'}
+                            </p>
+                            <p className="mt-0.5 text-xs text-slate-500">
+                              {sellerProfile?.seller?.bankInfo?.bankName === '연락처송금'
+                                ? `안내된 연락처 방식으로 ${PAYMENT_COUNTDOWN_MINUTES}분 이내 송금하지 않으면 주문이 자동 취소됩니다.`
+                                : `${PAYMENT_COUNTDOWN_MINUTES}분 이내 입금하지 않으면 자동 취소됩니다.`}
+                            </p>
+                          </div>
                         </div>
-                        <p className="mt-1 text-xs font-semibold text-amber-800">
-                          {sellerProfile?.seller?.bankInfo?.bankName === '연락처송금'
-                            ? '안내된 연락처 방식으로 송금하지 않으면 주문이 자동 취소됩니다.'
-                            : '10분내로 입금하지 않으면 자동 취소됩니다.'}
-                        </p>
-                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-semibold text-amber-800">
-                          <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100">
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">은행</p>
-                            <p className="mt-1 text-sm">
-                              {sellerProfile?.seller?.bankInfo?.bankName || '-'}
+                        <div
+                          className={`mt-2 rounded-lg border px-3 py-2 ${
+                            isPaymentCountdownUrgent
+                              ? 'border-rose-200 bg-rose-50/80'
+                              : 'border-blue-200 bg-blue-50/80'
+                          }`}
+                        >
+                          <div className="flex items-end justify-between gap-3">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                              입금 마감까지
+                            </p>
+                            <p
+                              className={`font-mono text-[30px] font-black leading-none tracking-tight tabular-nums ${
+                                isPaymentCountdownUrgent
+                                  ? 'text-rose-600 animate-pulse'
+                                  : 'text-blue-700'
+                              }`}
+                            >
+                              {paymentCountdownText}
                             </p>
                           </div>
-                          <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100">
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">예금주</p>
-                            <p className="mt-1 text-sm">
-                              {sellerProfile?.seller?.bankInfo?.accountHolder || '-'}
-                            </p>
+                          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                            <div
+                              className={`h-full rounded-full transition-[width] duration-1000 ease-linear ${
+                                isPaymentCountdownUrgent
+                                  ? 'bg-gradient-to-r from-rose-500 via-orange-400 to-rose-500 animate-pulse'
+                                  : 'bg-gradient-to-r from-emerald-500 to-blue-500'
+                              }`}
+                              style={{
+                                width: isPaymentCountdownExpired
+                                  ? '0%'
+                                  : `${Math.max(2, paymentCountdownRatio * 100)}%`,
+                              }}
+                            />
                           </div>
-                          <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100 col-span-2">
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">계좌번호</p>
-                            <p className="mt-1 text-sm font-bold">
-                              {sellerProfile?.seller?.bankInfo?.accountNumber || '-'}
-                            </p>
-                          </div>
+                          <p
+                            className={`mt-1 text-[11px] font-semibold ${
+                              isPaymentCountdownUrgent ? 'text-rose-600' : 'text-slate-500'
+                            }`}
+                          >
+                            {isPaymentCountdownExpired
+                              ? '입금 가능 시간이 지났습니다. 주문 상태를 다시 확인해 주세요.'
+                              : '남은 시간 안에 입금을 완료하면 자동 취소를 방지할 수 있습니다.'}
+                          </p>
+                        </div>
+                        <div className="mt-2 space-y-1.5">
+                          {isContactTransfer ? (
+                            <div className="flex items-center justify-between border-b border-slate-200 py-1.5">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                결제방식
+                              </p>
+                              <p className="text-sm font-semibold text-slate-900">
+                                연락처송금
+                              </p>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex items-center justify-between border-b border-slate-200 py-1.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                  은행
+                                </p>
+                                <p className="text-sm font-semibold text-slate-900">
+                                  {sellerProfile?.seller?.bankInfo?.bankName || '-'}
+                                </p>
+                              </div>
+                              <div className="flex items-center justify-between border-b border-slate-200 py-1.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                  예금주
+                                </p>
+                                <p className="text-sm font-semibold text-slate-900">
+                                  {sellerProfile?.seller?.bankInfo?.accountHolder || '-'}
+                                </p>
+                              </div>
+                              <div className="flex items-center justify-between border-b border-slate-200 py-1.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                  계좌번호
+                                </p>
+                                <p className="text-sm font-semibold text-slate-900">
+                                  {sellerProfile?.seller?.bankInfo?.accountNumber || '-'}
+                                </p>
+                              </div>
+                            </>
+                          )}
                           {isContactTransfer && (
-                            <div className="col-span-2 rounded-2xl border border-amber-300/90 bg-gradient-to-br from-amber-50 via-white to-orange-50 px-3.5 py-3 shadow-[0_14px_34px_-26px_rgba(217,119,6,0.9)]">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600">
+                            <div className="border-b border-slate-200 py-1.5">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                                 연락처 메모
                               </p>
-                              <div className="mt-1.5 whitespace-pre-wrap break-words text-[15px] font-bold leading-relaxed text-amber-950">
+                              <div className="mt-1 whitespace-pre-wrap break-words text-sm font-semibold leading-relaxed text-slate-900">
                                 {contactTransferMemo
                                   ? renderTextWithAutoLinks(
                                       contactTransferMemo,
-                                      'font-bold underline decoration-amber-500/80 underline-offset-2 break-all hover:text-amber-700'
+                                      'font-semibold underline decoration-slate-400 underline-offset-2 break-all hover:text-slate-700'
                                     )
                                   : '-'}
                               </div>
                             </div>
                           )}
-                          <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100">
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">입금액</p>
-                            <p className="mt-1 text-sm font-bold">
-                              {formatNumber(sellerProfile?.seller?.buyOrder?.krwAmount, 0)} KRW
-                            </p>
-                          </div>
-                          <div className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100">
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-amber-500">주문 수량</p>
-                            <p className="mt-1 text-sm font-bold">
-                              {formatNumber(sellerProfile?.seller?.buyOrder?.usdtAmount, 2)} USDT
-                            </p>
+                          <div className="grid grid-cols-2 gap-3 pt-1">
+                            <div className="text-right">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                입금액
+                              </p>
+                              <p className="mt-0.5 flex items-end justify-end gap-1 whitespace-nowrap text-[24px] font-black leading-none tracking-tight text-slate-900 tabular-nums">
+                                {formatNumber(currentTradeOrder?.krwAmount, 0)}
+                                <span className="mb-0.5 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                                  KRW
+                                </span>
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                주문 수량
+                              </p>
+                              <p className="mt-0.5 flex items-end justify-end gap-1 whitespace-nowrap text-[24px] font-black leading-none tracking-tight text-slate-900 tabular-nums">
+                                {formatNumberFixed(currentTradeOrder?.usdtAmount, 3)}
+                                <span className="mb-0.5 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                                  USDT
+                                </span>
+                              </p>
+                            </div>
                           </div>
                         </div>
                         {canCancelCurrentBuyOrder && (
-                          <div className="mt-3">
+                          <div className="mt-3 flex justify-end">
                             <button
                               type="button"
                               onClick={openCancelBuyOrderModal}
                               disabled={cancelingBuyOrder}
-                              className="inline-flex items-center justify-center rounded-xl border border-rose-300 bg-white px-4 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                              className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               {cancelingBuyOrder ? '구매 주문 취소 중...' : '구매 주문 취소하기'}
                             </button>
@@ -1265,208 +1632,235 @@ export default function SellerChatPage() {
                         )}
                       </div>
                     )}
-                    <div className="mt-3 space-y-2">
-                      <label className="block text-xs font-semibold text-slate-500">
-                        결제할 원화금액
-                      </label>
-                      <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_10px_28px_-24px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/70">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                        value={
-                          buyKrwInput
-                            ? Number(buyKrwInput).toLocaleString('ko-KR')
-                            : ''
-                        }
-                        onChange={(e) => handleKrwChange(e.target.value.replace(/,/g, ''))}
-                        placeholder="원화 금액을 입력하세요"
-                        disabled={!isLoggedIn || buying || isPaymentRequested}
-                          className={`
-                            w-full border-0 px-4 py-3 pr-16 text-right text-lg font-extrabold tracking-tight placeholder:text-slate-400 focus:outline-none focus:ring-2
-                            ${isLoggedIn && !buying
-                              ? 'bg-white text-slate-900 focus:ring-blue-500'
-                              : 'cursor-not-allowed bg-slate-100 text-slate-400 focus:ring-0'}
-                          `}
-                        />
-                        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">
-                          KRW
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-3 space-y-2">
-                      <label className="block text-xs font-semibold text-slate-500">
-                        구매할 USDT 수량
-                      </label>
-                      <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_10px_28px_-24px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/70">
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                        value={buyUsdtInput}
-                        onChange={(e) => handleUsdtChange(e.target.value)}
-                        placeholder="구매할 USDT 수량을 입력하세요"
-                        disabled={!isLoggedIn || buying || isPaymentRequested}
-                          className={`
-                            w-full border-0 px-4 py-3 pr-16 text-right text-lg font-extrabold tracking-tight placeholder:text-slate-400 focus:outline-none focus:ring-2
-                            ${isLoggedIn && !buying
-                              ? 'bg-white text-slate-900 focus:ring-blue-500'
-                              : 'cursor-not-allowed bg-slate-100 text-slate-400 focus:ring-0'}
-                          `}
-                        />
-                        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">
-                          USDT
-                        </span>
-                      </div>
-                    </div>
-                      <div className="mt-4">
-                      <button
-                        type="button"
-                        onClick={goBuy}
-                        disabled={
-                          !isLoggedIn
-                          || !sellerId
-                          || !effectiveRate
-                          || (!buyKrwInput && !buyUsdtInput)
-                          || buying
-                          || cancelingBuyOrder
-                          || isPaymentRequested
-                        }
-                        className={`
-                          group flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition
-                          ${
-                            !isLoggedIn
-                            || !sellerId
-                            || !effectiveRate
-                            || (!buyKrwInput && !buyUsdtInput)
-                            || buying
-                            || cancelingBuyOrder
-                            ? 'cursor-not-allowed bg-slate-100 text-slate-400 border border-slate-200'
-                            : 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-500 text-white shadow-[0_18px_45px_-16px_rgba(37,99,235,0.65)] hover:-translate-y-0.5 hover:shadow-[0_28px_60px_-18px_rgba(37,99,235,0.85)] active:translate-y-0'}
-                        `}
-                      >
-                        {buying ? (
-                          <>
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              className="h-5 w-5 animate-spin"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M12 4v2m0 12v2m8-8h-2M6 12H4m11.314-5.314-1.414 1.414M8.1 15.9l-1.414 1.414m0-11.314L8.1 8.1m7.8 7.8 1.414 1.414"
-                              />
-                            </svg>
-                            주문 처리 중...
-                          </>
-                        ) : (
-                          <>
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              className="h-5 w-5"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M3.5 5h1.75l.6 3m0 0 .9 4H17l2-7H6.25m0 0H20.5"
-                              />
-                              <circle cx="9.5" cy="18.5" r="1.25" />
-                              <circle cx="16" cy="18.5" r="1.25" />
-                            </svg>
-                            USDT 구매하기
-                          </>
-                        )}
-                      </button>
-                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 ring-1 ring-slate-200/70">
-                          최소 1 USDT
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 ring-1 ring-slate-200/70">
-                          최대 100,000 USDT
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 ring-1 ring-slate-200/70">
-                          실시간 시세 반영
-                        </span>
-                      </div>
-                      {!isLoggedIn && (
-                        <p className="mt-2 text-xs text-slate-500">
-                          웹3 지갑을 연결하면 빠르게 구매를 진행할 수 있습니다.
-                        </p>
-                      )}
-                      {!effectiveRate && (
-                        <p className="mt-2 text-xs text-rose-500">
-                          판매자 가격 정보를 불러오지 못했습니다.
-                        </p>
-                      )}
-                      {buyStatus !== 'idle' && (
+                    {!isTradeInProgress && (
+                      <div className="relative mt-3">
                         <div
-                          className={`mt-3 rounded-2xl border px-3 py-3 text-xs font-semibold ${
-                            buyStatus === 'success'
-                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                              : buyStatus === 'error'
-                                ? 'border-rose-200 bg-rose-50 text-rose-700'
-                                : 'border-slate-200 bg-slate-50 text-slate-600'
+                          className={`transition duration-200 ${
+                            isTradeStatusResolving
+                              ? 'pointer-events-none select-none opacity-45 blur-[1.5px]'
+                              : ''
                           }`}
                         >
-                          <div className="flex items-center gap-2 text-sm">
-                            {buyStatus === 'success' && (
-                              <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.14)]" />
-                            )}
-                            {buyStatus === 'error' && (
-                              <span className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_0_6px_rgba(244,63,94,0.14)]" />
-                            )}
-                            {buyStatus === 'loading' && (
-                              <span className="h-2 w-2 rounded-full bg-slate-400 animate-pulse" />
-                            )}
-                            <span>{buyStatusMessage}</span>
-                          </div>
-                          {buyStatus === 'success' && recentOrderInfo && (
-                            <div className="mt-2">
-                              <div className="grid grid-cols-2 gap-2 text-[11px] font-medium">
-                                <div className="rounded-xl bg-white/70 px-3 py-2 text-slate-700 ring-1 ring-emerald-100">
-                                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
-                                    주문 상태
-                                  </p>
-                                  <p className="mt-1 text-sm font-semibold text-emerald-700">
-                                    입금요청
-                                  </p>
-                                </div>
-                              <div className="rounded-xl bg-white/70 px-3 py-2 text-slate-700 ring-1 ring-emerald-100">
-                                <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
-                                  주문 금액
-                                </p>
-                                <p className="mt-1 text-sm font-semibold text-slate-900">
-                                  {formatNumber(recentOrderInfo.krwAmount, 0)} KRW /{' '}
-                                  {formatNumber(recentOrderInfo.usdtAmount, 2)} USDT
-                                </p>
-                                <p className="text-[10px] text-slate-500">
-                                  생성 {formatUpdatedTime(recentOrderInfo.createdAt)}
-                                </p>
-                              </div>
-                              </div>
-                              {canCancelCurrentBuyOrder && (
-                                <div className="mt-2">
-                                  <button
-                                    type="button"
-                                    onClick={openCancelBuyOrderModal}
-                                    disabled={cancelingBuyOrder}
-                                    className="inline-flex items-center justify-center rounded-xl border border-rose-300 bg-white px-3 py-1.5 text-[11px] font-bold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                  >
-                                    {cancelingBuyOrder ? '구매 주문 취소 중...' : '구매 주문 취소하기'}
-                                  </button>
-                                </div>
-                              )}
+                          <div className="space-y-2">
+                            <label className="block text-xs font-semibold text-slate-500">
+                              결제할 원화 금액
+                            </label>
+                            <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_10px_28px_-24px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/70">
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={buyKrwInput ? Number(buyKrwInput).toLocaleString('ko-KR') : ''}
+                                onChange={(e) => handleKrwChange(e.target.value.replace(/,/g, ''))}
+                                placeholder="원화 금액을 입력하세요"
+                                disabled={!isLoggedIn || buying || isPaymentRequested || isTradeStatusResolving}
+                                className={`
+                                  w-full border-0 px-4 py-4 pr-20 text-right text-[30px] font-black leading-none tracking-tight tabular-nums placeholder:text-base placeholder:font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2
+                                  ${isLoggedIn && !buying && !isTradeStatusResolving
+                                    ? 'bg-white text-slate-900 focus:ring-blue-500'
+                                    : 'cursor-not-allowed bg-slate-100 text-slate-400 focus:ring-0'}
+                                `}
+                              />
+                              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">
+                                KRW
+                              </span>
                             </div>
-                          )}
+                          </div>
+                          <div className="mt-3 space-y-2">
+                            <label className="block text-xs font-semibold text-slate-500">
+                              구매할 USDT 수량
+                            </label>
+                            <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_10px_28px_-24px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/70">
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={buyUsdtInput}
+                                onChange={(e) => handleUsdtChange(e.target.value)}
+                                placeholder="USDT 수량을 입력하세요"
+                                disabled={!isLoggedIn || buying || isPaymentRequested || isTradeStatusResolving}
+                                className={`
+                                  w-full border-0 px-4 py-4 pr-20 text-right text-[30px] font-black leading-none tracking-tight tabular-nums placeholder:text-base placeholder:font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2
+                                  ${isLoggedIn && !buying && !isTradeStatusResolving
+                                    ? 'bg-white text-slate-900 focus:ring-blue-500'
+                                    : 'cursor-not-allowed bg-slate-100 text-slate-400 focus:ring-0'}
+                                `}
+                              />
+                              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">
+                                USDT
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mt-4">
+                            <button
+                              type="button"
+                              onClick={goBuy}
+                              disabled={
+                                !isLoggedIn
+                                || !sellerId
+                                || !effectiveRate
+                                || (!buyKrwInput && !buyUsdtInput)
+                                || buying
+                                || cancelingBuyOrder
+                                || isPaymentRequested
+                                || isTradeStatusResolving
+                              }
+                              className={`
+                                group flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition
+                                ${
+                                  !isLoggedIn
+                                  || !sellerId
+                                  || !effectiveRate
+                                  || (!buyKrwInput && !buyUsdtInput)
+                                  || buying
+                                  || cancelingBuyOrder
+                                  || isPaymentRequested
+                                  || isTradeStatusResolving
+                                  ? 'cursor-not-allowed bg-slate-100 text-slate-400 border border-slate-200'
+                                  : 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-500 text-white shadow-[0_18px_45px_-16px_rgba(37,99,235,0.65)] hover:-translate-y-0.5 hover:shadow-[0_28px_60px_-18px_rgba(37,99,235,0.85)] active:translate-y-0'}
+                              `}
+                            >
+                              {buying ? (
+                                <>
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    className="h-5 w-5 animate-spin"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M12 4v2m0 12v2m8-8h-2M6 12H4m11.314-5.314-1.414 1.414M8.1 15.9l-1.414 1.414m0-11.314L8.1 8.1m7.8 7.8 1.414 1.414"
+                                    />
+                                  </svg>
+                                  주문 처리 중...
+                                </>
+                              ) : (
+                                <>
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    className="h-5 w-5"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M3.5 5h1.75l.6 3m0 0 .9 4H17l2-7H6.25m0 0H20.5"
+                                    />
+                                    <circle cx="9.5" cy="18.5" r="1.25" />
+                                    <circle cx="16" cy="18.5" r="1.25" />
+                                  </svg>
+                                  USDT 구매하기
+                                </>
+                              )}
+                            </button>
+                            <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 ring-1 ring-slate-200/70">
+                                최소 1 USDT
+                              </span>
+                              <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 ring-1 ring-slate-200/70">
+                                최대 100,000 USDT
+                              </span>
+                              <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 ring-1 ring-slate-200/70">
+                                실시간 시세 반영
+                              </span>
+                            </div>
+                            {!isLoggedIn && (
+                              <p className="mt-2 text-xs text-slate-500">
+                                웹3 지갑을 연결하면 빠르게 구매를 진행할 수 있습니다.
+                              </p>
+                            )}
+                            {!effectiveRate && (
+                              <p className="mt-2 text-xs text-rose-500">
+                                판매자 가격 정보를 불러오지 못했습니다.
+                              </p>
+                            )}
+                            {buyStatus !== 'idle' && (
+                              <div
+                                className={`mt-3 rounded-2xl border px-3 py-3 text-xs font-semibold ${
+                                  buyStatus === 'success'
+                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                    : buyStatus === 'error'
+                                      ? 'border-rose-200 bg-rose-50 text-rose-700'
+                                      : 'border-slate-200 bg-slate-50 text-slate-600'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 text-sm">
+                                  {buyStatus === 'success' && (
+                                    <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.14)]" />
+                                  )}
+                                  {buyStatus === 'error' && (
+                                    <span className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_0_6px_rgba(244,63,94,0.14)]" />
+                                  )}
+                                  {buyStatus === 'loading' && (
+                                    <span className="h-2 w-2 rounded-full bg-slate-400 animate-pulse" />
+                                  )}
+                                  <span>{buyStatusMessage}</span>
+                                </div>
+                                {buyStatus === 'success' && recentOrderInfo && (
+                                  <div className="mt-2">
+                                    <div className="grid grid-cols-2 gap-2 text-[11px] font-medium">
+                                      <div className="rounded-xl bg-white/70 px-3 py-2 text-slate-700 ring-1 ring-emerald-100">
+                                        <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
+                                          주문 상태
+                                        </p>
+                                        <p className="mt-1 text-sm font-semibold text-emerald-700">
+                                          입금요청
+                                        </p>
+                                      </div>
+                                      <div className="rounded-xl bg-white/70 px-3 py-2 text-slate-700 ring-1 ring-emerald-100">
+                                        <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
+                                          주문 금액
+                                        </p>
+                                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                                          {formatNumber(recentOrderInfo.krwAmount, 0)} KRW /{' '}
+                                          {formatNumberFixed(recentOrderInfo.usdtAmount, 3)} USDT
+                                        </p>
+                                        <p className="text-[10px] text-slate-500">
+                                          생성 {formatUpdatedTime(recentOrderInfo.createdAt)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    {canCancelCurrentBuyOrder && (
+                                      <div className="mt-3 flex justify-end">
+                                        <button
+                                          type="button"
+                                          onClick={openCancelBuyOrderModal}
+                                          disabled={cancelingBuyOrder}
+                                          className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                          {cancelingBuyOrder ? '구매 주문 취소 중...' : '구매 주문 취소하기'}
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
+                        {isTradeStatusResolving && (
+                          <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden rounded-2xl border border-slate-200/80 bg-white/45 backdrop-blur-[1px]">
+                            <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-white/25 via-slate-100/60 to-white/30" />
+                            <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-700 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.4)]">
+                              <div className="flex items-center gap-2">
+                                <span className="h-2.5 w-2.5 rounded-full bg-blue-500 animate-pulse" />
+                                거래 상태를 읽어오는 중입니다. 잠시만 기다려 주세요.
+                              </div>
+                              <div className="mt-2 grid grid-cols-3 gap-2">
+                                <span className="h-2 rounded-full bg-slate-200/90 animate-pulse" />
+                                <span className="h-2 rounded-full bg-slate-200/90 animate-pulse" />
+                                <span className="h-2 rounded-full bg-slate-200/90 animate-pulse" />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1484,36 +1878,6 @@ export default function SellerChatPage() {
                   상담 진행
                 </div>
               </div>
-              {isLoggedIn && buyerNickname && (
-                <div className="mt-3 rounded-2xl border border-sky-200/80 bg-gradient-to-r from-sky-50 via-white to-blue-50 px-4 py-3 shadow-[0_16px_36px_-28px_rgba(14,116,144,0.75)]">
-                  <div className="flex items-center gap-3">
-                    <div className="h-11 w-11 overflow-hidden rounded-full border border-sky-200 bg-white shadow-sm">
-                      {buyerAvatar ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={buyerAvatar}
-                          alt={buyerNickname}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <span className="flex h-full w-full items-center justify-center text-sm font-bold text-sky-700">
-                          {(buyerNickname || address || 'ME').slice(0, 2).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-sky-700">내 정보</p>
-                      <p className="truncate text-sm font-extrabold text-slate-900">{buyerNickname}</p>
-                      <p className="mt-0.5 truncate font-mono text-xs text-slate-600">
-                        {maskWalletAddress(address)}
-                      </p>
-                    </div>
-                    <span className="rounded-full border border-sky-200 bg-white px-2.5 py-1 text-[10px] font-bold tracking-[0.12em] text-sky-700">
-                      BUYER
-                    </span>
-                  </div>
-                </div>
-              )}
               {!sellerId ? (
                 <p className="mt-3 px-5 text-sm text-black/60">판매자 정보를 찾을 수 없습니다.</p>
               ) : !isLoggedIn ? (
@@ -1566,6 +1930,7 @@ export default function SellerChatPage() {
                     userId={address}
                     accessToken={sessionToken}
                     theme="light"
+                    sdkInitParams={sendbirdSdkInitParams}
                   >
                     <GroupChannel channelUrl={channelUrl} />
                   </SendbirdProvider>

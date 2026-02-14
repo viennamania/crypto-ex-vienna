@@ -444,6 +444,41 @@ const getContactTransferMemo = (sellerItem: any): string => {
   return String(directMemo || fallbackMemo || '').trim();
 };
 
+const getBuyerDepositName = (orderLike: any): string => {
+  const candidates = [
+    orderLike?.buyer?.bankInfo?.depositName,
+    orderLike?.buyer?.depositName,
+    orderLike?.buyer?.bankInfo?.accountHolder,
+  ];
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '-';
+};
+
+const ensureMaskedBuyerName = (value?: string | null) => {
+  const source = (value || '').trim();
+  if (!source || source === '-') {
+    return '-';
+  }
+  if (source.includes('*')) {
+    return source;
+  }
+  return maskBuyerId(source);
+};
+
+const getBuyerDisplayNameForTradeList = (orderLike: any, isOwnerView: boolean) => {
+  const rawName = orderLike?.buyer?.nickname || orderLike?.nickname || '-';
+  return isOwnerView ? (rawName || '-') : ensureMaskedBuyerName(rawName);
+};
+
+const getBuyerDepositNameForTradeList = (orderLike: any, isOwnerView: boolean) => {
+  const rawDepositName = getBuyerDepositName(orderLike);
+  return isOwnerView ? rawDepositName : ensureMaskedBuyerName(rawDepositName);
+};
+
 type DailyTradePoint = {
   dateKey: string;
   day: string;
@@ -945,7 +980,7 @@ export default function Index({ params }: any) {
   const isOwnerSeller = Boolean(
     address &&
     ownerWalletAddress &&
-    address === ownerWalletAddress
+    address.toLowerCase() === ownerWalletAddress.toLowerCase()
   );
 
   useEffect(() => {
@@ -1499,6 +1534,18 @@ export default function Index({ params }: any) {
     
   const [buyOrders, setBuyOrders] = useState<BuyOrder[]>([]);
   const [tradeHistoryBuyerMaskedByApi, setTradeHistoryBuyerMaskedByApi] = useState(true);
+  const [activePaymentRequestedOrders, setActivePaymentRequestedOrders] = useState<BuyOrder[]>([]);
+  const [loadingActivePaymentRequestedOrders, setLoadingActivePaymentRequestedOrders] = useState(false);
+  const [loadedActivePaymentRequestedOrders, setLoadedActivePaymentRequestedOrders] = useState(false);
+  const [isActiveOrderCompleteModalOpen, setIsActiveOrderCompleteModalOpen] = useState(false);
+  const [selectedActivePaymentRequestedOrder, setSelectedActivePaymentRequestedOrder] = useState<BuyOrder | null>(null);
+  const [completingActiveOrder, setCompletingActiveOrder] = useState(false);
+
+  const isSameWalletAddress = (walletA?: string, walletB?: string) =>
+    Boolean(walletA && walletB && walletA.toLowerCase() === walletB.toLowerCase());
+  const isMySellerCard = (walletAddress?: string) => isSameWalletAddress(walletAddress, address);
+  const ownerHasActivePaymentRequestedOrders =
+    isOwnerSeller && activePaymentRequestedOrders.length > 0;
 
 
 
@@ -4294,6 +4341,195 @@ const fetchBuyOrders = async () => {
     return () => clearInterval(interval);
   }, [address, sellerWalletAddressParam]);
 
+  useEffect(() => {
+    if (
+      !sellerWalletAddressParam ||
+      !targetSellerEscrowWalletAddress
+    ) {
+      setActivePaymentRequestedOrders([]);
+      setLoadingActivePaymentRequestedOrders(false);
+      setLoadedActivePaymentRequestedOrders(false);
+      return;
+    }
+
+    let mounted = true;
+
+    const fetchActivePaymentRequestedOrders = async (isInitial: boolean) => {
+      if (!mounted) {
+        return;
+      }
+
+      if (isInitial) {
+        setLoadingActivePaymentRequestedOrders(true);
+      }
+
+      try {
+        const response = await fetch('/api/order/getAllBuyOrdersBySellerEscrowWallet', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            limit: 50,
+            page: 1,
+            walletAddress: targetSellerEscrowWalletAddress,
+            requesterWalletAddress: address || undefined,
+            status: 'paymentRequested',
+          }),
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+        const orders = Array.isArray(data?.result?.orders)
+          ? [...data.result.orders]
+          : [];
+
+        orders.sort((a: BuyOrder, b: BuyOrder) => {
+          const aTime = new Date(a?.paymentRequestedAt || a?.createdAt || 0).getTime();
+          const bTime = new Date(b?.paymentRequestedAt || b?.createdAt || 0).getTime();
+          const aSafeTime = Number.isFinite(aTime) ? aTime : 0;
+          const bSafeTime = Number.isFinite(bTime) ? bTime : 0;
+          return bSafeTime - aSafeTime;
+        });
+
+        if (mounted) {
+          setActivePaymentRequestedOrders(orders);
+        }
+      } catch (error) {
+        console.error('Error fetching active payment requested orders', error);
+      } finally {
+        if (mounted) {
+          if (isInitial) {
+            setLoadingActivePaymentRequestedOrders(false);
+            setLoadedActivePaymentRequestedOrders(true);
+          }
+        }
+      }
+    };
+
+    fetchActivePaymentRequestedOrders(true);
+    const interval = setInterval(() => {
+      fetchActivePaymentRequestedOrders(false);
+    }, 10000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [address, sellerWalletAddressParam, targetSellerEscrowWalletAddress]);
+
+  const openActiveOrderCompleteModal = (order: BuyOrder) => {
+    if (!isOwnerSeller) {
+      return;
+    }
+    setSelectedActivePaymentRequestedOrder(order);
+    setIsActiveOrderCompleteModalOpen(true);
+  };
+
+  const closeActiveOrderCompleteModal = () => {
+    if (completingActiveOrder) {
+      return;
+    }
+    setIsActiveOrderCompleteModalOpen(false);
+    setSelectedActivePaymentRequestedOrder(null);
+  };
+
+  useEffect(() => {
+    if (isOwnerSeller) {
+      return;
+    }
+    setIsActiveOrderCompleteModalOpen(false);
+    setSelectedActivePaymentRequestedOrder(null);
+  }, [isOwnerSeller]);
+
+  const completeSelectedActiveOrder = async () => {
+    if (completingActiveOrder) {
+      return;
+    }
+
+    if (!isOwnerSeller || !selectedActivePaymentRequestedOrder?._id || !address) {
+      return;
+    }
+
+    setCompletingActiveOrder(true);
+    try {
+      const response = await fetch('/api/order/completePrivateBuyOrderBySeller', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: selectedActivePaymentRequestedOrder._id,
+          sellerWalletAddress: address,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.result) {
+        throw new Error(data?.error || '주문 완료 처리에 실패했습니다.');
+      }
+
+      const confirmedAt =
+        typeof data?.paymentConfirmedAt === 'string' && data.paymentConfirmedAt
+          ? data.paymentConfirmedAt
+          : new Date().toISOString();
+      const releaseTxHash =
+        typeof data?.transactionHash === 'string' ? data.transactionHash : '';
+
+      setActivePaymentRequestedOrders((prev) =>
+        prev.filter((item) => item._id !== selectedActivePaymentRequestedOrder._id),
+      );
+
+      setSellersBalance((prev) =>
+        prev.map((seller) => {
+          if (!isMySellerCard(seller.walletAddress)) {
+            return seller;
+          }
+
+          if (seller?.seller?.buyOrder?._id !== selectedActivePaymentRequestedOrder._id) {
+            return seller;
+          }
+
+          return {
+            ...seller,
+            seller: {
+              ...seller.seller,
+              buyOrder: {
+                ...(seller.seller?.buyOrder || {}),
+                status: 'paymentConfirmed',
+                paymentConfirmedAt: confirmedAt,
+                transactionHash: releaseTxHash || seller.seller?.buyOrder?.transactionHash,
+                buyer: {
+                  ...(seller.seller?.buyOrder?.buyer || {}),
+                  releaseTransactionHash:
+                    releaseTxHash || seller.seller?.buyOrder?.buyer?.releaseTransactionHash,
+                },
+                seller: {
+                  ...(seller.seller?.buyOrder?.seller || {}),
+                  releaseTransactionHash:
+                    releaseTxHash || seller.seller?.buyOrder?.seller?.releaseTransactionHash,
+                },
+              },
+            },
+          };
+        }),
+      );
+
+      toast.success('주문 완료 처리되었습니다.');
+      setIsActiveOrderCompleteModalOpen(false);
+      setSelectedActivePaymentRequestedOrder(null);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : '주문 완료 처리에 실패했습니다.';
+      toast.error(message);
+    } finally {
+      setCompletingActiveOrder(false);
+    }
+  };
+
 
   // sellersBalance.reduce((acc, seller) => acc + seller.currentUsdtBalance, 0)
   // animated totalUsdtBalance
@@ -5538,8 +5774,7 @@ const fetchBuyOrders = async () => {
                         지정가
                       </span>
                       {activeSeller.walletAddress === address
-                      && activeSeller.seller?.buyOrder?.status !== 'ordered'
-                      && activeSeller.seller?.buyOrder?.status !== 'paymentRequested' && (
+                      && !ownerHasActivePaymentRequestedOrders && (
                         <>
                           <button
                             onClick={() => {
@@ -6362,9 +6597,10 @@ const fetchBuyOrders = async () => {
                     border border-slate-200
                     
                     ${(
+                      !isMySellerCard(seller.walletAddress) &&
                       (seller.seller.buyOrder?.status === 'ordered'
-                      || seller.seller.buyOrder?.status === 'paymentRequested')
-                    && (seller.walletAddress !== address && seller.seller?.buyOrder?.walletAddress !== address)
+                      || seller.seller.buyOrder?.status === 'paymentRequested') &&
+                      !isSameWalletAddress(seller.seller?.buyOrder?.walletAddress, address)
                     ) ?
                       'ring-4 ring-red-500/50 animate-pulse' : ''
                     }
@@ -6372,15 +6608,17 @@ const fetchBuyOrders = async () => {
 
                  
 
-                    ${seller.walletAddress === address
+                    ${isMySellerCard(seller.walletAddress)
                     ? 'ring-4 ring-amber-400/70' : ''
                     }
 
                     ${
                     (
+                      !isMySellerCard(seller.walletAddress) &&
                       (seller.seller.buyOrder?.status === 'ordered' ||
-                      seller.seller?.buyOrder?.status === 'paymentRequested')
-                    && seller.seller?.buyOrder?.walletAddress === address)
+                      seller.seller?.buyOrder?.status === 'paymentRequested') &&
+                      isSameWalletAddress(seller.seller?.buyOrder?.walletAddress, address)
+                    )
                     ? 'ring-4 ring-yellow-400/70' : ''
                     }
 
@@ -6705,22 +6943,24 @@ const fetchBuyOrders = async () => {
 
                                   }
                                 </div>
+                                <div className="mt-3 flex justify-end">
+                                  <a
+                                    className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm hover:text-slate-800 hover:shadow-md"
+                                    href={`https://polygonscan.com/token/0xc2132d05d31c914a87c6611c10748aeb04b58e8f?a=${seller.seller.escrowWalletAddress}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    <Image
+                                      src="/logo-polygon.png"
+                                      alt="Polygonscan"
+                                      width={16}
+                                      height={16}
+                                      className="h-4 w-4"
+                                    />
+                                    <span>폴리스캔에서 USDT 잔고 보기</span>
+                                  </a>
+                                </div>
                               </div>
-                              <a
-                                className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm hover:text-slate-800 hover:shadow-md"
-                                href={`https://polygonscan.com/token/0xc2132d05d31c914a87c6611c10748aeb04b58e8f?a=${seller.seller.escrowWalletAddress}`}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                <Image
-                                  src="/logo-polygon.png"
-                                  alt="Polygonscan"
-                                  width={16}
-                                  height={16}
-                                  className="h-4 w-4"
-                                />
-                                <span>폴리스캔에서 USDT 잔고 보기</span>
-                              </a>
 
                               {/*
                               {seller.walletAddress === address && (
@@ -6765,7 +7005,7 @@ const fetchBuyOrders = async () => {
                                 </div>
                               ) : (
                                 <>
-                                  {seller.walletAddress === address && (
+                                  {isMySellerCard(seller.walletAddress) && (
                                     <div className="w-full rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-xs font-semibold text-emerald-700">
                                       {/*If you deposit more USDT, more orders will be assigned. */}
                                       충전된 USDT가 많을수록 더 많은 주문이 할당됩니다.
@@ -6775,10 +7015,13 @@ const fetchBuyOrders = async () => {
                               )}
 
                             {!(
-                              seller.seller?.buyOrder?.status === 'paymentRequested' ||
-                              (seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
-                                (!seller.seller?.buyOrder?.transactionHash ||
-                                  seller.seller?.buyOrder?.transactionHash === '0x'))
+                              (isMySellerCard(seller.walletAddress) && ownerHasActivePaymentRequestedOrders) ||
+                              (!isMySellerCard(seller.walletAddress) && (
+                                seller.seller?.buyOrder?.status === 'paymentRequested' ||
+                                (seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
+                                  (!seller.seller?.buyOrder?.transactionHash ||
+                                    seller.seller?.buyOrder?.transactionHash === '0x'))
+                              ))
                             ) && (
                               <>
                                 {/* if balance is greater than or equal to 10 USDT, show 판매 대기중 */}
@@ -6949,40 +7192,43 @@ const fetchBuyOrders = async () => {
                               )}
                             </div>
 
-                            <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5">
-                              <span className="w-full flex text-sm font-semibold text-slate-800">
-                                자동입금처리
-                              </span>
-                              {seller.seller?.autoProcessDeposit ? (
-                                <div className="mt-1 w-full flex flex-col items-start justify-center">
-                                  <div className="flex text-xs text-emerald-800 font-semibold
-                                  bg-emerald-100/90 border border-emerald-200 rounded-lg px-2 py-1 text-center
-                                  ">
-                                    활성화 상태
+                            {seller.seller?.bankInfo?.bankName !== '연락처송금' && (
+                              <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5">
+                                <span className="w-full flex text-sm font-semibold text-slate-800">
+                                  자동입금처리
+                                </span>
+                                {seller.seller?.autoProcessDeposit ? (
+                                  <div className="mt-1 w-full flex flex-col items-start justify-center">
+                                    <div className="flex text-xs text-emerald-800 font-semibold
+                                    bg-emerald-100/90 border border-emerald-200 rounded-lg px-2 py-1 text-center
+                                    ">
+                                      활성화 상태
+                                    </div>
+                                    <div className="text-xs text-slate-700 mt-1 leading-relaxed">
+                                      구매자가 입금을 하면 자동으로 입금확인이 처리됩니다.
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-slate-700 mt-1 leading-relaxed">
-                                    구매자가 입금을 하면 자동으로 입금확인이 처리됩니다.
+                                ) : (
+                                  <div className="mt-1 w-full flex flex-col items-start justify-center">
+                                    <div className="flex text-xs text-red-700 font-semibold
+                                    bg-red-100/90 border border-red-200 rounded-lg px-2 py-1 text-center
+                                    ">
+                                      비활성화 상태
+                                    </div>
+                                    <div className="text-xs text-slate-700 mt-1 leading-relaxed">
+                                      구매자가 입금을 하면 판매자가 수동으로 입금확인을 합니다.
+                                    </div>
                                   </div>
-                                </div>
-                              ) : (
-                                <div className="mt-1 w-full flex flex-col items-start justify-center">
-                                  <div className="flex text-xs text-red-700 font-semibold
-                                  bg-red-100/90 border border-red-200 rounded-lg px-2 py-1 text-center
-                                  ">
-                                    비활성화 상태
-                                  </div>
-                                  <div className="text-xs text-slate-700 mt-1 leading-relaxed">
-                                    구매자가 입금을 하면 판매자가 수동으로 입금확인을 합니다.
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
 
                       </div>
 
-                      {seller.seller?.buyOrder?.status === 'paymentRequested' && (
+                      {!isMySellerCard(seller.walletAddress) &&
+                        seller.seller?.buyOrder?.status === 'paymentRequested' && (
 
                         <div className="w-full flex flex-col items-start justify-center gap-2
                         bg-amber-50/80 text-slate-900 px-4 py-3 rounded-xl
@@ -7166,7 +7412,8 @@ const fetchBuyOrders = async () => {
                       )}
 
 
-                      {seller.seller?.buyOrder?.status === 'paymentConfirmed'
+                      {!isMySellerCard(seller.walletAddress) &&
+                        seller.seller?.buyOrder?.status === 'paymentConfirmed'
                         && (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x') && (
 
                           <div className="w-full flex flex-row items-center gap-2
@@ -7204,7 +7451,7 @@ const fetchBuyOrders = async () => {
                       w-full
                       flex flex-col items-start justify-center gap-2">
 
-                      {seller.seller?.buyOrder?.status === 'paymentRequested' ? (
+                      {(!isMySellerCard(seller.walletAddress) && seller.seller?.buyOrder?.status === 'paymentRequested') ? (
                         <div className="w-full flex flex-col items-start justify-center gap-2">
 
                           {/* 판매 진행 */}
@@ -7452,7 +7699,7 @@ const fetchBuyOrders = async () => {
 
                         </div>
 
-                      ) : seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
+                      ) : !isMySellerCard(seller.walletAddress) && seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
                           (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x') ? (
                         <div className="w-full flex flex-col items-start justify-center gap-2">
                           {/* 판매 진행중 */}
@@ -7626,6 +7873,70 @@ const fetchBuyOrders = async () => {
                                 </span>
                               </div>
                             </div>
+
+                            {seller.walletAddress && isSameWalletAddress(seller.walletAddress, sellerWalletAddressParam) && (
+                              <div className="w-full flex flex-col items-start justify-center gap-2 rounded-xl border border-slate-200 bg-white/90 p-3">
+                                <div className="w-full flex flex-row items-center justify-between gap-2">
+                                  <span className="text-sm font-bold text-slate-800">
+                                    거래중인 주문 목록
+                                  </span>
+                                  <span className="text-xs font-semibold text-slate-500">
+                                    최신순
+                                  </span>
+                                </div>
+                                {!loadedActivePaymentRequestedOrders || loadingActivePaymentRequestedOrders ? (
+                                  <div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                                    거래중 주문을 불러오는 중입니다...
+                                  </div>
+                                ) : activePaymentRequestedOrders.length > 0 ? (
+                                  <div className="w-full flex flex-col items-start justify-center gap-2">
+                                    {activePaymentRequestedOrders.map((order) => (
+                                      <div
+                                        key={order._id}
+                                        className="w-full rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2"
+                                      >
+                                        <div className="w-full flex flex-row items-start justify-between gap-2">
+                                          <span className="text-sm font-semibold text-slate-900">
+                                            TID #{order.tradeId || '-'}
+                                          </span>
+                                          <div className="flex flex-col items-end gap-1">
+                                            <span className="text-xs text-slate-600">
+                                              {formatTradeHistoryTime(order.paymentRequestedAt || order.createdAt)}
+                                            </span>
+                                            {isOwnerSeller && (
+                                              <button
+                                                type="button"
+                                                className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                                                onClick={() => openActiveOrderCompleteModal(order)}
+                                              >
+                                                완료하기
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div className="mt-1 w-full flex flex-row items-center justify-between gap-2 text-sm">
+                                          <div className="flex min-w-0 flex-col items-start">
+                                            <span className="text-slate-700">
+                                              구매자 {getBuyerDisplayNameForTradeList(order, isOwnerSeller)}
+                                            </span>
+                                            <span className="text-xs text-slate-500">
+                                              입금자명 {getBuyerDepositNameForTradeList(order, isOwnerSeller)}
+                                            </span>
+                                          </div>
+                                          <span className="font-semibold text-amber-700" style={{ fontFamily: 'monospace' }}>
+                                            {formatKrwValue(order.krwAmount)}원 / {(Number(order.usdtAmount || 0)).toFixed(3)} USDT
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                                    현재 거래중인 주문이 없습니다.
+                                  </div>
+                                )}
+                              </div>
+                            )}
 
                           </div>
 
@@ -7985,10 +8296,14 @@ const fetchBuyOrders = async () => {
                       )}
 
 
-                      {seller.seller?.buyOrder?.status === 'paymentRequested'
-                      || (seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
-                          (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x'))
-                      ? (
+                      {(
+                        !isMySellerCard(seller.walletAddress) &&
+                        (
+                          seller.seller?.buyOrder?.status === 'paymentRequested' ||
+                          (seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
+                            (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x'))
+                        )
+                      ) ? (
                         <>
 
                         {/*
@@ -8139,7 +8454,6 @@ const fetchBuyOrders = async () => {
                       ) : (
                         <></>
                       )}
-
 
                     </div>
 
@@ -10148,6 +10462,118 @@ const fetchBuyOrders = async () => {
                 closeModal={closeModal}
                 selectedItem={selectedItem}
             />
+        </ModalUser>
+
+        <ModalUser
+          isOpen={isActiveOrderCompleteModalOpen}
+          onClose={closeActiveOrderCompleteModal}
+        >
+          <div className="w-[min(94vw,560px)] rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">주문 완료 처리</h3>
+                <p className="text-xs text-slate-500">에스크로에서 구매자 지갑으로 USDT를 전송합니다.</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeActiveOrderCompleteModal}
+                disabled={completingActiveOrder}
+                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-500 hover:text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300"
+              >
+                닫기
+              </button>
+            </div>
+
+            {selectedActivePaymentRequestedOrder && (
+              <>
+                <div className="mt-4 grid grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-700">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">주문번호</span>
+                    <span className="font-semibold text-slate-900">{selectedActivePaymentRequestedOrder._id}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">TID</span>
+                    <span className="font-semibold text-slate-900">
+                      {selectedActivePaymentRequestedOrder.tradeId || '-'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">주문 상태</span>
+                    <span className="font-semibold text-amber-700">
+                      {selectedActivePaymentRequestedOrder.status || 'paymentRequested'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">입금 금액</span>
+                    <span className="font-semibold text-slate-900">
+                      {formatKrwValue(selectedActivePaymentRequestedOrder.krwAmount)} 원
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">주문 수량</span>
+                    <span className="font-semibold text-slate-900">
+                      {(Number(selectedActivePaymentRequestedOrder.usdtAmount || 0)).toFixed(3)} USDT
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">입금자명</span>
+                    <span className="font-semibold text-slate-900">
+                      {getBuyerDepositName(selectedActivePaymentRequestedOrder)}
+                    </span>
+                  </div>
+                  <div className="border-t border-slate-200 pt-2">
+                    <span className="text-xs text-slate-500">구매자 지갑</span>
+                    <div className="mt-0.5 break-all text-xs font-semibold text-slate-800">
+                      {selectedActivePaymentRequestedOrder.buyer?.walletAddress || selectedActivePaymentRequestedOrder.walletAddress || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-slate-500">구매자 에스크로 지갑</span>
+                    <div className="mt-0.5 break-all text-xs font-semibold text-slate-800">
+                      {selectedActivePaymentRequestedOrder.buyer?.escrowWalletAddress || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-slate-500">입금요청 시간</span>
+                    <div className="mt-0.5 text-xs font-semibold text-slate-800">
+                      {formatTradeHistoryTime(
+                        selectedActivePaymentRequestedOrder.paymentRequestedAt
+                        || selectedActivePaymentRequestedOrder.createdAt,
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                  완료 시 구매자 에스크로 지갑에서 구매자 지갑으로 USDT가 전송되고, 주문 상태가 결제완료로 변경됩니다.
+                </div>
+              </>
+            )}
+
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeActiveOrderCompleteModal}
+                disabled={completingActiveOrder}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={completeSelectedActiveOrder}
+                disabled={!selectedActivePaymentRequestedOrder || completingActiveOrder}
+                className={`
+                  rounded-lg px-3 py-1.5 text-sm font-semibold text-white
+                  ${!selectedActivePaymentRequestedOrder || completingActiveOrder
+                    ? 'cursor-not-allowed bg-slate-300'
+                    : 'bg-emerald-600 hover:bg-emerald-500'}
+                `}
+              >
+                {completingActiveOrder ? '완료 처리중...' : '완료하기'}
+              </button>
+            </div>
+          </div>
         </ModalUser>
 
         <style jsx>{`
