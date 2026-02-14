@@ -2347,6 +2347,35 @@ export default function Index({ params }: any) {
                 </button>
               </div>
 
+              {/* 구매주문 대시보드 별도 배치 */}
+              <div className="w-full mt-3 flex flex-col gap-2 rounded-2xl border border-slate-200/80 bg-cyan-50/80 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-sm text-slate-700">
+                  <div className="w-2 h-2 rounded-full bg-cyan-500"></div>
+                  <span className="font-semibold">구매주문 대시보드</span>
+                  <span className="text-xs text-slate-500">최신 주문 상태를 실시간 모니터링</span>
+                </div>
+                <button
+                  onClick={() => {
+                    router.push('/' + params.lang + '/administration/buyorder-management');
+                  }}
+                  className="inline-flex items-center gap-2 rounded-full bg-cyan-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md whitespace-nowrap"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 5v14" />
+                    <path d="M5 12h14" />
+                  </svg>
+                  구매주문 대시보드로 이동
+                </button>
+              </div>
+
 
 
 
