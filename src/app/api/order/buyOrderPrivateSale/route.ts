@@ -5,8 +5,6 @@ import {
   getPrivateTradeStatusByBuyerAndSeller,
 } from '@lib/api/order';
 
-import { getSellerBySellerWalletAddress } from '@lib/api/user';
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -26,14 +24,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const seller = await getSellerBySellerWalletAddress(sellerWalletAddress);
-    if (!seller) {
-      return NextResponse.json(
-        { error: 'Seller not found for wallet address.', sellerWalletAddress },
-        { status: 404 },
-      );
-    }
-
     const tradableStatuses = new Set(['ordered', 'accepted', 'paymentRequested']);
     const beforeTradeStatus = await getPrivateTradeStatusByBuyerAndSeller({
       buyerWalletAddress,
@@ -42,6 +32,7 @@ export async function POST(request: NextRequest) {
     const hasActiveTradeBefore =
       Boolean(beforeTradeStatus?.order?.status)
       && tradableStatuses.has(String(beforeTradeStatus.order?.status));
+    let createdNewOrder = false;
 
     if (!hasActiveTradeBefore) {
       const created = await acceptBuyOrderPrivateSale({
@@ -67,12 +58,15 @@ export async function POST(request: NextRequest) {
           {
             error: 'BUY_ORDER_CREATION_FAILED',
             reason: created.error,
-            message:
-              failureMessageByReason[created.error] || `구매 주문 생성 실패 (${created.error})`,
+            detail: created.detail || '',
+            message: created.detail
+              ? `${failureMessageByReason[created.error] || `구매 주문 생성 실패 (${created.error})`}: ${created.detail}`
+              : (failureMessageByReason[created.error] || `구매 주문 생성 실패 (${created.error})`),
           },
           { status: 400 },
         );
       }
+      createdNewOrder = true;
     }
 
     const tradeStatus = await getPrivateTradeStatusByBuyerAndSeller({
@@ -89,11 +83,23 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       result: true,
+      created: createdNewOrder,
+      reason: createdNewOrder ? 'CREATED_NEW_ORDER' : 'ACTIVE_ORDER_EXISTS',
       order: tradeStatus.order,
     });
   } catch (error) {
+    const detail =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : '';
     return NextResponse.json(
-      { error: 'INTERNAL_SERVER_ERROR' },
+      {
+        error: 'INTERNAL_SERVER_ERROR',
+        message: '구매 주문 생성 중 서버 오류가 발생했습니다.',
+        detail,
+      },
       { status: 500 },
     );
   }

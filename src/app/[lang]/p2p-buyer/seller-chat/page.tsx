@@ -425,7 +425,13 @@ export default function SellerChatPage() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data?.result) {
-        throw new Error(data?.message || data?.error || '구매 주문 생성에 실패했습니다.');
+        throw new Error(
+          data?.message
+          || data?.detail
+          || data?.reason
+          || data?.error
+          || '구매 주문 생성에 실패했습니다.',
+        );
       }
 
       const apiOrder =
@@ -438,10 +444,17 @@ export default function SellerChatPage() {
       setCurrentTradeOrder(apiOrder);
       setPaymentCountdownNow(Date.now());
 
+      const isNewOrderCreated = data?.created !== false;
       setBuyStatus('success');
-      setBuyStatusMessage('구매 주문이 생성되었습니다.');
-      setBuyUsdtInput('');
-      setBuyKrwInput('');
+      setBuyStatusMessage(
+        isNewOrderCreated
+          ? '구매 주문이 생성되었습니다.'
+          : '이미 거래중인 주문이 있어 새 주문을 생성하지 않았습니다.',
+      );
+      if (isNewOrderCreated) {
+        setBuyUsdtInput('');
+        setBuyKrwInput('');
+      }
       fetchSellerProfile();
       fetchBuyerSellerTradeStatus({ showLoading: false });
     } catch (error) {

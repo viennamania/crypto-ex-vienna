@@ -204,8 +204,44 @@ type SellerChatItem = {
   unreadMessageCount?: number;
 };
 
+type BuyOrderConfirmDraft = {
+  index: number;
+  sellerWalletAddress: string;
+  sellerName: string;
+  usdtAmount: number;
+  krwAmount: number;
+  rate: number;
+};
+
+type PrivateTradeOrderSummary = {
+  orderId: string;
+  tradeId: string;
+  status: string;
+  createdAt: string;
+  acceptedAt: string;
+  paymentRequestedAt: string;
+  paymentConfirmedAt: string;
+  cancelledAt: string;
+  krwAmount: number;
+  usdtAmount: number;
+  paymentMethod: string;
+  paymentBankName: string;
+  buyerWalletAddress: string;
+  sellerWalletAddress: string;
+};
+
+type PrivateTradeStatusState = {
+  loaded: boolean;
+  loading: boolean;
+  isTrading: boolean;
+  status: string | null;
+  order: PrivateTradeOrderSummary | null;
+  error: string | null;
+};
+
 
 const walletAuthOptions = ["google", "email", "phone"];
+const ACTIVE_PRIVATE_TRADE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
 
 // 클라이언트에서 접근 가능한 공개 App ID가 비어 있으면 기본값으로 설정
 const NEXT_PUBLIC_SENDBIRD_APP_ID =
@@ -379,6 +415,54 @@ const formatShortWalletAddress = (value?: string | null) => {
   return `${wallet.substring(0, 6)}...${wallet.substring(wallet.length - 4)}`;
 };
 
+const toWalletKey = (walletAddress?: string | null) =>
+  String(walletAddress || '').trim().toLowerCase();
+
+const normalizePrivateTradeOrderSummary = (order: any): PrivateTradeOrderSummary | null => {
+  if (!order || typeof order !== 'object') {
+    return null;
+  }
+
+  const status = typeof order?.status === 'string' ? order.status : '';
+  if (!status) {
+    return null;
+  }
+
+  const orderId =
+    (typeof order?.orderId === 'string' && order.orderId)
+    || (typeof order?._id === 'string' && order._id)
+    || '';
+
+  const buyerWalletAddress =
+    (typeof order?.buyerWalletAddress === 'string' && order.buyerWalletAddress)
+    || (typeof order?.buyer?.walletAddress === 'string' && order.buyer.walletAddress)
+    || (typeof order?.walletAddress === 'string' ? order.walletAddress : '');
+
+  const sellerWalletAddress =
+    (typeof order?.sellerWalletAddress === 'string' && order.sellerWalletAddress)
+    || (typeof order?.seller?.walletAddress === 'string' && order.seller.walletAddress)
+    || '';
+
+  return {
+    orderId,
+    tradeId: typeof order?.tradeId === 'string' ? order.tradeId : '',
+    status,
+    createdAt: typeof order?.createdAt === 'string' ? order.createdAt : '',
+    acceptedAt: typeof order?.acceptedAt === 'string' ? order.acceptedAt : '',
+    paymentRequestedAt: typeof order?.paymentRequestedAt === 'string' ? order.paymentRequestedAt : '',
+    paymentConfirmedAt: typeof order?.paymentConfirmedAt === 'string' ? order.paymentConfirmedAt : '',
+    cancelledAt: typeof order?.cancelledAt === 'string' ? order.cancelledAt : '',
+    krwAmount: Number(order?.krwAmount || 0) || 0,
+    usdtAmount: Number(order?.usdtAmount || 0) || 0,
+    paymentMethod: typeof order?.paymentMethod === 'string' ? order.paymentMethod : '',
+    paymentBankName:
+      (typeof order?.paymentBankName === 'string' && order.paymentBankName)
+      || (typeof order?.seller?.bankInfo?.bankName === 'string' ? order.seller.bankInfo.bankName : ''),
+    buyerWalletAddress,
+    sellerWalletAddress,
+  };
+};
+
 const LINKABLE_TOKEN_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
 const URL_ONLY_REGEX = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/i;
 const EMAIL_ONLY_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
@@ -477,6 +561,25 @@ const getBuyerDisplayNameForTradeList = (orderLike: any, isOwnerView: boolean) =
 const getBuyerDepositNameForTradeList = (orderLike: any, isOwnerView: boolean) => {
   const rawDepositName = getBuyerDepositName(orderLike);
   return isOwnerView ? rawDepositName : ensureMaskedBuyerName(rawDepositName);
+};
+
+const getPaymentMethodLabel = (paymentMethod?: string | null, paymentBankName?: string | null) => {
+  const method = String(paymentMethod || '').trim().toLowerCase();
+  const bankName = String(paymentBankName || '').trim();
+
+  if ((!method || method === 'bank') && bankName === '연락처송금') {
+    return '연락처송금';
+  }
+  if (method === 'bank') return '은행송금';
+  if (method === 'card') return '카드';
+  if (method === 'pg') return 'PG';
+  if (method === 'cash') return '현금';
+  if (method === 'crypto') return '암호화폐';
+  if (method === 'giftcard') return '기프트카드';
+  if (method === 'mkrw') return 'MKRW';
+  if (method === 'contact' || method === 'contacttransfer' || method === 'contact_transfer') return '연락처송금';
+  if (bankName) return bankName;
+  return '기타';
 };
 
 type DailyTradePoint = {
@@ -1537,6 +1640,9 @@ export default function Index({ params }: any) {
   const [activePaymentRequestedOrders, setActivePaymentRequestedOrders] = useState<BuyOrder[]>([]);
   const [loadingActivePaymentRequestedOrders, setLoadingActivePaymentRequestedOrders] = useState(false);
   const [loadedActivePaymentRequestedOrders, setLoadedActivePaymentRequestedOrders] = useState(false);
+  const [sellersBalance, setSellersBalance] = useState([] as any[]);
+  const [privateTradeStatusBySellerWallet, setPrivateTradeStatusBySellerWallet] =
+    useState<Record<string, PrivateTradeStatusState>>({});
   const [isActiveOrderCompleteModalOpen, setIsActiveOrderCompleteModalOpen] = useState(false);
   const [selectedActivePaymentRequestedOrder, setSelectedActivePaymentRequestedOrder] = useState<BuyOrder | null>(null);
   const [completingActiveOrder, setCompletingActiveOrder] = useState(false);
@@ -1544,6 +1650,38 @@ export default function Index({ params }: any) {
   const isSameWalletAddress = (walletA?: string, walletB?: string) =>
     Boolean(walletA && walletB && walletA.toLowerCase() === walletB.toLowerCase());
   const isMySellerCard = (walletAddress?: string) => isSameWalletAddress(walletAddress, address);
+  const getPrivateTradeStatusForSeller = (walletAddress?: string) =>
+    privateTradeStatusBySellerWallet[toWalletKey(walletAddress)];
+  const getPrivateTradeOrderForSeller = (walletAddress?: string) => {
+    const status = getPrivateTradeStatusForSeller(walletAddress);
+    if (!status?.isTrading || !status?.order) {
+      return null;
+    }
+    return status.order;
+  };
+  const hasPrivateTradeOrderForSeller = (walletAddress?: string) =>
+    Boolean(getPrivateTradeOrderForSeller(walletAddress));
+  const isPrivateTradeStatusLoadingForSeller = (walletAddress?: string) => {
+    const status = getPrivateTradeStatusForSeller(walletAddress);
+    if (!status) {
+      return true;
+    }
+    return status.loading && !status.loaded;
+  };
+  const privateTradeTargetSellerWallets = useMemo(() => {
+    if (!address) {
+      return [] as string[];
+    }
+    return Array.from(new Set(
+      sellersBalance
+        .map((item) => String(item?.walletAddress || '').trim())
+        .filter((walletAddress) => walletAddress && !isSameWalletAddress(walletAddress, address)),
+    ));
+  }, [address, sellersBalance]);
+  const privateTradeTargetSellerWalletsKey = useMemo(
+    () => privateTradeTargetSellerWallets.map((walletAddress) => walletAddress.toLowerCase()).sort().join('|'),
+    [privateTradeTargetSellerWallets],
+  );
   const ownerHasActivePaymentRequestedOrders =
     isOwnerSeller && activePaymentRequestedOrders.length > 0;
 
@@ -4224,7 +4362,6 @@ const fetchBuyOrders = async () => {
 
 
   // 판매자 잔고 불러오기
-  const [sellersBalance, setSellersBalance] = useState([] as any[]);
   const [sellerProfileLoaded, setSellerProfileLoaded] = useState(false);
   const fetchSellersBalance = async () => {
     try {
@@ -4420,6 +4557,140 @@ const fetchBuyOrders = async () => {
       clearInterval(interval);
     };
   }, [address, sellerWalletAddressParam, targetSellerEscrowWalletAddress]);
+
+  useEffect(() => {
+    if (!address || privateTradeTargetSellerWallets.length === 0) {
+      setPrivateTradeStatusBySellerWallet({});
+      return;
+    }
+
+    let mounted = true;
+
+    const fetchPrivateTradeStatuses = async (isInitial: boolean) => {
+      const targetWallets = [...privateTradeTargetSellerWallets];
+      if (targetWallets.length === 0) {
+        if (mounted) {
+          setPrivateTradeStatusBySellerWallet({});
+        }
+        return;
+      }
+
+      if (isInitial && mounted) {
+        setPrivateTradeStatusBySellerWallet((prev) => {
+          const next: Record<string, PrivateTradeStatusState> = {};
+          for (const sellerWalletAddress of targetWallets) {
+            const key = toWalletKey(sellerWalletAddress);
+            const prevStatus = prev[key];
+            next[key] = {
+              loaded: Boolean(prevStatus?.loaded),
+              loading: true,
+              isTrading: Boolean(prevStatus?.isTrading),
+              status: prevStatus?.status || null,
+              order: prevStatus?.order || null,
+              error: null,
+            };
+          }
+          return next;
+        });
+      }
+
+      const fetched = await Promise.all(
+        targetWallets.map(async (sellerWalletAddress) => {
+          try {
+            const response = await fetch('/api/order/getPrivateTradeStatus', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                buyerWalletAddress: address,
+                sellerWalletAddress,
+              }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+              const errorMessage =
+                data?.message
+                || data?.detail
+                || data?.error
+                || '현재 거래 상태를 확인하지 못했습니다.';
+              return {
+                sellerWalletAddress,
+                value: {
+                  loaded: true,
+                  loading: false,
+                  isTrading: false,
+                  status: null,
+                  order: null,
+                  error: errorMessage,
+                } as PrivateTradeStatusState,
+              };
+            }
+
+            const result = data?.result || {};
+            const normalizedOrder = normalizePrivateTradeOrderSummary(result?.order);
+            const normalizedStatus =
+              normalizedOrder?.status
+              || (typeof result?.status === 'string' ? result.status : null);
+            const isTrading =
+              Boolean(result?.isTrading)
+              && Boolean(normalizedOrder)
+              && ACTIVE_PRIVATE_TRADE_STATUSES.has(String(normalizedStatus || ''));
+
+            return {
+              sellerWalletAddress,
+              value: {
+                loaded: true,
+                loading: false,
+                isTrading,
+                status: isTrading ? String(normalizedStatus || '') : null,
+                order: isTrading ? normalizedOrder : null,
+                error: null,
+              } as PrivateTradeStatusState,
+            };
+          } catch (error) {
+            return {
+              sellerWalletAddress,
+              value: {
+                loaded: true,
+                loading: false,
+                isTrading: false,
+                status: null,
+                order: null,
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : '현재 거래 상태를 확인하지 못했습니다.',
+              } as PrivateTradeStatusState,
+            };
+          }
+        }),
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setPrivateTradeStatusBySellerWallet(() => {
+        const next: Record<string, PrivateTradeStatusState> = {};
+        for (const item of fetched) {
+          next[toWalletKey(item.sellerWalletAddress)] = item.value;
+        }
+        return next;
+      });
+    };
+
+    fetchPrivateTradeStatuses(true);
+    const intervalId = window.setInterval(() => {
+      fetchPrivateTradeStatuses(false);
+    }, 10000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, [address, privateTradeTargetSellerWallets, privateTradeTargetSellerWalletsKey]);
 
   const openActiveOrderCompleteModal = (order: BuyOrder) => {
     if (!isOwnerSeller) {
@@ -4856,7 +5127,7 @@ const fetchBuyOrders = async () => {
     if (!value || Number.isNaN(value)) {
       return '';
     }
-    const fixed = (Math.floor(value * 100) / 100).toFixed(2);
+    const fixed = (Math.floor(value * 1000) / 1000).toFixed(3);
     const trimmed = fixed.replace(/\.?0+$/, '');
     return formatNumberWithCommas(trimmed);
   };
@@ -4869,7 +5140,7 @@ const fetchBuyOrders = async () => {
     const parts = cleaned.split('.');
     const integerPart = parts[0] ?? '';
     const decimalPart = parts.slice(1).join('');
-    const trimmedDecimal = decimalPart.slice(0, 2);
+    const trimmedDecimal = decimalPart.slice(0, 3);
     const normalizedInteger = integerPart.replace(/^0+(?=\d)/, '');
     if (cleaned.includes('.')) {
       return `${normalizedInteger || '0'}.${trimmedDecimal}`;
@@ -4901,45 +5172,126 @@ const fetchBuyOrders = async () => {
 
 
   const [buyOrderingPrivateSaleArray, setBuyOrderingPrivateSaleArray] = useState<boolean[]>([]);
+  const [isBuyOrderConfirmModalOpen, setIsBuyOrderConfirmModalOpen] = useState(false);
+  const [buyOrderConfirmDraft, setBuyOrderConfirmDraft] = useState<BuyOrderConfirmDraft | null>(null);
+  const [buyOrderConfirmError, setBuyOrderConfirmError] = useState<string | null>(null);
 
-  const buyOrderPrivateSale = async (
-    index: number,
-    sellerWalletAddress: string,
-  ) => {
-    if (!address) {
-      toast.error('지갑을 연결해주세요.');
-      return;
-    }
-
-
-    if (buyOrderingPrivateSaleArray[index]) {
-      return;
-    }
-
+  const getBuyOrderRequestInfo = (index: number, sellerWalletAddress: string) => {
     const targetSeller = sellersBalance.find(
-      (seller) => seller.walletAddress === sellerWalletAddress
+      (seller) => isSameWalletAddress(seller.walletAddress, sellerWalletAddress),
     );
-    const rate = targetSeller?.seller?.usdtToKrwRate || 0;
-    const krwInput = buyAmountKrwInputs[index] ?? 0;
-    const computedUsdtFromKrw =
-      rate > 0 && krwInput > 0 ? Math.floor((krwInput / rate) * 100) / 100 : 0;
-    const usdtAmount =
-      computedUsdtFromKrw > 0 ? computedUsdtFromKrw : buyAmountInputs[index] || 0;
 
-    if (!usdtAmount || usdtAmount <= 0) {
+    if (!targetSeller) {
+      return null;
+    }
+
+    const rate = Number(targetSeller?.seller?.usdtToKrwRate || 0);
+    const krwInput = buyAmountKrwInputs[index] ?? 0;
+    const usdtInput = buyAmountInputs[index] ?? 0;
+
+    const derivedUsdt =
+      usdtInput > 0
+        ? Math.floor(usdtInput * 1000) / 1000
+        : rate > 0 && krwInput > 0
+          ? Math.floor((krwInput / rate) * 1000) / 1000
+          : 0;
+    const derivedKrw =
+      krwInput > 0
+        ? Math.floor(krwInput)
+        : derivedUsdt > 0 && rate > 0
+          ? Math.round(derivedUsdt * rate)
+          : 0;
+
+    const sellerName =
+      targetSeller?.nickname
+      || targetSeller?.seller?.nickname
+      || targetSeller?.walletAddress
+      || sellerWalletAddress;
+
+    return {
+      sellerName,
+      rate,
+      derivedUsdt,
+      derivedKrw,
+    };
+  };
+
+  const openBuyOrderConfirmModal = (index: number, sellerWalletAddress: string) => {
+    setBuyOrderConfirmError(null);
+    const requestInfo = getBuyOrderRequestInfo(index, sellerWalletAddress);
+    if (!requestInfo) {
+      toast.error('판매자 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    if (
+      !requestInfo.derivedUsdt
+      || requestInfo.derivedUsdt <= 0
+      || !requestInfo.derivedKrw
+      || requestInfo.derivedKrw <= 0
+    ) {
       toast.error('구매 금액을 입력해주세요.');
       return;
     }
 
-    if (usdtAmount > MAX_BUY_AMOUNT) {
-      toast.error('구매 수량은 100,000 USDT 이하로 입력해주세요.');
+    setBuyOrderConfirmDraft({
+      index,
+      sellerWalletAddress,
+      sellerName: requestInfo.sellerName,
+      usdtAmount: requestInfo.derivedUsdt,
+      krwAmount: requestInfo.derivedKrw,
+      rate: requestInfo.rate,
+    });
+    setIsBuyOrderConfirmModalOpen(true);
+  };
+
+  const closeBuyOrderConfirmModal = () => {
+    if (
+      buyOrderConfirmDraft
+      && buyOrderingPrivateSaleArray[buyOrderConfirmDraft.index]
+    ) {
       return;
     }
+    setIsBuyOrderConfirmModalOpen(false);
+    setBuyOrderConfirmDraft(null);
+    setBuyOrderConfirmError(null);
+  };
 
-    // if buyAmountInputs[index] is more than currentUsdtBalanceArray[index], show error
-    if (usdtAmount > currentUsdtBalanceArray[index]) {
-      toast.error('구매 금액이 판매자의 잔여 USDT 잔고를 초과합니다.');
-      return;
+  const buyOrderPrivateSale = async (
+    index: number,
+    sellerWalletAddress: string,
+  ): Promise<boolean> => {
+    const failBuyOrder = (message: string) => {
+      setBuyOrderConfirmError(message);
+      toast.error(message);
+      return false;
+    };
+
+    if (!address) {
+      return failBuyOrder('지갑을 연결해주세요.');
+    }
+
+
+    if (buyOrderingPrivateSaleArray[index]) {
+      return false;
+    }
+
+    const requestInfo = getBuyOrderRequestInfo(index, sellerWalletAddress);
+    if (!requestInfo) {
+      return failBuyOrder('판매자 정보를 찾을 수 없습니다.');
+    }
+    const { derivedUsdt, derivedKrw } = requestInfo;
+
+    if (!derivedUsdt || derivedUsdt <= 0 || !derivedKrw || derivedKrw <= 0) {
+      return failBuyOrder('구매 금액을 입력해주세요.');
+    }
+
+    if (derivedUsdt > MAX_BUY_AMOUNT) {
+      return failBuyOrder('구매 수량은 100,000 USDT 이하로 입력해주세요.');
+    }
+
+    if (Number.isFinite(currentUsdtBalanceArray[index]) && derivedUsdt > currentUsdtBalanceArray[index]) {
+      return failBuyOrder('구매 금액이 판매자의 잔여 USDT 잔고를 초과합니다.');
     }
 
     setBuyOrderingPrivateSaleArray((prev) => {
@@ -4957,20 +5309,53 @@ const fetchBuyOrders = async () => {
         body: JSON.stringify({
           buyerWalletAddress: address,
           sellerWalletAddress: sellerWalletAddress,
-          usdtAmount,
-          krwAmount: krwInput,
+          usdtAmount: derivedUsdt,
+          krwAmount: derivedKrw,
         }),
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data?.message || '구매 주문 생성에 실패했습니다.');
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.result) {
+        throw new Error(
+          data?.message
+          || data?.detail
+          || data?.reason
+          || data?.error
+          || '구매 주문 생성에 실패했습니다.',
+        );
       }
 
-      if (data.result) {
+      const apiOrder = data?.order && typeof data.order === 'object' ? data.order : null;
+      if (!apiOrder?.status) {
+        throw new Error('구매 주문 상태를 확인하지 못했습니다. 다시 시도해 주세요.');
+      }
+      const normalizedApiOrder = normalizePrivateTradeOrderSummary(apiOrder);
+      if (normalizedApiOrder) {
+        const normalizedStatus = String(normalizedApiOrder.status || '');
+        const isTrading = ACTIVE_PRIVATE_TRADE_STATUSES.has(normalizedStatus);
+        setPrivateTradeStatusBySellerWallet((prev) => ({
+          ...prev,
+          [toWalletKey(sellerWalletAddress)]: {
+            loaded: true,
+            loading: false,
+            isTrading,
+            status: isTrading ? normalizedStatus : null,
+            order: isTrading
+              ? {
+                  ...normalizedApiOrder,
+                  buyerWalletAddress: normalizedApiOrder.buyerWalletAddress || address,
+                  sellerWalletAddress: normalizedApiOrder.sellerWalletAddress || sellerWalletAddress,
+                }
+              : null,
+            error: null,
+          },
+        }));
+      }
+
+      const isNewOrderCreated = data?.created !== false;
+      if (isNewOrderCreated) {
+        setBuyOrderConfirmError(null);
         toast.success('구매 주문이 생성되었습니다.');
-        const nowIso = new Date().toISOString();
-        const krwAmount = Math.floor(usdtAmount * rate);
 
         setBuyAmountInputs((prev) => {
           const next = [...prev];
@@ -4997,51 +5382,18 @@ const fetchBuyOrders = async () => {
           next[index] = false;
           return next;
         });
-
-        setSellersBalance((prev) =>
-          prev.map((seller) =>
-            seller.walletAddress === sellerWalletAddress
-              ? {
-                    ...seller,
-                    seller: {
-                      ...seller.seller,
-                      buyOrder: {
-                        ...(seller.seller?.buyOrder ?? {}),
-                        tradeId:
-                          seller.seller?.buyOrder?.tradeId ||
-                          `PENDING-${Date.now().toString().slice(-6)}`,
-                        walletAddress: address,
-                        isWeb3Wallet: true,
-                        usdtAmount,
-                        rate,
-                        krwAmount,
-                        status: 'paymentRequested',
-                        createdAt: nowIso,
-                        acceptedAt: nowIso,
-                        paymentRequestedAt: nowIso,
-                        buyer: {
-                          nickname: user?.nickname || '',
-                          walletAddress: address,
-                          depositName:
-                            user?.buyer?.bankInfo?.accountHolder ||
-                            user?.buyer?.depositName ||
-                            '',
-                        },
-                      },
-                    },
-                }
-              : seller
-          )
-        );
-
-        fetchSellersBalance();
       } else {
-        toast.error('구매 주문 생성에 실패했습니다: ' + data.message);
+        setBuyOrderConfirmError('이미 거래중인 주문이 있어 새 주문을 생성하지 않았습니다.');
+        toast('이미 거래중인 주문이 있어 새 주문을 생성하지 않았습니다.');
       }
+
+      // 서버 기준 상태를 다시 읽어와 화면과 실제 주문 상태를 동기화한다.
+      fetchSellersBalance();
+      return true;
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '구매 주문 생성에 실패했습니다.';
-      toast.error(message);
+      return failBuyOrder(message);
     } finally {
       setBuyOrderingPrivateSaleArray((prev) => {
         const newArray = [...prev];
@@ -5087,6 +5439,27 @@ const fetchBuyOrders = async () => {
 
   };
     
+  const isBuyOrderConfirmProcessing =
+    Boolean(
+      buyOrderConfirmDraft
+      && buyOrderingPrivateSaleArray[buyOrderConfirmDraft.index],
+    );
+
+  const confirmBuyOrderFromModal = async () => {
+    if (!buyOrderConfirmDraft) {
+      return;
+    }
+
+    setBuyOrderConfirmError(null);
+    const targetIndex = buyOrderConfirmDraft.index;
+    const targetSellerWalletAddress = buyOrderConfirmDraft.sellerWalletAddress;
+    const isSuccess = await buyOrderPrivateSale(targetIndex, targetSellerWalletAddress);
+    if (isSuccess) {
+      setIsBuyOrderConfirmModalOpen(false);
+      setBuyOrderConfirmDraft(null);
+    }
+  };
+
 
 
   //if (!address) {
@@ -5181,6 +5554,8 @@ const fetchBuyOrders = async () => {
   const shareLabel = !sellerProfileLoaded
     ? '... 판매자 공유하기'
     : (activeSeller?.nickname ? `${activeSeller.nickname} 판매자 공유하기` : null);
+  const myBuyerNickname = user?.nickname || '연결된 지갑';
+  const myBuyerWalletShort = formatShortWalletAddress(address || '');
   const dailyTradeMax = Math.max(...dailyTradeHistory.map((item) => item.value), 1);
   const dailyTradeChartWidth = 320;
   const dailyTradeChartHeight = 96;
@@ -5325,6 +5700,38 @@ const fetchBuyOrders = async () => {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">판매자 상세</h1>
           <p className="text-sm text-slate-500">판매자 정보와 에스크로 진행 상태를 확인합니다.</p>
         </header>
+
+        {address && (
+          <section className="mb-6 rounded-2xl border border-sky-200/80 bg-sky-50/80 px-4 py-3 shadow-[0_18px_45px_-36px_rgba(14,116,144,0.65)]">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-sky-200 bg-white">
+                  <Image
+                    src="/icon-buyer.png"
+                    alt="Buyer"
+                    width={28}
+                    height={28}
+                    className="h-7 w-7 object-contain"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-700/80">
+                    My Buyer Wallet
+                  </p>
+                  <p className="truncate text-base font-bold text-slate-900">
+                    {myBuyerNickname}
+                  </p>
+                  <p className="truncate text-sm font-semibold text-slate-500">
+                    {myBuyerWalletShort}
+                  </p>
+                </div>
+              </div>
+              <span className="inline-flex items-center rounded-full border border-sky-300 bg-white px-3 py-1 text-sm font-extrabold tracking-[0.18em] text-sky-700">
+                BUYER
+              </span>
+            </div>
+          </section>
+        )}
 
 
 
@@ -6432,7 +6839,7 @@ const fetchBuyOrders = async () => {
                             />
                             <span className="text-lg text-emerald-300 font-semibold"
                               style={{ fontFamily: 'monospace' }}>
-                              {order?.usdtAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                              {order?.usdtAmount.toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                             </span>
                           </div>
                           <span className="text-sm text-amber-300 font-semibold"
@@ -7038,7 +7445,7 @@ const fetchBuyOrders = async () => {
                                       />
                                       {/* 판매 홍보용 문구 */}
                                       {seller.seller?.promotionText ? (
-                                      <span className="relative inline-flex min-h-[160px] flex-1 min-w-0 max-w-[420px] items-start rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-800 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.4)] break-words">
+                                      <span className="relative inline-flex min-h-[96px] flex-1 min-w-0 max-w-[420px] items-start rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-800 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.4)] break-words">
                                         <span
                                           className="absolute -left-2 top-3 h-0 w-0 border-y-[8px] border-r-[8px] border-y-transparent border-r-slate-200/70"
                                           aria-hidden="true"
@@ -7922,6 +8329,9 @@ const fetchBuyOrders = async () => {
                                             <span className="text-xs text-slate-500">
                                               입금자명 {getBuyerDepositNameForTradeList(order, isOwnerSeller)}
                                             </span>
+                                            <span className="text-xs text-slate-500">
+                                              결제방법 {getPaymentMethodLabel(order?.paymentMethod, order?.seller?.bankInfo?.bankName)}
+                                            </span>
                                           </div>
                                           <span className="font-semibold text-amber-700" style={{ fontFamily: 'monospace' }}>
                                             {formatKrwValue(order.krwAmount)}원 / {(Number(order.usdtAmount || 0)).toFixed(3)} USDT
@@ -7946,9 +8356,53 @@ const fetchBuyOrders = async () => {
                           {/* 구래수량(USDT) 입력, 구해하기 버튼 */}
                           {/* 판매 대기중일 경우 */}
                           {/* 나의 판매 계정이 아닐 경우 */}
+                          {!isMySellerCard(seller.walletAddress) && address && isPrivateTradeStatusLoadingForSeller(seller.walletAddress) && (
+                            <div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                              현재 진행중인 주문이 있는지 확인 중입니다...
+                            </div>
+                          )}
+                          {(() => {
+                            const currentTradeOrder = getPrivateTradeOrderForSeller(seller.walletAddress);
+                            if (!address || isMySellerCard(seller.walletAddress) || !currentTradeOrder) {
+                              return null;
+                            }
+                            return (
+                              <div className="w-full rounded-xl border border-amber-200 bg-amber-50/60 p-3 shadow-[0_14px_32px_-24px_rgba(251,191,36,0.55)]">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-sm font-semibold text-slate-900">현재 진행중인 주문</span>
+                                  <span
+                                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${getTradeStatusBadgeClass(currentTradeOrder.status)}`}
+                                  >
+                                    {getTradeStatusLabel(currentTradeOrder.status)}
+                                  </span>
+                                </div>
+                                <div className="mt-2 grid grid-cols-1 gap-2 text-sm text-slate-700 sm:grid-cols-2">
+                                  <div className="rounded-lg border border-slate-200 bg-white/80 px-2 py-1.5">
+                                    TID {currentTradeOrder.tradeId || '-'}
+                                  </div>
+                                  <div className="rounded-lg border border-slate-200 bg-white/80 px-2 py-1.5">
+                                    주문 금액 {formatKrwValue(currentTradeOrder.krwAmount)} 원
+                                  </div>
+                                  <div className="rounded-lg border border-slate-200 bg-white/80 px-2 py-1.5">
+                                    주문 수량 {Number(currentTradeOrder.usdtAmount || 0).toFixed(3)} USDT
+                                  </div>
+                                  <div className="rounded-lg border border-slate-200 bg-white/80 px-2 py-1.5">
+                                    결제방법 {getPaymentMethodLabel(currentTradeOrder.paymentMethod, currentTradeOrder.paymentBankName)}
+                                  </div>
+                                </div>
+                                <div className="mt-2 text-xs text-slate-500">
+                                  {currentTradeOrder.paymentRequestedAt
+                                    ? `입금요청 ${formatTradeHistoryTime(currentTradeOrder.paymentRequestedAt)}`
+                                    : `생성 ${formatTradeHistoryTime(currentTradeOrder.createdAt)}`}
+                                </div>
+                              </div>
+                            );
+                          })()}
                           {
                             seller.walletAddress !== address &&
-                            currentUsdtBalanceArray[index] >= 10 && (
+                            currentUsdtBalanceArray[index] >= 10 &&
+                            !(address && isPrivateTradeStatusLoadingForSeller(seller.walletAddress)) &&
+                            !(address && hasPrivateTradeOrderForSeller(seller.walletAddress)) && (
 
                             <div className="w-full flex flex-col items-start justify-center gap-2
                               border-t border-slate-200 pt-2
@@ -7976,10 +8430,18 @@ const fetchBuyOrders = async () => {
                                           const rate = seller.seller?.usdtToKrwRate || 0;
                                           const isOverKrwLimit = numericValue > MAX_KRW_AMOUNT;
                                           let krwValue = Math.min(numericValue, MAX_KRW_AMOUNT);
-                                          let usdtValue = rate > 0 ? Math.floor((krwValue / rate) * 100) / 100 : 0;
+                                          let usdtValue = rate > 0 ? Math.floor((krwValue / rate) * 1000) / 1000 : 0;
                                           const isOverUsdtLimit = usdtValue > MAX_BUY_AMOUNT;
                                           if (isOverUsdtLimit) {
                                             usdtValue = MAX_BUY_AMOUNT;
+                                            krwValue = rate > 0 ? Math.floor(usdtValue * rate) : krwValue;
+                                          }
+                                          const escrowUsdtLimit =
+                                            Number.isFinite(currentUsdtBalanceArray[index])
+                                              ? Math.max(0, currentUsdtBalanceArray[index])
+                                              : null;
+                                          if (escrowUsdtLimit !== null && usdtValue > escrowUsdtLimit) {
+                                            usdtValue = Math.floor(escrowUsdtLimit * 1000) / 1000;
                                             krwValue = rate > 0 ? Math.floor(usdtValue * rate) : krwValue;
                                           }
 
@@ -8034,7 +8496,7 @@ const fetchBuyOrders = async () => {
                                       <input
                                         type="text"
                                         inputMode="decimal"
-                                        pattern="^\\d*(\\.\\d{0,2})?$"
+                                        pattern="^\\d*(\\.\\d{0,3})?$"
                                         placeholder="구매할 USDT 수량"
                                         onChange={(e) => {
                                           const normalizedValue = normalizeUsdtInput(e.target.value);
@@ -8042,11 +8504,20 @@ const fetchBuyOrders = async () => {
                                           const rate = seller.seller?.usdtToKrwRate || 0;
                                           const isOverUsdtLimit = numericValue > MAX_BUY_AMOUNT;
                                           let usdtValue = Math.min(numericValue, MAX_BUY_AMOUNT);
-                                          usdtValue = Math.floor(usdtValue * 100) / 100;
+                                          usdtValue = Math.floor(usdtValue * 1000) / 1000;
                                           const rawKrwValue = rate > 0 ? Math.floor(usdtValue * rate) : 0;
                                           const isOverKrwLimit = rawKrwValue > MAX_KRW_AMOUNT;
                                           if (isOverKrwLimit && rate > 0) {
-                                            usdtValue = Math.floor((MAX_KRW_AMOUNT / rate) * 100) / 100;
+                                            usdtValue = Math.floor((MAX_KRW_AMOUNT / rate) * 1000) / 1000;
+                                          }
+                                          const escrowUsdtLimit =
+                                            Number.isFinite(currentUsdtBalanceArray[index])
+                                              ? Math.max(0, currentUsdtBalanceArray[index])
+                                              : null;
+                                          const isOverEscrowLimit =
+                                            escrowUsdtLimit !== null && usdtValue > escrowUsdtLimit;
+                                          if (isOverEscrowLimit) {
+                                            usdtValue = Math.floor(escrowUsdtLimit * 1000) / 1000;
                                           }
                                           const krwValue = rate > 0 ? Math.floor(usdtValue * rate) : 0;
                                           const newBuyAmountInputs = [...buyAmountInputs];
@@ -8066,7 +8537,7 @@ const fetchBuyOrders = async () => {
 
                                           const newBuyAmountInputTexts = [...buyAmountInputTexts];
                                           const displayValue =
-                                            isOverUsdtLimit || isOverKrwLimit
+                                            isOverUsdtLimit || isOverKrwLimit || isOverEscrowLimit
                                               ? formatUsdtValue(usdtValue)
                                               : formatNumberWithCommas(normalizedValue);
                                           newBuyAmountInputTexts[index] = displayValue;
@@ -8119,10 +8590,7 @@ const fetchBuyOrders = async () => {
 
                                 <button
                                   onClick={() => {                             
-                                    if (!window.confirm('USDT 구매를 진행할까요?')) {
-                                      return;
-                                    }
-                                    buyOrderPrivateSale(index, seller.walletAddress);
+                                    openBuyOrderConfirmModal(index, seller.walletAddress);
                                   }}
                                   className={`
                                     ${address
@@ -8188,80 +8656,6 @@ const fetchBuyOrders = async () => {
                                 </div>
                               )}
 
-                              {/* 로그아웃 */}
-                              {address && (
-                                <div className="w-full flex flex-col items-center justify-center mt-2
-                                bg-white border border-slate-200 p-2 rounded-lg
-                                "> 
-
-                                  {/* 구래자 정보 */}
-                                  <div className="w-full flex flex-row items-center justify-start gap-2
-                                  border-b border-slate-200 pb-2 mb-2 text-slate-800
-                                  ">
-                                    <Image
-                                      src="/icon-buyer.png"
-                                      alt="Buyer"
-                                      width={20}
-                                      height={20}
-                                      className="w-5 h-5 rounded-lg object-cover"
-                                    />
-                                    <div className="flex flex-col items-start justify-center gap-0">
-                                      <span className="text-sm font-semibold text-slate-900">
-                                        {user?.nickname || 'No Nickname'}
-                                      </span>
-                                      <button
-                                        className="text-sm font-medium text-slate-600 underline underline-offset-2 transition hover:text-slate-900"
-                                        onClick={() => {
-                                          navigator.clipboard.writeText(address);
-                                          toast.success(Copied_Wallet_Address);
-                                        } }
-                                      >
-                                        {address.substring(0, 6)}...{address.substring(address.length - 4)}
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  <button
-                                      onClick={() => {
-                                          confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
-                                          .then(() => {
-
-                                              toast.success('로그아웃 되었습니다');
-
-                                              //router.push(
-                                              //    "/administration/" + params.center
-                                              //);
-                                          });
-                                      } }
-
-                                      className="
-                                        w-full
-                                        flex items-center justify-center gap-2
-                                        bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg hover:shadow-red-500/50
-                                        transition-all duration-200 ease-in-out
-                                      "
-                                  >
-
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      className="h-5 w-5"
-                                      viewBox="0 0 20 20"
-                                      fill="currentColor"
-                                    >
-                                      <path
-                                        fillRule="evenodd"
-                                        d="M3 4.5A1.5 1.5 0 014.5 3h7a1.5 1.5 0 010 3h-7A1.5 1.5 0 013 4.5zm0 6A1.5 1.5 0 014.5 9h7a1.5 1.5 0 010 3h-7A1.5 1.5 0 013 10.5zm1.5 6a1.5 1.5 0 000 3h7a1.5 1.5 0 000-3h-7z"
-                                        clipRule="evenodd"
-                                      />
-                                    </svg>
-                                    <span className="text-sm">
-                                      로그아웃
-                                    </span>
-                                  </button>
-                                </div>
-
-                              )}
-
                               {address && !user?.buyer?.bankInfo && (
                                 <div className="w-full flex flex-col items-center justify-center mt-2">
                                   <span className="text-sm text-red-600">
@@ -8297,6 +8691,7 @@ const fetchBuyOrders = async () => {
 
 
                       {(
+                        !hasPrivateTradeOrderForSeller(seller.walletAddress) &&
                         !isMySellerCard(seller.walletAddress) &&
                         (
                           seller.seller?.buyOrder?.status === 'paymentRequested' ||
@@ -10462,6 +10857,93 @@ const fetchBuyOrders = async () => {
                 closeModal={closeModal}
                 selectedItem={selectedItem}
             />
+        </ModalUser>
+
+        <ModalUser
+          isOpen={isBuyOrderConfirmModalOpen}
+          onClose={closeBuyOrderConfirmModal}
+        >
+          <div className="w-[min(94vw,520px)] rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">구매 주문 확인</h3>
+                <p className="text-xs text-slate-500">아래 금액으로 주문을 생성할까요?</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeBuyOrderConfirmModal}
+                disabled={isBuyOrderConfirmProcessing}
+                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-500 hover:text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300"
+              >
+                닫기
+              </button>
+            </div>
+
+            {buyOrderConfirmDraft && (
+              <div className="mt-4 grid grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-700">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-slate-500">판매자</span>
+                  <span className="font-semibold text-slate-900 break-all text-right">
+                    {buyOrderConfirmDraft.sellerName}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-slate-500">결제 금액</span>
+                  <span className="font-semibold text-slate-900">
+                    {formatKrwValue(buyOrderConfirmDraft.krwAmount)} 원
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-slate-500">주문 수량</span>
+                  <span className="font-semibold text-slate-900">
+                    {Number(buyOrderConfirmDraft.usdtAmount || 0).toFixed(3)} USDT
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-slate-500">단가</span>
+                  <span className="font-semibold text-slate-900">
+                    {buyOrderConfirmDraft.rate > 0
+                      ? `${formatKrwValue(buyOrderConfirmDraft.rate)} KRW`
+                      : '-'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+              주문 생성 후 입금요청 상태로 전환됩니다.
+            </div>
+
+            {buyOrderConfirmError && (
+              <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                {buyOrderConfirmError}
+              </div>
+            )}
+
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeBuyOrderConfirmModal}
+                disabled={isBuyOrderConfirmProcessing}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={confirmBuyOrderFromModal}
+                disabled={!buyOrderConfirmDraft || isBuyOrderConfirmProcessing}
+                className={`
+                  rounded-lg px-3 py-1.5 text-sm font-semibold text-white
+                  ${!buyOrderConfirmDraft || isBuyOrderConfirmProcessing
+                    ? 'cursor-not-allowed bg-slate-300'
+                    : 'bg-blue-600 hover:bg-blue-500'}
+                `}
+              >
+                {isBuyOrderConfirmProcessing ? '처리중...' : '완료 처리'}
+              </button>
+            </div>
+          </div>
         </ModalUser>
 
         <ModalUser

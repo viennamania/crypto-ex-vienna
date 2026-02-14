@@ -3823,6 +3823,8 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
     cancelledAt: string;
     krwAmount: number;
     usdtAmount: number;
+    paymentMethod: string;
+    paymentBankName: string;
     buyerWalletAddress: string;
     sellerWalletAddress: string;
   } | null;
@@ -3884,6 +3886,7 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
       cancelledAt: 1,
       krwAmount: 1,
       usdtAmount: 1,
+      paymentMethod: 1,
       walletAddress: 1,
       buyer: 1,
       seller: 1,
@@ -3936,6 +3939,10 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
       cancelledAt: typeof order?.cancelledAt === 'string' ? order.cancelledAt : '',
       krwAmount: typeof order?.krwAmount === 'number' ? order.krwAmount : 0,
       usdtAmount: typeof order?.usdtAmount === 'number' ? order.usdtAmount : 0,
+      paymentMethod: typeof order?.paymentMethod === 'string' ? order.paymentMethod : '',
+      paymentBankName:
+        (typeof order?.seller?.bankInfo?.bankName === 'string' && order.seller.bankInfo.bankName)
+        || '',
       buyerWalletAddress:
         (typeof order?.buyer?.walletAddress === 'string' && order.buyer.walletAddress)
         || (typeof order?.walletAddress === 'string' ? order.walletAddress : ''),
@@ -9590,6 +9597,7 @@ export type AcceptBuyOrderPrivateSaleResult =
         | 'BUYER_ESCROW_WALLET_EMPTY'
         | 'ESCROW_TRANSFER_FAILED'
         | 'BUYORDER_INSERT_FAILED';
+      detail?: string;
     };
 
 export async function acceptBuyOrderPrivateSale(
@@ -9604,6 +9612,20 @@ export async function acceptBuyOrderPrivateSale(
     usdtAmount: number;
     krwAmount?: number;
   }): Promise<AcceptBuyOrderPrivateSaleResult> {
+
+    const toErrorMessage = (error: unknown) => {
+      if (error instanceof Error) {
+        return error.message;
+      }
+      if (typeof error === 'string') {
+        return error;
+      }
+      try {
+        return JSON.stringify(error);
+      } catch {
+        return String(error);
+      }
+    };
 
     const normalizedSellerWalletAddress = String(sellerWalletAddress || '').trim();
     const normalizedBuyerWalletAddress = String(buyerWalletAddress || '').trim();
@@ -9627,7 +9649,7 @@ export async function acceptBuyOrderPrivateSale(
         storecode: 'admin',
         walletAddress: sellerWalletRegex,
       },
-      { projection: { storecode: 1, nickname: 1, avatar: 1, seller: 1, agentcode: 1 } }
+      { projection: { storecode: 1, nickname: 1, avatar: 1, seller: 1, agentcode: 1, walletAddress: 1 } }
     );
 
     if (!seller) {
@@ -9656,7 +9678,7 @@ export async function acceptBuyOrderPrivateSale(
         storecode: 'admin',
         walletAddress: buyerWalletRegex,
       },
-      { projection: { nickname: 1, avatar: 1, buyer: 1 } }
+      { projection: { nickname: 1, avatar: 1, buyer: 1, walletAddress: 1 } }
     );
 
     if (!buyer) {
@@ -9664,8 +9686,15 @@ export async function acceptBuyOrderPrivateSale(
       return { success: false, error: 'BUYER_NOT_FOUND' };
     }
 
-    if (!buyer?.buyer?.bankInfo?.accountHolder) {
-      console.log('acceptBuyOrderPrivateSale: buyer does not have a accountHolder for walletAddress: ' + buyerWalletAddress);
+    const buyerAccountHolder = String(
+      buyer?.buyer?.bankInfo?.accountHolder
+      || buyer?.buyer?.bankInfo?.depositName
+      || buyer?.buyer?.depositName
+      || '',
+    ).trim();
+
+    if (!buyerAccountHolder) {
+      console.log('acceptBuyOrderPrivateSale: buyer does not have a deposit/account holder for walletAddress: ' + buyerWalletAddress);
       return { success: false, error: 'BUYER_ACCOUNT_HOLDER_MISSING' };
     }
 
@@ -9673,6 +9702,14 @@ export async function acceptBuyOrderPrivateSale(
       typeof buyer.walletAddress === 'string' && buyer.walletAddress.trim()
         ? buyer.walletAddress.trim()
         : normalizedBuyerWalletAddress;
+    const matchedSellerWalletRegex = {
+      $regex: `^${escapeRegex(matchedSellerWalletAddress)}$`,
+      $options: 'i',
+    };
+    const matchedBuyerWalletRegex = {
+      $regex: `^${escapeRegex(matchedBuyerWalletAddress)}$`,
+      $options: 'i',
+    };
 
  
     const collection = client.db(dbName).collection('buyorders');
@@ -9713,7 +9750,11 @@ export async function acceptBuyOrderPrivateSale(
       buyerEscrowWalletAddress = resolveEngineWalletAddress(createdServerWallet);
     } catch (error) {
       console.error('acceptBuyOrderPrivateSale: failed to create buyer escrow wallet', error);
-      return { success: false, error: 'BUYER_ESCROW_WALLET_CREATE_FAILED' };
+      return {
+        success: false,
+        error: 'BUYER_ESCROW_WALLET_CREATE_FAILED',
+        detail: toErrorMessage(error),
+      };
     }
 
     if (!buyerEscrowWalletAddress) {
@@ -9785,7 +9826,11 @@ export async function acceptBuyOrderPrivateSale(
       }
     } catch (error) {
       console.error('acceptBuyOrderPrivateSale: escrow transfer failed', error);
-      return { success: false, error: 'ESCROW_TRANSFER_FAILED' };
+      return {
+        success: false,
+        error: 'ESCROW_TRANSFER_FAILED',
+        detail: toErrorMessage(error),
+      };
     }
 
     const nowIso = new Date().toISOString();
@@ -9812,7 +9857,7 @@ export async function acceptBuyOrderPrivateSale(
         walletAddress: matchedBuyerWalletAddress,
         escrowWalletAddress: buyerEscrowWalletAddress,
         lockTransactionHash: escrowTransferTransactionHash,
-        depositName: buyer.buyer.bankInfo.accountHolder,
+        depositName: buyerAccountHolder,
         depositCompleted: false,
       },
       seller: {
@@ -9826,8 +9871,15 @@ export async function acceptBuyOrderPrivateSale(
       },
     };
 
-    const result = await collection.insertOne(newBuyOrder);
-    if (result.insertedId) {
+    try {
+      const result = await collection.insertOne(newBuyOrder);
+      if (!result.insertedId) {
+        return {
+          success: false,
+          error: 'BUYORDER_INSERT_FAILED',
+          detail: 'insertOne did not return insertedId',
+        };
+      }
 
       // buyOrder for objectid
       const buyOrder = await collection.findOne<any>(
@@ -9836,7 +9888,10 @@ export async function acceptBuyOrderPrivateSale(
 
       // seller buyOrder update
       await usersCollection.updateOne(
-        { walletAddress: matchedSellerWalletAddress },
+        {
+          walletAddress: matchedSellerWalletRegex,
+          storecode: 'admin',
+        },
         { $set: {
           'seller.buyOrder': buyOrder,
         } }
@@ -9845,7 +9900,7 @@ export async function acceptBuyOrderPrivateSale(
       // buyer buyOrderStatus update
       await usersCollection.updateOne(
         {
-          walletAddress: matchedBuyerWalletAddress,
+          walletAddress: matchedBuyerWalletRegex,
           storecode: 'admin',
         },
         {
@@ -9858,7 +9913,12 @@ export async function acceptBuyOrderPrivateSale(
 
 
       return { success: true };
-    } else {
-      return { success: false, error: 'BUYORDER_INSERT_FAILED' };
+    } catch (error) {
+      console.error('acceptBuyOrderPrivateSale: buyorder insert/update failed', error);
+      return {
+        success: false,
+        error: 'BUYORDER_INSERT_FAILED',
+        detail: toErrorMessage(error),
+      };
     }
 }
