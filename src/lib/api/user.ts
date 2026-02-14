@@ -3100,13 +3100,19 @@ export async function getSellerBySellerWalletAddress(
 ): Promise<UserProps | null> {
 
   console.log('getSellerBySellerWalletAddress sellerWalletAddress: ' + sellerWalletAddress);
+  const normalizedWalletAddress = String(sellerWalletAddress || '').trim();
+  if (!normalizedWalletAddress) {
+    return null;
+  }
+
+  const escapeRegex = (value: string) => value.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
 
   const results = await collection.findOne<UserProps>(
     {
-      walletAddress: sellerWalletAddress,
+      walletAddress: { $regex: `^${escapeRegex(normalizedWalletAddress)}$`, $options: 'i' },
       storecode: 'admin',
       'seller.status': 'confirmed',
       'seller.enabled': true,

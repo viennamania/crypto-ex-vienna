@@ -50,9 +50,26 @@ export async function POST(request: NextRequest) {
         usdtAmount,
         krwAmount,
       });
-      if (!created) {
+      if (!created.success) {
+        const failureMessageByReason: Record<string, string> = {
+          SELLER_NOT_FOUND: '판매자 정보를 찾을 수 없습니다.',
+          SELLER_ESCROW_WALLET_MISSING: '판매자 에스크로 지갑이 설정되지 않았습니다.',
+          BUYER_NOT_FOUND: '구매자 정보를 찾을 수 없습니다.',
+          BUYER_ACCOUNT_HOLDER_MISSING: '구매자 입금자명 정보가 없습니다.',
+          INVALID_USDT_AMOUNT: '유효하지 않은 USDT 수량입니다.',
+          THIRDWEB_SECRET_KEY_MISSING: '서버 지갑 설정이 누락되었습니다.',
+          BUYER_ESCROW_WALLET_CREATE_FAILED: '구매자 에스크로 지갑 생성에 실패했습니다.',
+          BUYER_ESCROW_WALLET_EMPTY: '구매자 에스크로 지갑 주소가 비어 있습니다.',
+          ESCROW_TRANSFER_FAILED: '에스크로 전송에 실패했습니다.',
+          BUYORDER_INSERT_FAILED: '구매 주문 저장에 실패했습니다.',
+        };
         return NextResponse.json(
-          { error: 'Buy order creation failed' },
+          {
+            error: 'BUY_ORDER_CREATION_FAILED',
+            reason: created.error,
+            message:
+              failureMessageByReason[created.error] || `구매 주문 생성 실패 (${created.error})`,
+          },
           { status: 400 },
         );
       }
