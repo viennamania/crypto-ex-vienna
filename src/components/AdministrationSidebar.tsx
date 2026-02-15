@@ -23,7 +23,7 @@ const buildMenuItems = (lang: string): MenuItem[] => {
     { label: '구매주문 대시보드', hint: 'Live Monitor', href: `${root}/buyorder-management` },
     { label: '구매주문 상세', hint: 'Buy Order', href: `${root}/buyorder` },
     { label: '거래내역', hint: 'Trade History', href: `${root}/trade-history` },
-    { label: '청산내역', hint: 'Clearance', href: `${root}/clearance-history` },
+    { label: '가맹점 관리', hint: 'Store', href: `${root}/store-management` },
     { label: '판매자 관리', hint: 'Seller', href: `${root}/seller-management` },
     { label: '구매자 관리', hint: 'Buyer', href: `${root}/buyer-management` },
     { label: '에이전트 관리', hint: 'Agent', href: `${root}/agent-management` },

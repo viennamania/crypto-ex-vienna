@@ -12,7 +12,11 @@ export async function insertStore(data: any) {
   /*
   insertStore data: {"storecode":"teststorecode","storeName":"테스트상점","storeType":"test","storeUrl":"https://test.com","storeDescription":"설명입니다.","storeLogo":"https://test.com/logo.png","storeBanner":"https://test.com/banner.png"}
   */
-  if (!data.storecode || !data.storeName || !data.agentcode) {
+  const storecode = String(data?.storecode || '').trim();
+  const storeName = String(data?.storeName || '').trim();
+  const agentcode = String(data?.agentcode || '').trim();
+
+  if (!storecode || !storeName) {
     
     
     console.log('insertStore data is invalid');
@@ -31,8 +35,8 @@ export async function insertStore(data: any) {
     {
       //storecode: data.storecode or storeName: data.storeName
       $or: [
-        { storecode: data.storecode },
-        { storeName: data.storeName },
+        { storecode: storecode },
+        { storeName: storeName },
       ],
 
     }
@@ -50,9 +54,9 @@ export async function insertStore(data: any) {
   // insert storecode
   const result = await collection.insertOne(
     {
-      agentcode: data.agentcode,
-      storecode: data.storecode,
-      storeName: data.storeName.trim(),
+      agentcode: agentcode,
+      storecode: storecode,
+      storeName: storeName,
       storeType: data.storeType,
       storeUrl: data.storeUrl,
       storeDescription: data.storeDescription,
@@ -67,18 +71,19 @@ export async function insertStore(data: any) {
   // update agent totalStoreCount
   // sum of stores with same agentcode
   // get sum of stores with same agentcode from stores collection
-  const sumOfStores = await collection.countDocuments(
-    { agentcode: data.agentcode }
-  );
+  if (agentcode) {
+    const sumOfStores = await collection.countDocuments(
+      { agentcode: agentcode }
+    );
 
-  console.log('sumOfStores: ' + sumOfStores);
+    console.log('sumOfStores: ' + sumOfStores);
 
-
-  const agentCollection = client.db(dbName).collection('agents');
-  await agentCollection.updateOne(
-    { agentcode: data.agentcode },
-    { $set: { totalStoreCount: sumOfStores } },
-  );
+    const agentCollection = client.db(dbName).collection('agents');
+    await agentCollection.updateOne(
+      { agentcode: agentcode },
+      { $set: { totalStoreCount: sumOfStores } },
+    );
+  }
 
 
   //console.log('insertStore result: ' + JSON.stringify(result));
@@ -88,7 +93,7 @@ export async function insertStore(data: any) {
     );
     return {
       _id: result.insertedId,
-      storecode: data.storecode,
+      storecode: storecode,
     };
   } else {
     return null;
