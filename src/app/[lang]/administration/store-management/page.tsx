@@ -22,8 +22,10 @@ type StoreItem = {
   settlementFeePercent: number;
   escrowAmountUSDT: number;
   adminWalletAddress: string;
+  adminNickname: string;
   sellerWalletAddress: string;
   settlementWalletAddress: string;
+  paymentWalletAddress: string;
 };
 
 type StoreCreateForm = {
@@ -31,6 +33,23 @@ type StoreCreateForm = {
   storeDescription: string;
   storeLogo: string;
   storeBanner: string;
+};
+
+type AdminWalletMemberItem = {
+  id: string;
+  nickname: string;
+  role: string;
+  walletAddress: string;
+  createdAt: string;
+};
+
+type StoreAdminWalletRoleHistoryItem = {
+  id: string;
+  prevAdminWalletAddress: string;
+  nextAdminWalletAddress: string;
+  changedByWalletAddress: string;
+  changedByName: string;
+  changedAt: string;
 };
 
 type FetchMode = 'initial' | 'query' | 'polling';
@@ -47,6 +66,7 @@ const toFiniteNumber = (value: unknown) => {
 };
 
 const toText = (value: unknown) => (typeof value === 'string' ? value : '');
+const isWalletAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(String(value || '').trim());
 const createInitialStoreForm = (): StoreCreateForm => ({
   storeName: '',
   storeDescription: '',
@@ -72,8 +92,10 @@ const normalizeStore = (value: unknown): StoreItem => {
     settlementFeePercent: toFiniteNumber(source.settlementFeePercent),
     escrowAmountUSDT: toFiniteNumber(source.escrowAmountUSDT),
     adminWalletAddress: toText(source.adminWalletAddress),
+    adminNickname: toText(source.adminNickname),
     sellerWalletAddress: toText(source.sellerWalletAddress),
     settlementWalletAddress: toText(source.settlementWalletAddress),
+    paymentWalletAddress: toText(source.paymentWalletAddress),
   };
 };
 
@@ -100,6 +122,36 @@ const shortWallet = (value: string) => {
   if (!value) return '-';
   if (value.length <= 14) return value;
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
+};
+
+const toRoleLabel = (role: string) => {
+  const normalizedRole = String(role || '').trim().toLowerCase();
+  if (!normalizedRole) return 'member';
+  if (normalizedRole === 'admin') return 'admin';
+  if (normalizedRole === 'seller') return 'seller';
+  if (normalizedRole === 'buyer') return 'buyer';
+  return normalizedRole;
+};
+
+const normalizeAdminWalletMember = (value: unknown): AdminWalletMemberItem | null => {
+  const source = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  const walletAddress = toText(source.walletAddress).trim();
+  if (!walletAddress) {
+    return null;
+  }
+  const nickname = toText(source.nickname).trim() || toText(source.name).trim() || '이름없음';
+  const role = toText(source.role).trim() || (
+    source.seller ? 'seller' : source.buyer ? 'buyer' : 'member'
+  );
+  const id = toText(source._id).trim() || walletAddress;
+
+  return {
+    id,
+    nickname,
+    role: toRoleLabel(role),
+    walletAddress,
+    createdAt: toText(source.createdAt).trim(),
+  };
 };
 
 const getRiskLevel = (store: StoreItem): RiskLevel => {
@@ -154,6 +206,17 @@ export default function StoreManagementPage() {
   const [creatingStore, setCreatingStore] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [creatingPaymentWalletStorecode, setCreatingPaymentWalletStorecode] = useState('');
+  const [isAdminWalletModalOpen, setIsAdminWalletModalOpen] = useState(false);
+  const [adminWalletModalStore, setAdminWalletModalStore] = useState<StoreItem | null>(null);
+  const [adminWalletMembers, setAdminWalletMembers] = useState<AdminWalletMemberItem[]>([]);
+  const [adminWalletHistory, setAdminWalletHistory] = useState<StoreAdminWalletRoleHistoryItem[]>([]);
+  const [adminWalletSearchTerm, setAdminWalletSearchTerm] = useState('');
+  const [selectedAdminWalletAddress, setSelectedAdminWalletAddress] = useState('');
+  const [loadingAdminWalletMembers, setLoadingAdminWalletMembers] = useState(false);
+  const [loadingAdminWalletHistory, setLoadingAdminWalletHistory] = useState(false);
+  const [updatingAdminWallet, setUpdatingAdminWallet] = useState(false);
+  const [adminWalletModalError, setAdminWalletModalError] = useState<string | null>(null);
   const [createModalError, setCreateModalError] = useState<string | null>(null);
   const [createForm, setCreateForm] = useState<StoreCreateForm>(() => createInitialStoreForm());
   const [draftFilters, setDraftFilters] = useState({
@@ -287,6 +350,20 @@ export default function StoreManagementPage() {
       .slice(0, 6);
   }, [stores]);
 
+  const filteredAdminWalletMembers = useMemo(() => {
+    const normalizedSearchTerm = adminWalletSearchTerm.trim().toLowerCase();
+    if (!normalizedSearchTerm) {
+      return adminWalletMembers;
+    }
+    return adminWalletMembers.filter((member) => {
+      return (
+        member.nickname.toLowerCase().includes(normalizedSearchTerm) ||
+        member.walletAddress.toLowerCase().includes(normalizedSearchTerm) ||
+        member.role.toLowerCase().includes(normalizedSearchTerm)
+      );
+    });
+  }, [adminWalletMembers, adminWalletSearchTerm]);
+
   const handleFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setPageNumber(1);
@@ -312,6 +389,221 @@ export default function StoreManagementPage() {
     setCreateModalError(null);
     setCreateForm(createInitialStoreForm());
   }, [creatingStore]);
+
+  const closeAdminWalletModal = useCallback(() => {
+    if (updatingAdminWallet) return;
+    setIsAdminWalletModalOpen(false);
+    setAdminWalletModalStore(null);
+    setAdminWalletMembers([]);
+    setAdminWalletHistory([]);
+    setAdminWalletSearchTerm('');
+    setSelectedAdminWalletAddress('');
+    setAdminWalletModalError(null);
+  }, [updatingAdminWallet]);
+
+  const loadAdminWalletMembers = useCallback(async (store: StoreItem) => {
+    const normalizedStorecode = store.storecode.trim();
+    const adminStorecode = 'admin';
+    if (!normalizedStorecode) {
+      setAdminWalletMembers([]);
+      return;
+    }
+
+    setLoadingAdminWalletMembers(true);
+    try {
+      const response = await fetch('/api/user/getAllUsersByStorecode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: adminStorecode,
+          limit: 300,
+          page: 1,
+          includeUnverified: true,
+          requireProfile: false,
+          userType: 'all',
+          searchTerm: '',
+          sortField: 'nickname',
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === 'string'
+            ? payload.error
+            : '회원 목록 조회에 실패했습니다.',
+        );
+      }
+
+      const users: unknown[] = Array.isArray(payload?.result?.users) ? payload.result.users : [];
+      const normalizedMembers = users
+        .map((user) => normalizeAdminWalletMember(user))
+        .filter((member: AdminWalletMemberItem | null): member is AdminWalletMemberItem => member !== null);
+
+      const uniqueMembersMap = new Map<string, AdminWalletMemberItem>();
+      normalizedMembers.forEach((member) => {
+        const key = member.walletAddress.trim().toLowerCase();
+        if (!key || uniqueMembersMap.has(key)) return;
+        uniqueMembersMap.set(key, member);
+      });
+
+      const currentAdminWalletAddress = store.adminWalletAddress.trim();
+      if (isWalletAddress(currentAdminWalletAddress)) {
+        const normalizedCurrentWalletAddress = currentAdminWalletAddress.toLowerCase();
+        if (!uniqueMembersMap.has(normalizedCurrentWalletAddress)) {
+          uniqueMembersMap.set(normalizedCurrentWalletAddress, {
+            id: `current-admin-${normalizedStorecode}`,
+            nickname: '현재 관리자',
+            role: 'admin',
+            walletAddress: currentAdminWalletAddress,
+            createdAt: '',
+          });
+        }
+      }
+
+      const uniqueMembers = Array.from(uniqueMembersMap.values()).sort((a, b) => {
+        if (a.role === 'admin' && b.role !== 'admin') return -1;
+        if (a.role !== 'admin' && b.role === 'admin') return 1;
+        return a.nickname.localeCompare(b.nickname, 'ko');
+      });
+
+      setAdminWalletMembers(uniqueMembers);
+    } catch (membersError: unknown) {
+      const message = membersError instanceof Error ? membersError.message : '회원 목록 조회 중 오류가 발생했습니다.';
+      setAdminWalletModalError(message);
+      setAdminWalletMembers([]);
+    } finally {
+      setLoadingAdminWalletMembers(false);
+    }
+  }, []);
+
+  const loadAdminWalletHistory = useCallback(async (storecode: string) => {
+    const normalizedStorecode = storecode.trim();
+    if (!normalizedStorecode) {
+      setAdminWalletHistory([]);
+      return;
+    }
+
+    setLoadingAdminWalletHistory(true);
+    try {
+      const response = await fetch('/api/store/getStoreAdminWalletRoleHistory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: normalizedStorecode,
+          limit: 20,
+          page: 1,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === 'string'
+            ? payload.error
+            : '변경이력 조회에 실패했습니다.',
+        );
+      }
+
+      const items = Array.isArray(payload?.result?.items) ? payload.result.items : [];
+      const normalizedHistory = items.map((item: any, index: number) => ({
+        id: toText(item?._id) || `${normalizedStorecode}-${index}`,
+        prevAdminWalletAddress: toText(item?.prevAdminWalletAddress),
+        nextAdminWalletAddress: toText(item?.nextAdminWalletAddress),
+        changedByWalletAddress: toText(item?.changedByWalletAddress),
+        changedByName: toText(item?.changedByName),
+        changedAt: toText(item?.changedAt),
+      }));
+
+      setAdminWalletHistory(normalizedHistory);
+    } catch (historyError: unknown) {
+      const message = historyError instanceof Error ? historyError.message : '변경이력 조회 중 오류가 발생했습니다.';
+      setAdminWalletModalError((prev) => prev || message);
+      setAdminWalletHistory([]);
+    } finally {
+      setLoadingAdminWalletHistory(false);
+    }
+  }, []);
+
+  const openAdminWalletModal = useCallback((store: StoreItem) => {
+    if (!store.storecode.trim()) {
+      toast.error('가맹점 코드가 없습니다.');
+      return;
+    }
+    setAdminWalletModalStore(store);
+    setSelectedAdminWalletAddress(store.adminWalletAddress.trim());
+    setAdminWalletSearchTerm('');
+    setAdminWalletModalError(null);
+    setIsAdminWalletModalOpen(true);
+
+    void Promise.all([
+      loadAdminWalletMembers(store),
+      loadAdminWalletHistory(store.storecode),
+    ]);
+  }, [loadAdminWalletHistory, loadAdminWalletMembers]);
+
+  const updateAdminWalletAddress = useCallback(async () => {
+    if (!adminWalletModalStore) {
+      return;
+    }
+
+    const nextAdminWalletAddress = selectedAdminWalletAddress.trim();
+    if (!isWalletAddress(nextAdminWalletAddress)) {
+      setAdminWalletModalError('유효한 지갑주소를 선택해 주세요.');
+      return;
+    }
+
+    setUpdatingAdminWallet(true);
+    setAdminWalletModalError(null);
+    try {
+      const response = await fetch('/api/store/updateStoreAdminWalletAddress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: adminWalletModalStore.storecode,
+          adminWalletAddress: nextAdminWalletAddress,
+          changedByName: 'store-management-dashboard',
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === 'string'
+            ? payload.error
+            : '관리자 지갑 변경에 실패했습니다.',
+        );
+      }
+
+      const isChanged = Boolean(payload?.changed);
+
+      setStores((prev) => prev.map((store) => (
+        store.storecode === adminWalletModalStore.storecode
+          ? { ...store, adminWalletAddress: nextAdminWalletAddress }
+          : store
+      )));
+      setAdminWalletModalStore((prev) => (
+        prev ? { ...prev, adminWalletAddress: nextAdminWalletAddress } : prev
+      ));
+
+      await Promise.all([
+        fetchStoreDashboard('query'),
+        loadAdminWalletHistory(adminWalletModalStore.storecode),
+      ]);
+
+      if (isChanged) {
+        toast.success('가맹점 관리자 지갑이 변경되었습니다.');
+      } else {
+        toast.success('변경할 내용이 없어 기존 관리자 지갑을 유지했습니다.');
+      }
+    } catch (updateError: unknown) {
+      const message = updateError instanceof Error ? updateError.message : '관리자 지갑 변경 중 오류가 발생했습니다.';
+      setAdminWalletModalError(message);
+      toast.error(message);
+    } finally {
+      setUpdatingAdminWallet(false);
+    }
+  }, [adminWalletModalStore, fetchStoreDashboard, loadAdminWalletHistory, selectedAdminWalletAddress]);
 
   const submitCreateStore = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -381,6 +673,58 @@ export default function StoreManagementPage() {
     }
   };
 
+  const handleCreatePaymentWallet = useCallback(async (storecode: string) => {
+    const normalizedStorecode = storecode.trim();
+    if (!normalizedStorecode) {
+      toast.error('가맹점 코드가 없습니다.');
+      return;
+    }
+    if (creatingPaymentWalletStorecode) {
+      return;
+    }
+
+    setCreatingPaymentWalletStorecode(normalizedStorecode);
+
+    try {
+      const response = await fetch('/api/store/createPaymentWalletAddress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: normalizedStorecode,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === 'string'
+            ? payload.error
+            : '결제 지갑 생성 요청에 실패했습니다.',
+        );
+      }
+
+      const paymentWalletAddress = toText(payload?.result?.paymentWalletAddress).trim();
+      if (!isWalletAddress(paymentWalletAddress)) {
+        throw new Error('생성된 결제 지갑주소가 유효하지 않습니다.');
+      }
+
+      setStores((prev) => prev.map((store) => (
+        store.storecode === normalizedStorecode
+          ? { ...store, paymentWalletAddress }
+          : store
+      )));
+
+      const created = Boolean(payload?.result?.created);
+      toast.success(created ? '결제용 서버지갑이 생성되었습니다.' : '이미 생성된 결제지갑을 불러왔습니다.');
+      await fetchStoreDashboard('query');
+    } catch (createError: unknown) {
+      const message = createError instanceof Error ? createError.message : '결제 지갑 생성 중 오류가 발생했습니다.';
+      toast.error(message);
+    } finally {
+      setCreatingPaymentWalletStorecode('');
+    }
+  }, [creatingPaymentWalletStorecode, fetchStoreDashboard]);
+
   const uploadImageToBlob = useCallback(async (file: File, kind: 'logo' | 'banner') => {
     if (!file.type.startsWith('image/')) {
       setCreateModalError('이미지 파일만 업로드할 수 있습니다.');
@@ -449,6 +793,25 @@ export default function StoreManagementPage() {
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [closeCreateModal, creatingStore, isCreateModalOpen]);
+
+  useEffect(() => {
+    if (!isAdminWalletModalOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !updatingAdminWallet) {
+        closeAdminWalletModal();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [closeAdminWalletModal, isAdminWalletModalOpen, updatingAdminWallet]);
 
   return (
     <main className="store-management-shell relative min-h-screen overflow-hidden px-4 pb-20 pt-6 lg:px-6 lg:pt-8">
@@ -678,8 +1041,9 @@ export default function StoreManagementPage() {
                     <th className="px-4 py-3 text-right">거래금액</th>
                     <th className="px-4 py-3 text-right">정산금액</th>
                     <th className="px-4 py-3 text-right">수수료율</th>
+                    <th className="px-4 py-3">관리자</th>
                     <th className="px-4 py-3">지갑상태</th>
-                    <th className="w-[170px] px-4 py-3 text-right whitespace-nowrap">작업</th>
+                    <th className="w-[280px] px-4 py-3 text-right whitespace-nowrap">작업</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -691,6 +1055,8 @@ export default function StoreManagementPage() {
                       !!store.adminWalletAddress.trim() &&
                       !!store.sellerWalletAddress.trim() &&
                       !!store.settlementWalletAddress.trim();
+                    const hasPaymentWallet = isWalletAddress(store.paymentWalletAddress.trim());
+                    const isCreatingPaymentWallet = creatingPaymentWalletStorecode === store.storecode;
 
                     return (
                       <tr key={`${store.storecode || store._id || 'table-store'}-${index}`} className="bg-white text-sm text-slate-700">
@@ -730,16 +1096,48 @@ export default function StoreManagementPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col gap-1">
+                            <span className="text-sm font-semibold text-slate-900">
+                              {store.adminNickname || '-'}
+                            </span>
+                            <span className={`break-all text-[11px] font-medium ${isWalletAddress(store.adminWalletAddress.trim()) ? 'text-sky-700' : 'text-amber-700'}`}>
+                              {store.adminWalletAddress ? shortWallet(store.adminWalletAddress) : '지갑 미설정'}
+                            </span>
+                            {hasStoreCode && (
+                              <button
+                                type="button"
+                                onClick={() => openAdminWalletModal(store)}
+                                className="mt-1 inline-flex w-fit items-center rounded-full border border-sky-300 bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700 transition hover:bg-sky-100"
+                              >
+                                관리자 변경
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
                             <span className={`inline-flex w-fit rounded-full border px-2 py-0.5 text-xs font-semibold ${badge.className}`}>
                               {badge.label}
                             </span>
                             <span className={`text-xs font-medium ${hasAllWallets ? 'text-emerald-700' : 'text-rose-600'}`}>
                               {hasAllWallets ? '핵심 지갑 정상' : '지갑 정보 점검 필요'}
                             </span>
+                            <span className={`text-xs font-medium ${hasPaymentWallet ? 'text-emerald-700' : 'text-amber-700'}`}>
+                              결제지갑 {hasPaymentWallet ? shortWallet(store.paymentWalletAddress) : '미설정'}
+                            </span>
+                            {!hasPaymentWallet && hasStoreCode && (
+                              <button
+                                type="button"
+                                onClick={() => handleCreatePaymentWallet(store.storecode)}
+                                disabled={isCreatingPaymentWallet}
+                                className="inline-flex w-fit items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {isCreatingPaymentWallet ? '생성 중...' : '결제지갑 생성하기'}
+                              </button>
+                            )}
                           </div>
                         </td>
-                        <td className="w-[170px] px-4 py-3 text-right whitespace-nowrap">
-                          <div className="flex justify-end gap-2">
+                        <td className="w-[280px] px-4 py-3 text-right whitespace-nowrap">
+                          <div className="flex flex-wrap justify-end gap-2">
                             {hasStoreCode ? (
                               <>
                                 <Link
@@ -814,6 +1212,185 @@ export default function StoreManagementPage() {
           </div>
         </section>
       </div>
+
+      {isAdminWalletModalOpen && adminWalletModalStore && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center px-4 py-6">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/55 backdrop-blur-[2px]"
+            aria-label="관리자 지갑 변경 모달 닫기"
+            onClick={closeAdminWalletModal}
+          />
+
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="가맹점 관리자 지갑 변경"
+            className="modal-pop relative z-[131] max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-sky-100 bg-white shadow-[0_40px_90px_-42px_rgba(15,23,42,0.75)]"
+          >
+            <header className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-sky-700">Admin Wallet Control</p>
+                <h2 className="mt-1 text-lg font-bold text-slate-900">가맹점 관리자 지갑 변경</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {adminWalletModalStore.storeName || '-'} · 코드 {adminWalletModalStore.storecode || '-'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeAdminWalletModal}
+                disabled={updatingAdminWallet}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="닫기"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18" />
+                  <path d="M6 6l12 12" />
+                </svg>
+              </button>
+            </header>
+
+            <div className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-12">
+              <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 lg:col-span-7">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">회원 지갑 목록</p>
+                    <p className="text-xs text-slate-500">회원 중에서 관리자 지갑으로 사용할 주소를 선택하세요.</p>
+                  </div>
+                  <span className="inline-flex rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">
+                    현재 {shortWallet(adminWalletModalStore.adminWalletAddress)}
+                  </span>
+                </div>
+
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    value={adminWalletSearchTerm}
+                    onChange={(event) => setAdminWalletSearchTerm(event.target.value)}
+                    placeholder="닉네임/지갑주소/role 검색"
+                    className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-500"
+                  />
+                </div>
+
+                <div className="mt-3 max-h-[380px] overflow-y-auto rounded-xl border border-slate-200 bg-white">
+                  {loadingAdminWalletMembers ? (
+                    <div className="space-y-2 p-3">
+                      {Array.from({ length: 6 }).map((_, index) => (
+                        <div key={`admin-wallet-member-loading-${index}`} className="h-12 animate-pulse rounded-lg bg-slate-100" />
+                      ))}
+                    </div>
+                  ) : filteredAdminWalletMembers.length === 0 ? (
+                    <div className="px-3 py-8 text-center text-sm text-slate-500">표시할 회원 지갑이 없습니다.</div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {filteredAdminWalletMembers.map((member) => {
+                        const isSelected = member.walletAddress.toLowerCase() === selectedAdminWalletAddress.trim().toLowerCase();
+                        return (
+                          <button
+                            type="button"
+                            key={`${member.id}-${member.walletAddress}`}
+                            onClick={() => setSelectedAdminWalletAddress(member.walletAddress)}
+                            className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition ${
+                              isSelected ? 'bg-sky-50' : 'hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-900">{member.nickname}</p>
+                              <p className="truncate text-xs text-slate-500">
+                                {shortWallet(member.walletAddress)} · role {member.role}
+                                {member.createdAt ? ` · ${formatDateTime(member.createdAt)}` : ''}
+                              </p>
+                            </div>
+                            <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full border ${
+                              isSelected
+                                ? 'border-sky-600 bg-sky-600 text-white'
+                                : 'border-slate-300 bg-white text-transparent'
+                            }`}>
+                              ✓
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 lg:col-span-5">
+                <p className="text-sm font-semibold text-slate-900">변경 요약</p>
+                <div className="mt-2 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                  <div className="flex items-center justify-between gap-2">
+                    <span>현재 관리자</span>
+                    <span className="font-semibold text-slate-800">{shortWallet(adminWalletModalStore.adminWalletAddress)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span>선택 지갑</span>
+                    <span className="font-semibold text-slate-800">
+                      {selectedAdminWalletAddress ? shortWallet(selectedAdminWalletAddress) : '-'}
+                    </span>
+                  </div>
+                </div>
+
+                {adminWalletModalError && (
+                  <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+                    {adminWalletModalError}
+                  </p>
+                )}
+
+                <div className="mt-3 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={closeAdminWalletModal}
+                    disabled={updatingAdminWallet}
+                    className="inline-flex h-10 items-center rounded-full border border-slate-300 bg-white px-3.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    닫기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={updateAdminWalletAddress}
+                    disabled={updatingAdminWallet || !isWalletAddress(selectedAdminWalletAddress)}
+                    className="inline-flex h-10 items-center rounded-full bg-sky-700 px-3.5 text-xs font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {updatingAdminWallet ? '변경 중...' : '관리자 지갑 변경'}
+                  </button>
+                </div>
+
+                <div className="mt-4 border-t border-slate-200 pt-3">
+                  <p className="text-sm font-semibold text-slate-900">관리자 역할 변경이력</p>
+                  <p className="mt-1 text-xs text-slate-500">최근 변경 순으로 표시됩니다.</p>
+
+                  <div className="mt-2 max-h-[230px] overflow-y-auto rounded-xl border border-slate-200 bg-slate-50">
+                    {loadingAdminWalletHistory ? (
+                      <div className="space-y-2 p-3">
+                        {Array.from({ length: 4 }).map((_, index) => (
+                          <div key={`admin-wallet-history-loading-${index}`} className="h-12 animate-pulse rounded-lg bg-slate-100" />
+                        ))}
+                      </div>
+                    ) : adminWalletHistory.length === 0 ? (
+                      <div className="px-3 py-6 text-center text-xs text-slate-500">변경이력이 없습니다.</div>
+                    ) : (
+                      <div className="divide-y divide-slate-200">
+                        {adminWalletHistory.map((item) => (
+                          <div key={item.id} className="px-3 py-2.5 text-xs text-slate-600">
+                            <p className="font-semibold text-slate-800">
+                              {shortWallet(item.prevAdminWalletAddress)} → {shortWallet(item.nextAdminWalletAddress)}
+                            </p>
+                            <p className="mt-0.5">
+                              {item.changedByName ? `${item.changedByName}` : 'dashboard'}{item.changedByWalletAddress ? ` (${shortWallet(item.changedByWalletAddress)})` : ''}
+                            </p>
+                            <p className="mt-0.5 text-slate-500">{formatDateTime(item.changedAt)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            </div>
+          </section>
+        </div>
+      )}
 
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center px-4 py-6">

@@ -154,6 +154,7 @@ export async function getStoreByStorecode(
 
         adminWalletAddress: 1,
         settlementWalletAddress: 1,
+        paymentWalletAddress: 1,
         agentFeePercent: 1,
         agentFeeWalletAddress: 1,
 
@@ -365,7 +366,7 @@ export async function updateStoreAdminWalletAddress(
     { storecode: storecode },
     { $set: { adminWalletAddress: adminWalletAddress } }
   );
-  if (result) {
+  if (result.matchedCount > 0) {
     return true;
   } else {
     return false;
@@ -416,6 +417,30 @@ export async function updateStoreSettlementWalletAddress(
   const result = await collection.updateOne(
     { storecode: storecode },
     { $set: { settlementWalletAddress: settlementWalletAddress } }
+  );
+  if (result) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+// updateStorePaymentWalletAddress
+export async function updateStorePaymentWalletAddress(
+  {
+    storecode,
+    paymentWalletAddress,
+  }: {
+    storecode: string;
+    paymentWalletAddress: string;
+  }
+): Promise<boolean> {
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('stores');
+
+  const result = await collection.updateOne(
+    { storecode: storecode },
+    { $set: { paymentWalletAddress: paymentWalletAddress } }
   );
   if (result) {
     return true;
@@ -647,6 +672,40 @@ export async function getAllStores(
         $unwind: { path: '$agentInfo', preserveNullAndEmptyArrays: true }
       },
       {
+        $lookup: {
+          from: 'users',
+          let: { adminWalletAddress: '$adminWalletAddress' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$storecode', 'admin'] },
+                    {
+                      $eq: [
+                        { $toLower: { $ifNull: ['$walletAddress', ''] } },
+                        { $toLower: { $ifNull: ['$$adminWalletAddress', ''] } },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                nickname: 1,
+              },
+            },
+            { $limit: 1 },
+          ],
+          as: 'adminUserInfo',
+        },
+      },
+      {
+        $unwind: { path: '$adminUserInfo', preserveNullAndEmptyArrays: true }
+      },
+      {
         
         $project: {
           createdAt: 1,
@@ -658,7 +717,9 @@ export async function getAllStores(
 
           sellerWalletAddress: 1,
           adminWalletAddress: 1,
+          adminNickname: { $ifNull: ['$adminUserInfo.nickname', ''] },
           settlementWalletAddress: 1,
+          paymentWalletAddress: 1,
 
 
           settlementFeePercent: 1,
