@@ -122,11 +122,19 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
 
   const { Canvas } = useQRCode();
 
+  const pathname = usePathname();
   const router = useRouter();
   const { wallet, wallets, smartAccountEnabled } = useClientWallets({
     authOptions: walletAuthOptions,
     sponsorGas: true,
   });
+
+  const pathSegments = pathname?.split("/").filter(Boolean) ?? [];
+  const langFromPath = pathSegments[0] ?? "ko";
+  const isP2pSection = pathSegments[1] === "p2p" || pathSegments[1] === "p2p-buyer";
+  const withdrawUsdtPath = isP2pSection
+    ? `/${langFromPath}/wallet-management/wallet-usdt`
+    : `/${langFromPath}/administration/withdraw-usdt`;
 
 
   /*
@@ -568,7 +576,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                 /* router and hide button for withdraw USDT */
                 onClick={() => {
                   onRequestClose?.();
-                  router.push("/ko/administration/withdraw-usdt");
+                  router.push(withdrawUsdtPath);
                 }}>
                   <Image
                     src={`/icon-withdraw.png`}
