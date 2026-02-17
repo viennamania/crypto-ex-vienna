@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation';
 import { Manrope, Playfair_Display } from 'next/font/google';
 import { toast } from 'react-hot-toast';
+import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
+import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 import {
   getContract,
   sendAndConfirmTransaction,
@@ -53,6 +55,7 @@ type Merchant = {
   storeName: string;
   storeLogo: string;
   paymentWalletAddress: string;
+  adminWalletAddress: string;
 };
 
 type PaymentRecord = {
@@ -113,6 +116,10 @@ const bodyFont = Manrope({
 
 const WALLET_AUTH_OPTIONS = ['phone', 'email', 'google', 'apple', 'line', 'telegram'];
 const QUICK_KRW_AMOUNTS = [10000, 30000, 50000, 100000, 300000, 500000];
+const SENDBIRD_APP_ID =
+  process.env.NEXT_PUBLIC_SENDBIRD_APP_ID ||
+  process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID ||
+  '';
 
 const NETWORK_BY_KEY: Record<NetworkKey, NetworkOption> = {
   ethereum: {
@@ -305,6 +312,11 @@ export default function PaymentUsdtPage({
   const [signupNickname, setSignupNickname] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signingUpMember, setSigningUpMember] = useState(false);
+  const [chatSessionToken, setChatSessionToken] = useState<string | null>(null);
+  const [chatChannelUrl, setChatChannelUrl] = useState<string | null>(null);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [chatRefreshToken, setChatRefreshToken] = useState(0);
   const memberProfileRequestIdRef = useRef(0);
   const amountInputRef = useRef<HTMLInputElement | null>(null);
   const memberStatusCardRef = useRef<HTMLDivElement | null>(null);
@@ -340,6 +352,24 @@ export default function PaymentUsdtPage({
   const memberBankInfoSnapshot = useMemo(
     () => resolveBuyerBankInfo(myMemberProfile?.buyer),
     [myMemberProfile?.buyer]
+  );
+  const fallbackMemberDisplayName = useMemo(() => {
+    if (!activeAccount?.address) return '';
+    return `user_${activeAccount.address.replace(/^0x/i, '').slice(0, 6)}`;
+  }, [activeAccount?.address]);
+  const memberDisplayName = useMemo(() => {
+    const nickname = String(myMemberProfile?.nickname || '').trim();
+    return nickname || fallbackMemberDisplayName;
+  }, [myMemberProfile?.nickname, fallbackMemberDisplayName]);
+  const selectedMerchantAdminWalletAddress = String(selectedMerchant?.adminWalletAddress || '').trim();
+  const hasValidStoreAdminWallet = isWalletAddress(selectedMerchantAdminWalletAddress);
+  const isStoreAdminSameAsMember = Boolean(
+    activeAccount?.address &&
+      hasValidStoreAdminWallet &&
+      activeAccount.address.toLowerCase() === selectedMerchantAdminWalletAddress.toLowerCase(),
+  );
+  const shouldShowSelfMerchantChatAlert = Boolean(
+    activeAccount?.address && selectedMerchant && isStoreAdminSameAsMember,
   );
   const hasMemberProfile = Boolean(myMemberProfile);
   const needsMerchantSelectionFirst = !hasStorecodeParam && !selectedMerchant;
@@ -470,6 +500,7 @@ export default function PaymentUsdtPage({
             storeName: String(store?.storeName || store?.storecode || '상점'),
             storeLogo: String(store?.storeLogo || ''),
             paymentWalletAddress,
+            adminWalletAddress: String(store?.adminWalletAddress || '').trim(),
           };
         })
         .filter((item: Merchant) => Boolean(item.storecode && item.paymentWalletAddress));
@@ -634,6 +665,83 @@ export default function PaymentUsdtPage({
     }
   }, [activeAccount?.address, selectedStorecode]);
 
+  const connectStoreChat = useCallback(async () => {
+    if (
+      paymentTab !== 'pay' ||
+      !activeAccount?.address ||
+      !selectedMerchant ||
+      !SENDBIRD_APP_ID ||
+      !hasValidStoreAdminWallet ||
+      isStoreAdminSameAsMember
+    ) {
+      setChatSessionToken(null);
+      setChatChannelUrl(null);
+      setChatError(null);
+      return;
+    }
+
+    if (!memberDisplayName) {
+      return;
+    }
+
+    setChatLoading(true);
+    setChatError(null);
+    try {
+      await fetch('/api/sendbird/update-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: activeAccount.address,
+          nickname: memberDisplayName,
+        }),
+      }).catch(() => null);
+
+      const sessionResponse = await fetch('/api/sendbird/session-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: activeAccount.address,
+          nickname: memberDisplayName,
+        }),
+      });
+      const sessionData = await sessionResponse.json().catch(() => ({}));
+      if (!sessionResponse.ok || !sessionData?.sessionToken) {
+        throw new Error(sessionData?.error || '채팅 세션 토큰 발급에 실패했습니다.');
+      }
+
+      const channelResponse = await fetch('/api/sendbird/group-channel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          buyerId: activeAccount.address,
+          sellerId: selectedMerchantAdminWalletAddress,
+        }),
+      });
+      const channelData = await channelResponse.json().catch(() => ({}));
+      if (!channelResponse.ok || !channelData?.channelUrl) {
+        throw new Error(channelData?.error || '상점 채팅 채널 생성에 실패했습니다.');
+      }
+
+      setChatSessionToken(String(sessionData.sessionToken));
+      setChatChannelUrl(String(channelData.channelUrl));
+    } catch (error) {
+      console.error('Failed to connect store chat', error);
+      setChatSessionToken(null);
+      setChatChannelUrl(null);
+      setChatError(error instanceof Error ? error.message : '채팅을 연결하지 못했습니다.');
+    } finally {
+      setChatLoading(false);
+    }
+  }, [
+    paymentTab,
+    activeAccount?.address,
+    selectedMerchant,
+    selectedMerchantAdminWalletAddress,
+    hasValidStoreAdminWallet,
+    isStoreAdminSameAsMember,
+    memberDisplayName,
+  ]);
+
   useEffect(() => {
     loadMerchants();
   }, [loadMerchants]);
@@ -669,6 +777,10 @@ export default function PaymentUsdtPage({
   useEffect(() => {
     loadMemberProfile();
   }, [loadMemberProfile]);
+
+  useEffect(() => {
+    connectStoreChat();
+  }, [connectStoreChat, chatRefreshToken]);
 
   useEffect(() => {
     setSignupNickname('');
@@ -917,22 +1029,20 @@ export default function PaymentUsdtPage({
 
       <div className="relative mx-auto w-full max-w-[430px] px-4 pb-28 pt-8">
         <div className="mb-8">
-          <div>
-            <p className="mb-2 inline-flex rounded-full border border-slate-300/80 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600">
-              Wallet Management
-            </p>
-            <h1
-              className="text-3xl font-semibold tracking-tight text-slate-900"
-              style={{ fontFamily: 'var(--font-display), "Times New Roman", serif' }}
-            >
-              USDT 결제
-            </h1>
-            <p className="mt-2 text-sm text-slate-600">
-              {hasStorecodeParam
-                ? '지정된 가맹점에 결제 금액(KRW)을 입력하면, 실시간 환율 기준 USDT로 안전하게 결제할 수 있습니다.'
-                : '가맹점을 선택하고 결제 금액(KRW)을 입력하면, 실시간 환율 기준 USDT로 안전하게 결제할 수 있습니다.'}
-            </p>
-          </div>
+          <p className="mb-2 inline-flex rounded-full border border-slate-300/80 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600">
+            Wallet Management
+          </p>
+          <h1
+            className="text-3xl font-semibold tracking-tight text-slate-900"
+            style={{ fontFamily: 'var(--font-display), "Times New Roman", serif' }}
+          >
+            USDT 결제
+          </h1>
+          <p className="mt-2 text-sm text-slate-600">
+            {hasStorecodeParam
+              ? '지정된 가맹점에 결제 금액(KRW)을 입력하면, 실시간 환율 기준 USDT로 안전하게 결제할 수 있습니다.'
+              : '가맹점을 선택하고 결제 금액(KRW)을 입력하면, 실시간 환율 기준 USDT로 안전하게 결제할 수 있습니다.'}
+          </p>
         </div>
 
         {activeAccount?.address ? (
@@ -1283,9 +1393,10 @@ export default function PaymentUsdtPage({
                   <button
                     type="button"
                     onClick={loadHistory}
-                    className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-800"
+                    disabled={loadingHistory}
+                    className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    새로고침
+                    {loadingHistory ? '조회 중...' : '새로고침'}
                   </button>
                 </div>
 
@@ -1352,6 +1463,80 @@ export default function PaymentUsdtPage({
               </>
             )}
           </section>
+
+          {paymentTab === 'pay' && (
+          <section className="rounded-3xl border border-white/70 bg-white/75 p-5 shadow-[0_26px_60px_-35px_rgba(15,23,42,0.45)] backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">STEP 2</p>
+                <h2 className="mt-1 text-lg font-semibold text-slate-900">상점 채팅</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  회원 지갑과 상점 관리자 간 채팅으로 결제 확인을 빠르게 진행하세요.
+                </p>
+              </div>
+              {!shouldShowSelfMerchantChatAlert && (
+                <button
+                  type="button"
+                  onClick={() => setChatRefreshToken((prev) => prev + 1)}
+                  disabled={chatLoading}
+                  className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {chatLoading ? '연결 중...' : '재연결'}
+                </button>
+              )}
+            </div>
+
+            {!activeAccount?.address && (
+              <p className="mt-3 text-sm text-slate-500">지갑 연결 후 상점 채팅을 사용할 수 있습니다.</p>
+            )}
+            {activeAccount?.address && !selectedMerchant && (
+              <p className="mt-3 text-sm text-slate-500">결제 상점을 선택하면 채팅이 자동으로 연결됩니다.</p>
+            )}
+            {shouldShowSelfMerchantChatAlert && (
+              <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm">
+                <p className="font-semibold text-rose-700">현재 상점 관리자가 회원 지갑과 동일한 계정입니다.</p>
+                <p className="mt-1 text-xs text-rose-600">채팅 연결 대상이 없어 상점을 다시 선택해 주세요.</p>
+              </div>
+            )}
+            {activeAccount?.address && selectedMerchant && !isStoreAdminSameAsMember && !SENDBIRD_APP_ID && (
+              <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">
+                채팅 설정이 비어 있어 연결할 수 없습니다. NEXT_PUBLIC_SENDBIRD_APP_ID 설정을 확인해 주세요.
+              </p>
+            )}
+            {activeAccount?.address && selectedMerchant && !isStoreAdminSameAsMember && SENDBIRD_APP_ID && !hasValidStoreAdminWallet && (
+              <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">
+                상점 관리자 지갑이 설정되지 않아 채팅을 연결할 수 없습니다.
+              </p>
+            )}
+            {activeAccount?.address && selectedMerchant && !isStoreAdminSameAsMember && SENDBIRD_APP_ID && hasValidStoreAdminWallet && (
+              <>
+                <p className="mt-3 text-xs font-semibold text-slate-500">
+                  관리자 지갑: {shortAddress(selectedMerchantAdminWalletAddress)}
+                </p>
+                <div className="mt-2 h-[420px] overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                {chatError ? (
+                  <div className="px-4 py-4 text-xs font-semibold text-rose-600">{chatError}</div>
+                ) : !memberDisplayName || loadingMemberProfile ? (
+                  <div className="px-4 py-4 text-xs text-slate-500">내 회원 정보를 불러오는 중입니다...</div>
+                ) : !chatSessionToken || !chatChannelUrl ? (
+                  <div className="px-4 py-4 text-xs text-slate-500">
+                    {chatLoading ? '채팅을 준비 중입니다...' : '채팅 채널을 연결하는 중입니다...'}
+                  </div>
+                ) : (
+                  <SendbirdProvider
+                    appId={SENDBIRD_APP_ID}
+                    userId={activeAccount.address}
+                    accessToken={chatSessionToken}
+                    theme="light"
+                  >
+                    <GroupChannel channelUrl={chatChannelUrl} />
+                  </SendbirdProvider>
+                )}
+                </div>
+              </>
+            )}
+          </section>
+          )}
         </div>
       </div>
 
