@@ -9,7 +9,6 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
 
   const {
-    walletAddress,
     storecode,
     limit,
     page,
@@ -20,6 +19,7 @@ export async function POST(request: NextRequest) {
     userType = 'all',
     role = '',
     requireProfile = true,
+    includeWalletless = false,
   } = body;
 
 
@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
     userType,
     role,
     requireProfile,
+    includeWalletless,
   });
 
  

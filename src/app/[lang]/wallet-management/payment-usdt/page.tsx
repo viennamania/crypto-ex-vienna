@@ -169,10 +169,6 @@ const formatUsdt = (value: number) => `${value.toLocaleString(undefined, { maxim
 const formatRate = (value: number) => `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })} KRW`;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
-const getSuggestedNickname = (walletAddress?: string) => {
-  const seed = String(walletAddress || '').replace(/^0x/i, '').slice(0, 6);
-  return seed ? `user_${seed}` : `user_${Math.random().toString(36).slice(2, 8)}`;
-};
 
 const resolveBuyerBankInfo = (buyer: unknown): BuyerBankInfoSnapshot | null => {
   if (!isRecord(buyer)) return null;
@@ -307,6 +303,7 @@ export default function PaymentUsdtPage({
   const [loadingMemberProfile, setLoadingMemberProfile] = useState(false);
   const [memberProfileError, setMemberProfileError] = useState<string | null>(null);
   const [signupNickname, setSignupNickname] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
   const [signingUpMember, setSigningUpMember] = useState(false);
   const memberProfileRequestIdRef = useRef(0);
   const amountInputRef = useRef<HTMLInputElement | null>(null);
@@ -616,11 +613,11 @@ export default function PaymentUsdtPage({
           buyer: isRecord(user?.buyer) ? (user.buyer as MemberProfile['buyer']) : null,
         });
         setMemberProfileError(null);
-        setSignupNickname((prev) => prev || String(user?.nickname || '').trim());
+        setSignupNickname('');
+        setSignupPassword('');
       } else {
         setMyMemberProfile(null);
         setMemberProfileError(null);
-        setSignupNickname((prev) => prev || getSuggestedNickname(activeAccount.address));
       }
     } catch (error) {
       console.error('Failed to load member profile', error);
@@ -672,6 +669,11 @@ export default function PaymentUsdtPage({
     loadMemberProfile();
   }, [loadMemberProfile]);
 
+  useEffect(() => {
+    setSignupNickname('');
+    setSignupPassword('');
+  }, [selectedStorecode]);
+
   const registerMemberForSelectedStore = async () => {
     if (!activeAccount?.address) {
       toast.error('지갑을 먼저 연결해 주세요.');
@@ -684,32 +686,41 @@ export default function PaymentUsdtPage({
 
     const nickname = signupNickname.trim();
     if (nickname.length < 2) {
-      toast.error('닉네임을 2자 이상 입력해 주세요.');
+      toast.error('회원 아이디를 2자 이상 입력해 주세요.');
+      return;
+    }
+
+    const password = signupPassword.trim();
+    if (!password) {
+      toast.error('비밀번호를 입력해 주세요.');
       return;
     }
 
     setSigningUpMember(true);
+    setMemberProfileError(null);
     try {
-      const response = await fetch('/api/user/setUser', {
+      const response = await fetch('/api/user/linkWalletByStorecodeNicknamePassword', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storecode: selectedStorecode,
           walletAddress: activeAccount.address,
           nickname,
-          mobile: '',
+          password,
         }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data?.error) {
-        throw new Error(data?.error || '회원가입에 실패했습니다.');
+        throw new Error(data?.error || '회원 인증에 실패했습니다.');
       }
 
-      toast.success('회원가입이 완료되었습니다.');
+      toast.success('회원 인증이 완료되어 내 지갑으로 연결되었습니다.');
       await loadMemberProfile();
     } catch (error) {
-      console.error('Failed to register member', error);
-      toast.error(error instanceof Error ? error.message : '회원가입 중 오류가 발생했습니다.');
+      console.error('Failed to verify and link member', error);
+      const message = error instanceof Error ? error.message : '회원 인증 중 오류가 발생했습니다.';
+      setMemberProfileError(message);
+      toast.error(message);
     } finally {
       setSigningUpMember(false);
     }
@@ -1089,24 +1100,37 @@ export default function PaymentUsdtPage({
                         <p className="font-semibold text-amber-800">
                           이 상점에서 결제하려면 먼저 회원가입이 필요합니다.
                         </p>
+                        <p className="mt-1 text-xs text-amber-700">
+                          회원 아이디와 비밀번호를 입력해 내 지갑을 회원 계정에 연결해 주세요.
+                        </p>
                         {memberProfileError && (
                           <p className="mt-1 text-xs text-rose-600">{memberProfileError}</p>
                         )}
-                        <div className="mt-3 flex flex-col gap-2">
-                          <input
-                            value={signupNickname}
-                            onChange={(event) => setSignupNickname(event.target.value)}
-                            placeholder="회원가입 닉네임 입력"
-                            className="h-10 flex-1 rounded-xl border border-amber-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-amber-500"
-                            maxLength={24}
-                          />
+                        <div className="mt-3 space-y-2.5">
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <input
+                              value={signupNickname}
+                              onChange={(event) => setSignupNickname(event.target.value)}
+                              placeholder="회원 아이디"
+                              className="h-12 w-full rounded-2xl border-2 border-amber-300 bg-white px-4 text-base font-semibold text-slate-800 outline-none transition focus:border-amber-500 placeholder:text-slate-400"
+                              maxLength={24}
+                            />
+                            <input
+                              type="password"
+                              value={signupPassword}
+                              onChange={(event) => setSignupPassword(event.target.value)}
+                              placeholder="비밀번호"
+                              className="h-12 w-full rounded-2xl border-2 border-amber-300 bg-white px-4 text-base font-semibold text-slate-800 outline-none transition focus:border-amber-500 placeholder:text-slate-400"
+                              maxLength={32}
+                            />
+                          </div>
                           <button
                             type="button"
                             onClick={registerMemberForSelectedStore}
                             disabled={signingUpMember}
                             className="inline-flex h-10 items-center justify-center rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            {signingUpMember ? '가입 처리 중...' : '회원가입 후 결제하기'}
+                            {signingUpMember ? '인증 처리 중...' : '회원가입 후 결제하기'}
                           </button>
                         </div>
                       </>

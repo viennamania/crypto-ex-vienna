@@ -287,6 +287,131 @@ export async function insertOne(data: any) {
 }
 
 
+// create user profile without auto-generating on-chain wallet address
+export async function insertOneWithoutWalletAddress(data: any) {
+  if (!data?.storecode || !data?.nickname) {
+    return {
+      result: null,
+      error: 'Missing required fields: storecode, nickname',
+    };
+  }
+
+  const storecode = String(data.storecode || '').trim();
+  const nickname = String(data.nickname || '').trim();
+  const mobile = String(data.mobile || '').trim();
+
+  if (!storecode || !nickname) {
+    return {
+      result: null,
+      error: 'Missing required fields: storecode, nickname',
+    };
+  }
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+  const storeCollection = client.db(dbName).collection('stores');
+
+  const store = await storeCollection.findOne(
+    { storecode: storecode },
+  );
+  if (!store) {
+    return {
+      result: null,
+      error: 'store not found',
+    };
+  }
+
+  const checkNickname = await collection.findOne<UserProps>(
+    {
+      storecode: storecode,
+      nickname: nickname,
+    },
+    { projection: { _id: 1 } },
+  );
+
+  if (checkNickname) {
+    return {
+      result: null,
+      error: 'user already exists',
+    };
+  }
+
+  const id = Math.floor(Math.random() * 9000000) + 100000;
+  const nowIso = new Date().toISOString();
+
+  const depositBankName = String(
+    data?.buyer?.depositBankName
+    || data?.buyer?.bankInfo?.bankName
+    || '',
+  ).trim();
+  const depositBankAccountNumber = String(
+    data?.buyer?.depositBankAccountNumber
+    || data?.buyer?.bankInfo?.accountNumber
+    || '',
+  ).replace(/[^0-9]/g, '');
+  const depositName = String(
+    data?.buyer?.depositName
+    || data?.buyer?.bankInfo?.accountHolder
+    || nickname,
+  ).trim();
+
+  const buyer = {
+    depositBankName: depositBankName,
+    depositBankAccountNumber: depositBankAccountNumber,
+    depositName: depositName,
+    bankInfo: {
+      bankName: depositBankName,
+      accountNumber: depositBankAccountNumber,
+      accountHolder: depositName,
+    },
+  };
+
+  const insertResult = await collection.insertOne(
+    {
+      id: id,
+      email: String(data?.email || '').trim(),
+      nickname: nickname,
+      avatar: String(data?.avatar || '').trim(),
+      mobile: mobile,
+
+      storecode: storecode,
+      store: store,
+
+      // wallet address is intentionally left empty.
+      walletAddress: '',
+      walletPrivateKey: '',
+
+      createdAt: nowIso,
+      updatedAt: nowIso,
+
+      settlementAmountOfFee: '0',
+      password: String(data?.password || ''),
+      verified: false,
+      role: String(data?.role || 'buyer').trim() || 'buyer',
+      userType: String(data?.userType || 'buyer').trim() || 'buyer',
+      buyOrderStatus: 'none',
+      buyer: buyer,
+    },
+  );
+
+  if (!insertResult?.insertedId) {
+    return {
+      result: null,
+      error: 'failed to insert user',
+    };
+  }
+
+  const inserted = await collection.findOne<UserProps>(
+    { _id: insertResult.insertedId },
+  );
+
+  return {
+    result: inserted,
+    error: '',
+  };
+}
+
+
 
 
 
@@ -1838,6 +1963,7 @@ export async function getAllUsersByStorecode(
     userType = 'all',
     role = '',
     requireProfile = true,
+    includeWalletless = false,
   }: {
     storecode: string;
     limit: number;
@@ -1849,6 +1975,7 @@ export async function getAllUsersByStorecode(
     userType?: 'seller' | 'buyer' | 'all';
     role?: string;
     requireProfile?: boolean;
+    includeWalletless?: boolean;
   }
 ): Promise<ResultProps> {
 
@@ -1871,7 +1998,7 @@ export async function getAllUsersByStorecode(
 
   const conditions: any[] = [
     { storecode: { $regex: storecode, $options: 'i' } },
-    { walletAddress: { $exists: true, $ne: null } },
+    ...(includeWalletless ? [] : [{ walletAddress: { $exists: true, $ne: null } }]),
     ...(requireProfile ? [roleCondition] : []),
     ...(includeUnverified ? [] : [{ verified: true }]),
   ];

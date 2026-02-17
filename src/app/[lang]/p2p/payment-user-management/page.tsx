@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 import { AutoConnect, useActiveAccount } from 'thirdweb/react';
 import { arbitrum, bsc, ethereum, polygon } from 'thirdweb/chains';
 
@@ -23,6 +24,7 @@ type PaymentMember = {
   id: string;
   nickname: string;
   walletAddress: string;
+  password: string;
   createdAt: string;
   verified: boolean;
   hasBuyer: boolean;
@@ -102,6 +104,7 @@ export default function P2PPaymentUserManagementPage() {
   const storecodeQuery = storecode ? `?storecode=${encodeURIComponent(storecode)}` : '';
   const paymentManagementPath = `/${lang}/p2p/payment-management${storecodeQuery}`;
   const paymentUserManagementPath = `/${lang}/p2p/payment-user-management${storecodeQuery}`;
+  const memberHomepagePath = `/ko/wallet-management?storecode=${encodeURIComponent(storecode)}`;
 
   const activeAccount = useActiveAccount();
   const walletAddress = activeAccount?.address || '';
@@ -123,6 +126,14 @@ export default function P2PPaymentUserManagementPage() {
   const [keyword, setKeyword] = useState(keywordFromQuery);
   const [currentPage, setCurrentPage] = useState(pageFromQuery);
   const [memberStatus, setMemberStatus] = useState<MemberStatus>(statusFromQuery);
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
+  const [newMemberNickname, setNewMemberNickname] = useState('');
+  const [newMemberDepositName, setNewMemberDepositName] = useState('');
+  const [newMemberDepositBankName, setNewMemberDepositBankName] = useState('');
+  const [newMemberDepositBankAccountNumber, setNewMemberDepositBankAccountNumber] = useState('');
+  const [addMemberError, setAddMemberError] = useState<string | null>(null);
+  const [memberHomepageFullUrl, setMemberHomepageFullUrl] = useState(memberHomepagePath);
 
   useEffect(() => {
     setKeyword(keywordFromQuery);
@@ -135,6 +146,11 @@ export default function P2PPaymentUserManagementPage() {
   useEffect(() => {
     setMemberStatus(statusFromQuery);
   }, [statusFromQuery]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setMemberHomepageFullUrl(`${window.location.origin}${memberHomepagePath}`);
+  }, [memberHomepagePath]);
 
   const updateQueryState = useCallback(
     (next: { page?: number; keyword?: string; status?: MemberStatus }) => {
@@ -160,6 +176,20 @@ export default function P2PPaymentUserManagementPage() {
     },
     [currentPage, keyword, memberStatus, pathname, router, searchParams],
   );
+
+  const copyMemberHomepageUrl = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(memberHomepageFullUrl);
+      toast.success('회원 홈페이지 URL을 복사했습니다.');
+    } catch {
+      toast.error('URL 복사에 실패했습니다.');
+    }
+  }, [memberHomepageFullUrl]);
+
+  const openMemberHomepageInNewTab = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    window.open(memberHomepageFullUrl, '_blank', 'noopener,noreferrer');
+  }, [memberHomepageFullUrl]);
 
   const loadData = useCallback(async () => {
     if (!walletAddress || !storecode) {
@@ -190,6 +220,7 @@ export default function P2PPaymentUserManagementPage() {
             limit: 1000,
             page: 1,
             includeUnverified: true,
+            includeWalletless: true,
             sortField: 'createdAt',
             requireProfile: false,
             userType: 'all',
@@ -238,6 +269,7 @@ export default function P2PPaymentUserManagementPage() {
             id: String(item?._id || item?.id || `${index}`),
             nickname: String(item?.nickname || '').trim() || '-',
             walletAddress: String(item?.walletAddress || '').trim(),
+            password: String(item?.password || '').trim(),
             createdAt: String(item?.createdAt || ''),
             verified: Boolean(item?.verified),
             hasBuyer: Boolean(item?.buyer),
@@ -250,8 +282,7 @@ export default function P2PPaymentUserManagementPage() {
             hasPaymentInfo: Boolean(item?.paymentInfo),
             bankInfoLabel,
           };
-        })
-        .filter((item: PaymentMember) => Boolean(item.walletAddress));
+        });
 
       setMembers(normalizedMembers);
     } catch (fetchError: unknown) {
@@ -266,6 +297,122 @@ export default function P2PPaymentUserManagementPage() {
       setLoading(false);
     }
   }, [storecode, walletAddress]);
+
+  const openAddMemberModal = useCallback(() => {
+    if (!walletAddress) {
+      toast.error('지갑 연결 후 회원 추가가 가능합니다.');
+      return;
+    }
+    if (!storecode) {
+      toast.error('storecode를 먼저 선택해 주세요.');
+      return;
+    }
+
+    setNewMemberNickname('');
+    setNewMemberDepositName('');
+    setNewMemberDepositBankName('');
+    setNewMemberDepositBankAccountNumber('');
+    setAddMemberError(null);
+    setIsAddMemberModalOpen(true);
+  }, [storecode, walletAddress]);
+
+  const closeAddMemberModal = useCallback(() => {
+    if (addingMember) return;
+    setAddMemberError(null);
+    setIsAddMemberModalOpen(false);
+  }, [addingMember]);
+
+  const submitAddMember = useCallback(async () => {
+    if (!walletAddress) {
+      toast.error('지갑 연결 후 진행해 주세요.');
+      return;
+    }
+    if (!storecode) {
+      toast.error('storecode가 필요합니다.');
+      return;
+    }
+    if (addingMember) return;
+
+    const nextNickname = String(newMemberNickname || '').trim();
+    const nextDepositName = String(newMemberDepositName || '').trim();
+    const nextDepositBankName = String(newMemberDepositBankName || '').trim();
+    const nextDepositBankAccountNumber = String(newMemberDepositBankAccountNumber || '').trim();
+    setAddMemberError(null);
+
+    if (!nextNickname) {
+      setAddMemberError('회원 닉네임을 입력해 주세요.');
+      toast.error('회원 닉네임을 입력해 주세요.');
+      return;
+    }
+    if (!nextDepositName) {
+      setAddMemberError('입금자명을 입력해 주세요.');
+      toast.error('입금자명을 입력해 주세요.');
+      return;
+    }
+
+    setAddingMember(true);
+    try {
+      const createResponse = await fetch('/api/user/setPaymentMemberWithoutWalletAddress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode,
+          nickname: nextNickname,
+          userName: nextDepositName,
+          userBankName: nextDepositBankName,
+          userBankAccountNumber: nextDepositBankAccountNumber,
+          mobile: '',
+        }),
+      });
+      const createData = await createResponse.json().catch(() => ({}));
+      const createResult = isRecord(createData?.result) ? createData.result : null;
+      const rawErrorMessage = String(createData?.error || createResult?.error || '').trim();
+      const errorMessage = rawErrorMessage.toLowerCase();
+      const isDuplicateNickname =
+        createResponse.status === 409 ||
+        errorMessage.includes('already exists') ||
+        errorMessage.includes('이미 등록') ||
+        errorMessage.includes('duplicate');
+
+      if (!createResponse.ok) {
+        if (isDuplicateNickname) {
+          throw new Error('이미 등록된 회원 아이디입니다.');
+        }
+        throw new Error(
+          typeof createData?.error === 'string' ? createData.error : '신규 회원 추가에 실패했습니다.',
+        );
+      }
+      if (errorMessage.includes('already exists')) {
+        throw new Error('이미 등록된 회원 아이디입니다.');
+      }
+      if (typeof createResult?.error === 'string' && createResult.error) {
+        throw new Error(createResult.error);
+      }
+
+      toast.success('새로운 회원을 추가했습니다.');
+      setIsAddMemberModalOpen(false);
+      setCurrentPage(1);
+      updateQueryState({ page: 1 });
+      await loadData();
+    } catch (submitError: unknown) {
+      const message =
+        submitError instanceof Error ? submitError.message : '회원 추가 처리 중 오류가 발생했습니다.';
+      setAddMemberError(message);
+      toast.error(message);
+    } finally {
+      setAddingMember(false);
+    }
+  }, [
+    addingMember,
+    loadData,
+    newMemberDepositBankAccountNumber,
+    newMemberDepositBankName,
+    newMemberDepositName,
+    newMemberNickname,
+    storecode,
+    updateQueryState,
+    walletAddress,
+  ]);
 
   useEffect(() => {
     void loadData();
@@ -352,6 +499,31 @@ export default function P2PPaymentUserManagementPage() {
               <p className="mt-1 text-xs text-slate-600 md:text-sm">
                 가맹점 결제 회원의 가입 현황과 결제정보 등록 상태를 대시보드로 확인합니다.
               </p>
+              <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+                <span className="text-[11px] font-semibold text-slate-500">회원 홈페이지</span>
+                <Link
+                  href={memberHomepageFullUrl}
+                  className="truncate font-mono text-[11px] font-semibold text-cyan-700 underline decoration-cyan-300 underline-offset-2"
+                >
+                  {memberHomepageFullUrl}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void copyMemberHomepageUrl();
+                  }}
+                  className="inline-flex h-6 items-center rounded-full border border-slate-300 bg-white px-2 text-[10px] font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  복사
+                </button>
+                <button
+                  type="button"
+                  onClick={openMemberHomepageInNewTab}
+                  className="inline-flex h-6 items-center rounded-full border border-slate-300 bg-white px-2 text-[10px] font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  새창열기
+                </button>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex h-8 items-center rounded-full border border-slate-300 bg-white p-0.5">
@@ -374,15 +546,6 @@ export default function P2PPaymentUserManagementPage() {
               >
                 P2P 홈으로
               </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  void loadData();
-                }}
-                className="inline-flex h-8 items-center rounded-full bg-slate-900 px-2.5 text-[11px] font-semibold text-white transition hover:bg-slate-800"
-              >
-                새로고침
-              </button>
             </div>
           </div>
         </section>
@@ -484,7 +647,25 @@ export default function P2PPaymentUserManagementPage() {
 
                 <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_24px_56px_-42px_rgba(15,23,42,0.45)]">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-3 py-2">
-                    <p className="text-sm font-semibold text-slate-900">회원 가입현황 목록</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-slate-900">회원 가입현황 목록</p>
+                      <button
+                        type="button"
+                        onClick={openAddMemberModal}
+                        className="inline-flex h-7 items-center rounded-full border border-cyan-200 bg-cyan-50 px-2.5 text-[11px] font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100"
+                      >
+                        회원 추가
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void loadData();
+                        }}
+                        className="inline-flex h-7 items-center rounded-full border border-slate-300 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                      >
+                        새로고침
+                      </button>
+                    </div>
                     <div className="flex w-full max-w-[420px] items-center gap-1.5">
                       <select
                         value={memberStatus}
@@ -518,12 +699,13 @@ export default function P2PPaymentUserManagementPage() {
                     <div className="px-3 py-8 text-center text-sm text-slate-500">회원 데이터가 없습니다.</div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full min-w-[930px]">
+                      <table className="w-full min-w-[1030px]">
                         <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.14em] text-slate-500">
                           <tr>
                             <th className="px-3 py-2">가입일시</th>
                             <th className="px-3 py-2">닉네임</th>
                             <th className="px-3 py-2">지갑주소</th>
+                            <th className="px-3 py-2">비밀번호(PIN)</th>
                             <th className="px-3 py-2">회원유형</th>
                             <th className="px-3 py-2">검증</th>
                             <th className="px-3 py-2">결제정보</th>
@@ -560,6 +742,7 @@ export default function P2PPaymentUserManagementPage() {
                                 </div>
                               </td>
                               <td className="px-3 py-2 font-mono text-xs text-slate-700">{shortAddress(member.walletAddress)}</td>
+                              <td className="px-3 py-2 font-mono text-xs text-slate-700">{member.password || '-'}</td>
                               <td className="px-3 py-2 text-xs font-semibold text-slate-800">{resolveMemberType(member)}</td>
                               <td className="px-3 py-2">
                                 <span
@@ -644,6 +827,121 @@ export default function P2PPaymentUserManagementPage() {
           </>
         )}
       </div>
+
+      {isAddMemberModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm">
+          <button
+            type="button"
+            aria-label="회원 추가 모달 닫기"
+            onClick={closeAddMemberModal}
+            className="absolute inset-0"
+          />
+          <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_36px_80px_-40px_rgba(15,23,42,0.45)]">
+            <p className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-[11px] font-semibold text-cyan-700">
+              신규 회원 추가
+            </p>
+            <h2 className="mt-2 text-lg font-bold text-slate-900">가맹점 결제 회원 등록</h2>
+            <p className="mt-1 text-xs text-slate-600">
+              storecode <span className="font-mono text-slate-700">{storecode || '-'}</span> 기준으로 회원을 생성합니다.
+            </p>
+            <p className="mt-1 text-[11px] font-medium text-cyan-700">지갑주소는 자동 생성하지 않고 회원만 등록합니다.</p>
+
+            <form
+              className="mt-4 space-y-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submitAddMember();
+              }}
+            >
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-600">회원 닉네임 (필수)</span>
+                <input
+                  value={newMemberNickname}
+                  onChange={(event) => {
+                    setNewMemberNickname(event.target.value);
+                    setAddMemberError(null);
+                  }}
+                  placeholder="nickname"
+                  disabled={addingMember}
+                  className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-600">입금자명 (필수)</span>
+                <input
+                  value={newMemberDepositName}
+                  onChange={(event) => {
+                    setNewMemberDepositName(event.target.value);
+                    setAddMemberError(null);
+                  }}
+                  placeholder="홍길동"
+                  disabled={addingMember}
+                  className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-600">입금은행 (선택)</span>
+                <input
+                  value={newMemberDepositBankName}
+                  onChange={(event) => {
+                    setNewMemberDepositBankName(event.target.value);
+                    setAddMemberError(null);
+                  }}
+                  placeholder="은행명"
+                  disabled={addingMember}
+                  className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-600">입금계좌번호 (선택)</span>
+                <input
+                  value={newMemberDepositBankAccountNumber}
+                  onChange={(event) => {
+                    setNewMemberDepositBankAccountNumber(event.target.value);
+                    setAddMemberError(null);
+                  }}
+                  placeholder="계좌번호"
+                  disabled={addingMember}
+                  className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                />
+              </label>
+
+              {addMemberError && (
+                <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                  {addMemberError}
+                </p>
+              )}
+
+              {addingMember && (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                  회원을 생성 중입니다. 완료될 때까지 이 창을 닫지 마세요.
+                </p>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={closeAddMemberModal}
+                  disabled={addingMember}
+                  className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  닫기
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingMember}
+                  className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-900 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                >
+                  {addingMember ? '추가 중...' : '회원 추가'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
