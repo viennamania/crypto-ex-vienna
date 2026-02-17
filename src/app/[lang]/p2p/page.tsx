@@ -236,6 +236,14 @@ type AgentSummary = {
     adminWalletAddress?: string;
 };
 
+type ManagedStoreSummary = {
+    storecode: string;
+    storeName?: string;
+    storeLogo?: string;
+    paymentWalletAddress?: string;
+    adminWalletAddress?: string;
+};
+
 const TRADE_STYLES: Record<
     TradeTone,
     { label: string; badge: string; accent: string; glow: string }
@@ -439,6 +447,8 @@ export default function OrangeXPage() {
     const isAgent = Boolean(agentCode);
     const [myAgents, setMyAgents] = useState<AgentSummary[]>([]);
     const [myAgentsLoading, setMyAgentsLoading] = useState(false);
+    const [myManagedStores, setMyManagedStores] = useState<ManagedStoreSummary[]>([]);
+    const [myManagedStoresLoading, setMyManagedStoresLoading] = useState(false);
     const newsTickerRef = useRef<HTMLDivElement | null>(null);
     const newsTickerPauseUntilRef = useRef(0);
     const newsTickerOffsetRef = useRef(0);
@@ -994,6 +1004,34 @@ export default function OrangeXPage() {
         };
 
         fetchAgents();
+    }, [walletAddress]);
+
+    useEffect(() => {
+        const fetchManagedStores = async () => {
+            if (!walletAddress) {
+                setMyManagedStores([]);
+                return;
+            }
+            setMyManagedStoresLoading(true);
+            try {
+                const response = await fetch(
+                    `/api/stores?adminWalletAddress=${encodeURIComponent(walletAddress)}&limit=30`,
+                );
+                if (!response.ok) {
+                    throw new Error('가맹점 목록을 불러오지 못했습니다.');
+                }
+                const data = await response.json();
+                const items = Array.isArray(data?.items) ? data.items : [];
+                setMyManagedStores(items);
+            } catch (error) {
+                console.warn('Failed to load my managed stores', error);
+                setMyManagedStores([]);
+            } finally {
+                setMyManagedStoresLoading(false);
+            }
+        };
+
+        fetchManagedStores();
     }, [walletAddress]);
 
     useEffect(() => {
@@ -1983,6 +2021,65 @@ export default function OrangeXPage() {
                                                 </div>
                                                 <span className="text-[11px] font-semibold text-emerald-700">
                                                     소속 판매자 관리 →
+                                                </span>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {walletAddress && !myManagedStoresLoading && myManagedStores.length > 0 && (
+                                <div className="mt-4 space-y-3 rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.35)]">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-cyan-100 text-cyan-700">
+                                                <Image src="/icon-payment.png" alt="Store" width={18} height={18} />
+                                            </span>
+                                            <div className="flex flex-col leading-tight">
+                                                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                                    My Stores
+                                                </span>
+                                                <span className="text-sm font-semibold text-slate-900">
+                                                    내 지갑이 관리자인 가맹점
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <span className="text-[11px] font-semibold text-slate-500">
+                                            {myManagedStores.length}개
+                                        </span>
+                                    </div>
+                                    <div className="grid gap-3 md:grid-cols-2">
+                                        {myManagedStores.map((store) => (
+                                            <Link
+                                                key={store.storecode}
+                                                href={`/${lang}/p2p/payment-management?storecode=${encodeURIComponent(store.storecode)}`}
+                                                className="group flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                                            >
+                                                <div className="relative h-10 w-10 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                                                    {store.storeLogo ? (
+                                                        <Image
+                                                            src={store.storeLogo}
+                                                            alt={store.storeName || store.storecode}
+                                                            fill
+                                                            sizes="40px"
+                                                            className="object-cover"
+                                                        />
+                                                    ) : (
+                                                        <span className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-slate-700">
+                                                            {(store.storeName || store.storecode).slice(0, 2).toUpperCase()}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate text-sm font-semibold text-slate-900">
+                                                        {store.storeName || '가맹점'}
+                                                    </p>
+                                                    <p className="text-[11px] font-mono text-slate-600">
+                                                        {store.storecode}
+                                                    </p>
+                                                </div>
+                                                <span className="text-[11px] font-semibold text-cyan-700">
+                                                    결제 관리 →
                                                 </span>
                                             </Link>
                                         ))}

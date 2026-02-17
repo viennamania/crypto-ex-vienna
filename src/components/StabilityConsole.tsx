@@ -135,6 +135,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
   const withdrawUsdtPath = isP2pSection
     ? `/${langFromPath}/wallet-management/wallet-usdt`
     : `/${langFromPath}/administration/withdraw-usdt`;
+  const paymentUsdtPath = `/${langFromPath}/wallet-management/payment-usdt`;
 
 
   /*
@@ -586,6 +587,25 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                   />
                   <span>USDT 출금하기</span>
               </button>
+
+              {isP2pSection && (
+                <button
+                  className="group inline-flex h-11 items-center justify-center gap-2 rounded-full bg-cyan-700
+                  px-4 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-600"
+                  onClick={() => {
+                    onRequestClose?.();
+                    router.push(paymentUsdtPath);
+                  }}
+                >
+                  <Image
+                    src={`/icon-payment.png`}
+                    alt={`Payment icon`}
+                    width={16}
+                    height={16}
+                  />
+                  <span>USDT 결제하기</span>
+                </button>
+              )}
 
                 <button
                   className="inline-flex h-11 items-center justify-center rounded-full border border-rose-200/70
