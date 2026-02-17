@@ -1105,6 +1105,7 @@ export default function PaymentUsdtPage({
                         <p className="mt-1 text-xs text-amber-700">
                           가맹점에 등록된 회원 아이디와 핀번호(숫자 5자리)를 입력하면 내 지갑과 회원정보가 연동됩니다.
                         </p>
+                        <p className="mt-1 text-xs font-semibold text-amber-800">모를 경우 상점에 문의하세요.</p>
                         {memberProfileError && (
                           <p className="mt-1 text-xs text-rose-600">{memberProfileError}</p>
                         )}
