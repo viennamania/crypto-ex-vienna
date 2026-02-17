@@ -20,7 +20,6 @@ type SellerCandidate = {
 
 type StoreSellerResult = {
   storecode: string;
-  sellerWalletAddress: string;
   sellerWalletAddresses: string[];
 };
 
@@ -273,7 +272,7 @@ export default function StoreSellerSettingsPage() {
         body: JSON.stringify({
           action: 'add',
           storecode,
-          sellerWalletAddress: walletAddress,
+          walletAddress,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -307,7 +306,7 @@ export default function StoreSellerSettingsPage() {
         body: JSON.stringify({
           action: 'remove',
           storecode,
-          sellerWalletAddress: walletAddress,
+          walletAddress,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -397,9 +396,6 @@ export default function StoreSellerSettingsPage() {
         <section className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.4)]">
           <p className="text-sm text-slate-600">
             판매자 목록에서 추가하면 해당 가맹점의 `store` 컬렉션 판매자 배열에 등록되고, 가맹점 판매자 목록에서 제거하면 즉시 해제됩니다.
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            대표 판매자 지갑(기존 단일 필드 호환): {selectedSellerWallets[0] ? shortWallet(selectedSellerWallets[0]) : '미설정'}
           </p>
         </section>
 
@@ -560,11 +556,6 @@ export default function StoreSellerSettingsPage() {
                             <p className="truncate text-sm font-semibold text-slate-900">
                               {displayName}
                             </p>
-                            {index === 0 && (
-                              <span className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-2 py-0.5 text-[11px] font-semibold text-cyan-700">
-                                대표 판매자
-                              </span>
-                            )}
                           </div>
                           <p className="mt-1 break-all text-xs text-slate-600">{walletAddress}</p>
                           {candidate ? (

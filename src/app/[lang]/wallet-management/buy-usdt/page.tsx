@@ -281,6 +281,48 @@ const formatCountdownClock = (remainingMs: number) => {
 const toTrimmedString = (value: unknown) => String(value ?? '').trim();
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+const WALLET_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
+const normalizeWalletAddress = (value: unknown) => {
+  const raw = String(value || '').trim();
+  if (!WALLET_ADDRESS_REGEX.test(raw)) return '';
+  return raw;
+};
+
+const normalizeSellerFromUser = (rawUser: unknown): SellerItem | null => {
+  if (!isRecord(rawUser)) return null;
+
+  const seller = isRecord(rawUser.seller) ? rawUser.seller : null;
+  const walletAddress = normalizeWalletAddress(rawUser.walletAddress);
+  const rate = Number(seller?.usdtToKrwRate || 0);
+  const enabled = seller?.enabled === true;
+  const status = String(seller?.status || '');
+  const currentUsdtBalance = Number(rawUser.currentUsdtBalance || 0);
+  if (!walletAddress || !enabled || status !== 'confirmed' || !Number.isFinite(rate) || rate <= 0) {
+    return null;
+  }
+
+  const paymentMethods = Array.isArray(seller?.paymentMethods)
+    ? seller.paymentMethods.map((item: unknown) => String(item))
+    : [];
+  const bankInfo = (seller?.bankInfo && typeof seller.bankInfo === 'object')
+    ? (seller.bankInfo as Record<string, unknown>)
+    : {};
+
+  return {
+    walletAddress,
+    nickname: String(rawUser.nickname || '').trim() || '판매자',
+    avatar: String(rawUser.avatar || '').trim(),
+    rate,
+    currentUsdtBalance: Number.isFinite(currentUsdtBalance) ? Math.max(0, currentUsdtBalance) : 0,
+    paymentMethods,
+    bankInfo: {
+      bankName: String(bankInfo?.bankName || ''),
+      accountNumber: String(bankInfo?.accountNumber || ''),
+      accountHolder: String(bankInfo?.accountHolder || ''),
+      contactMemo: String(bankInfo?.contactMemo || ''),
+    },
+  };
+};
 
 export default function BuyUsdtPage({
   params,
@@ -315,12 +357,12 @@ export default function BuyUsdtPage({
   );
 
   const [balance, setBalance] = useState(0);
-  const [loadingBalance, setLoadingBalance] = useState(false);
 
   const [sellers, setSellers] = useState<SellerItem[]>([]);
   const [loadingSellers, setLoadingSellers] = useState(false);
   const [sellersError, setSellersError] = useState<string | null>(null);
   const [selectedSellerWallet, setSelectedSellerWallet] = useState(sellerFromQuery);
+  const [configuredSellerWalletCount, setConfiguredSellerWalletCount] = useState(0);
   const [sellerKeyword, setSellerKeyword] = useState('');
   const [sellerPickerOpen, setSellerPickerOpen] = useState(false);
   const [sellerSortOption, setSellerSortOption] = useState<'rate' | 'balance'>('rate');
@@ -472,6 +514,7 @@ export default function BuyUsdtPage({
       selectedSeller &&
       isSelectedSellerBuyer,
   );
+  const shouldHideSellerReselectControls = configuredSellerWalletCount === 1;
   const canCancelActiveTrade = Boolean(
     activePrivateTradeOrder?.orderId && activePrivateTradeOrder.status === 'paymentRequested',
   );
@@ -516,7 +559,7 @@ export default function BuyUsdtPage({
       return '지갑 연결 후 진행';
     }
     if (!hasBuyerProfileForPurchase) {
-      return '구매자 정보 입력하기';
+      return '구매자 정보 불러오는중';
     }
     if (!selectedSeller) {
       return sellerFromQuery ? '판매자 정보 확인 필요' : '판매자 선택하기';
@@ -525,7 +568,7 @@ export default function BuyUsdtPage({
       return '판매자 다시 선택하기';
     }
     if (usdtAmount <= 0) {
-      return '구매 수량 입력하기';
+      return '구매 수량/금액 입력하기';
     }
     if (!hasEnoughSellerBalance) {
       return '판매 가능 수량 초과';
@@ -548,7 +591,6 @@ export default function BuyUsdtPage({
       return;
     }
 
-    setLoadingBalance(true);
     try {
       const result = await balanceOf({
         contract,
@@ -557,8 +599,6 @@ export default function BuyUsdtPage({
       setBalance(Number(result) / 10 ** activeNetwork.tokenDecimals);
     } catch (error) {
       console.error('Failed to load buyer usdt balance', error);
-    } finally {
-      setLoadingBalance(false);
     }
   }, [activeAccount?.address, contract, activeNetwork.tokenDecimals]);
 
@@ -566,59 +606,67 @@ export default function BuyUsdtPage({
     setLoadingSellers(true);
     setSellersError(null);
     try {
+      let allowedSellerWalletSet: Set<string> | null = null;
+      let configuredWalletCount = 0;
+
+      if (storecode) {
+        try {
+          const storeResponse = await fetch('/api/store/getOneStore', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ storecode }),
+          });
+          const storeData = await storeResponse.json().catch(() => ({}));
+          if (storeResponse.ok && isRecord(storeData?.result)) {
+            const rawWallets: unknown[] = Array.isArray(storeData.result.sellerWalletAddresses)
+              ? storeData.result.sellerWalletAddresses
+              : [];
+            const wallets = rawWallets
+              .map((value: unknown) => normalizeWalletAddress(value))
+              .filter((value): value is string => Boolean(value));
+            configuredWalletCount = wallets.length;
+            if (wallets.length > 0) {
+              allowedSellerWalletSet = new Set(wallets.map((wallet) => wallet.toLowerCase()));
+            }
+          }
+        } catch (storeError) {
+          console.error('Failed to load store seller config', storeError);
+        }
+      }
+      setConfiguredSellerWalletCount(configuredWalletCount);
+
+      const sellerRequestBody: Record<string, unknown> = {
+        storecode: 'admin',
+        limit: 60,
+        page: 1,
+      };
+      if (allowedSellerWalletSet && allowedSellerWalletSet.size > 0) {
+        sellerRequestBody.walletAddresses = Array.from(allowedSellerWalletSet);
+        sellerRequestBody.limit = Math.max(allowedSellerWalletSet.size, 60);
+      }
+
       const response = await fetch('/api/user/getAllSellersForBalance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storecode: 'admin',
-          limit: 60,
-          page: 1,
-        }),
+        body: JSON.stringify(sellerRequestBody),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data?.error || '판매자 목록을 불러오지 못했습니다.');
       }
-
       const source: unknown[] = Array.isArray(data?.result?.users) ? data.result.users : [];
-      const normalized: SellerItem[] = source
-        .map((rawUser): SellerItem | null => {
-          const user = rawUser as Record<string, unknown>;
-          const sellerRaw = user?.seller;
-          const seller =
-            sellerRaw && typeof sellerRaw === 'object'
-              ? (sellerRaw as Record<string, unknown>)
-              : null;
-          const walletAddress = String(user?.walletAddress || '').trim();
-          const rate = Number(seller?.usdtToKrwRate || 0);
-          const enabled = seller?.enabled === true;
-          const status = String(seller?.status || '');
-          const currentUsdtBalance = Number(user?.currentUsdtBalance || 0);
-          if (!walletAddress || !enabled || status !== 'confirmed' || !Number.isFinite(rate) || rate <= 0) {
-            return null;
-          }
-          const paymentMethods = Array.isArray(seller?.paymentMethods)
-            ? seller.paymentMethods.map((item: unknown) => String(item))
-            : [];
-          const bankInfo = (seller?.bankInfo && typeof seller.bankInfo === 'object')
-            ? (seller.bankInfo as Record<string, unknown>)
-            : {};
-          return {
-            walletAddress,
-            nickname: String(user?.nickname || '').trim() || '판매자',
-            avatar: String(user?.avatar || '').trim(),
-            rate,
-            currentUsdtBalance: Number.isFinite(currentUsdtBalance) ? Math.max(0, currentUsdtBalance) : 0,
-            paymentMethods,
-            bankInfo: {
-              bankName: String(bankInfo?.bankName || ''),
-              accountNumber: String(bankInfo?.accountNumber || ''),
-              accountHolder: String(bankInfo?.accountHolder || ''),
-              contactMemo: String(bankInfo?.contactMemo || ''),
-            },
-          };
-        })
+
+      const normalizedAll = source
+        .map((rawUser) => normalizeSellerFromUser(rawUser))
         .filter((item): item is SellerItem => item !== null);
+
+      const normalized = allowedSellerWalletSet
+        ? normalizedAll.filter((item) => allowedSellerWalletSet.has(item.walletAddress.toLowerCase()))
+        : normalizedAll;
+
+      if (allowedSellerWalletSet && normalized.length === 0) {
+        setSellersError('가맹점에 등록된 판매자가 없거나 판매 조건이 충족되지 않았습니다.');
+      }
 
       setSellers(normalized);
       setSelectedSellerWallet((prev) => {
@@ -640,7 +688,7 @@ export default function BuyUsdtPage({
     } finally {
       setLoadingSellers(false);
     }
-  }, [sellerFromQuery]);
+  }, [sellerFromQuery, storecode]);
 
   const loadPrivateTradeStatus = useCallback(async (options?: { silent?: boolean }) => {
     const isSilent = options?.silent === true;
@@ -1305,9 +1353,7 @@ export default function BuyUsdtPage({
             walletAddressDisplay={shortAddress(activeAccount.address)}
             networkLabel={activeNetwork.label}
             usdtBalanceDisplay={
-              loadingBalance
-                ? '조회 중...'
-                : `${balance.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT`
+              `${balance.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT`
             }
             modeLabel={buyTabLabel}
             smartAccountEnabled={smartAccountEnabled}
@@ -1352,19 +1398,9 @@ export default function BuyUsdtPage({
 
             {buyTab === 'buy' ? (
               <>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">STEP 1</p>
-                <h2 className="mt-1 text-lg font-semibold text-slate-900">판매자 선택 및 구매 신청</h2>
-              </div>
-              <button
-                type="button"
-                onClick={loadSellers}
-                disabled={loadingSellers}
-                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {loadingSellers ? '불러오는 중...' : '새로고침'}
-              </button>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">STEP 1</p>
+              <h2 className="mt-1 text-lg font-semibold text-slate-900">판매자 선택 및 구매 신청</h2>
             </div>
 
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5">
@@ -1401,30 +1437,32 @@ export default function BuyUsdtPage({
               )}
             </div>
 
-            <div className="mt-3 inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
-              <button
-                type="button"
-                onClick={() => setSellerSortOption('rate')}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                  sellerSortOption === 'rate'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                최저 환율 우선
-              </button>
-              <button
-                type="button"
-                onClick={() => setSellerSortOption('balance')}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                  sellerSortOption === 'balance'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                보유량 우선
-              </button>
-            </div>
+            {!loadingSellers && !shouldHideSellerReselectControls && (
+              <div className="mt-3 inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+                <button
+                  type="button"
+                  onClick={() => setSellerSortOption('rate')}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    sellerSortOption === 'rate'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  최저 환율 우선
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSellerSortOption('balance')}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    sellerSortOption === 'balance'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  보유량 우선
+                </button>
+              </div>
+            )}
 
             {sellerFromQuery && !loadingSellers && !selectedSeller && (
               <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">
@@ -1447,13 +1485,15 @@ export default function BuyUsdtPage({
                   <p className="mt-1 text-xs text-rose-600">
                     자기 자신과는 거래할 수 없습니다. 판매자를 다시 선택해 주세요.
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setSellerPickerOpen(true)}
-                    className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                  >
-                    판매자 다시 선택
-                  </button>
+                  {!shouldHideSellerReselectControls && (
+                    <button
+                      type="button"
+                      onClick={() => setSellerPickerOpen(true)}
+                      className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                    >
+                      판매자 다시 선택
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50/70 p-4">
@@ -1506,16 +1546,8 @@ export default function BuyUsdtPage({
                   )}
 
                   <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
                       <p className="font-semibold text-slate-700">거래 상태</p>
-                      <button
-                        type="button"
-                        onClick={() => loadPrivateTradeStatus()}
-                        disabled={loadingPrivateTradeStatus}
-                        className="inline-flex h-7 items-center rounded-lg border border-slate-300 px-2.5 text-[11px] font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {loadingPrivateTradeStatus ? '확인 중...' : '상태 확인'}
-                      </button>
                     </div>
                     {activePrivateTradeOrder && (
                       <p className="mt-1 text-[11px] font-medium text-cyan-700">
@@ -1629,7 +1661,13 @@ export default function BuyUsdtPage({
                                     복사
                                   </button>
                                 </div>
-                                <div className="mt-1 whitespace-pre-wrap break-words font-semibold leading-relaxed text-slate-900">
+                                <div
+                                  className={`mt-1 whitespace-pre-wrap break-words text-sm font-semibold leading-relaxed ${
+                                    activeTradeDepositInfo.contactMemo
+                                      ? 'animate-pulse text-amber-700'
+                                      : 'text-slate-900'
+                                  }`}
+                                >
                                   {activeTradeDepositInfo.contactMemo
                                     ? renderTextWithAutoLinks(
                                         activeTradeDepositInfo.contactMemo,
@@ -1693,7 +1731,7 @@ export default function BuyUsdtPage({
                     )}
                   </div>
 
-                  {!sellerFromQuery && (
+                  {!sellerFromQuery && !shouldHideSellerReselectControls && (
                     <button
                       type="button"
                       onClick={() => setSellerPickerOpen(true)}
@@ -1705,14 +1743,23 @@ export default function BuyUsdtPage({
                 </div>
               )
             ) : (
-              <button
-                type="button"
-                onClick={() => setSellerPickerOpen(true)}
-                disabled={loadingSellers || sellers.length === 0}
-                className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-xl bg-cyan-700 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                판매자 선택하기
-              </button>
+              <>
+                {loadingSellers && (
+                  <p className="mt-4 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-700">
+                    판매자 정보를 불러오는 중입니다.
+                  </p>
+                )}
+                {!loadingSellers && (
+                  <button
+                    type="button"
+                    onClick={() => setSellerPickerOpen(true)}
+                    disabled={sellers.length === 0}
+                    className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-xl bg-cyan-700 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    판매자 선택하기
+                  </button>
+                )}
+              </>
             )}
 
             {!isSelectedSellerBuyer && (
@@ -1755,7 +1802,7 @@ export default function BuyUsdtPage({
                         setSelectedQuickAmount(null);
                       }}
                       placeholder="0.00"
-                      className="w-full bg-transparent text-2xl font-semibold text-slate-900 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
+                      className="w-full bg-transparent text-right text-5xl font-semibold text-slate-900 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
                       inputMode="decimal"
                     />
                     <span className="pb-1 text-sm font-semibold text-slate-500">USDT</span>
@@ -1776,7 +1823,7 @@ export default function BuyUsdtPage({
                         setSelectedQuickAmount(null);
                       }}
                       placeholder="0"
-                      className="w-full bg-transparent text-2xl font-semibold text-slate-900 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
+                      className="w-full bg-transparent text-right text-5xl font-semibold text-slate-900 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
                       inputMode="numeric"
                     />
                     <span className="pb-1 text-sm font-semibold text-slate-500">KRW</span>
@@ -1841,7 +1888,7 @@ export default function BuyUsdtPage({
                     {primaryLabel}
                   </button>
                   <p className="mt-2 text-xs text-slate-500">
-                    구매자 정보(아이디, 입금자명) 입력 후, 판매자와 수량/금액을 확인하고 신청하세요.
+                    구매자 정보(아이디, 입금자명)를 확인하고, 판매자와 구매 수량/금액을 점검한 뒤 신청하세요.
                   </p>
                 </>
               )

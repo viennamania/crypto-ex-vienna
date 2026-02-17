@@ -26,11 +26,12 @@ const resolveStoreSellerWalletAddresses = (store: any): string[] => {
     walletList.push(normalizedWallet);
   };
 
-  pushWallet(store?.sellerWalletAddress);
-
   if (Array.isArray(store?.sellerWalletAddresses)) {
     store.sellerWalletAddresses.forEach((wallet: unknown) => pushWallet(wallet));
   }
+
+  // Backward-compatibility: include legacy single seller wallet if array is missing that value.
+  pushWallet(store?.sellerWalletAddress);
   return walletList;
 };
 
@@ -181,6 +182,7 @@ export async function getStoreByStorecode(
         settlementFeeWalletAddress: 1,
         
         sellerWalletAddress: 1,
+        sellerWalletAddresses: 1,
         escrowAmountUSDT: 1,
 
         adminWalletAddress: 1,
@@ -438,7 +440,6 @@ export async function getStoreSellerWalletAddresses(
   }
 ): Promise<{
   storecode: string;
-  sellerWalletAddress: string;
   sellerWalletAddresses: string[];
 }> {
   const normalizedStorecode = String(storecode || '').trim();
@@ -468,7 +469,6 @@ export async function getStoreSellerWalletAddresses(
   const sellerWalletAddresses = resolveStoreSellerWalletAddresses(store);
   return {
     storecode: normalizedStorecode,
-    sellerWalletAddress: sellerWalletAddresses[0] || '',
     sellerWalletAddresses,
   };
 }
@@ -484,7 +484,6 @@ export async function addStoreSellerWalletAddress(
 ): Promise<{
   storecode: string;
   added: boolean;
-  sellerWalletAddress: string;
   sellerWalletAddresses: string[];
 }> {
   const normalizedStorecode = String(storecode || '').trim();
@@ -535,17 +534,15 @@ export async function addStoreSellerWalletAddress(
     },
   );
   const afterList = resolveStoreSellerWalletAddresses(storeAfter);
-  const primarySellerWalletAddress = afterList[0] || '';
 
   await collection.updateOne(
     { storecode: normalizedStorecode },
-    { $set: { sellerWalletAddress: primarySellerWalletAddress, sellerWalletAddresses: afterList } },
+    { $set: { sellerWalletAddresses: afterList } },
   );
 
   return {
     storecode: normalizedStorecode,
     added,
-    sellerWalletAddress: primarySellerWalletAddress,
     sellerWalletAddresses: afterList,
   };
 }
@@ -561,7 +558,6 @@ export async function removeStoreSellerWalletAddress(
 ): Promise<{
   storecode: string;
   removed: boolean;
-  sellerWalletAddress: string;
   sellerWalletAddresses: string[];
 }> {
   const normalizedStorecode = String(storecode || '').trim();
@@ -599,17 +595,15 @@ export async function removeStoreSellerWalletAddress(
   const nextList = beforeList.filter(
     (wallet) => wallet.toLowerCase() !== normalizedWalletAddress.toLowerCase(),
   );
-  const primarySellerWalletAddress = nextList[0] || '';
 
   await collection.updateOne(
     { storecode: normalizedStorecode },
-    { $set: { sellerWalletAddress: primarySellerWalletAddress, sellerWalletAddresses: nextList } },
+    { $set: { sellerWalletAddresses: nextList } },
   );
 
   return {
     storecode: normalizedStorecode,
     removed,
-    sellerWalletAddress: primarySellerWalletAddress,
     sellerWalletAddresses: nextList,
   };
 }

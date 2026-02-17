@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const action = String(body?.action || 'get').trim().toLowerCase();
     const storecode = String(body?.storecode || '').trim();
-    const sellerWalletAddress = String(body?.sellerWalletAddress || '').trim();
+    const walletAddress = String(body?.walletAddress || '').trim();
 
     if (!storecode) {
       return NextResponse.json({ error: 'storecode is required' }, { status: 400 });
@@ -24,17 +24,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ result });
     }
 
-    if (!isWalletAddress(sellerWalletAddress)) {
-      return NextResponse.json({ error: 'valid sellerWalletAddress is required' }, { status: 400 });
+    if (!isWalletAddress(walletAddress)) {
+      return NextResponse.json({ error: 'valid walletAddress is required' }, { status: 400 });
     }
 
     if (action === 'add') {
-      const result = await addStoreSellerWalletAddress({ storecode, sellerWalletAddress });
+      const result = await addStoreSellerWalletAddress({ storecode, sellerWalletAddress: walletAddress });
       return NextResponse.json({ result });
     }
 
     if (action === 'remove') {
-      const result = await removeStoreSellerWalletAddress({ storecode, sellerWalletAddress });
+      const result = await removeStoreSellerWalletAddress({ storecode, sellerWalletAddress: walletAddress });
       return NextResponse.json({ result });
     }
 

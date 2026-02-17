@@ -11,6 +11,7 @@ type StoreItem = {
   createdAt: string;
   storecode: string;
   storeName: string;
+  storeLogo: string;
   agentcode: string;
   agentName: string;
   backgroundColor: string;
@@ -81,6 +82,7 @@ const normalizeStore = (value: unknown): StoreItem => {
     createdAt: toText(source.createdAt),
     storecode: toText(source.storecode),
     storeName: toText(source.storeName),
+    storeLogo: toText(source.storeLogo),
     agentcode: toText(source.agentcode),
     agentName: toText(source.agentName),
     backgroundColor: toText(source.backgroundColor),
@@ -1065,10 +1067,18 @@ export default function StoreManagementPage() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <span
-                              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-xs font-bold text-slate-700"
+                              className="inline-flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 text-xs font-bold text-slate-700"
                               style={{ backgroundColor: store.backgroundColor || '#f1f5f9' }}
                             >
-                              {(store.storeName || store.storecode || 'S').slice(0, 1)}
+                              {store.storeLogo ? (
+                                <div
+                                  className="h-full w-full bg-cover bg-center"
+                                  style={{ backgroundImage: `url(${encodeURI(store.storeLogo)})` }}
+                                  aria-label={store.storeName || store.storecode || 'store logo'}
+                                />
+                              ) : (
+                                (store.storeName || store.storecode || 'S').slice(0, 1)
+                              )}
                             </span>
                             <div className="min-w-0">
                               <p className="break-all whitespace-normal font-semibold text-slate-900">{store.storeName || '-'}</p>

@@ -2851,11 +2851,13 @@ export async function getAllSellersForBalanceInquiry(
     limit,
     page,
     escrowWalletAddress,
+    walletAddresses,
   }: {
     storecode: string;
     limit: number;
     page: number;
     escrowWalletAddress?: string;
+    walletAddresses?: string[];
   }
 ): Promise<any> {
   const client = await clientPromise;
@@ -2866,26 +2868,54 @@ export async function getAllSellersForBalanceInquiry(
   // if storecode is empty, return all users
   // projection: id, nickname, walletAddress
 
-  const matchQuery: Record<string, any> = {
-    storecode: { $regex: String(storecode), $options: 'i' },
-    walletAddress: { $exists: true, $ne: null },
-    seller: { $exists: true, $ne: null },
-  };
+  const escapeRegex = (value: string) => value.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const normalizedWalletAddresses = Array.isArray(walletAddresses)
+    ? walletAddresses
+        .map((value) => String(value || '').trim())
+        .filter((value): value is string => Boolean(value))
+    : [];
+
+  const conditions: Record<string, any>[] = [
+    { walletAddress: { $exists: true, $ne: null } },
+    { seller: { $exists: true, $ne: null } },
+  ];
+
+  if (normalizedWalletAddresses.length > 0) {
+    conditions.push({
+      $or: normalizedWalletAddresses.map((walletAddress) => ({
+        walletAddress: {
+          $regex: `^${escapeRegex(walletAddress)}$`,
+          $options: 'i',
+        },
+      })),
+    });
+  } else {
+    conditions.push({
+      storecode: { $regex: String(storecode), $options: 'i' },
+    });
+  }
 
   if (escrowWalletAddress) {
     // Allow matching by escrowWalletAddress or the seller's own walletAddress when escrow is missing.
     // Use case-insensitive exact match to avoid checksum/uppercase mismatch.
-    const addressRegex = { $regex: `^${escrowWalletAddress}$`, $options: 'i' };
-    matchQuery.$or = [
-      { 'seller.escrowWalletAddress': addressRegex },
-      { walletAddress: addressRegex },
-    ];
+    const addressRegex = { $regex: `^${escapeRegex(escrowWalletAddress)}$`, $options: 'i' };
+    conditions.push({
+      $or: [
+        { 'seller.escrowWalletAddress': addressRegex },
+        { walletAddress: addressRegex },
+      ],
+    });
     // Do not enforce status/enabled filters when a specific address is requested.
   } else {
-    matchQuery['seller.status'] = 'confirmed';
-    matchQuery['seller.enabled'] = true;
-    matchQuery['seller.escrowWalletAddress'] = { $exists: true, $ne: null };
+    conditions.push(
+      { 'seller.status': 'confirmed' },
+      { 'seller.enabled': true },
+      { 'seller.escrowWalletAddress': { $exists: true, $ne: null } },
+    );
   }
+
+  const matchQuery: Record<string, any> =
+    conditions.length > 1 ? { $and: conditions } : conditions[0];
 
   const users = await collection
     .find<UserProps>(
