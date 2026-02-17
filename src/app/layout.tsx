@@ -17,6 +17,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 
 
 import Script from "next/script";
@@ -74,8 +75,14 @@ const WalletConsoleShell = () => {
   
   const [showChain, setShowChain] = useState(false);
   const activeAccount = useActiveAccount();
+  const pathname = usePathname();
   const previousAddressRef = useRef<string | undefined>(undefined);
   const isConnected = !!activeAccount?.address;
+  const normalizedPathname = (pathname || '').replace(/\/+$/, '');
+  const pathSegments = normalizedPathname.split('/').filter(Boolean);
+  const walletManagementIndex = pathSegments.indexOf('wallet-management');
+  const shouldHideOnWalletManagementSubPage =
+    walletManagementIndex >= 0 && pathSegments.length > walletManagementIndex + 1;
 
   useEffect(() => {
     const prevAddress = previousAddressRef.current;
@@ -97,9 +104,15 @@ const WalletConsoleShell = () => {
     previousAddressRef.current = nextAddress;
   }, [activeAccount?.address, showChain]);
 
+  useEffect(() => {
+    if (shouldHideOnWalletManagementSubPage && showChain) {
+      setShowChain(false);
+    }
+  }, [shouldHideOnWalletManagementSubPage, showChain]);
+
 
   useEffect(() => {
-    if (!showChain) {
+    if (!showChain || shouldHideOnWalletManagementSubPage) {
       return;
     }
 
@@ -121,9 +134,9 @@ const WalletConsoleShell = () => {
       body.style.overscrollBehavior = prevBodyOverscroll;
       html.style.overflow = prevHtmlOverflow;
     };
-  }, [showChain]);
+  }, [showChain, shouldHideOnWalletManagementSubPage]);
 
-  if (!isConnected) {
+  if (!isConnected || shouldHideOnWalletManagementSubPage) {
     return null;
   }
 
