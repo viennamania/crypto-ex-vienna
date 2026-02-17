@@ -1553,7 +1553,7 @@ export default function BuyUsdtPage({
                         </div>
                       )}
 
-                      <div className="mt-3 space-y-1.5 border-t border-slate-200 pt-2 text-[11px]">
+                      <div className="mt-3 space-y-2.5 border-t border-slate-200 pt-3 text-xs">
                         {activeTradeDepositInfo?.isContactTransfer ? (
                           <>
                             <div className="flex items-center justify-between">
@@ -1598,26 +1598,30 @@ export default function BuyUsdtPage({
                           </>
                         ) : (
                           <>
-                            <div className="flex items-center justify-between">
-                              <span className="text-slate-500">은행</span>
-                              <span className="font-semibold text-slate-900">{activeTradeDepositInfo?.bankName || '-'}</span>
+                            <div className="flex items-start justify-between gap-4">
+                              <span className="pt-1 text-[12px] font-medium text-slate-500">은행</span>
+                              <span className="text-right text-lg font-extrabold leading-tight text-slate-900">
+                                {activeTradeDepositInfo?.bankName || '-'}
+                              </span>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-slate-500">계좌번호</span>
-                              <span className="flex items-center gap-2 font-semibold text-slate-900">
-                                {activeTradeDepositInfo?.accountNumber || '-'}
+                            <div className="flex items-start justify-between gap-4">
+                              <span className="pt-1 text-[12px] font-medium text-slate-500">계좌번호</span>
+                              <span className="flex flex-wrap items-center justify-end gap-2 text-right text-lg font-extrabold leading-tight text-slate-900">
+                                <span className="break-all">{activeTradeDepositInfo?.accountNumber || '-'}</span>
                                 <button
                                   type="button"
                                   onClick={() => copyDepositField(activeTradeDepositInfo?.accountNumber || '', '입금 계좌')}
-                                  className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700 transition hover:border-slate-400"
+                                  className="shrink-0 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-400"
                                 >
                                   복사
                                 </button>
                               </span>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-slate-500">예금주</span>
-                              <span className="font-semibold text-slate-900">{activeTradeDepositInfo?.accountHolder || '-'}</span>
+                            <div className="flex items-start justify-between gap-4">
+                              <span className="pt-1 text-[12px] font-medium text-slate-500">예금주</span>
+                              <span className="text-right text-lg font-extrabold leading-tight text-slate-900">
+                                {activeTradeDepositInfo?.accountHolder || '-'}
+                              </span>
                             </div>
                           </>
                         )}
