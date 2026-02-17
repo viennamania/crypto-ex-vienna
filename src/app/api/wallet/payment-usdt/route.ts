@@ -350,14 +350,23 @@ export async function POST(request: NextRequest) {
 
   if (action === "list") {
     const fromWalletAddress = normalizeAddress(body?.fromWalletAddress);
+    const storecode = String(body?.storecode || "").trim();
     const limit = Math.min(Math.max(Number(body?.limit || 10), 1), 50);
 
     if (!isWalletAddress(fromWalletAddress)) {
       return NextResponse.json({ error: "invalid wallet address" }, { status: 400 });
     }
 
+    const query: any = {
+      fromWalletAddress,
+      status: "confirmed",
+    };
+    if (storecode) {
+      query.storecode = { $regex: `^${escapeRegex(storecode)}$`, $options: "i" };
+    }
+
     const payments = await collection
-      .find({ fromWalletAddress, status: "confirmed" })
+      .find(query)
       .sort({ confirmedAt: -1, createdAt: -1 })
       .limit(limit)
       .toArray();

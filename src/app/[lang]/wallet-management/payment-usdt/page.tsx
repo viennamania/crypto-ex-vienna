@@ -558,6 +558,7 @@ export default function PaymentUsdtPage({
         body: JSON.stringify({
           action: 'list',
           fromWalletAddress: activeAccount.address,
+          ...(selectedStorecode ? { storecode: selectedStorecode } : {}),
           limit: 8,
         }),
       });
@@ -573,7 +574,7 @@ export default function PaymentUsdtPage({
     } finally {
       setLoadingHistory(false);
     }
-  }, [activeAccount?.address]);
+  }, [activeAccount?.address, selectedStorecode]);
 
   const loadMemberProfile = useCallback(async () => {
     const requestId = memberProfileRequestIdRef.current + 1;
