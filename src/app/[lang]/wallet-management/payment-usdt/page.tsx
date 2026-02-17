@@ -375,7 +375,7 @@ export default function PaymentUsdtPage({
       return '회원 정보 확인 중...';
     }
     if (!hasMemberProfile) {
-      return '회원가입 완료하기';
+      return '회원정보 연동하기';
     }
     if (krwAmount <= 0) {
       return '결제 금액 입력하기';
@@ -415,7 +415,7 @@ export default function PaymentUsdtPage({
       return '선택한 가맹점 회원 여부를 확인하고 있습니다.';
     }
     if (!hasMemberProfile) {
-      return '회원가입을 완료해야 결제 금액 입력과 결제가 활성화됩니다.';
+      return '가맹점 회원 아이디와 핀번호(숫자 5자리)를 입력해 회원정보 연동을 완료해야 결제를 진행할 수 있습니다.';
     }
     if (krwAmount <= 0) {
       return '결제할 KRW 금액을 입력해 주세요.';
@@ -691,8 +691,8 @@ export default function PaymentUsdtPage({
     }
 
     const password = signupPassword.trim();
-    if (!password) {
-      toast.error('비밀번호를 입력해 주세요.');
+    if (!/^\d{5}$/.test(password)) {
+      toast.error('핀번호 숫자 5자리를 입력해 주세요.');
       return;
     }
 
@@ -740,7 +740,7 @@ export default function PaymentUsdtPage({
       return;
     }
     if (!hasMemberProfile) {
-      toast.error('선택한 상점의 회원가입 후 결제할 수 있습니다.');
+      toast.error('선택한 상점의 회원정보 연동을 완료해야 결제할 수 있습니다.');
       return;
     }
     if (krwAmount <= 0) {
@@ -786,7 +786,7 @@ export default function PaymentUsdtPage({
     }
     if (!hasMemberProfile) {
       memberStatusCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      toast.error('회원가입을 먼저 완료해 주세요.');
+      toast.error('회원정보 연동을 먼저 완료해 주세요.');
       return;
     }
     if (krwAmount <= 0) {
@@ -1091,17 +1091,19 @@ export default function PaymentUsdtPage({
                     ) : hasMemberProfile ? (
                       <>
                         <p className="font-semibold text-emerald-800">결제 가능한 회원입니다.</p>
-                        <p className="mt-1 text-xs text-emerald-700">
-                          {myMemberProfile?.nickname || '-'} · {myMemberProfile?.storecode || selectedStorecode}
+                        <p className="mt-2 text-[11px] font-semibold text-emerald-700">회원 아이디</p>
+                        <p className="mt-1 break-all text-2xl font-extrabold leading-tight text-emerald-900">
+                          {myMemberProfile?.nickname || '-'}
                         </p>
+                        <p className="mt-1 text-xs text-emerald-700">가맹점 코드 {myMemberProfile?.storecode || selectedStorecode}</p>
                       </>
                     ) : (
                       <>
                         <p className="font-semibold text-amber-800">
-                          이 상점에서 결제하려면 먼저 회원가입이 필요합니다.
+                          이 상점의 가맹점 회원정보를 먼저 연동해야 결제할 수 있습니다.
                         </p>
                         <p className="mt-1 text-xs text-amber-700">
-                          회원 아이디와 비밀번호를 입력해 내 지갑을 회원 계정에 연결해 주세요.
+                          가맹점에 등록된 회원 아이디와 핀번호(숫자 5자리)를 입력하면 내 지갑과 회원정보가 연동됩니다.
                         </p>
                         {memberProfileError && (
                           <p className="mt-1 text-xs text-rose-600">{memberProfileError}</p>
@@ -1118,10 +1120,11 @@ export default function PaymentUsdtPage({
                             <input
                               type="password"
                               value={signupPassword}
-                              onChange={(event) => setSignupPassword(event.target.value)}
-                              placeholder="비밀번호"
+                              onChange={(event) => setSignupPassword(event.target.value.replace(/[^0-9]/g, '').slice(0, 5))}
+                              placeholder="핀번호(숫자 5자리)"
+                              inputMode="numeric"
                               className="h-12 w-full rounded-2xl border-2 border-amber-300 bg-white px-4 text-base font-semibold text-slate-800 outline-none transition focus:border-amber-500 placeholder:text-slate-400"
-                              maxLength={32}
+                              maxLength={5}
                             />
                           </div>
                           <button
@@ -1130,7 +1133,7 @@ export default function PaymentUsdtPage({
                             disabled={signingUpMember}
                             className="inline-flex h-10 items-center justify-center rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            {signingUpMember ? '인증 처리 중...' : '회원가입 후 결제하기'}
+                            {signingUpMember ? '인증 처리 중...' : '회원정보 연동 후 결제하기'}
                           </button>
                         </div>
                       </>
@@ -1170,7 +1173,7 @@ export default function PaymentUsdtPage({
                 )}
                 {needsMemberSignupFirst && (
                   <p className="mt-2 text-xs font-semibold text-amber-700">
-                    회원가입 완료 후 결제 금액을 입력할 수 있습니다.
+                    회원정보 연동 완료 후 결제 금액을 입력할 수 있습니다.
                   </p>
                 )}
 
