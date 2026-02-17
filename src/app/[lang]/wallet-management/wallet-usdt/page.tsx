@@ -23,7 +23,6 @@ import {
     useSetActiveWallet,
 
     AutoConnect,
-    useConnectModal,
     
 } from "thirdweb/react";
 
@@ -53,8 +52,10 @@ import Image from 'next/image';
 import AppBarComponent from "@/components/Appbar/AppBar";
 import { getDictionary } from "../../../dictionaries";
 import { useClientWallets } from "@/lib/useClientWallets";
-import { ORANGEX_CONNECT_OPTIONS, ORANGEX_WELCOME_SCREEN } from "@/lib/orangeXConnectModal";
 import { useClientSettings } from "@/components/ClientSettingsProvider";
+import WalletManagementBottomNav from "@/components/wallet-management/WalletManagementBottomNav";
+import WalletConnectPrompt from "@/components/wallet-management/WalletConnectPrompt";
+import WalletSummaryCard from "@/components/wallet-management/WalletSummaryCard";
 
 
 
@@ -192,7 +193,7 @@ import {
 } from "next//navigation";
 
 import { Select } from '@mui/material';
-import { Sen } from 'next/font/google';
+import { Manrope, Playfair_Display } from 'next/font/google';
 import { Router } from 'next/router';
 import path from 'path';
 
@@ -204,6 +205,19 @@ import path from 'path';
 
 
 
+
+const displayFont = Playfair_Display({
+  subsets: ['latin'],
+  weight: ['600', '700'],
+  variable: '--font-display',
+});
+
+const bodyFont = Manrope({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-body',
+});
+
 export default function SendUsdt({ params }: any) {
 
   const lang = params?.lang ?? 'ko';
@@ -213,7 +227,6 @@ export default function SendUsdt({ params }: any) {
     sponsorGas: true,
     defaultSmsCountryCode: 'KR',
   });
-  const { connect: openConnectModal, isConnecting } = useConnectModal();
 
   //console.log("wallet", wallet);
   //console.log("wallets", wallets);
@@ -357,6 +370,11 @@ export default function SendUsdt({ params }: any) {
 
   const router = useRouter();
 
+  const walletPageClassName = `${displayFont.variable} ${bodyFont.variable} relative min-h-[100vh] overflow-hidden bg-[radial-gradient(130%_130%_at_100%_0%,#cffafe_0%,#eef2ff_40%,#f8fafc_100%)] text-slate-900`;
+  const walletPageStyle = {
+    fontFamily: 'var(--font-body), "Avenir Next", "Segoe UI", sans-serif',
+  } as const;
+
 
 
   const activeAccount = useActiveAccount();
@@ -380,7 +398,6 @@ export default function SendUsdt({ params }: any) {
   const [transferResult, setTransferResult] = useState<{ ok: boolean; message: string }>({ ok: false, message: '' });
   const [showJackpot, setShowJackpot] = useState(false);
   const [lastSentAmount, setLastSentAmount] = useState<number | null>(null);
-  const [connectError, setConnectError] = useState<string | null>(null);
   const [favoriteWallets, setFavoriteWallets] = useState<FavoriteWallet[]>([]);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [favoriteSaving, setFavoriteSaving] = useState(false);
@@ -1274,90 +1291,47 @@ export default function SendUsdt({ params }: any) {
 
   if (clientSettingsLoading) {
     return (
-      <main className="min-h-[100vh] bg-white px-4 py-8">
+      <main className={`${walletPageClassName} px-4 py-8 pb-28`} style={walletPageStyle}>
         <div className="mx-auto flex min-h-[70vh] max-w-screen-sm items-center justify-center text-center">
           <p className="text-lg font-semibold text-slate-600 sm:text-2xl">
             클라이언트 설정을 확인 중입니다...
           </p>
         </div>
+        <WalletManagementBottomNav lang={lang} active="wallet" />
       </main>
     );
   }
 
   if (!smartAccountEnabled) {
     return (
-      <main className="min-h-[100vh] bg-white px-4 py-8">
+      <main className={`${walletPageClassName} px-4 py-8 pb-28`} style={walletPageStyle}>
         <div className="mx-auto flex min-h-[70vh] max-w-screen-sm items-center justify-center text-center">
           <p className="text-lg font-semibold text-rose-600 sm:text-2xl">
             스마트 어카운트가 비활성화되어 있습니다. 관리자에게 문의해주세요.
           </p>
         </div>
+        <WalletManagementBottomNav lang={lang} active="wallet" />
       </main>
     );
   }
 
   if (!address) {
     return (
-      <main className="min-h-[100vh] bg-white px-4 py-8">
+      <main className={`${walletPageClassName} px-4 py-8 pb-28`} style={walletPageStyle}>
         <AutoConnect client={client} wallets={wallets.length ? wallets : [wallet]} />
-        <div className="mx-auto flex min-h-[70vh] max-w-screen-sm items-center justify-center">
-        <div className="w-full max-w-md mx-auto p-6 text-center">
-            <div className="flex flex-col items-center gap-3">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
-                OrangeX
-              </span>
-              <Image
-                src="/logo-orangex.png"
-                alt="OrangeX"
-                width={160}
-                height={48}
-                className="h-10 w-auto"
-                priority
-              />
-            </div>
-            <div className="mx-auto mt-6 flex h-16 w-16 items-center justify-center rounded-md border border-slate-200 bg-white">
-              <Image src="/logo-wallet.png" alt="Wallet" width={32} height={32} className="h-8 w-8" />
-            </div>
-            <h2 className="mt-4 text-xl font-semibold text-slate-900 sm:text-2xl">
-              지갑 연결이 필요합니다
-            </h2>
-            <p className="mt-2 text-sm text-slate-500">
-              USDT 출금을 위해 지갑을 연결해 주세요.
-            </p>
-            {connectError && (
-              <p className="mt-3 text-xs font-semibold text-rose-600">
-                {connectError}
-              </p>
-            )}
-            <button
-              type="button"
-              disabled={isConnecting}
-              onClick={async () => {
-                try {
-                  setConnectError(null);
-                  await openConnectModal({
-                    client,
-                    wallets: wallets.length ? wallets : [wallet],
-                    chain: selectedNetworkConfig.chain,
-                    ...ORANGEX_CONNECT_OPTIONS,
-                    welcomeScreen: {
-                      ...ORANGEX_WELCOME_SCREEN,
-                      subtitle: "간편하게 지갑을 연결하고 USDT 출금을 시작하세요.",
-                    },
-                  });
-                } catch (error) {
-                  const message =
-                    error instanceof Error ? error.message : '지갑 연결에 실패했습니다.';
-                  setConnectError(message);
-                }
-              }}
-              className="mt-5 inline-flex w-full items-center justify-center rounded-md border border-slate-200 bg-white px-6 py-3 text-base font-medium text-slate-800 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:text-slate-400"
-            >
-              {isConnecting ? '연결 중...' : '지갑 연결하기'}
-            </button>
-          </div>
+        <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-cyan-300/40 blur-3xl" />
+        <div className="pointer-events-none absolute top-24 right-0 h-80 w-80 rounded-full bg-blue-300/30 blur-3xl" />
+        <div className="relative mx-auto flex min-h-[70vh] w-full max-w-[430px] items-center px-4">
+          <WalletConnectPrompt
+            wallets={wallets}
+            chain={selectedNetworkConfig.chain}
+            lang={lang}
+            title="지갑 연결이 필요합니다."
+            description="USDT 지갑 서비스를 사용하려면 먼저 지갑을 연결해 주세요."
+            centered
+          />
         </div>
-        <footer className="relative mt-10 border-t border-slate-200 bg-white px-6 py-12 text-center text-slate-600">
+        <footer className="relative mt-10 border-t border-slate-200 bg-white/50 px-6 py-12 text-center text-slate-600 backdrop-blur">
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-6">
             <Image
               src="/logo-orangex.png"
@@ -1390,66 +1364,101 @@ export default function SendUsdt({ params }: any) {
             <p className="text-xs text-slate-400">Copyright © OrangeX All Rights Reserved</p>
           </div>
         </footer>
+        <WalletManagementBottomNav lang={lang} active="wallet" />
       </main>
     );
   }
 
   return (
 
-    <main className="min-h-[100vh] bg-white px-4 py-8 pb-28">
+    <main className={walletPageClassName} style={walletPageStyle}>
 
 
       <AutoConnect client={client} wallets={[wallet]} />
 
+      <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-cyan-300/40 blur-3xl" />
+      <div className="pointer-events-none absolute top-24 right-0 h-80 w-80 rounded-full bg-blue-300/30 blur-3xl" />
 
-      <div className="w-full max-w-md mx-auto">
-        
-        <div className="py-2">
-
-  
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <button
-            onClick={() => window.history.back()}
-            className="group inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white">
-              <Image
-                src="/icon-back.png"
-                alt="Back"
-                width={18}
-                  height={18}
-                  className="rounded-full"
-                />
-              </span>
-              돌아가기
-            </button>
-
+      <div className="relative mx-auto w-full max-w-[430px] px-4 pb-28 pt-8">
+          <div className="mb-8">
+            <p className="mb-2 inline-flex rounded-full border border-slate-300/80 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600">
+              Wallet Management
+            </p>
+            <h1
+              className="text-3xl font-semibold tracking-tight text-slate-900"
+              style={{ fontFamily: 'var(--font-display), "Times New Roman", serif' }}
+            >
+              USDT 지갑
+            </h1>
+            <p className="mt-2 text-sm text-slate-600">
+              내 지갑의 USDT를 관리하고 출금, 입금, 전송내역을 한 화면에서 확인할 수 있습니다.
+            </p>
           </div>
 
-        <div className="mt-6 flex flex-col gap-1">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white">
-              <Image
-                src="/logo-tether.svg"
-                alt="USDT"
-                width={24}
-                height={24}
-                className="w-6 h-6"
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">
-                Wallet Transfer
-              </span>
-              <span className="text-xl font-medium text-slate-900">
-                {footerTabLabel}
-              </span>
-            </div>
-          </div>
-          <p className="text-sm text-slate-500">보안 기준을 충족한 사용자만 출금할 수 있습니다.</p>
-        </div>
+          <WalletSummaryCard
+            walletAddress={address}
+            walletAddressDisplay={`${address.substring(0, 6)}...${address.substring(address.length - 4)}`}
+            networkLabel={selectedNetworkConfig.label}
+            usdtBalanceDisplay={`${Number(animatedBalance).toFixed(3)} USDT`}
+            modeLabel={footerTabLabel}
+            smartAccountEnabled={smartAccountEnabled}
+            onCopyAddress={(walletAddress) => {
+              navigator.clipboard.writeText(walletAddress);
+              toast.success(Copied_Wallet_Address);
+            }}
+          />
 
-          <div className="mt-6 flex flex-col gap-2 border-t border-slate-200 pt-4">
+          <div className="grid gap-5">
+            <section className="rounded-3xl border border-white/70 bg-white/75 p-5 shadow-[0_26px_60px_-35px_rgba(15,23,42,0.45)] backdrop-blur">
+              <div className="mb-5 grid grid-cols-3 gap-2">
+                {[
+                  {
+                    key: 'withdraw',
+                    label: '출금하기',
+                    icon: (
+                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path d="M12 5v14m0 0 4-4m-4 4-4-4" strokeLinecap="round" strokeLinejoin="round" />
+                        <rect x="4" y="3" width="16" height="6" rx="2" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    key: 'deposit',
+                    label: '입금하기',
+                    icon: (
+                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path d="M12 19V5m0 0-4 4m4-4 4 4" strokeLinecap="round" strokeLinejoin="round" />
+                        <rect x="4" y="15" width="16" height="4" rx="1.5" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    key: 'history',
+                    label: '전송내역',
+                    icon: (
+                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <circle cx="12" cy="12" r="8" />
+                        <path d="M12 8v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    ),
+                  },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setFooterTab(tab.key as any)}
+                    className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold transition ${
+                      footerTab === tab.key
+                        ? 'border-slate-900 bg-slate-900 text-white shadow-md'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
+                    }`}
+                  >
+                    {tab.icon}
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+
+          <div className="flex flex-col gap-2">
             <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">
               네트워크 선택
             </span>
@@ -1495,58 +1504,8 @@ export default function SendUsdt({ params }: any) {
 
               
 
-          {address && (
-            <div className="mt-6 border-t border-slate-200 pt-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">
-                    My Wallet
-                  </span>
-                  <button
-                    className="text-sm font-medium text-slate-700 underline decoration-slate-300 underline-offset-2 transition hover:text-slate-900"
-                    onClick={() => {
-                      navigator.clipboard.writeText(address);
-                      toast.success(Copied_Wallet_Address);
-                    }}
-                  >
-                    {address.substring(0, 6)}...{address.substring(address.length - 4)}
-                  </button>
-                </div>
-                <div className="flex items-center gap-2 mr-1 sm:mr-2">
-                  {smartAccountEnabled && (
-                    <span className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50/90 px-3 py-1.5 shadow-[0_0_0_1px_rgba(251,191,36,0.15)]">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white">
-                        <svg
-                          aria-hidden="true"
-                          viewBox="0 0 24 24"
-                          className="h-3.5 w-3.5"
-                          fill="currentColor"
-                        >
-                          <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
-                        </svg>
-                      </span>
-                      <span className="flex flex-col leading-tight">
-                        <span className="text-[11px] font-semibold text-amber-800">스마트 어카운트</span>
-                        <span className="text-[10px] font-medium text-amber-600">가스비 0원 · 즉시 전송</span>
-                      </span>
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="mt-3 flex items-baseline justify-end gap-2">
-                <span
-                  className="text-3xl sm:text-4xl font-medium text-emerald-700 tabular-nums"
-                  style={{ fontFamily: 'monospace' }}
-                >
-                  {Number(animatedBalance).toFixed(3)}
-                </span>
-                <span className="text-sm font-medium text-slate-500">USDT</span>
-              </div>
-            </div>
-          )}
-
           {footerTab === 'withdraw' && (
-          <div className="mt-8 flex flex-col gap-5 border-t border-slate-200 pt-4">
+          <div className="mt-4 flex flex-col gap-5 border-t border-slate-200 pt-4">
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium text-slate-900">출금 요청</span>
               <p className="text-sm text-slate-500">{Enter_the_amount_and_recipient_address}</p>
@@ -1620,7 +1579,7 @@ export default function SendUsdt({ params }: any) {
                         disabled={sending}
                         type="text"
                         placeholder={User_wallet_address}
-                        className="w-80 xl:w-96 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800"
+                        className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800"
                         value={recipient.walletAddress}
                           onChange={(e) => {
                             const next = e.target.value.trim();
@@ -2087,7 +2046,7 @@ export default function SendUsdt({ params }: any) {
           )}
 
           {footerTab === 'history' && (
-          <div className="mt-8 border-t border-slate-200 pt-4">
+          <div className="mt-4 border-t border-slate-200 pt-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <span className="text-sm font-medium text-slate-900">USDT 입출금 내역</span>
@@ -2246,7 +2205,7 @@ export default function SendUsdt({ params }: any) {
           )}
 
           {footerTab === 'deposit' && (
-            <div className="mt-8 border-t border-slate-200 pt-4">
+            <div className="mt-4 border-t border-slate-200 pt-4">
               <div className="flex flex-col items-center gap-3 text-center">
                 <span className="text-sm font-semibold text-slate-900">입금하기</span>
                 <p className="text-xs text-slate-500">아래 QR을 스캔해 지갑 주소로 입금하세요.</p>
@@ -2284,10 +2243,8 @@ export default function SendUsdt({ params }: any) {
           )}
 
           
-
-
-        </div>
-
+            </section>
+          </div>
       </div>
 
       {showTransferConfirm && (
@@ -2548,57 +2505,7 @@ export default function SendUsdt({ params }: any) {
         }
       `}</style>
 
-      <nav className="fixed bottom-0 left-1/2 z-40 w-full max-w-md -translate-x-1/2 border-t border-slate-200 bg-white/95 backdrop-blur px-3 py-3 sm:max-w-lg md:max-w-xl">
-        <div className="mx-auto flex w-full flex-nowrap items-center justify-center gap-2 overflow-x-auto whitespace-nowrap">
-          {[
-            {
-              key: 'withdraw',
-              label: '출금하기',
-              icon: (
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <path d="M12 5v14m0 0 4-4m-4 4-4-4" strokeLinecap="round" strokeLinejoin="round" />
-                  <rect x="4" y="3" width="16" height="6" rx="2" />
-                </svg>
-              ),
-            },
-            {
-              key: 'deposit',
-              label: '입금하기',
-              icon: (
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <path d="M12 19V5m0 0-4 4m4-4 4 4" strokeLinecap="round" strokeLinejoin="round" />
-                  <rect x="4" y="15" width="16" height="4" rx="1.5" />
-                </svg>
-              ),
-            },
-            {
-              key: 'history',
-              label: '전송내역',
-              icon: (
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <circle cx="12" cy="12" r="8" />
-                  <path d="M12 8v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              ),
-            },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => {
-                setFooterTab(tab.key as any);
-              }}
-              className={`flex flex-1 min-w-[110px] items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition ${
-                footerTab === tab.key
-                  ? 'border-slate-900 bg-slate-900 text-white shadow-md'
-                  : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
-              } sm:flex-none sm:w-auto`}
-            >
-              {tab.icon}
-              <span className="whitespace-nowrap">{tab.label}</span>
-            </button>
-          ))}
-        </div>
-      </nav>
+      <WalletManagementBottomNav lang={lang} active="wallet" />
 
     </main>
 

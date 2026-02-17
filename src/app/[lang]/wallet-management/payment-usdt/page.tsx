@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Manrope, Playfair_Display } from 'next/font/google';
 import { toast } from 'react-hot-toast';
 import {
@@ -25,9 +25,11 @@ import {
 } from 'thirdweb/react';
 
 import { client } from '@/app/client';
-import { ConnectButton } from '@/components/OrangeXConnectButton';
 import { useClientWallets } from '@/lib/useClientWallets';
 import { useClientSettings } from '@/components/ClientSettingsProvider';
+import WalletManagementBottomNav from '@/components/wallet-management/WalletManagementBottomNav';
+import WalletConnectPrompt from '@/components/wallet-management/WalletConnectPrompt';
+import WalletSummaryCard from '@/components/wallet-management/WalletSummaryCard';
 import {
   ethereumContractAddressUSDT,
   polygonContractAddressUSDT,
@@ -198,20 +200,6 @@ const resolveBuyerBankInfo = (buyer: unknown): BuyerBankInfoSnapshot | null => {
   };
 };
 
-const formatBuyerBankInfo = (bankInfo: BuyerBankInfoSnapshot | null) => {
-  if (!bankInfo) return '-';
-
-  const bankName = String(bankInfo.bankName || bankInfo.depositBankName || '').trim();
-  const accountNumber = String(bankInfo.accountNumber || bankInfo.depositBankAccountNumber || '').trim();
-  const accountHolder = String(bankInfo.accountHolder || bankInfo.depositName || '').trim();
-
-  if (!bankName && !accountNumber && !accountHolder) return '-';
-  if (bankName && accountNumber && accountHolder) {
-    return `${bankName} ${accountNumber} (${accountHolder})`;
-  }
-  return [bankName, accountNumber, accountHolder].filter(Boolean).join(' ');
-};
-
 const formatPaymentMemberName = (member: PaymentRecord['member']) => {
   const nickname = String(member?.nickname || '').trim();
   const memberStorecode = String(member?.storecode || '').trim();
@@ -219,24 +207,6 @@ const formatPaymentMemberName = (member: PaymentRecord['member']) => {
     return `${nickname} (${memberStorecode})`;
   }
   return nickname || memberStorecode || '-';
-};
-
-const formatPaymentMemberBankInfo = (member: PaymentRecord['member']) => {
-  const bankInfo = member?.buyer?.bankInfo;
-  if (!bankInfo || typeof bankInfo !== 'object' || Array.isArray(bankInfo)) {
-    return '-';
-  }
-  const bankName = String(
-    bankInfo.bankName || bankInfo.depositBankName || '',
-  ).trim();
-  const accountNumber = String(
-    bankInfo.accountNumber || bankInfo.depositBankAccountNumber || '',
-  ).trim();
-  const accountHolder = String(
-    bankInfo.accountHolder || bankInfo.depositName || '',
-  ).trim();
-  const merged = [bankName, accountNumber, accountHolder].filter(Boolean).join(' ');
-  return merged || '-';
 };
 
 type ExchangeRateItem = {
@@ -286,9 +256,12 @@ export default function PaymentUsdtPage({
   params: { lang: string };
 }) {
   const lang = params?.lang || 'ko';
+  const searchParams = useSearchParams();
+  const storecodeFromQuery = String(searchParams?.get('storecode') || '').trim();
+  const hasStorecodeParam = Boolean(storecodeFromQuery);
   const { chain } = useClientSettings();
   const activeAccount = useActiveAccount();
-  const { wallet, wallets } = useClientWallets({
+  const { wallet, wallets, smartAccountEnabled } = useClientWallets({
     authOptions: WALLET_AUTH_OPTIONS,
     sponsorGas: true,
     defaultSmsCountryCode: 'KR',
@@ -323,8 +296,10 @@ export default function PaymentUsdtPage({
   const [exchangeRateSource, setExchangeRateSource] = useState('');
   const [loadingRate, setLoadingRate] = useState(false);
   const [rateUpdatedAt, setRateUpdatedAt] = useState('');
+  const [isStorePickerOpen, setIsStorePickerOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [paymentTab, setPaymentTab] = useState<'pay' | 'history'>('pay');
 
   const [history, setHistory] = useState<PaymentRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -359,13 +334,13 @@ export default function PaymentUsdtPage({
     return Number((krwAmount / exchangeRate).toFixed(6));
   }, [exchangeRate, krwAmount]);
   const hasEnoughBalance = usdtAmount > 0 && usdtAmount <= balance;
+  const paymentTabLabel = useMemo(
+    () => (paymentTab === 'pay' ? '결제하기' : '결제내역'),
+    [paymentTab],
+  );
   const memberBankInfoSnapshot = useMemo(
     () => resolveBuyerBankInfo(myMemberProfile?.buyer),
     [myMemberProfile?.buyer]
-  );
-  const memberBankInfoLabel = useMemo(
-    () => formatBuyerBankInfo(memberBankInfoSnapshot),
-    [memberBankInfoSnapshot]
   );
   const hasMemberProfile = Boolean(myMemberProfile);
 
@@ -403,10 +378,16 @@ export default function PaymentUsdtPage({
 
       setMerchants(nextMerchants);
       setSelectedStorecode((prev) => {
+        if (storecodeFromQuery) {
+          const matchedStore = nextMerchants.find(
+            (item) => item.storecode.toLowerCase() === storecodeFromQuery.toLowerCase(),
+          );
+          return matchedStore?.storecode || storecodeFromQuery;
+        }
         if (prev && nextMerchants.some((item) => item.storecode === prev)) {
           return prev;
         }
-        return nextMerchants[0]?.storecode || '';
+        return '';
       });
     } catch (error) {
       console.error('Failed to load merchants', error);
@@ -414,7 +395,7 @@ export default function PaymentUsdtPage({
     } finally {
       setLoadingMerchants(false);
     }
-  }, []);
+  }, [storecodeFromQuery]);
 
   const loadExchangeRate = useCallback(async () => {
     setLoadingRate(true);
@@ -639,7 +620,7 @@ export default function PaymentUsdtPage({
       return;
     }
     if (!selectedMerchant) {
-      toast.error('결제할 상점을 선택해 주세요.');
+      toast.error(hasStorecodeParam ? '요청한 상점 정보를 찾을 수 없습니다.' : '결제할 상점을 선택해 주세요.');
       return;
     }
     if (loadingMemberProfile) {
@@ -769,117 +750,385 @@ export default function PaymentUsdtPage({
       <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-cyan-300/40 blur-3xl" />
       <div className="pointer-events-none absolute top-24 right-0 h-80 w-80 rounded-full bg-blue-300/30 blur-3xl" />
 
-      <div className="relative mx-auto w-full max-w-6xl px-4 pb-12 pt-8 md:px-8">
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="relative mx-auto w-full max-w-[430px] px-4 pb-28 pt-8">
+        <div className="mb-8">
           <div>
             <p className="mb-2 inline-flex rounded-full border border-slate-300/80 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600">
               Wallet Management
             </p>
             <h1
-              className="text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl"
+              className="text-3xl font-semibold tracking-tight text-slate-900"
               style={{ fontFamily: 'var(--font-display), "Times New Roman", serif' }}
             >
-              USDT 결제하기
+              USDT 결제
             </h1>
             <p className="mt-2 text-sm text-slate-600">
-              상점을 선택하고 금액을 입력한 뒤 확인 모달에서 결제를 완료하세요.
+              {hasStorecodeParam
+                ? '지정된 가맹점에 결제 금액(KRW)을 입력하면, 실시간 환율 기준 USDT로 안전하게 결제할 수 있습니다.'
+                : '가맹점을 선택하고 결제 금액(KRW)을 입력하면, 실시간 환율 기준 USDT로 안전하게 결제할 수 있습니다.'}
             </p>
           </div>
-
-          <Link
-            href={`/${lang}/wallet-management/wallet-usdt`}
-            className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-400 hover:text-slate-900"
-          >
-            내 지갑으로 돌아가기
-          </Link>
         </div>
 
-        <div className="mb-6 rounded-2xl border border-white/70 bg-white/70 p-4 shadow-[0_20px_50px_-30px_rgba(15,23,42,0.5)] backdrop-blur">
-          {activeAccount?.address ? (
-            <div className="grid gap-4 md:grid-cols-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">내 지갑</p>
-                <p className="mt-2 text-sm font-semibold text-slate-800">{shortAddress(activeAccount.address)}</p>
-                <p className="mt-2 text-xs text-slate-600">
-                  선택 상점 회원: {loadingMemberProfile ? '조회 중...' : hasMemberProfile ? '가입됨' : '미가입'}
-                </p>
-                <p className="mt-1 text-xs text-slate-600">
-                  회원 닉네임: {loadingMemberProfile ? '조회 중...' : myMemberProfile?.nickname || '-'}
-                </p>
-                <p className="mt-1 text-xs text-slate-600">
-                  구매자 계좌: {loadingMemberProfile ? '조회 중...' : memberBankInfoLabel}
-                </p>
-                <p className="mt-1 text-xs text-slate-600">
-                  조회 상점: {selectedStorecode || '-'}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">네트워크</p>
-                <p className="mt-2 text-sm font-semibold text-slate-800">{activeNetwork.label}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">USDT 잔액</p>
-                <p className="mt-2 text-sm font-semibold text-slate-800">
-                  {loadingBalance ? '조회 중...' : `${balance.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT`}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">환율</p>
-                <p className="mt-2 text-sm font-semibold text-slate-800">
-                  {loadingRate ? '조회 중...' : exchangeRate > 0 ? `1 USDT = ${formatRate(exchangeRate)}` : '환율 조회 실패'}
-                </p>
-                {exchangeRateSource && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    {exchangeRateSource}
-                    {rateUpdatedAt ? ` · ${new Date(rateUpdatedAt).toLocaleTimeString()}` : ''}
+        {activeAccount?.address ? (
+          <WalletSummaryCard
+            walletAddress={activeAccount.address}
+            walletAddressDisplay={shortAddress(activeAccount.address)}
+            networkLabel={activeNetwork.label}
+            usdtBalanceDisplay={
+              loadingBalance
+                ? '조회 중...'
+                : `${balance.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT`
+            }
+            modeLabel={paymentTabLabel}
+            smartAccountEnabled={smartAccountEnabled}
+            onCopyAddress={(walletAddress) => {
+              navigator.clipboard.writeText(walletAddress);
+              toast.success('지갑 주소를 복사했습니다.');
+            }}
+          />
+        ) : (
+          <div className="mb-6 rounded-2xl border border-white/70 bg-white/70 p-4 shadow-[0_20px_50px_-30px_rgba(15,23,42,0.5)] backdrop-blur">
+            <WalletConnectPrompt
+              wallets={wallets}
+              chain={activeNetwork.chain}
+              lang={lang}
+              title="결제를 시작하려면 지갑을 연결하세요."
+              description="연결 후 상점 선택, 원화 금액 입력, 환율 적용 USDT 전송이 활성화됩니다."
+            />
+          </div>
+        )}
+
+        <div className="grid gap-5">
+          <section className="rounded-3xl border border-white/70 bg-white/75 p-5 shadow-[0_26px_60px_-35px_rgba(15,23,42,0.45)] backdrop-blur">
+            <div className="mb-5 grid grid-cols-2 gap-2">
+              {[
+                { key: 'pay', label: '결제하기' },
+                { key: 'history', label: '결제내역' },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setPaymentTab(tab.key as 'pay' | 'history')}
+                  className={`inline-flex h-10 items-center justify-center rounded-xl border text-xs font-semibold transition ${
+                    paymentTab === tab.key
+                      ? 'border-slate-900 bg-slate-900 text-white shadow-md'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {paymentTab === 'pay' ? (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-lg font-semibold text-slate-900">결제 금액 입력 (KRW)</h2>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {selectedMerchant && (
+                      <div className="inline-flex max-w-[260px] items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1.5">
+                        <div className="h-5 w-5 shrink-0 overflow-hidden rounded-md bg-white ring-1 ring-cyan-200">
+                          {selectedMerchant.storeLogo ? (
+                            <div
+                              className="h-full w-full bg-cover bg-center"
+                              style={{ backgroundImage: `url(${encodeURI(selectedMerchant.storeLogo)})` }}
+                              aria-label={selectedMerchant.storeName}
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-[8px] font-bold text-cyan-700">
+                              SHOP
+                            </div>
+                          )}
+                        </div>
+                        <span className="truncate text-xs font-semibold text-cyan-900">
+                          {selectedMerchant.storeName}
+                        </span>
+                      </div>
+                    )}
+                    {!hasStorecodeParam && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchKeyword('');
+                          setIsStorePickerOpen(true);
+                        }}
+                        disabled={loadingMerchants || merchants.length === 0}
+                        className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {selectedMerchant ? '결제 상점 변경' : '결제할 상점 선택'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  {QUICK_KRW_AMOUNTS.map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPreset(value);
+                        setAmountInput(String(value));
+                      }}
+                      className={`h-10 rounded-xl border text-sm font-semibold transition ${
+                        selectedPreset === value
+                          ? 'border-slate-900 bg-slate-900 text-white'
+                          : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+                      }`}
+                    >
+                      {formatKrw(value)}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-slate-300 bg-white px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">직접 입력 (원)</p>
+                  <div className="mt-2 flex items-end justify-between gap-3">
+                    <input
+                      value={amountInput ? Number(amountInput).toLocaleString() : ''}
+                      onChange={(event) => {
+                        const raw = event.target.value.replace(/[^0-9]/g, '');
+                        setAmountInput(raw);
+                        setSelectedPreset(null);
+                      }}
+                      placeholder="0"
+                      className="w-full bg-transparent text-2xl font-semibold text-slate-900 outline-none"
+                      inputMode="numeric"
+                    />
+                    <span className="pb-1 text-sm font-semibold text-slate-500">KRW</span>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">선택 상점</span>
+                    <span className="font-semibold text-slate-800">
+                      {selectedMerchant ? selectedMerchant.storeName : '미선택'}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-slate-500">결제 네트워크</span>
+                    <span className="font-semibold text-slate-800">{activeNetwork.label}</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-slate-500">적용 환율</span>
+                    <span className="font-semibold text-slate-800">
+                      {exchangeRate > 0 ? `1 USDT = ${formatRate(exchangeRate)}` : '조회 중'}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-slate-500">결제 금액 (KRW)</span>
+                    <span className="font-semibold text-slate-800">
+                      {krwAmount > 0 ? formatKrw(krwAmount) : '0원'}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-slate-500">전송 예정 (USDT)</span>
+                    <span className="font-semibold text-slate-800">
+                      {usdtAmount > 0 ? formatUsdt(usdtAmount) : '0 USDT'}
+                    </span>
+                  </div>
+                </div>
+
+                {activeAccount?.address && selectedMerchant && (
+                  <div
+                    className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
+                      hasMemberProfile
+                        ? 'border-emerald-200 bg-emerald-50'
+                        : 'border-amber-200 bg-amber-50'
+                    }`}
+                  >
+                    {loadingMemberProfile ? (
+                      <p className="text-slate-600">선택 상점 회원 정보를 확인 중입니다...</p>
+                    ) : hasMemberProfile ? (
+                      <>
+                        <p className="font-semibold text-emerald-800">결제 가능한 회원입니다.</p>
+                        <p className="mt-1 text-xs text-emerald-700">
+                          {myMemberProfile?.nickname || '-'} · {myMemberProfile?.storecode || selectedStorecode}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-semibold text-amber-800">
+                          이 상점에서 결제하려면 먼저 회원가입이 필요합니다.
+                        </p>
+                        {memberProfileError && (
+                          <p className="mt-1 text-xs text-rose-600">{memberProfileError}</p>
+                        )}
+                        <div className="mt-3 flex flex-col gap-2">
+                          <input
+                            value={signupNickname}
+                            onChange={(event) => setSignupNickname(event.target.value)}
+                            placeholder="회원가입 닉네임 입력"
+                            className="h-10 flex-1 rounded-xl border border-amber-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-amber-500"
+                            maxLength={24}
+                          />
+                          <button
+                            type="button"
+                            onClick={registerMemberForSelectedStore}
+                            disabled={signingUpMember}
+                            className="inline-flex h-10 items-center justify-center rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {signingUpMember ? '가입 처리 중...' : '회원가입 후 결제하기'}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {!hasEnoughBalance && usdtAmount > 0 && (
+                  <p className="mt-3 text-sm font-medium text-rose-600">
+                    잔액이 부족합니다. 현재 환율 기준 전송량은 {formatUsdt(usdtAmount)} 입니다.
                   </p>
                 )}
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-slate-800">결제를 시작하려면 지갑을 연결하세요.</p>
-                <p className="mt-1 text-xs text-slate-600">연결 후 상점 선택, 원화 금액 입력, 환율 적용 USDT 전송이 활성화됩니다.</p>
-              </div>
-              <ConnectButton
-                client={client}
-                wallets={wallets}
-                chain={activeNetwork.chain}
-                locale={lang === 'en' ? 'en_US' : 'ko_KR'}
-                theme="light"
-                connectButton={{
-                  label: '지갑 연결',
-                  className:
-                    'inline-flex h-10 items-center justify-center rounded-full bg-slate-900 px-5 text-sm font-semibold text-white transition hover:bg-slate-800',
-                }}
-              />
-            </div>
-          )}
-        </div>
 
-        <div className="grid gap-5 lg:grid-cols-[1.2fr,1fr]">
-          <section className="rounded-3xl border border-white/70 bg-white/70 p-4 shadow-[0_26px_60px_-35px_rgba(15,23,42,0.45)] backdrop-blur">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2.5">
-              <h2 className="text-base font-semibold text-slate-900">결제할 상점 선택</h2>
-              <input
-                value={searchKeyword}
-                onChange={(event) => setSearchKeyword(event.target.value)}
-                placeholder="상점명 또는 코드 검색"
-                className="h-9 w-full rounded-full border border-slate-300 bg-white px-3.5 text-sm text-slate-700 outline-none transition focus:border-cyan-500 md:w-60"
-              />
-            </div>
+                <button
+                  type="button"
+                  onClick={openConfirmModal}
+                  disabled={
+                    !activeAccount?.address ||
+                    !selectedMerchant ||
+                    loadingMemberProfile ||
+                    !hasMemberProfile ||
+                    krwAmount <= 0 ||
+                    exchangeRate <= 0 ||
+                    usdtAmount <= 0 ||
+                    !hasEnoughBalance ||
+                    paying
+                  }
+                  className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white transition enabled:hover:-translate-y-0.5 enabled:hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {paying
+                    ? '결제 처리 중...'
+                    : !activeAccount?.address
+                    ? '지갑 연결 필요'
+                    : !selectedMerchant
+                    ? hasStorecodeParam
+                      ? '상점 정보 확인 필요'
+                      : '상점 선택 필요'
+                    : loadingMemberProfile
+                    ? '회원 확인 중...'
+                    : !hasMemberProfile
+                    ? '회원가입 후 결제 가능'
+                    : '결제하기'}
+                </button>
 
-            {selectedMerchant && (
-              <div className="mb-3 flex items-center justify-between rounded-xl border border-cyan-200/80 bg-cyan-50/70 px-3 py-2 text-xs">
-                <span className="font-semibold text-cyan-800">현재 선택</span>
-                <span className="truncate pl-2 font-semibold text-slate-800">
-                  {selectedMerchant.storeName} ({selectedMerchant.storecode})
-                </span>
-              </div>
+                <p className="mt-3 text-xs text-slate-500">
+                  원화 금액 입력 후 환율을 적용한 USDT 수량이 계산되며, 확인 시 해당 USDT가 상점 결제지갑으로 전송됩니다.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-slate-900">내 최근 결제 내역</h2>
+                  <button
+                    type="button"
+                    onClick={loadHistory}
+                    className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-800"
+                  >
+                    새로고침
+                  </button>
+                </div>
+
+                {loadingHistory && <p className="text-sm text-slate-500">결제 내역을 불러오는 중입니다...</p>}
+                {!loadingHistory && history.length === 0 && (
+                  <p className="text-sm text-slate-500">아직 완료된 결제 내역이 없습니다.</p>
+                )}
+
+                {!loadingHistory && history.length > 0 && (
+                  <div className="space-y-3">
+                    {history.map((item) => {
+                      const txUrl = `${NETWORK_BY_KEY[item.chain]?.explorerBaseUrl || ''}${item.transactionHash}`;
+                      return (
+                        <div key={item.id} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">가맹점 정보</p>
+                              <p className="text-sm font-semibold text-slate-900">
+                                {item.storeName || '-'} ({item.storecode || '-'})
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-semibold text-slate-900">
+                                {Number(item.usdtAmount).toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {item.krwAmount > 0 ? `${Number(item.krwAmount).toLocaleString()}원 · ` : ''}
+                                {new Date(item.confirmedAt || item.createdAt).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-2 grid gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 text-xs">
+                            <div>
+                              <p className="font-semibold text-slate-500">가맹점 결제지갑</p>
+                              <p className="mt-0.5 font-mono text-slate-700">{shortAddress(item.toWalletAddress)}</p>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-500">결제 회원</p>
+                              <p className="mt-0.5 text-slate-800">{formatPaymentMemberName(item.member)}</p>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-500">회원 지갑</p>
+                              <p className="mt-0.5 font-mono text-slate-700">{shortAddress(item.fromWalletAddress)}</p>
+                            </div>
+                          </div>
+
+                          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <span className="text-slate-500">네트워크: {NETWORK_BY_KEY[item.chain]?.label || item.chain}</span>
+                            <a
+                              href={txUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-semibold text-cyan-700 underline decoration-cyan-300 underline-offset-2"
+                            >
+                              TX 확인
+                            </a>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
+          </section>
+        </div>
+      </div>
 
-            <div className="max-h-[360px] overflow-y-auto rounded-2xl border border-slate-200/80 bg-white/80">
+      <WalletManagementBottomNav lang={lang} active="payment" />
+
+      {isStorePickerOpen && !hasStorecodeParam && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-[430px] rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_40px_100px_-45px_rgba(2,132,199,0.8)]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
+                  결제 상점 선택
+                </p>
+                <h3 className="mt-3 text-lg font-semibold text-slate-900">
+                  결제할 상점을 선택해 주세요
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsStorePickerOpen(false)}
+                className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+              >
+                닫기
+              </button>
+            </div>
+
+            <input
+              value={searchKeyword}
+              onChange={(event) => setSearchKeyword(event.target.value)}
+              placeholder="상점명 또는 코드 검색"
+              className="mt-4 h-10 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-sm text-slate-700 outline-none transition focus:border-cyan-500"
+            />
+
+            <div className="mt-3 max-h-[420px] overflow-y-auto rounded-2xl border border-slate-200/80 bg-white/85">
               {loadingMerchants && (
                 <div className="px-4 py-5 text-sm text-slate-500">
                   상점 목록을 불러오는 중입니다...
@@ -898,7 +1147,10 @@ export default function PaymentUsdtPage({
                   <button
                     key={merchant.storecode}
                     type="button"
-                    onClick={() => setSelectedStorecode(merchant.storecode)}
+                    onClick={() => {
+                      setSelectedStorecode(merchant.storecode);
+                      setIsStorePickerOpen(false);
+                    }}
                     className={`flex w-full items-center justify-between gap-3 border-b border-slate-100 px-3 py-2.5 text-left transition last:border-b-0 ${
                       selected ? 'bg-cyan-50/80' : 'hover:bg-slate-50/80'
                     }`}
@@ -937,250 +1189,13 @@ export default function PaymentUsdtPage({
                 );
               })}
             </div>
-          </section>
-
-          <section className="rounded-3xl border border-white/70 bg-white/75 p-5 shadow-[0_26px_60px_-35px_rgba(15,23,42,0.45)] backdrop-blur">
-            <h2 className="text-lg font-semibold text-slate-900">결제 금액 입력 (KRW)</h2>
-
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              {QUICK_KRW_AMOUNTS.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => {
-                    setSelectedPreset(value);
-                    setAmountInput(String(value));
-                  }}
-                  className={`h-10 rounded-xl border text-sm font-semibold transition ${
-                    selectedPreset === value
-                      ? 'border-slate-900 bg-slate-900 text-white'
-                      : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
-                  }`}
-                >
-                  {formatKrw(value)}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-slate-300 bg-white px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">직접 입력 (원)</p>
-              <div className="mt-2 flex items-end justify-between gap-3">
-                <input
-                  value={amountInput ? Number(amountInput).toLocaleString() : ''}
-                  onChange={(event) => {
-                    const raw = event.target.value.replace(/[^0-9]/g, '');
-                    setAmountInput(raw);
-                    setSelectedPreset(null);
-                  }}
-                  placeholder="0"
-                  className="w-full bg-transparent text-2xl font-semibold text-slate-900 outline-none"
-                  inputMode="numeric"
-                />
-                <span className="pb-1 text-sm font-semibold text-slate-500">KRW</span>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">선택 상점</span>
-                <span className="font-semibold text-slate-800">
-                  {selectedMerchant ? selectedMerchant.storeName : '미선택'}
-                </span>
-              </div>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-slate-500">결제 네트워크</span>
-                <span className="font-semibold text-slate-800">{activeNetwork.label}</span>
-              </div>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-slate-500">적용 환율</span>
-                <span className="font-semibold text-slate-800">
-                  {exchangeRate > 0 ? `1 USDT = ${formatRate(exchangeRate)}` : '조회 중'}
-                </span>
-              </div>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-slate-500">결제 금액 (KRW)</span>
-                <span className="font-semibold text-slate-800">
-                  {krwAmount > 0 ? formatKrw(krwAmount) : '0원'}
-                </span>
-              </div>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-slate-500">전송 예정 (USDT)</span>
-                <span className="font-semibold text-slate-800">
-                  {usdtAmount > 0 ? formatUsdt(usdtAmount) : '0 USDT'}
-                </span>
-              </div>
-            </div>
-
-            {activeAccount?.address && selectedMerchant && (
-              <div
-                className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
-                  hasMemberProfile
-                    ? 'border-emerald-200 bg-emerald-50'
-                    : 'border-amber-200 bg-amber-50'
-                }`}
-              >
-                {loadingMemberProfile ? (
-                  <p className="text-slate-600">선택 상점 회원 정보를 확인 중입니다...</p>
-                ) : hasMemberProfile ? (
-                  <>
-                    <p className="font-semibold text-emerald-800">결제 가능한 회원입니다.</p>
-                    <p className="mt-1 text-xs text-emerald-700">
-                      {myMemberProfile?.nickname || '-'} · {myMemberProfile?.storecode || selectedStorecode}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="font-semibold text-amber-800">
-                      이 상점에서 결제하려면 먼저 회원가입이 필요합니다.
-                    </p>
-                    {memberProfileError && (
-                      <p className="mt-1 text-xs text-rose-600">{memberProfileError}</p>
-                    )}
-                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                      <input
-                        value={signupNickname}
-                        onChange={(event) => setSignupNickname(event.target.value)}
-                        placeholder="회원가입 닉네임 입력"
-                        className="h-10 flex-1 rounded-xl border border-amber-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-amber-500"
-                        maxLength={24}
-                      />
-                      <button
-                        type="button"
-                        onClick={registerMemberForSelectedStore}
-                        disabled={signingUpMember}
-                        className="inline-flex h-10 items-center justify-center rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {signingUpMember ? '가입 처리 중...' : '회원가입 후 결제하기'}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {!hasEnoughBalance && usdtAmount > 0 && (
-              <p className="mt-3 text-sm font-medium text-rose-600">
-                잔액이 부족합니다. 현재 환율 기준 전송량은 {formatUsdt(usdtAmount)} 입니다.
-              </p>
-            )}
-
-            <button
-              type="button"
-              onClick={openConfirmModal}
-              disabled={
-                !activeAccount?.address ||
-                !selectedMerchant ||
-                loadingMemberProfile ||
-                !hasMemberProfile ||
-                krwAmount <= 0 ||
-                exchangeRate <= 0 ||
-                usdtAmount <= 0 ||
-                !hasEnoughBalance ||
-                paying
-              }
-              className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white transition enabled:hover:-translate-y-0.5 enabled:hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-            >
-              {paying
-                ? '결제 처리 중...'
-                : !activeAccount?.address
-                ? '지갑 연결 필요'
-                : !selectedMerchant
-                ? '상점 선택 필요'
-                : loadingMemberProfile
-                ? '회원 확인 중...'
-                : !hasMemberProfile
-                ? '회원가입 후 결제 가능'
-                : '결제하기'}
-            </button>
-
-            <p className="mt-3 text-xs text-slate-500">
-              원화 금액 입력 후 환율을 적용한 USDT 수량이 계산되며, 확인 시 해당 USDT가 상점 결제지갑으로 전송됩니다.
-            </p>
-          </section>
-        </div>
-
-        <section className="mt-6 rounded-3xl border border-white/70 bg-white/75 p-5 shadow-[0_26px_60px_-35px_rgba(15,23,42,0.45)] backdrop-blur">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900">내 최근 결제 내역</h2>
-            <button
-              type="button"
-              onClick={loadHistory}
-              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-800"
-            >
-              새로고침
-            </button>
           </div>
-
-          {loadingHistory && <p className="text-sm text-slate-500">결제 내역을 불러오는 중입니다...</p>}
-          {!loadingHistory && history.length === 0 && (
-            <p className="text-sm text-slate-500">아직 완료된 결제 내역이 없습니다.</p>
-          )}
-
-          {!loadingHistory && history.length > 0 && (
-            <div className="space-y-3">
-              {history.map((item) => {
-                const txUrl = `${NETWORK_BY_KEY[item.chain]?.explorerBaseUrl || ''}${item.transactionHash}`;
-                return (
-                  <div key={item.id} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">가맹점 정보</p>
-                        <p className="text-sm font-semibold text-slate-900">
-                          {item.storeName || '-'} ({item.storecode || '-'})
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-slate-900">
-                          {Number(item.usdtAmount).toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {item.krwAmount > 0 ? `${Number(item.krwAmount).toLocaleString()}원 · ` : ''}
-                          {new Date(item.confirmedAt || item.createdAt).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-2 grid gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 text-xs md:grid-cols-2">
-                      <div>
-                        <p className="font-semibold text-slate-500">가맹점 결제지갑</p>
-                        <p className="mt-0.5 font-mono text-slate-700">{shortAddress(item.toWalletAddress)}</p>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-500">결제 회원</p>
-                        <p className="mt-0.5 text-slate-800">{formatPaymentMemberName(item.member)}</p>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-500">회원 지갑</p>
-                        <p className="mt-0.5 font-mono text-slate-700">{shortAddress(item.fromWalletAddress)}</p>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-500">회원 계좌정보</p>
-                        <p className="mt-0.5 text-slate-700">{formatPaymentMemberBankInfo(item.member)}</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-                      <span className="text-slate-500">네트워크: {NETWORK_BY_KEY[item.chain]?.label || item.chain}</span>
-                      <a
-                        href={txUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-semibold text-cyan-700 underline decoration-cyan-300 underline-offset-2"
-                      >
-                        TX 확인
-                      </a>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      </div>
+        </div>
+      )}
 
       {isConfirmOpen && selectedMerchant && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_40px_100px_-45px_rgba(2,132,199,0.9)]">
+          <div className="w-full max-w-[430px] rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_40px_100px_-45px_rgba(2,132,199,0.9)]">
             <p className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
               결제 확인
             </p>
