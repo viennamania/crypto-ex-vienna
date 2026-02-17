@@ -3,6 +3,37 @@ import clientPromise from '../mongodb';
 
 import { dbName } from '../mongodb';
 
+const STORE_WALLET_REGEX = /^0x[a-fA-F0-9]{40}$/;
+
+const normalizeWalletAddress = (value: unknown) => {
+  const raw = String(value || '').trim();
+  if (!STORE_WALLET_REGEX.test(raw)) {
+    return '';
+  }
+  return raw;
+};
+
+const resolveStoreSellerWalletAddresses = (store: any): string[] => {
+  const walletList: string[] = [];
+  const seen = new Set<string>();
+
+  const pushWallet = (wallet: unknown) => {
+    const normalizedWallet = normalizeWalletAddress(wallet);
+    if (!normalizedWallet) return;
+    const key = normalizedWallet.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    walletList.push(normalizedWallet);
+  };
+
+  pushWallet(store?.sellerWalletAddress);
+
+  if (Array.isArray(store?.sellerWalletAddresses)) {
+    store.sellerWalletAddresses.forEach((wallet: unknown) => pushWallet(wallet));
+  }
+  return walletList;
+};
+
 
 
 
@@ -397,6 +428,190 @@ export async function updateStoreSellerWalletAddress(
   } else {
     return false;
   }
+}
+
+export async function getStoreSellerWalletAddresses(
+  {
+    storecode,
+  }: {
+    storecode: string;
+  }
+): Promise<{
+  storecode: string;
+  sellerWalletAddress: string;
+  sellerWalletAddresses: string[];
+}> {
+  const normalizedStorecode = String(storecode || '').trim();
+  if (!normalizedStorecode) {
+    throw new Error('storecode is required');
+  }
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('stores');
+
+  const store = await collection.findOne<any>(
+    { storecode: normalizedStorecode },
+    {
+      projection: {
+        _id: 0,
+        storecode: 1,
+        sellerWalletAddress: 1,
+        sellerWalletAddresses: 1,
+      },
+    },
+  );
+
+  if (!store) {
+    throw new Error('Store not found');
+  }
+
+  const sellerWalletAddresses = resolveStoreSellerWalletAddresses(store);
+  return {
+    storecode: normalizedStorecode,
+    sellerWalletAddress: sellerWalletAddresses[0] || '',
+    sellerWalletAddresses,
+  };
+}
+
+export async function addStoreSellerWalletAddress(
+  {
+    storecode,
+    sellerWalletAddress,
+  }: {
+    storecode: string;
+    sellerWalletAddress: string;
+  }
+): Promise<{
+  storecode: string;
+  added: boolean;
+  sellerWalletAddress: string;
+  sellerWalletAddresses: string[];
+}> {
+  const normalizedStorecode = String(storecode || '').trim();
+  if (!normalizedStorecode) {
+    throw new Error('storecode is required');
+  }
+
+  const normalizedWalletAddress = normalizeWalletAddress(sellerWalletAddress);
+  if (!normalizedWalletAddress) {
+    throw new Error('Invalid seller wallet address');
+  }
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('stores');
+
+  const storeBefore = await collection.findOne<any>(
+    { storecode: normalizedStorecode },
+    {
+      projection: {
+        _id: 0,
+        sellerWalletAddress: 1,
+        sellerWalletAddresses: 1,
+      },
+    },
+  );
+  if (!storeBefore) {
+    throw new Error('Store not found');
+  }
+
+  const beforeList = resolveStoreSellerWalletAddresses(storeBefore);
+  const added = !beforeList.some(
+    (wallet) => wallet.toLowerCase() === normalizedWalletAddress.toLowerCase(),
+  );
+
+  await collection.updateOne(
+    { storecode: normalizedStorecode },
+    { $addToSet: { sellerWalletAddresses: normalizedWalletAddress } },
+  );
+
+  const storeAfter = await collection.findOne<any>(
+    { storecode: normalizedStorecode },
+    {
+      projection: {
+        _id: 0,
+        sellerWalletAddress: 1,
+        sellerWalletAddresses: 1,
+      },
+    },
+  );
+  const afterList = resolveStoreSellerWalletAddresses(storeAfter);
+  const primarySellerWalletAddress = afterList[0] || '';
+
+  await collection.updateOne(
+    { storecode: normalizedStorecode },
+    { $set: { sellerWalletAddress: primarySellerWalletAddress, sellerWalletAddresses: afterList } },
+  );
+
+  return {
+    storecode: normalizedStorecode,
+    added,
+    sellerWalletAddress: primarySellerWalletAddress,
+    sellerWalletAddresses: afterList,
+  };
+}
+
+export async function removeStoreSellerWalletAddress(
+  {
+    storecode,
+    sellerWalletAddress,
+  }: {
+    storecode: string;
+    sellerWalletAddress: string;
+  }
+): Promise<{
+  storecode: string;
+  removed: boolean;
+  sellerWalletAddress: string;
+  sellerWalletAddresses: string[];
+}> {
+  const normalizedStorecode = String(storecode || '').trim();
+  if (!normalizedStorecode) {
+    throw new Error('storecode is required');
+  }
+
+  const normalizedWalletAddress = normalizeWalletAddress(sellerWalletAddress);
+  if (!normalizedWalletAddress) {
+    throw new Error('Invalid seller wallet address');
+  }
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('stores');
+
+  const storeBefore = await collection.findOne<any>(
+    { storecode: normalizedStorecode },
+    {
+      projection: {
+        _id: 0,
+        sellerWalletAddress: 1,
+        sellerWalletAddresses: 1,
+      },
+    },
+  );
+  if (!storeBefore) {
+    throw new Error('Store not found');
+  }
+
+  const beforeList = resolveStoreSellerWalletAddresses(storeBefore);
+  const removed = beforeList.some(
+    (wallet) => wallet.toLowerCase() === normalizedWalletAddress.toLowerCase(),
+  );
+
+  const nextList = beforeList.filter(
+    (wallet) => wallet.toLowerCase() !== normalizedWalletAddress.toLowerCase(),
+  );
+  const primarySellerWalletAddress = nextList[0] || '';
+
+  await collection.updateOne(
+    { storecode: normalizedStorecode },
+    { $set: { sellerWalletAddress: primarySellerWalletAddress, sellerWalletAddresses: nextList } },
+  );
+
+  return {
+    storecode: normalizedStorecode,
+    removed,
+    sellerWalletAddress: primarySellerWalletAddress,
+    sellerWalletAddresses: nextList,
+  };
 }
 
 

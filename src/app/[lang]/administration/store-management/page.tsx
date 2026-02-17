@@ -1038,14 +1038,14 @@ export default function StoreManagementPage() {
               <table className="w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
-                    <th className="w-[360px] px-4 py-3">가맹점</th>
+                    <th className="w-[260px] px-4 py-3">가맹점</th>
                     <th className="px-4 py-3 text-right">결제확정</th>
                     <th className="px-4 py-3 text-right">거래금액</th>
                     <th className="px-4 py-3 text-right">정산금액</th>
                     <th className="px-4 py-3 text-right">수수료율</th>
                     <th className="px-4 py-3">관리자</th>
                     <th className="px-4 py-3">지갑상태</th>
-                    <th className="w-[280px] px-4 py-3 text-right whitespace-nowrap">작업</th>
+                    <th className="w-[380px] px-4 py-3 text-right whitespace-nowrap">작업</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1137,10 +1137,16 @@ export default function StoreManagementPage() {
                             )}
                           </div>
                         </td>
-                        <td className="w-[280px] px-4 py-3 text-right whitespace-nowrap">
+                        <td className="w-[380px] px-4 py-3 text-right whitespace-nowrap">
                           <div className="flex flex-wrap justify-end gap-2">
                             {hasStoreCode ? (
                               <>
+                                <Link
+                                  href={`/${lang}/administration/store-management/${store.storecode}/seller-settings`}
+                                  className="inline-flex shrink-0 items-center rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                                >
+                                  판매자 설정
+                                </Link>
                                 <Link
                                   href={`/${lang}/administration/store/${store.storecode}`}
                                   className="inline-flex shrink-0 items-center rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
