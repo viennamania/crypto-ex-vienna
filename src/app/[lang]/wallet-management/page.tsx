@@ -33,6 +33,15 @@ type NetworkOption = {
   tokenDecimals: number;
 };
 
+type SellerPreviewItem = {
+  walletAddress: string;
+  nickname: string;
+  avatar: string;
+  rate: number;
+  currentUsdtBalance: number;
+  status: string;
+};
+
 const displayFont = Playfair_Display({
   subsets: ['latin'],
   weight: ['600', '700'],
@@ -83,15 +92,34 @@ const shortAddress = (value: string) => {
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
 export default function WalletManagementHomePage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const lang = typeof params?.lang === 'string' ? params.lang : 'ko';
   const storecode = String(searchParams?.get('storecode') || '').trim();
-  const querySuffix = storecode ? `?storecode=${encodeURIComponent(storecode)}` : '';
-
-  const walletPath = `/${lang}/wallet-management/wallet-usdt${querySuffix}`;
-  const paymentPath = `/${lang}/wallet-management/payment-usdt${querySuffix}`;
+  const sellerWalletFromQuery = String(searchParams?.get('seller') || '').trim();
+  const baseQueryString = useMemo(() => {
+    const query = new URLSearchParams();
+    if (storecode) {
+      query.set('storecode', storecode);
+    }
+    return query.toString();
+  }, [storecode]);
+  const walletPath = `/${lang}/wallet-management/wallet-usdt${baseQueryString ? `?${baseQueryString}` : ''}`;
+  const paymentPath = `/${lang}/wallet-management/payment-usdt${baseQueryString ? `?${baseQueryString}` : ''}`;
+  const buildBuyPath = useCallback((sellerWalletAddress?: string) => {
+    const query = new URLSearchParams(baseQueryString);
+    const sellerWallet = String(sellerWalletAddress || '').trim();
+    if (sellerWallet) {
+      query.set('seller', sellerWallet);
+    }
+    const queryString = query.toString();
+    const basePath = `/${lang}/wallet-management/buy-usdt`;
+    return queryString ? `${basePath}?${queryString}` : basePath;
+  }, [baseQueryString, lang]);
 
   const { chain, loading: clientSettingsLoading } = useClientSettings();
   const activeAccount = useActiveAccount();
@@ -119,6 +147,22 @@ export default function WalletManagementHomePage() {
   const [balance, setBalance] = useState(0);
   const [loadingBalance, setLoadingBalance] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState('');
+  const [sellers, setSellers] = useState<SellerPreviewItem[]>([]);
+  const [loadingSellers, setLoadingSellers] = useState(false);
+  const [sellersError, setSellersError] = useState<string | null>(null);
+  const [selectedSellerWallet, setSelectedSellerWallet] = useState(sellerWalletFromQuery);
+
+  const selectedSeller = useMemo(
+    () =>
+      sellers.find(
+        (item) => item.walletAddress.toLowerCase() === selectedSellerWallet.toLowerCase(),
+      ) || null,
+    [sellers, selectedSellerWallet],
+  );
+  const buyPath = useMemo(
+    () => buildBuyPath(selectedSeller?.walletAddress || selectedSellerWallet),
+    [buildBuyPath, selectedSeller?.walletAddress, selectedSellerWallet],
+  );
 
   const loadBalance = useCallback(async () => {
     if (!activeAccount?.address) {
@@ -157,6 +201,91 @@ export default function WalletManagementHomePage() {
 
     return () => clearInterval(interval);
   }, [activeAccount?.address, loadBalance]);
+
+  const loadSellers = useCallback(async () => {
+    setLoadingSellers(true);
+    setSellersError(null);
+    try {
+      const response = await fetch('/api/user/getAllSellersForBalance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: 'admin',
+          limit: 40,
+          page: 1,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || '판매자 목록을 불러오지 못했습니다.');
+      }
+
+      const source: unknown[] = Array.isArray(data?.result?.users) ? data.result.users : [];
+      const normalized: SellerPreviewItem[] = source
+        .map((rawUser: unknown): SellerPreviewItem | null => {
+          if (!isRecord(rawUser)) return null;
+
+          const user = rawUser;
+          const sellerRaw = user.seller;
+          const seller = isRecord(sellerRaw) ? sellerRaw : null;
+          const walletAddress = String(user.walletAddress || '').trim();
+          const rate = Number(seller?.usdtToKrwRate || 0);
+          const currentUsdtBalance = Number(user.currentUsdtBalance || 0);
+          const enabled = seller?.enabled === true;
+          const status = String(seller?.status || '');
+          if (!walletAddress || !enabled || status !== 'confirmed' || !Number.isFinite(rate) || rate <= 0) {
+            return null;
+          }
+          return {
+            walletAddress,
+            nickname: String(user.nickname || '').trim() || '판매자',
+            avatar: String(user.avatar || '').trim(),
+            rate,
+            currentUsdtBalance: Number.isFinite(currentUsdtBalance) ? Math.max(0, currentUsdtBalance) : 0,
+            status,
+          };
+        })
+        .filter((item: SellerPreviewItem | null): item is SellerPreviewItem => item !== null);
+
+      normalized.sort((a: SellerPreviewItem, b: SellerPreviewItem) => {
+        if (b.currentUsdtBalance !== a.currentUsdtBalance) {
+          return b.currentUsdtBalance - a.currentUsdtBalance;
+        }
+        return a.rate - b.rate;
+      });
+
+      setSellers(normalized);
+      setSelectedSellerWallet((prev) => {
+        if (sellerWalletFromQuery) {
+          const matched = normalized.find(
+            (item: SellerPreviewItem) => item.walletAddress.toLowerCase() === sellerWalletFromQuery.toLowerCase(),
+          );
+          if (matched) return matched.walletAddress;
+        }
+        if (prev && normalized.some((item: SellerPreviewItem) => item.walletAddress.toLowerCase() === prev.toLowerCase())) {
+          return prev;
+        }
+        return normalized[0]?.walletAddress || '';
+      });
+    } catch (error) {
+      console.error('Failed to load sellers for buy-usdt', error);
+      const message = error instanceof Error ? error.message : '판매자 목록을 불러오지 못했습니다.';
+      setSellersError(message);
+      setSellers([]);
+    } finally {
+      setLoadingSellers(false);
+    }
+  }, [sellerWalletFromQuery]);
+
+  useEffect(() => {
+    loadSellers();
+  }, [loadSellers]);
+
+  useEffect(() => {
+    if (sellerWalletFromQuery) {
+      setSelectedSellerWallet(sellerWalletFromQuery);
+    }
+  }, [sellerWalletFromQuery]);
 
   if (clientSettingsLoading) {
     return (
@@ -246,18 +375,24 @@ export default function WalletManagementHomePage() {
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="mt-4 grid grid-cols-3 gap-2">
                 <Link
                   href={walletPath}
-                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-2 text-xs font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
                 >
                   지갑 관리
                 </Link>
                 <Link
                   href={paymentPath}
-                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-cyan-600 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-500"
+                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-cyan-600 px-2 text-xs font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-500"
                 >
                   결제 진행
+                </Link>
+                <Link
+                  href={buyPath}
+                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-emerald-600 px-2 text-xs font-semibold text-white transition hover:-translate-y-0.5 hover:bg-emerald-500"
+                >
+                  USDT 구매
                 </Link>
               </div>
 
@@ -299,6 +434,82 @@ export default function WalletManagementHomePage() {
               <p className="mt-1 text-slate-500">거래내역 추적</p>
             </div>
           </div>
+        </section>
+
+        <section className="mt-5 rounded-3xl border border-white/70 bg-white/80 p-5 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.42)] backdrop-blur">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">USDT BUY</p>
+              <h2 className="mt-1 text-xl font-semibold text-slate-900">판매자 선택 후 구매 시작</h2>
+            </div>
+            <button
+              type="button"
+              onClick={loadSellers}
+              disabled={loadingSellers}
+              className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loadingSellers ? '불러오는 중...' : '새로고침'}
+            </button>
+          </div>
+
+          <p className="mt-2 text-sm text-slate-600">
+            API에서 판매자 목록을 조회해 조건이 맞는 판매자를 고르고, 구매/채팅/구매신청으로 바로 연결됩니다.
+          </p>
+
+          {sellersError && (
+            <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">
+              {sellersError}
+            </p>
+          )}
+
+          {loadingSellers && sellers.length === 0 && (
+            <p className="mt-3 text-sm text-slate-500">판매자 목록을 불러오는 중입니다...</p>
+          )}
+
+          {!loadingSellers && sellers.length === 0 && !sellersError && (
+            <p className="mt-3 text-sm text-slate-500">현재 구매 가능한 판매자가 없습니다.</p>
+          )}
+
+          {sellers.length > 0 && (
+            <div className="mt-4 grid gap-2">
+              <div className="max-h-[230px] space-y-2 overflow-y-auto pr-1">
+                {sellers.map((seller) => {
+                  const selected =
+                    seller.walletAddress.toLowerCase() === selectedSellerWallet.toLowerCase();
+                  return (
+                    <button
+                      key={seller.walletAddress}
+                      type="button"
+                      onClick={() => setSelectedSellerWallet(seller.walletAddress)}
+                      className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
+                        selected
+                          ? 'border-cyan-300 bg-cyan-50 shadow-[0_12px_26px_-18px_rgba(6,182,212,0.65)]'
+                          : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-sm font-semibold text-slate-900">{seller.nickname}</p>
+                        <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-white">
+                          {seller.rate.toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">{shortAddress(seller.walletAddress)}</p>
+                      <p className="mt-1 text-xs font-semibold text-emerald-700">
+                        판매 가능: {seller.currentUsdtBalance.toLocaleString(undefined, { maximumFractionDigits: 3 })} USDT
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <Link
+                href={buyPath}
+                className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-emerald-600 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-emerald-500"
+              >
+                {selectedSeller ? `${selectedSeller.nickname} 판매자로 USDT 구매 이동` : 'USDT 구매 페이지로 이동'}
+              </Link>
+            </div>
+          )}
         </section>
 
         <div className="mt-5 grid gap-4">
@@ -347,6 +558,31 @@ export default function WalletManagementHomePage() {
               className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-cyan-600 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-500"
             >
               USDT 결제로 이동
+            </Link>
+          </section>
+
+          <section className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.42)] backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">USDT Buy</p>
+                <h2 className="mt-1 text-xl font-semibold text-slate-900">USDT 구매</h2>
+              </div>
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white">
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M6 15.5 10 11.5l2.5 2.5L18 8.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M15 8.5h3v3" strokeLinecap="round" strokeLinejoin="round" />
+                  <rect x="3" y="4" width="18" height="16" rx="2.5" />
+                </svg>
+              </span>
+            </div>
+            <p className="mt-3 text-sm text-slate-600">
+              판매자 매물을 확인하고 채팅과 함께 구매 신청까지 한 화면 흐름으로 진행합니다.
+            </p>
+            <Link
+              href={buyPath}
+              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-emerald-600 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-emerald-500"
+            >
+              USDT 구매로 이동
             </Link>
           </section>
         </div>

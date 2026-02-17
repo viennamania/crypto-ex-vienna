@@ -341,7 +341,6 @@ export default function SendUsdt({ params }: any) {
     Contact_Us,
     Buy_Description,
     Sell_Description,
-    Send_USDT,
     Pay_USDT,
     Coming_Soon,
     Please_connect_your_wallet_first,
@@ -430,6 +429,9 @@ export default function SendUsdt({ params }: any) {
 
   const [amount, setAmount] = useState(0);
   const [amountInput, setAmountInput] = useState('');
+  const amountInputRef = useRef<HTMLInputElement | null>(null);
+  const recipientInputRef = useRef<HTMLInputElement | null>(null);
+  const riskConsentRef = useRef<HTMLDivElement | null>(null);
   const maxAmount = useMemo(() => (
     Number.isFinite(balance) ? Math.max(0, balance) : 0
   ), [balance]);
@@ -1244,6 +1246,122 @@ export default function SendUsdt({ params }: any) {
     return details;
   }, [favoriteHit?.label, recipient?.email, transferRecipientNickname]);
 
+  const recipientWalletAddress = recipient?.walletAddress?.trim() || '';
+  const hasAmountToSend = amount > 0;
+  const hasRecipientWallet = Boolean(recipientWalletAddress);
+  const hasValidRecipientWallet = /^0x[a-fA-F0-9]{40}$/.test(recipientWalletAddress);
+  const needsRiskConsent = Boolean(hasRecipientWallet && !isTrustedRecipient && !consentChecked);
+  const canOpenTransferConfirm = Boolean(
+    address &&
+      hasAmountToSend &&
+      hasValidRecipientWallet &&
+      !addressError &&
+      verifiedOtp &&
+      !needsRiskConsent &&
+      !sending
+  );
+  const withdrawPrimaryLabel = useMemo(() => {
+    if (sending) {
+      return '전송 처리 중...';
+    }
+    if (!hasAmountToSend) {
+      return '출금 금액 입력하기';
+    }
+    if (!hasRecipientWallet) {
+      return recipientMode === 'manual' ? '받는 지갑주소 입력하기' : '받는 지갑 선택하기';
+    }
+    if (!hasValidRecipientWallet || addressError) {
+      return '지갑주소 형식 확인 필요';
+    }
+    if (!verifiedOtp) {
+      return '본인 인증 필요';
+    }
+    if (needsRiskConsent) {
+      return '위험 고지 동의 필요';
+    }
+    return `${formatAmountInput(amount, selectedNetworkConfig.decimals)} USDT 확인 후 전송`;
+  }, [
+    sending,
+    hasAmountToSend,
+    hasRecipientWallet,
+    recipientMode,
+    hasValidRecipientWallet,
+    addressError,
+    verifiedOtp,
+    needsRiskConsent,
+    amount,
+    selectedNetworkConfig.decimals,
+  ]);
+  const withdrawPrimaryGuide = useMemo(() => {
+    if (!hasAmountToSend) {
+      return '먼저 출금할 USDT 금액을 입력해 주세요.';
+    }
+    if (!hasRecipientWallet) {
+      return '받는 지갑주소를 입력하거나 즐겨찾기/회원 검색에서 선택해 주세요.';
+    }
+    if (!hasValidRecipientWallet || addressError) {
+      return '이더리움 지갑주소 형식을 다시 확인해 주세요.';
+    }
+    if (!verifiedOtp) {
+      return '보안을 위해 본인 인증이 완료되어야 전송할 수 있습니다.';
+    }
+    if (needsRiskConsent) {
+      return '신규 주소 전송은 위험 고지 동의가 필요합니다.';
+    }
+    return '확인 모달에서 수신 주소와 전송 금액을 최종 확인한 뒤 진행할 수 있습니다.';
+  }, [
+    hasAmountToSend,
+    hasRecipientWallet,
+    hasValidRecipientWallet,
+    addressError,
+    verifiedOtp,
+    needsRiskConsent,
+  ]);
+
+  const openTransferConfirmWithCta = () => {
+    if (sending) {
+      return;
+    }
+    if (!address) {
+      toast.error('지갑을 먼저 연결해 주세요.');
+      return;
+    }
+    if (!hasAmountToSend) {
+      amountInputRef.current?.focus();
+      toast.error('출금 금액을 입력해 주세요.');
+      return;
+    }
+    if (!hasRecipientWallet) {
+      if (recipientMode !== 'manual') {
+        setRecipientMode('manual');
+      }
+      setTimeout(() => recipientInputRef.current?.focus(), 0);
+      toast.error('받는 지갑주소를 입력해 주세요.');
+      return;
+    }
+    if (!hasValidRecipientWallet || addressError) {
+      if (recipientMode !== 'manual') {
+        setRecipientMode('manual');
+      }
+      setTimeout(() => recipientInputRef.current?.focus(), 0);
+      toast.error('받는사람 지갑주소 형식을 확인해 주세요.');
+      return;
+    }
+    if (!verifiedOtp) {
+      toast.error('본인 인증이 필요합니다.');
+      return;
+    }
+    if (needsRiskConsent) {
+      riskConsentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      toast.error('위험 고지 동의 후 전송해 주세요.');
+      return;
+    }
+
+    setTransferModalPhase('confirm');
+    setTransferResult({ ok: false, message: '' });
+    setShowTransferConfirm(true);
+  };
+
   
   useEffect(() => {
     const wallet = recipient?.walletAddress?.trim();
@@ -1511,6 +1629,41 @@ export default function SendUsdt({ params }: any) {
               <p className="text-sm text-slate-500">{Enter_the_amount_and_recipient_address}</p>
             </div>
 
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm ${
+                canOpenTransferConfirm
+                  ? 'border-emerald-200 bg-emerald-50'
+                  : 'border-slate-200 bg-slate-50'
+              }`}
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">출금 준비 상태</p>
+              <div className="mt-2 grid gap-1 text-xs">
+                <div className={`font-semibold ${hasAmountToSend ? 'text-emerald-700' : 'text-slate-500'}`}>
+                  1. 금액 입력 {hasAmountToSend ? '완료' : '필요'}
+                </div>
+                <div className={`font-semibold ${hasValidRecipientWallet ? 'text-emerald-700' : 'text-slate-500'}`}>
+                  2. 수신 지갑 확인 {hasValidRecipientWallet ? '완료' : '필요'}
+                </div>
+                <div
+                  className={`font-semibold ${
+                    !hasRecipientWallet
+                      ? 'text-slate-500'
+                      : !needsRiskConsent
+                      ? 'text-emerald-700'
+                      : 'text-rose-600'
+                  }`}
+                >
+                  3. 위험 고지 동의 {hasRecipientWallet ? (!needsRiskConsent ? '완료' : '필요') : '대기'}
+                </div>
+              </div>
+              <p className={`mt-2 font-semibold ${canOpenTransferConfirm ? 'text-emerald-800' : 'text-slate-800'}`}>
+                {withdrawPrimaryLabel}
+              </p>
+              <p className={`mt-1 text-xs ${canOpenTransferConfirm ? 'text-emerald-700' : 'text-slate-600'}`}>
+                {withdrawPrimaryGuide}
+              </p>
+            </div>
+
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-3">
@@ -1527,6 +1680,7 @@ export default function SendUsdt({ params }: any) {
                 </div>
                 <div className="relative">
                   <input
+                    ref={amountInputRef}
                     disabled={sending}
                     type="text"
                     inputMode="decimal"
@@ -1576,6 +1730,7 @@ export default function SendUsdt({ params }: any) {
                     {recipientMode === 'manual' ? (
                       <div className="flex flex-col gap-4 items-center justify-between">
                         <input
+                        ref={recipientInputRef}
                         disabled={sending}
                         type="text"
                         placeholder={User_wallet_address}
@@ -1691,7 +1846,10 @@ export default function SendUsdt({ params }: any) {
                         )}
 
                         {!isTrustedRecipient && recipient.walletAddress && !addressError && (
-                          <div className="flex flex-col gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-3 text-xs text-rose-700">
+                          <div
+                            ref={riskConsentRef}
+                            className="flex flex-col gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-3 text-xs text-rose-700"
+                          >
                             <div className="flex items-center gap-2 font-semibold">
                               <div className="h-2.5 w-2.5 rounded-full bg-rose-500"></div>
                               <span>주의: 자주 쓰는 지갑/등록 회원이 아닌 주소입니다.</span>
@@ -2017,30 +2175,24 @@ export default function SendUsdt({ params }: any) {
 
 
                 <button
-                  disabled={
-                    !address ||
-                    !recipient?.walletAddress ||
-                    !amount ||
-                    sending ||
-                    !verifiedOtp ||
-                    (!isTrustedRecipient && !consentChecked)
-                  }
-                  onClick={() => {
-                    setTransferModalPhase('confirm');
-                    setTransferResult({ ok: false, message: '' });
-                    setShowTransferConfirm(true);
-                  }}
-                  className={`mt-2 w-full rounded-md border px-4 py-3 text-lg font-medium transition-all duration-200 ease-in-out
+                  disabled={sending}
+                  onClick={openTransferConfirmWithCta}
+                  className={`mt-2 w-full rounded-xl border px-4 py-3 text-lg font-medium transition-all duration-200 ease-in-out
                       ${sending ? 'animate-pulse' : ''}
                       ${
-                      !address || !recipient?.walletAddress || !amount || sending || !verifiedOtp || (!isTrustedRecipient && !consentChecked)
-                      ?'border-slate-200 bg-white text-slate-300 cursor-not-allowed'
-                      : 'border-slate-900 bg-white text-slate-900 hover:border-slate-600 hover:text-slate-700'
+                      canOpenTransferConfirm
+                      ? 'border-cyan-700 bg-cyan-700 text-white shadow-[0_16px_34px_-20px_rgba(14,116,144,0.85)] hover:-translate-y-0.5 hover:bg-cyan-600'
+                      : 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
                       }
+                      disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed
                     `}
                 >
-                    {Send_USDT}
+                    {withdrawPrimaryLabel}
                 </button>
+
+                <p className="mt-2 text-xs text-slate-500">
+                  {withdrawPrimaryGuide}
+                </p>
 
           </div>
           )}

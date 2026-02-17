@@ -3383,11 +3383,12 @@ export async function cancelPrivateBuyOrderByBuyer(
   const client = await clientPromise;
   const buyordersCollection = client.db(dbName).collection('buyorders');
   const usersCollection = client.db(dbName).collection('users');
+  const buyerReputationLogsCollection = client.db(dbName).collection('buyer_reputation_logs');
   const objectId = new ObjectId(orderId);
 
   const order = await buyordersCollection.findOne<any>(
     { _id: objectId },
-    { projection: { walletAddress: 1, buyer: 1, seller: 1, usdtAmount: 1, privateSale: 1, status: 1 } },
+    { projection: { walletAddress: 1, buyer: 1, seller: 1, usdtAmount: 1, privateSale: 1, status: 1, tradeId: 1 } },
   );
 
   if (!order || order.privateSale !== true) {
@@ -3568,6 +3569,85 @@ export async function cancelPrivateBuyOrderByBuyer(
     },
     { $set: { 'buyer.buyOrderStatus': 'cancelled' } },
   );
+
+  // Buyer reputation update + dedicated history log collection.
+  // Keep cancellation success independent from reputation logging failures.
+  try {
+    const buyerWalletRegex = {
+      $regex: `^${String(orderBuyerWalletAddress).replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}$`,
+      $options: 'i',
+    };
+    const buyerUser = await usersCollection.findOne<any>(
+      {
+        walletAddress: buyerWalletRegex,
+        storecode: 'admin',
+      },
+      {
+        projection: {
+          walletAddress: 1,
+          nickname: 1,
+          buyer: 1,
+        },
+      },
+    );
+
+    const penaltyPoints = 1;
+    const prevCancelCountRaw = Number(buyerUser?.buyer?.cancelCount);
+    const prevCancelCount = Number.isFinite(prevCancelCountRaw) ? Math.max(0, Math.floor(prevCancelCountRaw)) : 0;
+    const nextCancelCount = prevCancelCount + 1;
+
+    const prevReputationScoreRaw = Number(buyerUser?.buyer?.reputationScore);
+    const prevReputationScore = Number.isFinite(prevReputationScoreRaw)
+      ? Math.max(0, prevReputationScoreRaw)
+      : 100;
+    const nextReputationScore = Math.max(0, prevReputationScore - penaltyPoints);
+
+    await usersCollection.updateOne(
+      {
+        walletAddress: buyerWalletRegex,
+        storecode: 'admin',
+      },
+      {
+        $set: {
+          'buyer.buyOrderStatus': 'cancelled',
+          'buyer.cancelCount': nextCancelCount,
+          'buyer.reputationScore': nextReputationScore,
+          'buyer.reputationUpdatedAt': now,
+          'buyer.reputationLastPenalty': {
+            type: 'BUYER_CANCEL_PRIVATE_TRADE',
+            reason: '구매자 요청 취소',
+            penaltyPoints,
+            orderId: orderId,
+            tradeId: String(order?.tradeId || ''),
+            appliedAt: now,
+          },
+        },
+      },
+    );
+
+    await buyerReputationLogsCollection.insertOne({
+      type: 'BUYER_CANCEL_PRIVATE_TRADE',
+      reason: '구매자 요청 취소',
+      storecode: 'admin',
+      orderId: orderId,
+      tradeId: String(order?.tradeId || ''),
+      buyerWalletAddress: String(buyerUser?.walletAddress || orderBuyerWalletAddress || '').trim(),
+      buyerNickname: String(buyerUser?.nickname || '').trim(),
+      sellerWalletAddress:
+        String(order?.seller?.walletAddress || sellerWalletAddress || '').trim(),
+      statusBeforeCancel: 'paymentRequested',
+      statusAfterCancel: 'cancelled',
+      penaltyPoints,
+      reputationScoreBefore: prevReputationScore,
+      reputationScoreAfter: nextReputationScore,
+      cancelCountBefore: prevCancelCount,
+      cancelCountAfter: nextCancelCount,
+      rollbackTransactionHash: rollbackTransactionHash || '',
+      createdAt: now,
+    });
+  } catch (reputationError) {
+    console.error('cancelPrivateBuyOrderByBuyer: failed to update buyer reputation history', reputationError);
+  }
 
   return true;
 }
@@ -3825,6 +3905,10 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
     usdtAmount: number;
     paymentMethod: string;
     paymentBankName: string;
+    paymentAccountNumber: string;
+    paymentAccountHolder: string;
+    paymentContactMemo: string;
+    isContactTransfer: boolean;
     buyerWalletAddress: string;
     sellerWalletAddress: string;
   } | null;
@@ -3861,6 +3945,8 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
       {
         projection: {
           'seller.escrowWalletAddress': 1,
+          'seller.bankInfo': 1,
+          'seller.paymentMethods': 1,
         },
         maxTimeMS: 2500,
       },
@@ -3927,6 +4013,50 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
     }
 
     const status = typeof order?.status === 'string' ? order.status : '';
+    const orderSellerBankInfo =
+      order?.seller?.bankInfo && typeof order.seller.bankInfo === 'object'
+        ? order.seller.bankInfo
+        : {};
+    const sellerUserBankInfo =
+      sellerUser?.seller?.bankInfo && typeof sellerUser.seller.bankInfo === 'object'
+        ? sellerUser.seller.bankInfo
+        : {};
+
+    const paymentBankName =
+      (typeof orderSellerBankInfo?.bankName === 'string' && orderSellerBankInfo.bankName.trim())
+      || (typeof sellerUserBankInfo?.bankName === 'string' && sellerUserBankInfo.bankName.trim())
+      || '';
+    const paymentAccountNumber =
+      (typeof orderSellerBankInfo?.accountNumber === 'string' && orderSellerBankInfo.accountNumber.trim())
+      || (typeof sellerUserBankInfo?.accountNumber === 'string' && sellerUserBankInfo.accountNumber.trim())
+      || '';
+    const paymentAccountHolder =
+      (typeof orderSellerBankInfo?.accountHolder === 'string' && orderSellerBankInfo.accountHolder.trim())
+      || (typeof sellerUserBankInfo?.accountHolder === 'string' && sellerUserBankInfo.accountHolder.trim())
+      || '';
+    const paymentContactMemo =
+      (typeof orderSellerBankInfo?.contactMemo === 'string' && orderSellerBankInfo.contactMemo.trim())
+      || (typeof sellerUserBankInfo?.contactMemo === 'string' && sellerUserBankInfo.contactMemo.trim())
+      || '';
+
+    const orderPaymentMethods = Array.isArray(order?.seller?.paymentMethods)
+      ? order.seller.paymentMethods
+          .map((item: any) => String(item || '').trim())
+          .filter(Boolean)
+      : [];
+    const sellerUserPaymentMethods = Array.isArray(sellerUser?.seller?.paymentMethods)
+      ? sellerUser.seller.paymentMethods
+          .map((item: any) => String(item || '').trim())
+          .filter(Boolean)
+      : [];
+    const paymentMethod =
+      (typeof order?.paymentMethod === 'string' && order.paymentMethod.trim())
+      || orderPaymentMethods[0]
+      || sellerUserPaymentMethods[0]
+      || '';
+    const isContactTransfer =
+      paymentBankName === '연락처송금'
+      || String(paymentMethod).trim().toLowerCase() === 'contact';
 
     const normalizedOrder = {
       orderId: order?._id?.toString?.() || '',
@@ -3939,10 +4069,12 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
       cancelledAt: typeof order?.cancelledAt === 'string' ? order.cancelledAt : '',
       krwAmount: typeof order?.krwAmount === 'number' ? order.krwAmount : 0,
       usdtAmount: typeof order?.usdtAmount === 'number' ? order.usdtAmount : 0,
-      paymentMethod: typeof order?.paymentMethod === 'string' ? order.paymentMethod : '',
-      paymentBankName:
-        (typeof order?.seller?.bankInfo?.bankName === 'string' && order.seller.bankInfo.bankName)
-        || '',
+      paymentMethod,
+      paymentBankName,
+      paymentAccountNumber,
+      paymentAccountHolder,
+      paymentContactMemo,
+      isContactTransfer,
       buyerWalletAddress:
         (typeof order?.buyer?.walletAddress === 'string' && order.buyer.walletAddress)
         || (typeof order?.walletAddress === 'string' ? order.walletAddress : ''),
@@ -9670,6 +9802,24 @@ export async function acceptBuyOrderPrivateSale(
         ? seller.walletAddress.trim()
         : normalizedSellerWalletAddress;
 
+    const sellerBankInfo =
+      seller?.seller?.bankInfo && typeof seller.seller.bankInfo === 'object'
+        ? seller.seller.bankInfo
+        : {};
+    const sellerPaymentMethods = Array.isArray(seller?.seller?.paymentMethods)
+      ? seller.seller.paymentMethods
+          .map((item: any) => String(item || '').trim())
+          .filter(Boolean)
+      : [];
+    const sellerBankName = String(sellerBankInfo?.bankName || '').trim();
+    const sellerAccountNumber = String(sellerBankInfo?.accountNumber || '').trim();
+    const sellerAccountHolder = String(sellerBankInfo?.accountHolder || '').trim();
+    const sellerContactMemo = String(sellerBankInfo?.contactMemo || '').trim();
+    const isSellerContactTransfer = sellerBankName === '연락처송금';
+    const normalizedPaymentMethod =
+      sellerPaymentMethods[0]
+      || (isSellerContactTransfer ? 'contact' : (sellerBankName ? 'bank' : ''));
+
 
 
     // get buyer information from users collection
@@ -9845,6 +9995,8 @@ export async function acceptBuyOrderPrivateSale(
       usdtAmount: normalizedUsdtAmount,
       rate: usdtToKrwRate,
       krwAmount: normalizedKrwAmount,
+      paymentMethod: normalizedPaymentMethod,
+      paymentBankName: sellerBankName,
       storecode: 'admin',
       totalAmount: normalizedUsdtAmount,
       status: 'paymentRequested',
@@ -9868,6 +10020,13 @@ export async function acceptBuyOrderPrivateSale(
         nickname: seller.nickname || '',
         avatar: seller.avatar || '',
         storecode: seller.storecode || '',
+        paymentMethods: sellerPaymentMethods,
+        bankInfo: {
+          bankName: sellerBankName,
+          accountNumber: sellerAccountNumber,
+          accountHolder: sellerAccountHolder,
+          contactMemo: sellerContactMemo,
+        },
       },
     };
 

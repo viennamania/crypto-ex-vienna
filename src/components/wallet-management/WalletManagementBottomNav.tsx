@@ -5,11 +5,11 @@ import { useSearchParams } from 'next/navigation';
 
 type WalletManagementBottomNavProps = {
   lang: string;
-  active: 'home' | 'wallet' | 'payment';
+  active: 'home' | 'wallet' | 'payment' | 'buy';
 };
 
 const NAV_ITEMS: Array<{
-  key: 'home' | 'wallet' | 'payment';
+  key: 'home' | 'wallet' | 'payment' | 'buy';
   label: string;
   href: (lang: string) => string;
   icon: JSX.Element;
@@ -26,7 +26,7 @@ const NAV_ITEMS: Array<{
   },
   {
     key: 'wallet',
-    label: 'USDT 지갑',
+    label: '지갑',
     href: (lang) => `/${lang}/wallet-management/wallet-usdt`,
     icon: (
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -37,12 +37,24 @@ const NAV_ITEMS: Array<{
   },
   {
     key: 'payment',
-    label: 'USDT 결제',
+    label: '결제',
     href: (lang) => `/${lang}/wallet-management/payment-usdt`,
     icon: (
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
         <rect x="3" y="5" width="18" height="14" rx="2.5" />
         <path d="M7 9h10M7 13h5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    key: 'buy',
+    label: '구매',
+    href: (lang) => `/${lang}/wallet-management/buy-usdt`,
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M6 15.5 10 11.5l2.5 2.5L18 8.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M15 8.5h3v3" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="3" y="4" width="18" height="16" rx="2.5" />
       </svg>
     ),
   },
@@ -54,10 +66,19 @@ export default function WalletManagementBottomNav({
 }: WalletManagementBottomNavProps) {
   const searchParams = useSearchParams();
   const storecode = String(searchParams?.get('storecode') || '').trim();
+  const seller = String(searchParams?.get('seller') || '').trim();
 
-  const withStorecode = (href: string) => {
-    if (!storecode) return href;
-    return `${href}?storecode=${encodeURIComponent(storecode)}`;
+  const withQuery = (href: string, navKey: 'home' | 'wallet' | 'payment' | 'buy') => {
+    const query = new URLSearchParams();
+    if (storecode) {
+      query.set('storecode', storecode);
+    }
+    if (navKey === 'buy' && seller) {
+      query.set('seller', seller);
+    }
+    const queryString = query.toString();
+    if (!queryString) return href;
+    return `${href}?${queryString}`;
   };
 
   return (
@@ -68,7 +89,7 @@ export default function WalletManagementBottomNav({
           return (
             <Link
               key={item.key}
-              href={withStorecode(item.href(lang))}
+              href={withQuery(item.href(lang), item.key)}
               className={`flex flex-1 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition ${
                 isActive
                   ? 'border-slate-900 bg-slate-900 text-white shadow-md'
