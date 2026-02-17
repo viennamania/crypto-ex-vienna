@@ -16,6 +16,7 @@ import {
 
 type ChainKey = "ethereum" | "polygon" | "arbitrum" | "bsc";
 type PaymentStatus = "prepared" | "confirmed";
+type CollectStatus = "REQUESTING" | "QUEUED" | "SUBMITTED" | "CONFIRMED" | "FAILED";
 type BankInfoSnapshot = Record<string, unknown>;
 type PaymentMemberSnapshot = {
   nickname: string;
@@ -42,6 +43,25 @@ type WalletPaymentDocument = {
   member?: PaymentMemberSnapshot;
 };
 
+type WalletCollectDocument = {
+  _id?: ObjectId;
+  storecode: string;
+  storeName: string;
+  chain?: ChainKey;
+  fromWalletAddress: string;
+  toWalletAddress: string;
+  requestedByWalletAddress: string;
+  requestedAmount: number;
+  transactionId: string;
+  status: CollectStatus;
+  onchainStatus?: string;
+  transactionHash?: string;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
+  confirmedAt?: string;
+};
+
 const SUPPORTED_CHAINS: ChainKey[] = ["ethereum", "polygon", "arbitrum", "bsc"];
 const CHAIN_TO_TOKEN_DECIMALS: Record<ChainKey, number> = {
   ethereum: 6,
@@ -65,6 +85,20 @@ const normalizeAddress = (value: unknown) => String(value || "").trim().toLowerC
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const normalizeCollectStatus = (value: unknown): CollectStatus => {
+  const status = String(value || "").trim().toUpperCase();
+  if (
+    status === "REQUESTING" ||
+    status === "QUEUED" ||
+    status === "SUBMITTED" ||
+    status === "CONFIRMED" ||
+    status === "FAILED"
+  ) {
+    return status;
+  }
+  return "QUEUED";
+};
 
 const normalizeAmount = (value: unknown) => {
   const amount = Number(value);
@@ -119,12 +153,32 @@ const serializePayment = (doc: WalletPaymentDocument & { _id?: ObjectId }) => ({
   member: doc.member || null,
 });
 
+const serializeCollect = (doc: WalletCollectDocument & { _id?: ObjectId }) => ({
+  id: doc._id?.toString() || "",
+  storecode: doc.storecode,
+  storeName: doc.storeName,
+  chain: doc.chain || "",
+  fromWalletAddress: doc.fromWalletAddress,
+  toWalletAddress: doc.toWalletAddress,
+  requestedByWalletAddress: doc.requestedByWalletAddress,
+  requestedAmount: Number(doc.requestedAmount || 0),
+  transactionId: doc.transactionId,
+  status: doc.status,
+  onchainStatus: doc.onchainStatus || "",
+  transactionHash: doc.transactionHash || "",
+  error: doc.error || "",
+  createdAt: doc.createdAt,
+  updatedAt: doc.updatedAt,
+  confirmedAt: doc.confirmedAt || "",
+});
+
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const action = String(body?.action || "").trim().toLowerCase();
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection<WalletPaymentDocument>("walletUsdtPayments");
+  const collectCollection = client.db(dbName).collection<WalletCollectDocument>("walletUsdtCollects");
 
   if (action === "prepare") {
     const storecode = String(body?.storecode || "").trim();
@@ -570,6 +624,34 @@ export async function POST(request: NextRequest) {
         executionStatus = "QUEUED";
       }
 
+      const now = new Date().toISOString();
+      const collectStatus = normalizeCollectStatus(executionStatus);
+      await collectCollection.updateOne(
+        { transactionId },
+        {
+          $set: {
+            storecode: String(store?.storecode || storecode),
+            storeName: String(store?.storeName || storecode),
+            chain,
+            fromWalletAddress: normalizeAddress(paymentWalletAddress),
+            toWalletAddress: normalizedToWalletAddress,
+            requestedByWalletAddress: adminWalletAddress,
+            requestedAmount: walletBalance,
+            transactionId,
+            status: collectStatus,
+            onchainStatus: "",
+            transactionHash: "",
+            error: "",
+            updatedAt: now,
+            ...(collectStatus === "CONFIRMED" ? { confirmedAt: now } : {}),
+          },
+          $setOnInsert: {
+            createdAt: now,
+          },
+        },
+        { upsert: true }
+      );
+
       return NextResponse.json({
         result: {
           storecode: String(store?.storecode || storecode),
@@ -578,7 +660,7 @@ export async function POST(request: NextRequest) {
           transferredAmount: walletBalance,
           chain,
           transactionId,
-          status: executionStatus,
+          status: collectStatus,
         },
       });
     } catch (collectError) {
@@ -629,7 +711,7 @@ export async function POST(request: NextRequest) {
         transactionId,
       });
 
-      const status = String(executionResult?.status || "").toUpperCase();
+      const status = normalizeCollectStatus(executionResult?.status || "");
       const fromWalletAddress = normalizeAddress(executionResult?.from || "");
       if (fromWalletAddress && fromWalletAddress !== paymentWalletAddress) {
         return NextResponse.json({ error: "transaction does not belong to this store payment wallet" }, { status: 403 });
@@ -647,6 +729,32 @@ export async function POST(request: NextRequest) {
         executionResult && "error" in executionResult
           ? String(executionResult.error || "")
           : "";
+      const now = new Date().toISOString();
+
+      await collectCollection.updateOne(
+        { transactionId },
+        {
+          $set: {
+            storecode: String(store?.storecode || storecode),
+            storeName: String(store?.storeName || storecode),
+            fromWalletAddress: paymentWalletAddress,
+            toWalletAddress: storeAdminWalletAddress,
+            requestedByWalletAddress: adminWalletAddress,
+            transactionId,
+            status,
+            onchainStatus,
+            transactionHash,
+            error,
+            updatedAt: now,
+            ...(status === "CONFIRMED" ? { confirmedAt: now } : {}),
+          },
+          $setOnInsert: {
+            requestedAmount: 0,
+            createdAt: now,
+          },
+        },
+        { upsert: true }
+      );
 
       return NextResponse.json({
         result: {
@@ -663,6 +771,30 @@ export async function POST(request: NextRequest) {
       const message =
         collectStatusError instanceof Error ? collectStatusError.message : "failed to get collect transaction status";
       if (message.toLowerCase().includes("not found")) {
+        const now = new Date().toISOString();
+        await collectCollection.updateOne(
+          { transactionId },
+          {
+            $set: {
+              storecode: String(store?.storecode || storecode),
+              storeName: String(store?.storeName || storecode),
+              fromWalletAddress: paymentWalletAddress,
+              toWalletAddress: storeAdminWalletAddress,
+              requestedByWalletAddress: adminWalletAddress,
+              transactionId,
+              status: "QUEUED",
+              onchainStatus: "",
+              transactionHash: "",
+              error: "",
+              updatedAt: now,
+            },
+            $setOnInsert: {
+              requestedAmount: 0,
+              createdAt: now,
+            },
+          },
+          { upsert: true }
+        );
         return NextResponse.json({
           result: {
             storecode: String(store?.storecode || storecode),
@@ -678,6 +810,41 @@ export async function POST(request: NextRequest) {
       console.error("wallet payment-usdt collect-status error", collectStatusError);
       return NextResponse.json({ error: "failed to get collect transaction status" }, { status: 500 });
     }
+  }
+
+  if (action === "collect-history") {
+    const storecode = String(body?.storecode || "").trim();
+    const adminWalletAddress = normalizeAddress(body?.adminWalletAddress);
+    const limit = Math.min(Math.max(Number(body?.limit || 30), 1), 100);
+
+    if (!storecode) {
+      return NextResponse.json({ error: "storecode is required" }, { status: 400 });
+    }
+    if (!adminWalletAddress) {
+      return NextResponse.json({ error: "adminWalletAddress is required" }, { status: 400 });
+    }
+
+    const store = await getStoreByStorecode({ storecode });
+    if (!store) {
+      return NextResponse.json({ error: "store not found" }, { status: 404 });
+    }
+
+    const storeAdminWalletAddress = normalizeAddress(store?.adminWalletAddress);
+    if (!storeAdminWalletAddress || storeAdminWalletAddress !== adminWalletAddress) {
+      return NextResponse.json({ error: "not authorized for this store" }, { status: 403 });
+    }
+
+    const history = await collectCollection
+      .find({
+        storecode: { $regex: `^${escapeRegex(storecode)}$`, $options: "i" },
+      })
+      .sort({ createdAt: -1, updatedAt: -1 })
+      .limit(limit)
+      .toArray();
+
+    return NextResponse.json({
+      result: history.map((item) => serializeCollect(item)),
+    });
   }
 
   return NextResponse.json({ error: "unsupported action" }, { status: 400 });

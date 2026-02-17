@@ -84,6 +84,25 @@ type DashboardPayload = {
   payments: PaymentRecord[];
 };
 
+type CollectHistoryRecord = {
+  id: string;
+  storecode: string;
+  storeName: string;
+  chain: ChainKey | '';
+  fromWalletAddress: string;
+  toWalletAddress: string;
+  requestedByWalletAddress: string;
+  requestedAmount: number;
+  transactionId: string;
+  status: 'REQUESTING' | 'QUEUED' | 'SUBMITTED' | 'CONFIRMED' | 'FAILED';
+  onchainStatus: string;
+  transactionHash: string;
+  error: string;
+  createdAt: string;
+  updatedAt: string;
+  confirmedAt: string;
+};
+
 type CollectEngineStatus =
   | 'IDLE'
   | 'REQUESTING'
@@ -99,6 +118,14 @@ const collectStatusLabelMap: Record<CollectEngineStatus, string> = {
   SUBMITTED: '블록체인 전송 중',
   CONFIRMED: '전송 완료',
   FAILED: '실패',
+};
+
+const collectHistoryStatusClassMap: Record<CollectHistoryRecord['status'], string> = {
+  REQUESTING: 'bg-slate-100 text-slate-700',
+  QUEUED: 'bg-amber-100 text-amber-700',
+  SUBMITTED: 'bg-cyan-100 text-cyan-700',
+  CONFIRMED: 'bg-emerald-100 text-emerald-700',
+  FAILED: 'bg-rose-100 text-rose-700',
 };
 
 const formatKrw = (value: number) =>
@@ -241,6 +268,10 @@ export default function P2PPaymentManagementPage() {
   const [collectTransactionHash, setCollectTransactionHash] = useState('');
   const [collectProgressMessage, setCollectProgressMessage] = useState('');
   const [collectEngineStatus, setCollectEngineStatus] = useState<CollectEngineStatus>('IDLE');
+  const [isCollectHistoryModalOpen, setIsCollectHistoryModalOpen] = useState(false);
+  const [collectHistoryLoading, setCollectHistoryLoading] = useState(false);
+  const [collectHistoryError, setCollectHistoryError] = useState<string | null>(null);
+  const [collectHistory, setCollectHistory] = useState<CollectHistoryRecord[]>([]);
 
   const loadDashboard = useCallback(async () => {
     if (!walletAddress || !storecode) {
@@ -353,6 +384,90 @@ export default function P2PPaymentManagementPage() {
     [collectEngineStatus],
   );
 
+  const loadCollectHistory = useCallback(async () => {
+    if (!walletAddress || !storecode) {
+      setCollectHistory([]);
+      return;
+    }
+
+    setCollectHistoryLoading(true);
+    setCollectHistoryError(null);
+    try {
+      const response = await fetch('/api/wallet/payment-usdt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'collect-history',
+          storecode,
+          adminWalletAddress: walletAddress,
+          limit: 50,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === 'string'
+            ? payload.error
+            : '회수 내역을 불러오지 못했습니다.',
+        );
+      }
+
+      const source = Array.isArray(payload?.result) ? payload.result : [];
+      const normalized = source.map((item: any) => {
+        const statusValue = String(item?.status || '')
+          .trim()
+          .toUpperCase();
+        const status: CollectHistoryRecord['status'] =
+          statusValue === 'REQUESTING' ||
+          statusValue === 'QUEUED' ||
+          statusValue === 'SUBMITTED' ||
+          statusValue === 'CONFIRMED' ||
+          statusValue === 'FAILED'
+            ? statusValue
+            : 'QUEUED';
+
+        const chainValue = String(item?.chain || '')
+          .trim()
+          .toLowerCase();
+        const chain: CollectHistoryRecord['chain'] =
+          chainValue === 'ethereum' ||
+          chainValue === 'polygon' ||
+          chainValue === 'arbitrum' ||
+          chainValue === 'bsc'
+            ? (chainValue as ChainKey)
+            : '';
+
+        return {
+          id: String(item?.id || ''),
+          storecode: String(item?.storecode || ''),
+          storeName: String(item?.storeName || ''),
+          chain,
+          fromWalletAddress: String(item?.fromWalletAddress || ''),
+          toWalletAddress: String(item?.toWalletAddress || ''),
+          requestedByWalletAddress: String(item?.requestedByWalletAddress || ''),
+          requestedAmount: Number(item?.requestedAmount || 0),
+          transactionId: String(item?.transactionId || ''),
+          status,
+          onchainStatus: String(item?.onchainStatus || ''),
+          transactionHash: String(item?.transactionHash || ''),
+          error: String(item?.error || ''),
+          createdAt: String(item?.createdAt || ''),
+          updatedAt: String(item?.updatedAt || ''),
+          confirmedAt: String(item?.confirmedAt || ''),
+        } satisfies CollectHistoryRecord;
+      });
+
+      setCollectHistory(normalized);
+    } catch (historyError: unknown) {
+      const message =
+        historyError instanceof Error ? historyError.message : '회수 내역 조회 중 오류가 발생했습니다.';
+      setCollectHistoryError(message);
+      setCollectHistory([]);
+    } finally {
+      setCollectHistoryLoading(false);
+    }
+  }, [storecode, walletAddress]);
+
   useEffect(() => {
     if (!collectingBalance) return undefined;
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -379,11 +494,22 @@ export default function P2PPaymentManagementPage() {
     setIsCollectModalOpen(true);
   };
 
+  const openCollectHistoryModal = useCallback(() => {
+    setIsCollectHistoryModalOpen(true);
+    void loadCollectHistory();
+  }, [loadCollectHistory]);
+
   const closeCollectModal = useCallback(() => {
     if (collectingBalance) return;
     setIsCollectModalOpen(false);
     setCollectModalError(null);
   }, [collectingBalance]);
+
+  const closeCollectHistoryModal = useCallback(() => {
+    if (collectHistoryLoading) return;
+    setIsCollectHistoryModalOpen(false);
+    setCollectHistoryError(null);
+  }, [collectHistoryLoading]);
 
   const pollCollectStatus = useCallback(
     async (transactionId: string) => {
@@ -522,6 +648,7 @@ export default function P2PPaymentManagementPage() {
       setPaymentWalletBalanceError(null);
       await loadDashboard();
       await loadPaymentWalletBalance();
+      void loadCollectHistory();
     } catch (collectError: unknown) {
       const message = collectError instanceof Error ? collectError.message : '잔고 회수 중 오류가 발생했습니다.';
       setCollectEngineStatus('FAILED');
@@ -536,6 +663,7 @@ export default function P2PPaymentManagementPage() {
     collectingBalance,
     dashboard,
     loadDashboard,
+    loadCollectHistory,
     loadPaymentWalletBalance,
     pollCollectStatus,
     storecode,
@@ -682,6 +810,14 @@ export default function P2PPaymentManagementPage() {
                         className="inline-flex items-center rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         회수하기
+                      </button>
+                      <button
+                        type="button"
+                        onClick={openCollectHistoryModal}
+                        disabled={collectingBalance}
+                        className="inline-flex items-center rounded-full border border-cyan-300 bg-white/80 px-3 py-1.5 text-xs font-semibold text-cyan-700 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        회수내역
                       </button>
                     </div>
 
@@ -970,6 +1106,132 @@ export default function P2PPaymentManagementPage() {
                   ? '전송 완료'
                   : '전액 회수하기'}
               </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {isCollectHistoryModalOpen && dashboard && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center px-4 py-6">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-950/55 backdrop-blur-[2px]"
+            onClick={closeCollectHistoryModal}
+            aria-label="회수내역 모달 닫기"
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="결제지갑 회수 내역"
+            className="relative z-[1201] w-full max-w-3xl rounded-3xl border border-cyan-100 bg-white p-5 shadow-[0_30px_90px_-45px_rgba(8,145,178,0.75)]"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-cyan-700">Collect History</p>
+                <h3 className="mt-1 text-lg font-bold text-slate-900">결제지갑 회수 내역</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  가맹점 결제지갑에서 관리자 지갑으로 회수한 이력을 확인합니다.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void loadCollectHistory();
+                  }}
+                  disabled={collectHistoryLoading}
+                  className="inline-flex h-9 items-center rounded-full border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  새로고침
+                </button>
+                <button
+                  type="button"
+                  onClick={closeCollectHistoryModal}
+                  disabled={collectHistoryLoading}
+                  className="inline-flex h-9 items-center rounded-full bg-slate-900 px-3 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+
+            {collectHistoryError && (
+              <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                {collectHistoryError}
+              </p>
+            )}
+
+            <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+              {collectHistoryLoading ? (
+                <div className="space-y-2 p-3">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={`collect-history-loading-${index}`} className="h-10 animate-pulse rounded-xl bg-slate-100" />
+                  ))}
+                </div>
+              ) : collectHistory.length === 0 ? (
+                <div className="px-3 py-10 text-center text-sm text-slate-500">회수 내역이 없습니다.</div>
+              ) : (
+                <div className="max-h-[60vh] overflow-auto">
+                  <table className="w-full min-w-[880px]">
+                    <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.14em] text-slate-500">
+                      <tr>
+                        <th className="px-3 py-2">요청시각</th>
+                        <th className="px-3 py-2">상태</th>
+                        <th className="px-3 py-2 text-right">회수량</th>
+                        <th className="px-3 py-2">결제지갑</th>
+                        <th className="px-3 py-2">수신지갑</th>
+                        <th className="px-3 py-2">네트워크</th>
+                        <th className="px-3 py-2">TX</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+                      {collectHistory.map((item) => {
+                        const txBase = item.chain ? txExplorerMap[item.chain] : '';
+                        const txUrl = txBase && item.transactionHash ? `${txBase}${item.transactionHash}` : '';
+                        const chainLabel = item.chain ? chainLabelMap[item.chain] : '-';
+                        const statusLabel =
+                          collectStatusLabelMap[item.status] || item.status;
+                        return (
+                          <tr key={item.id || item.transactionId}>
+                            <td className="px-3 py-2 text-xs text-slate-500">{toDateTime(item.createdAt)}</td>
+                            <td className="px-3 py-2">
+                              <span
+                                className={`inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold ${collectHistoryStatusClassMap[item.status]}`}
+                              >
+                                {statusLabel}
+                              </span>
+                              {item.error && (
+                                <p className="mt-1 text-[11px] text-rose-600">{item.error}</p>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-right font-semibold text-slate-900">{formatUsdt(item.requestedAmount)}</td>
+                            <td className="px-3 py-2 font-mono text-xs text-slate-700">{shortAddress(item.fromWalletAddress)}</td>
+                            <td className="px-3 py-2 font-mono text-xs text-slate-700">{shortAddress(item.toWalletAddress)}</td>
+                            <td className="px-3 py-2 text-xs text-slate-600">{chainLabel}</td>
+                            <td className="px-3 py-2">
+                              {txUrl ? (
+                                <a
+                                  href={txUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-xs font-semibold text-cyan-700 underline decoration-cyan-300 underline-offset-2"
+                                >
+                                  {shortAddress(item.transactionHash)}
+                                </a>
+                              ) : (
+                                <span className="text-xs text-slate-400">-</span>
+                              )}
+                              <p className="mt-1 break-all text-[11px] text-slate-500">
+                                {item.transactionId || '-'}
+                              </p>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </section>
         </div>
