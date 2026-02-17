@@ -16,7 +16,10 @@ export async function POST(request: NextRequest) {
   const client = await clientPromise;
   const collection = client.db(dbName).collection("seller_enabled_logs");
 
-  const query = { walletAddress };
+  const escapedWalletAddress = walletAddress.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const query = {
+    walletAddress: { $regex: `^${escapedWalletAddress}$`, $options: "i" },
+  };
   const items = await collection
     .find(query, {
       limit,

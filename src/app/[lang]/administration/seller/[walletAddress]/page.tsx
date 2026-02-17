@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -55,6 +55,12 @@ export default function SellerDetailPage() {
     walletAddress: '',
     rate: '',
   });
+  const [enabledUpdating, setEnabledUpdating] = useState(false);
+  const [enabledHistoryLoading, setEnabledHistoryLoading] = useState(false);
+  const [enabledHistory, setEnabledHistory] = useState<any[]>([]);
+  const [enabledHistoryTotal, setEnabledHistoryTotal] = useState(0);
+  const [enabledHistoryPage, setEnabledHistoryPage] = useState(1);
+  const [enabledHistoryHasMore, setEnabledHistoryHasMore] = useState(false);
 
   const fetchUser = async () => {
     if (!walletAddress) {
@@ -145,6 +151,61 @@ export default function SellerDetailPage() {
     fetchFeeLogs();
   }, [walletAddress, user?.storecode]);
 
+  const fetchEnabledHistory = useCallback(
+    async (targetWalletAddress: string, page = 1, append = false) => {
+      if (!targetWalletAddress) {
+        setEnabledHistory([]);
+        setEnabledHistoryTotal(0);
+        setEnabledHistoryPage(1);
+        setEnabledHistoryHasMore(false);
+        return;
+      }
+
+      setEnabledHistoryLoading(true);
+      try {
+        const res = await fetch('/api/user/getSellerEnabledHistory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            walletAddress: targetWalletAddress,
+            limit: 10,
+            page,
+          }),
+        });
+        const data = await res.json();
+        const items = Array.isArray(data?.result?.items) ? data.result.items : [];
+        const totalCount = Number(data?.result?.totalCount || 0);
+        setEnabledHistoryTotal(totalCount);
+        setEnabledHistory((prev) => (append ? [...prev, ...items] : items));
+        setEnabledHistoryPage(page);
+        setEnabledHistoryHasMore(page * 10 < totalCount);
+      } catch (error) {
+        console.error('Failed to load seller enabled history', error);
+        if (!append) {
+          setEnabledHistory([]);
+          setEnabledHistoryTotal(0);
+          setEnabledHistoryPage(1);
+          setEnabledHistoryHasMore(false);
+        }
+      } finally {
+        setEnabledHistoryLoading(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const targetWalletAddress = String(user?.walletAddress || walletAddress || '').trim();
+    if (!targetWalletAddress) {
+      setEnabledHistory([]);
+      setEnabledHistoryTotal(0);
+      setEnabledHistoryPage(1);
+      setEnabledHistoryHasMore(false);
+      return;
+    }
+    void fetchEnabledHistory(targetWalletAddress, 1, false);
+  }, [fetchEnabledHistory, user?.walletAddress, walletAddress]);
+
   const seller = user?.seller || {};
   const sellerStatus: SellerStatus = seller?.status;
   const kycStatus: KycStatus = seller?.kyc?.status || (seller?.kyc?.idImageUrl ? 'pending' : 'none');
@@ -152,6 +213,7 @@ export default function SellerDetailPage() {
   const bankInfoStatus: KycStatus =
     seller?.bankInfo?.status || (seller?.bankInfo?.accountNumber ? 'pending' : 'none');
   const normalizedSellerStatus: SellerStatusValue = sellerStatus === 'confirmed' ? 'confirmed' : 'pending';
+  const sellerEnabled = seller?.enabled === true;
 
   const buildStatusHistory = (nextStatus: SellerStatusValue, reason: string) => {
     const previousStatus = seller?.status || 'pending';
@@ -408,6 +470,54 @@ export default function SellerDetailPage() {
     setStatusUpdating(false);
   };
 
+  const handleSellerEnabledUpdate = async (nextEnabled: boolean) => {
+    const targetWalletAddress = String(user?.walletAddress || walletAddress || '').trim();
+    if (!targetWalletAddress) {
+      return;
+    }
+    if (!seller || seller?.enabled === nextEnabled) {
+      return;
+    }
+
+    setEnabledUpdating(true);
+    try {
+      const response = await fetch('/api/user/updateSellerEnabled', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          walletAddress: targetWalletAddress,
+          enabled: nextEnabled,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === 'string' ? payload.error : '판매자 사용여부 변경에 실패했습니다.',
+        );
+      }
+
+      setUser((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          seller: {
+            ...(prev.seller || {}),
+            enabled: nextEnabled,
+          },
+        };
+      });
+      toast.success(nextEnabled ? '판매자 사용여부를 사용중으로 변경했습니다.' : '판매자 사용여부를 미사용으로 변경했습니다.');
+      await fetchEnabledHistory(targetWalletAddress, 1, false);
+    } catch (error) {
+      console.error('Failed to update seller enabled', error);
+      toast.error(error instanceof Error ? error.message : '판매자 사용여부 변경에 실패했습니다.');
+    } finally {
+      setEnabledUpdating(false);
+    }
+  };
+
   return (
     <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-md mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
       <div className="w-full">
@@ -491,6 +601,108 @@ export default function SellerDetailPage() {
                   >
                     {statusUpdating ? '변경 중...' : '상태 변경하기'}
                   </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-900">판매자 사용여부</span>
+                  <span
+                    className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
+                      sellerEnabled
+                        ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                        : 'border-slate-200/80 bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    {sellerEnabled ? '사용중' : '미사용'}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleSellerEnabledUpdate(true);
+                    }}
+                    disabled={enabledUpdating || sellerEnabled}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                      enabledUpdating || sellerEnabled
+                        ? 'bg-emerald-100 text-emerald-300'
+                        : 'bg-emerald-600 text-white hover:bg-emerald-500'
+                    }`}
+                  >
+                    {enabledUpdating && !sellerEnabled ? '변경 중...' : '사용중으로 변경'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleSellerEnabledUpdate(false);
+                    }}
+                    disabled={enabledUpdating || !sellerEnabled}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                      enabledUpdating || !sellerEnabled
+                        ? 'bg-slate-200 text-slate-400'
+                        : 'bg-slate-700 text-white hover:bg-slate-600'
+                    }`}
+                  >
+                    {enabledUpdating && sellerEnabled ? '변경 중...' : '미사용으로 변경'}
+                  </button>
+                </div>
+
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-700">사용여부 변경 이력</span>
+                    <span className="text-[11px] text-slate-500">{enabledHistoryTotal.toLocaleString()}건</span>
+                  </div>
+                  <div className="mt-2 flex flex-col gap-2">
+                    {enabledHistory.length === 0 && !enabledHistoryLoading ? (
+                      <span className="text-xs text-slate-500">이력이 없습니다.</span>
+                    ) : (
+                      enabledHistory.map((item, index) => (
+                        <div
+                          key={`${item?._id || item?.changedAt || index}`}
+                          className="flex flex-col gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">
+                              {item?.prevEnabled === undefined || item?.prevEnabled === null
+                                ? 'N/A'
+                                : item?.prevEnabled
+                                ? '사용중'
+                                : '미사용'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">→</span>
+                            <span className="font-semibold text-emerald-700">
+                              {item?.newEnabled ? '사용중' : '미사용'}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            {item?.changedAt ? new Date(item.changedAt).toLocaleString() : '-'}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    {enabledHistoryLoading && (
+                      <span className="text-xs text-slate-500">이력을 불러오는 중입니다...</span>
+                    )}
+                    {enabledHistoryHasMore && !enabledHistoryLoading && (
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const targetWalletAddress = String(user?.walletAddress || walletAddress || '').trim();
+                            if (!targetWalletAddress) return;
+                            void fetchEnabledHistory(targetWalletAddress, enabledHistoryPage + 1, true);
+                          }}
+                          className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                        >
+                          더보기
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
