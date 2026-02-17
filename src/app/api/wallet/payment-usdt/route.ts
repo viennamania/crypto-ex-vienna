@@ -341,7 +341,7 @@ export async function POST(request: NextRequest) {
       status: "confirmed" as PaymentStatus,
     };
 
-    const [recentPayments, summaryRows, topPayers, dailyRows, totalCount] = await Promise.all([
+    const [recentPayments, summaryRows, topMembersRows, dailyRows, totalCount] = await Promise.all([
       collection
         .find(storeQuery)
         .sort({ confirmedAt: -1, createdAt: -1 })
@@ -364,12 +364,32 @@ export async function POST(request: NextRequest) {
       collection
         .aggregate([
           { $match: storeQuery },
+          { $sort: { confirmedAt: -1, createdAt: -1 } },
+          {
+            $project: {
+              fromWalletAddress: 1,
+              usdtAmount: 1,
+              krwAmount: { $ifNull: ["$krwAmount", 0] },
+              memberNickname: {
+                $trim: {
+                  input: { $ifNull: ["$member.nickname", ""] },
+                },
+              },
+              memberStorecode: {
+                $trim: {
+                  input: { $ifNull: ["$member.storecode", ""] },
+                },
+              },
+            },
+          },
           {
             $group: {
               _id: "$fromWalletAddress",
               totalUsdtAmount: { $sum: "$usdtAmount" },
               totalKrwAmount: { $sum: { $ifNull: ["$krwAmount", 0] } },
               count: { $sum: 1 },
+              memberNickname: { $first: "$memberNickname" },
+              memberStorecode: { $first: "$memberStorecode" },
             },
           },
           { $sort: { totalUsdtAmount: -1, count: -1 } },
@@ -420,8 +440,19 @@ export async function POST(request: NextRequest) {
           avgExchangeRate: Number(summary?.avgExchangeRate || 0),
           latestConfirmedAt: String(summary?.latestConfirmedAt || ""),
         },
-        topPayers: topPayers.map((item) => ({
+        topMembers: topMembersRows.map((item) => ({
           walletAddress: String(item?._id || ""),
+          nickname: String(item?.memberNickname || ""),
+          memberStorecode: String(item?.memberStorecode || ""),
+          totalUsdtAmount: Number(item?.totalUsdtAmount || 0),
+          totalKrwAmount: Number(item?.totalKrwAmount || 0),
+          count: Number(item?.count || 0),
+        })),
+        // Backward compatible field.
+        topPayers: topMembersRows.map((item) => ({
+          walletAddress: String(item?._id || ""),
+          nickname: String(item?.memberNickname || ""),
+          memberStorecode: String(item?.memberStorecode || ""),
           totalUsdtAmount: Number(item?.totalUsdtAmount || 0),
           totalKrwAmount: Number(item?.totalKrwAmount || 0),
           count: Number(item?.count || 0),
@@ -528,6 +559,17 @@ export async function POST(request: NextRequest) {
         transaction,
       });
 
+      let executionStatus = "QUEUED";
+      try {
+        const executionResult = await Engine.getTransactionStatus({
+          client: thirdwebClient,
+          transactionId,
+        });
+        executionStatus = String(executionResult?.status || "QUEUED").toUpperCase();
+      } catch {
+        executionStatus = "QUEUED";
+      }
+
       return NextResponse.json({
         result: {
           storecode: String(store?.storecode || storecode),
@@ -536,11 +578,105 @@ export async function POST(request: NextRequest) {
           transferredAmount: walletBalance,
           chain,
           transactionId,
+          status: executionStatus,
         },
       });
     } catch (collectError) {
       console.error("wallet payment-usdt collect error", collectError);
       return NextResponse.json({ error: "failed to collect payment wallet balance" }, { status: 500 });
+    }
+  }
+
+  if (action === "collect-status") {
+    const storecode = String(body?.storecode || "").trim();
+    const adminWalletAddress = normalizeAddress(body?.adminWalletAddress);
+    const transactionId = String(body?.transactionId || "").trim();
+
+    if (!storecode) {
+      return NextResponse.json({ error: "storecode is required" }, { status: 400 });
+    }
+    if (!adminWalletAddress) {
+      return NextResponse.json({ error: "adminWalletAddress is required" }, { status: 400 });
+    }
+    if (!transactionId) {
+      return NextResponse.json({ error: "transactionId is required" }, { status: 400 });
+    }
+
+    const store = await getStoreByStorecode({ storecode });
+    if (!store) {
+      return NextResponse.json({ error: "store not found" }, { status: 404 });
+    }
+
+    const storeAdminWalletAddress = normalizeAddress(store?.adminWalletAddress);
+    if (!storeAdminWalletAddress || storeAdminWalletAddress !== adminWalletAddress) {
+      return NextResponse.json({ error: "not authorized for this store" }, { status: 403 });
+    }
+
+    const paymentWalletAddress = normalizeAddress(store?.paymentWalletAddress);
+    if (!isWalletAddress(paymentWalletAddress)) {
+      return NextResponse.json({ error: "store payment wallet is not configured" }, { status: 400 });
+    }
+
+    const secretKey = process.env.THIRDWEB_SECRET_KEY || "";
+    if (!secretKey) {
+      return NextResponse.json({ error: "THIRDWEB_SECRET_KEY is not configured" }, { status: 500 });
+    }
+
+    try {
+      const thirdwebClient = createThirdwebClient({ secretKey });
+      const executionResult = await Engine.getTransactionStatus({
+        client: thirdwebClient,
+        transactionId,
+      });
+
+      const status = String(executionResult?.status || "").toUpperCase();
+      const fromWalletAddress = normalizeAddress(executionResult?.from || "");
+      if (fromWalletAddress && fromWalletAddress !== paymentWalletAddress) {
+        return NextResponse.json({ error: "transaction does not belong to this store payment wallet" }, { status: 403 });
+      }
+
+      const transactionHash =
+        executionResult && "transactionHash" in executionResult
+          ? String(executionResult.transactionHash || "")
+          : "";
+      const onchainStatus =
+        executionResult && "onchainStatus" in executionResult
+          ? String(executionResult.onchainStatus || "")
+          : "";
+      const error =
+        executionResult && "error" in executionResult
+          ? String(executionResult.error || "")
+          : "";
+
+      return NextResponse.json({
+        result: {
+          storecode: String(store?.storecode || storecode),
+          transactionId,
+          status,
+          transactionHash,
+          onchainStatus,
+          confirmedAt: String(executionResult?.confirmedAt || ""),
+          error,
+        },
+      });
+    } catch (collectStatusError) {
+      const message =
+        collectStatusError instanceof Error ? collectStatusError.message : "failed to get collect transaction status";
+      if (message.toLowerCase().includes("not found")) {
+        return NextResponse.json({
+          result: {
+            storecode: String(store?.storecode || storecode),
+            transactionId,
+            status: "QUEUED",
+            transactionHash: "",
+            onchainStatus: "",
+            confirmedAt: "",
+            error: "",
+          },
+        });
+      }
+      console.error("wallet payment-usdt collect-status error", collectStatusError);
+      return NextResponse.json({ error: "failed to get collect transaction status" }, { status: 500 });
     }
   }
 
