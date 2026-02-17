@@ -840,13 +840,6 @@ export default function StoreManagementPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={openCreateModal}
-                className="inline-flex items-center rounded-full bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-600"
-              >
-                가맹점 추가
-              </button>
               <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
                 <span className={`h-2.5 w-2.5 rounded-full ${polling ? 'animate-pulse bg-emerald-500' : 'bg-emerald-400'}`} />
                 {polling ? '동기화 중' : '15초 자동 동기화'}
@@ -1020,7 +1013,16 @@ export default function StoreManagementPage() {
                 마지막 갱신 {lastUpdatedAt ? formatDateTime(lastUpdatedAt) : '-'} · {polling ? '자동 동기화 중' : '대기 중'}
               </p>
             </div>
-            {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="inline-flex items-center rounded-full bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-600"
+              >
+                가맹점 추가
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -1036,7 +1038,7 @@ export default function StoreManagementPage() {
               <table className="w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
-                    <th className="px-4 py-3">가맹점</th>
+                    <th className="w-[360px] px-4 py-3">가맹점</th>
                     <th className="px-4 py-3 text-right">결제확정</th>
                     <th className="px-4 py-3 text-right">거래금액</th>
                     <th className="px-4 py-3 text-right">정산금액</th>
@@ -1069,10 +1071,9 @@ export default function StoreManagementPage() {
                               {(store.storeName || store.storecode || 'S').slice(0, 1)}
                             </span>
                             <div className="min-w-0">
-                              <p className="truncate font-semibold text-slate-900">{store.storeName || '-'}</p>
-                              <p className="truncate text-xs text-slate-500">
-                                코드 {store.storecode || '-'} · 등록 {formatDateTime(store.createdAt)}
-                              </p>
+                              <p className="break-all whitespace-normal font-semibold text-slate-900">{store.storeName || '-'}</p>
+                              <p className="text-xs text-slate-500">코드 {store.storecode || '-'}</p>
+                              <p className="text-xs text-slate-500">등록 {formatDateTime(store.createdAt)}</p>
                             </div>
                           </div>
                         </td>
