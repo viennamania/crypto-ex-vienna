@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 
 import AgentInfoCard from '../../../_components/AgentInfoCard';
@@ -50,6 +50,10 @@ type CollectHistoryItem = {
   confirmedAt: string;
 };
 
+const wait = (ms: number) => new Promise<void>((resolve) => {
+  setTimeout(resolve, ms);
+});
+
 const CHAIN_OPTIONS: Array<{ id: CollectChain; label: string }> = [
   { id: 'polygon', label: 'Polygon' },
   { id: 'ethereum', label: 'Ethereum' },
@@ -91,6 +95,8 @@ const normalizeCollectHistoryItem = (value: unknown): CollectHistoryItem => {
   };
 };
 
+const isFinalCollectStatus = (status: string) => status === 'CONFIRMED' || status === 'FAILED';
+
 export default function P2PAgentStorePaymentWalletCollectPage() {
   const params = useParams<{ lang: string; storecode: string }>();
   const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang || 'ko';
@@ -107,6 +113,10 @@ export default function P2PAgentStorePaymentWalletCollectPage() {
   const [balanceInfo, setBalanceInfo] = useState<CollectBalanceResult | null>(null);
   const [histories, setHistories] = useState<CollectHistoryItem[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [animatedBalance, setAnimatedBalance] = useState(0);
+  const [lastBalanceUpdatedAt, setLastBalanceUpdatedAt] = useState('');
+  const animationFrameRef = useRef<number | null>(null);
+  const animatedBalanceRef = useRef(0);
 
   const storeManagementHref = useMemo(() => {
     const query = new URLSearchParams();
@@ -131,6 +141,62 @@ export default function P2PAgentStorePaymentWalletCollectPage() {
     return payload as Record<string, unknown>;
   }, []);
 
+  const animateBalanceTo = useCallback((targetBalance: number) => {
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+
+    const startValue = animatedBalanceRef.current;
+    const nextValue = Number.isFinite(targetBalance) ? Math.max(0, targetBalance) : 0;
+    const delta = nextValue - startValue;
+
+    if (Math.abs(delta) < 0.000001) {
+      animatedBalanceRef.current = nextValue;
+      setAnimatedBalance(nextValue);
+      return;
+    }
+
+    const durationMs = 700;
+    const startedAt = performance.now();
+
+    const step = (now: number) => {
+      const progress = Math.min((now - startedAt) / durationMs, 1);
+      const eased = 1 - (1 - progress) ** 3;
+      const current = startValue + delta * eased;
+      animatedBalanceRef.current = current;
+      setAnimatedBalance(current);
+
+      if (progress < 1) {
+        animationFrameRef.current = requestAnimationFrame(step);
+      } else {
+        animationFrameRef.current = null;
+        animatedBalanceRef.current = nextValue;
+        setAnimatedBalance(nextValue);
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(step);
+  }, []);
+
+  const fetchCollectBalance = useCallback(async (adminWalletAddress: string) => {
+    const balancePayload = await postPaymentWalletApi({
+      action: 'collect-balance',
+      storecode,
+      agentcode,
+      adminWalletAddress,
+      chain: selectedChain,
+    });
+    const balanceResult = isRecord(balancePayload?.result)
+      ? (balancePayload.result as CollectBalanceResult)
+      : null;
+
+    setBalanceInfo(balanceResult);
+    setLastBalanceUpdatedAt(new Date().toISOString());
+
+    return balanceResult;
+  }, [agentcode, postPaymentWalletApi, selectedChain, storecode]);
+
   const loadData = useCallback(async () => {
     if (!storecode || !agentcode) {
       setAgent(null);
@@ -142,21 +208,14 @@ export default function P2PAgentStorePaymentWalletCollectPage() {
 
     setLoading(true);
     setError(null);
-    setNotice(null);
     try {
       const agentSummary = await fetchAgentSummary(agentcode);
       if (!agentSummary?.adminWalletAddress) {
         throw new Error('에이전트 관리자 지갑 정보가 없어 조회할 수 없습니다.');
       }
 
-      const [balancePayload, historyPayload] = await Promise.all([
-        postPaymentWalletApi({
-          action: 'collect-balance',
-          storecode,
-          agentcode,
-          adminWalletAddress: agentSummary.adminWalletAddress,
-          chain: selectedChain,
-        }),
+      const [, historyPayload] = await Promise.all([
+        fetchCollectBalance(agentSummary.adminWalletAddress),
         postPaymentWalletApi({
           action: 'collect-history',
           storecode,
@@ -166,13 +225,9 @@ export default function P2PAgentStorePaymentWalletCollectPage() {
         }),
       ]);
 
-      const balanceResult = isRecord(balancePayload?.result)
-        ? (balancePayload.result as CollectBalanceResult)
-        : null;
       const historyResult = Array.isArray(historyPayload?.result) ? historyPayload.result : [];
 
       setAgent(agentSummary);
-      setBalanceInfo(balanceResult);
       setHistories(historyResult.map((item) => normalizeCollectHistoryItem(item)));
     } catch (loadError) {
       setAgent(null);
@@ -182,7 +237,7 @@ export default function P2PAgentStorePaymentWalletCollectPage() {
     } finally {
       setLoading(false);
     }
-  }, [agentcode, postPaymentWalletApi, selectedChain, storecode]);
+  }, [agentcode, fetchCollectBalance, postPaymentWalletApi, storecode]);
 
   useEffect(() => {
     loadData();
@@ -222,13 +277,44 @@ export default function P2PAgentStorePaymentWalletCollectPage() {
       const result = isRecord(payload?.result) ? payload.result : {};
       const amount = Number(result.transferredAmount || 0);
       const transactionId = String(result.transactionId || '').trim();
+      let latestStatus = String(result.status || '').toUpperCase();
+
       setConfirmOpen(false);
       setNotice(
         transactionId
           ? `전체 회수 요청이 접수되었습니다. (${formatUsdt(amount)} / transactionId: ${transactionId})`
           : `전체 회수 요청이 접수되었습니다. (${formatUsdt(amount)})`,
       );
+
+      if (transactionId) {
+        const maxPollCount = 20;
+        for (let attempt = 0; attempt < maxPollCount; attempt += 1) {
+          if (isFinalCollectStatus(latestStatus)) {
+            break;
+          }
+
+          await wait(1500);
+          const statusPayload = await postPaymentWalletApi({
+            action: 'collect-status',
+            storecode,
+            agentcode,
+            adminWalletAddress: agent.adminWalletAddress,
+            transactionId,
+          });
+          const statusResult = isRecord(statusPayload?.result) ? statusPayload.result : {};
+          latestStatus = String(statusResult.status || latestStatus || 'QUEUED').toUpperCase();
+        }
+      }
+
       await loadData();
+
+      if (latestStatus === 'CONFIRMED') {
+        setNotice(`전체 회수가 완료되어 회수 가능 잔고를 갱신했습니다. (${formatUsdt(amount)})`);
+      } else if (latestStatus === 'FAILED') {
+        setError('전체 회수 처리에 실패했습니다. 회수 이력의 오류 내용을 확인해 주세요.');
+      } else if (transactionId) {
+        setNotice(`회수 요청이 처리 중입니다. 완료되면 회수 가능 잔고가 갱신됩니다. (transactionId: ${transactionId})`);
+      }
     } catch (collectError) {
       setError(collectError instanceof Error ? collectError.message : '전체 회수 처리에 실패했습니다.');
     } finally {
@@ -237,6 +323,35 @@ export default function P2PAgentStorePaymentWalletCollectPage() {
   }, [agent?.adminWalletAddress, agentcode, balanceInfo, loadData, postPaymentWalletApi, selectedChain, storecode]);
 
   const canCollectAll = Boolean(balanceInfo && balanceInfo.balance > 0 && agent?.adminWalletAddress);
+
+  useEffect(() => {
+    animateBalanceTo(Number(balanceInfo?.balance || 0));
+  }, [animateBalanceTo, balanceInfo?.balance]);
+
+  useEffect(() => {
+    if (!storecode || !agentcode || !agent?.adminWalletAddress) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (collecting) return;
+      fetchCollectBalance(agent.adminWalletAddress).catch((pollError) => {
+        console.warn('collect balance polling failed', pollError);
+      });
+    }, 5000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [agent?.adminWalletAddress, agentcode, collecting, fetchCollectBalance, storecode]);
+
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -322,7 +437,10 @@ export default function P2PAgentStorePaymentWalletCollectPage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">회수 가능 잔고</p>
-                <p className="mt-1 text-3xl font-extrabold text-slate-900">{formatUsdt(balanceInfo.balance)}</p>
+                <p className="mt-1 text-3xl font-extrabold text-slate-900">{formatUsdt(animatedBalance)}</p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {lastBalanceUpdatedAt ? `최근 갱신 ${toDateTime(lastBalanceUpdatedAt)}` : '최근 갱신 -'}
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <label htmlFor="collect-chain" className="text-xs font-semibold text-slate-500">

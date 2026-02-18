@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ObjectId } from "mongodb";
+import { ObjectId, type Collection } from "mongodb";
 import { createThirdwebClient, Engine, getContract } from "thirdweb";
 import { balanceOf, transfer } from "thirdweb/extensions/erc20";
 import { ethereum, polygon, arbitrum, bsc } from "thirdweb/chains";
@@ -64,6 +64,27 @@ type WalletCollectDocument = {
   createdAt: string;
   updatedAt: string;
   confirmedAt?: string;
+};
+
+type WalletCollectQueueDocument = {
+  _id?: ObjectId;
+  queueType: "payment-usdt-collect";
+  transactionId: string;
+  status: CollectStatus;
+  onchainStatus?: string;
+  transactionHash?: string;
+  error?: string;
+  agentcode?: string;
+  storecode: string;
+  storeName: string;
+  chain?: ChainKey;
+  fromWalletAddress: string;
+  toWalletAddress: string;
+  requestedByWalletAddress: string;
+  requestedByRole?: "store-admin" | "agent-admin";
+  requestedAmount: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
 const SUPPORTED_CHAINS: ChainKey[] = ["ethereum", "polygon", "arbitrum", "bsc"];
@@ -160,6 +181,8 @@ const normalizeCollectStatus = (value: unknown): CollectStatus => {
   return "QUEUED";
 };
 
+const isCollectFinalStatus = (status: CollectStatus) => status === "CONFIRMED" || status === "FAILED";
+
 const normalizeAmount = (value: unknown) => {
   const amount = Number(value);
   if (!Number.isFinite(amount)) {
@@ -235,6 +258,93 @@ const serializeCollect = (doc: WalletCollectDocument & { _id?: ObjectId }) => ({
   confirmedAt: doc.confirmedAt || "",
 });
 
+const serializeCollectQueue = (doc: WalletCollectQueueDocument & { _id?: ObjectId }) => ({
+  id: doc._id?.toString() || "",
+  queueType: doc.queueType,
+  transactionId: doc.transactionId,
+  status: doc.status,
+  onchainStatus: doc.onchainStatus || "",
+  transactionHash: doc.transactionHash || "",
+  error: doc.error || "",
+  agentcode: doc.agentcode || "",
+  storecode: doc.storecode,
+  storeName: doc.storeName,
+  chain: doc.chain || "",
+  fromWalletAddress: doc.fromWalletAddress,
+  toWalletAddress: doc.toWalletAddress,
+  requestedByWalletAddress: doc.requestedByWalletAddress,
+  requestedByRole: doc.requestedByRole || "",
+  requestedAmount: Number(doc.requestedAmount || 0),
+  createdAt: doc.createdAt,
+  updatedAt: doc.updatedAt,
+});
+
+const upsertCollectQueue = async ({
+  queueCollection,
+  transactionId,
+  status,
+  onchainStatus,
+  transactionHash,
+  error,
+  agentcode,
+  storecode,
+  storeName,
+  chain,
+  fromWalletAddress,
+  toWalletAddress,
+  requestedByWalletAddress,
+  requestedByRole,
+  requestedAmount,
+}: {
+  queueCollection: Collection<WalletCollectQueueDocument>;
+  transactionId: string;
+  status: CollectStatus;
+  onchainStatus: string;
+  transactionHash: string;
+  error: string;
+  agentcode: string;
+  storecode: string;
+  storeName: string;
+  chain: ChainKey;
+  fromWalletAddress: string;
+  toWalletAddress: string;
+  requestedByWalletAddress: string;
+  requestedByRole: "store-admin" | "agent-admin";
+  requestedAmount: number;
+}) => {
+  const now = new Date().toISOString();
+  await queueCollection.updateOne(
+    {
+      queueType: "payment-usdt-collect",
+      transactionId,
+    },
+    {
+      $set: {
+        queueType: "payment-usdt-collect",
+        transactionId,
+        status,
+        onchainStatus,
+        transactionHash,
+        error,
+        agentcode,
+        storecode,
+        storeName,
+        chain,
+        fromWalletAddress,
+        toWalletAddress,
+        requestedByWalletAddress,
+        requestedByRole,
+        requestedAmount,
+        updatedAt: now,
+      },
+      $setOnInsert: {
+        createdAt: now,
+      },
+    },
+    { upsert: true }
+  );
+};
+
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const action = String(body?.action || "").trim().toLowerCase();
@@ -242,6 +352,7 @@ export async function POST(request: NextRequest) {
   const client = await clientPromise;
   const collection = client.db(dbName).collection<WalletPaymentDocument>("walletUsdtPayments");
   const collectCollection = client.db(dbName).collection<WalletCollectDocument>("walletUsdtCollects");
+  const queueCollection = client.db(dbName).collection<WalletCollectQueueDocument>("walletUsdtServerWalletQueues");
 
   if (action === "prepare") {
     const storecode = String(body?.storecode || "").trim();
@@ -841,6 +952,31 @@ export async function POST(request: NextRequest) {
         { upsert: true }
       );
 
+      if (isCollectFinalStatus(collectStatus)) {
+        await queueCollection.deleteOne({
+          queueType: "payment-usdt-collect",
+          transactionId,
+        });
+      } else {
+        await upsertCollectQueue({
+          queueCollection,
+          transactionId,
+          status: collectStatus,
+          onchainStatus: "",
+          transactionHash: "",
+          error: "",
+          agentcode: requester.resolvedAgentcode,
+          storecode: String(store?.storecode || storecode),
+          storeName: String(store?.storeName || storecode),
+          chain,
+          fromWalletAddress: normalizeAddress(paymentWalletAddress),
+          toWalletAddress: requester.authorizedWalletAddress,
+          requestedByWalletAddress: adminWalletAddress,
+          requestedByRole: requester.role,
+          requestedAmount: walletBalance,
+        });
+      }
+
       return NextResponse.json({
         result: {
           storecode: String(store?.storecode || storecode),
@@ -892,6 +1028,10 @@ export async function POST(request: NextRequest) {
     if (!isWalletAddress(paymentWalletAddress)) {
       return NextResponse.json({ error: "store payment wallet is not configured" }, { status: 400 });
     }
+
+    const existingCollect = await collectCollection.findOne({ transactionId });
+    const collectChain = normalizeChain(existingCollect?.chain || "polygon");
+    const collectRequestedAmount = Number(existingCollect?.requestedAmount || 0);
 
     const secretKey = process.env.THIRDWEB_SECRET_KEY || "";
     if (!secretKey) {
@@ -952,6 +1092,31 @@ export async function POST(request: NextRequest) {
         { upsert: true }
       );
 
+      if (isCollectFinalStatus(status)) {
+        await queueCollection.deleteOne({
+          queueType: "payment-usdt-collect",
+          transactionId,
+        });
+      } else {
+        await upsertCollectQueue({
+          queueCollection,
+          transactionId,
+          status,
+          onchainStatus,
+          transactionHash,
+          error,
+          agentcode: requester.resolvedAgentcode,
+          storecode: String(store?.storecode || storecode),
+          storeName: String(store?.storeName || storecode),
+          chain: collectChain,
+          fromWalletAddress: paymentWalletAddress,
+          toWalletAddress: requester.authorizedWalletAddress,
+          requestedByWalletAddress: adminWalletAddress,
+          requestedByRole: requester.role,
+          requestedAmount: collectRequestedAmount,
+        });
+      }
+
       return NextResponse.json({
         result: {
           storecode: String(store?.storecode || storecode),
@@ -993,6 +1158,23 @@ export async function POST(request: NextRequest) {
           },
           { upsert: true }
         );
+        await upsertCollectQueue({
+          queueCollection,
+          transactionId,
+          status: "QUEUED",
+          onchainStatus: "",
+          transactionHash: "",
+          error: "",
+          agentcode: requester.resolvedAgentcode,
+          storecode: String(store?.storecode || storecode),
+          storeName: String(store?.storeName || storecode),
+          chain: collectChain,
+          fromWalletAddress: paymentWalletAddress,
+          toWalletAddress: requester.authorizedWalletAddress,
+          requestedByWalletAddress: adminWalletAddress,
+          requestedByRole: requester.role,
+          requestedAmount: collectRequestedAmount,
+        });
         return NextResponse.json({
           result: {
             storecode: String(store?.storecode || storecode),
@@ -1048,6 +1230,48 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       result: history.map((item) => serializeCollect(item)),
+    });
+  }
+
+  if (action === "collect-queue") {
+    const storecode = String(body?.storecode || "").trim();
+    const agentcode = normalizeAgentcode(body?.agentcode);
+    const adminWalletAddress = normalizeAddress(body?.adminWalletAddress);
+    const limit = Math.min(Math.max(Number(body?.limit || 100), 1), 300);
+
+    if (!storecode) {
+      return NextResponse.json({ error: "storecode is required" }, { status: 400 });
+    }
+    if (!isWalletAddress(adminWalletAddress)) {
+      return NextResponse.json({ error: "adminWalletAddress is required" }, { status: 400 });
+    }
+
+    const store = await getStoreByStorecode({ storecode });
+    if (!store) {
+      return NextResponse.json({ error: "store not found" }, { status: 404 });
+    }
+
+    const requester = await resolveCollectRequester({
+      store,
+      agentcode,
+      requestedByWalletAddress: adminWalletAddress,
+    });
+    if (!requester) {
+      return NextResponse.json({ error: "not authorized for this store" }, { status: 403 });
+    }
+    void requester;
+
+    const queue = await queueCollection
+      .find({
+        queueType: "payment-usdt-collect",
+        storecode: { $regex: `^${escapeRegex(storecode)}$`, $options: "i" },
+      })
+      .sort({ createdAt: -1, updatedAt: -1 })
+      .limit(limit)
+      .toArray();
+
+    return NextResponse.json({
+      result: queue.map((item) => serializeCollectQueue(item)),
     });
   }
 
