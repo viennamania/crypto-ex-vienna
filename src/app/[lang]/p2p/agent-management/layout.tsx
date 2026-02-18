@@ -3,6 +3,11 @@
 import Link from 'next/link';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
 import { useMemo, useState, type ReactNode } from 'react';
+import { AutoConnect, useActiveAccount } from 'thirdweb/react';
+
+import { client } from '@/app/client';
+import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { useClientWallets } from '@/lib/useClientWallets';
 
 type MenuItem = {
   key: string;
@@ -12,6 +17,8 @@ type MenuItem = {
   basePath: string;
   subItems?: MenuItem[];
 };
+
+const WALLET_AUTH_OPTIONS = ['phone'];
 
 const MenuIcon = ({ itemKey, active }: { itemKey: string; active: boolean }) => {
   const iconClass = active
@@ -36,6 +43,8 @@ const MenuIcon = ({ itemKey, active }: { itemKey: string; active: boolean }) => 
 };
 
 export default function P2PAgentManagementLayout({ children }: { children: ReactNode }) {
+  const activeAccount = useActiveAccount();
+  const { wallet, wallets } = useClientWallets({ authOptions: WALLET_AUTH_OPTIONS });
   const params = useParams<{ lang: string }>();
   const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang || 'ko';
   const pathname = usePathname();
@@ -99,6 +108,8 @@ export default function P2PAgentManagementLayout({ children }: { children: React
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f2f7ff_0%,#edf4ff_45%,#f8fafc_100%)] text-slate-900">
+      <AutoConnect client={client} wallets={[wallet]} />
+
       <button
         type="button"
         onClick={() => setMobileOpen((prev) => !prev)}
@@ -130,7 +141,7 @@ export default function P2PAgentManagementLayout({ children }: { children: React
         <div className="flex h-full flex-col">
           <div className="relative border-b border-white/10 px-3 py-4">
             <div className="rounded-2xl border border-white/12 bg-white/5 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200/90">P2P Control</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200/90">Payment Control</p>
               {!collapsed && (
                 <>
                   <p className="mt-1 text-base font-semibold text-white/95">Agent Management</p>
@@ -269,7 +280,31 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       </aside>
 
       <div className={`min-h-screen transition-all duration-300 ${desktopSidebarWidthClass}`}>
-        <div className="px-4 pb-10 pt-16 lg:px-8 lg:pt-8">{children}</div>
+        <div className="space-y-4 px-4 pb-10 pt-16 lg:px-8 lg:pt-8">
+          {!activeAccount?.address && (
+            <section className="rounded-2xl border border-cyan-200 bg-cyan-50/70 px-4 py-4 shadow-[0_16px_32px_-24px_rgba(8,145,178,0.45)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-700">Wallet Required</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">에이전트 관리 기능을 사용하려면 지갑 연결이 필요합니다.</p>
+                  <p className="mt-1 text-xs text-slate-600">전화번호 인증으로 지갑을 연결한 뒤 계속 진행해 주세요.</p>
+                </div>
+
+                <ConnectButton
+                  client={client}
+                  wallets={wallets}
+                  connectButton={{
+                    label: '지갑 연결하기',
+                    className:
+                      'inline-flex h-10 items-center justify-center rounded-xl border border-cyan-300 bg-white px-4 text-sm font-semibold text-cyan-800 transition hover:border-cyan-400 hover:text-cyan-900',
+                  }}
+                />
+              </div>
+            </section>
+          )}
+
+          {children}
+        </div>
       </div>
     </div>
   );

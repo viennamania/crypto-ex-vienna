@@ -792,6 +792,11 @@ export async function POST(request: NextRequest) {
         address: paymentWalletAddress,
       });
       const walletBalance = Number(walletBalanceRaw) / 10 ** tokenDecimals;
+      const collectToWalletBalanceRaw = await balanceOf({
+        contract: usdtContract,
+        address: requester.authorizedWalletAddress,
+      });
+      const collectToWalletBalance = Number(collectToWalletBalanceRaw) / 10 ** tokenDecimals;
 
       return NextResponse.json({
         result: {
@@ -806,6 +811,10 @@ export async function POST(request: NextRequest) {
           chain,
           balance: Number.isFinite(walletBalance) && walletBalance > 0 ? walletBalance : 0,
           collectToWalletAddress: requester.authorizedWalletAddress,
+          collectToWalletBalance:
+            Number.isFinite(collectToWalletBalance) && collectToWalletBalance > 0
+              ? collectToWalletBalance
+              : 0,
           requestedByRole: requester.role,
         },
       });
