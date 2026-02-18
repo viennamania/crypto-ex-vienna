@@ -30,8 +30,6 @@ const resolveStoreSellerWalletAddresses = (store: any): string[] => {
     store.sellerWalletAddresses.forEach((wallet: unknown) => pushWallet(wallet));
   }
 
-  // Backward-compatibility: include legacy single seller wallet if array is missing that value.
-  pushWallet(store?.sellerWalletAddress);
   return walletList;
 };
 
@@ -251,7 +249,10 @@ export async function getStoreByStorecode(
   //console.log('getStoreByStorecode result: ' + JSON.stringify(result));
 
   if (result) {
-    return result;
+    return {
+      ...result,
+      sellerWalletAddresses: resolveStoreSellerWalletAddresses(result),
+    };
   } else {
     return null;
   }

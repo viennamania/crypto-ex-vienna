@@ -287,17 +287,32 @@ const normalizeWalletAddress = (value: unknown) => {
   if (!WALLET_ADDRESS_REGEX.test(raw)) return '';
   return raw;
 };
+const normalizeWalletAddressList = (values: unknown[]): string[] => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  values.forEach((value: unknown) => {
+    const normalized = normalizeWalletAddress(value);
+    if (!normalized) return;
+    const lowered = normalized.toLowerCase();
+    if (seen.has(lowered)) return;
+    seen.add(lowered);
+    result.push(normalized);
+  });
+  return result;
+};
 
 const normalizeSellerFromUser = (rawUser: unknown): SellerItem | null => {
   if (!isRecord(rawUser)) return null;
 
   const seller = isRecord(rawUser.seller) ? rawUser.seller : null;
+  const sellerBuyOrder = isRecord(seller?.buyOrder) ? seller.buyOrder : null;
   const walletAddress = normalizeWalletAddress(rawUser.walletAddress);
-  const rate = Number(seller?.usdtToKrwRate || 0);
+  const parsedRate = Number(seller?.usdtToKrwRate || sellerBuyOrder?.rate || 0);
+  const rate = Number.isFinite(parsedRate) && parsedRate > 0 ? parsedRate : 1;
   const enabled = seller?.enabled === true;
   const status = String(seller?.status || '');
   const currentUsdtBalance = Number(rawUser.currentUsdtBalance || 0);
-  if (!walletAddress || !enabled || status !== 'confirmed' || !Number.isFinite(rate) || rate <= 0) {
+  if (!walletAddress || !enabled || status !== 'confirmed') {
     return null;
   }
 
@@ -614,43 +629,39 @@ export default function BuyUsdtPage({
     setLoadingSellers(true);
     setSellersError(null);
     try {
-      let allowedSellerWalletSet: Set<string> | null = null;
-      let configuredWalletCount = 0;
+      let walletAddressesFilter: string[] = [];
 
       if (storecode) {
-        try {
-          const storeResponse = await fetch('/api/store/getOneStore', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ storecode }),
-          });
-          const storeData = await storeResponse.json().catch(() => ({}));
-          if (storeResponse.ok && isRecord(storeData?.result)) {
-            const rawWallets: unknown[] = Array.isArray(storeData.result.sellerWalletAddresses)
-              ? storeData.result.sellerWalletAddresses
-              : [];
-            const wallets = rawWallets
-              .map((value: unknown) => normalizeWalletAddress(value))
-              .filter((value): value is string => Boolean(value));
-            configuredWalletCount = wallets.length;
-            if (wallets.length > 0) {
-              allowedSellerWalletSet = new Set(wallets.map((wallet) => wallet.toLowerCase()));
-            }
-          }
-        } catch (storeError) {
-          console.error('Failed to load store seller config', storeError);
+        const storeResponse = await fetch('/api/store/getOneStore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storecode }),
+        });
+        const storeData = await storeResponse.json().catch(() => ({}));
+        if (!storeResponse.ok) {
+          throw new Error(String(storeData?.error || '가맹점 정보를 불러오지 못했습니다.'));
+        }
+
+        const storeResult = isRecord(storeData?.result) ? storeData.result : {};
+        walletAddressesFilter = normalizeWalletAddressList(
+          Array.isArray(storeResult.sellerWalletAddresses) ? storeResult.sellerWalletAddresses : [],
+        );
+        if (walletAddressesFilter.length === 0) {
+          setConfiguredSellerWalletCount(0);
+          setSellers([]);
+          setSelectedSellerWallet('');
+          return;
         }
       }
-      setConfiguredSellerWalletCount(configuredWalletCount);
+      setConfiguredSellerWalletCount(walletAddressesFilter.length);
 
       const sellerRequestBody: Record<string, unknown> = {
-        storecode: 'admin',
-        limit: 60,
+        storecode: storecode || 'admin',
+        limit: Math.max(40, walletAddressesFilter.length),
         page: 1,
       };
-      if (allowedSellerWalletSet && allowedSellerWalletSet.size > 0) {
-        sellerRequestBody.walletAddresses = Array.from(allowedSellerWalletSet);
-        sellerRequestBody.limit = Math.max(allowedSellerWalletSet.size, 60);
+      if (walletAddressesFilter.length > 0) {
+        sellerRequestBody.walletAddresses = walletAddressesFilter;
       }
 
       const response = await fetch('/api/user/getAllSellersForBalance', {
@@ -668,12 +679,28 @@ export default function BuyUsdtPage({
         .map((rawUser) => normalizeSellerFromUser(rawUser))
         .filter((item): item is SellerItem => item !== null);
 
-      const normalized = allowedSellerWalletSet
-        ? normalizedAll.filter((item) => allowedSellerWalletSet.has(item.walletAddress.toLowerCase()))
+      const normalized = walletAddressesFilter.length > 0
+        ? normalizedAll.filter((item) =>
+          walletAddressesFilter.some((walletAddress) => walletAddress.toLowerCase() === item.walletAddress.toLowerCase()))
         : normalizedAll;
 
-      if (allowedSellerWalletSet && normalized.length === 0) {
-        setSellersError('가맹점에 등록된 판매자가 없거나 판매 조건이 충족되지 않았습니다.');
+      if (walletAddressesFilter.length > 0) {
+        const orderMap = new Map<string, number>();
+        walletAddressesFilter.forEach((walletAddress, index) => {
+          orderMap.set(walletAddress.toLowerCase(), index);
+        });
+        normalized.sort((a, b) => {
+          const aIndex = orderMap.get(a.walletAddress.toLowerCase());
+          const bIndex = orderMap.get(b.walletAddress.toLowerCase());
+          return (aIndex ?? Number.MAX_SAFE_INTEGER) - (bIndex ?? Number.MAX_SAFE_INTEGER);
+        });
+      } else {
+        normalized.sort((a, b) => {
+          if (b.currentUsdtBalance !== a.currentUsdtBalance) {
+            return b.currentUsdtBalance - a.currentUsdtBalance;
+          }
+          return a.rate - b.rate;
+        });
       }
 
       setSellers(normalized);
@@ -683,6 +710,12 @@ export default function BuyUsdtPage({
             (item) => item.walletAddress.toLowerCase() === sellerFromQuery.toLowerCase(),
           );
           if (matched) return matched.walletAddress;
+        }
+        if (walletAddressesFilter.length === 1) {
+          const matchedSingle = normalized.find(
+            (item) => item.walletAddress.toLowerCase() === walletAddressesFilter[0].toLowerCase(),
+          );
+          return matchedSingle?.walletAddress || walletAddressesFilter[0];
         }
         if (prev && normalized.some((item) => item.walletAddress.toLowerCase() === prev.toLowerCase())) {
           return prev;

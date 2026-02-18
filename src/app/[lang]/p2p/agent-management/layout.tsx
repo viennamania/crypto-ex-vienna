@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AutoConnect, useActiveAccount } from 'thirdweb/react';
 
 import { client } from '@/app/client';
@@ -19,6 +19,9 @@ type MenuItem = {
 };
 
 const WALLET_AUTH_OPTIONS = ['phone'];
+const normalizeAddress = (value: string) => String(value || '').trim().toLowerCase();
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const MenuIcon = ({ itemKey, active }: { itemKey: string; active: boolean }) => {
   const iconClass = active
@@ -52,6 +55,10 @@ export default function P2PAgentManagementLayout({ children }: { children: React
   const agentcode = String(searchParams?.get('agentcode') || '').trim();
   const agentQuery = agentcode ? `?agentcode=${encodeURIComponent(agentcode)}` : '';
   const p2pHomeHref = `/${lang}/p2p${agentQuery}`;
+  const connectedWalletAddress = String(activeAccount?.address || '').trim();
+  const [agentAdminWalletAddress, setAgentAdminWalletAddress] = useState('');
+  const [checkingAgentAccess, setCheckingAgentAccess] = useState(false);
+  const [agentAccessError, setAgentAccessError] = useState<string | null>(null);
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -105,6 +112,86 @@ export default function P2PAgentManagementLayout({ children }: { children: React
     item.key === 'home'
       ? pathname === item.basePath
       : pathname === item.basePath || pathname.startsWith(`${item.basePath}/`);
+  const normalizedConnectedWalletAddress = normalizeAddress(connectedWalletAddress);
+  const normalizedAgentAdminWalletAddress = normalizeAddress(agentAdminWalletAddress);
+  const isAgentAccessVerified = Boolean(
+    agentcode
+      && normalizedConnectedWalletAddress
+      && normalizedAgentAdminWalletAddress
+      && normalizedConnectedWalletAddress === normalizedAgentAdminWalletAddress,
+  );
+  const showWalletConnectRequired = !normalizedConnectedWalletAddress;
+  const showAccessChecking = Boolean(normalizedConnectedWalletAddress && checkingAgentAccess);
+  const showAccessDenied = Boolean(
+    normalizedConnectedWalletAddress
+      && !checkingAgentAccess
+      && !isAgentAccessVerified,
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAgentAccess = async () => {
+      if (!agentcode) {
+        if (!isMounted) return;
+        setAgentAdminWalletAddress('');
+        setAgentAccessError('agentcode 파라미터가 없어 권한을 확인할 수 없습니다.');
+        setCheckingAgentAccess(false);
+        return;
+      }
+
+      if (!normalizedConnectedWalletAddress) {
+        if (!isMounted) return;
+        setAgentAdminWalletAddress('');
+        setAgentAccessError(null);
+        setCheckingAgentAccess(false);
+        return;
+      }
+
+      if (isMounted) {
+        setCheckingAgentAccess(true);
+        setAgentAccessError(null);
+      }
+
+      try {
+        const response = await fetch('/api/agent/getOneAgent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agentcode }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(String((payload as Record<string, unknown>)?.error || '에이전트 정보를 불러오지 못했습니다.'));
+        }
+
+        const result = isRecord((payload as Record<string, unknown>)?.result)
+          ? (payload as Record<string, unknown>).result
+          : {};
+        const adminWalletAddress = String((result as Record<string, unknown>)?.adminWalletAddress || '').trim();
+        if (!adminWalletAddress) {
+          throw new Error('에이전트 관리자 지갑 주소가 설정되지 않았습니다.');
+        }
+
+        if (!isMounted) return;
+        setAgentAdminWalletAddress(adminWalletAddress);
+        setAgentAccessError(null);
+      } catch (error) {
+        if (!isMounted) return;
+        setAgentAdminWalletAddress('');
+        setAgentAccessError(error instanceof Error ? error.message : '권한 확인 중 오류가 발생했습니다.');
+      } finally {
+        if (isMounted) {
+          setCheckingAgentAccess(false);
+        }
+      }
+    };
+
+    loadAgentAccess();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [agentcode, normalizedConnectedWalletAddress]);
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f2f7ff_0%,#edf4ff_45%,#f8fafc_100%)] text-slate-900">
@@ -281,7 +368,7 @@ export default function P2PAgentManagementLayout({ children }: { children: React
 
       <div className={`min-h-screen transition-all duration-300 ${desktopSidebarWidthClass}`}>
         <div className="space-y-4 px-4 pb-10 pt-16 lg:px-8 lg:pt-8">
-          {!activeAccount?.address && (
+          {showWalletConnectRequired && (
             <section className="rounded-2xl border border-cyan-200 bg-cyan-50/70 px-4 py-4 shadow-[0_16px_32px_-24px_rgba(8,145,178,0.45)]">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -303,7 +390,44 @@ export default function P2PAgentManagementLayout({ children }: { children: React
             </section>
           )}
 
-          {children}
+          {showAccessChecking && (
+            <section className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">Access Check</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">에이전트 관리자 권한을 확인하고 있습니다.</p>
+              <p className="mt-1 text-xs text-slate-600">잠시만 기다려 주세요.</p>
+            </section>
+          )}
+
+          {showAccessDenied && (
+            <section className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 shadow-[0_16px_32px_-24px_rgba(225,29,72,0.45)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-700">Access Denied</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">이 페이지는 해당 에이전트 관리자 지갑만 접근할 수 있습니다.</p>
+              <div className="mt-2 space-y-1 text-xs text-slate-700">
+                <p>현재 연결 지갑: {connectedWalletAddress || '-'}</p>
+                <p>허용 지갑: {agentAdminWalletAddress || '-'}</p>
+                {agentAccessError && <p className="text-rose-700">오류: {agentAccessError}</p>}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <ConnectButton
+                  client={client}
+                  wallets={wallets}
+                  connectButton={{
+                    label: '권한 지갑으로 다시 연결',
+                    className:
+                      'inline-flex h-10 items-center justify-center rounded-xl border border-rose-300 bg-white px-4 text-sm font-semibold text-rose-700 transition hover:border-rose-400 hover:text-rose-800',
+                  }}
+                />
+                <Link
+                  href={p2pHomeHref}
+                  className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                >
+                  P2P 홈으로
+                </Link>
+              </div>
+            </section>
+          )}
+
+          {isAgentAccessVerified && children}
         </div>
       </div>
     </div>

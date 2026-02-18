@@ -243,7 +243,9 @@ export default function WalletManagementHomePage() {
         }
 
         const storeResult = isRecord(storeData?.result) ? storeData.result : {};
-        walletAddressesFilter = normalizeWalletAddressList(storeResult.sellerWalletAddresses);
+        walletAddressesFilter = normalizeWalletAddressList(
+          Array.isArray(storeResult.sellerWalletAddresses) ? storeResult.sellerWalletAddresses : [],
+        );
         setStoreSellerWalletAddresses(walletAddressesFilter);
 
         if (walletAddressesFilter.length === 0) {
@@ -278,12 +280,18 @@ export default function WalletManagementHomePage() {
           const user = rawUser;
           const sellerRaw = user.seller;
           const seller = isRecord(sellerRaw) ? sellerRaw : null;
+          const sellerBuyOrder = isRecord(seller?.buyOrder) ? seller.buyOrder : null;
           const walletAddress = String(user.walletAddress || '').trim();
-          const rate = Number(seller?.usdtToKrwRate || 0);
+          const parsedRate = Number(
+            seller?.usdtToKrwRate
+            || sellerBuyOrder?.rate
+            || 0,
+          );
+          const rate = Number.isFinite(parsedRate) && parsedRate > 0 ? parsedRate : 1;
           const currentUsdtBalance = Number(user.currentUsdtBalance || 0);
           const enabled = seller?.enabled === true;
           const status = String(seller?.status || '');
-          if (!walletAddress || !enabled || status !== 'confirmed' || !Number.isFinite(rate) || rate <= 0) {
+          if (!walletAddress || !enabled || status !== 'confirmed') {
             return null;
           }
           return {
