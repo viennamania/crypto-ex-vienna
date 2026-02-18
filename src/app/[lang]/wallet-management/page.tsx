@@ -118,6 +118,8 @@ const normalizeWalletAddressList = (value: unknown): string[] => {
   return Array.from(dedup.values());
 };
 
+const BALANCE_SYNC_WARNING_THRESHOLD = 3;
+
 export default function WalletManagementHomePage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -168,7 +170,7 @@ export default function WalletManagementHomePage() {
   );
 
   const [balance, setBalance] = useState(0);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState('');
+  const [balanceSyncFailureCount, setBalanceSyncFailureCount] = useState(0);
   const [sellers, setSellers] = useState<SellerPreviewItem[]>([]);
   const [storeSellerWalletAddresses, setStoreSellerWalletAddresses] = useState<string[]>([]);
   const [loadingSellers, setLoadingSellers] = useState(false);
@@ -190,11 +192,15 @@ export default function WalletManagementHomePage() {
   );
   const isStoreSellerMode = Boolean(storecode);
   const hasSingleConfiguredStoreSeller = isStoreSellerMode && storeSellerWalletAddresses.length === 1;
+  const isBalanceSyncWarning = balanceSyncFailureCount >= BALANCE_SYNC_WARNING_THRESHOLD;
+  const balanceSyncStatusLabel = isBalanceSyncWarning
+    ? '잔액 갱신 지연'
+    : '실시간 동기화 중';
 
   const loadBalance = useCallback(async () => {
     if (!activeAccount?.address) {
       setBalance(0);
-      setLastUpdatedAt('');
+      setBalanceSyncFailureCount(0);
       return;
     }
 
@@ -206,9 +212,10 @@ export default function WalletManagementHomePage() {
 
       const parsed = Number(result) / 10 ** activeNetwork.tokenDecimals;
       setBalance(Number.isFinite(parsed) ? parsed : 0);
-      setLastUpdatedAt(new Date().toISOString());
+      setBalanceSyncFailureCount(0);
     } catch (error) {
       console.error('Failed to load wallet balance', error);
+      setBalanceSyncFailureCount((prev) => Math.min(prev + 1, 99));
     }
   }, [activeAccount?.address, contract, activeNetwork.tokenDecimals]);
 
@@ -446,8 +453,8 @@ export default function WalletManagementHomePage() {
             USDT Finance
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            자산 관리와 상점 결제를 한 흐름으로 연결한 모바일형 금융 화면입니다.
-            필요한 작업으로 바로 이동하세요.
+            자산 관리부터 상점 결제까지, 서비스 이용 흐름을 하나로 연결했습니다.
+            필요한 업무를 바로 시작하세요.
           </p>
         </div>
 
@@ -458,6 +465,8 @@ export default function WalletManagementHomePage() {
               walletAddressDisplay={shortAddress(activeAccount.address)}
               networkLabel={activeNetwork.label}
               usdtBalanceDisplay={`${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`}
+              balanceUpdatedAtLabel={balanceSyncStatusLabel}
+              balanceUpdatedAtWarning={isBalanceSyncWarning}
               modeLabel="홈"
               smartAccountEnabled={smartAccountEnabled}
               onCopyAddress={(walletAddress) => {
@@ -510,9 +519,6 @@ export default function WalletManagementHomePage() {
                 </Link>
               </div>
 
-              <p className="mt-3 text-xs text-slate-500">
-                {lastUpdatedAt ? `최근 잔액 업데이트: ${new Date(lastUpdatedAt).toLocaleTimeString()}` : '잔액 데이터를 불러오는 중입니다.'}
-              </p>
             </section>
           </>
         ) : (
