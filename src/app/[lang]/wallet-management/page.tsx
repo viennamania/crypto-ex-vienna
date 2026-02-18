@@ -145,7 +145,6 @@ export default function WalletManagementHomePage() {
   );
 
   const [balance, setBalance] = useState(0);
-  const [loadingBalance, setLoadingBalance] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState('');
   const [sellers, setSellers] = useState<SellerPreviewItem[]>([]);
   const [loadingSellers, setLoadingSellers] = useState(false);
@@ -171,7 +170,6 @@ export default function WalletManagementHomePage() {
       return;
     }
 
-    setLoadingBalance(true);
     try {
       const result = await balanceOf({
         contract,
@@ -183,8 +181,6 @@ export default function WalletManagementHomePage() {
       setLastUpdatedAt(new Date().toISOString());
     } catch (error) {
       console.error('Failed to load wallet balance', error);
-    } finally {
-      setLoadingBalance(false);
     }
   }, [activeAccount?.address, contract, activeNetwork.tokenDecimals]);
 
@@ -318,9 +314,9 @@ export default function WalletManagementHomePage() {
           </p>
           <h1
             className="text-3xl font-semibold tracking-tight text-slate-900"
-            style={{ fontFamily: 'var(--font-display), "Times New Roman", serif' }}
+            style={{ fontFamily: '"SUIT Variable", "Pretendard", "Noto Sans KR", sans-serif' }}
           >
-            USDT 금융 홈
+            USDT Finance
           </h1>
           <p className="mt-2 text-sm text-slate-600">
             자산 관리와 상점 결제를 한 흐름으로 연결한 모바일형 금융 화면입니다.
@@ -339,11 +335,7 @@ export default function WalletManagementHomePage() {
               walletAddress={activeAccount.address}
               walletAddressDisplay={shortAddress(activeAccount.address)}
               networkLabel={activeNetwork.label}
-              usdtBalanceDisplay={
-                loadingBalance
-                  ? '조회 중...'
-                  : `${balance.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT`
-              }
+              usdtBalanceDisplay={`${balance.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT`}
               modeLabel="홈"
               smartAccountEnabled={smartAccountEnabled}
               onCopyAddress={(walletAddress) => {

@@ -1338,7 +1338,7 @@ export default function BuyUsdtPage({
           </p>
           <h1
             className="text-3xl font-semibold tracking-tight text-slate-900"
-            style={{ fontFamily: 'var(--font-display), "Times New Roman", serif' }}
+            style={{ fontFamily: '"SUIT Variable", "Pretendard", "Noto Sans KR", sans-serif' }}
           >
             USDT 구매
           </h1>

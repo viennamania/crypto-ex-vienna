@@ -115,7 +115,7 @@ const bodyFont = Manrope({
 });
 
 const WALLET_AUTH_OPTIONS = ['phone', 'email', 'google', 'apple', 'line', 'telegram'];
-const QUICK_KRW_AMOUNTS = [10000, 30000, 50000, 100000, 300000, 500000];
+const QUICK_USDT_AMOUNTS = [10, 30, 50, 100, 300, 500];
 const SENDBIRD_APP_ID =
   process.env.NEXT_PUBLIC_SENDBIRD_APP_ID ||
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID ||
@@ -163,12 +163,34 @@ const shortAddress = (value: string) => {
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
 };
 
-const toSafeKrwAmount = (value: string) => {
-  const digits = String(value || '').replace(/[^0-9]/g, '');
-  if (!digits) return 0;
-  const parsed = Number(digits);
+const normalizeUsdtInput = (value: string) => {
+  const cleaned = value.replace(/,/g, '').replace(/[^\d.]/g, '');
+  if (!cleaned) return '';
+  const hasTrailingDot = cleaned.endsWith('.');
+  const [wholeRaw, decimalRaw = ''] = cleaned.split('.');
+  const whole = wholeRaw.replace(/^0+(?=\d)/, '');
+  const decimal = decimalRaw.slice(0, 6);
+  if (hasTrailingDot) {
+    return `${whole || '0'}.`;
+  }
+  if (decimal.length > 0) {
+    return `${whole || '0'}.${decimal}`;
+  }
+  return whole;
+};
+
+const toSafeUsdtAmount = (value: string) => {
+  const parsed = Number(String(value || '').replace(/,/g, ''));
   if (!Number.isFinite(parsed)) return 0;
-  return Math.max(0, Math.floor(parsed));
+  const normalized = Number(parsed.toFixed(6));
+  return normalized > 0 ? normalized : 0;
+};
+
+const formatUsdtInputFromBalance = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) return '';
+  const floored = Math.floor(value * 1_000_000) / 1_000_000;
+  if (floored <= 0) return '';
+  return floored.toFixed(6).replace(/\.?0+$/, '');
 };
 
 const formatKrw = (value: number) => `${value.toLocaleString()}원`;
@@ -291,7 +313,6 @@ export default function PaymentUsdtPage({
   const [selectedStorecode, setSelectedStorecode] = useState('');
 
   const [balance, setBalance] = useState(0);
-  const [loadingBalance, setLoadingBalance] = useState(false);
 
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
   const [amountInput, setAmountInput] = useState('');
@@ -321,6 +342,19 @@ export default function PaymentUsdtPage({
   const amountInputRef = useRef<HTMLInputElement | null>(null);
   const memberStatusCardRef = useRef<HTMLDivElement | null>(null);
 
+  const clampUsdtInputToBalance = useCallback((rawValue: string) => {
+    const normalized = normalizeUsdtInput(rawValue);
+    if (!normalized) return '';
+
+    const parsed = toSafeUsdtAmount(normalized);
+    if (parsed <= 0) return '';
+    if (balance <= 0) return '';
+    if (parsed > balance) {
+      return formatUsdtInputFromBalance(balance);
+    }
+    return normalized;
+  }, [balance]);
+
   const selectedMerchant = useMemo(
     () => merchants.find((item) => item.storecode === selectedStorecode) || null,
     [merchants, selectedStorecode]
@@ -337,13 +371,13 @@ export default function PaymentUsdtPage({
     });
   }, [merchants, searchKeyword]);
 
-  const krwAmount = useMemo(() => toSafeKrwAmount(amountInput), [amountInput]);
-  const usdtAmount = useMemo(() => {
-    if (exchangeRate <= 0 || krwAmount <= 0) {
+  const usdtAmount = useMemo(() => toSafeUsdtAmount(amountInput), [amountInput]);
+  const krwAmount = useMemo(() => {
+    if (exchangeRate <= 0 || usdtAmount <= 0) {
       return 0;
     }
-    return Number((krwAmount / exchangeRate).toFixed(6));
-  }, [exchangeRate, krwAmount]);
+    return Math.round(usdtAmount * exchangeRate);
+  }, [exchangeRate, usdtAmount]);
   const hasEnoughBalance = usdtAmount > 0 && usdtAmount <= balance;
   const paymentTabLabel = useMemo(
     () => (paymentTab === 'pay' ? '결제하기' : '결제내역'),
@@ -386,9 +420,9 @@ export default function PaymentUsdtPage({
       selectedMerchant &&
       !loadingMemberProfile &&
       hasMemberProfile &&
-      krwAmount > 0 &&
-      exchangeRate > 0 &&
       usdtAmount > 0 &&
+      exchangeRate > 0 &&
+      krwAmount > 0 &&
       hasEnoughBalance
   );
   const primaryActionLabel = useMemo(() => {
@@ -407,14 +441,14 @@ export default function PaymentUsdtPage({
     if (!hasMemberProfile) {
       return '회원정보 연동하기';
     }
-    if (krwAmount <= 0) {
-      return '결제 금액 입력하기';
+    if (usdtAmount <= 0) {
+      return 'USDT 수량 입력하기';
     }
     if (exchangeRate <= 0) {
       return '환율 로딩 중...';
     }
-    if (usdtAmount <= 0) {
-      return '결제 금액 입력하기';
+    if (krwAmount <= 0) {
+      return '수량 조정 필요';
     }
     if (!hasEnoughBalance) {
       return 'USDT 충전 후 결제';
@@ -427,9 +461,9 @@ export default function PaymentUsdtPage({
     hasStorecodeParam,
     loadingMemberProfile,
     hasMemberProfile,
-    krwAmount,
     usdtAmount,
     exchangeRate,
+    krwAmount,
     hasEnoughBalance,
   ]);
   const primaryActionGuide = useMemo(() => {
@@ -447,14 +481,14 @@ export default function PaymentUsdtPage({
     if (!hasMemberProfile) {
       return '가맹점 회원 아이디와 핀번호(숫자 5자리)를 입력해 회원정보 연동을 완료해야 결제를 진행할 수 있습니다.';
     }
-    if (krwAmount <= 0) {
-      return '결제할 KRW 금액을 입력해 주세요.';
+    if (usdtAmount <= 0) {
+      return '결제할 USDT 수량을 입력해 주세요.';
     }
     if (exchangeRate <= 0) {
       return '실시간 환율을 불러오는 중입니다. 잠시만 기다려 주세요.';
     }
-    if (usdtAmount <= 0) {
-      return '전송 가능한 USDT 수량이 계산되도록 결제 금액을 조정해 주세요.';
+    if (krwAmount <= 0) {
+      return '환산 금액이 0원이 되지 않도록 USDT 수량을 조정해 주세요.';
     }
     if (!hasEnoughBalance) {
       return `잔액이 부족합니다. 현재 필요 수량은 ${formatUsdt(usdtAmount)} 입니다.`;
@@ -466,9 +500,9 @@ export default function PaymentUsdtPage({
     hasStorecodeParam,
     loadingMemberProfile,
     hasMemberProfile,
-    krwAmount,
     usdtAmount,
     exchangeRate,
+    krwAmount,
     hasEnoughBalance,
   ]);
 
@@ -560,7 +594,6 @@ export default function PaymentUsdtPage({
       return;
     }
 
-    setLoadingBalance(true);
     try {
       const result = await balanceOf({
         contract,
@@ -570,8 +603,6 @@ export default function PaymentUsdtPage({
     } catch (error) {
       console.error('Failed to load balance', error);
       toast.error('USDT 잔액 조회에 실패했습니다.');
-    } finally {
-      setLoadingBalance(false);
     }
   }, [activeAccount?.address, contract, activeNetwork.tokenDecimals]);
 
@@ -856,16 +887,16 @@ export default function PaymentUsdtPage({
       toast.error('선택한 상점의 회원정보 연동을 완료해야 결제할 수 있습니다.');
       return;
     }
-    if (krwAmount <= 0) {
-      toast.error('결제 금액(원)을 입력해 주세요.');
+    if (usdtAmount <= 0) {
+      toast.error('결제 수량(USDT)을 입력해 주세요.');
       return;
     }
     if (exchangeRate <= 0) {
       toast.error('환율 정보를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');
       return;
     }
-    if (usdtAmount <= 0) {
-      toast.error('전송 가능한 USDT 수량이 계산되도록 결제 금액을 조정해 주세요.');
+    if (krwAmount <= 0) {
+      toast.error('환산 금액이 너무 작습니다. USDT 수량을 늘려 주세요.');
       return;
     }
     if (!hasEnoughBalance) {
@@ -902,18 +933,18 @@ export default function PaymentUsdtPage({
       toast.error('회원정보 연동을 먼저 완료해 주세요.');
       return;
     }
-    if (krwAmount <= 0) {
+    if (usdtAmount <= 0) {
       amountInputRef.current?.focus();
-      toast.error('결제 금액(원)을 입력해 주세요.');
+      toast.error('결제 수량(USDT)을 입력해 주세요.');
       return;
     }
     if (exchangeRate <= 0) {
       toast.error('환율 정보를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');
       return;
     }
-    if (usdtAmount <= 0) {
+    if (krwAmount <= 0) {
       amountInputRef.current?.focus();
-      toast.error('전송 가능한 USDT 수량이 계산되도록 결제 금액을 조정해 주세요.');
+      toast.error('환산 금액이 너무 작습니다. USDT 수량을 늘려 주세요.');
       return;
     }
     if (!hasEnoughBalance) {
@@ -929,9 +960,9 @@ export default function PaymentUsdtPage({
       !activeAccount?.address ||
       !selectedMerchant ||
       !hasMemberProfile ||
-      krwAmount <= 0 ||
       usdtAmount <= 0 ||
       exchangeRate <= 0 ||
+      krwAmount <= 0 ||
       paying
     ) {
       return;
@@ -1034,14 +1065,34 @@ export default function PaymentUsdtPage({
           </p>
           <h1
             className="text-3xl font-semibold tracking-tight text-slate-900"
-            style={{ fontFamily: 'var(--font-display), "Times New Roman", serif' }}
+            style={{ fontFamily: '"SUIT Variable", "Pretendard", "Noto Sans KR", sans-serif' }}
           >
-            USDT 결제
+            {hasStorecodeParam && selectedMerchant ? (
+              <span className="inline-flex max-w-full items-center gap-2.5">
+                <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-cyan-200">
+                  {selectedMerchant.storeLogo ? (
+                    <span
+                      className="block h-full w-full bg-cover bg-center"
+                      style={{ backgroundImage: `url(${encodeURI(selectedMerchant.storeLogo)})` }}
+                      aria-label={selectedMerchant.storeName}
+                    />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-cyan-700">
+                      SHOP
+                    </span>
+                  )}
+                </span>
+                <span className="min-w-0 truncate">{selectedMerchant.storeName}</span>
+                <span className="shrink-0 text-slate-700">USDT 결제</span>
+              </span>
+            ) : (
+              'USDT 결제'
+            )}
           </h1>
           <p className="mt-2 text-sm text-slate-600">
             {hasStorecodeParam
-              ? '지정된 가맹점에 결제 금액(KRW)을 입력하면, 실시간 환율 기준 USDT로 안전하게 결제할 수 있습니다.'
-              : '가맹점을 선택하고 결제 금액(KRW)을 입력하면, 실시간 환율 기준 USDT로 안전하게 결제할 수 있습니다.'}
+              ? '지정된 가맹점에 USDT 결제 수량을 입력하면, 실시간 환율 기준 KRW 환산 금액을 확인하며 안전하게 결제할 수 있습니다.'
+              : '가맹점을 선택하고 USDT 결제 수량을 입력하면, 실시간 환율 기준 KRW 환산 금액을 확인하며 안전하게 결제할 수 있습니다.'}
           </p>
         </div>
 
@@ -1050,11 +1101,7 @@ export default function PaymentUsdtPage({
             walletAddress={activeAccount.address}
             walletAddressDisplay={shortAddress(activeAccount.address)}
             networkLabel={activeNetwork.label}
-            usdtBalanceDisplay={
-              loadingBalance
-                ? '조회 중...'
-                : `${balance.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT`
-            }
+            usdtBalanceDisplay={`${balance.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT`}
             modeLabel={paymentTabLabel}
             smartAccountEnabled={smartAccountEnabled}
             onCopyAddress={(walletAddress) => {
@@ -1069,7 +1116,7 @@ export default function PaymentUsdtPage({
               chain={activeNetwork.chain}
               lang={lang}
               title="결제를 시작하려면 지갑을 연결하세요."
-              description="연결 후 상점 선택, 원화 금액 입력, 환율 적용 USDT 전송이 활성화됩니다."
+              description="연결 후 상점 선택, USDT 수량 입력, 환율 기반 결제가 활성화됩니다."
             />
           </div>
         )}
@@ -1112,8 +1159,8 @@ export default function PaymentUsdtPage({
                     </h3>
                     <p className="mt-1 text-xs text-slate-600">
                       {selectedMerchant
-                        ? '상점 선택이 완료되었습니다. 이제 결제 금액을 입력해 진행할 수 있습니다.'
-                        : '가맹점을 먼저 선택해야 회원 확인과 결제 금액 입력이 활성화됩니다.'}
+                        ? '상점 선택이 완료되었습니다. 이제 USDT 결제 수량을 입력해 진행할 수 있습니다.'
+                        : '가맹점을 먼저 선택해야 회원 확인과 USDT 수량 입력이 활성화됩니다.'}
                     </p>
 
                     {selectedMerchant && (
@@ -1155,7 +1202,7 @@ export default function PaymentUsdtPage({
                   </div>
                 )}
 
-                {hasStorecodeParam && selectedMerchant && (
+                {!hasStorecodeParam && selectedMerchant && (
                   <div className="mb-4 rounded-2xl border border-cyan-200 bg-cyan-50/70 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-700">지정 가맹점</p>
                     <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full border border-cyan-200 bg-white px-2.5 py-1.5">
@@ -1206,7 +1253,6 @@ export default function PaymentUsdtPage({
                         <p className="mt-1 break-all text-2xl font-extrabold leading-tight text-emerald-900">
                           {myMemberProfile?.nickname || '-'}
                         </p>
-                        <p className="mt-1 text-xs text-emerald-700">가맹점 코드 {myMemberProfile?.storecode || selectedStorecode}</p>
                       </>
                     ) : (
                       <>
@@ -1253,51 +1299,49 @@ export default function PaymentUsdtPage({
                   </div>
                 )}
 
-                <div
-                  className={`mb-4 rounded-2xl border px-4 py-3 text-sm ${
-                    isPaymentReady
-                      ? 'border-emerald-200 bg-emerald-50'
-                      : 'border-slate-200 bg-slate-50'
-                  }`}
-                >
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">결제 준비 상태</p>
-                  <p className={`mt-1 font-semibold ${isPaymentReady ? 'text-emerald-800' : 'text-slate-800'}`}>
-                    {primaryActionLabel}
-                  </p>
-                  <p className={`mt-1 text-xs ${isPaymentReady ? 'text-emerald-700' : 'text-slate-600'}`}>
-                    {primaryActionGuide}
-                  </p>
-                </div>
+                {!hasStorecodeParam && (
+                  <div
+                    className={`mb-4 rounded-2xl border px-4 py-3 text-sm ${
+                      isPaymentReady
+                        ? 'border-emerald-200 bg-emerald-50'
+                        : 'border-slate-200 bg-slate-50'
+                    }`}
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">결제 준비 상태</p>
+                    <p className={`mt-1 font-semibold ${isPaymentReady ? 'text-emerald-800' : 'text-slate-800'}`}>
+                      {primaryActionLabel}
+                    </p>
+                    <p className={`mt-1 text-xs ${isPaymentReady ? 'text-emerald-700' : 'text-slate-600'}`}>
+                      {primaryActionGuide}
+                    </p>
+                  </div>
+                )}
 
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-lg font-semibold text-slate-900">결제 금액 입력 (KRW)</h2>
-                  {selectedMerchant && (
-                    <span className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800">
-                      {selectedMerchant.storeName}
-                    </span>
-                  )}
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-slate-900">USDT 결제 수량 입력</h2>
                 </div>
 
                 {needsMerchantSelectionFirst && (
                   <p className="mt-2 text-xs font-semibold text-cyan-700">
-                    결제할 가맹점을 먼저 선택하면 아래 금액 입력이 활성화됩니다.
+                    결제할 가맹점을 먼저 선택하면 아래 USDT 입력이 활성화됩니다.
                   </p>
                 )}
                 {needsMemberSignupFirst && (
                   <p className="mt-2 text-xs font-semibold text-amber-700">
-                    회원정보 연동 완료 후 결제 금액을 입력할 수 있습니다.
+                    회원정보 연동 완료 후 USDT 수량을 입력할 수 있습니다.
                   </p>
                 )}
 
                 <div className="mt-4 grid grid-cols-3 gap-2">
-                  {QUICK_KRW_AMOUNTS.map((value) => (
+                  {QUICK_USDT_AMOUNTS.map((value) => (
                     <button
                       key={value}
                       type="button"
                       disabled={shouldLockAmountInputs}
                       onClick={() => {
-                        setSelectedPreset(value);
-                        setAmountInput(String(value));
+                        const nextAmount = clampUsdtInputToBalance(String(value));
+                        setAmountInput(nextAmount);
+                        setSelectedPreset(nextAmount === String(value) ? value : null);
                       }}
                       className={`h-10 rounded-xl border text-sm font-semibold transition ${
                         selectedPreset === value
@@ -1305,28 +1349,53 @@ export default function PaymentUsdtPage({
                           : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
                       } disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400`}
                     >
-                      {formatKrw(value)}
+                      {value.toLocaleString()} USDT
                     </button>
                   ))}
                 </div>
 
                 <div className="mt-4 rounded-2xl border border-slate-300 bg-white px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">직접 입력 (원)</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">직접 입력 (USDT)</p>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAmountInput('');
+                          setSelectedPreset(null);
+                        }}
+                        disabled={shouldLockAmountInputs || !amountInput}
+                        className="text-xs font-semibold text-slate-500 underline decoration-slate-300 underline-offset-2 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:text-slate-400 disabled:no-underline"
+                      >
+                        초기화
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAmountInput(formatUsdtInputFromBalance(balance));
+                          setSelectedPreset(null);
+                        }}
+                        disabled={shouldLockAmountInputs || balance <= 0}
+                        className="text-xs font-semibold text-emerald-600 underline decoration-emerald-200 underline-offset-2 transition hover:text-emerald-700 disabled:cursor-not-allowed disabled:text-slate-400 disabled:no-underline"
+                      >
+                        최대
+                      </button>
+                    </div>
+                  </div>
                   <div className="mt-2 flex items-end justify-between gap-3">
                     <input
                       ref={amountInputRef}
                       disabled={shouldLockAmountInputs}
-                      value={amountInput ? Number(amountInput).toLocaleString() : ''}
+                      value={amountInput}
                       onChange={(event) => {
-                        const raw = event.target.value.replace(/[^0-9]/g, '');
-                        setAmountInput(raw);
+                        setAmountInput(clampUsdtInputToBalance(event.target.value));
                         setSelectedPreset(null);
                       }}
-                      placeholder="0"
-                      className="w-full bg-transparent text-2xl font-semibold text-slate-900 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
-                      inputMode="numeric"
+                      placeholder="0.00"
+                      className="w-full bg-transparent text-right text-5xl font-bold text-slate-900 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
+                      inputMode="decimal"
                     />
-                    <span className="pb-1 text-sm font-semibold text-slate-500">KRW</span>
+                    <span className="pb-1 text-sm font-semibold text-slate-500">USDT</span>
                   </div>
                 </div>
 
@@ -1342,28 +1411,28 @@ export default function PaymentUsdtPage({
                     <span className="font-semibold text-slate-800">{activeNetwork.label}</span>
                   </div>
                   <div className="mt-2 flex items-center justify-between">
+                    <span className="text-slate-500">입력 수량 (USDT)</span>
+                    <span className="font-semibold text-slate-800">
+                      {usdtAmount > 0 ? formatUsdt(usdtAmount) : '0 USDT'}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
                     <span className="text-slate-500">적용 환율</span>
                     <span className="font-semibold text-slate-800">
                       {exchangeRate > 0 ? `1 USDT = ${formatRate(exchangeRate)}` : '조회 중'}
                     </span>
                   </div>
                   <div className="mt-2 flex items-center justify-between">
-                    <span className="text-slate-500">결제 금액 (KRW)</span>
+                    <span className="text-slate-500">환산 금액 (KRW)</span>
                     <span className="font-semibold text-slate-800">
                       {krwAmount > 0 ? formatKrw(krwAmount) : '0원'}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-slate-500">전송 예정 (USDT)</span>
-                    <span className="font-semibold text-slate-800">
-                      {usdtAmount > 0 ? formatUsdt(usdtAmount) : '0 USDT'}
                     </span>
                   </div>
                 </div>
 
                 {!hasEnoughBalance && usdtAmount > 0 && (
                   <p className="mt-3 text-sm font-medium text-rose-600">
-                    잔액이 부족합니다. 현재 환율 기준 전송량은 {formatUsdt(usdtAmount)} 입니다.
+                    잔액이 부족합니다. 입력한 전송 수량은 {formatUsdt(usdtAmount)} 입니다.
                   </p>
                 )}
 
@@ -1641,7 +1710,7 @@ export default function PaymentUsdtPage({
             <p className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
               결제 확인
             </p>
-            <h3 className="mt-3 text-xl font-semibold text-slate-900">KRW 결제 요청을 진행할까요?</h3>
+            <h3 className="mt-3 text-xl font-semibold text-slate-900">USDT 결제를 진행할까요?</h3>
 
             <div className="mt-4 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
               <div className="flex items-center justify-between">
@@ -1649,7 +1718,11 @@ export default function PaymentUsdtPage({
                 <span className="font-semibold text-slate-800">{selectedMerchant.storeName}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">결제 금액 (KRW)</span>
+                <span className="text-slate-500">입력 수량 (USDT)</span>
+                <span className="font-semibold text-slate-800">{formatUsdt(usdtAmount)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">환산 금액 (KRW)</span>
                 <span className="font-semibold text-slate-800">
                   {formatKrw(krwAmount)}
                 </span>
