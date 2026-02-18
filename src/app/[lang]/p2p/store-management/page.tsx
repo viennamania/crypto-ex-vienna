@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 
 type DashboardStore = {
   storecode: string;
@@ -75,8 +76,18 @@ const formatRate = (value: number) =>
   `${new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0)} KRW`;
 
 export default function P2PStoreManagementHomePage() {
+  const params = useParams<{ lang: string }>();
+  const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang || 'ko';
   const searchParams = useSearchParams();
   const storecode = String(searchParams?.get('storecode') || '').trim();
+  const p2pHomeHref = useMemo(() => {
+    const query = new URLSearchParams();
+    if (storecode) {
+      query.set('storecode', storecode);
+    }
+    const queryString = query.toString();
+    return `/${lang}/p2p${queryString ? `?${queryString}` : ''}`;
+  }, [lang, storecode]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -224,6 +235,15 @@ export default function P2PStoreManagementHomePage() {
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">Store Dashboard</p>
         <h1 className="mt-1 text-2xl font-bold text-slate-900">가맹점 운영 홈</h1>
         <p className="mt-1 text-sm text-slate-600">storecode 기반 회원/결제 현황을 한 화면에서 확인합니다.</p>
+      </div>
+
+      <div className="flex justify-end">
+        <Link
+          href={p2pHomeHref}
+          className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+        >
+          P2P 홈으로 돌아가기
+        </Link>
       </div>
 
       {!storecode && (

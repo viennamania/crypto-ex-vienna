@@ -7,6 +7,7 @@ import { ethereum, polygon, arbitrum, bsc } from "thirdweb/chains";
 import clientPromise, { dbName } from "@lib/mongodb";
 import { getStoreByStorecode } from "@lib/api/store";
 import { getOneByWalletAddress } from "@lib/api/user";
+import { getAgentByAgentcode } from "@lib/api/agent";
 import {
   ethereumContractAddressUSDT,
   polygonContractAddressUSDT,
@@ -46,12 +47,14 @@ type WalletPaymentDocument = {
 
 type WalletCollectDocument = {
   _id?: ObjectId;
+  agentcode?: string;
   storecode: string;
   storeName: string;
   chain?: ChainKey;
   fromWalletAddress: string;
   toWalletAddress: string;
   requestedByWalletAddress: string;
+  requestedByRole?: "store-admin" | "agent-admin";
   requestedAmount: number;
   transactionId: string;
   status: CollectStatus;
@@ -83,9 +86,65 @@ const normalizeChain = (value: unknown): ChainKey => {
 };
 
 const normalizeAddress = (value: unknown) => String(value || "").trim().toLowerCase();
+const normalizeAgentcode = (value: unknown) => String(value || "").trim();
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+const isSameText = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+const resolveCollectRequester = async ({
+  store,
+  agentcode,
+  requestedByWalletAddress,
+}: {
+  store: any;
+  agentcode: string;
+  requestedByWalletAddress: string;
+}): Promise<{
+  role: "store-admin" | "agent-admin";
+  authorizedWalletAddress: string;
+  resolvedAgentcode: string;
+} | null> => {
+  const normalizedRequester = normalizeAddress(requestedByWalletAddress);
+  if (!isWalletAddress(normalizedRequester)) {
+    return null;
+  }
+
+  const storeAdminWalletAddress = normalizeAddress(store?.adminWalletAddress);
+  if (isWalletAddress(storeAdminWalletAddress) && normalizedRequester === storeAdminWalletAddress) {
+    return {
+      role: "store-admin",
+      authorizedWalletAddress: storeAdminWalletAddress,
+      resolvedAgentcode: normalizeAgentcode(store?.agentcode || agentcode),
+    };
+  }
+
+  const storeAgentcode = normalizeAgentcode(store?.agentcode);
+  const requestedAgentcode = normalizeAgentcode(agentcode);
+  if (requestedAgentcode && storeAgentcode && !isSameText(requestedAgentcode, storeAgentcode)) {
+    return null;
+  }
+
+  const targetAgentcode = requestedAgentcode || storeAgentcode;
+  if (!targetAgentcode) {
+    return null;
+  }
+
+  const agent = await getAgentByAgentcode({ agentcode: targetAgentcode });
+  const agentAdminWalletAddress = normalizeAddress(agent?.adminWalletAddress);
+  if (!isWalletAddress(agentAdminWalletAddress)) {
+    return null;
+  }
+  if (normalizedRequester !== agentAdminWalletAddress) {
+    return null;
+  }
+
+  return {
+    role: "agent-admin",
+    authorizedWalletAddress: agentAdminWalletAddress,
+    resolvedAgentcode: targetAgentcode,
+  };
+};
 
 const normalizeCollectStatus = (value: unknown): CollectStatus => {
   const status = String(value || "").trim().toUpperCase();
@@ -157,12 +216,14 @@ const serializePayment = (doc: WalletPaymentDocument & { _id?: ObjectId }) => ({
 
 const serializeCollect = (doc: WalletCollectDocument & { _id?: ObjectId }) => ({
   id: doc._id?.toString() || "",
+  agentcode: doc.agentcode || "",
   storecode: doc.storecode,
   storeName: doc.storeName,
   chain: doc.chain || "",
   fromWalletAddress: doc.fromWalletAddress,
   toWalletAddress: doc.toWalletAddress,
   requestedByWalletAddress: doc.requestedByWalletAddress,
+  requestedByRole: doc.requestedByRole || "",
   requestedAmount: Number(doc.requestedAmount || 0),
   transactionId: doc.transactionId,
   status: doc.status,
@@ -552,9 +613,101 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  if (action === "collect-balance") {
+    const storecode = String(body?.storecode || "").trim();
+    const chain = normalizeChain(body?.chain);
+    const agentcode = normalizeAgentcode(body?.agentcode);
+    const adminWalletAddress = normalizeAddress(body?.adminWalletAddress);
+
+    if (!storecode) {
+      return NextResponse.json({ error: "storecode is required" }, { status: 400 });
+    }
+    if (!isWalletAddress(adminWalletAddress)) {
+      return NextResponse.json({ error: "adminWalletAddress is required" }, { status: 400 });
+    }
+
+    const store = await getStoreByStorecode({ storecode });
+    if (!store) {
+      return NextResponse.json({ error: "store not found" }, { status: 404 });
+    }
+
+    const requester = await resolveCollectRequester({
+      store,
+      agentcode,
+      requestedByWalletAddress: adminWalletAddress,
+    });
+    if (!requester) {
+      return NextResponse.json({ error: "not authorized for this store" }, { status: 403 });
+    }
+
+    const paymentWalletAddress = String(store?.paymentWalletAddress || "").trim();
+    if (!isWalletAddress(paymentWalletAddress)) {
+      return NextResponse.json({ error: "store payment wallet is not configured" }, { status: 400 });
+    }
+
+    const secretKey = process.env.THIRDWEB_SECRET_KEY || "";
+    if (!secretKey) {
+      return NextResponse.json({ error: "THIRDWEB_SECRET_KEY is not configured" }, { status: 500 });
+    }
+
+    try {
+      const thirdwebClient = createThirdwebClient({ secretKey });
+      const chainInfo =
+        chain === "ethereum"
+          ? ethereum
+          : chain === "arbitrum"
+          ? arbitrum
+          : chain === "bsc"
+          ? bsc
+          : polygon;
+      const usdtContractAddress =
+        chain === "ethereum"
+          ? ethereumContractAddressUSDT
+          : chain === "arbitrum"
+          ? arbitrumContractAddressUSDT
+          : chain === "bsc"
+          ? bscContractAddressUSDT
+          : polygonContractAddressUSDT;
+      const tokenDecimals = CHAIN_TO_TOKEN_DECIMALS[chain];
+
+      const usdtContract = getContract({
+        client: thirdwebClient,
+        chain: chainInfo,
+        address: usdtContractAddress,
+      });
+
+      const walletBalanceRaw = await balanceOf({
+        contract: usdtContract,
+        address: paymentWalletAddress,
+      });
+      const walletBalance = Number(walletBalanceRaw) / 10 ** tokenDecimals;
+
+      return NextResponse.json({
+        result: {
+          store: {
+            storecode: String(store?.storecode || storecode),
+            storeName: String(store?.storeName || storecode),
+            storeLogo: String(store?.storeLogo || ""),
+            agentcode: String(store?.agentcode || requester.resolvedAgentcode || ""),
+            paymentWalletAddress,
+            adminWalletAddress: String(store?.adminWalletAddress || ""),
+          },
+          chain,
+          balance: Number.isFinite(walletBalance) && walletBalance > 0 ? walletBalance : 0,
+          collectToWalletAddress: requester.authorizedWalletAddress,
+          requestedByRole: requester.role,
+        },
+      });
+    } catch (collectBalanceError) {
+      console.error("wallet payment-usdt collect-balance error", collectBalanceError);
+      return NextResponse.json({ error: "failed to load payment wallet balance" }, { status: 500 });
+    }
+  }
+
   if (action === "collect") {
     const storecode = String(body?.storecode || "").trim();
     const chain = normalizeChain(body?.chain);
+    const agentcode = normalizeAgentcode(body?.agentcode);
     const adminWalletAddress = normalizeAddress(body?.adminWalletAddress);
     const toWalletAddress = String(body?.toWalletAddress || "").trim();
     const normalizedToWalletAddress = normalizeAddress(toWalletAddress);
@@ -565,7 +718,7 @@ export async function POST(request: NextRequest) {
     if (!isWalletAddress(normalizedToWalletAddress)) {
       return NextResponse.json({ error: "invalid toWalletAddress" }, { status: 400 });
     }
-    if (!adminWalletAddress) {
+    if (!isWalletAddress(adminWalletAddress)) {
       return NextResponse.json({ error: "adminWalletAddress is required" }, { status: 400 });
     }
 
@@ -574,12 +727,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "store not found" }, { status: 404 });
     }
 
-    const storeAdminWalletAddress = normalizeAddress(store?.adminWalletAddress);
-    if (!storeAdminWalletAddress || storeAdminWalletAddress !== adminWalletAddress) {
+    const requester = await resolveCollectRequester({
+      store,
+      agentcode,
+      requestedByWalletAddress: adminWalletAddress,
+    });
+    if (!requester) {
       return NextResponse.json({ error: "not authorized for this store" }, { status: 403 });
     }
-    if (storeAdminWalletAddress !== normalizedToWalletAddress) {
-      return NextResponse.json({ error: "toWalletAddress must be admin wallet address" }, { status: 403 });
+    if (requester.authorizedWalletAddress !== normalizedToWalletAddress) {
+      return NextResponse.json({ error: "toWalletAddress must match authorized admin wallet" }, { status: 403 });
     }
 
     const paymentWalletAddress = String(store?.paymentWalletAddress || "").trim();
@@ -660,12 +817,14 @@ export async function POST(request: NextRequest) {
         { transactionId },
         {
           $set: {
+            agentcode: requester.resolvedAgentcode,
             storecode: String(store?.storecode || storecode),
             storeName: String(store?.storeName || storecode),
             chain,
             fromWalletAddress: normalizeAddress(paymentWalletAddress),
-            toWalletAddress: normalizedToWalletAddress,
+            toWalletAddress: requester.authorizedWalletAddress,
             requestedByWalletAddress: adminWalletAddress,
+            requestedByRole: requester.role,
             requestedAmount: walletBalance,
             transactionId,
             status: collectStatus,
@@ -686,7 +845,7 @@ export async function POST(request: NextRequest) {
         result: {
           storecode: String(store?.storecode || storecode),
           fromWalletAddress: paymentWalletAddress,
-          toWalletAddress: normalizedToWalletAddress,
+          toWalletAddress: requester.authorizedWalletAddress,
           transferredAmount: walletBalance,
           chain,
           transactionId,
@@ -701,13 +860,14 @@ export async function POST(request: NextRequest) {
 
   if (action === "collect-status") {
     const storecode = String(body?.storecode || "").trim();
+    const agentcode = normalizeAgentcode(body?.agentcode);
     const adminWalletAddress = normalizeAddress(body?.adminWalletAddress);
     const transactionId = String(body?.transactionId || "").trim();
 
     if (!storecode) {
       return NextResponse.json({ error: "storecode is required" }, { status: 400 });
     }
-    if (!adminWalletAddress) {
+    if (!isWalletAddress(adminWalletAddress)) {
       return NextResponse.json({ error: "adminWalletAddress is required" }, { status: 400 });
     }
     if (!transactionId) {
@@ -719,8 +879,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "store not found" }, { status: 404 });
     }
 
-    const storeAdminWalletAddress = normalizeAddress(store?.adminWalletAddress);
-    if (!storeAdminWalletAddress || storeAdminWalletAddress !== adminWalletAddress) {
+    const requester = await resolveCollectRequester({
+      store,
+      agentcode,
+      requestedByWalletAddress: adminWalletAddress,
+    });
+    if (!requester) {
       return NextResponse.json({ error: "not authorized for this store" }, { status: 403 });
     }
 
@@ -765,11 +929,13 @@ export async function POST(request: NextRequest) {
         { transactionId },
         {
           $set: {
+            agentcode: requester.resolvedAgentcode,
             storecode: String(store?.storecode || storecode),
             storeName: String(store?.storeName || storecode),
             fromWalletAddress: paymentWalletAddress,
-            toWalletAddress: storeAdminWalletAddress,
+            toWalletAddress: requester.authorizedWalletAddress,
             requestedByWalletAddress: adminWalletAddress,
+            requestedByRole: requester.role,
             transactionId,
             status,
             onchainStatus,
@@ -806,11 +972,13 @@ export async function POST(request: NextRequest) {
           { transactionId },
           {
             $set: {
+              agentcode: requester.resolvedAgentcode,
               storecode: String(store?.storecode || storecode),
               storeName: String(store?.storeName || storecode),
               fromWalletAddress: paymentWalletAddress,
-              toWalletAddress: storeAdminWalletAddress,
+              toWalletAddress: requester.authorizedWalletAddress,
               requestedByWalletAddress: adminWalletAddress,
+              requestedByRole: requester.role,
               transactionId,
               status: "QUEUED",
               onchainStatus: "",
@@ -844,13 +1012,14 @@ export async function POST(request: NextRequest) {
 
   if (action === "collect-history") {
     const storecode = String(body?.storecode || "").trim();
+    const agentcode = normalizeAgentcode(body?.agentcode);
     const adminWalletAddress = normalizeAddress(body?.adminWalletAddress);
     const limit = Math.min(Math.max(Number(body?.limit || 30), 1), 100);
 
     if (!storecode) {
       return NextResponse.json({ error: "storecode is required" }, { status: 400 });
     }
-    if (!adminWalletAddress) {
+    if (!isWalletAddress(adminWalletAddress)) {
       return NextResponse.json({ error: "adminWalletAddress is required" }, { status: 400 });
     }
 
@@ -859,10 +1028,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "store not found" }, { status: 404 });
     }
 
-    const storeAdminWalletAddress = normalizeAddress(store?.adminWalletAddress);
-    if (!storeAdminWalletAddress || storeAdminWalletAddress !== adminWalletAddress) {
+    const requester = await resolveCollectRequester({
+      store,
+      agentcode,
+      requestedByWalletAddress: adminWalletAddress,
+    });
+    if (!requester) {
       return NextResponse.json({ error: "not authorized for this store" }, { status: 403 });
     }
+    void requester;
 
     const history = await collectCollection
       .find({

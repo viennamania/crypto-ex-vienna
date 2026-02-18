@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 
 import AgentInfoCard from '../_components/AgentInfoCard';
 import {
@@ -16,6 +17,8 @@ import {
 } from '../_shared';
 
 export default function P2PAgentStoreManagementPage() {
+  const params = useParams<{ lang: string }>();
+  const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang || 'ko';
   const searchParams = useSearchParams();
   const agentcode = String(searchParams?.get('agentcode') || '').trim();
 
@@ -181,7 +184,19 @@ export default function P2PAgentStoreManagementPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600">{shortAddress(store.adminWalletAddress)}</td>
-                        <td className="px-4 py-3 text-xs text-slate-600">{shortAddress(store.paymentWalletAddress)}</td>
+                        <td className="px-4 py-3 text-xs text-slate-600">
+                          <p>{shortAddress(store.paymentWalletAddress)}</p>
+                          {store.storecode && (
+                            <Link
+                              href={`/${lang}/p2p/agent-management/store-management/${encodeURIComponent(
+                                store.storecode,
+                              )}/payment-wallet-collect${agentcode ? `?agentcode=${encodeURIComponent(agentcode)}` : ''}`}
+                              className="mt-1 inline-flex h-7 items-center justify-center rounded-md border border-cyan-300 bg-cyan-50 px-2 text-[11px] font-semibold text-cyan-800 transition hover:border-cyan-400 hover:text-cyan-900"
+                            >
+                              회수하기
+                            </Link>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-right text-xs font-semibold text-slate-700">
                           {store.totalPaymentConfirmedCount.toLocaleString()}건
                         </td>
