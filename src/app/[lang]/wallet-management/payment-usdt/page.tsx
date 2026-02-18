@@ -56,6 +56,7 @@ type Merchant = {
   storeLogo: string;
   paymentWalletAddress: string;
   adminWalletAddress: string;
+  usdtToKrwRate: number;
 };
 
 type PaymentRecord = {
@@ -592,6 +593,7 @@ export default function PaymentUsdtPage({
             storeLogo: String(store?.storeLogo || ''),
             paymentWalletAddress,
             adminWalletAddress: String(store?.adminWalletAddress || '').trim(),
+            usdtToKrwRate: toSafeNumber(store?.usdtToKrwRate),
           };
         })
         .filter((item: Merchant) => Boolean(item.storecode && item.paymentWalletAddress));
@@ -618,6 +620,15 @@ export default function PaymentUsdtPage({
   }, [storecodeFromQuery]);
 
   const loadExchangeRate = useCallback(async () => {
+    const storeConfiguredRate = toSafeNumber(selectedMerchant?.usdtToKrwRate);
+    if (storeConfiguredRate > 0) {
+      setExchangeRate(storeConfiguredRate);
+      setExchangeRateSource('Store');
+      setRateUpdatedAt(new Date().toISOString());
+      setLoadingRate(false);
+      return;
+    }
+
     setLoadingRate(true);
     try {
       const response = await fetch('/api/markets/usdt-krw', {
@@ -643,7 +654,7 @@ export default function PaymentUsdtPage({
     } finally {
       setLoadingRate(false);
     }
-  }, []);
+  }, [selectedMerchant?.usdtToKrwRate]);
 
   const loadBalance = useCallback(async () => {
     if (!activeAccount?.address) {
