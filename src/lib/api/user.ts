@@ -351,6 +351,7 @@ export async function insertOneWithoutWalletAddress(data: any) {
   ).replace(/[^0-9]/g, '');
   const depositName = String(
     data?.buyer?.depositName
+    || data?.buyer?.bankInfo?.depositName
     || data?.buyer?.bankInfo?.accountHolder
     || nickname,
   ).trim();
@@ -362,6 +363,7 @@ export async function insertOneWithoutWalletAddress(data: any) {
     bankInfo: {
       bankName: depositBankName,
       accountNumber: depositBankAccountNumber,
+      depositName: depositName,
       accountHolder: depositName,
     },
   };

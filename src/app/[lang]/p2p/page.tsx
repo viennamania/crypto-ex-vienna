@@ -2052,7 +2052,7 @@ export default function OrangeXPage() {
                                         {myManagedStores.map((store) => (
                                             <Link
                                                 key={store.storecode}
-                                                href={`/${lang}/p2p/payment-management?storecode=${encodeURIComponent(store.storecode)}`}
+                                                href={`/${lang}/p2p/store-management?storecode=${encodeURIComponent(store.storecode)}`}
                                                 className="group flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                                             >
                                                 <div className="relative h-10 w-10 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
