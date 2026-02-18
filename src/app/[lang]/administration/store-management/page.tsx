@@ -28,6 +28,7 @@ type StoreItem = {
   sellerWalletAddress: string;
   settlementWalletAddress: string;
   paymentWalletAddress: string;
+  usdtToKrwRate: number;
 };
 
 type StoreCreateForm = {
@@ -49,6 +50,15 @@ type StoreAdminWalletRoleHistoryItem = {
   id: string;
   prevAdminWalletAddress: string;
   nextAdminWalletAddress: string;
+  changedByWalletAddress: string;
+  changedByName: string;
+  changedAt: string;
+};
+
+type StoreUsdtToKrwRateHistoryItem = {
+  id: string;
+  prevUsdtToKrwRate: number;
+  nextUsdtToKrwRate: number;
   changedByWalletAddress: string;
   changedByName: string;
   changedAt: string;
@@ -84,6 +94,24 @@ const createInitialStoreForm = (): StoreCreateForm => ({
   storeBanner: '',
 });
 
+const normalizeRateInput = (value: string) => {
+  const cleaned = value.replace(/,/g, '').replace(/[^\d.]/g, '');
+  if (!cleaned) return '';
+
+  const hasTrailingDot = cleaned.endsWith('.');
+  const [wholeRaw, decimalRaw = ''] = cleaned.split('.');
+  const whole = wholeRaw.replace(/^0+(?=\d)/, '');
+  const decimal = decimalRaw.slice(0, 2);
+
+  if (hasTrailingDot) {
+    return `${whole || '0'}.`;
+  }
+  if (decimal.length > 0) {
+    return `${whole || '0'}.${decimal}`;
+  }
+  return whole;
+};
+
 const normalizeStore = (value: unknown): StoreItem => {
   const source = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
   return {
@@ -108,6 +136,7 @@ const normalizeStore = (value: unknown): StoreItem => {
     sellerWalletAddress: toText(source.sellerWalletAddress),
     settlementWalletAddress: toText(source.settlementWalletAddress),
     paymentWalletAddress: toText(source.paymentWalletAddress),
+    usdtToKrwRate: toFiniteNumber(source.usdtToKrwRate),
   };
 };
 
@@ -116,6 +145,8 @@ const formatKrw = (value: number) =>
 
 const formatUsdt = (value: number) =>
   new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(toFiniteNumber(value));
+const formatRate = (value: number) =>
+  new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(toFiniteNumber(value));
 
 const formatDateTime = (value: string) => {
   if (!value) return '-';
@@ -245,6 +276,13 @@ export default function StoreManagementPage() {
   const [loadingAdminWalletHistory, setLoadingAdminWalletHistory] = useState(false);
   const [updatingAdminWallet, setUpdatingAdminWallet] = useState(false);
   const [adminWalletModalError, setAdminWalletModalError] = useState<string | null>(null);
+  const [isRateModalOpen, setIsRateModalOpen] = useState(false);
+  const [rateModalStore, setRateModalStore] = useState<StoreItem | null>(null);
+  const [rateInput, setRateInput] = useState('');
+  const [rateHistory, setRateHistory] = useState<StoreUsdtToKrwRateHistoryItem[]>([]);
+  const [loadingRateHistory, setLoadingRateHistory] = useState(false);
+  const [updatingStoreRate, setUpdatingStoreRate] = useState(false);
+  const [rateModalError, setRateModalError] = useState<string | null>(null);
   const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
   const [agentModalStore, setAgentModalStore] = useState<StoreItem | null>(null);
   const [agentOptions, setAgentOptions] = useState<AgentItem[]>([]);
@@ -458,6 +496,15 @@ export default function StoreManagementPage() {
     setSelectedAdminWalletAddress('');
     setAdminWalletModalError(null);
   }, [updatingAdminWallet]);
+
+  const closeRateModal = useCallback(() => {
+    if (updatingStoreRate) return;
+    setIsRateModalOpen(false);
+    setRateModalStore(null);
+    setRateInput('');
+    setRateHistory([]);
+    setRateModalError(null);
+  }, [updatingStoreRate]);
 
   const closeAgentModal = useCallback(() => {
     if (updatingStoreAgent) return;
@@ -733,6 +780,141 @@ export default function StoreManagementPage() {
       setLoadingAdminWalletHistory(false);
     }
   }, []);
+
+  const loadStoreRateHistory = useCallback(async (storecode: string) => {
+    const normalizedStorecode = storecode.trim();
+    if (!normalizedStorecode) {
+      setRateHistory([]);
+      return;
+    }
+
+    setLoadingRateHistory(true);
+    try {
+      const response = await fetch('/api/store/getStoreUsdtToKrwRateHistory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: normalizedStorecode,
+          limit: 20,
+          page: 1,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === 'string'
+            ? payload.error
+            : '환율 변경이력 조회에 실패했습니다.',
+        );
+      }
+
+      const items = Array.isArray(payload?.result?.items) ? payload.result.items : [];
+      const normalizedHistory = items.map((item: any, index: number) => ({
+        id: toText(item?._id) || `${normalizedStorecode}-rate-${index}`,
+        prevUsdtToKrwRate: toFiniteNumber(item?.prevUsdtToKrwRate),
+        nextUsdtToKrwRate: toFiniteNumber(item?.nextUsdtToKrwRate),
+        changedByWalletAddress: toText(item?.changedByWalletAddress),
+        changedByName: toText(item?.changedByName),
+        changedAt: toText(item?.changedAt),
+      }));
+
+      setRateHistory(normalizedHistory);
+    } catch (historyError: unknown) {
+      const message = historyError instanceof Error ? historyError.message : '환율 변경이력 조회 중 오류가 발생했습니다.';
+      setRateModalError((prev) => prev || message);
+      setRateHistory([]);
+    } finally {
+      setLoadingRateHistory(false);
+    }
+  }, []);
+
+  const openRateModal = useCallback((store: StoreItem) => {
+    if (!store.storecode.trim()) {
+      toast.error('가맹점 코드가 없습니다.');
+      return;
+    }
+
+    setRateModalStore(store);
+    setRateInput(store.usdtToKrwRate > 0 ? String(Number(store.usdtToKrwRate.toFixed(2))) : '');
+    setRateModalError(null);
+    setRateHistory([]);
+    setIsRateModalOpen(true);
+
+    void loadStoreRateHistory(store.storecode);
+  }, [loadStoreRateHistory]);
+
+  const updateStoreUsdtRate = useCallback(async () => {
+    if (!rateModalStore) return;
+
+    const normalizedStorecode = rateModalStore.storecode.trim();
+    if (!normalizedStorecode) {
+      setRateModalError('가맹점 코드가 없습니다.');
+      return;
+    }
+
+    const parsedRate = Number(String(rateInput || '').replace(/,/g, ''));
+    if (!Number.isFinite(parsedRate) || parsedRate <= 0) {
+      setRateModalError('유효한 환율(0보다 큰 숫자)을 입력해 주세요.');
+      return;
+    }
+    const nextUsdtToKrwRate = Number(parsedRate.toFixed(2));
+
+    setUpdatingStoreRate(true);
+    setRateModalError(null);
+
+    try {
+      const response = await fetch('/api/store/updateStoreUsdtToKrwRate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: normalizedStorecode,
+          usdtToKrwRate: nextUsdtToKrwRate,
+          changedByName: 'store-management-dashboard',
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === 'string'
+            ? payload.error
+            : '적용 환율 변경에 실패했습니다.',
+        );
+      }
+
+      const resolvedNextRate = Number.isFinite(Number(payload?.nextUsdtToKrwRate))
+        ? Number(Number(payload.nextUsdtToKrwRate).toFixed(2))
+        : nextUsdtToKrwRate;
+
+      setStores((prev) => prev.map((store) => (
+        store.storecode.toLowerCase() === normalizedStorecode.toLowerCase()
+          ? { ...store, usdtToKrwRate: resolvedNextRate }
+          : store
+      )));
+      setRateModalStore((prev) => (
+        prev ? { ...prev, usdtToKrwRate: resolvedNextRate } : prev
+      ));
+      setRateInput(String(Number(resolvedNextRate.toFixed(2))));
+
+      await Promise.all([
+        fetchStoreDashboard('query'),
+        loadStoreRateHistory(normalizedStorecode),
+      ]);
+
+      if (Boolean(payload?.changed)) {
+        toast.success('적용 환율이 변경되었습니다.');
+      } else {
+        toast.success('변경할 내용이 없어 기존 적용 환율을 유지했습니다.');
+      }
+    } catch (updateError: unknown) {
+      const message = updateError instanceof Error ? updateError.message : '적용 환율 변경 중 오류가 발생했습니다.';
+      setRateModalError(message);
+      toast.error(message);
+    } finally {
+      setUpdatingStoreRate(false);
+    }
+  }, [fetchStoreDashboard, loadStoreRateHistory, rateInput, rateModalStore]);
 
   const openAdminWalletModal = useCallback((store: StoreItem) => {
     if (!store.storecode.trim()) {
@@ -1023,6 +1205,25 @@ export default function StoreManagementPage() {
   }, [closeAdminWalletModal, isAdminWalletModalOpen, updatingAdminWallet]);
 
   useEffect(() => {
+    if (!isRateModalOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !updatingStoreRate) {
+        closeRateModal();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [closeRateModal, isRateModalOpen, updatingStoreRate]);
+
+  useEffect(() => {
     if (!isAgentModalOpen) return;
 
     const previousOverflow = document.body.style.overflow;
@@ -1266,15 +1467,16 @@ export default function StoreManagementPage() {
               <table className="w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
-                    <th className="w-[220px] px-4 py-3">가맹점</th>
-                    <th className="w-[130px] px-4 py-3">에이전트</th>
-                    <th className="px-4 py-3 text-right">결제확정</th>
+                    <th className="w-[180px] px-4 py-3">가맹점</th>
+                    <th className="w-[110px] px-4 py-3">에이전트</th>
+                    <th className="w-[100px] px-4 py-3 text-right">결제확정</th>
                     <th className="px-4 py-3 text-right">거래금액</th>
                     <th className="px-4 py-3 text-right">정산금액</th>
                     <th className="px-4 py-3 text-right">수수료율</th>
+                    <th className="w-[150px] px-4 py-3 text-right">적용 환율</th>
                     <th className="px-4 py-3">관리자</th>
                     <th className="px-4 py-3">지갑상태</th>
-                    <th className="w-[260px] px-4 py-3 text-right whitespace-nowrap">작업</th>
+                    <th className="w-[180px] px-4 py-3 text-right whitespace-nowrap">작업</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1354,7 +1556,7 @@ export default function StoreManagementPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="w-[100px] px-4 py-3 text-right">
                           <span className="font-semibold text-slate-900">{store.totalPaymentConfirmedCount.toLocaleString()}건</span>
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -1371,6 +1573,22 @@ export default function StoreManagementPage() {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <span className="font-semibold text-slate-900">{store.settlementFeePercent.toFixed(2)}%</span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="font-semibold text-slate-900">
+                              {store.usdtToKrwRate > 0 ? `1 USDT = ${formatRate(store.usdtToKrwRate)} KRW` : '-'}
+                            </span>
+                            {hasStoreCode && (
+                              <button
+                                type="button"
+                                onClick={() => openRateModal(store)}
+                                className="inline-flex w-fit items-center rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                              >
+                                수정하기
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col gap-1">
@@ -1414,7 +1632,7 @@ export default function StoreManagementPage() {
                             )}
                           </div>
                         </td>
-                        <td className="w-[260px] px-4 py-3 text-right whitespace-nowrap">
+                        <td className="w-[180px] px-4 py-3 text-right whitespace-nowrap">
                           <div className="flex flex-wrap justify-end gap-2">
                             {hasStoreCode ? (
                               <>
@@ -1831,6 +2049,153 @@ export default function StoreManagementPage() {
                       </div>
                     )}
                   </div>
+                </div>
+              </section>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {isRateModalOpen && rateModalStore && (
+        <div className="fixed inset-0 z-[134] flex items-center justify-center px-4 py-6">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/55 backdrop-blur-[2px]"
+            aria-label="가맹점 적용 환율 변경 모달 닫기"
+            onClick={closeRateModal}
+          />
+
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="가맹점 적용 환율 변경"
+            className="modal-pop relative z-[135] max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-emerald-100 bg-white shadow-[0_40px_90px_-42px_rgba(15,23,42,0.75)]"
+          >
+            <header className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-700">Rate Control</p>
+                <h2 className="mt-1 text-lg font-bold text-slate-900">가맹점 적용 환율 변경</h2>
+                <div className="mt-2 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <span
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 text-xs font-bold text-slate-700"
+                    style={{ backgroundColor: rateModalStore.backgroundColor || '#f1f5f9' }}
+                  >
+                    {rateModalStore.storeLogo ? (
+                      <span
+                        className="h-full w-full bg-cover bg-center"
+                        style={{ backgroundImage: `url(${encodeURI(rateModalStore.storeLogo)})` }}
+                        aria-label={rateModalStore.storeName || rateModalStore.storecode || 'store logo'}
+                      />
+                    ) : (
+                      (rateModalStore.storeName || rateModalStore.storecode || 'S').slice(0, 1)
+                    )}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">{rateModalStore.storeName || '-'}</p>
+                    <p className="truncate text-xs text-slate-500">코드 {rateModalStore.storecode || '-'}</p>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeRateModal}
+                disabled={updatingStoreRate}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="닫기"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18" />
+                  <path d="M6 6l12 12" />
+                </svg>
+              </button>
+            </header>
+
+            <div className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-12">
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 lg:col-span-5">
+                <p className="text-sm font-semibold text-slate-900">환율 설정</p>
+                <p className="mt-1 text-xs text-slate-500">KRW 기준 1 USDT 적용 환율을 입력해 저장하세요.</p>
+
+                <div className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                  <div className="flex items-center justify-between gap-2">
+                    <span>현재 환율</span>
+                    <span className="font-semibold text-slate-900">
+                      {rateModalStore.usdtToKrwRate > 0 ? `1 USDT = ${formatRate(rateModalStore.usdtToKrwRate)} KRW` : '-'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    새 적용 환율
+                  </label>
+                  <div className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={rateInput}
+                      onChange={(event) => setRateInput(normalizeRateInput(event.target.value))}
+                      placeholder="예: 1385.5"
+                      className="h-11 w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                    />
+                    <span className="text-xs font-semibold text-slate-500">KRW</span>
+                  </div>
+                </div>
+
+                {rateModalError && (
+                  <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+                    {rateModalError}
+                  </p>
+                )}
+
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={closeRateModal}
+                    disabled={updatingStoreRate}
+                    className="inline-flex h-10 items-center rounded-full border border-slate-300 bg-white px-3.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    닫기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={updateStoreUsdtRate}
+                    disabled={updatingStoreRate || !rateInput.trim()}
+                    className="inline-flex h-10 items-center rounded-full bg-emerald-700 px-3.5 text-xs font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {updatingStoreRate ? '저장 중...' : '환율 저장'}
+                  </button>
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 lg:col-span-7">
+                <p className="text-sm font-semibold text-slate-900">환율 변경이력</p>
+                <p className="mt-1 text-xs text-slate-500">최근 변경 순으로 표시됩니다.</p>
+
+                <div className="mt-3 max-h-[420px] overflow-y-auto rounded-xl border border-slate-200 bg-white">
+                  {loadingRateHistory ? (
+                    <div className="space-y-2 p-3">
+                      {Array.from({ length: 6 }).map((_, index) => (
+                        <div key={`store-rate-history-loading-${index}`} className="h-12 animate-pulse rounded-lg bg-slate-100" />
+                      ))}
+                    </div>
+                  ) : rateHistory.length === 0 ? (
+                    <div className="px-3 py-8 text-center text-sm text-slate-500">변경이력이 없습니다.</div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {rateHistory.map((item) => (
+                        <div key={item.id} className="px-3 py-2.5 text-xs text-slate-600">
+                          <p className="font-semibold text-slate-800">
+                            1 USDT = {formatRate(item.prevUsdtToKrwRate)} KRW → 1 USDT = {formatRate(item.nextUsdtToKrwRate)} KRW
+                          </p>
+                          <p className="mt-0.5">
+                            {item.changedByName ? item.changedByName : 'dashboard'}
+                            {item.changedByWalletAddress ? ` (${shortWallet(item.changedByWalletAddress)})` : ''}
+                          </p>
+                          <p className="mt-0.5 text-slate-500">{formatDateTime(item.changedAt)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </section>
             </div>

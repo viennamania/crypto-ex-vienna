@@ -102,6 +102,12 @@ type BuyHistoryItem = {
   paymentMethod: string;
 };
 
+type PurchaseCompleteJackpot = {
+  orderKey: string;
+  tradeId: string;
+  usdtAmount: number;
+};
+
 const displayFont = Playfair_Display({
   subsets: ['latin'],
   weight: ['600', '700'],
@@ -118,6 +124,7 @@ const WALLET_AUTH_OPTIONS = ['phone'];
 const QUICK_BUY_AMOUNTS = [10, 30, 50, 100, 300, 500];
 const TRADABLE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
 const PRIVATE_TRADE_PAYMENT_WINDOW_MS = 30 * 60 * 1000;
+const JACKPOT_AUTO_HIDE_MS = 5200;
 const PRIVATE_TRADE_STATUS_LABEL: Record<string, string> = {
   ordered: '주문 대기',
   accepted: '주문 수락됨',
@@ -333,9 +340,8 @@ const normalizeSellerFromUser = (rawUser: unknown): SellerItem | null => {
   if (!isRecord(rawUser)) return null;
 
   const seller = isRecord(rawUser.seller) ? rawUser.seller : null;
-  const sellerBuyOrder = isRecord(seller?.buyOrder) ? seller.buyOrder : null;
   const walletAddress = normalizeWalletAddress(rawUser.walletAddress);
-  const parsedRate = Number(seller?.usdtToKrwRate || sellerBuyOrder?.rate || 0);
+  const parsedRate = Number(seller?.usdtToKrwRate || 0);
   const rate = Number.isFinite(parsedRate) && parsedRate > 0 ? parsedRate : 1;
   const enabled = seller?.enabled === true;
   const status = String(seller?.status || '');
@@ -489,6 +495,9 @@ export default function BuyUsdtPage({
   const [latestBuyHistoryItem, setLatestBuyHistoryItem] = useState<BuyHistoryItem | null>(null);
   const [loadingLatestBuyHistory, setLoadingLatestBuyHistory] = useState(false);
   const [latestHistoryNowMs, setLatestHistoryNowMs] = useState<number>(() => Date.now());
+  const [purchaseCompleteJackpot, setPurchaseCompleteJackpot] = useState<PurchaseCompleteJackpot | null>(null);
+  const paymentRequestedWatchRef = useRef<{ orderId: string; tradeId: string; usdtAmount: number } | null>(null);
+  const jackpotShownOrderKeysRef = useRef<Set<string>>(new Set());
 
   const openSellerPicker = useCallback(() => {
     setSellerKeyword('');
@@ -666,6 +675,7 @@ export default function BuyUsdtPage({
   );
   const isLatestBuyJustNow = latestBuyHistoryTimeAgo === '방금';
   const latestBuyHistoryItemId = latestBuyHistoryItem?.id || '';
+  const latestHistoryPollingMs = activePrivateTradeOrder?.status === 'paymentRequested' ? 4000 : 15000;
 
   const primaryLabel = useMemo(() => {
     if (submittingBuy) {
@@ -1136,7 +1146,7 @@ export default function BuyUsdtPage({
     const interval = setInterval(() => {
       if (typeof document !== 'undefined' && document.hidden) return;
       loadLatestBuyHistory({ silent: true });
-    }, 15000);
+    }, latestHistoryPollingMs);
 
     const handleVisibilityChange = () => {
       if (typeof document === 'undefined' || document.hidden) return;
@@ -1148,7 +1158,7 @@ export default function BuyUsdtPage({
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [activeAccount?.address, loadLatestBuyHistory]);
+  }, [activeAccount?.address, loadLatestBuyHistory, latestHistoryPollingMs]);
 
   useEffect(() => {
     setLatestHistoryNowMs(Date.now());
@@ -1160,6 +1170,58 @@ export default function BuyUsdtPage({
 
     return () => clearInterval(interval);
   }, [latestBuyHistoryItemId]);
+
+  useEffect(() => {
+    if (!activePrivateTradeOrder?.orderId) return;
+    if (activePrivateTradeOrder.status !== 'paymentRequested') return;
+
+    paymentRequestedWatchRef.current = {
+      orderId: activePrivateTradeOrder.orderId,
+      tradeId: activePrivateTradeOrder.tradeId || '',
+      usdtAmount: Number(activePrivateTradeOrder.usdtAmount || 0),
+    };
+  }, [
+    activePrivateTradeOrder?.orderId,
+    activePrivateTradeOrder?.status,
+    activePrivateTradeOrder?.tradeId,
+    activePrivateTradeOrder?.usdtAmount,
+  ]);
+
+  useEffect(() => {
+    if (!latestBuyHistoryItem || latestBuyHistoryItem.status !== 'paymentConfirmed') return;
+
+    const watchingOrder = paymentRequestedWatchRef.current;
+    if (!watchingOrder?.orderId && !watchingOrder?.tradeId) return;
+
+    const matchedByOrderId = Boolean(
+      watchingOrder?.orderId && latestBuyHistoryItem.id && watchingOrder.orderId === latestBuyHistoryItem.id,
+    );
+    const matchedByTradeId = Boolean(
+      watchingOrder?.tradeId && latestBuyHistoryItem.tradeId && watchingOrder.tradeId === latestBuyHistoryItem.tradeId,
+    );
+    if (!matchedByOrderId && !matchedByTradeId) return;
+
+    const orderKey = latestBuyHistoryItem.id || latestBuyHistoryItem.tradeId || watchingOrder.orderId || watchingOrder.tradeId;
+    if (!orderKey || jackpotShownOrderKeysRef.current.has(orderKey)) return;
+    jackpotShownOrderKeysRef.current.add(orderKey);
+
+    setPurchaseCompleteJackpot({
+      orderKey,
+      tradeId: latestBuyHistoryItem.tradeId || watchingOrder.tradeId || '',
+      usdtAmount: Number(latestBuyHistoryItem.usdtAmount || watchingOrder.usdtAmount || 0),
+    });
+    paymentRequestedWatchRef.current = null;
+  }, [latestBuyHistoryItem]);
+
+  useEffect(() => {
+    if (!purchaseCompleteJackpot?.orderKey) return;
+
+    const timeout = setTimeout(() => {
+      setPurchaseCompleteJackpot(null);
+    }, JACKPOT_AUTO_HIDE_MS);
+
+    return () => clearTimeout(timeout);
+  }, [purchaseCompleteJackpot?.orderKey]);
 
   useEffect(() => {
     if (!activePrivateTradeOrder?.orderId) return;
@@ -1798,11 +1860,6 @@ export default function BuyUsdtPage({
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-slate-700">거래 상태</p>
                     </div>
-                    {activePrivateTradeOrder && (
-                      <p className="mt-1 text-[11px] font-medium text-cyan-700">
-                        진행중 거래 상태를 5초마다 자동으로 확인하고 있습니다.
-                      </p>
-                    )}
                     {loadingPrivateTradeStatus ? (
                       <p className="mt-2 text-slate-500">선택한 판매자와의 진행중 거래를 조회하고 있습니다.</p>
                     ) : activePrivateTradeOrder ? (
@@ -1824,9 +1881,9 @@ export default function BuyUsdtPage({
                             {activePrivateTradeOrder.krwAmount.toLocaleString()} KRW
                           </p>
                         </div>
-                        <div className="mt-2 flex items-center justify-between text-[11px]">
+                        <div className="mt-2 flex items-end justify-between">
                           <span className="text-slate-500">주문 수량</span>
-                          <span className="font-semibold text-slate-800">
+                          <span className="text-2xl font-extrabold leading-none text-slate-900 tabular-nums">
                             {activePrivateTradeOrder.usdtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT
                           </span>
                         </div>
@@ -2294,6 +2351,65 @@ export default function BuyUsdtPage({
 
       <WalletManagementBottomNav lang={lang} active="buy" />
 
+      {purchaseCompleteJackpot && (
+        <div className="fixed inset-0 z-[10010] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-slate-950/55 backdrop-blur-[2px]" />
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            {Array.from({ length: 26 }).map((_, index) => {
+              const left = (index * 17) % 100;
+              const delayMs = (index % 8) * 140;
+              const durationMs = 1800 + (index % 6) * 260;
+              const size = 7 + (index % 4) * 2;
+              const colors = ['#facc15', '#fb7185', '#22d3ee', '#34d399', '#f59e0b'];
+              return (
+                <span
+                  key={`jackpot-particle-${purchaseCompleteJackpot.orderKey}-${index}`}
+                  className="absolute top-[-16%] rounded-full opacity-90"
+                  style={{
+                    left: `${left}%`,
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    backgroundColor: colors[index % colors.length],
+                    animationName: 'jackpotFall',
+                    animationDuration: `${durationMs}ms`,
+                    animationTimingFunction: 'linear',
+                    animationDelay: `${delayMs}ms`,
+                    animationIterationCount: 'infinite',
+                  }}
+                />
+              );
+            })}
+          </div>
+          <div
+            className="relative w-full max-w-[420px] overflow-hidden rounded-3xl border border-emerald-200/80 bg-[radial-gradient(130%_130%_at_20%_0%,#dcfce7_0%,#ffffff_55%,#ecfeff_100%)] px-5 py-6 text-center shadow-[0_44px_120px_-40px_rgba(16,185,129,0.8)]"
+            style={{ animation: 'jackpotPop 560ms cubic-bezier(0.2, 0.8, 0.2, 1)' }}
+          >
+            <div className="pointer-events-none absolute -top-10 -left-10 h-32 w-32 rounded-full bg-emerald-300/30 blur-2xl" />
+            <div className="pointer-events-none absolute -right-12 -bottom-10 h-36 w-36 rounded-full bg-cyan-300/30 blur-2xl" />
+
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Purchase Completed</p>
+            <h3 className="mt-2 text-3xl font-black tracking-tight text-slate-900 [text-shadow:0_2px_0_rgba(255,255,255,0.75)]">
+              구매 완료!
+            </h3>
+            <p className="mt-4 text-sm font-semibold text-slate-500">구매 수량</p>
+            <p className="mt-1 text-4xl font-extrabold leading-none tracking-tight text-emerald-700 tabular-nums">
+              {purchaseCompleteJackpot.usdtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })}
+              <span className="ml-1 text-xl font-bold text-emerald-600">USDT</span>
+            </p>
+            {purchaseCompleteJackpot.tradeId && (
+              <p className="mt-3 text-xs font-semibold text-slate-500">거래번호 #{purchaseCompleteJackpot.tradeId}</p>
+            )}
+            <button
+              type="button"
+              onClick={() => setPurchaseCompleteJackpot(null)}
+              className="mt-5 inline-flex h-10 items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-700 transition hover:border-emerald-400 hover:text-emerald-800"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
+
       {sellerPickerOpen && (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm">
           <div className="w-full max-w-[430px] rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_40px_100px_-45px_rgba(2,132,199,0.8)]">
@@ -2615,6 +2731,37 @@ export default function BuyUsdtPage({
           </div>
         </div>
       )}
+
+      <style jsx global>{`
+        @keyframes jackpotFall {
+          0% {
+            transform: translate3d(0, -16vh, 0) rotate(0deg);
+            opacity: 0;
+          }
+          12% {
+            opacity: 0.95;
+          }
+          100% {
+            transform: translate3d(0, 118vh, 0) rotate(420deg);
+            opacity: 0;
+          }
+        }
+
+        @keyframes jackpotPop {
+          0% {
+            transform: scale(0.86) translateY(12px);
+            opacity: 0;
+          }
+          68% {
+            transform: scale(1.03) translateY(-2px);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </main>
   );
 }

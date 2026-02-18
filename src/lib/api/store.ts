@@ -715,6 +715,33 @@ export async function updateStoreSettlementFeePercent(
 }
 
 
+// updateStoreUsdtToKrwRate
+export async function updateStoreUsdtToKrwRate(
+  {
+    storecode,
+    usdtToKrwRate,
+  }: {
+    storecode: string;
+    usdtToKrwRate: number;
+  }
+): Promise<boolean> {
+  const normalizedStorecode = String(storecode || '').trim();
+  if (!normalizedStorecode) {
+    return false;
+  }
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('stores');
+
+  const result = await collection.updateOne(
+    { storecode: normalizedStorecode },
+    { $set: { usdtToKrwRate } }
+  );
+
+  return result.matchedCount > 0;
+}
+
+
 // updateStoreBankInfo
 export async function updateStoreBankInfo(
   {
@@ -930,6 +957,7 @@ export async function getAllStores(
 
           settlementFeePercent: 1,
           settlementFeeWalletAddress: 1,
+          usdtToKrwRate: 1,
 
           agentFeePercent: 1,
           agentFeeWalletAddress: { $ifNull: ['$agentInfo.agentFeeWalletAddress', null] },

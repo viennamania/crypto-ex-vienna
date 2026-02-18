@@ -279,11 +279,9 @@ export default function WalletManagementHomePage() {
           const user = rawUser;
           const sellerRaw = user.seller;
           const seller = isRecord(sellerRaw) ? sellerRaw : null;
-          const sellerBuyOrder = isRecord(seller?.buyOrder) ? seller.buyOrder : null;
           const walletAddress = String(user.walletAddress || '').trim();
           const parsedRate = Number(
             seller?.usdtToKrwRate
-            || sellerBuyOrder?.rate
             || 0,
           );
           const rate = Number.isFinite(parsedRate) && parsedRate > 0 ? parsedRate : 1;
