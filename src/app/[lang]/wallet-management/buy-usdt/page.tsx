@@ -178,6 +178,34 @@ const formatDateTime = (value: string) => {
   return date.toLocaleString();
 };
 
+const formatTimeAgo = (value: string, nowMs?: number) => {
+  if (!value) return '-';
+  const targetMs = Date.parse(value);
+  if (!Number.isFinite(targetMs)) return '-';
+
+  const baseNowMs = Number.isFinite(nowMs) ? Number(nowMs) : Date.now();
+  const diffMs = Math.max(0, baseNowMs - targetMs);
+  if (diffMs < 60 * 1000) return '방금';
+
+  const diffSeconds = Math.floor(diffMs / 1000);
+  if (diffSeconds < 60) return `${diffSeconds}초 전`;
+
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  if (diffMinutes < 60) return `${diffMinutes}분 전`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}시간 전`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) return `${diffDays}일 전`;
+
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) return `${diffMonths}개월 전`;
+
+  const diffYears = Math.floor(diffDays / 365);
+  return `${diffYears}년 전`;
+};
+
 const LINKABLE_TOKEN_REGEX =
   /(https?:\/\/[^\s]+|www\.[^\s]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d\s-]{7,}\d)/gi;
 const URL_ONLY_REGEX = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/i;
@@ -339,6 +367,45 @@ const normalizeSellerFromUser = (rawUser: unknown): SellerItem | null => {
   };
 };
 
+const normalizeBuyHistoryOrder = (order: unknown): BuyHistoryItem | null => {
+  if (!isRecord(order)) return null;
+  const seller = isRecord(order?.seller) ? order.seller : null;
+  const sellerBankInfo = isRecord(seller?.bankInfo) ? seller.bankInfo : null;
+  const tradeId = toTrimmedString(order.tradeId);
+  const id =
+    toTrimmedString(order._id) ||
+    toTrimmedString(order.orderId) ||
+    tradeId;
+  if (!id) return null;
+
+  return {
+    id,
+    tradeId,
+    status: toTrimmedString(order.status),
+    usdtAmount: Number(order.usdtAmount || 0),
+    krwAmount: Number(order.krwAmount || 0),
+    rate: Number(order.rate || 0),
+    createdAt: toTrimmedString(order.createdAt),
+    paymentRequestedAt: toTrimmedString(order.paymentRequestedAt),
+    paymentConfirmedAt: toTrimmedString(order.paymentConfirmedAt),
+    cancelledAt: toTrimmedString(order.cancelledAt),
+    sellerWalletAddress: toTrimmedString(seller?.walletAddress),
+    sellerNickname: toTrimmedString(seller?.nickname),
+    sellerBankName: toTrimmedString(sellerBankInfo?.bankName),
+    sellerAccountNumber: toTrimmedString(sellerBankInfo?.accountNumber),
+    paymentMethod: toTrimmedString(order.paymentMethod),
+  };
+};
+
+const extractBuyHistoryOrders = (data: unknown): BuyHistoryItem[] => {
+  const payload = isRecord(data) ? data : null;
+  const result = isRecord(payload?.result) ? payload.result : null;
+  const orders: unknown[] = Array.isArray(result?.orders) ? result.orders : [];
+  return orders
+    .map((order: unknown): BuyHistoryItem | null => normalizeBuyHistoryOrder(order))
+    .filter((item: BuyHistoryItem | null): item is BuyHistoryItem => item !== null);
+};
+
 export default function BuyUsdtPage({
   params,
 }: {
@@ -419,6 +486,9 @@ export default function BuyUsdtPage({
   const [buyTab, setBuyTab] = useState<'buy' | 'history'>('buy');
   const [buyHistory, setBuyHistory] = useState<BuyHistoryItem[]>([]);
   const [loadingBuyHistory, setLoadingBuyHistory] = useState(false);
+  const [latestBuyHistoryItem, setLatestBuyHistoryItem] = useState<BuyHistoryItem | null>(null);
+  const [loadingLatestBuyHistory, setLoadingLatestBuyHistory] = useState(false);
+  const [latestHistoryNowMs, setLatestHistoryNowMs] = useState<number>(() => Date.now());
 
   const openSellerPicker = useCallback(() => {
     setSellerKeyword('');
@@ -581,6 +651,21 @@ export default function BuyUsdtPage({
     () => (buyTab === 'buy' ? '구매하기' : '구매내역'),
     [buyTab],
   );
+  const latestBuyHistoryDisplayAt = useMemo(() => {
+    if (!latestBuyHistoryItem) return '';
+    return (
+      latestBuyHistoryItem.paymentConfirmedAt ||
+      latestBuyHistoryItem.cancelledAt ||
+      latestBuyHistoryItem.paymentRequestedAt ||
+      latestBuyHistoryItem.createdAt
+    );
+  }, [latestBuyHistoryItem]);
+  const latestBuyHistoryTimeAgo = useMemo(
+    () => formatTimeAgo(latestBuyHistoryDisplayAt, latestHistoryNowMs),
+    [latestBuyHistoryDisplayAt, latestHistoryNowMs],
+  );
+  const isLatestBuyJustNow = latestBuyHistoryTimeAgo === '방금';
+  const latestBuyHistoryItemId = latestBuyHistoryItem?.id || '';
 
   const primaryLabel = useMemo(() => {
     if (submittingBuy) {
@@ -889,46 +974,57 @@ export default function BuyUsdtPage({
         throw new Error(data?.error || '구매 내역을 불러오지 못했습니다.');
       }
 
-      const result = isRecord(data?.result) ? data.result : null;
-      const orders: unknown[] = Array.isArray(result?.orders) ? result.orders : [];
-      const normalized = orders
-        .map((order: unknown): BuyHistoryItem | null => {
-          if (!isRecord(order)) return null;
-          const seller = isRecord(order?.seller) ? order.seller : null;
-          const sellerBankInfo = isRecord(seller?.bankInfo) ? seller.bankInfo : null;
-          const tradeId = toTrimmedString(order.tradeId);
-          const id =
-            toTrimmedString(order._id) ||
-            toTrimmedString(order.orderId) ||
-            tradeId;
-          if (!id) return null;
-
-          return {
-            id,
-            tradeId,
-            status: toTrimmedString(order.status),
-            usdtAmount: Number(order.usdtAmount || 0),
-            krwAmount: Number(order.krwAmount || 0),
-            rate: Number(order.rate || 0),
-            createdAt: toTrimmedString(order.createdAt),
-            paymentRequestedAt: toTrimmedString(order.paymentRequestedAt),
-            paymentConfirmedAt: toTrimmedString(order.paymentConfirmedAt),
-            cancelledAt: toTrimmedString(order.cancelledAt),
-            sellerWalletAddress: toTrimmedString(seller?.walletAddress),
-            sellerNickname: toTrimmedString(seller?.nickname),
-            sellerBankName: toTrimmedString(sellerBankInfo?.bankName),
-            sellerAccountNumber: toTrimmedString(sellerBankInfo?.accountNumber),
-            paymentMethod: toTrimmedString(order.paymentMethod),
-          };
-        })
-        .filter((item: BuyHistoryItem | null): item is BuyHistoryItem => item !== null);
-
-      setBuyHistory(normalized);
+      setBuyHistory(extractBuyHistoryOrders(data));
     } catch (error) {
       console.error('Failed to load buy history', error);
       setBuyHistory([]);
     } finally {
       setLoadingBuyHistory(false);
+    }
+  }, [activeAccount?.address]);
+
+  const loadLatestBuyHistory = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+    if (!activeAccount?.address) {
+      setLatestBuyHistoryItem(null);
+      setLoadingLatestBuyHistory(false);
+      return;
+    }
+
+    if (!silent) {
+      setLoadingLatestBuyHistory(true);
+    }
+    try {
+      const response = await fetch('/api/order/getAllBuyOrders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: 'admin',
+          walletAddress: activeAccount.address,
+          searchMyOrders: true,
+          searchOrderStatusCompleted: true,
+          searchOrderStatusCancelled: false,
+          privateSaleMode: 'private',
+          limit: 1,
+          page: 1,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || '최근 구매 내역을 불러오지 못했습니다.');
+      }
+
+      const latest = extractBuyHistoryOrders(data)[0] ?? null;
+      setLatestBuyHistoryItem(latest);
+    } catch (error) {
+      console.error('Failed to load latest buy history', error);
+      if (!silent) {
+        setLatestBuyHistoryItem(null);
+      }
+    } finally {
+      if (!silent) {
+        setLoadingLatestBuyHistory(false);
+      }
     }
   }, [activeAccount?.address]);
 
@@ -1032,6 +1128,38 @@ export default function BuyUsdtPage({
     if (buyTab !== 'history') return;
     loadBuyHistory();
   }, [buyTab, loadBuyHistory]);
+
+  useEffect(() => {
+    if (!activeAccount?.address) return;
+
+    loadLatestBuyHistory();
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      loadLatestBuyHistory({ silent: true });
+    }, 15000);
+
+    const handleVisibilityChange = () => {
+      if (typeof document === 'undefined' || document.hidden) return;
+      loadLatestBuyHistory({ silent: true });
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [activeAccount?.address, loadLatestBuyHistory]);
+
+  useEffect(() => {
+    setLatestHistoryNowMs(Date.now());
+    if (!latestBuyHistoryItemId) return;
+
+    const interval = setInterval(() => {
+      setLatestHistoryNowMs(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [latestBuyHistoryItemId]);
 
   useEffect(() => {
     if (!activePrivateTradeOrder?.orderId) return;
@@ -1297,8 +1425,11 @@ export default function BuyUsdtPage({
       setKrwInput('');
       setLastEditedAmountType('usdt');
       setSelectedQuickAmount(null);
-      await loadSellers();
-      await loadPrivateTradeStatus();
+      await Promise.all([
+        loadSellers(),
+        loadPrivateTradeStatus(),
+        loadLatestBuyHistory(),
+      ]);
       setChatRefreshToken((prev) => prev + 1);
     } catch (error) {
       console.error('Failed to submit buy order', error);
@@ -1385,7 +1516,7 @@ export default function BuyUsdtPage({
       setKrwInput('');
       setLastEditedAmountType('usdt');
       setSelectedQuickAmount(null);
-      await Promise.all([loadPrivateTradeStatus(), loadSellers()]);
+      await Promise.all([loadPrivateTradeStatus(), loadSellers(), loadLatestBuyHistory()]);
       setChatRefreshToken((prev) => prev + 1);
     } catch (error) {
       console.error('Failed to cancel private trade order', error);
@@ -1516,6 +1647,44 @@ export default function BuyUsdtPage({
                     구매자 정보 입력하기
                   </button>
                 </div>
+              )}
+            </div>
+
+            <div className="mt-2 rounded-lg border border-slate-200 bg-white/90 px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">최근 구매 1건</p>
+
+              {!activeAccount?.address ? (
+                <p className="mt-1 text-[11px] text-slate-500">지갑 연결 후 최근 구매 내역을 확인할 수 있습니다.</p>
+              ) : loadingLatestBuyHistory ? (
+                <p className="mt-1 text-[11px] text-slate-500">최근 구매 내역을 불러오는 중입니다...</p>
+              ) : latestBuyHistoryItem ? (
+                <>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className="max-w-[55%] truncate text-[11px] font-semibold text-slate-700">
+                      {latestBuyHistoryItem.sellerNickname || shortAddress(latestBuyHistoryItem.sellerWalletAddress) || '-'}
+                    </span>
+                    <span
+                      className={`text-[12px] font-extrabold ${
+                        isLatestBuyJustNow ? 'text-emerald-700' : 'text-slate-700'
+                      }`}
+                    >
+                      {latestBuyHistoryTimeAgo}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 flex items-end justify-between gap-2">
+                    <span className="text-base font-extrabold leading-none tracking-tight text-slate-900 tabular-nums">
+                      {latestBuyHistoryItem.usdtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT
+                    </span>
+                    <span className="text-base font-bold leading-none text-slate-800 tabular-nums">
+                      {latestBuyHistoryItem.krwAmount.toLocaleString()} KRW
+                    </span>
+                  </div>
+                  <div className="mt-0.5 flex items-center justify-end text-[10px] font-semibold text-slate-400">
+                    {latestBuyHistoryItem.tradeId ? `#${latestBuyHistoryItem.tradeId}` : `#${latestBuyHistoryItem.id.slice(-6)}`}
+                  </div>
+                </>
+              ) : (
+                <p className="mt-1 text-[11px] text-slate-500">아직 완료된 구매 내역이 없습니다.</p>
               )}
             </div>
 
