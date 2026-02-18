@@ -457,7 +457,6 @@ export async function getStoreSellerWalletAddresses(
       projection: {
         _id: 0,
         storecode: 1,
-        sellerWalletAddress: 1,
         sellerWalletAddresses: 1,
       },
     },
@@ -505,7 +504,6 @@ export async function addStoreSellerWalletAddress(
     {
       projection: {
         _id: 0,
-        sellerWalletAddress: 1,
         sellerWalletAddresses: 1,
       },
     },
@@ -529,7 +527,6 @@ export async function addStoreSellerWalletAddress(
     {
       projection: {
         _id: 0,
-        sellerWalletAddress: 1,
         sellerWalletAddresses: 1,
       },
     },
@@ -579,7 +576,6 @@ export async function removeStoreSellerWalletAddress(
     {
       projection: {
         _id: 0,
-        sellerWalletAddress: 1,
         sellerWalletAddresses: 1,
       },
     },

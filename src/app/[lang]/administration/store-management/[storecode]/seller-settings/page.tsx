@@ -349,30 +349,13 @@ export default function StoreSellerSettingsPage() {
 
       <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-4">
         <section className="rounded-3xl border border-teal-100/80 bg-white/90 p-5 shadow-[0_30px_70px_-48px_rgba(15,118,110,0.75)] backdrop-blur">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-teal-100 bg-slate-100">
-                {storeLogo ? (
-                  <div
-                    className="h-full w-full bg-cover bg-center"
-                    style={{ backgroundImage: `url(${encodeURI(storeLogo)})` }}
-                    aria-label={storeName || 'store logo'}
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-teal-700">
-                    SHOP
-                  </div>
-                )}
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-teal-700">Store Seller Control</p>
-                <h1 className="mt-1 text-xl font-bold text-slate-900">가맹점 판매자 설정</h1>
-                <p className="mt-1 text-sm text-slate-600">
-                  {loadingStore
-                    ? '가맹점 정보를 불러오는 중입니다...'
-                    : `${storeName || '-'} · 코드 ${storecode || '-'}`}
-                </p>
-              </div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-teal-700">Store Seller Control</p>
+              <h1 className="mt-1 text-xl font-bold text-slate-900">가맹점 판매자 설정</h1>
+              <p className="mt-1 text-sm text-slate-600">
+                선택된 가맹점의 판매자 목록을 구성하고 관리합니다.
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Link
@@ -389,6 +372,38 @@ export default function StoreSellerSettingsPage() {
               >
                 {refreshing ? '새로고침 중...' : '새로고침'}
               </button>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-teal-200 bg-gradient-to-r from-teal-50 via-cyan-50 to-white p-4 sm:p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">선택 가맹점</p>
+            <div className="mt-3 flex items-center gap-4">
+              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border-2 border-teal-200 bg-white shadow-sm sm:h-20 sm:w-20">
+                {storeLogo ? (
+                  <div
+                    className="h-full w-full bg-cover bg-center"
+                    style={{ backgroundImage: `url(${encodeURI(storeLogo)})` }}
+                    aria-label={storeName || 'store logo'}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-sm font-bold text-teal-700">
+                    {getInitial(storeName || 'S')}
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-teal-700/90">Store Name</p>
+                <h2 className="mt-1 truncate text-2xl font-extrabold text-slate-900 sm:text-[32px] sm:leading-tight">
+                  {loadingStore ? '가맹점 정보 불러오는 중...' : (storeName || '이름 없는 가맹점')}
+                </h2>
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white px-3 py-1.5">
+                  <span className="text-xs font-semibold text-teal-700">가맹점 코드</span>
+                  <span className="text-sm font-extrabold tracking-[0.03em] text-slate-900">
+                    {storecode || '-'}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
