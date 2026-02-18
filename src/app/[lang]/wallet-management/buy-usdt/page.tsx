@@ -1119,11 +1119,11 @@ export default function BuyUsdtPage({
     }
     if (savingBuyerProfile) return;
 
-    const nickname = toTrimmedString(buyerNicknameInput);
+    const nickname = toTrimmedString(buyerNicknameInput || buyerProfileNickname || fallbackBuyerNickname);
     const depositName = toTrimmedString(buyerDepositNameInput);
 
     if (!nickname) {
-      toast.error('구매자 아이디를 입력해 주세요.');
+      toast.error('구매자 정보를 확인해 주세요.');
       return;
     }
     if (!depositName) {
@@ -1144,7 +1144,7 @@ export default function BuyUsdtPage({
       });
       const setUserData = await setUserResponse.json().catch(() => ({}));
       if (!setUserResponse.ok || !setUserData?.result) {
-        throw new Error(setUserData?.error || '구매자 아이디 저장에 실패했습니다.');
+        throw new Error(setUserData?.error || '구매자 정보 저장에 실패했습니다.');
       }
 
       const existingBuyer: Record<string, unknown> =
@@ -1207,7 +1207,7 @@ export default function BuyUsdtPage({
     }
     if (!hasBuyerProfileForPurchase) {
       openBuyerProfileModal();
-      toast.error('구매자 정보(아이디, 입금자명)를 먼저 입력해 주세요.');
+      toast.error('구매자 정보(입금자명)를 먼저 입력해 주세요.');
       return;
     }
     if (!selectedSeller) {
@@ -1481,34 +1481,41 @@ export default function BuyUsdtPage({
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">구매자 정보</p>
-                <button
-                  type="button"
-                  onClick={openBuyerProfileModal}
-                  className="inline-flex h-7 items-center rounded-lg border border-slate-300 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                >
-                  {hasBuyerProfileForPurchase ? '정보 수정' : '정보 입력'}
-                </button>
+                {hasBuyerProfileForPurchase && (
+                  <button
+                    type="button"
+                    onClick={openBuyerProfileModal}
+                    className="inline-flex h-7 items-center rounded-lg border border-slate-300 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                  >
+                    정보 수정
+                  </button>
+                )}
               </div>
 
               {loadingBuyerProfile ? (
                 <p className="mt-2 text-xs text-slate-500">구매자 정보를 불러오는 중입니다...</p>
-              ) : (
-                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                    <p className="text-slate-500">아이디</p>
-                    <p className="mt-1 truncate text-sm font-semibold text-slate-900">{buyerProfileNickname || '-'}</p>
-                  </div>
+              ) : hasBuyerProfileForPurchase ? (
+                <div className="mt-2 grid grid-cols-1 gap-2 text-xs">
                   <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
                     <p className="text-slate-500">입금자명</p>
-                    <p className="mt-1 truncate text-sm font-semibold text-slate-900">{buyerDepositName || '-'}</p>
+                    <p className="mt-1 text-center text-2xl font-extrabold leading-tight tracking-tight text-slate-900">
+                      {buyerDepositName || '-'}
+                    </p>
                   </div>
                 </div>
-              )}
-
-              {!loadingBuyerProfile && !hasBuyerProfileForPurchase && (
-                <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-                  구매 신청 전에 구매자 정보(아이디, 입금자명)를 먼저 입력해 주세요.
-                </p>
+              ) : (
+                <div className="mt-3 rounded-2xl border border-amber-200 bg-[linear-gradient(135deg,#fff7ed_0%,#fffbeb_100%)] px-3 py-3">
+                  <p className="text-xs font-semibold text-amber-800">
+                    구매 신청 전에 구매자 정보(입금자명)를 먼저 입력해 주세요.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={openBuyerProfileModal}
+                    className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl border border-amber-300 bg-white text-sm font-semibold text-amber-800 transition hover:border-amber-400 hover:bg-amber-50"
+                  >
+                    구매자 정보 입력하기
+                  </button>
+                </div>
               )}
             </div>
 
@@ -1959,7 +1966,7 @@ export default function BuyUsdtPage({
                     {primaryLabel}
                   </button>
                   <p className="mt-2 text-xs text-slate-500">
-                    구매자 정보(아이디, 입금자명)를 확인하고, 판매자와 구매 수량/금액을 점검한 뒤 신청하세요.
+                    구매자 정보(입금자명)를 확인하고, 판매자와 구매 수량/금액을 점검한 뒤 신청하세요.
                   </p>
                 </>
               )
@@ -2333,25 +2340,12 @@ export default function BuyUsdtPage({
             <p className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
               구매자 정보 입력
             </p>
-            <h3 className="mt-3 text-xl font-semibold text-slate-900">아이디와 입금자명을 입력해 주세요</h3>
+            <h3 className="mt-3 text-xl font-semibold text-slate-900">입금자명을 입력해 주세요</h3>
             <p className="mt-2 text-sm text-slate-600">
               구매자 정보가 있어야 구매 신청을 진행할 수 있습니다.
             </p>
 
             <div className="mt-4 space-y-3">
-              <label className="block">
-                <span className="text-xs font-semibold text-slate-500">구매자 아이디</span>
-                <input
-                  type="text"
-                  value={buyerNicknameInput}
-                  onChange={(event) => setBuyerNicknameInput(event.target.value)}
-                  maxLength={24}
-                  disabled={savingBuyerProfile}
-                  placeholder="아이디 입력"
-                  className="mt-1 h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-sm text-slate-800 outline-none transition focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-100"
-                />
-              </label>
-
               <label className="block">
                 <span className="text-xs font-semibold text-slate-500">입금자명</span>
                 <input
