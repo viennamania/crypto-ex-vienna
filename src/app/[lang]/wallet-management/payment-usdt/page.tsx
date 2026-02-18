@@ -1271,6 +1271,9 @@ export default function PaymentUsdtPage({
                         {formatKrw(latestPaymentRecord.krwAmount)}
                       </p>
                     </div>
+                    <p className="mt-1 text-xs font-semibold text-slate-700">
+                      적용 환율 {latestPaymentRecord.exchangeRate > 0 ? `1 USDT = ${formatRate(latestPaymentRecord.exchangeRate)}` : '-'}
+                    </p>
                     <p className="mt-1 text-xs text-slate-600">
                       결제완료 {formatDateTime(latestPaymentRecord.confirmedAt || latestPaymentRecord.createdAt)}
                     </p>
@@ -1584,7 +1587,7 @@ export default function PaymentUsdtPage({
                   </div>
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-slate-500">적용 환율</span>
-                    <span className="font-semibold text-slate-800">
+                    <span className="text-2xl font-extrabold leading-none text-slate-900 tabular-nums">
                       {exchangeRate > 0 ? `1 USDT = ${formatRate(exchangeRate)}` : '조회 중'}
                     </span>
                   </div>
@@ -1673,6 +1676,12 @@ export default function PaymentUsdtPage({
                           </div>
 
                           <div className="mt-2 grid gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 text-xs">
+                            <div>
+                              <p className="font-semibold text-slate-500">적용 환율</p>
+                              <p className="mt-0.5 text-slate-800">
+                                {item.exchangeRate > 0 ? `1 USDT = ${formatRate(item.exchangeRate)}` : '-'}
+                              </p>
+                            </div>
                             <div>
                               <p className="font-semibold text-slate-500">가맹점 결제지갑</p>
                               <p className="mt-0.5 font-mono text-slate-700">{shortAddress(item.toWalletAddress)}</p>
@@ -1914,7 +1923,7 @@ export default function PaymentUsdtPage({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">적용 환율</span>
-                <span className="font-semibold text-slate-800">1 USDT = {formatRate(exchangeRate)}</span>
+                <span className="text-lg font-bold text-slate-900 tabular-nums">1 USDT = {formatRate(exchangeRate)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">실제 전송 (USDT)</span>
