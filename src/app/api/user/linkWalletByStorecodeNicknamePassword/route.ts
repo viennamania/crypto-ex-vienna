@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
   const nickname = String(body?.nickname || "").trim();
   const password = String(body?.password || "").trim();
   const walletAddress = String(body?.walletAddress || "").trim();
+  const mobile = String(body?.mobile || "").trim();
 
   if (!storecode || !nickname || !password || !walletAddress) {
     return NextResponse.json(
@@ -98,6 +99,7 @@ export async function POST(request: NextRequest) {
     {
       $set: {
         walletAddress,
+        ...(mobile ? { mobile } : {}),
         updatedAt: new Date().toISOString(),
       },
     },
@@ -118,6 +120,7 @@ export async function POST(request: NextRequest) {
         storecode: 1,
         nickname: 1,
         walletAddress: 1,
+        mobile: 1,
         buyer: 1,
       },
     },

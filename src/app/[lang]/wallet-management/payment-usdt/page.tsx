@@ -25,6 +25,7 @@ import {
   AutoConnect,
   useActiveAccount,
 } from 'thirdweb/react';
+import { getUserPhoneNumber } from 'thirdweb/wallets/in-app';
 
 import { client } from '@/app/client';
 import { useClientWallets } from '@/lib/useClientWallets';
@@ -919,12 +920,22 @@ export default function PaymentUsdtPage({
     setSigningUpMember(true);
     setMemberProfileError(null);
     try {
+      let thirdwebMobile = '';
+      try {
+        thirdwebMobile = String(await getUserPhoneNumber({ client }) || '').trim();
+      } catch (phoneError) {
+        console.warn('Failed to read thirdweb phone number for member link', phoneError);
+      }
+
+      ///console.log('thirdwebMobile=', thirdwebMobile);
+
       const response = await fetch('/api/user/linkWalletByStorecodeNicknamePassword', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storecode: selectedStorecode,
           walletAddress: activeAccount.address,
+          mobile: thirdwebMobile,
           nickname,
           password,
         }),

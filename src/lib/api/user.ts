@@ -629,7 +629,13 @@ export async function updateOne(data: any) {
       walletAddress: data.walletAddress,
       storecode: data.storecode,
     },
-    { $set: { nickname: data.nickname } }
+    {
+      $set: {
+        nickname: data.nickname,
+        ...(String(data.mobile || '').trim() ? { mobile: String(data.mobile || '').trim() } : {}),
+        updatedAt: new Date().toISOString(),
+      },
+    }
   );
 
   if (result) {

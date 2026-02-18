@@ -9,6 +9,7 @@ import { getContract } from 'thirdweb';
 import { balanceOf } from 'thirdweb/extensions/erc20';
 import { ethereum, polygon, arbitrum, bsc, type Chain } from 'thirdweb/chains';
 import { AutoConnect, useActiveAccount } from 'thirdweb/react';
+import { getUserPhoneNumber } from 'thirdweb/wallets/in-app';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 
@@ -1323,6 +1324,13 @@ export default function BuyUsdtPage({
 
     setSavingBuyerProfile(true);
     try {
+      let thirdwebMobile = '';
+      try {
+        thirdwebMobile = String(await getUserPhoneNumber({ client }) || '').trim();
+      } catch (phoneError) {
+        console.warn('Failed to read thirdweb phone number for buyer profile', phoneError);
+      }
+
       const setUserResponse = await fetch('/api/user/setUser', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1330,6 +1338,7 @@ export default function BuyUsdtPage({
           storecode: 'admin',
           walletAddress: activeAccount.address,
           nickname,
+          ...(thirdwebMobile ? { mobile: thirdwebMobile } : {}),
         }),
       });
       const setUserData = await setUserResponse.json().catch(() => ({}));
