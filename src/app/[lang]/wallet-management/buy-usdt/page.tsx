@@ -382,6 +382,7 @@ export default function BuyUsdtPage({
   const [balance, setBalance] = useState(0);
 
   const [sellers, setSellers] = useState<SellerItem[]>([]);
+  const [sellerPickerSellers, setSellerPickerSellers] = useState<SellerItem[]>([]);
   const [loadingSellers, setLoadingSellers] = useState(false);
   const [sellersError, setSellersError] = useState<string | null>(null);
   const [selectedSellerWallet, setSelectedSellerWallet] = useState(sellerFromQuery);
@@ -419,12 +420,21 @@ export default function BuyUsdtPage({
   const [buyHistory, setBuyHistory] = useState<BuyHistoryItem[]>([]);
   const [loadingBuyHistory, setLoadingBuyHistory] = useState(false);
 
+  const openSellerPicker = useCallback(() => {
+    setSellerKeyword('');
+    setSellerPickerOpen(true);
+  }, []);
+
   const selectedSeller = useMemo(
     () =>
       sellers.find(
         (item) => item.walletAddress.toLowerCase() === selectedSellerWallet.toLowerCase(),
-      ) || null,
-    [sellers, selectedSellerWallet],
+      ) ||
+      sellerPickerSellers.find(
+        (item) => item.walletAddress.toLowerCase() === selectedSellerWallet.toLowerCase(),
+      ) ||
+      null,
+    [sellerPickerSellers, sellers, selectedSellerWallet],
   );
   const activePrivateTradeOrder = useMemo(
     () => (privateTradeStatus?.isTrading && privateTradeStatus.order ? privateTradeStatus.order : null),
@@ -459,31 +469,29 @@ export default function BuyUsdtPage({
       isContactTransfer,
     };
   }, [activePrivateTradeOrder, selectedSeller?.bankInfo]);
-  const sortedSellers = useMemo(() => {
-    const next = [...sellers];
+  const filteredSellers = useMemo(() => {
+    const sorted = [...sellerPickerSellers];
     if (sellerSortOption === 'rate') {
-      next.sort((a, b) => {
+      sorted.sort((a, b) => {
         if (a.rate !== b.rate) return a.rate - b.rate;
         return b.currentUsdtBalance - a.currentUsdtBalance;
       });
-      return next;
+    } else {
+      sorted.sort((a, b) => {
+        if (b.currentUsdtBalance !== a.currentUsdtBalance) return b.currentUsdtBalance - a.currentUsdtBalance;
+        return a.rate - b.rate;
+      });
     }
-    next.sort((a, b) => {
-      if (b.currentUsdtBalance !== a.currentUsdtBalance) return b.currentUsdtBalance - a.currentUsdtBalance;
-      return a.rate - b.rate;
-    });
-    return next;
-  }, [sellers, sellerSortOption]);
-  const filteredSellers = useMemo(() => {
+
     const keyword = sellerKeyword.trim().toLowerCase();
-    if (!keyword) return sortedSellers;
-    return sortedSellers.filter((item) => {
+    if (!keyword) return sorted;
+    return sorted.filter((item) => {
       return (
         item.nickname.toLowerCase().includes(keyword) ||
         item.walletAddress.toLowerCase().includes(keyword)
       );
     });
-  }, [sellerKeyword, sortedSellers]);
+  }, [sellerKeyword, sellerPickerSellers, sellerSortOption]);
 
   const usdtAmount = useMemo(() => {
     const parsed = Number(amountInput);
@@ -630,6 +638,7 @@ export default function BuyUsdtPage({
     setSellersError(null);
     try {
       let walletAddressesFilter: string[] = [];
+      let shouldPickSingleFallbackSeller = false;
 
       if (storecode) {
         const storeResponse = await fetch('/api/store/getOneStore', {
@@ -647,17 +656,14 @@ export default function BuyUsdtPage({
           Array.isArray(storeResult.sellerWalletAddresses) ? storeResult.sellerWalletAddresses : [],
         );
         if (walletAddressesFilter.length === 0) {
-          setConfiguredSellerWalletCount(0);
-          setSellers([]);
-          setSelectedSellerWallet('');
-          return;
+          shouldPickSingleFallbackSeller = true;
         }
       }
       setConfiguredSellerWalletCount(walletAddressesFilter.length);
 
       const sellerRequestBody: Record<string, unknown> = {
-        storecode: storecode || 'admin',
-        limit: Math.max(40, walletAddressesFilter.length),
+        storecode: walletAddressesFilter.length > 0 ? (storecode || 'admin') : 'admin',
+        limit: shouldPickSingleFallbackSeller ? 200 : Math.max(40, walletAddressesFilter.length),
         page: 1,
       };
       if (walletAddressesFilter.length > 0) {
@@ -683,19 +689,27 @@ export default function BuyUsdtPage({
         ? normalizedAll.filter((item) =>
           walletAddressesFilter.some((walletAddress) => walletAddress.toLowerCase() === item.walletAddress.toLowerCase()))
         : normalizedAll;
+      const sellerFromQueryMatch = sellerFromQuery
+        ? normalized.find((item) => item.walletAddress.toLowerCase() === sellerFromQuery.toLowerCase()) || null
+        : null;
 
+      let pickerSellers = [...normalized];
       if (walletAddressesFilter.length > 0) {
         const orderMap = new Map<string, number>();
         walletAddressesFilter.forEach((walletAddress, index) => {
           orderMap.set(walletAddress.toLowerCase(), index);
         });
-        normalized.sort((a, b) => {
+        pickerSellers.sort((a, b) => {
           const aIndex = orderMap.get(a.walletAddress.toLowerCase());
           const bIndex = orderMap.get(b.walletAddress.toLowerCase());
           return (aIndex ?? Number.MAX_SAFE_INTEGER) - (bIndex ?? Number.MAX_SAFE_INTEGER);
         });
       } else {
-        normalized.sort((a, b) => {
+        pickerSellers.sort((a, b) => {
+          if (sellerSortOption === 'rate') {
+            if (a.rate !== b.rate) return a.rate - b.rate;
+            return b.currentUsdtBalance - a.currentUsdtBalance;
+          }
           if (b.currentUsdtBalance !== a.currentUsdtBalance) {
             return b.currentUsdtBalance - a.currentUsdtBalance;
           }
@@ -703,33 +717,52 @@ export default function BuyUsdtPage({
         });
       }
 
-      setSellers(normalized);
+      setSellerPickerSellers(pickerSellers);
+
+      let nextSellers = pickerSellers;
+      if (walletAddressesFilter.length === 0) {
+        if (shouldPickSingleFallbackSeller) {
+          if (sellerFromQueryMatch) {
+            nextSellers = [sellerFromQueryMatch];
+          } else if (nextSellers.length > 1) {
+            nextSellers = [nextSellers[0]];
+          }
+        } else if (sellerFromQueryMatch && nextSellers.length > 1) {
+          nextSellers = [
+            sellerFromQueryMatch,
+            ...nextSellers.filter((item) => item.walletAddress.toLowerCase() !== sellerFromQueryMatch.walletAddress.toLowerCase()),
+          ];
+        }
+      }
+
+      setSellers(nextSellers);
       setSelectedSellerWallet((prev) => {
         if (sellerFromQuery) {
-          const matched = normalized.find(
+          const matched = nextSellers.find(
             (item) => item.walletAddress.toLowerCase() === sellerFromQuery.toLowerCase(),
           );
           if (matched) return matched.walletAddress;
         }
         if (walletAddressesFilter.length === 1) {
-          const matchedSingle = normalized.find(
+          const matchedSingle = nextSellers.find(
             (item) => item.walletAddress.toLowerCase() === walletAddressesFilter[0].toLowerCase(),
           );
           return matchedSingle?.walletAddress || walletAddressesFilter[0];
         }
-        if (prev && normalized.some((item) => item.walletAddress.toLowerCase() === prev.toLowerCase())) {
+        if (prev && nextSellers.some((item) => item.walletAddress.toLowerCase() === prev.toLowerCase())) {
           return prev;
         }
-        return normalized[0]?.walletAddress || '';
+        return nextSellers[0]?.walletAddress || '';
       });
     } catch (error) {
       console.error('Failed to load sellers', error);
       setSellersError(error instanceof Error ? error.message : '판매자 목록을 불러오지 못했습니다.');
       setSellers([]);
+      setSellerPickerSellers([]);
     } finally {
       setLoadingSellers(false);
     }
-  }, [sellerFromQuery, storecode]);
+  }, [sellerFromQuery, sellerSortOption, storecode]);
 
   const loadPrivateTradeStatus = useCallback(async (options?: { silent?: boolean }) => {
     const isSilent = options?.silent === true;
@@ -1178,12 +1211,12 @@ export default function BuyUsdtPage({
       return;
     }
     if (!selectedSeller) {
-      setSellerPickerOpen(true);
+      openSellerPicker();
       toast.error('판매자를 먼저 선택해 주세요.');
       return;
     }
     if (isSelectedSellerBuyer) {
-      setSellerPickerOpen(true);
+      openSellerPicker();
       toast.error('현재 지갑과 동일한 판매자는 선택할 수 없습니다. 다른 판매자를 선택해 주세요.');
       return;
     }
@@ -1527,15 +1560,13 @@ export default function BuyUsdtPage({
                   <p className="mt-1 text-xs text-rose-600">
                     자기 자신과는 거래할 수 없습니다. 판매자를 다시 선택해 주세요.
                   </p>
-                  {!shouldHideSellerReselectControls && (
-                    <button
-                      type="button"
-                      onClick={() => setSellerPickerOpen(true)}
-                      className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                    >
-                      판매자 다시 선택
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={openSellerPicker}
+                    className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                  >
+                    다른 판매자 선택
+                  </button>
                 </div>
               ) : (
                 <div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50/70 p-4">
@@ -1564,14 +1595,14 @@ export default function BuyUsdtPage({
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-xl border border-white/80 bg-white px-3 py-2">
                       <p className="text-slate-500">판매 환율</p>
-                      <p className="mt-1 font-semibold text-slate-900">
-                        1 USDT = {selectedSeller.rate.toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW
+                      <p className="mt-1 text-right text-xl font-extrabold leading-tight text-slate-900">
+                        {selectedSeller.rate.toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW
                       </p>
                     </div>
                     <div className="rounded-xl border border-white/80 bg-white px-3 py-2">
                       <p className="text-slate-500">판매 가능 수량</p>
-                      <p className="mt-1 font-semibold text-emerald-700">
-                        {selectedSeller.currentUsdtBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT
+                      <p className="mt-1 text-right text-xl font-extrabold leading-tight text-emerald-700">
+                        {selectedSeller.currentUsdtBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} USDT
                       </p>
                     </div>
                   </div>
@@ -1773,15 +1804,13 @@ export default function BuyUsdtPage({
                     )}
                   </div>
 
-                  {!sellerFromQuery && !shouldHideSellerReselectControls && (
-                    <button
-                      type="button"
-                      onClick={() => setSellerPickerOpen(true)}
-                      className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                    >
-                      판매자 다시 선택
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={openSellerPicker}
+                    className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                  >
+                    다른 판매자 선택
+                  </button>
                 </div>
               )
             ) : (
@@ -1794,8 +1823,8 @@ export default function BuyUsdtPage({
                 {!loadingSellers && (
                   <button
                     type="button"
-                    onClick={() => setSellerPickerOpen(true)}
-                    disabled={sellers.length === 0}
+                    onClick={openSellerPicker}
+                    disabled={sellerPickerSellers.length === 0}
                     className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-xl bg-cyan-700 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     판매자 선택하기
@@ -1899,7 +1928,7 @@ export default function BuyUsdtPage({
                     <span className="text-slate-500">판매 환율</span>
                     <span className="font-semibold text-slate-800">
                       {selectedSeller
-                        ? `1 USDT = ${selectedSeller.rate.toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW`
+                        ? `${selectedSeller.rate.toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW`
                         : '-'}
                     </span>
                   </div>
@@ -2115,6 +2144,31 @@ export default function BuyUsdtPage({
               className="mt-4 h-10 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-sm text-slate-700 outline-none transition focus:border-cyan-500"
             />
 
+            <div className="mt-3 inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+              <button
+                type="button"
+                onClick={() => setSellerSortOption('rate')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  sellerSortOption === 'rate'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                최저 환율 우선
+              </button>
+              <button
+                type="button"
+                onClick={() => setSellerSortOption('balance')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  sellerSortOption === 'balance'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                보유량 우선
+              </button>
+            </div>
+
             <div className="mt-3 max-h-[420px] overflow-y-auto rounded-2xl border border-slate-200/80 bg-white/85">
               {loadingSellers && (
                 <div className="px-4 py-5 text-sm text-slate-500">판매자 목록을 불러오는 중입니다...</div>
@@ -2138,7 +2192,7 @@ export default function BuyUsdtPage({
                       selected ? 'bg-cyan-50/80' : 'hover:bg-slate-50/80'
                     }`}
                   >
-                    <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
                       <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200">
                         {seller.avatar ? (
                           <Image
@@ -2154,11 +2208,23 @@ export default function BuyUsdtPage({
                           </div>
                         )}
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-slate-900">{seller.nickname}</p>
-                        <p className="truncate text-[11px] text-slate-500">
-                          {shortAddress(seller.walletAddress)} · {seller.rate.toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW
-                        </p>
+                        <p className="truncate text-[11px] text-slate-500">{shortAddress(seller.walletAddress)}</p>
+                      </div>
+                      <div className="shrink-0 space-y-1">
+                        <div className="inline-flex min-w-[92px] flex-col justify-center rounded-xl border border-cyan-200 bg-cyan-50 px-2 py-1.5">
+                          <span className="text-[10px] font-semibold text-cyan-700/90">환율</span>
+                          <span className="block w-full text-right text-sm font-extrabold leading-tight text-cyan-800 tabular-nums">
+                            {seller.rate.toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW
+                          </span>
+                        </div>
+                        <div className="inline-flex min-w-[92px] flex-col justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-1.5">
+                          <span className="text-[10px] font-semibold text-emerald-700/90">보유량</span>
+                          <span className="block w-full text-right text-sm font-extrabold leading-tight text-emerald-800 tabular-nums">
+                            {seller.currentUsdtBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} USDT
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <span
@@ -2350,7 +2416,7 @@ export default function BuyUsdtPage({
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">판매 환율</span>
                 <span className="font-semibold text-slate-800">
-                  1 USDT = {selectedSeller.rate.toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW
+                  {selectedSeller.rate.toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW
                 </span>
               </div>
               <div className="flex items-center justify-between">

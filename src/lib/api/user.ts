@@ -3083,7 +3083,6 @@ export async function getAllSellersForBalanceInquiry(
     conditions.push(
       { 'seller.status': 'confirmed' },
       { 'seller.enabled': true },
-      { 'seller.escrowWalletAddress': { $exists: true, $ne: null } },
     );
   }
 

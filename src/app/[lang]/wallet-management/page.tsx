@@ -231,6 +231,7 @@ export default function WalletManagementHomePage() {
     setSellersError(null);
     try {
       let walletAddressesFilter: string[] = [];
+      let useRandomFallbackSeller = false;
       if (storecode) {
         const storeResponse = await fetch('/api/store/getOneStore', {
           method: 'POST',
@@ -249,9 +250,7 @@ export default function WalletManagementHomePage() {
         setStoreSellerWalletAddresses(walletAddressesFilter);
 
         if (walletAddressesFilter.length === 0) {
-          setSellers([]);
-          setSelectedSellerWallet('');
-          return;
+          useRandomFallbackSeller = true;
         }
       } else {
         setStoreSellerWalletAddresses([]);
@@ -261,8 +260,8 @@ export default function WalletManagementHomePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          storecode: storecode || 'admin',
-          limit: 40,
+          storecode: walletAddressesFilter.length > 0 ? (storecode || 'admin') : 'admin',
+          limit: useRandomFallbackSeller ? 200 : 40,
           page: 1,
           ...(walletAddressesFilter.length > 0 ? { walletAddresses: walletAddressesFilter } : {}),
         }),
@@ -305,18 +304,24 @@ export default function WalletManagementHomePage() {
         })
         .filter((item: SellerPreviewItem | null): item is SellerPreviewItem => item !== null);
 
+      let nextSellers = normalized;
       if (walletAddressesFilter.length > 0) {
         const orderMap = new Map<string, number>();
         walletAddressesFilter.forEach((walletAddress, index) => {
           orderMap.set(walletAddress.toLowerCase(), index);
         });
-        normalized.sort((a: SellerPreviewItem, b: SellerPreviewItem) => {
+        nextSellers.sort((a: SellerPreviewItem, b: SellerPreviewItem) => {
           const aIndex = orderMap.get(a.walletAddress.toLowerCase());
           const bIndex = orderMap.get(b.walletAddress.toLowerCase());
           return (aIndex ?? Number.MAX_SAFE_INTEGER) - (bIndex ?? Number.MAX_SAFE_INTEGER);
         });
+      } else if (useRandomFallbackSeller) {
+        if (nextSellers.length > 0) {
+          const randomIndex = Math.floor(Math.random() * nextSellers.length);
+          nextSellers = [nextSellers[randomIndex]];
+        }
       } else {
-        normalized.sort((a: SellerPreviewItem, b: SellerPreviewItem) => {
+        nextSellers.sort((a: SellerPreviewItem, b: SellerPreviewItem) => {
           if (b.currentUsdtBalance !== a.currentUsdtBalance) {
             return b.currentUsdtBalance - a.currentUsdtBalance;
           }
@@ -324,25 +329,25 @@ export default function WalletManagementHomePage() {
         });
       }
 
-      setSellers(normalized);
+      setSellers(nextSellers);
       setSelectedSellerWallet((prev) => {
         if (sellerWalletFromQuery) {
-          const matched = normalized.find(
+          const matched = nextSellers.find(
             (item: SellerPreviewItem) => item.walletAddress.toLowerCase() === sellerWalletFromQuery.toLowerCase(),
           );
           if (matched) return matched.walletAddress;
         }
         if (walletAddressesFilter.length === 1) {
-          const matchedSingle = normalized.find(
+          const matchedSingle = nextSellers.find(
             (item: SellerPreviewItem) =>
               item.walletAddress.toLowerCase() === walletAddressesFilter[0].toLowerCase(),
           );
           return matchedSingle?.walletAddress || walletAddressesFilter[0];
         }
-        if (prev && normalized.some((item: SellerPreviewItem) => item.walletAddress.toLowerCase() === prev.toLowerCase())) {
+        if (prev && nextSellers.some((item: SellerPreviewItem) => item.walletAddress.toLowerCase() === prev.toLowerCase())) {
           return prev;
         }
-        return normalized[0]?.walletAddress || '';
+        return nextSellers[0]?.walletAddress || '';
       });
     } catch (error) {
       console.error('Failed to load sellers for buy-usdt', error);
@@ -725,8 +730,12 @@ export default function WalletManagementHomePage() {
                         {sellers[0]?.nickname || '판매자'}
                       </p>
                     </div>
-                    <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-white">
-                      {(sellers[0]?.rate || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW
+                    <span className="inline-flex flex-col items-end rounded-2xl bg-slate-900 px-3 py-1.5 leading-tight text-white">
+                      <span className="text-[10px] font-medium text-slate-300">판매금액</span>
+                      <span className="text-xl font-extrabold tracking-tight">
+                        {(sellers[0]?.rate || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        <span className="ml-1 text-xs font-semibold">KRW</span>
+                      </span>
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-slate-500">{shortAddress(sellers[0]?.walletAddress || '')}</p>
@@ -767,8 +776,12 @@ export default function WalletManagementHomePage() {
                             </span>
                             <p className="truncate text-sm font-semibold text-slate-900">{seller.nickname}</p>
                           </div>
-                          <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-white">
-                            {seller.rate.toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW
+                          <span className="inline-flex flex-col items-end rounded-xl bg-slate-900 px-3 py-1 leading-tight text-white">
+                            <span className="text-[9px] font-medium text-slate-300">판매금액</span>
+                            <span className="text-lg font-extrabold tracking-tight">
+                              {seller.rate.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                              <span className="ml-1 text-[10px] font-semibold">KRW</span>
+                            </span>
                           </span>
                         </div>
                         <p className="mt-1 text-xs text-slate-500">{shortAddress(seller.walletAddress)}</p>
