@@ -1,12 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 
 type StoreMember = {
   id: string;
   nickname: string;
   walletAddress: string;
+  password: string;
   verified: boolean;
   role: string;
   createdAt: string;
@@ -49,8 +50,10 @@ const resolveMemberType = (member: StoreMember) => {
 };
 
 export default function P2PStoreMemberManagementPage() {
+  const params = useParams();
   const searchParams = useSearchParams();
   const storecode = String(searchParams?.get('storecode') || '').trim();
+  const lang = String(Array.isArray(params?.lang) ? params.lang[0] : params?.lang || 'ko').trim() || 'ko';
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +68,9 @@ export default function P2PStoreMemberManagementPage() {
   const [newMemberDepositName, setNewMemberDepositName] = useState('');
   const [addMemberError, setAddMemberError] = useState<string | null>(null);
   const [addMemberSuccess, setAddMemberSuccess] = useState<string | null>(null);
+  const [passwordModalMember, setPasswordModalMember] = useState<StoreMember | null>(null);
+  const [siteOrigin, setSiteOrigin] = useState('');
+  const [homeUrlCopyFeedback, setHomeUrlCopyFeedback] = useState('');
 
   const loadMembers = useCallback(async () => {
     if (!storecode) {
@@ -130,6 +136,7 @@ export default function P2PStoreMemberManagementPage() {
             id: String(member.id || member._id || ''),
             nickname: String(member.nickname || '').trim() || '-',
             walletAddress: String(member.walletAddress || ''),
+            password: String(member.password ?? '').trim(),
             verified: member.verified === true,
             role: String(member.role || 'member').trim() || 'member',
             createdAt: String(member.createdAt || ''),
@@ -150,6 +157,19 @@ export default function P2PStoreMemberManagementPage() {
   useEffect(() => {
     loadMembers();
   }, [loadMembers]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setSiteOrigin(window.location.origin);
+  }, []);
+
+  useEffect(() => {
+    if (!homeUrlCopyFeedback) return;
+    const timer = window.setTimeout(() => {
+      setHomeUrlCopyFeedback('');
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [homeUrlCopyFeedback]);
 
   const openAddMemberModal = useCallback(() => {
     if (!storecode) return;
@@ -255,6 +275,27 @@ export default function P2PStoreMemberManagementPage() {
     [members],
   );
 
+  const memberHomepagePath = useMemo(() => {
+    if (!storecode) return '';
+    return `/${lang}/wallet-management?storecode=${encodeURIComponent(storecode)}`;
+  }, [lang, storecode]);
+
+  const memberHomepageUrl = useMemo(() => {
+    if (!memberHomepagePath) return '';
+    return siteOrigin ? `${siteOrigin}${memberHomepagePath}` : memberHomepagePath;
+  }, [memberHomepagePath, siteOrigin]);
+
+  const copyMemberHomepageUrl = useCallback(async () => {
+    if (!memberHomepageUrl) return;
+    try {
+      await navigator.clipboard.writeText(memberHomepageUrl);
+      setHomeUrlCopyFeedback('주소를 복사했습니다.');
+    } catch (copyError) {
+      console.error('Failed to copy member homepage url', copyError);
+      setHomeUrlCopyFeedback('주소 복사에 실패했습니다.');
+    }
+  }, [memberHomepageUrl]);
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
@@ -271,6 +312,36 @@ export default function P2PStoreMemberManagementPage() {
 
       {storecode && (
         <>
+          <section className="rounded-2xl border border-indigo-200 bg-indigo-50/60 px-4 py-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-700">Member Homepage</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">회원 홈페이지 주소</p>
+            <p className="mt-1 break-all rounded-xl border border-indigo-100 bg-white px-3 py-2 text-xs text-slate-700">
+              {memberHomepageUrl}
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  void copyMemberHomepageUrl();
+                }}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-indigo-300 bg-white px-3 text-xs font-semibold text-indigo-700 transition hover:border-indigo-400 hover:bg-indigo-50"
+              >
+                주소 복사
+              </button>
+              <a
+                href={memberHomepagePath}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-indigo-300 bg-white px-3 text-xs font-semibold text-indigo-700 transition hover:border-indigo-400 hover:bg-indigo-50"
+              >
+                홈페이지로 가기
+              </a>
+            </div>
+            {homeUrlCopyFeedback && (
+              <p className="mt-2 text-xs font-semibold text-indigo-700">{homeUrlCopyFeedback}</p>
+            )}
+          </section>
+
           {addMemberSuccess && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
               {addMemberSuccess}
@@ -392,7 +463,19 @@ export default function P2PStoreMemberManagementPage() {
                       <span>유형: {resolveMemberType(member)}</span>
                       <span>{toDateTime(member.createdAt)}</span>
                     </div>
-                    <p className="mt-1 text-[11px] text-slate-500">권한: {member.role}</p>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <p className="text-[11px] text-slate-500">권한: {member.role}</p>
+                      <div className="flex items-center gap-2 text-[11px]">
+                        <span className="text-slate-500">비밀번호 확인</span>
+                        <button
+                          type="button"
+                          onClick={() => setPasswordModalMember(member)}
+                          className="inline-flex h-7 items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100"
+                        >
+                          확인
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -494,6 +577,39 @@ export default function P2PStoreMemberManagementPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {passwordModalMember && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm">
+          <button
+            type="button"
+            aria-label="비밀번호 확인 모달 닫기"
+            onClick={() => setPasswordModalMember(null)}
+            className="absolute inset-0"
+          />
+          <div className="relative w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_36px_80px_-40px_rgba(15,23,42,0.45)]">
+            <p className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-[11px] font-semibold text-cyan-700">
+              비밀번호 확인
+            </p>
+            <h2 className="mt-2 text-lg font-bold text-slate-900">{passwordModalMember.nickname}</h2>
+            <p className="mt-1 text-xs text-slate-500">storecode: {storecode}</p>
+
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold text-slate-500">회원 비밀번호</p>
+              <p className="mt-1 break-all font-mono text-base font-bold text-slate-900">
+                {passwordModalMember.password || '-'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setPasswordModalMember(null)}
+              className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              닫기
+            </button>
           </div>
         </div>
       )}
