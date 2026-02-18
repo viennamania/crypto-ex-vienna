@@ -42,6 +42,13 @@ type SellerPreviewItem = {
   status: string;
 };
 
+type PaymentStoreInfo = {
+  storecode: string;
+  storeName: string;
+  storeLogo: string;
+  paymentWalletAddress: string;
+};
+
 const displayFont = Playfair_Display({
   subsets: ['latin'],
   weight: ['600', '700'],
@@ -167,6 +174,8 @@ export default function WalletManagementHomePage() {
   const [loadingSellers, setLoadingSellers] = useState(false);
   const [sellersError, setSellersError] = useState<string | null>(null);
   const [selectedSellerWallet, setSelectedSellerWallet] = useState(sellerWalletFromQuery);
+  const [paymentStoreInfo, setPaymentStoreInfo] = useState<PaymentStoreInfo | null>(null);
+  const [loadingPaymentStoreInfo, setLoadingPaymentStoreInfo] = useState(false);
 
   const selectedSeller = useMemo(
     () =>
@@ -341,6 +350,49 @@ export default function WalletManagementHomePage() {
     loadSellers();
   }, [loadSellers]);
 
+  const loadPaymentStoreInfo = useCallback(async () => {
+    if (!storecode) {
+      setPaymentStoreInfo(null);
+      setLoadingPaymentStoreInfo(false);
+      return;
+    }
+
+    setLoadingPaymentStoreInfo(true);
+    try {
+      const response = await fetch('/api/store/getOneStore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storecode }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String(data?.error || '가맹점 정보를 불러오지 못했습니다.'));
+      }
+
+      const storeResult = isRecord(data?.result) ? data.result : null;
+      if (!storeResult) {
+        setPaymentStoreInfo(null);
+        return;
+      }
+
+      setPaymentStoreInfo({
+        storecode: String(storeResult.storecode || storecode).trim(),
+        storeName: String(storeResult.storeName || storecode || '가맹점').trim() || '가맹점',
+        storeLogo: String(storeResult.storeLogo || storeResult.storeUrl || '').trim(),
+        paymentWalletAddress: String(storeResult.paymentWalletAddress || '').trim(),
+      });
+    } catch (error) {
+      console.error('Failed to load payment store info', error);
+      setPaymentStoreInfo(null);
+    } finally {
+      setLoadingPaymentStoreInfo(false);
+    }
+  }, [storecode]);
+
+  useEffect(() => {
+    loadPaymentStoreInfo();
+  }, [loadPaymentStoreInfo]);
+
   useEffect(() => {
     if (sellerWalletFromQuery) {
       setSelectedSellerWallet(sellerWalletFromQuery);
@@ -492,29 +544,128 @@ export default function WalletManagementHomePage() {
           </div>
         </section>
 
-        <section className="mt-5 rounded-3xl border border-white/70 bg-white/80 p-5 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.42)] backdrop-blur">
+        <div className="mt-5 grid gap-4">
+          <section className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.42)] backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">USDT Wallet</p>
+                <h2 className="mt-1 text-xl font-semibold text-slate-900">USDT 지갑</h2>
+              </div>
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M12 5v14m0 0 4-4m-4 4-4-4" strokeLinecap="round" strokeLinejoin="round" />
+                  <rect x="4" y="3" width="16" height="6" rx="2" />
+                </svg>
+              </span>
+            </div>
+            <p className="mt-3 text-sm text-slate-600">
+              네트워크별 잔액 확인, 출금/입금, 전송내역을 한 화면에서 관리합니다.
+            </p>
+            <Link
+              href={walletPath}
+              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+            >
+              USDT 지갑으로 이동
+            </Link>
+          </section>
+        </div>
+
+        <div className="mt-5 grid gap-4">
+
+          <section
+            className={`rounded-3xl border border-white/70 bg-white/80 p-5 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.42)] backdrop-blur ${
+              storecode ? 'min-h-[260px]' : ''
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">USDT Payment</p>
+                <h2 className="mt-1 text-xl font-semibold text-slate-900">USDT 결제</h2>
+              </div>
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-600 text-white">
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <rect x="3" y="5" width="18" height="14" rx="2.5" />
+                  <path d="M7 9h10M7 13h5" strokeLinecap="round" />
+                </svg>
+              </span>
+            </div>
+
+            {storecode && (
+              <div className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50/80 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">지정 상점</p>
+                <div className="mt-2 flex items-center gap-2.5">
+                  <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-cyan-200 bg-white">
+                    {paymentStoreInfo?.storeLogo ? (
+                      <span
+                        className="block h-full w-full bg-cover bg-center"
+                        style={{ backgroundImage: `url(${encodeURI(paymentStoreInfo.storeLogo)})` }}
+                        aria-label={paymentStoreInfo.storeName || storecode}
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-cyan-700">
+                        SHOP
+                      </span>
+                    )}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">
+                      {loadingPaymentStoreInfo
+                        ? '상점 정보를 확인 중입니다...'
+                        : paymentStoreInfo?.storeName || storecode}
+                    </p>
+                    <p className="text-xs text-cyan-700">
+                      {paymentStoreInfo?.storecode || storecode}
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-2 min-h-[16px] text-[11px] text-slate-500">
+                  {loadingPaymentStoreInfo
+                    ? '결제 지갑 정보를 확인 중입니다...'
+                    : paymentStoreInfo?.paymentWalletAddress
+                      ? `결제 지갑: ${shortAddress(paymentStoreInfo.paymentWalletAddress)}`
+                      : '\u00A0'}
+                </p>
+              </div>
+            )}
+
+            <p className="mt-3 text-sm text-slate-600">
+              {storecode
+                ? '지정된 상점 결제지갑으로 보낼 USDT 수량을 입력해 결제를 진행합니다.'
+                : '결제할 USDT 수량을 입력해 상점 결제지갑으로 전송합니다.'}
+            </p>
+            <Link
+              href={paymentPath}
+              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-cyan-600 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-500"
+            >
+              {storecode
+                ? loadingPaymentStoreInfo
+                  ? '상점 정보 확인 중...'
+                  : `${paymentStoreInfo?.storeName || '지정 상점'} USDT 결제로 이동`
+                : 'USDT 결제로 이동'}
+            </Link>
+          </section>
+
+        </div>
+
+        <section className="mt-5 min-h-[390px] rounded-3xl border border-white/70 bg-white/80 p-5 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.42)] backdrop-blur">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">USDT BUY</p>
               <h2 className="mt-1 text-xl font-semibold text-slate-900">
-                {isStoreSellerMode ? '가맹점 판매자 정보' : '판매자 선택 후 구매 시작'}
+                {isStoreSellerMode ? 'USDT 구매' : '판매자 선택 후 구매 시작'}
               </h2>
             </div>
-            {!isStoreSellerMode && (
-              <button
-                type="button"
-                onClick={loadSellers}
-                disabled={loadingSellers}
-                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {loadingSellers ? '불러오는 중...' : '새로고침'}
-              </button>
-            )}
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M3 12h18M12 3v18" strokeLinecap="round" />
+                <circle cx="12" cy="12" r="8" />
+              </svg>
+            </span>
           </div>
 
           <p className="mt-2 text-sm text-slate-600">
             {isStoreSellerMode
-              ? '가맹점에 설정된 판매자 목록을 읽어와 구매 가능한 판매자만 표시합니다.'
+              ? ''
               : 'API에서 판매자 목록을 조회해 조건이 맞는 판매자를 고르고, 구매/채팅/구매신청으로 바로 연결됩니다.'}
           </p>
 
@@ -524,26 +675,53 @@ export default function WalletManagementHomePage() {
             </p>
           )}
 
-          {loadingSellers && sellers.length === 0 && (
-            <p className="mt-3 text-sm text-slate-500">판매자 목록을 불러오는 중입니다...</p>
-          )}
+          <div className="mt-4 min-h-[248px]">
+            {loadingSellers && sellers.length === 0 && (
+              <div className="grid gap-2">
+                <p className="text-sm text-slate-500">판매자 목록을 불러오는 중입니다...</p>
+                <div className="h-[92px] animate-pulse rounded-2xl border border-slate-200 bg-slate-100/80" />
+                <div className="h-11 animate-pulse rounded-2xl bg-emerald-100/90" />
+              </div>
+            )}
 
-          {!loadingSellers && sellers.length === 0 && !sellersError && (
-            <p className="mt-3 text-sm text-slate-500">
-              {isStoreSellerMode && storeSellerWalletAddresses.length === 0
-                ? '가맹점에 설정된 판매자가 없습니다.'
-                : '현재 구매 가능한 판매자가 없습니다.'}
-            </p>
-          )}
+            {!loadingSellers && sellers.length === 0 && !sellersError && (
+              <div className="grid gap-2">
+                <p className="text-sm text-slate-500">
+                  {isStoreSellerMode && storeSellerWalletAddresses.length === 0
+                    ? '가맹점에 설정된 판매자가 없습니다.'
+                    : '현재 구매 가능한 판매자가 없습니다.'}
+                </p>
+              </div>
+            )}
 
-          {sellers.length > 0 && (
-            <div className="mt-4 grid gap-2">
+            {sellers.length > 0 && (
+              <div className="grid gap-2">
               {hasSingleConfiguredStoreSeller ? (
                 <div className="w-full rounded-2xl border border-cyan-300 bg-cyan-50 px-3 py-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-semibold text-slate-900">
-                      {sellers[0]?.nickname || '판매자'}
+                  {isStoreSellerMode && (
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                      지정 판매자
                     </p>
+                  )}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-white">
+                        {sellers[0]?.avatar ? (
+                          <span
+                            className="block h-full w-full bg-cover bg-center"
+                            style={{ backgroundImage: `url(${encodeURI(sellers[0].avatar)})` }}
+                            aria-label={`${sellers[0]?.nickname || '판매자'} 아바타`}
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-500">
+                            {String(sellers[0]?.nickname || 'S').slice(0, 1)}
+                          </span>
+                        )}
+                      </span>
+                      <p className="truncate text-sm font-semibold text-slate-900">
+                        {sellers[0]?.nickname || '판매자'}
+                      </p>
+                    </div>
                     <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-white">
                       {(sellers[0]?.rate || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW
                     </span>
@@ -570,7 +748,22 @@ export default function WalletManagementHomePage() {
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <p className="truncate text-sm font-semibold text-slate-900">{seller.nickname}</p>
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <span className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-white">
+                              {seller.avatar ? (
+                                <span
+                                  className="block h-full w-full bg-cover bg-center"
+                                  style={{ backgroundImage: `url(${encodeURI(seller.avatar)})` }}
+                                  aria-label={`${seller.nickname} 아바타`}
+                                />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-500">
+                                  {String(seller.nickname || 'S').slice(0, 1)}
+                                </span>
+                              )}
+                            </span>
+                            <p className="truncate text-sm font-semibold text-slate-900">{seller.nickname}</p>
+                          </div>
                           <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-white">
                             {seller.rate.toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW
                           </span>
@@ -589,86 +782,12 @@ export default function WalletManagementHomePage() {
                 href={buyPath}
                 className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-emerald-600 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-emerald-500"
               >
-                {selectedSeller ? `${selectedSeller.nickname} 판매자로 USDT 구매 이동` : 'USDT 구매 페이지로 이동'}
+                {selectedSeller ? `${selectedSeller.nickname} 판매자 USDT 구매로 이동` : 'USDT 구매 페이지로 이동'}
               </Link>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </section>
-
-        <div className="mt-5 grid gap-4">
-          <section className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.42)] backdrop-blur">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">USDT Wallet</p>
-                <h2 className="mt-1 text-xl font-semibold text-slate-900">USDT 지갑</h2>
-              </div>
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <path d="M12 5v14m0 0 4-4m-4 4-4-4" strokeLinecap="round" strokeLinejoin="round" />
-                  <rect x="4" y="3" width="16" height="6" rx="2" />
-                </svg>
-              </span>
-            </div>
-            <p className="mt-3 text-sm text-slate-600">
-              네트워크별 잔액 확인, 출금/입금, 전송내역을 한 화면에서 관리합니다.
-            </p>
-            <Link
-              href={walletPath}
-              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
-            >
-              USDT 지갑으로 이동
-            </Link>
-          </section>
-
-          <section className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.42)] backdrop-blur">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">USDT Payment</p>
-                <h2 className="mt-1 text-xl font-semibold text-slate-900">USDT 결제</h2>
-              </div>
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-600 text-white">
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <rect x="3" y="5" width="18" height="14" rx="2.5" />
-                  <path d="M7 9h10M7 13h5" strokeLinecap="round" />
-                </svg>
-              </span>
-            </div>
-            <p className="mt-3 text-sm text-slate-600">
-              결제할 USDT 수량을 입력해 상점 결제지갑으로 전송합니다.
-            </p>
-            <Link
-              href={paymentPath}
-              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-cyan-600 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-500"
-            >
-              USDT 결제로 이동
-            </Link>
-          </section>
-
-          <section className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.42)] backdrop-blur">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">USDT Buy</p>
-                <h2 className="mt-1 text-xl font-semibold text-slate-900">USDT 구매</h2>
-              </div>
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white">
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <path d="M6 15.5 10 11.5l2.5 2.5L18 8.5" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M15 8.5h3v3" strokeLinecap="round" strokeLinejoin="round" />
-                  <rect x="3" y="4" width="18" height="16" rx="2.5" />
-                </svg>
-              </span>
-            </div>
-            <p className="mt-3 text-sm text-slate-600">
-              판매자 매물을 확인하고 채팅과 함께 구매 신청까지 한 화면 흐름으로 진행합니다.
-            </p>
-            <Link
-              href={buyPath}
-              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-emerald-600 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-emerald-500"
-            >
-              USDT 구매로 이동
-            </Link>
-          </section>
-        </div>
 
         <p className="mt-5 text-center text-xs text-slate-500">
           거래 전 금액, 수신지갑, 네트워크 정보를 반드시 확인해 주세요.

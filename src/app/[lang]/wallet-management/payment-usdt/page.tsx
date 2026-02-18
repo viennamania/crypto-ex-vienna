@@ -479,7 +479,7 @@ export default function PaymentUsdtPage({
       return '선택한 가맹점 회원 여부를 확인하고 있습니다.';
     }
     if (!hasMemberProfile) {
-      return '가맹점 회원 아이디와 핀번호(숫자 5자리)를 입력해 회원정보 연동을 완료해야 결제를 진행할 수 있습니다.';
+      return '가맹점 회원 아이디와 비밀번호를 입력해 회원정보 연동을 완료해야 결제를 진행할 수 있습니다.';
     }
     if (usdtAmount <= 0) {
       return '결제할 USDT 수량을 입력해 주세요.';
@@ -835,8 +835,8 @@ export default function PaymentUsdtPage({
     }
 
     const password = signupPassword.trim();
-    if (!/^\d{5}$/.test(password)) {
-      toast.error('핀번호 숫자 5자리를 입력해 주세요.');
+    if (!password) {
+      toast.error('비밀번호를 입력해 주세요.');
       return;
     }
 
@@ -1242,11 +1242,19 @@ export default function PaymentUsdtPage({
                       hasMemberProfile
                         ? 'border-emerald-200 bg-emerald-50'
                         : 'border-amber-200 bg-amber-50'
-                    } ${loadingMemberProfile || hasMemberProfile ? 'min-h-[152px]' : ''}`}
+                    } ${
+                      hasMemberProfile
+                        ? 'min-h-[130px]'
+                        : loadingMemberProfile
+                          ? 'min-h-[160px]'
+                          : 'min-h-[220px]'
+                    }`}
                   >
                     {loadingMemberProfile ? (
                       <>
-                        <p className="font-semibold text-slate-700">선택 상점 회원 정보를 확인 중입니다...</p>
+                        <p className="font-semibold text-slate-700">
+                          {`${selectedMerchant.storeName || '선택 상점'} 회원 정보를 확인 중입니다...`}
+                        </p>
                         <p className="mt-2 text-[11px] font-semibold text-slate-500">회원 아이디</p>
                         <div className="mt-1 h-10 w-40 animate-pulse rounded-lg bg-slate-200/80" />
                       </>
@@ -1261,12 +1269,11 @@ export default function PaymentUsdtPage({
                     ) : (
                       <>
                         <p className="font-semibold text-amber-800">
-                          이 상점의 가맹점 회원정보를 먼저 연동해야 결제할 수 있습니다.
+                          {`${selectedMerchant.storeName || '이 상점'} 가맹점 회원정보를 먼저 연동해야 결제할 수 있습니다.`}
                         </p>
-                        <p className="mt-1 text-xs text-amber-700">
-                          가맹점에 등록된 회원 아이디와 핀번호(숫자 5자리)를 입력하면 내 지갑과 회원정보가 연동됩니다.
+                        <p className="mt-1 text-xs font-semibold text-amber-800">
+                          회원 아이디와 비밀번호를 모를경우 가맹점에 문의하세요.
                         </p>
-                        <p className="mt-1 text-xs font-semibold text-amber-800">모를 경우 상점에 문의하세요.</p>
                         {memberProfileError && (
                           <p className="mt-1 text-xs text-rose-600">{memberProfileError}</p>
                         )}
@@ -1282,11 +1289,11 @@ export default function PaymentUsdtPage({
                             <input
                               type="password"
                               value={signupPassword}
-                              onChange={(event) => setSignupPassword(event.target.value.replace(/[^0-9]/g, '').slice(0, 5))}
-                              placeholder="핀번호(숫자 5자리)"
-                              inputMode="numeric"
+                              onChange={(event) => setSignupPassword(event.target.value)}
+                              placeholder="비밀번호"
+                              autoComplete="current-password"
                               className="h-12 w-full rounded-2xl border-2 border-amber-300 bg-white px-4 text-base font-semibold text-slate-800 outline-none transition focus:border-amber-500 placeholder:text-slate-400"
-                              maxLength={5}
+                              maxLength={64}
                             />
                           </div>
                           <button
