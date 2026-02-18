@@ -18,6 +18,7 @@ type WalletSummaryCardProps = {
   modeLabel: string;
   smartAccountEnabled?: boolean;
   onCopyAddress?: (walletAddress: string) => void;
+  disconnectRedirectPath?: string;
 };
 
 export default function WalletSummaryCard({
@@ -28,6 +29,7 @@ export default function WalletSummaryCard({
   modeLabel,
   smartAccountEnabled = false,
   onCopyAddress,
+  disconnectRedirectPath,
 }: WalletSummaryCardProps) {
   useSyncConnectedWalletUser(walletAddress);
   const activeWallet = useActiveWallet();
@@ -79,9 +81,17 @@ export default function WalletSummaryCard({
     } finally {
       clearWalletConnectionState();
       window.dispatchEvent(new Event('orangex-wallet-disconnected'));
-      window.location.replace(window.location.pathname + window.location.search);
+      const fallbackPath = window.location.pathname + window.location.search;
+      window.location.replace(disconnectRedirectPath || fallbackPath);
     }
-  }, [activeWallet, connectedWallets, disconnect, disconnecting, hasConnectedWallet]);
+  }, [
+    activeWallet,
+    connectedWallets,
+    disconnect,
+    disconnecting,
+    disconnectRedirectPath,
+    hasConnectedWallet,
+  ]);
 
   return (
     <>

@@ -443,41 +443,51 @@ export default function P2PStoreMemberManagementPage() {
             ) : filteredMembers.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">조건에 맞는 회원이 없습니다.</p>
             ) : (
-              <div className="mt-4 space-y-2">
-                {filteredMembers.map((member) => (
-                  <div key={`${member.id}-${member.walletAddress}`} className="rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900">{member.nickname}</p>
-                        <p className="truncate text-[11px] text-slate-500">{shortAddress(member.walletAddress)}</p>
-                      </div>
-                      <span
-                        className={`inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold ${
-                          member.verified ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                        }`}
-                      >
-                        {member.verified ? '인증' : '미인증'}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
-                      <span>유형: {resolveMemberType(member)}</span>
-                      <span>{toDateTime(member.createdAt)}</span>
-                    </div>
-                    <div className="mt-1 flex items-center justify-between gap-2">
-                      <p className="text-[11px] text-slate-500">권한: {member.role}</p>
-                      <div className="flex items-center gap-2 text-[11px]">
-                        <span className="text-slate-500">비밀번호 확인</span>
-                        <button
-                          type="button"
-                          onClick={() => setPasswordModalMember(member)}
-                          className="inline-flex h-7 items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100"
-                        >
-                          확인
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+                <div className="max-h-[560px] overflow-auto">
+                  <table className="min-w-[860px] w-full table-auto">
+                    <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
+                      <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
+                        <th className="px-3 py-2">회원 아이디</th>
+                        <th className="px-3 py-2">지갑주소</th>
+                        <th className="px-3 py-2">유형</th>
+                        <th className="px-3 py-2">상태</th>
+                        <th className="px-3 py-2">권한</th>
+                        <th className="px-3 py-2">등록일</th>
+                        <th className="px-3 py-2 text-right">비밀번호 확인</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
+                      {filteredMembers.map((member) => (
+                        <tr key={`${member.id}-${member.walletAddress}`} className="transition hover:bg-slate-50/70">
+                          <td className="px-3 py-2.5 font-semibold text-slate-900">{member.nickname}</td>
+                          <td className="px-3 py-2.5 text-xs text-slate-500">{shortAddress(member.walletAddress)}</td>
+                          <td className="px-3 py-2.5 text-xs text-slate-600">{resolveMemberType(member)}</td>
+                          <td className="px-3 py-2.5">
+                            <span
+                              className={`inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold ${
+                                member.verified ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                              }`}
+                            >
+                              {member.verified ? '인증' : '미인증'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5 text-xs text-slate-600">{member.role}</td>
+                          <td className="px-3 py-2.5 text-xs text-slate-500">{toDateTime(member.createdAt)}</td>
+                          <td className="px-3 py-2.5 text-right">
+                            <button
+                              type="button"
+                              onClick={() => setPasswordModalMember(member)}
+                              className="inline-flex h-7 items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 text-[11px] font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100"
+                            >
+                              확인
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </section>

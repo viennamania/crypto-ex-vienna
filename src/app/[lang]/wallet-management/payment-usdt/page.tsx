@@ -284,6 +284,14 @@ export default function PaymentUsdtPage({
   const searchParams = useSearchParams();
   const storecodeFromQuery = String(searchParams?.get('storecode') || '').trim();
   const hasStorecodeParam = Boolean(storecodeFromQuery);
+  const disconnectRedirectPath = useMemo(() => {
+    const query = new URLSearchParams();
+    if (storecodeFromQuery) {
+      query.set('storecode', storecodeFromQuery);
+    }
+    const queryString = query.toString();
+    return `/${lang}/wallet-management${queryString ? `?${queryString}` : ''}`;
+  }, [lang, storecodeFromQuery]);
   const { chain } = useClientSettings();
   const activeAccount = useActiveAccount();
   const { wallet, wallets, smartAccountEnabled } = useClientWallets({
@@ -1104,6 +1112,7 @@ export default function PaymentUsdtPage({
             usdtBalanceDisplay={`${balance.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT`}
             modeLabel={paymentTabLabel}
             smartAccountEnabled={smartAccountEnabled}
+            disconnectRedirectPath={disconnectRedirectPath}
             onCopyAddress={(walletAddress) => {
               navigator.clipboard.writeText(walletAddress);
               toast.success('지갑 주소를 복사했습니다.');

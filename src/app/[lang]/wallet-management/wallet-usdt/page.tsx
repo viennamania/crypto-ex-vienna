@@ -239,6 +239,15 @@ export default function SendUsdt({ params }: any) {
   //console.log("params", params);
 
   const searchParams = useSearchParams();
+  const storecodeFromQuery = String(searchParams?.get('storecode') || '').trim();
+  const disconnectRedirectPath = useMemo(() => {
+    const query = new URLSearchParams();
+    if (storecodeFromQuery) {
+      query.set('storecode', storecodeFromQuery);
+    }
+    const queryString = query.toString();
+    return `/${lang}/wallet-management${queryString ? `?${queryString}` : ''}`;
+  }, [lang, storecodeFromQuery]);
  
   ///const wallet = searchParams.get('wallet');
   
@@ -1520,6 +1529,7 @@ export default function SendUsdt({ params }: any) {
             usdtBalanceDisplay={`${Number(animatedBalance).toFixed(3)} USDT`}
             modeLabel={footerTabLabel}
             smartAccountEnabled={smartAccountEnabled}
+            disconnectRedirectPath={disconnectRedirectPath}
             onCopyAddress={(walletAddress) => {
               navigator.clipboard.writeText(walletAddress);
               toast.success(Copied_Wallet_Address);

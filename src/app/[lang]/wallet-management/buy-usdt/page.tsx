@@ -333,6 +333,14 @@ export default function BuyUsdtPage({
   const searchParams = useSearchParams();
   const storecode = String(searchParams?.get('storecode') || '').trim();
   const sellerFromQuery = String(searchParams?.get('seller') || '').trim();
+  const disconnectRedirectPath = useMemo(() => {
+    const query = new URLSearchParams();
+    if (storecode) {
+      query.set('storecode', storecode);
+    }
+    const queryString = query.toString();
+    return `/${lang}/wallet-management${queryString ? `?${queryString}` : ''}`;
+  }, [lang, storecode]);
 
   const { chain } = useClientSettings();
   const activeAccount = useActiveAccount();
@@ -1357,6 +1365,7 @@ export default function BuyUsdtPage({
             }
             modeLabel={buyTabLabel}
             smartAccountEnabled={smartAccountEnabled}
+            disconnectRedirectPath={disconnectRedirectPath}
             onCopyAddress={(walletAddress) => {
               navigator.clipboard.writeText(walletAddress);
               toast.success('지갑 주소를 복사했습니다.');
