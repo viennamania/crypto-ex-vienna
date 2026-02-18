@@ -352,7 +352,11 @@ export default function P2PStoreManagementLayout({ children }: { children: React
                   connectButton={{
                     label: '지갑 연결하기',
                     className:
-                      'inline-flex h-10 items-center justify-center rounded-xl border border-cyan-300 bg-white px-4 text-sm font-semibold text-cyan-800 transition hover:border-cyan-400 hover:text-cyan-900',
+                      'p2p-store-connect-btn inline-flex h-10 items-center justify-center rounded-xl border border-cyan-300 !bg-white px-4 text-sm font-semibold !text-cyan-800 transition hover:border-cyan-400 hover:!text-cyan-900 focus-visible:!text-cyan-900 active:!text-cyan-900',
+                    style: {
+                      color: '#155e75',
+                      WebkitTextFillColor: '#155e75',
+                    },
                   }}
                 />
               </div>
@@ -419,6 +423,28 @@ export default function P2PStoreManagementLayout({ children }: { children: React
           )}
         </div>
       </div>
+      <style jsx global>{`
+        .p2p-store-connect-btn.tw-connect-wallet,
+        .p2p-store-connect-btn.tw-connect-wallet *,
+        button[data-test='connect-wallet-button'].p2p-store-connect-btn {
+          background-color: #ffffff !important;
+          color: #155e75 !important;
+          -webkit-text-fill-color: #155e75 !important;
+          opacity: 1 !important;
+        }
+
+        .p2p-store-connect-btn.tw-connect-wallet:hover,
+        .p2p-store-connect-btn.tw-connect-wallet:hover *,
+        .p2p-store-connect-btn.tw-connect-wallet:focus-visible,
+        .p2p-store-connect-btn.tw-connect-wallet:focus-visible *,
+        .p2p-store-connect-btn.tw-connect-wallet:active,
+        .p2p-store-connect-btn.tw-connect-wallet:active *,
+        button[data-test='connect-wallet-button'].p2p-store-connect-btn:hover {
+          color: #164e63 !important;
+          -webkit-text-fill-color: #164e63 !important;
+          opacity: 1 !important;
+        }
+      `}</style>
     </div>
   );
 }

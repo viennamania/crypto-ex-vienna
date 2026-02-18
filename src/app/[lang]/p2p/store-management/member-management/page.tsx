@@ -7,10 +7,10 @@ import { useActiveAccount } from 'thirdweb/react';
 type StoreMember = {
   id: string;
   nickname: string;
+  depositName: string;
   walletAddress: string;
   password: string;
   verified: boolean;
-  role: string;
   createdAt: string;
 };
 
@@ -21,8 +21,6 @@ type DashboardStore = {
   paymentWalletAddress: string;
   adminWalletAddress: string;
 };
-
-type MemberFilter = 'all' | 'verified' | 'pending';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -52,7 +50,6 @@ export default function P2PStoreMemberManagementPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [keyword, setKeyword] = useState('');
-  const [filter, setFilter] = useState<MemberFilter>('all');
   const [store, setStore] = useState<DashboardStore | null>(null);
   const [members, setMembers] = useState<StoreMember[]>([]);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
@@ -138,13 +135,17 @@ export default function P2PStoreMemberManagementPage() {
       setMembers(
         users.map((user: unknown) => {
           const member = isRecord(user) ? user : {};
+          const buyer = isRecord(member.buyer) ? member.buyer : {};
+          const buyerBankInfo = isRecord(buyer.bankInfo) ? buyer.bankInfo : {};
           return {
             id: String(member._id || member.id || ''),
             nickname: String(member.nickname || '').trim() || '-',
+            depositName: String(
+              buyer.depositName || buyerBankInfo.depositName || buyerBankInfo.accountHolder || '',
+            ).trim(),
             walletAddress: String(member.walletAddress || ''),
             password: String(member.password ?? '').trim(),
             verified: member.verified === true,
-            role: String(member.role || 'member').trim() || 'member',
             createdAt: String(member.createdAt || ''),
           };
         }),
@@ -263,16 +264,13 @@ export default function P2PStoreMemberManagementPage() {
   const filteredMembers = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
     return members.filter((member) => {
-      if (filter === 'verified' && !member.verified) return false;
-      if (filter === 'pending' && member.verified) return false;
-
       if (!normalizedKeyword) return true;
       return (
         member.nickname.toLowerCase().includes(normalizedKeyword) ||
         member.walletAddress.toLowerCase().includes(normalizedKeyword)
       );
     });
-  }, [members, keyword, filter]);
+  }, [members, keyword]);
 
   const verifiedCount = useMemo(
     () => members.filter((member) => member.verified).length,
@@ -482,7 +480,7 @@ export default function P2PStoreMemberManagementPage() {
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">Member Management</p>
         <h1 className="mt-1 text-2xl font-bold text-slate-900">회원관리</h1>
-        <p className="mt-1 text-sm text-slate-600">가맹점 회원 목록을 확인하고 상태별로 필터링할 수 있습니다.</p>
+        <p className="mt-1 text-sm text-slate-600">가맹점 회원 목록을 확인하고 검색할 수 있습니다.</p>
       </div>
 
       {!storecode && (
@@ -606,27 +604,6 @@ export default function P2PStoreMemberManagementPage() {
               </button>
             </div>
 
-            <div className="mt-3 flex gap-2">
-              {([
-                ['all', '전체'],
-                ['verified', '인증'],
-                ['pending', '미인증'],
-              ] as [MemberFilter, string][]).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setFilter(value)}
-                  className={`h-8 rounded-lg border px-3 text-xs font-semibold transition ${
-                    filter === value
-                      ? 'border-slate-900 bg-slate-900 text-white'
-                      : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
             {loading ? (
               <p className="mt-4 text-sm text-slate-500">회원 목록을 불러오는 중입니다...</p>
             ) : error ? (
@@ -638,13 +615,12 @@ export default function P2PStoreMemberManagementPage() {
             ) : (
               <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
                 <div className="max-h-[560px] overflow-auto">
-                  <table className="min-w-[860px] w-full table-auto">
+                  <table className="min-w-[820px] w-full table-auto">
                     <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                       <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                         <th className="px-3 py-2">회원 아이디</th>
+                        <th className="px-3 py-2">입금자명</th>
                         <th className="px-3 py-2">지갑주소</th>
-                        <th className="px-3 py-2">상태</th>
-                        <th className="px-3 py-2">권한</th>
                         <th className="px-3 py-2">등록일</th>
                         <th className="px-3 py-2 text-right">관리</th>
                       </tr>
@@ -656,6 +632,7 @@ export default function P2PStoreMemberManagementPage() {
                         return (
                         <tr key={`${member.id}-${member.walletAddress}`} className="transition hover:bg-slate-50/70">
                           <td className="px-3 py-2.5 font-semibold text-slate-900">{member.nickname}</td>
+                          <td className="px-3 py-2.5 text-xs text-slate-700">{member.depositName || '-'}</td>
                           <td className="px-3 py-2.5 text-xs text-slate-500">
                             <div className="inline-flex items-center gap-1.5">
                               <span>{shortAddress(member.walletAddress)}</span>
@@ -680,16 +657,6 @@ export default function P2PStoreMemberManagementPage() {
                               )}
                             </div>
                           </td>
-                          <td className="px-3 py-2.5">
-                            <span
-                              className={`inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold ${
-                                member.verified ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                              }`}
-                            >
-                              {member.verified ? '인증' : '미인증'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2.5 text-xs text-slate-600">{member.role}</td>
                           <td className="px-3 py-2.5 text-xs text-slate-500">{toDateTime(member.createdAt)}</td>
                           <td className="px-3 py-2.5 text-right">
                             <div className="inline-flex items-center gap-1.5">
