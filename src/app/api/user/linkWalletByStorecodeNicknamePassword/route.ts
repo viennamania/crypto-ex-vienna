@@ -60,6 +60,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const existingMemberWalletAddress = String(member?.walletAddress || "").trim();
+  if (existingMemberWalletAddress) {
+    const isSameWallet =
+      existingMemberWalletAddress.toLowerCase() === walletAddress.toLowerCase();
+
+    return NextResponse.json(
+      {
+        error: isSameWallet
+          ? "이미 이 지갑에 연동된 회원입니다."
+          : "이미 다른 지갑에 연동된 회원입니다.",
+      },
+      { status: 409 },
+    );
+  }
+
   const walletRegex = { $regex: `^${escapeRegex(walletAddress)}$`, $options: "i" };
 
   const alreadyLinkedUser = await users.findOne(

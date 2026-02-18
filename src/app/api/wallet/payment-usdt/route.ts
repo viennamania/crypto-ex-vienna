@@ -329,15 +329,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "wallet mismatch for this payment request" }, { status: 403 });
     }
 
+    const currentAgentcode = String(existing.agentcode || "").trim();
+    let resolvedAgentcode = currentAgentcode;
+
+    if (!resolvedAgentcode) {
+      const storecodeFromPayment = String(existing.storecode || "").trim();
+      if (storecodeFromPayment) {
+        const store = await getStoreByStorecode({ storecode: storecodeFromPayment });
+        resolvedAgentcode = String(store?.agentcode || "").trim();
+      }
+    }
+
+    const updatePayload: Record<string, unknown> = {};
     if (existing.status !== "confirmed") {
+      updatePayload.status = "confirmed";
+      updatePayload.transactionHash = transactionHash;
+      updatePayload.confirmedAt = new Date().toISOString();
+    }
+    if (resolvedAgentcode && resolvedAgentcode !== currentAgentcode) {
+      updatePayload.agentcode = resolvedAgentcode;
+    }
+
+    if (Object.keys(updatePayload).length > 0) {
       await collection.updateOne(
         { _id },
         {
-          $set: {
-            status: "confirmed",
-            transactionHash,
-            confirmedAt: new Date().toISOString(),
-          },
+          $set: updatePayload,
         }
       );
     }

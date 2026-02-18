@@ -234,6 +234,44 @@ const formatPaymentMemberName = (member: PaymentRecord['member']) => {
   return nickname || memberStorecode || '-';
 };
 
+const isNetworkKey = (value: string): value is NetworkKey =>
+  value === 'ethereum' || value === 'polygon' || value === 'arbitrum' || value === 'bsc';
+
+const toSafeNumber = (value: unknown) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const normalizePaymentRecord = (value: unknown): PaymentRecord | null => {
+  if (!isRecord(value)) return null;
+
+  const chainCandidate = String(value.chain || '').trim().toLowerCase();
+  const chain = isNetworkKey(chainCandidate) ? chainCandidate : 'polygon';
+
+  return {
+    id: String(value.id || value._id || '').trim(),
+    storecode: String(value.storecode || '').trim(),
+    storeName: String(value.storeName || value.storecode || '').trim(),
+    chain,
+    fromWalletAddress: String(value.fromWalletAddress || '').trim(),
+    toWalletAddress: String(value.toWalletAddress || '').trim(),
+    usdtAmount: toSafeNumber(value.usdtAmount),
+    krwAmount: toSafeNumber(value.krwAmount),
+    exchangeRate: toSafeNumber(value.exchangeRate),
+    transactionHash: String(value.transactionHash || '').trim(),
+    createdAt: String(value.createdAt || '').trim(),
+    confirmedAt: String(value.confirmedAt || '').trim(),
+    member: isRecord(value.member) ? (value.member as PaymentRecord['member']) : null,
+  };
+};
+
+const formatDateTime = (value: string) => {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleString('ko-KR');
+};
+
 type ExchangeRateItem = {
   id: string;
   name: string;
@@ -335,6 +373,8 @@ export default function PaymentUsdtPage({
 
   const [history, setHistory] = useState<PaymentRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [latestPaymentRecord, setLatestPaymentRecord] = useState<PaymentRecord | null>(null);
+  const [justPaidRecordId, setJustPaidRecordId] = useState('');
   const [myMemberProfile, setMyMemberProfile] = useState<MemberProfile | null>(null);
   const [loadingMemberProfile, setLoadingMemberProfile] = useState(false);
   const [memberProfileError, setMemberProfileError] = useState<string | null>(null);
@@ -354,12 +394,17 @@ export default function PaymentUsdtPage({
     const normalized = normalizeUsdtInput(rawValue);
     if (!normalized) return '';
 
-    const parsed = toSafeUsdtAmount(normalized);
-    if (parsed <= 0) return '';
-    if (balance <= 0) return '';
-    if (parsed > balance) {
+    // Keep intermediate decimal input states (e.g. "0", "0.", "0.0") so users can continue typing.
+    if (/^0(?:\.0*)?$/.test(normalized)) {
+      return normalized;
+    }
+
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed) || parsed < 0) return '';
+    if (balance > 0 && parsed > balance) {
       return formatUsdtInputFromBalance(balance);
     }
+
     return normalized;
   }, [balance]);
 
@@ -433,6 +478,10 @@ export default function PaymentUsdtPage({
       krwAmount > 0 &&
       hasEnoughBalance
   );
+  const latestPaymentTxUrl = useMemo(() => {
+    if (!latestPaymentRecord?.transactionHash) return '';
+    return `${NETWORK_BY_KEY[latestPaymentRecord.chain]?.explorerBaseUrl || ''}${latestPaymentRecord.transactionHash}`;
+  }, [latestPaymentRecord]);
   const primaryActionLabel = useMemo(() => {
     if (paying) {
       return '결제 처리 중...';
@@ -617,6 +666,8 @@ export default function PaymentUsdtPage({
   const loadHistory = useCallback(async () => {
     if (!activeAccount?.address) {
       setHistory([]);
+      setLatestPaymentRecord(null);
+      setJustPaidRecordId('');
       return;
     }
 
@@ -638,7 +689,12 @@ export default function PaymentUsdtPage({
         throw new Error(data?.error || '결제 내역 조회 실패');
       }
 
-      setHistory(Array.isArray(data?.result) ? data.result : []);
+      const nextHistory = (Array.isArray(data?.result) ? data.result : [])
+        .map((item: unknown) => normalizePaymentRecord(item))
+        .filter((item: PaymentRecord | null): item is PaymentRecord => Boolean(item));
+
+      setHistory(nextHistory);
+      setLatestPaymentRecord(nextHistory[0] || null);
     } catch (error) {
       console.error('Failed to load payment history', error);
     } finally {
@@ -824,6 +880,7 @@ export default function PaymentUsdtPage({
   useEffect(() => {
     setSignupNickname('');
     setSignupPassword('');
+    setJustPaidRecordId('');
   }, [selectedStorecode]);
 
   const registerMemberForSelectedStore = async () => {
@@ -1039,10 +1096,25 @@ export default function PaymentUsdtPage({
         throw new Error(confirmData?.error || '결제 기록 저장에 실패했습니다.');
       }
 
+      const confirmedPayment = normalizePaymentRecord(confirmData?.result);
+      if (confirmedPayment) {
+        setLatestPaymentRecord(confirmedPayment);
+        setJustPaidRecordId(confirmedPayment.id || confirmedPayment.transactionHash);
+        setHistory((previous) => {
+          const deduped = previous.filter(
+            (item) =>
+              item.id !== confirmedPayment.id &&
+              item.transactionHash !== confirmedPayment.transactionHash,
+          );
+          return [confirmedPayment, ...deduped].slice(0, 8);
+        });
+      }
+
       toast.success('USDT 결제가 완료되었습니다.');
       setIsConfirmOpen(false);
       setAmountInput('');
       setSelectedPreset(null);
+      setPaymentTab('history');
       await Promise.all([loadBalance(), loadHistory()]);
     } catch (error) {
       console.error('Failed to submit payment', error);
@@ -1154,6 +1226,69 @@ export default function PaymentUsdtPage({
 
             {paymentTab === 'pay' ? (
               <>
+                {latestPaymentRecord && (
+                  <div
+                    className={`mb-4 rounded-2xl border px-4 py-3 text-sm ${
+                      justPaidRecordId &&
+                      (justPaidRecordId === latestPaymentRecord.id ||
+                        justPaidRecordId === latestPaymentRecord.transactionHash)
+                        ? 'border-emerald-300 bg-emerald-50'
+                        : 'border-cyan-200 bg-cyan-50/70'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-700">
+                        최근 결제 완료 정보
+                      </p>
+                      {justPaidRecordId &&
+                        (justPaidRecordId === latestPaymentRecord.id ||
+                          justPaidRecordId === latestPaymentRecord.transactionHash) && (
+                          <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                            방금 결제됨
+                          </span>
+                        )}
+                    </div>
+
+                    <p className="mt-1 text-base font-semibold text-slate-900">
+                      {latestPaymentRecord.storeName || '-'} ({latestPaymentRecord.storecode || '-'})
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-end gap-x-2 gap-y-1">
+                      <p className="text-2xl font-extrabold leading-none tabular-nums text-slate-900">
+                        {formatUsdt(latestPaymentRecord.usdtAmount)}
+                      </p>
+                      <p className="text-sm font-semibold tabular-nums text-slate-600">
+                        {formatKrw(latestPaymentRecord.krwAmount)}
+                      </p>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-600">
+                      결제완료 {formatDateTime(latestPaymentRecord.confirmedAt || latestPaymentRecord.createdAt)}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      TX {shortAddress(latestPaymentRecord.transactionHash || '-')}
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentTab('history')}
+                        className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                      >
+                        결제내역 상세 보기
+                      </button>
+                      {latestPaymentTxUrl && (
+                        <a
+                          href={latestPaymentTxUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-8 items-center justify-center rounded-lg border border-cyan-300 bg-cyan-50 px-2.5 text-xs font-semibold text-cyan-800 transition hover:border-cyan-400 hover:text-cyan-900"
+                        >
+                          TX 확인
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {!hasStorecodeParam && (
                   <div
                     className={`mb-4 rounded-2xl border p-4 ${
@@ -1497,9 +1632,17 @@ export default function PaymentUsdtPage({
                 {!loadingHistory && history.length > 0 && (
                   <div className="space-y-3">
                     {history.map((item) => {
+                      const isJustPaid =
+                        Boolean(justPaidRecordId) &&
+                        (justPaidRecordId === item.id || justPaidRecordId === item.transactionHash);
                       const txUrl = `${NETWORK_BY_KEY[item.chain]?.explorerBaseUrl || ''}${item.transactionHash}`;
                       return (
-                        <div key={item.id} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                        <div
+                          key={item.id || item.transactionHash}
+                          className={`rounded-2xl border px-4 py-3 ${
+                            isJustPaid ? 'border-emerald-300 bg-emerald-50/80' : 'border-slate-200 bg-white'
+                          }`}
+                        >
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div>
                               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">가맹점 정보</p>
@@ -1508,12 +1651,12 @@ export default function PaymentUsdtPage({
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm font-semibold text-slate-900">
+                              <p className="text-2xl font-extrabold leading-none tabular-nums text-slate-900">
                                 {Number(item.usdtAmount).toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT
                               </p>
-                              <p className="text-xs text-slate-500">
+                              <p className="text-sm font-semibold tabular-nums text-slate-600">
                                 {item.krwAmount > 0 ? `${Number(item.krwAmount).toLocaleString()}원 · ` : ''}
-                                {new Date(item.confirmedAt || item.createdAt).toLocaleString()}
+                                {formatDateTime(item.confirmedAt || item.createdAt)}
                               </p>
                             </div>
                           </div>
@@ -1535,14 +1678,21 @@ export default function PaymentUsdtPage({
 
                           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
                             <span className="text-slate-500">네트워크: {NETWORK_BY_KEY[item.chain]?.label || item.chain}</span>
-                            <a
-                              href={txUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="font-semibold text-cyan-700 underline decoration-cyan-300 underline-offset-2"
-                            >
-                              TX 확인
-                            </a>
+                            <div className="flex items-center gap-2">
+                              {isJustPaid && (
+                                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                                  방금 결제됨
+                                </span>
+                              )}
+                              <a
+                                href={txUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="font-semibold text-cyan-700 underline decoration-cyan-300 underline-offset-2"
+                              >
+                                TX 확인
+                              </a>
+                            </div>
                           </div>
                         </div>
                       );
