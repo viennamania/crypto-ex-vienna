@@ -38,6 +38,10 @@ export default function WalletSummaryCard({
   const [disconnecting, setDisconnecting] = useState(false);
   const [disconnectModalOpen, setDisconnectModalOpen] = useState(false);
   const hasConnectedWallet = Boolean(activeWallet) || connectedWallets.length > 0;
+  const hasUsdtSuffix = /\sUSDT$/i.test(usdtBalanceDisplay.trim());
+  const usdtBalanceValueText = hasUsdtSuffix
+    ? usdtBalanceDisplay.trim().replace(/\sUSDT$/i, '')
+    : usdtBalanceDisplay;
 
   const openDisconnectModal = useCallback(() => {
     if (!hasConnectedWallet || disconnecting) {
@@ -132,7 +136,10 @@ export default function WalletSummaryCard({
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">USDT 잔액</p>
-            <p className="mt-2 text-sm font-semibold text-slate-800">{usdtBalanceDisplay}</p>
+            <p className="mt-2 pr-4 text-right text-2xl font-extrabold leading-tight tracking-tight text-slate-800 tabular-nums">
+              {usdtBalanceValueText}
+              {hasUsdtSuffix && <span className="ml-1 text-sm font-bold">USDT</span>}
+            </p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">모드</p>

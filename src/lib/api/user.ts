@@ -1261,15 +1261,19 @@ export async function syncThirdwebUserProfileByWalletAddress(data: {
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
 
-  const filter: Record<string, unknown> = {
+  const walletFilter: Record<string, unknown> = {
     walletAddress: {
       $regex: `^${escapeRegExp(walletAddress)}$`,
       $options: 'i',
     },
   };
 
+  const scopedFilter: Record<string, unknown> = {
+    ...walletFilter,
+  };
+
   if (storecode) {
-    filter.storecode = storecode;
+    scopedFilter.storecode = storecode;
   }
 
   const updateSet: Record<string, unknown> = {
@@ -1294,11 +1298,51 @@ export async function syncThirdwebUserProfileByWalletAddress(data: {
     updateSet.mobile = mobile;
   }
 
-  const result = await collection.updateMany(filter, { $set: updateSet });
+  const applySyncByFilter = async (filter: Record<string, unknown>) => {
+    const profileSyncResult = await collection.updateMany(filter, { $set: updateSet });
+
+    let buyerMobileMatchedCount = 0;
+    let buyerMobileModifiedCount = 0;
+    if (mobile) {
+      const buyerMobileResult = await collection.updateMany(
+        {
+          ...filter,
+          buyer: { $exists: true, $ne: null },
+        },
+        {
+          $set: {
+            'buyer.mobile': mobile,
+            updatedAt: now,
+          },
+        },
+      );
+      buyerMobileMatchedCount = buyerMobileResult.matchedCount;
+      buyerMobileModifiedCount = buyerMobileResult.modifiedCount;
+    }
+
+    return {
+      matchedCount: profileSyncResult.matchedCount,
+      modifiedCount: profileSyncResult.modifiedCount,
+      buyerMobileMatchedCount,
+      buyerMobileModifiedCount,
+    };
+  };
+
+  let syncResult = await applySyncByFilter(scopedFilter);
+  let fallbackToWalletScope = false;
+
+  // If store-scoped sync did not match any document, retry with wallet scope only.
+  if (storecode && syncResult.matchedCount === 0) {
+    syncResult = await applySyncByFilter(walletFilter);
+    fallbackToWalletScope = true;
+  }
 
   return {
-    matchedCount: result.matchedCount,
-    modifiedCount: result.modifiedCount,
+    matchedCount: syncResult.matchedCount,
+    modifiedCount: syncResult.modifiedCount,
+    buyerMobileMatchedCount: syncResult.buyerMobileMatchedCount,
+    buyerMobileModifiedCount: syncResult.buyerMobileModifiedCount,
+    fallbackToWalletScope,
     updatedFields: {
       email,
       mobile,

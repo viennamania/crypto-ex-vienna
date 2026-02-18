@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-hot-toast';
 
 type StoreSummaryItem = {
   id: string;
@@ -19,8 +20,6 @@ type StoreMemberItem = {
   verified: boolean;
   role: string;
   createdAt: string;
-  hasBuyer: boolean;
-  hasSeller: boolean;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -40,13 +39,6 @@ const toDateTime = (value: string) => {
   return parsed.toLocaleString('ko-KR');
 };
 
-const resolveMemberType = (member: StoreMemberItem) => {
-  if (member.hasBuyer && member.hasSeller) return 'Buyer+Seller';
-  if (member.hasBuyer) return 'Buyer';
-  if (member.hasSeller) return 'Seller';
-  return 'Profile';
-};
-
 export default function AdministrationStoreMemberManagementPage() {
   const params = useParams<{ lang?: string | string[] }>();
   const langParam = params?.lang;
@@ -63,6 +55,8 @@ export default function AdministrationStoreMemberManagementPage() {
   const [membersError, setMembersError] = useState<string | null>(null);
   const [members, setMembers] = useState<StoreMemberItem[]>([]);
   const [keyword, setKeyword] = useState('');
+  const [deleteTargetMember, setDeleteTargetMember] = useState<StoreMemberItem | null>(null);
+  const [deletingMember, setDeletingMember] = useState(false);
 
   const loadStores = useCallback(async () => {
     setLoadingStores(true);
@@ -160,8 +154,6 @@ export default function AdministrationStoreMemberManagementPage() {
           verified: row.verified === true,
           role: String(row.role || 'member').trim() || 'member',
           createdAt: String(row.createdAt || ''),
-          hasBuyer: isRecord(row.buyer),
-          hasSeller: isRecord(row.seller),
         };
       });
 
@@ -195,6 +187,49 @@ export default function AdministrationStoreMemberManagementPage() {
       member.walletAddress.toLowerCase().includes(normalizedKeyword)
     ));
   }, [keyword, members]);
+
+  const openDeleteModal = useCallback((member: StoreMemberItem) => {
+    setDeleteTargetMember(member);
+  }, []);
+
+  const closeDeleteModal = useCallback(() => {
+    if (deletingMember) return;
+    setDeleteTargetMember(null);
+  }, [deletingMember]);
+
+  const deleteMember = useCallback(async () => {
+    if (!selectedStorecode || !deleteTargetMember?.id || deletingMember) {
+      return;
+    }
+
+    setDeletingMember(true);
+    try {
+      const response = await fetch('/api/user/deleteStoreMember', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: selectedStorecode,
+          memberId: deleteTargetMember.id,
+          walletAddress: deleteTargetMember.walletAddress,
+          nickname: deleteTargetMember.nickname,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.result) {
+        throw new Error(String(payload?.error || '회원 삭제에 실패했습니다.'));
+      }
+
+      setMembers((prev) => prev.filter((member) => member.id !== deleteTargetMember.id));
+      setDeleteTargetMember(null);
+      toast.success('회원이 삭제되었습니다.');
+    } catch (deleteError) {
+      const message = deleteError instanceof Error ? deleteError.message : '회원 삭제에 실패했습니다.';
+      setMembersError(message);
+      toast.error(message);
+    } finally {
+      setDeletingMember(false);
+    }
+  }, [deleteTargetMember, deletingMember, selectedStorecode]);
 
   return (
     <main className="px-4 pb-10 pt-6 lg:px-6 lg:pt-8">
@@ -335,10 +370,10 @@ export default function AdministrationStoreMemberManagementPage() {
                     <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                       <th className="px-3 py-2">회원 아이디</th>
                       <th className="px-3 py-2">지갑주소</th>
-                      <th className="px-3 py-2">유형</th>
                       <th className="px-3 py-2">상태</th>
                       <th className="px-3 py-2">권한</th>
                       <th className="px-3 py-2">등록일</th>
+                      <th className="px-3 py-2">관리</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
@@ -352,8 +387,16 @@ export default function AdministrationStoreMemberManagementPage() {
                     {!loadingMembers && filteredMembers.map((member) => (
                       <tr key={`${member.id}-${member.walletAddress}`} className="transition hover:bg-slate-50/70">
                         <td className="px-3 py-2.5 font-semibold text-slate-900">{member.nickname}</td>
-                        <td className="px-3 py-2.5 text-xs text-slate-500">{shortAddress(member.walletAddress)}</td>
-                        <td className="px-3 py-2.5 text-xs text-slate-600">{resolveMemberType(member)}</td>
+                        <td className="px-3 py-2.5 text-xs text-slate-500">
+                          <div className="inline-flex items-center gap-1.5">
+                            <span>{shortAddress(member.walletAddress)}</span>
+                            {member.walletAddress.trim() && (
+                              <span className="inline-flex h-5 items-center rounded-full border border-emerald-200 bg-emerald-50 px-1.5 text-[10px] font-semibold text-emerald-700">
+                                연동완료
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-3 py-2.5">
                           <span
                             className={`inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold ${
@@ -365,6 +408,16 @@ export default function AdministrationStoreMemberManagementPage() {
                         </td>
                         <td className="px-3 py-2.5 text-xs text-slate-600">{member.role}</td>
                         <td className="px-3 py-2.5 text-xs text-slate-500">{toDateTime(member.createdAt)}</td>
+                        <td className="px-3 py-2.5 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => openDeleteModal(member)}
+                            disabled={!member.id}
+                            className="inline-flex h-7 items-center justify-center rounded-md border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            삭제
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -374,6 +427,60 @@ export default function AdministrationStoreMemberManagementPage() {
           )}
         </section>
       </div>
+
+      {deleteTargetMember && (
+        <div className="fixed inset-0 z-[120] flex items-end justify-center bg-slate-950/45 p-4 backdrop-blur-[2px] sm:items-center">
+          <button
+            type="button"
+            aria-label="삭제 확인 닫기"
+            onClick={closeDeleteModal}
+            className="absolute inset-0"
+          />
+          <div className="relative w-full max-w-sm rounded-2xl border border-rose-200 bg-white p-5 shadow-[0_35px_80px_-40px_rgba(225,29,72,0.75)]">
+            <p className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-700">
+              회원 삭제 확인
+            </p>
+            <h3 className="mt-3 text-lg font-bold text-slate-900">선택한 회원을 삭제할까요?</h3>
+            <p className="mt-1 text-sm text-slate-600">
+              삭제 후에는 복구할 수 없습니다. 회원 정보는 삭제 이력에 기록됩니다.
+            </p>
+
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-700">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-slate-500">회원 아이디</span>
+                <span className="font-semibold text-slate-900">{deleteTargetMember.nickname}</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-slate-500">지갑주소</span>
+                <span className="font-semibold text-slate-900">{shortAddress(deleteTargetMember.walletAddress)}</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-slate-500">권한</span>
+                <span className="font-semibold text-slate-900">{deleteTargetMember.role}</span>
+              </div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={deletingMember}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={deleteMember}
+                disabled={deletingMember}
+                className="inline-flex h-10 items-center justify-center rounded-lg bg-rose-600 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deletingMember ? '삭제 중...' : '삭제 확인'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

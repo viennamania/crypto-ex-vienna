@@ -1526,7 +1526,7 @@ export default function SendUsdt({ params }: any) {
             walletAddress={address}
             walletAddressDisplay={`${address.substring(0, 6)}...${address.substring(address.length - 4)}`}
             networkLabel={selectedNetworkConfig.label}
-            usdtBalanceDisplay={`${Number(animatedBalance).toFixed(3)} USDT`}
+            usdtBalanceDisplay={`${Number(animatedBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`}
             modeLabel={footerTabLabel}
             smartAccountEnabled={smartAccountEnabled}
             disconnectRedirectPath={disconnectRedirectPath}

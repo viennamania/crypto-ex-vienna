@@ -459,7 +459,7 @@ export default function WalletManagementHomePage() {
               walletAddress={activeAccount.address}
               walletAddressDisplay={shortAddress(activeAccount.address)}
               networkLabel={activeNetwork.label}
-              usdtBalanceDisplay={`${balance.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT`}
+              usdtBalanceDisplay={`${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`}
               modeLabel="홈"
               smartAccountEnabled={smartAccountEnabled}
               onCopyAddress={(walletAddress) => {
