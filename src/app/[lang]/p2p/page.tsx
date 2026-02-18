@@ -1992,7 +1992,7 @@ export default function OrangeXPage() {
                                         {myAgents.map((agent) => (
                                             <Link
                                                 key={agent.agentcode}
-                                                href={`/${lang}/p2p/seller-management?agentcode=${encodeURIComponent(agent.agentcode)}`}
+                                                href={`/${lang}/p2p/agent-management?agentcode=${encodeURIComponent(agent.agentcode)}`}
                                                 className="group flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                                             >
                                                 <div className="relative h-10 w-10 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
@@ -2020,7 +2020,7 @@ export default function OrangeXPage() {
                                                     </p>
                                                 </div>
                                                 <span className="text-[11px] font-semibold text-emerald-700">
-                                                    소속 판매자 관리 →
+                                                    에이전트 관리 →
                                                 </span>
                                             </Link>
                                         ))}

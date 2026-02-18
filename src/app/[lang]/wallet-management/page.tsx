@@ -438,11 +438,6 @@ export default function WalletManagementHomePage() {
             자산 관리와 상점 결제를 한 흐름으로 연결한 모바일형 금융 화면입니다.
             필요한 작업으로 바로 이동하세요.
           </p>
-          {storecode && (
-            <p className="mt-3 inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
-              지정 상점 코드: {storecode}
-            </p>
-          )}
         </div>
 
         {activeAccount?.address ? (

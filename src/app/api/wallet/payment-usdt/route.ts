@@ -28,6 +28,7 @@ type PaymentMemberSnapshot = {
 
 type WalletPaymentDocument = {
   _id?: ObjectId;
+  agentcode?: string;
   storecode: string;
   storeName: string;
   chain: ChainKey;
@@ -138,6 +139,7 @@ const normalizeExchangeRate = (value: unknown) => {
 
 const serializePayment = (doc: WalletPaymentDocument & { _id?: ObjectId }) => ({
   id: doc._id?.toString() || "",
+  agentcode: doc.agentcode || "",
   storecode: doc.storecode,
   storeName: doc.storeName,
   chain: doc.chain,
@@ -267,6 +269,7 @@ export async function POST(request: NextRequest) {
         : undefined;
 
     const paymentRequest: WalletPaymentDocument = {
+      agentcode: String(store?.agentcode || '').trim(),
       storecode,
       storeName: String(store?.storeName || storecode),
       chain,
@@ -285,6 +288,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       result: {
         paymentRequestId: inserted.insertedId.toString(),
+        agentcode: paymentRequest.agentcode || '',
         storecode: paymentRequest.storecode,
         storeName: paymentRequest.storeName,
         chain: paymentRequest.chain,

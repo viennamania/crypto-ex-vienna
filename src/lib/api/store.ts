@@ -1328,36 +1328,50 @@ export async function updateAgentcode(
     agentcode: string;
   }
 ): Promise<boolean> {
-  const client = await clientPromise;
-  const collection = client.db(dbName).collection('stores');
-
-  // update storecode
-  const result = await collection.updateOne(
-    { storecode: storecode },
-    { $set: { agentcode: agentcode } }
-  );
-
-
-
-  // update agents totalStoreCount
-  // if totalStoreCount is not exist, set it to 0
-
-
-  const agentCollection = client.db(dbName).collection('agents');
-  await agentCollection.updateOne(
-    { agentcode: agentcode },
-    { $inc: { totalStoreCount: 1 } },
-  )
-    
-
-
-
-
-  if (result) {
-    return true;
-  } else {
+  const normalizedStorecode = String(storecode || '').trim();
+  const normalizedAgentcode = String(agentcode || '').trim();
+  if (!normalizedStorecode || !normalizedAgentcode) {
     return false;
   }
+
+  const client = await clientPromise;
+  const storeCollection = client.db(dbName).collection('stores');
+  const agentCollection = client.db(dbName).collection('agents');
+
+  const storeBefore = await storeCollection.findOne<any>(
+    { storecode: normalizedStorecode },
+    { projection: { _id: 0, agentcode: 1 } },
+  );
+  if (!storeBefore) {
+    return false;
+  }
+
+  const previousAgentcode = String(storeBefore?.agentcode || '').trim();
+
+  const result = await storeCollection.updateOne(
+    { storecode: normalizedStorecode },
+    { $set: { agentcode: normalizedAgentcode } }
+  );
+
+  if (result.matchedCount < 1) {
+    return false;
+  }
+
+  const refreshAgentCodes = new Set<string>();
+  if (previousAgentcode) {
+    refreshAgentCodes.add(previousAgentcode);
+  }
+  refreshAgentCodes.add(normalizedAgentcode);
+
+  for (const refreshAgentcode of refreshAgentCodes) {
+    const totalStoreCount = await storeCollection.countDocuments({ agentcode: refreshAgentcode });
+    await agentCollection.updateOne(
+      { agentcode: refreshAgentcode },
+      { $set: { totalStoreCount } },
+    );
+  }
+
+  return true;
 }
 
 

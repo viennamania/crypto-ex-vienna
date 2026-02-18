@@ -14,6 +14,7 @@ type StoreItem = {
   storeLogo: string;
   agentcode: string;
   agentName: string;
+  agentLogo: string;
   backgroundColor: string;
   totalPaymentConfirmedCount: number;
   totalKrwAmount: number;
@@ -53,6 +54,14 @@ type StoreAdminWalletRoleHistoryItem = {
   changedAt: string;
 };
 
+type AgentItem = {
+  agentcode: string;
+  agentName: string;
+  agentLogo: string;
+  adminWalletAddress: string;
+  totalStoreCount: number;
+};
+
 type FetchMode = 'initial' | 'query' | 'polling';
 
 type RiskLevel = 'stable' | 'watch' | 'alert';
@@ -85,6 +94,7 @@ const normalizeStore = (value: unknown): StoreItem => {
     storeLogo: toText(source.storeLogo),
     agentcode: toText(source.agentcode),
     agentName: toText(source.agentName),
+    agentLogo: toText(source.agentLogo),
     backgroundColor: toText(source.backgroundColor),
     totalPaymentConfirmedCount: toFiniteNumber(source.totalPaymentConfirmedCount),
     totalKrwAmount: toFiniteNumber(source.totalKrwAmount),
@@ -156,6 +166,22 @@ const normalizeAdminWalletMember = (value: unknown): AdminWalletMemberItem | nul
   };
 };
 
+const normalizeAgentItem = (value: unknown): AgentItem | null => {
+  const source = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  const agentcode = toText(source.agentcode).trim();
+  if (!agentcode) {
+    return null;
+  }
+
+  return {
+    agentcode,
+    agentName: toText(source.agentName).trim() || agentcode,
+    agentLogo: toText(source.agentLogo).trim(),
+    adminWalletAddress: toText(source.adminWalletAddress).trim(),
+    totalStoreCount: toFiniteNumber(source.totalStoreCount),
+  };
+};
+
 const getRiskLevel = (store: StoreItem): RiskLevel => {
   const hasCriticalWalletGap =
     !store.adminWalletAddress.trim() ||
@@ -219,6 +245,14 @@ export default function StoreManagementPage() {
   const [loadingAdminWalletHistory, setLoadingAdminWalletHistory] = useState(false);
   const [updatingAdminWallet, setUpdatingAdminWallet] = useState(false);
   const [adminWalletModalError, setAdminWalletModalError] = useState<string | null>(null);
+  const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
+  const [agentModalStore, setAgentModalStore] = useState<StoreItem | null>(null);
+  const [agentOptions, setAgentOptions] = useState<AgentItem[]>([]);
+  const [agentSearchTerm, setAgentSearchTerm] = useState('');
+  const [selectedAgentcode, setSelectedAgentcode] = useState('');
+  const [loadingAgentOptions, setLoadingAgentOptions] = useState(false);
+  const [updatingStoreAgent, setUpdatingStoreAgent] = useState(false);
+  const [agentModalError, setAgentModalError] = useState<string | null>(null);
   const [createModalError, setCreateModalError] = useState<string | null>(null);
   const [createForm, setCreateForm] = useState<StoreCreateForm>(() => createInitialStoreForm());
   const [draftFilters, setDraftFilters] = useState({
@@ -366,6 +400,28 @@ export default function StoreManagementPage() {
     });
   }, [adminWalletMembers, adminWalletSearchTerm]);
 
+  const filteredAgentOptions = useMemo(() => {
+    const normalizedSearchTerm = agentSearchTerm.trim().toLowerCase();
+    if (!normalizedSearchTerm) {
+      return agentOptions;
+    }
+    return agentOptions.filter((agent) => {
+      return (
+        agent.agentName.toLowerCase().includes(normalizedSearchTerm) ||
+        agent.agentcode.toLowerCase().includes(normalizedSearchTerm) ||
+        agent.adminWalletAddress.toLowerCase().includes(normalizedSearchTerm)
+      );
+    });
+  }, [agentOptions, agentSearchTerm]);
+
+  const selectedAgentOption = useMemo(() => {
+    const normalizedSelectedAgentcode = selectedAgentcode.trim().toLowerCase();
+    if (!normalizedSelectedAgentcode) {
+      return null;
+    }
+    return agentOptions.find((agent) => agent.agentcode.toLowerCase() === normalizedSelectedAgentcode) || null;
+  }, [agentOptions, selectedAgentcode]);
+
   const handleFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setPageNumber(1);
@@ -402,6 +458,157 @@ export default function StoreManagementPage() {
     setSelectedAdminWalletAddress('');
     setAdminWalletModalError(null);
   }, [updatingAdminWallet]);
+
+  const closeAgentModal = useCallback(() => {
+    if (updatingStoreAgent) return;
+    setIsAgentModalOpen(false);
+    setAgentModalStore(null);
+    setAgentOptions([]);
+    setAgentSearchTerm('');
+    setSelectedAgentcode('');
+    setAgentModalError(null);
+  }, [updatingStoreAgent]);
+
+  const loadAgentOptions = useCallback(async () => {
+    setLoadingAgentOptions(true);
+    try {
+      const response = await fetch('/api/agent/getAllAgents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          limit: 300,
+          page: 1,
+          searchStore: '',
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === 'string'
+            ? payload.error
+            : '에이전트 목록 조회에 실패했습니다.',
+        );
+      }
+
+      const rawAgents: unknown[] = Array.isArray(payload?.result?.agents) ? payload.result.agents : [];
+      const normalizedAgents = rawAgents
+        .map((agent) => normalizeAgentItem(agent))
+        .filter((agent: AgentItem | null): agent is AgentItem => agent !== null);
+
+      const uniqueAgents = new Map<string, AgentItem>();
+      normalizedAgents.forEach((agent) => {
+        const key = agent.agentcode.toLowerCase();
+        if (uniqueAgents.has(key)) return;
+        uniqueAgents.set(key, agent);
+      });
+
+      const sortedAgents = Array.from(uniqueAgents.values()).sort((a, b) => (
+        a.agentName.localeCompare(b.agentName, 'ko')
+      ));
+      setAgentOptions(sortedAgents);
+    } catch (agentError: unknown) {
+      const message = agentError instanceof Error ? agentError.message : '에이전트 목록 조회 중 오류가 발생했습니다.';
+      setAgentModalError(message);
+      setAgentOptions([]);
+    } finally {
+      setLoadingAgentOptions(false);
+    }
+  }, []);
+
+  const openAgentModal = useCallback((store: StoreItem) => {
+    const normalizedStorecode = store.storecode.trim();
+    if (!normalizedStorecode) {
+      toast.error('가맹점 코드가 없습니다.');
+      return;
+    }
+
+    setAgentModalStore(store);
+    setSelectedAgentcode(store.agentcode.trim());
+    setAgentSearchTerm('');
+    setAgentModalError(null);
+    setIsAgentModalOpen(true);
+
+    void loadAgentOptions();
+  }, [loadAgentOptions]);
+
+  const updateStoreAgentcode = useCallback(async () => {
+    if (!agentModalStore) {
+      return;
+    }
+
+    const nextAgentcode = selectedAgentcode.trim();
+    if (!nextAgentcode) {
+      setAgentModalError('변경할 에이전트를 선택해 주세요.');
+      return;
+    }
+
+    setUpdatingStoreAgent(true);
+    setAgentModalError(null);
+    try {
+      const response = await fetch('/api/store/updateAgentcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: agentModalStore.storecode,
+          agentcode: nextAgentcode,
+          changedByName: 'store-management-dashboard',
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === 'string'
+            ? payload.error
+            : '에이전트 변경에 실패했습니다.',
+        );
+      }
+
+      const isChanged = Boolean(payload?.changed);
+      const resolvedNextAgentcode = toText(payload?.nextAgentcode).trim() || nextAgentcode;
+      const resolvedNextAgentName = toText(payload?.nextAgentName).trim();
+      const nextAgent = agentOptions.find((agent) => (
+        agent.agentcode.toLowerCase() === resolvedNextAgentcode.toLowerCase()
+      ));
+
+      setStores((prev) => prev.map((store) => (
+        store.storecode === agentModalStore.storecode
+          ? {
+            ...store,
+            agentcode: resolvedNextAgentcode,
+            agentName: resolvedNextAgentName || nextAgent?.agentName || store.agentName,
+            agentLogo: nextAgent?.agentLogo || store.agentLogo,
+          }
+          : store
+      )));
+      setAgentModalStore((prev) => (
+        prev
+          ? {
+            ...prev,
+            agentcode: resolvedNextAgentcode,
+            agentName: resolvedNextAgentName || nextAgent?.agentName || prev.agentName,
+            agentLogo: nextAgent?.agentLogo || prev.agentLogo,
+          }
+          : prev
+      ));
+      setSelectedAgentcode(resolvedNextAgentcode);
+
+      await fetchStoreDashboard('query');
+
+      if (isChanged) {
+        toast.success('가맹점 에이전트가 변경되었습니다.');
+      } else {
+        toast.success('변경할 내용이 없어 기존 에이전트를 유지했습니다.');
+      }
+    } catch (updateError: unknown) {
+      const message = updateError instanceof Error ? updateError.message : '에이전트 변경 중 오류가 발생했습니다.';
+      setAgentModalError(message);
+      toast.error(message);
+    } finally {
+      setUpdatingStoreAgent(false);
+    }
+  }, [agentModalStore, agentOptions, fetchStoreDashboard, selectedAgentcode]);
 
   const loadAdminWalletMembers = useCallback(async (store: StoreItem) => {
     const normalizedStorecode = store.storecode.trim();
@@ -815,6 +1022,25 @@ export default function StoreManagementPage() {
     };
   }, [closeAdminWalletModal, isAdminWalletModalOpen, updatingAdminWallet]);
 
+  useEffect(() => {
+    if (!isAgentModalOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !updatingStoreAgent) {
+        closeAgentModal();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [closeAgentModal, isAgentModalOpen, updatingStoreAgent]);
+
   return (
     <main className="store-management-shell relative min-h-screen overflow-hidden px-4 pb-20 pt-6 lg:px-6 lg:pt-8">
       <div className="decor-orb decor-orb-a" />
@@ -1040,14 +1266,15 @@ export default function StoreManagementPage() {
               <table className="w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
-                    <th className="w-[260px] px-4 py-3">가맹점</th>
+                    <th className="w-[220px] px-4 py-3">가맹점</th>
+                    <th className="w-[130px] px-4 py-3">에이전트</th>
                     <th className="px-4 py-3 text-right">결제확정</th>
                     <th className="px-4 py-3 text-right">거래금액</th>
                     <th className="px-4 py-3 text-right">정산금액</th>
                     <th className="px-4 py-3 text-right">수수료율</th>
                     <th className="px-4 py-3">관리자</th>
                     <th className="px-4 py-3">지갑상태</th>
-                    <th className="w-[380px] px-4 py-3 text-right whitespace-nowrap">작업</th>
+                    <th className="w-[260px] px-4 py-3 text-right whitespace-nowrap">작업</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1064,8 +1291,8 @@ export default function StoreManagementPage() {
 
                     return (
                       <tr key={`${store.storecode || store._id || 'table-store'}-${index}`} className="bg-white text-sm text-slate-700">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
+                        <td className="px-4 py-3 align-top">
+                          <div className="flex items-start gap-3">
                             <span
                               className="inline-flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 text-xs font-bold text-slate-700"
                               style={{ backgroundColor: store.backgroundColor || '#f1f5f9' }}
@@ -1080,11 +1307,51 @@ export default function StoreManagementPage() {
                                 (store.storeName || store.storecode || 'S').slice(0, 1)
                               )}
                             </span>
-                            <div className="min-w-0">
-                              <p className="break-all whitespace-normal font-semibold text-slate-900">{store.storeName || '-'}</p>
-                              <p className="text-xs text-slate-500">코드 {store.storecode || '-'}</p>
-                              <p className="text-xs text-slate-500">등록 {formatDateTime(store.createdAt)}</p>
+                            <div className="min-w-0 space-y-1.5">
+                              <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">가맹점정보</p>
+                                <p className="break-all whitespace-normal font-semibold text-slate-900">{store.storeName || '-'}</p>
+                                <p className="text-xs text-slate-500">코드 {store.storecode || '-'}</p>
+                              </div>
+                              <div className="text-[11px] text-slate-500">
+                                <p className="font-semibold uppercase tracking-[0.08em] text-slate-500">등록일</p>
+                                <p>{formatDateTime(store.createdAt)}</p>
+                              </div>
                             </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white text-[10px] font-bold text-slate-600">
+                                {store.agentLogo ? (
+                                  <div
+                                    className="h-full w-full bg-cover bg-center"
+                                    style={{ backgroundImage: `url(${encodeURI(store.agentLogo)})` }}
+                                    aria-label={store.agentName || store.agentcode || 'agent logo'}
+                                  />
+                                ) : (
+                                  (store.agentName || store.agentcode || 'A').slice(0, 1)
+                                )}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-900">
+                                  {store.agentName || '-'}
+                                </p>
+                                <p className="truncate text-[11px] text-slate-500">
+                                  코드 {store.agentcode || '-'}
+                                </p>
+                              </div>
+                            </div>
+                            {hasStoreCode && (
+                              <button
+                                type="button"
+                                onClick={() => openAgentModal(store)}
+                                className="inline-flex w-fit items-center rounded-full border border-violet-300 bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700 transition hover:bg-violet-100"
+                              >
+                                변경하기
+                              </button>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -1147,7 +1414,7 @@ export default function StoreManagementPage() {
                             )}
                           </div>
                         </td>
-                        <td className="w-[380px] px-4 py-3 text-right whitespace-nowrap">
+                        <td className="w-[260px] px-4 py-3 text-right whitespace-nowrap">
                           <div className="flex flex-wrap justify-end gap-2">
                             {hasStoreCode ? (
                               <>
@@ -1229,6 +1496,168 @@ export default function StoreManagementPage() {
           </div>
         </section>
       </div>
+
+      {isAgentModalOpen && agentModalStore && (
+        <div className="fixed inset-0 z-[132] flex items-center justify-center px-4 py-6">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/55 backdrop-blur-[2px]"
+            aria-label="가맹점 에이전트 변경 모달 닫기"
+            onClick={closeAgentModal}
+          />
+
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="가맹점 에이전트 변경"
+            className="modal-pop relative z-[133] max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-violet-100 bg-white shadow-[0_40px_90px_-42px_rgba(15,23,42,0.75)]"
+          >
+            <header className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-violet-700">Store Agent Control</p>
+                <h2 className="mt-1 text-lg font-bold text-slate-900">가맹점 에이전트 변경</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {agentModalStore.storeName || '-'} · 코드 {agentModalStore.storecode || '-'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeAgentModal}
+                disabled={updatingStoreAgent}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="닫기"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18" />
+                  <path d="M6 6l12 12" />
+                </svg>
+              </button>
+            </header>
+
+            <div className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-12">
+              <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 lg:col-span-7">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">변경할 에이전트 목록</p>
+                    <p className="text-xs text-slate-500">에이전트를 선택하고 변경하기를 눌러 적용하세요.</p>
+                  </div>
+                  <span className="inline-flex rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">
+                    현재 코드 {agentModalStore.agentcode || '-'}
+                  </span>
+                </div>
+
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    value={agentSearchTerm}
+                    onChange={(event) => setAgentSearchTerm(event.target.value)}
+                    placeholder="에이전트명/코드/관리자지갑 검색"
+                    className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-violet-500"
+                  />
+                </div>
+
+                <div className="mt-3 max-h-[380px] overflow-y-auto rounded-xl border border-slate-200 bg-white">
+                  {loadingAgentOptions ? (
+                    <div className="space-y-2 p-3">
+                      {Array.from({ length: 6 }).map((_, index) => (
+                        <div key={`agent-loading-${index}`} className="h-12 animate-pulse rounded-lg bg-slate-100" />
+                      ))}
+                    </div>
+                  ) : filteredAgentOptions.length === 0 ? (
+                    <div className="px-3 py-8 text-center text-sm text-slate-500">표시할 에이전트가 없습니다.</div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {filteredAgentOptions.map((agent) => {
+                        const isSelected = agent.agentcode.toLowerCase() === selectedAgentcode.trim().toLowerCase();
+                        return (
+                          <button
+                            type="button"
+                            key={agent.agentcode}
+                            onClick={() => setSelectedAgentcode(agent.agentcode)}
+                            className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition ${
+                              isSelected ? 'bg-violet-50' : 'hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white text-[10px] font-bold text-slate-600">
+                                {agent.agentLogo ? (
+                                  <div
+                                    className="h-full w-full bg-cover bg-center"
+                                    style={{ backgroundImage: `url(${encodeURI(agent.agentLogo)})` }}
+                                    aria-label={agent.agentName || agent.agentcode || 'agent logo'}
+                                  />
+                                ) : (
+                                  (agent.agentName || agent.agentcode || 'A').slice(0, 1)
+                                )}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-900">{agent.agentName}</p>
+                                <p className="truncate text-xs text-slate-500">
+                                  코드 {agent.agentcode} · 가맹점 {agent.totalStoreCount.toLocaleString()}개
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full border ${
+                              isSelected
+                                ? 'border-violet-600 bg-violet-600 text-white'
+                                : 'border-slate-300 bg-white text-transparent'
+                            }`}>
+                              ✓
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 lg:col-span-5">
+                <p className="text-sm font-semibold text-slate-900">변경 요약</p>
+                <div className="mt-2 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                  <div className="flex items-center justify-between gap-2">
+                    <span>현재 에이전트</span>
+                    <span className="font-semibold text-slate-800">
+                      {agentModalStore.agentName || '-'} ({agentModalStore.agentcode || '-'})
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span>선택 에이전트</span>
+                    <span className="font-semibold text-slate-800">
+                      {selectedAgentOption ? `${selectedAgentOption.agentName} (${selectedAgentOption.agentcode})` : '-'}
+                    </span>
+                  </div>
+                </div>
+
+                {agentModalError && (
+                  <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+                    {agentModalError}
+                  </p>
+                )}
+
+                <div className="mt-3 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={closeAgentModal}
+                    disabled={updatingStoreAgent}
+                    className="inline-flex h-10 items-center rounded-full border border-slate-300 bg-white px-3.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    닫기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={updateStoreAgentcode}
+                    disabled={updatingStoreAgent || !selectedAgentcode.trim()}
+                    className="inline-flex h-10 items-center rounded-full bg-violet-700 px-3.5 text-xs font-semibold text-white transition hover:bg-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {updatingStoreAgent ? '변경 중...' : '에이전트 변경'}
+                  </button>
+                </div>
+              </section>
+            </div>
+          </section>
+        </div>
+      )}
 
       {isAdminWalletModalOpen && adminWalletModalStore && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center px-4 py-6">

@@ -2098,6 +2098,7 @@ export async function getAllUsersByStorecode(
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
+  const storeCollection = client.db(dbName).collection('stores');
 
   // walletAddress is not empty and not null
   // order by nickname asc
@@ -2112,7 +2113,6 @@ export async function getAllUsersByStorecode(
       : { $or: [{ seller: { $exists: true } }, { buyer: { $exists: true } }] };
 
   const conditions: any[] = [
-    { storecode: { $regex: storecode, $options: 'i' } },
     ...(includeWalletless ? [] : [{ walletAddress: { $exists: true, $ne: null } }]),
     ...(requireProfile ? [roleCondition] : []),
     ...(includeUnverified ? [] : [{ verified: true }]),
@@ -2123,16 +2123,47 @@ export async function getAllUsersByStorecode(
     conditions.push({ role: { $regex: trimmedRole, $options: 'i' } });
   }
 
+  const normalizedStorecode = (storecode || '').trim();
   const trimmedAgentcode = (agentcode || '').trim();
+
   if (trimmedAgentcode) {
-    const agentRegex = { $regex: trimmedAgentcode, $options: 'i' };
-    conditions.push({
-      $or: [
-        { agentcode: agentRegex },
-        { 'seller.agentcode': agentRegex },
-        { 'store.agentcode': agentRegex },
-      ],
-    });
+    const stores = await storeCollection
+      .find(
+        {
+          agentcode: trimmedAgentcode,
+          storecode: { $nin: ['admin', 'agent'] },
+        },
+        {
+          projection: { _id: 0, storecode: 1 },
+        },
+      )
+      .toArray();
+
+    const allowedStorecodes = stores
+      .map((store: any) => String(store?.storecode || '').trim())
+      .filter(Boolean);
+
+    if (normalizedStorecode) {
+      if (!allowedStorecodes.includes(normalizedStorecode)) {
+        return {
+          totalCount: 0,
+          totalResult: 0,
+          users: [],
+        };
+      }
+      conditions.push({ storecode: normalizedStorecode });
+    } else {
+      if (allowedStorecodes.length === 0) {
+        return {
+          totalCount: 0,
+          totalResult: 0,
+          users: [],
+        };
+      }
+      conditions.push({ storecode: { $in: allowedStorecodes } });
+    }
+  } else {
+    conditions.push({ storecode: { $regex: normalizedStorecode, $options: 'i' } });
   }
 
   const trimmedSearch = (searchTerm || '').trim();
@@ -2155,22 +2186,49 @@ export async function getAllUsersByStorecode(
   const sortQuery: Record<string, 1 | -1> =
     sortField === 'createdAt' ? { createdAt: -1 } : { nickname: 1 };
 
+  const normalizedLimit = Number(limit) > 0 ? Number(limit) : 100;
+  const normalizedPage = Number(page) > 0 ? Number(page) : 1;
+  const skip = (normalizedPage - 1) * normalizedLimit;
+
   const users = await collection
-    .find<UserProps>(
-      matchQuery,
-      {
-        limit: limit,
-        skip: (page - 1) * limit,
-      },
+    .aggregate<UserProps>(
+      [
+        { $match: matchQuery },
+        {
+          $lookup: {
+            from: 'stores',
+            localField: 'storecode',
+            foreignField: 'storecode',
+            as: 'storeDocs',
+          },
+        },
+        {
+          $addFields: {
+            store: {
+              $let: {
+                vars: { storeDoc: { $arrayElemAt: ['$storeDocs', 0] } },
+                in: {
+                  storecode: { $ifNull: ['$$storeDoc.storecode', '$storecode'] },
+                  storeName: { $ifNull: ['$$storeDoc.storeName', ''] },
+                  storeLogo: { $ifNull: ['$$storeDoc.storeLogo', ''] },
+                },
+              },
+            },
+          },
+        },
+        { $project: { storeDocs: 0 } },
+        { $sort: sortQuery },
+        { $skip: skip },
+        { $limit: normalizedLimit },
+      ],
     )
-    .sort(sortQuery)
     .toArray();
 
   const totalCount = await collection.countDocuments(matchQuery);
   return {
     totalCount,
     totalResult: totalCount,
-    users,
+    users: users as UserProps[],
   };
 }
 

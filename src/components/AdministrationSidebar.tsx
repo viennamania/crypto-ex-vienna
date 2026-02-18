@@ -14,6 +14,7 @@ type MenuItem = {
   label: string;
   hint: string;
   href: string;
+  children?: MenuItem[];
 };
 
 const buildMenuItems = (lang: string): MenuItem[] => {
@@ -21,10 +22,17 @@ const buildMenuItems = (lang: string): MenuItem[] => {
   return [
     { label: '관리자 홈', hint: 'Dashboard', href: root },
     { label: '구매주문 대시보드', hint: 'Live Monitor', href: `${root}/buyorder-management` },
-    { label: '가맹점 관리', hint: 'Store', href: `${root}/store-management` },
+    { label: '에이전트 관리', hint: 'Agent', href: `${root}/agent-management` },
+    {
+      label: '가맹점 관리',
+      hint: 'Store',
+      href: `${root}/store-management`,
+      children: [
+        { label: '회원 관리', hint: 'Member', href: `${root}/store-management/member-management` },
+      ],
+    },
     { label: '판매자 관리', hint: 'Seller', href: `${root}/seller-management` },
     { label: '구매자 관리', hint: 'Buyer', href: `${root}/buyer-management` },
-    { label: '에이전트 관리', hint: 'Agent', href: `${root}/agent-management` },
     { label: '관리자 관리', hint: 'Admin', href: `${root}/admin-management` },
     { label: '정책 관리', hint: 'Policy', href: `${root}/policy` },
     { label: '공지 관리', hint: 'Notice', href: `${root}/notice` },
@@ -74,25 +82,59 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
         {menuItems.map((item) => {
           const isActive = isActiveRoute(pathname, item.href);
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`group flex items-center gap-3 rounded-xl border px-3 py-2.5 transition ${
-                isActive
-                  ? 'border-slate-300 bg-slate-900 text-white shadow-[0_14px_28px_-20px_rgba(15,23,42,0.65)]'
-                  : 'border-transparent bg-transparent text-slate-700 hover:border-slate-200 hover:bg-white'
-              }`}
-            >
-              <span className={`h-2.5 w-2.5 rounded-full ${isActive ? 'bg-cyan-300' : 'bg-slate-300 group-hover:bg-slate-400'}`} />
-              <span className="min-w-0 flex-1">
-                <span className={`block truncate text-sm font-semibold ${isActive ? 'text-white' : 'text-slate-800'}`}>
-                  {item.label}
+            <div key={item.href}>
+              <Link
+                href={item.href}
+                className={`group flex items-center gap-3 rounded-xl border px-3 py-2.5 transition ${
+                  isActive
+                    ? 'border-slate-300 bg-slate-900 text-white shadow-[0_14px_28px_-20px_rgba(15,23,42,0.65)]'
+                    : 'border-transparent bg-transparent text-slate-700 hover:border-slate-200 hover:bg-white'
+                }`}
+              >
+                <span className={`h-2.5 w-2.5 rounded-full ${isActive ? 'bg-cyan-300' : 'bg-slate-300 group-hover:bg-slate-400'}`} />
+                <span className="min-w-0 flex-1">
+                  <span className={`block truncate text-sm font-semibold ${isActive ? 'text-white' : 'text-slate-800'}`}>
+                    {item.label}
+                  </span>
+                  <span className={`block truncate text-[11px] ${isActive ? 'text-slate-200' : 'text-slate-500'}`}>
+                    {item.hint}
+                  </span>
                 </span>
-                <span className={`block truncate text-[11px] ${isActive ? 'text-slate-200' : 'text-slate-500'}`}>
-                  {item.hint}
-                </span>
-              </span>
-            </Link>
+              </Link>
+
+              {item.children && item.children.length > 0 && (
+                <div className="ml-7 mt-1.5 space-y-1">
+                  {item.children.map((child) => {
+                    const isChildActive = isActiveRoute(pathname, child.href);
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        className={`group flex items-center gap-2 rounded-lg border px-2.5 py-2 transition ${
+                          isChildActive
+                            ? 'border-cyan-200 bg-cyan-50 text-cyan-900'
+                            : 'border-transparent bg-transparent text-slate-600 hover:border-slate-200 hover:bg-white'
+                        }`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            isChildActive ? 'bg-cyan-600' : 'bg-slate-300 group-hover:bg-slate-400'
+                          }`}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className={`block truncate text-xs font-semibold ${isChildActive ? 'text-cyan-900' : 'text-slate-700'}`}>
+                            {child.label}
+                          </span>
+                          <span className={`block truncate text-[10px] ${isChildActive ? 'text-cyan-700' : 'text-slate-500'}`}>
+                            {child.hint}
+                          </span>
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>
