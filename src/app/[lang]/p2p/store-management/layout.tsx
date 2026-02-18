@@ -2,7 +2,12 @@
 
 import Link from 'next/link';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { AutoConnect, useActiveAccount } from 'thirdweb/react';
+
+import { client } from '@/app/client';
+import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { useClientWallets } from '@/lib/useClientWallets';
 
 type MenuItem = {
   key: string;
@@ -10,6 +15,15 @@ type MenuItem = {
   compactLabel: string;
   description: string;
   basePath: string;
+};
+
+const WALLET_AUTH_OPTIONS = ['phone', 'google', 'email'];
+
+const shortAddress = (value: string) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '-';
+  if (normalized.length <= 14) return normalized;
+  return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
 };
 
 const MenuIcon = ({ itemKey, active }: { itemKey: string; active: boolean }) => {
@@ -63,13 +77,104 @@ const MenuIcon = ({ itemKey, active }: { itemKey: string; active: boolean }) => 
 export default function P2PStoreManagementLayout({ children }: { children: ReactNode }) {
   const params = useParams<{ lang: string }>();
   const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang || 'ko';
+  const { wallet, wallets } = useClientWallets({
+    authOptions: WALLET_AUTH_OPTIONS,
+    defaultSmsCountryCode: 'KR',
+  });
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const storecode = String(searchParams?.get('storecode') || '').trim();
+  const activeAccount = useActiveAccount();
+  const connectedWalletAddress = String(activeAccount?.address || '').trim();
+  const normalizedConnectedWalletAddress = connectedWalletAddress.toLowerCase();
   const storeQuery = storecode ? `?storecode=${encodeURIComponent(storecode)}` : '';
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [loadingStoreAccess, setLoadingStoreAccess] = useState(false);
+  const [storeAccessError, setStoreAccessError] = useState<string | null>(null);
+  const [storeAdminWalletAddress, setStoreAdminWalletAddress] = useState('');
+  const [storeName, setStoreName] = useState('');
+  const [storeLogo, setStoreLogo] = useState('');
+
+  useEffect(() => {
+    if (!normalizedConnectedWalletAddress || !storecode) {
+      setStoreAccessError(null);
+      setStoreAdminWalletAddress('');
+      setStoreName('');
+      setStoreLogo('');
+      setLoadingStoreAccess(false);
+      return;
+    }
+
+    const abortController = new AbortController();
+    setLoadingStoreAccess(true);
+    setStoreAccessError(null);
+
+    (async () => {
+      try {
+        const response = await fetch('/api/store/getOneStore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storecode }),
+          signal: abortController.signal,
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.result) {
+          throw new Error(String(payload?.error || '가맹점 정보를 불러오지 못했습니다.'));
+        }
+
+        const result = payload.result || {};
+        const nextAdminWalletAddress = String(result?.adminWalletAddress || '').trim();
+        const nextStoreName = String(result?.storeName || '').trim();
+        const nextStoreLogo = String(result?.storeLogo || '').trim();
+        setStoreAdminWalletAddress(nextAdminWalletAddress);
+        setStoreName(nextStoreName);
+        setStoreLogo(nextStoreLogo);
+      } catch (error) {
+        if (abortController.signal.aborted) return;
+        setStoreAdminWalletAddress('');
+        setStoreName('');
+        setStoreLogo('');
+        setStoreAccessError(
+          error instanceof Error ? error.message : '가맹점 관리자 권한을 확인하지 못했습니다.',
+        );
+      } finally {
+        if (!abortController.signal.aborted) {
+          setLoadingStoreAccess(false);
+        }
+      }
+    })();
+
+    return () => {
+      abortController.abort();
+    };
+  }, [normalizedConnectedWalletAddress, storecode]);
+
+  const normalizedStoreAdminWalletAddress = storeAdminWalletAddress.toLowerCase();
+  const canAccessStorePages = useMemo(() => {
+    if (!normalizedConnectedWalletAddress) return false;
+    if (!storecode) return true;
+    if (loadingStoreAccess) return false;
+    if (storeAccessError) return false;
+    if (!normalizedStoreAdminWalletAddress) return false;
+    return normalizedConnectedWalletAddress === normalizedStoreAdminWalletAddress;
+  }, [
+    loadingStoreAccess,
+    normalizedConnectedWalletAddress,
+    normalizedStoreAdminWalletAddress,
+    storeAccessError,
+    storecode,
+  ]);
+
+  const showWalletConnectRequired = !normalizedConnectedWalletAddress;
+  const showStoreAccessChecking = Boolean(normalizedConnectedWalletAddress && storecode && loadingStoreAccess);
+  const showStoreAccessDenied = Boolean(
+    normalizedConnectedWalletAddress
+      && storecode
+      && !loadingStoreAccess
+      && !canAccessStorePages,
+  );
 
   const menuItems = useMemo<MenuItem[]>(
     () => [
@@ -110,6 +215,8 @@ export default function P2PStoreManagementLayout({ children }: { children: React
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f2f7ff_0%,#edf4ff_45%,#f8fafc_100%)] text-slate-900">
+      <AutoConnect client={client} wallets={[wallet]} />
+
       <button
         type="button"
         onClick={() => setMobileOpen((prev) => !prev)}
@@ -230,7 +337,87 @@ export default function P2PStoreManagementLayout({ children }: { children: React
       </aside>
 
       <div className={`min-h-screen transition-all duration-300 ${desktopSidebarWidthClass}`}>
-        <div className="px-4 pb-10 pt-16 lg:px-8 lg:pt-8">{children}</div>
+        <div className="px-4 pb-10 pt-16 lg:px-8 lg:pt-8">
+          {showWalletConnectRequired ? (
+            <section className="rounded-2xl border border-cyan-200 bg-cyan-50/70 px-4 py-4 shadow-[0_16px_32px_-24px_rgba(8,145,178,0.45)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-700">Wallet Required</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">가맹점 관리 기능을 사용하려면 지갑 연결이 필요합니다.</p>
+                  <p className="mt-1 text-xs text-slate-600">지갑 연결 후 다시 접근 권한을 확인합니다.</p>
+                </div>
+                <ConnectButton
+                  client={client}
+                  wallets={wallets}
+                  connectButton={{
+                    label: '지갑 연결하기',
+                    className:
+                      'inline-flex h-10 items-center justify-center rounded-xl border border-cyan-300 bg-white px-4 text-sm font-semibold text-cyan-800 transition hover:border-cyan-400 hover:text-cyan-900',
+                  }}
+                />
+              </div>
+            </section>
+          ) : showStoreAccessChecking ? (
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
+              가맹점 관리자 권한을 확인하는 중입니다...
+            </div>
+          ) : showStoreAccessDenied ? (
+            <section className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">Access Blocked</p>
+              <h2 className="mt-2 text-xl font-bold text-rose-800">가맹점 관리 페이지 접근이 차단되었습니다.</h2>
+              <p className="mt-2 text-sm text-rose-700">
+                현재 연결된 지갑이 해당 가맹점의 관리자 지갑(`store.adminWalletAddress`)과 일치하지 않습니다.
+              </p>
+
+              <div className="mt-4 rounded-2xl border border-rose-200 bg-white px-4 py-4 shadow-[0_14px_28px_-20px_rgba(190,24,93,0.4)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-rose-700">Store Info</p>
+                <div className="mt-2 flex items-center gap-4">
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-rose-100 bg-slate-100">
+                    {storeLogo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={encodeURI(storeLogo)}
+                        alt={storeName || storecode || 'store logo'}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[10px] font-bold tracking-[0.08em] text-slate-600">
+                        STORE
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-2xl font-extrabold text-slate-900">{storeName || '가맹점 이름 없음'}</p>
+                    <p className="mt-1 text-sm font-semibold text-rose-700">코드: {storecode}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2 rounded-xl border border-rose-200 bg-white px-3 py-3 text-xs text-slate-700">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-slate-500">가맹점 코드</span>
+                  <span className="font-semibold text-slate-900">{storecode}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-slate-500">내 지갑</span>
+                  <span className="font-semibold text-slate-900">{shortAddress(connectedWalletAddress)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-slate-500">관리자 지갑</span>
+                  <span className="font-semibold text-slate-900">{shortAddress(storeAdminWalletAddress)}</span>
+                </div>
+                {storeAccessError && (
+                  <p className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] text-rose-700">
+                    권한 확인 오류: {storeAccessError}
+                  </p>
+                )}
+              </div>
+            </section>
+          ) : (
+            children
+          )}
+        </div>
       </div>
     </div>
   );

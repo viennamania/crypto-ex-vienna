@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
+import { useActiveAccount } from 'thirdweb/react';
 
 type StoreMember = {
   id: string;
@@ -11,8 +12,6 @@ type StoreMember = {
   verified: boolean;
   role: string;
   createdAt: string;
-  hasBuyer: boolean;
-  hasSeller: boolean;
 };
 
 type DashboardStore = {
@@ -42,14 +41,9 @@ const toDateTime = (value: string) => {
   return parsed.toLocaleString('ko-KR');
 };
 
-const resolveMemberType = (member: StoreMember) => {
-  if (member.hasBuyer && member.hasSeller) return 'Buyer+Seller';
-  if (member.hasBuyer) return 'Buyer';
-  if (member.hasSeller) return 'Seller';
-  return 'Profile';
-};
-
 export default function P2PStoreMemberManagementPage() {
+  const activeAccount = useActiveAccount();
+  const connectedWalletAddress = String(activeAccount?.address || '').trim();
   const params = useParams();
   const searchParams = useSearchParams();
   const storecode = String(searchParams?.get('storecode') || '').trim();
@@ -69,6 +63,18 @@ export default function P2PStoreMemberManagementPage() {
   const [addMemberError, setAddMemberError] = useState<string | null>(null);
   const [addMemberSuccess, setAddMemberSuccess] = useState<string | null>(null);
   const [passwordModalMember, setPasswordModalMember] = useState<StoreMember | null>(null);
+  const [nextPassword, setNextPassword] = useState('');
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [passwordUpdateError, setPasswordUpdateError] = useState<string | null>(null);
+  const [passwordUpdateSuccess, setPasswordUpdateSuccess] = useState<string | null>(null);
+  const [unlinkModalMember, setUnlinkModalMember] = useState<StoreMember | null>(null);
+  const [unlinkingWallet, setUnlinkingWallet] = useState(false);
+  const [unlinkWalletError, setUnlinkWalletError] = useState<string | null>(null);
+  const [unlinkWalletSuccess, setUnlinkWalletSuccess] = useState<string | null>(null);
+  const [deleteModalMember, setDeleteModalMember] = useState<StoreMember | null>(null);
+  const [deletingMember, setDeletingMember] = useState(false);
+  const [deleteMemberError, setDeleteMemberError] = useState<string | null>(null);
+  const [deleteMemberSuccess, setDeleteMemberSuccess] = useState<string | null>(null);
   const [siteOrigin, setSiteOrigin] = useState('');
   const [homeUrlCopyFeedback, setHomeUrlCopyFeedback] = useState('');
 
@@ -133,15 +139,13 @@ export default function P2PStoreMemberManagementPage() {
         users.map((user: unknown) => {
           const member = isRecord(user) ? user : {};
           return {
-            id: String(member.id || member._id || ''),
+            id: String(member._id || member.id || ''),
             nickname: String(member.nickname || '').trim() || '-',
             walletAddress: String(member.walletAddress || ''),
             password: String(member.password ?? '').trim(),
             verified: member.verified === true,
             role: String(member.role || 'member').trim() || 'member',
             createdAt: String(member.createdAt || ''),
-            hasBuyer: isRecord(member.buyer),
-            hasSeller: isRecord(member.seller),
           };
         }),
       );
@@ -296,6 +300,183 @@ export default function P2PStoreMemberManagementPage() {
     }
   }, [memberHomepageUrl]);
 
+  const openPasswordModal = useCallback((member: StoreMember) => {
+    setPasswordModalMember(member);
+    setNextPassword('');
+    setPasswordUpdateError(null);
+    setPasswordUpdateSuccess(null);
+  }, []);
+
+  const closePasswordModal = useCallback(() => {
+    if (updatingPassword) return;
+    setPasswordModalMember(null);
+    setNextPassword('');
+    setPasswordUpdateError(null);
+    setPasswordUpdateSuccess(null);
+  }, [updatingPassword]);
+
+  const submitPasswordUpdate = useCallback(async () => {
+    if (!passwordModalMember || !storecode || updatingPassword) {
+      return;
+    }
+
+    const normalizedNextPassword = String(nextPassword || '').trim();
+    setPasswordUpdateError(null);
+    setPasswordUpdateSuccess(null);
+
+    if (!normalizedNextPassword) {
+      setPasswordUpdateError('새 비밀번호를 입력해 주세요.');
+      return;
+    }
+
+    setUpdatingPassword(true);
+    try {
+      const response = await fetch('/api/user/updateStoreMemberPassword', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode,
+          memberId: passwordModalMember.id,
+          memberNickname: passwordModalMember.nickname,
+          memberWalletAddress: passwordModalMember.walletAddress,
+          nextPassword: normalizedNextPassword,
+          changedByWalletAddress: connectedWalletAddress,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.result) {
+        throw new Error(String(payload?.error || '비밀번호 변경에 실패했습니다.'));
+      }
+
+      setMembers((prev) => prev.map((member) => (
+        member.id === passwordModalMember.id
+          ? { ...member, password: normalizedNextPassword }
+          : member
+      )));
+      setPasswordModalMember((prev) => (
+        prev
+          ? { ...prev, password: normalizedNextPassword }
+          : prev
+      ));
+      setNextPassword('');
+      setPasswordUpdateSuccess('비밀번호가 변경되었습니다.');
+    } catch (submitError) {
+      setPasswordUpdateError(
+        submitError instanceof Error ? submitError.message : '비밀번호 변경 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setUpdatingPassword(false);
+    }
+  }, [
+    connectedWalletAddress,
+    nextPassword,
+    passwordModalMember,
+    storecode,
+    updatingPassword,
+  ]);
+
+  const openUnlinkModal = useCallback((member: StoreMember) => {
+    setUnlinkModalMember(member);
+    setUnlinkWalletError(null);
+  }, []);
+
+  const closeUnlinkModal = useCallback(() => {
+    if (unlinkingWallet) return;
+    setUnlinkModalMember(null);
+    setUnlinkWalletError(null);
+  }, [unlinkingWallet]);
+
+  const submitUnlinkWallet = useCallback(async () => {
+    if (!unlinkModalMember || !storecode || unlinkingWallet) {
+      return;
+    }
+
+    setUnlinkWalletError(null);
+    setUnlinkWalletSuccess(null);
+    setUnlinkingWallet(true);
+    try {
+      const response = await fetch('/api/user/unlinkStoreMemberWallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode,
+          memberId: unlinkModalMember.id,
+          memberNickname: unlinkModalMember.nickname,
+          memberWalletAddress: unlinkModalMember.walletAddress,
+          unlinkedByWalletAddress: connectedWalletAddress,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.result) {
+        throw new Error(String(payload?.error || '지갑 연동 해제에 실패했습니다.'));
+      }
+
+      setMembers((prev) => prev.map((member) => (
+        member.id === unlinkModalMember.id
+          ? { ...member, walletAddress: '' }
+          : member
+      )));
+      setUnlinkModalMember(null);
+      setUnlinkWalletSuccess('회원 지갑 연동이 해제되었습니다.');
+    } catch (submitError) {
+      setUnlinkWalletError(
+        submitError instanceof Error ? submitError.message : '지갑 연동 해제 처리 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setUnlinkingWallet(false);
+    }
+  }, [connectedWalletAddress, storecode, unlinkModalMember, unlinkingWallet]);
+
+  const openDeleteModal = useCallback((member: StoreMember) => {
+    setDeleteModalMember(member);
+    setDeleteMemberError(null);
+  }, []);
+
+  const closeDeleteModal = useCallback(() => {
+    if (deletingMember) return;
+    setDeleteModalMember(null);
+    setDeleteMemberError(null);
+  }, [deletingMember]);
+
+  const submitDeleteMember = useCallback(async () => {
+    if (!deleteModalMember || !storecode || deletingMember) {
+      return;
+    }
+
+    setDeleteMemberError(null);
+    setDeleteMemberSuccess(null);
+    setDeletingMember(true);
+    try {
+      const response = await fetch('/api/user/deleteStoreMember', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode,
+          memberId: deleteModalMember.id,
+          walletAddress: deleteModalMember.walletAddress,
+          nickname: deleteModalMember.nickname,
+          deletedByWalletAddress: connectedWalletAddress,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok || !payload?.result) {
+        throw new Error(String(payload?.error || '회원 삭제에 실패했습니다.'));
+      }
+
+      setMembers((prev) => prev.filter((member) => member.id !== deleteModalMember.id));
+      setDeleteModalMember(null);
+      setDeleteMemberSuccess('회원이 삭제되었습니다.');
+    } catch (submitError) {
+      setDeleteMemberError(
+        submitError instanceof Error ? submitError.message : '회원 삭제 처리 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setDeletingMember(false);
+    }
+  }, [connectedWalletAddress, deleteModalMember, deletingMember, storecode]);
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
@@ -345,6 +526,18 @@ export default function P2PStoreMemberManagementPage() {
           {addMemberSuccess && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
               {addMemberSuccess}
+            </div>
+          )}
+
+          {unlinkWalletSuccess && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+              {unlinkWalletSuccess}
+            </div>
+          )}
+
+          {deleteMemberSuccess && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+              {deleteMemberSuccess}
             </div>
           )}
 
@@ -450,19 +643,43 @@ export default function P2PStoreMemberManagementPage() {
                       <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                         <th className="px-3 py-2">회원 아이디</th>
                         <th className="px-3 py-2">지갑주소</th>
-                        <th className="px-3 py-2">유형</th>
                         <th className="px-3 py-2">상태</th>
                         <th className="px-3 py-2">권한</th>
                         <th className="px-3 py-2">등록일</th>
-                        <th className="px-3 py-2 text-right">비밀번호 확인</th>
+                        <th className="px-3 py-2 text-right">관리</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
-                      {filteredMembers.map((member) => (
+                      {filteredMembers.map((member) => {
+                        const hasWalletAddress = Boolean(String(member.walletAddress || '').trim());
+
+                        return (
                         <tr key={`${member.id}-${member.walletAddress}`} className="transition hover:bg-slate-50/70">
                           <td className="px-3 py-2.5 font-semibold text-slate-900">{member.nickname}</td>
-                          <td className="px-3 py-2.5 text-xs text-slate-500">{shortAddress(member.walletAddress)}</td>
-                          <td className="px-3 py-2.5 text-xs text-slate-600">{resolveMemberType(member)}</td>
+                          <td className="px-3 py-2.5 text-xs text-slate-500">
+                            <div className="inline-flex items-center gap-1.5">
+                              <span>{shortAddress(member.walletAddress)}</span>
+                              {hasWalletAddress && (
+                                <span className="inline-flex h-5 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 text-[10px] font-semibold text-emerald-700">
+                                  연동완료
+                                </span>
+                              )}
+                              {hasWalletAddress && (
+                                <button
+                                  type="button"
+                                  onClick={() => openUnlinkModal(member)}
+                                  className="inline-flex h-5 items-center rounded-full border border-rose-200 bg-rose-50 px-2 text-[10px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                                >
+                                  연동해제하기
+                                </button>
+                              )}
+                              {!hasWalletAddress && (
+                                <span className="inline-flex h-5 items-center rounded-full border border-amber-200 bg-amber-50 px-2 text-[10px] font-semibold text-amber-700">
+                                  지갑 연동안됩
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-3 py-2.5">
                             <span
                               className={`inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold ${
@@ -475,16 +692,26 @@ export default function P2PStoreMemberManagementPage() {
                           <td className="px-3 py-2.5 text-xs text-slate-600">{member.role}</td>
                           <td className="px-3 py-2.5 text-xs text-slate-500">{toDateTime(member.createdAt)}</td>
                           <td className="px-3 py-2.5 text-right">
-                            <button
-                              type="button"
-                              onClick={() => setPasswordModalMember(member)}
-                              className="inline-flex h-7 items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 text-[11px] font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100"
-                            >
-                              확인
-                            </button>
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => openPasswordModal(member)}
+                                className="inline-flex h-7 items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 text-[11px] font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100"
+                              >
+                                비밀번호
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openDeleteModal(member)}
+                                className="inline-flex h-7 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                              >
+                                삭제
+                              </button>
+                            </div>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -596,12 +823,12 @@ export default function P2PStoreMemberManagementPage() {
           <button
             type="button"
             aria-label="비밀번호 확인 모달 닫기"
-            onClick={() => setPasswordModalMember(null)}
+            onClick={closePasswordModal}
             className="absolute inset-0"
           />
           <div className="relative w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_36px_80px_-40px_rgba(15,23,42,0.45)]">
             <p className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-[11px] font-semibold text-cyan-700">
-              비밀번호 확인
+              비밀번호 확인/변경
             </p>
             <h2 className="mt-2 text-lg font-bold text-slate-900">{passwordModalMember.nickname}</h2>
             <p className="mt-1 text-xs text-slate-500">storecode: {storecode}</p>
@@ -613,13 +840,198 @@ export default function P2PStoreMemberManagementPage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setPasswordModalMember(null)}
-              className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              닫기
-            </button>
+            <label className="mt-4 block">
+              <span className="text-xs font-semibold text-slate-600">새 비밀번호</span>
+              <input
+                value={nextPassword}
+                onChange={(event) => {
+                  setNextPassword(event.target.value);
+                  setPasswordUpdateError(null);
+                  setPasswordUpdateSuccess(null);
+                }}
+                placeholder="변경할 비밀번호 입력"
+                disabled={updatingPassword}
+                className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+              />
+            </label>
+
+            {passwordUpdateError && (
+              <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                {passwordUpdateError}
+              </p>
+            )}
+
+            {passwordUpdateSuccess && (
+              <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+                {passwordUpdateSuccess}
+              </p>
+            )}
+
+            <p className="mt-3 text-[11px] text-slate-500">
+              변경 이력은 서버의 회원 비밀번호 변경 컬렉션에 기록됩니다.
+            </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={closePasswordModal}
+                disabled={updatingPassword}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                닫기
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void submitPasswordUpdate();
+                }}
+                disabled={updatingPassword}
+                className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-900 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {updatingPassword ? '변경 중...' : '비밀번호 변경'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {unlinkModalMember && (
+        <div className="fixed inset-0 z-[10005] flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm">
+          <button
+            type="button"
+            aria-label="지갑 연동 해제 모달 닫기"
+            onClick={closeUnlinkModal}
+            className="absolute inset-0"
+          />
+
+          <div className="relative w-full max-w-md rounded-3xl border border-rose-200 bg-white p-5 shadow-[0_36px_80px_-40px_rgba(15,23,42,0.45)]">
+            <p className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-700">
+              지갑 연동 해제
+            </p>
+            <h2 className="mt-2 text-lg font-bold text-slate-900">연동된 지갑주소를 해제하시겠습니까?</h2>
+            <p className="mt-1 text-xs text-slate-600">
+              확인을 누르면 해당 회원의 `walletAddress` 값이 빈값으로 변경됩니다.
+            </p>
+
+            <div className="mt-4 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+              <div className="grid grid-cols-[84px_minmax(0,1fr)] items-center gap-3">
+                <span className="whitespace-nowrap text-slate-500">회원 아이디</span>
+                <span className="truncate text-right font-semibold text-slate-900">{unlinkModalMember.nickname}</span>
+              </div>
+              <div className="grid grid-cols-[84px_minmax(0,1fr)] items-center gap-3">
+                <span className="whitespace-nowrap text-slate-500">지갑주소</span>
+                <span
+                  className="truncate whitespace-nowrap text-right font-mono text-[13px] font-semibold text-slate-900"
+                  title={unlinkModalMember.walletAddress || '-'}
+                >
+                  {unlinkModalMember.walletAddress || '-'}
+                </span>
+              </div>
+              <div className="grid grid-cols-[84px_minmax(0,1fr)] items-center gap-3">
+                <span className="whitespace-nowrap text-slate-500">storecode</span>
+                <span className="truncate text-right font-semibold text-slate-900">{storecode}</span>
+              </div>
+            </div>
+
+            <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+              위 지갑주소와 회원 계정의 연동을 해제합니다.
+            </p>
+
+            {unlinkWalletError && (
+              <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                {unlinkWalletError}
+              </p>
+            )}
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={closeUnlinkModal}
+                disabled={unlinkingWallet}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void submitUnlinkWallet();
+                }}
+                disabled={unlinkingWallet}
+                className="inline-flex h-10 items-center justify-center rounded-xl bg-rose-600 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-rose-300"
+              >
+                {unlinkingWallet ? '해제 중...' : '연동 해제 확인'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteModalMember && (
+        <div className="fixed inset-0 z-[10010] flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm">
+          <button
+            type="button"
+            aria-label="회원 삭제 모달 닫기"
+            onClick={closeDeleteModal}
+            className="absolute inset-0"
+          />
+
+          <div className="relative w-full max-w-md rounded-3xl border border-rose-200 bg-white p-5 shadow-[0_36px_80px_-40px_rgba(15,23,42,0.45)]">
+            <p className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-700">
+              회원 삭제
+            </p>
+            <h2 className="mt-2 text-lg font-bold text-slate-900">해당 회원을 삭제하시겠습니까?</h2>
+            <p className="mt-1 text-xs text-slate-600">삭제된 회원은 복구가 어려우니 정보를 다시 확인해 주세요.</p>
+
+            <div className="mt-4 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-slate-500">회원 아이디</span>
+                <span className="font-semibold text-slate-900">{deleteModalMember.nickname}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-slate-500">지갑주소</span>
+                <span className="font-semibold text-slate-900">{shortAddress(deleteModalMember.walletAddress)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-slate-500">등록일</span>
+                <span className="font-semibold text-slate-900">{toDateTime(deleteModalMember.createdAt)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-slate-500">storecode</span>
+                <span className="font-semibold text-slate-900">{storecode}</span>
+              </div>
+            </div>
+
+            <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+              삭제 이력은 서버 컬렉션 `store_member_deletion_logs`에 자동 기록됩니다.
+            </p>
+
+            {deleteMemberError && (
+              <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                {deleteMemberError}
+              </p>
+            )}
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={deletingMember}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void submitDeleteMember();
+                }}
+                disabled={deletingMember}
+                className="inline-flex h-10 items-center justify-center rounded-xl bg-rose-600 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-rose-300"
+              >
+                {deletingMember ? '삭제 중...' : '삭제 확정'}
+              </button>
+            </div>
           </div>
         </div>
       )}
