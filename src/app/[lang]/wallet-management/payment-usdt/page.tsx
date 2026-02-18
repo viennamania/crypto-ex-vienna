@@ -114,7 +114,7 @@ const bodyFont = Manrope({
   variable: '--font-body',
 });
 
-const WALLET_AUTH_OPTIONS = ['phone', 'email', 'google', 'apple', 'line', 'telegram'];
+const WALLET_AUTH_OPTIONS = ['phone'];
 const QUICK_USDT_AMOUNTS = [10, 30, 50, 100, 300, 500];
 const SENDBIRD_APP_ID =
   process.env.NEXT_PUBLIC_SENDBIRD_APP_ID ||
@@ -1242,10 +1242,14 @@ export default function PaymentUsdtPage({
                       hasMemberProfile
                         ? 'border-emerald-200 bg-emerald-50'
                         : 'border-amber-200 bg-amber-50'
-                    }`}
+                    } ${loadingMemberProfile || hasMemberProfile ? 'min-h-[152px]' : ''}`}
                   >
                     {loadingMemberProfile ? (
-                      <p className="text-slate-600">선택 상점 회원 정보를 확인 중입니다...</p>
+                      <>
+                        <p className="font-semibold text-slate-700">선택 상점 회원 정보를 확인 중입니다...</p>
+                        <p className="mt-2 text-[11px] font-semibold text-slate-500">회원 아이디</p>
+                        <div className="mt-1 h-10 w-40 animate-pulse rounded-lg bg-slate-200/80" />
+                      </>
                     ) : hasMemberProfile ? (
                       <>
                         <p className="font-semibold text-emerald-800">결제 가능한 회원입니다.</p>

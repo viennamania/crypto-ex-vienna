@@ -1,0 +1,19 @@
+<svg
+  width="256"
+  height="256"
+  viewBox="0 0 256 256"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <defs>
+    <linearGradient id="orangex-grad" x1="30" y1="24" x2="226" y2="232" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFB347" />
+      <stop offset="1" stop-color="#FF7A1A" />
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="232" height="232" rx="58" fill="url(#orangex-grad)" />
+  <path
+    d="M80 68H118L150 112L182 68H220L169 133L223 202H185L150 156L115 202H77L131 133L80 68Z"
+    fill="white"
+  />
+</svg>

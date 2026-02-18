@@ -54,7 +54,7 @@ const bodyFont = Manrope({
   variable: '--font-body',
 });
 
-const WALLET_AUTH_OPTIONS = ['phone', 'email', 'google', 'apple', 'line', 'telegram'];
+const WALLET_AUTH_OPTIONS = ['phone'];
 
 const NETWORK_BY_KEY: Record<NetworkKey, NetworkOption> = {
   ethereum: {
@@ -94,6 +94,22 @@ const shortAddress = (value: string) => {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isWalletAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(String(value || '').trim());
+
+const normalizeWalletAddressList = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  const dedup = new Map<string, string>();
+  value.forEach((item: unknown) => {
+    const walletAddress = String(item || '').trim();
+    if (!isWalletAddress(walletAddress)) return;
+    const key = walletAddress.toLowerCase();
+    if (!dedup.has(key)) {
+      dedup.set(key, walletAddress);
+    }
+  });
+  return Array.from(dedup.values());
+};
 
 export default function WalletManagementHomePage() {
   const params = useParams();
@@ -147,6 +163,7 @@ export default function WalletManagementHomePage() {
   const [balance, setBalance] = useState(0);
   const [lastUpdatedAt, setLastUpdatedAt] = useState('');
   const [sellers, setSellers] = useState<SellerPreviewItem[]>([]);
+  const [storeSellerWalletAddresses, setStoreSellerWalletAddresses] = useState<string[]>([]);
   const [loadingSellers, setLoadingSellers] = useState(false);
   const [sellersError, setSellersError] = useState<string | null>(null);
   const [selectedSellerWallet, setSelectedSellerWallet] = useState(sellerWalletFromQuery);
@@ -162,6 +179,8 @@ export default function WalletManagementHomePage() {
     () => buildBuyPath(selectedSeller?.walletAddress || selectedSellerWallet),
     [buildBuyPath, selectedSeller?.walletAddress, selectedSellerWallet],
   );
+  const isStoreSellerMode = Boolean(storecode);
+  const hasSingleConfiguredStoreSeller = isStoreSellerMode && storeSellerWalletAddresses.length === 1;
 
   const loadBalance = useCallback(async () => {
     if (!activeAccount?.address) {
@@ -202,13 +221,39 @@ export default function WalletManagementHomePage() {
     setLoadingSellers(true);
     setSellersError(null);
     try {
+      let walletAddressesFilter: string[] = [];
+      if (storecode) {
+        const storeResponse = await fetch('/api/store/getOneStore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storecode }),
+        });
+        const storeData = await storeResponse.json().catch(() => ({}));
+        if (!storeResponse.ok) {
+          throw new Error(String(storeData?.error || '가맹점 정보를 불러오지 못했습니다.'));
+        }
+
+        const storeResult = isRecord(storeData?.result) ? storeData.result : {};
+        walletAddressesFilter = normalizeWalletAddressList(storeResult.sellerWalletAddresses);
+        setStoreSellerWalletAddresses(walletAddressesFilter);
+
+        if (walletAddressesFilter.length === 0) {
+          setSellers([]);
+          setSelectedSellerWallet('');
+          return;
+        }
+      } else {
+        setStoreSellerWalletAddresses([]);
+      }
+
       const response = await fetch('/api/user/getAllSellersForBalance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          storecode: 'admin',
+          storecode: storecode || 'admin',
           limit: 40,
           page: 1,
+          ...(walletAddressesFilter.length > 0 ? { walletAddresses: walletAddressesFilter } : {}),
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -243,12 +288,24 @@ export default function WalletManagementHomePage() {
         })
         .filter((item: SellerPreviewItem | null): item is SellerPreviewItem => item !== null);
 
-      normalized.sort((a: SellerPreviewItem, b: SellerPreviewItem) => {
-        if (b.currentUsdtBalance !== a.currentUsdtBalance) {
-          return b.currentUsdtBalance - a.currentUsdtBalance;
-        }
-        return a.rate - b.rate;
-      });
+      if (walletAddressesFilter.length > 0) {
+        const orderMap = new Map<string, number>();
+        walletAddressesFilter.forEach((walletAddress, index) => {
+          orderMap.set(walletAddress.toLowerCase(), index);
+        });
+        normalized.sort((a: SellerPreviewItem, b: SellerPreviewItem) => {
+          const aIndex = orderMap.get(a.walletAddress.toLowerCase());
+          const bIndex = orderMap.get(b.walletAddress.toLowerCase());
+          return (aIndex ?? Number.MAX_SAFE_INTEGER) - (bIndex ?? Number.MAX_SAFE_INTEGER);
+        });
+      } else {
+        normalized.sort((a: SellerPreviewItem, b: SellerPreviewItem) => {
+          if (b.currentUsdtBalance !== a.currentUsdtBalance) {
+            return b.currentUsdtBalance - a.currentUsdtBalance;
+          }
+          return a.rate - b.rate;
+        });
+      }
 
       setSellers(normalized);
       setSelectedSellerWallet((prev) => {
@@ -257,6 +314,13 @@ export default function WalletManagementHomePage() {
             (item: SellerPreviewItem) => item.walletAddress.toLowerCase() === sellerWalletFromQuery.toLowerCase(),
           );
           if (matched) return matched.walletAddress;
+        }
+        if (walletAddressesFilter.length === 1) {
+          const matchedSingle = normalized.find(
+            (item: SellerPreviewItem) =>
+              item.walletAddress.toLowerCase() === walletAddressesFilter[0].toLowerCase(),
+          );
+          return matchedSingle?.walletAddress || walletAddressesFilter[0];
         }
         if (prev && normalized.some((item: SellerPreviewItem) => item.walletAddress.toLowerCase() === prev.toLowerCase())) {
           return prev;
@@ -271,7 +335,7 @@ export default function WalletManagementHomePage() {
     } finally {
       setLoadingSellers(false);
     }
-  }, [sellerWalletFromQuery]);
+  }, [sellerWalletFromQuery, storecode]);
 
   useEffect(() => {
     loadSellers();
@@ -419,7 +483,7 @@ export default function WalletManagementHomePage() {
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-3">
               <p className="font-semibold text-slate-800">간편</p>
-              <p className="mt-1 text-slate-500">원화 기준 결제</p>
+              <p className="mt-1 text-slate-500">USDT 수량 결제</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-3">
               <p className="font-semibold text-slate-800">투명</p>
@@ -432,20 +496,26 @@ export default function WalletManagementHomePage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">USDT BUY</p>
-              <h2 className="mt-1 text-xl font-semibold text-slate-900">판매자 선택 후 구매 시작</h2>
+              <h2 className="mt-1 text-xl font-semibold text-slate-900">
+                {isStoreSellerMode ? '가맹점 판매자 정보' : '판매자 선택 후 구매 시작'}
+              </h2>
             </div>
-            <button
-              type="button"
-              onClick={loadSellers}
-              disabled={loadingSellers}
-              className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loadingSellers ? '불러오는 중...' : '새로고침'}
-            </button>
+            {!isStoreSellerMode && (
+              <button
+                type="button"
+                onClick={loadSellers}
+                disabled={loadingSellers}
+                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loadingSellers ? '불러오는 중...' : '새로고침'}
+              </button>
+            )}
           </div>
 
           <p className="mt-2 text-sm text-slate-600">
-            API에서 판매자 목록을 조회해 조건이 맞는 판매자를 고르고, 구매/채팅/구매신청으로 바로 연결됩니다.
+            {isStoreSellerMode
+              ? '가맹점에 설정된 판매자 목록을 읽어와 구매 가능한 판매자만 표시합니다.'
+              : 'API에서 판매자 목록을 조회해 조건이 맞는 판매자를 고르고, 구매/채팅/구매신청으로 바로 연결됩니다.'}
           </p>
 
           {sellersError && (
@@ -459,40 +529,61 @@ export default function WalletManagementHomePage() {
           )}
 
           {!loadingSellers && sellers.length === 0 && !sellersError && (
-            <p className="mt-3 text-sm text-slate-500">현재 구매 가능한 판매자가 없습니다.</p>
+            <p className="mt-3 text-sm text-slate-500">
+              {isStoreSellerMode && storeSellerWalletAddresses.length === 0
+                ? '가맹점에 설정된 판매자가 없습니다.'
+                : '현재 구매 가능한 판매자가 없습니다.'}
+            </p>
           )}
 
           {sellers.length > 0 && (
             <div className="mt-4 grid gap-2">
-              <div className="max-h-[230px] space-y-2 overflow-y-auto pr-1">
-                {sellers.map((seller) => {
-                  const selected =
-                    seller.walletAddress.toLowerCase() === selectedSellerWallet.toLowerCase();
-                  return (
-                    <button
-                      key={seller.walletAddress}
-                      type="button"
-                      onClick={() => setSelectedSellerWallet(seller.walletAddress)}
-                      className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
-                        selected
-                          ? 'border-cyan-300 bg-cyan-50 shadow-[0_12px_26px_-18px_rgba(6,182,212,0.65)]'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-sm font-semibold text-slate-900">{seller.nickname}</p>
-                        <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-white">
-                          {seller.rate.toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs text-slate-500">{shortAddress(seller.walletAddress)}</p>
-                      <p className="mt-1 text-xs font-semibold text-emerald-700">
-                        판매 가능: {seller.currentUsdtBalance.toLocaleString(undefined, { maximumFractionDigits: 3 })} USDT
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
+              {hasSingleConfiguredStoreSeller ? (
+                <div className="w-full rounded-2xl border border-cyan-300 bg-cyan-50 px-3 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-sm font-semibold text-slate-900">
+                      {sellers[0]?.nickname || '판매자'}
+                    </p>
+                    <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-white">
+                      {(sellers[0]?.rate || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">{shortAddress(sellers[0]?.walletAddress || '')}</p>
+                  <p className="mt-1 text-xs font-semibold text-emerald-700">
+                    판매 가능: {(sellers[0]?.currentUsdtBalance || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })} USDT
+                  </p>
+                </div>
+              ) : (
+                <div className="max-h-[230px] space-y-2 overflow-y-auto pr-1">
+                  {sellers.map((seller) => {
+                    const selected =
+                      seller.walletAddress.toLowerCase() === selectedSellerWallet.toLowerCase();
+                    return (
+                      <button
+                        key={seller.walletAddress}
+                        type="button"
+                        onClick={() => setSelectedSellerWallet(seller.walletAddress)}
+                        className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
+                          selected
+                            ? 'border-cyan-300 bg-cyan-50 shadow-[0_12px_26px_-18px_rgba(6,182,212,0.65)]'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-sm font-semibold text-slate-900">{seller.nickname}</p>
+                          <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-white">
+                            {seller.rate.toLocaleString(undefined, { maximumFractionDigits: 0 })} KRW
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">{shortAddress(seller.walletAddress)}</p>
+                        <p className="mt-1 text-xs font-semibold text-emerald-700">
+                          판매 가능: {seller.currentUsdtBalance.toLocaleString(undefined, { maximumFractionDigits: 3 })} USDT
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               <Link
                 href={buyPath}
@@ -543,7 +634,7 @@ export default function WalletManagementHomePage() {
               </span>
             </div>
             <p className="mt-3 text-sm text-slate-600">
-              원화 금액 입력 시 환율 기반 USDT 수량을 계산하고 상점 결제지갑으로 전송합니다.
+              결제할 USDT 수량을 입력해 상점 결제지갑으로 전송합니다.
             </p>
             <Link
               href={paymentPath}

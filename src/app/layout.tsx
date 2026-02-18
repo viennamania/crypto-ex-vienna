@@ -81,8 +81,7 @@ const WalletConsoleShell = () => {
   const normalizedPathname = (pathname || '').replace(/\/+$/, '');
   const pathSegments = normalizedPathname.split('/').filter(Boolean);
   const walletManagementIndex = pathSegments.indexOf('wallet-management');
-  const shouldHideOnWalletManagementSubPage =
-    walletManagementIndex >= 0 && pathSegments.length > walletManagementIndex + 1;
+  const shouldHideOnWalletManagementPage = walletManagementIndex >= 0;
 
   useEffect(() => {
     const prevAddress = previousAddressRef.current;
@@ -105,14 +104,14 @@ const WalletConsoleShell = () => {
   }, [activeAccount?.address, showChain]);
 
   useEffect(() => {
-    if (shouldHideOnWalletManagementSubPage && showChain) {
+    if (shouldHideOnWalletManagementPage && showChain) {
       setShowChain(false);
     }
-  }, [shouldHideOnWalletManagementSubPage, showChain]);
+  }, [shouldHideOnWalletManagementPage, showChain]);
 
 
   useEffect(() => {
-    if (!showChain || shouldHideOnWalletManagementSubPage) {
+    if (!showChain || shouldHideOnWalletManagementPage) {
       return;
     }
 
@@ -134,9 +133,9 @@ const WalletConsoleShell = () => {
       body.style.overscrollBehavior = prevBodyOverscroll;
       html.style.overflow = prevHtmlOverflow;
     };
-  }, [showChain, shouldHideOnWalletManagementSubPage]);
+  }, [showChain, shouldHideOnWalletManagementPage]);
 
-  if (!isConnected || shouldHideOnWalletManagementSubPage) {
+  if (!isConnected || shouldHideOnWalletManagementPage) {
     return null;
   }
 

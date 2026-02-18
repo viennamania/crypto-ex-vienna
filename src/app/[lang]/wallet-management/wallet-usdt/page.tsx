@@ -78,7 +78,7 @@ import {
 
 
 
-const walletAuthOptions = ["phone", "email", "google", "apple", "line", "telegram"];
+const walletAuthOptions = ['phone'];
 
 
 const contractAddress = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"; // USDT on Polygon
@@ -1686,7 +1686,7 @@ export default function SendUsdt({ params }: any) {
                     inputMode="decimal"
                     placeholder="0.00"
                     className={`
-                      w-full rounded-md border px-4 py-4 pr-20 text-right text-3xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-400
+                      w-full rounded-md border px-4 py-4 pr-20 text-right text-5xl font-semibold leading-none tracking-tight tabular-nums text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-400
                       ${sending ? 'border-slate-200 bg-slate-100 text-slate-400' : 'border-slate-200 bg-white'}
                     `}
                     value={amountInput}

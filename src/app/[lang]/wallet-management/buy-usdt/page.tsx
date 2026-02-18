@@ -114,7 +114,7 @@ const bodyFont = Manrope({
   variable: '--font-body',
 });
 
-const WALLET_AUTH_OPTIONS = ['phone', 'email', 'google', 'apple', 'line', 'telegram'];
+const WALLET_AUTH_OPTIONS = ['phone'];
 const QUICK_BUY_AMOUNTS = [10, 30, 50, 100, 300, 500];
 const TRADABLE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
 const PRIVATE_TRADE_PAYMENT_WINDOW_MS = 30 * 60 * 1000;

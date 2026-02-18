@@ -75,6 +75,40 @@ export interface ResultProps {
   users: UserProps[];
 }
 
+type ThirdwebProfile = {
+  type?: string;
+  details?: {
+    email?: string;
+    phone?: string;
+    [key: string]: unknown;
+  } | null;
+  [key: string]: unknown;
+};
+
+type ThirdwebUserProfile = {
+  userId?: string;
+  walletAddress?: string;
+  smartAccountAddress?: string;
+  email?: string;
+  phone?: string;
+  createdAt?: string;
+  profiles?: ThirdwebProfile[];
+};
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const extractThirdwebProfileField = (
+  profiles: ThirdwebProfile[],
+  field: 'email' | 'phone',
+) => {
+  const found = profiles.find((profile) => {
+    const value = profile?.details?.[field];
+    return typeof value === 'string' && value.trim().length > 0;
+  });
+  const value = found?.details?.[field];
+  return typeof value === 'string' ? value.trim() : '';
+};
+
 
 
 
@@ -1191,6 +1225,85 @@ export async function getOneByWalletAddress(
 
   const results = await collection.findOne<UserProps>(filter);
   return results;
+}
+
+export async function syncThirdwebUserProfileByWalletAddress(data: {
+  walletAddress: string;
+  storecode?: string;
+  thirdwebUser: ThirdwebUserProfile;
+}) {
+  const walletAddress = String(data?.walletAddress || '').trim();
+  if (!walletAddress) {
+    return {
+      matchedCount: 0,
+      modifiedCount: 0,
+      updatedFields: {
+        email: '',
+        mobile: '',
+      },
+    };
+  }
+
+  const storecode = String(data?.storecode || '').trim();
+  const thirdwebUser = data?.thirdwebUser || {};
+  const profiles = Array.isArray(thirdwebUser?.profiles)
+    ? thirdwebUser.profiles
+    : [];
+
+  const email =
+    String(thirdwebUser?.email || '').trim() ||
+    extractThirdwebProfileField(profiles, 'email');
+  const mobile =
+    String(thirdwebUser?.phone || '').trim() ||
+    extractThirdwebProfileField(profiles, 'phone');
+  const now = new Date().toISOString();
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('users');
+
+  const filter: Record<string, unknown> = {
+    walletAddress: {
+      $regex: `^${escapeRegExp(walletAddress)}$`,
+      $options: 'i',
+    },
+  };
+
+  if (storecode) {
+    filter.storecode = storecode;
+  }
+
+  const updateSet: Record<string, unknown> = {
+    updatedAt: now,
+    thirdweb: {
+      userId: String(thirdwebUser?.userId || '').trim(),
+      walletAddress: String(thirdwebUser?.walletAddress || walletAddress).trim(),
+      smartAccountAddress: String(thirdwebUser?.smartAccountAddress || '').trim(),
+      email,
+      phone: mobile,
+      createdAt: String(thirdwebUser?.createdAt || '').trim(),
+      profiles,
+      syncedAt: now,
+    },
+  };
+
+  if (email) {
+    updateSet.email = email;
+  }
+
+  if (mobile) {
+    updateSet.mobile = mobile;
+  }
+
+  const result = await collection.updateMany(filter, { $set: updateSet });
+
+  return {
+    matchedCount: result.matchedCount,
+    modifiedCount: result.modifiedCount,
+    updatedFields: {
+      email,
+      mobile,
+    },
+  };
 }
 
 export async function searchUsersByNickname(
