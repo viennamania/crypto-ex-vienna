@@ -150,16 +150,27 @@ const getPaymentMethodLabel = (order: BuyOrderItem) => {
 const getBuyerIdLabel = (order: BuyOrderItem) =>
   String(order?.buyer?.nickname || order?.nickname || '').trim() || '-';
 
-const getStoreNameLabel = (order: BuyOrderItem) =>
-  String(order?.store?.storeName || order?.storecode || '').trim() || '-';
+const resolveCancellerRole = (order: BuyOrderItem): 'buyer' | 'seller' | 'admin' | 'unknown' => {
+  const role = String(order?.cancelledByRole || order?.canceller || '').trim().toLowerCase();
 
-const getStoreLogoUrl = (order: BuyOrderItem) =>
-  String(order?.store?.storeLogo || '').trim();
+  if (role === 'buyer' || role.includes('구매')) return 'buyer';
+  if (role === 'seller' || role.includes('판매')) return 'seller';
+  if (role === 'admin' || role.includes('관리')) return 'admin';
+  return 'unknown';
+};
+
+const getCancellerRoleLabel = (order: BuyOrderItem) => {
+  const role = resolveCancellerRole(order);
+  if (role === 'buyer') return '구매자';
+  if (role === 'seller') return '판매자';
+  if (role === 'admin') return '관리자';
+  return '미확인';
+};
 
 const getCancellerLabel = (order: BuyOrderItem) => {
   const nickname = String(order?.cancelledByNickname || '').trim();
   const walletAddress = String(order?.cancelledByWalletAddress || '').trim();
-  const role = String(order?.cancelledByRole || order?.canceller || '').trim().toLowerCase();
+  const role = resolveCancellerRole(order);
 
   if (nickname && walletAddress) return `${nickname} (${shortWallet(walletAddress)})`;
   if (nickname) return nickname;
@@ -580,10 +591,9 @@ export default function BuyOrderManagementPage() {
             <div className="px-4 py-12 text-center text-sm text-slate-500">검색된 주문 데이터가 없습니다.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-[1270px] w-full table-fixed">
+              <table className="min-w-[1100px] w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
-                    <th className="w-[165px] px-3 py-3">가맹점</th>
                     <th className="w-[132px] px-3 py-3">상태</th>
                     <th className="w-[145px] px-3 py-3">주문시각</th>
                     <th className="w-[170px] px-3 py-3">주문식별</th>
@@ -598,36 +608,19 @@ export default function BuyOrderManagementPage() {
                   {orders.map((order, index) => (
                     <tr key={`${order?._id || order?.tradeId || 'order'}-${index}`} className="bg-white text-sm text-slate-700">
                       <td className="px-3 py-3">
-                        <div className="flex min-w-0 items-center gap-2.5">
-                          <span className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
-                            {getStoreLogoUrl(order) ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={encodeURI(getStoreLogoUrl(order))}
-                                alt={`${getStoreNameLabel(order)} 로고`}
-                                className="h-full w-full object-cover"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-slate-500">
-                                SHOP
-                              </span>
-                            )}
-                          </span>
-                          <span className="truncate font-semibold text-slate-900">
-                            {getStoreNameLabel(order)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
                         <div className="space-y-1">
                           <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusBadgeClassName(order?.status)}`}>
                             {getStatusLabel(order?.status)}
                           </span>
                           {String(order?.status || '').trim() === 'cancelled' && (
-                            <p className="truncate text-[11px] text-slate-500">
-                              취소자 {getCancellerLabel(order)}
-                            </p>
+                            <>
+                              <p className="truncate text-[11px] font-semibold text-slate-600">
+                                취소주체 {getCancellerRoleLabel(order)}
+                              </p>
+                              <p className="truncate text-[11px] text-slate-500">
+                                취소자 {getCancellerLabel(order)}
+                              </p>
+                            </>
                           )}
                         </div>
                       </td>
