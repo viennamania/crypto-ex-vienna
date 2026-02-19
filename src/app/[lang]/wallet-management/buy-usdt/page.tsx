@@ -135,7 +135,7 @@ const BUY_HISTORY_STATUS_LABEL: Record<string, string> = {
   ordered: '주문 대기',
   accepted: '주문 수락됨',
   paymentRequested: '입금 요청',
-  paymentConfirmed: '결제 완료',
+  paymentConfirmed: '구매완료',
   cancelled: '취소됨',
 };
 const SENDBIRD_APP_ID =
@@ -2249,13 +2249,15 @@ export default function BuyUsdtPage({
                           <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                               <p className="text-slate-500">구매 수량</p>
-                              <p className="mt-1 font-semibold text-slate-900">
+                              <p className="mt-1 text-right text-lg font-bold tabular-nums text-slate-900">
                                 {item.usdtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT
                               </p>
                             </div>
                             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                               <p className="text-slate-500">구매 금액</p>
-                              <p className="mt-1 font-semibold text-slate-900">{item.krwAmount.toLocaleString()} KRW</p>
+                              <p className="mt-1 text-right text-lg font-bold tabular-nums text-slate-900">
+                                {item.krwAmount.toLocaleString()} KRW
+                              </p>
                             </div>
                           </div>
 
@@ -2279,7 +2281,7 @@ export default function BuyUsdtPage({
                               </span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="text-slate-500">최근 시각</span>
+                              <span className="text-slate-500">완료 시각</span>
                               <span className="font-semibold text-slate-800">{formatDateTime(displayAt)}</span>
                             </div>
                           </div>

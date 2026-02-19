@@ -28,6 +28,15 @@ const formatAppliedRate = (value: number) => {
   }).format(numeric)} KRW`;
 };
 
+type StoreUsdtToKrwRateHistoryItem = {
+  id: string;
+  prevUsdtToKrwRate: number;
+  nextUsdtToKrwRate: number;
+  changedByWalletAddress: string;
+  changedByName: string;
+  changedAt: string;
+};
+
 export default function P2PAgentStoreManagementPage() {
   const params = useParams<{ lang: string }>();
   const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang || 'ko';
@@ -46,6 +55,9 @@ export default function P2PAgentStoreManagementPage() {
   const [rateInput, setRateInput] = useState('');
   const [rateSubmitting, setRateSubmitting] = useState(false);
   const [rateError, setRateError] = useState<string | null>(null);
+  const [rateHistory, setRateHistory] = useState<StoreUsdtToKrwRateHistoryItem[]>([]);
+  const [loadingRateHistory, setLoadingRateHistory] = useState(false);
+  const [rateHistoryError, setRateHistoryError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!agentcode) {
@@ -96,11 +108,72 @@ export default function P2PAgentStoreManagementPage() {
     });
   }, [stores, keyword]);
 
+  const loadStoreRateHistory = useCallback(async (storecode: string) => {
+    const normalizedStorecode = String(storecode || '').trim();
+    if (!normalizedStorecode) {
+      setRateHistory([]);
+      return;
+    }
+
+    setLoadingRateHistory(true);
+    setRateHistoryError(null);
+    try {
+      const response = await fetch('/api/store/getStoreUsdtToKrwRateHistory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: normalizedStorecode,
+          limit: 20,
+          page: 1,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String(payload?.error || '환율 변경이력을 불러오지 못했습니다.'));
+      }
+
+      const items = Array.isArray(payload?.result?.items) ? payload.result.items : [];
+      const nextHistory = items.map((item: any, index: number) => {
+        const prevRate = Number(item?.prevUsdtToKrwRate);
+        const nextRate = Number(item?.nextUsdtToKrwRate);
+        const idRaw = item?._id;
+        const id = typeof idRaw?.toString === 'function'
+          ? String(idRaw.toString())
+          : `${normalizedStorecode}-${index}-${String(item?.changedAt || '')}`;
+
+        return {
+          id,
+          prevUsdtToKrwRate: Number.isFinite(prevRate) ? prevRate : 0,
+          nextUsdtToKrwRate: Number.isFinite(nextRate) ? nextRate : 0,
+          changedByWalletAddress: String(item?.changedByWalletAddress || ''),
+          changedByName: String(item?.changedByName || ''),
+          changedAt: String(item?.changedAt || ''),
+        };
+      });
+
+      setRateHistory(nextHistory);
+    } catch (historyError) {
+      setRateHistory([]);
+      setRateHistoryError(
+        historyError instanceof Error
+          ? historyError.message
+          : '환율 변경이력을 불러오지 못했습니다.',
+      );
+    } finally {
+      setLoadingRateHistory(false);
+    }
+  }, []);
+
   const openRateModal = useCallback((store: AgentStoreItem) => {
     setRateModalStore(store);
     setRateInput(store.usdtToKrwRate > 0 ? String(store.usdtToKrwRate) : '');
     setRateError(null);
-  }, []);
+    setRateHistory([]);
+    setRateHistoryError(null);
+
+    void loadStoreRateHistory(store.storecode);
+  }, [loadStoreRateHistory]);
 
   const closeRateModal = useCallback(() => {
     if (rateSubmitting) {
@@ -109,6 +182,8 @@ export default function P2PAgentStoreManagementPage() {
     setRateModalStore(null);
     setRateInput('');
     setRateError(null);
+    setRateHistory([]);
+    setRateHistoryError(null);
   }, [rateSubmitting]);
 
   const submitStoreRate = useCallback(async () => {
@@ -159,6 +234,7 @@ export default function P2PAgentStoreManagementPage() {
       setRateNotice(
         `${rateModalStore.storeName || rateModalStore.storecode} 적용 환율을 ${formatAppliedRate(resolvedRate)}로 변경했습니다.`,
       );
+      await loadStoreRateHistory(rateModalStore.storecode);
       setRateModalStore(null);
       setRateInput('');
     } catch (submitError) {
@@ -176,6 +252,7 @@ export default function P2PAgentStoreManagementPage() {
     agent?.agentName,
     agent?.agentcode,
     rateInput,
+    loadStoreRateHistory,
     rateModalStore,
     rateSubmitting,
   ]);
@@ -341,7 +418,7 @@ export default function P2PAgentStoreManagementPage() {
           onClick={closeRateModal}
         >
           <div
-            className="w-full max-w-sm rounded-3xl border border-white/80 bg-white p-5 shadow-[0_34px_70px_-40px_rgba(15,23,42,0.8)]"
+            className="w-full max-w-3xl rounded-3xl border border-white/80 bg-white p-5 shadow-[0_34px_70px_-40px_rgba(15,23,42,0.8)]"
             role="dialog"
             aria-modal="true"
             aria-label="가맹점 적용 환율 변경"
@@ -349,56 +426,101 @@ export default function P2PAgentStoreManagementPage() {
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">Store Rate</p>
             <h3 className="mt-1 text-xl font-semibold tracking-tight text-slate-900">가맹점 적용 환율 변경</h3>
-            <p className="mt-1 text-sm text-slate-600">
-              {rateModalStore.storeName || '-'} ({rateModalStore.storecode || '-'})
-            </p>
+            <p className="mt-1 text-sm text-slate-600">{rateModalStore.storeName || '-'} ({rateModalStore.storecode || '-'})</p>
 
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
-              <p>현재 환율: <span className="font-semibold text-slate-800">{formatAppliedRate(rateModalStore.usdtToKrwRate)}</span></p>
-            </div>
+            <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-12">
+              <section className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 lg:col-span-5">
+                <p className="text-xs text-slate-600">
+                  현재 환율: <span className="font-semibold text-slate-800">{formatAppliedRate(rateModalStore.usdtToKrwRate)}</span>
+                </p>
 
-            <label className="mt-4 block">
-              <span className="text-xs font-semibold text-slate-600">새 적용 환율 (KRW)</span>
-              <input
-                type="number"
-                inputMode="decimal"
-                min="0"
-                step="0.01"
-                value={rateInput}
-                onChange={(event) => {
-                  setRateInput(event.target.value);
-                  if (rateError) {
-                    setRateError(null);
-                  }
-                }}
-                placeholder="예: 1400"
-                className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
-              />
-            </label>
+                <label className="mt-4 block">
+                  <span className="text-xs font-semibold text-slate-600">새 적용 환율 (KRW)</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    value={rateInput}
+                    onChange={(event) => {
+                      setRateInput(event.target.value);
+                      if (rateError) {
+                        setRateError(null);
+                      }
+                    }}
+                    placeholder="예: 1400"
+                    className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
+                  />
+                </label>
 
-            {rateError && (
-              <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
-                {rateError}
-              </p>
-            )}
+                {rateError && (
+                  <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                    {rateError}
+                  </p>
+                )}
 
-            <div className="mt-5 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={closeRateModal}
-                disabled={rateSubmitting}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={submitStoreRate}
-                disabled={rateSubmitting}
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-cyan-600 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {rateSubmitting ? '저장 중...' : '저장'}
-              </button>
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={closeRateModal}
+                    disabled={rateSubmitting}
+                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="button"
+                    onClick={submitStoreRate}
+                    disabled={rateSubmitting}
+                    className="inline-flex h-10 items-center justify-center rounded-xl bg-cyan-600 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {rateSubmitting ? '저장 중...' : '저장'}
+                  </button>
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white px-3 py-3 lg:col-span-7">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-900">환율 변경이력</p>
+                  <button
+                    type="button"
+                    onClick={() => loadStoreRateHistory(rateModalStore.storecode)}
+                    disabled={loadingRateHistory}
+                    className="inline-flex h-7 items-center justify-center rounded-md border border-slate-300 bg-white px-2 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {loadingRateHistory ? '조회 중...' : '새로고침'}
+                  </button>
+                </div>
+
+                <div className="mt-2 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50">
+                  {loadingRateHistory ? (
+                    <div className="space-y-2 p-3">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <div key={`rate-history-loading-${index}`} className="h-10 animate-pulse rounded-lg bg-slate-200/80" />
+                      ))}
+                    </div>
+                  ) : rateHistoryError ? (
+                    <p className="px-3 py-6 text-center text-xs font-semibold text-rose-700">{rateHistoryError}</p>
+                  ) : rateHistory.length === 0 ? (
+                    <p className="px-3 py-6 text-center text-xs text-slate-500">변경이력이 없습니다.</p>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {rateHistory.map((item) => (
+                        <div key={item.id} className="px-3 py-2 text-xs text-slate-600">
+                          <p className="font-semibold text-slate-800">
+                            {formatAppliedRate(item.prevUsdtToKrwRate)} → {formatAppliedRate(item.nextUsdtToKrwRate)}
+                          </p>
+                          <p className="mt-0.5">
+                            {item.changedByName || 'agent'}
+                            {item.changedByWalletAddress ? ` (${shortAddress(item.changedByWalletAddress)})` : ''}
+                          </p>
+                          <p className="mt-0.5 text-slate-500">{toDateTime(item.changedAt)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
             </div>
           </div>
         </div>
