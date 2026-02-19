@@ -373,14 +373,24 @@ export default function P2PAgentStoreManagementPage() {
                         <td className="px-4 py-3 text-xs text-slate-600">
                           <p>{shortAddress(store.paymentWalletAddress)}</p>
                           {store.storecode && (
-                            <Link
-                              href={`/${lang}/p2p/agent-management/store-management/${encodeURIComponent(
-                                store.storecode,
-                              )}/payment-wallet-collect${agentcode ? `?agentcode=${encodeURIComponent(agentcode)}` : ''}`}
-                              className="mt-1 inline-flex h-7 items-center justify-center rounded-md border border-cyan-300 bg-cyan-50 px-2 text-[11px] font-semibold text-cyan-800 transition hover:border-cyan-400 hover:text-cyan-900"
-                            >
-                              회수하기
-                            </Link>
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              <Link
+                                href={`/${lang}/p2p/agent-management/store-management/${encodeURIComponent(
+                                  store.storecode,
+                                )}/payment-wallet-collect${agentcode ? `?agentcode=${encodeURIComponent(agentcode)}` : ''}`}
+                                className="inline-flex h-7 items-center justify-center rounded-md border border-cyan-300 bg-cyan-50 px-2 text-[11px] font-semibold text-cyan-800 transition hover:border-cyan-400 hover:text-cyan-900"
+                              >
+                                회수하기
+                              </Link>
+                              <Link
+                                href={`/${lang}/p2p/agent-management/store-management/${encodeURIComponent(
+                                  store.storecode,
+                                )}/store-seller-settings${agentcode ? `?agentcode=${encodeURIComponent(agentcode)}` : ''}`}
+                                className="inline-flex h-7 items-center justify-center rounded-md border border-emerald-300 bg-emerald-50 px-2 text-[11px] font-semibold text-emerald-700 transition hover:border-emerald-400 hover:text-emerald-800"
+                              >
+                                판매자 설정
+                              </Link>
+                            </div>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right text-xs font-semibold text-slate-700">
