@@ -133,11 +133,11 @@ export default function WalletSummaryCard({
             <span className="inline-flex items-end justify-center gap-0.5">
               <span className="leading-none">{usdtBalanceMainText}</span>
               {usdtBalanceDecimalText && (
-                <span className="text-sm font-bold leading-none">
+                <span className="text-lg font-bold leading-none">
                   {usdtBalanceDecimalText}
                 </span>
               )}
-              {hasUsdtSuffix && <span className="text-sm font-bold leading-none">USDT</span>}
+              {hasUsdtSuffix && <span className="text-lg font-bold leading-none">USDT</span>}
             </span>
           </p>
         </section>
