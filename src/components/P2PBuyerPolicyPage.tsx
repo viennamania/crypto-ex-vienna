@@ -119,22 +119,22 @@ export default function P2PBuyerPolicyPage({ slug, title, description }: PolicyP
                   Orange X™
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] text-[#b6beca]">
-                  <span className="px-2">이용약관</span>
+                  <span className="px-2">Terms of Service</span>
                   <span className="text-[#566072]">|</span>
-                  <span className="px-2">개인정보처리방침</span>
+                  <span className="px-2">Privacy Policy</span>
                   <span className="text-[#566072]">|</span>
-                  <span className="px-2">환불 분쟁 정책</span>
+                  <span className="px-2">Refund & Dispute Policy</span>
                 </div>
               </div>
 
               <p className="mt-4 text-[11px] leading-relaxed text-[#8a93a6]">
-                리스크 고지: 가상자산 결제에는 가격 변동 및 네트워크 지연 등 위험이
-                수반될 수 있습니다. 결제 전에 수수료·환율·정산 조건을 확인해 주세요.
+                Risk notice: Crypto payments involve risks such as price volatility and network delays.
+                Please review fees, exchange rates, and settlement terms before payment.
               </p>
 
               <div className="mt-4 space-y-1 text-[11px] text-[#b6beca]">
-                <p>이메일: help@orangex.center</p>
-                <p>주소: 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
+                <p>Email: help@orangex.center</p>
+                <p>Address: 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
               </div>
 
               <p className="mt-4 text-[11px] text-[#6c7688]">

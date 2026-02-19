@@ -144,27 +144,27 @@ export default function P2PBuyerNoticePage() {
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] text-[#b6beca]">
                     <Link href={`/${lang}/p2p-buyer/terms-of-service`} className="px-2 hover:text-white">
-                      이용약관
+                      Terms of Service
                     </Link>
                     <span className="text-[#566072]">|</span>
                     <Link href={`/${lang}/p2p-buyer/privacy-policy`} className="px-2 hover:text-white">
-                      개인정보처리방침
+                      Privacy Policy
                     </Link>
                     <span className="text-[#566072]">|</span>
                     <Link href={`/${lang}/p2p-buyer/refund-policy`} className="px-2 hover:text-white">
-                      환불 분쟁 정책
+                      Refund & Dispute Policy
                     </Link>
                   </div>
                 </div>
 
                 <p className="mt-4 text-[11px] leading-relaxed text-[#8a93a6]">
-                  리스크 고지: 가상자산 결제에는 가격 변동 및 네트워크 지연 등 위험이
-                  수반될 수 있습니다. 결제 전에 수수료·환율·정산 조건을 확인해 주세요.
+                  Risk notice: Crypto payments involve risks such as price volatility and network delays.
+                  Please review fees, exchange rates, and settlement terms before payment.
                 </p>
 
                 <div className="mt-4 space-y-1 text-[11px] text-[#b6beca]">
-                  <p>이메일: help@orangex.center</p>
-                  <p>주소: 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
+                  <p>Email: help@orangex.center</p>
+                  <p>Address: 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
                 </div>
 
                 <p className="mt-4 text-[11px] text-[#6c7688]">
