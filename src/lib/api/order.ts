@@ -3715,13 +3715,15 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   }
 
   const buyerEscrowWalletAddress = resolveBuyerEscrowWalletAddress(order);
+  const sellerEscrowWalletAddress = resolveSellerEscrowWalletAddress(order);
   const orderBuyerWalletAddress =
     (typeof order?.buyer?.walletAddress === 'string' && order.buyer.walletAddress.trim())
     || (typeof order?.walletAddress === 'string' ? order.walletAddress.trim() : '');
 
-  if (!buyerEscrowWalletAddress || !orderBuyerWalletAddress) {
+  if (!buyerEscrowWalletAddress || !sellerEscrowWalletAddress || !orderBuyerWalletAddress) {
     console.error('cancelPrivateBuyOrderByAdminToBuyer: wallet address missing', {
       buyerEscrowWalletAddress,
+      sellerEscrowWalletAddress,
       orderBuyerWalletAddress,
     });
     return { success: false, error: 'WALLET_ADDRESS_MISSING' };
@@ -3757,7 +3759,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
 
     const releaseTransaction = transfer({
       contract: usdtContract,
-      to: orderBuyerWalletAddress,
+      to: sellerEscrowWalletAddress,
       amount: normalizedUsdtAmount,
     });
 
@@ -3827,7 +3829,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
       $set: {
         status: 'cancelled',
         cancelledAt: now,
-        cancelTradeReason: '관리자 취소(구매자 지갑 반환)',
+        cancelTradeReason: '관리자 취소(판매자 지갑 반환)',
         canceller: cancelledByRole,
         cancelledByRole,
         cancelledByWalletAddress,
@@ -3854,7 +3856,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
         $set: {
           'seller.buyOrder.status': 'cancelled',
           'seller.buyOrder.cancelledAt': now,
-          'seller.buyOrder.cancelTradeReason': '관리자 취소(구매자 지갑 반환)',
+          'seller.buyOrder.cancelTradeReason': '관리자 취소(판매자 지갑 반환)',
           'seller.buyOrder.canceller': cancelledByRole,
           'seller.buyOrder.cancelledByRole': cancelledByRole,
           'seller.buyOrder.cancelledByWalletAddress': cancelledByWalletAddress,

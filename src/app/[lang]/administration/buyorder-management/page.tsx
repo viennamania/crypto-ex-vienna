@@ -753,7 +753,7 @@ export default function BuyOrderManagementPage() {
             <div className="border-b border-slate-200 px-5 py-4">
               <p className="text-xl font-bold text-slate-900">주문 취소 확인</p>
               <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium leading-relaxed text-amber-900">
-                취소를 확정하면 에스크로에 보관된 USDT가 구매자 지갑으로 반환되고, 주문 상태는
+                취소를 확정하면 에스크로에 보관된 USDT가 판매자 지갑으로 반환되고, 주문 상태는
                 <span className="mx-1 font-bold">주문취소</span>
                 로 기록됩니다.
               </p>
@@ -781,6 +781,10 @@ export default function BuyOrderManagementPage() {
                 <p className="text-sm font-semibold text-slate-500">구매자 지갑</p>
                 <p className="break-all text-base font-medium text-slate-900">
                   {cancelTargetOrder.buyer?.walletAddress || cancelTargetOrder.walletAddress || '-'}
+                </p>
+                <p className="text-sm font-semibold text-slate-500">판매자 지갑</p>
+                <p className="break-all text-base font-medium text-slate-900">
+                  {cancelTargetOrder.seller?.walletAddress || '-'}
                 </p>
                 <p className="text-sm font-semibold text-slate-500">반환 수량</p>
                 <p className="text-base font-bold text-slate-900">{formatUsdt(cancelTargetOrder.usdtAmount)} USDT</p>
