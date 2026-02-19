@@ -7,7 +7,12 @@ import { toast } from 'react-hot-toast';
 type BuyOrderItem = {
   _id?: string;
   tradeId?: string;
+  privateSale?: boolean;
   status?: string;
+  canceller?: string;
+  cancelledByRole?: string;
+  cancelledByWalletAddress?: string;
+  cancelledByNickname?: string;
   createdAt?: string;
   paymentRequestedAt?: string;
   paymentConfirmedAt?: string;
@@ -49,6 +54,8 @@ type SearchFilters = {
 };
 
 const ACTIVE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
+const isAdminCancelablePrivateOrder = (order: BuyOrderItem) =>
+  order?.privateSale === true && String(order?.status || '').trim() === 'paymentRequested';
 
 const getStatusLabel = (status?: string | null) => {
   const normalized = String(status || '').trim();
@@ -92,6 +99,29 @@ const formatDateTime = (value?: string) => {
   });
 };
 
+const formatDateOnly = (value?: string) => {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+};
+
+const formatTimeOnly = (value?: string) => {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+};
+
 const shortWallet = (value?: string) => {
   const source = String(value || '').trim();
   if (!source) return '-';
@@ -113,6 +143,23 @@ const getPaymentMethodLabel = (order: BuyOrderItem) => {
   if (method === 'mkrw') return 'MKRW';
   if (bankName) return bankName;
   return '기타';
+};
+
+const getBuyerIdLabel = (order: BuyOrderItem) =>
+  String(order?.buyer?.nickname || order?.nickname || '').trim() || '-';
+
+const getCancellerLabel = (order: BuyOrderItem) => {
+  const nickname = String(order?.cancelledByNickname || '').trim();
+  const walletAddress = String(order?.cancelledByWalletAddress || '').trim();
+  const role = String(order?.cancelledByRole || order?.canceller || '').trim().toLowerCase();
+
+  if (nickname && walletAddress) return `${nickname} (${shortWallet(walletAddress)})`;
+  if (nickname) return nickname;
+  if (walletAddress) return shortWallet(walletAddress);
+  if (role === 'buyer') return '구매자';
+  if (role === 'seller') return '판매자';
+  if (role === 'admin') return '관리자';
+  return '-';
 };
 
 const getTodayDate = () => {
@@ -148,6 +195,9 @@ export default function BuyOrderManagementPage() {
   });
   const [draftFilters, setDraftFilters] = useState<SearchFilters>(() => createDefaultFilters());
   const [appliedFilters, setAppliedFilters] = useState<SearchFilters>(() => createDefaultFilters());
+  const [cancelTargetOrder, setCancelTargetOrder] = useState<BuyOrderItem | null>(null);
+  const [cancelingOrder, setCancelingOrder] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const mountedRef = useRef(true);
   const requestInFlightRef = useRef(false);
@@ -281,6 +331,59 @@ export default function BuyOrderManagementPage() {
     setAppliedFilters(defaults);
     setPageNumber(1);
   };
+
+  const openCancelOrderModal = (order: BuyOrderItem) => {
+    if (!isAdminCancelablePrivateOrder(order)) {
+      toast.error('입금요청 상태(private sale) 주문만 취소할 수 있습니다.');
+      return;
+    }
+    setCancelTargetOrder(order);
+    setCancelError(null);
+  };
+
+  const closeCancelOrderModal = () => {
+    if (cancelingOrder) return;
+    setCancelTargetOrder(null);
+    setCancelError(null);
+  };
+
+  const cancelPrivateOrderByAdmin = useCallback(async () => {
+    const targetOrderId = String(cancelTargetOrder?._id || '').trim();
+    if (!targetOrderId) {
+      setCancelError('취소할 주문 식별자를 찾을 수 없습니다.');
+      return;
+    }
+    if (cancelingOrder) return;
+
+    setCancelingOrder(true);
+    setCancelError(null);
+    try {
+      const response = await fetch('/api/order/cancelPrivateBuyOrderByAdminToBuyer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: targetOrderId,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.result?.success) {
+        throw new Error(String(payload?.error || '주문 취소 처리에 실패했습니다.'));
+      }
+
+      const txHash = String(payload?.result?.transactionHash || '').trim();
+      toast.success(txHash ? `주문 취소 완료 (TX: ${shortWallet(txHash)})` : '주문 취소 완료');
+
+      setCancelTargetOrder(null);
+      await fetchLatestBuyOrders('query');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '주문 취소 처리 중 오류가 발생했습니다.';
+      setCancelError(message);
+      toast.error(message);
+    } finally {
+      setCancelingOrder(false);
+    }
+  }, [cancelTargetOrder?._id, cancelingOrder, fetchLatestBuyOrders]);
 
   return (
     <main className="min-h-screen bg-transparent">
@@ -469,59 +572,90 @@ export default function BuyOrderManagementPage() {
             <div className="px-4 py-12 text-center text-sm text-slate-500">검색된 주문 데이터가 없습니다.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-[1180px] w-full">
+              <table className="min-w-[1220px] w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
-                    <th className="px-4 py-3">상태</th>
-                    <th className="px-4 py-3">생성시각</th>
-                    <th className="px-4 py-3">주문식별</th>
-                    <th className="px-4 py-3">구매자</th>
-                    <th className="px-4 py-3">판매자</th>
-                    <th className="px-4 py-3">결제방법</th>
-                    <th className="px-4 py-3 text-right">주문금액</th>
+                    <th className="w-[140px] px-3 py-3">상태</th>
+                    <th className="w-[150px] px-3 py-3">주문시각</th>
+                    <th className="w-[185px] px-3 py-3">주문식별</th>
+                    <th className="w-[175px] px-3 py-3">구매자</th>
+                    <th className="w-[170px] px-3 py-3">판매자</th>
+                    <th className="w-[96px] px-3 py-3">결제방법</th>
+                    <th className="w-[150px] px-3 py-3 text-right">주문금액</th>
+                    <th className="w-[127px] px-3 py-3 text-center">관리</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {orders.map((order, index) => (
                     <tr key={`${order?._id || order?.tradeId || 'order'}-${index}`} className="bg-white text-sm text-slate-700">
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusBadgeClassName(order?.status)}`}>
-                          {getStatusLabel(order?.status)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">{formatDateTime(order?.createdAt)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-slate-900">TID {order?.tradeId || '-'}</span>
-                          <span className="text-xs text-slate-500">{shortWallet(order?._id)}</span>
+                      <td className="px-3 py-3">
+                        <div className="space-y-1">
+                          <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusBadgeClassName(order?.status)}`}>
+                            {getStatusLabel(order?.status)}
+                          </span>
+                          {String(order?.status || '').trim() === 'cancelled' && (
+                            <p className="truncate text-[11px] text-slate-500">
+                              취소자 {getCancellerLabel(order)}
+                            </p>
+                          )}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3 text-slate-600">
+                        <div className="flex flex-col leading-tight">
+                          <span className="text-[13px] font-medium text-slate-700">
+                            {formatDateOnly(order?.createdAt)}
+                          </span>
+                          <span className="mt-0.5 text-xs text-slate-500">
+                            {formatTimeOnly(order?.createdAt)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
                         <div className="flex flex-col">
-                          <span className="font-medium text-slate-900">
+                          <span className="truncate font-semibold text-slate-900">TID {order?.tradeId || '-'}</span>
+                          <span className="truncate text-xs text-slate-500">{shortWallet(order?._id)}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex flex-col">
+                          <span className="truncate font-medium text-slate-900">
                             {order?.buyer?.nickname || order?.nickname || '-'}
                           </span>
-                          <span className="text-xs text-slate-500">
+                          <span className="truncate text-xs text-slate-500">
                             {shortWallet(order?.buyer?.walletAddress || order?.walletAddress)}
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3">
                         <div className="flex flex-col">
-                          <span className="font-medium text-slate-900">{order?.seller?.nickname || '-'}</span>
-                          <span className="text-xs text-slate-500">{shortWallet(order?.seller?.walletAddress)}</span>
+                          <span className="truncate font-medium text-slate-900">{order?.seller?.nickname || '-'}</span>
+                          <span className="truncate text-xs text-slate-500">{shortWallet(order?.seller?.walletAddress)}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3">
                         <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">
                           {getPaymentMethodLabel(order)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-3 py-3 text-right">
                         <div className="flex flex-col items-end">
                           <span className="font-bold text-slate-900">{formatKrw(order?.krwAmount)} KRW</span>
                           <span className="text-xs font-semibold text-slate-500">{formatUsdt(order?.usdtAmount)} USDT</span>
                         </div>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        {isAdminCancelablePrivateOrder(order) ? (
+                          <button
+                            type="button"
+                            onClick={() => openCancelOrderModal(order)}
+                            disabled={cancelingOrder}
+                            className="inline-flex h-8 items-center justify-center rounded-lg border border-rose-300 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 transition hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {cancelingOrder && cancelTargetOrder?._id === order?._id ? '취소 처리 중...' : '거래취소'}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-slate-400">-</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -578,6 +712,86 @@ export default function BuyOrderManagementPage() {
           고급 모니터링 UI · 자동 상태 동기화 ({POLLING_INTERVAL_MS / 1000}초 주기)
         </section>
       </div>
+
+      {cancelTargetOrder && (
+        <div
+          className="fixed inset-0 z-[120] flex items-end justify-center bg-slate-900/45 p-4 backdrop-blur-[1px] sm:items-center"
+          role="presentation"
+          onClick={closeCancelOrderModal}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-[0_42px_90px_-52px_rgba(15,23,42,0.9)]"
+            role="dialog"
+            aria-modal="true"
+            aria-label="주문 취소 확인"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-slate-200 px-5 py-4">
+              <p className="text-xl font-bold text-slate-900">주문 취소 확인</p>
+              <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium leading-relaxed text-amber-900">
+                취소를 확정하면 에스크로에 보관된 USDT가 구매자 지갑으로 반환되고, 주문 상태는
+                <span className="mx-1 font-bold">주문취소</span>
+                로 기록됩니다.
+              </p>
+            </div>
+
+            <div className="space-y-4 px-5 py-5">
+              <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-700">
+                  구매자 아이디
+                </p>
+                <p className="mt-1 break-all text-2xl font-extrabold leading-tight text-slate-900">
+                  {getBuyerIdLabel(cancelTargetOrder)}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-[126px_1fr] gap-x-3 gap-y-3">
+                <p className="text-sm font-semibold text-slate-500">주문 ID</p>
+                <p className="break-all text-base font-medium text-slate-900">{cancelTargetOrder._id || '-'}</p>
+                <p className="text-sm font-semibold text-slate-500">거래 ID</p>
+                <p className="break-all text-base font-medium text-slate-900">{cancelTargetOrder.tradeId || '-'}</p>
+                <p className="text-sm font-semibold text-slate-500">구매자 아이디</p>
+                <p className="break-all text-base font-semibold text-slate-900">
+                  {getBuyerIdLabel(cancelTargetOrder)}
+                </p>
+                <p className="text-sm font-semibold text-slate-500">구매자 지갑</p>
+                <p className="break-all text-base font-medium text-slate-900">
+                  {cancelTargetOrder.buyer?.walletAddress || cancelTargetOrder.walletAddress || '-'}
+                </p>
+                <p className="text-sm font-semibold text-slate-500">반환 수량</p>
+                <p className="text-base font-bold text-slate-900">{formatUsdt(cancelTargetOrder.usdtAmount)} USDT</p>
+                <p className="text-sm font-semibold text-slate-500">현재 상태</p>
+                <p className="text-base font-medium text-slate-900">{getStatusLabel(cancelTargetOrder.status)}</p>
+              </div>
+
+              {cancelError && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+                  {cancelError}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-4">
+              <button
+                type="button"
+                onClick={closeCancelOrderModal}
+                disabled={cancelingOrder}
+                className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                닫기
+              </button>
+              <button
+                type="button"
+                onClick={cancelPrivateOrderByAdmin}
+                disabled={cancelingOrder || !isAdminCancelablePrivateOrder(cancelTargetOrder)}
+                className="inline-flex h-11 items-center justify-center rounded-lg border border-rose-600 bg-rose-600 px-4 text-sm font-semibold text-white transition hover:border-rose-700 hover:bg-rose-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-500"
+              >
+                {cancelingOrder ? '취소 처리 중...' : 'USDT 반환 후 주문 취소'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

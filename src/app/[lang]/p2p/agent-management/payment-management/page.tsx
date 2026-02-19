@@ -207,7 +207,9 @@ export default function P2PAgentPaymentManagementPage() {
           <div className="flex items-center justify-end">
             <button
               type="button"
-              onClick={loadData}
+              onClick={() => {
+                void loadData();
+              }}
               disabled={loading}
               className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
             >

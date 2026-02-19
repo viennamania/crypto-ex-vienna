@@ -302,6 +302,12 @@ const normalizeKrwInput = (value: string) => {
   return cleaned.replace(/^0+(?=\d)/, '');
 };
 
+const formatKrwInputWithComma = (value: string) => {
+  const digits = normalizeKrwInput(value);
+  if (!digits) return '';
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+
 const formatUsdtInputFromNumber = (value: number) => {
   if (!Number.isFinite(value) || value <= 0) return '';
   return value.toFixed(6).replace(/\.?0+$/, '');
@@ -583,6 +589,7 @@ export default function BuyUsdtPage({
     if (!Number.isFinite(parsed)) return 0;
     return parsed > 0 ? Math.floor(parsed) : 0;
   }, [krwInput]);
+  const krwDisplayInput = useMemo(() => formatKrwInputWithComma(krwInput), [krwInput]);
   const estimatedKrwAmount = useMemo(() => {
     if (krwAmount > 0) return krwAmount;
     if (!selectedSeller || usdtAmount <= 0) return 0;
@@ -2129,7 +2136,7 @@ export default function BuyUsdtPage({
                   <div className="mt-2 flex items-end justify-between gap-3">
                     <input
                       disabled={!selectedSeller || submittingBuy || isSelectedSellerBuyer}
-                      value={krwInput}
+                      value={krwDisplayInput}
                       onChange={(event) => {
                         setKrwInput(normalizeKrwInput(event.target.value));
                         setLastEditedAmountType('krw');
