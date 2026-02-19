@@ -39,6 +39,7 @@ type PendingAlertCardItem = PendingOrderProcessingItem & {
 const ORDER_PROCESSING_ALERT_POLLING_MS = 15000;
 const ORDER_PROCESSING_ALERT_SOUND_INTERVAL_MS = 30000;
 const ORDER_PROCESSING_ALERT_SOUND_ENABLED_KEY = 'administration-order-processing-alert-sound-enabled';
+const ORDER_PROCESSING_ALERT_EXPANDED_KEY = 'administration-order-processing-alert-expanded';
 const ORDER_PROCESSING_ALERT_SOUND_SRC = '/notification.mp3';
 const ORDER_PROCESSING_ALERT_SOUND_FALLBACK_SRC = '/notification.wav';
 const ORDER_PROCESSING_CARD_ENTER_MS = 1700;
@@ -96,6 +97,7 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
   const [pendingAlertError, setPendingAlertError] = useState<string | null>(null);
   const [pendingAlertLastCheckedAt, setPendingAlertLastCheckedAt] = useState('');
   const [pendingAlertSoundEnabled, setPendingAlertSoundEnabled] = useState(true);
+  const [pendingAlertExpanded, setPendingAlertExpanded] = useState(true);
   const [pendingAlertCards, setPendingAlertCards] = useState<PendingAlertCardItem[]>([]);
   const pendingAlertAudioRef = useRef<HTMLAudioElement | null>(null);
   const pendingAlertAudioUnlockedRef = useRef(false);
@@ -197,6 +199,17 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
       setPendingAlertSoundEnabled(saved === null ? true : saved === 'true');
     } catch (error) {
       console.warn('failed to load pending alert sound option', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const saved = window.localStorage.getItem(ORDER_PROCESSING_ALERT_EXPANDED_KEY);
+      setPendingAlertExpanded(saved === null ? true : saved === 'true');
+    } catch (error) {
+      console.warn('failed to load pending alert expanded option', error);
     }
   }, []);
 
@@ -387,6 +400,22 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
     }
   };
 
+  const togglePendingAlertExpanded = () => {
+    setPendingAlertExpanded((prev) => {
+      const next = !prev;
+
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(ORDER_PROCESSING_ALERT_EXPANDED_KEY, String(next));
+        } catch (error) {
+          console.warn('failed to store pending alert expanded option', error);
+        }
+      }
+
+      return next;
+    });
+  };
+
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)] text-slate-800">
       <AdministrationSidebar
@@ -413,6 +442,13 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
                 <div className="flex shrink-0 flex-wrap gap-1.5">
                   <button
                     type="button"
+                    onClick={togglePendingAlertExpanded}
+                    className="inline-flex h-7 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-[10px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                  >
+                    {pendingAlertExpanded ? '접기' : '펼치기'}
+                  </button>
+                  <button
+                    type="button"
                     onClick={togglePendingAlertSound}
                     className={`inline-flex h-7 items-center justify-center rounded-lg border px-2 text-[10px] font-semibold transition ${
                       pendingAlertSoundEnabled
@@ -431,7 +467,7 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
                 </div>
               </div>
 
-              {pendingAlertCards.length > 0 && (
+              {pendingAlertExpanded && pendingAlertCards.length > 0 && (
                 <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
                   {pendingAlertCards.map((payment) => {
                     const motionClass =
@@ -500,7 +536,7 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
           isSidebarOpen ? 'lg:pl-[280px]' : 'lg:pl-0'
         }`}
       >
-        <div className={showPinnedPendingAlert ? 'pt-44 lg:pt-32' : ''}>
+        <div className={showPinnedPendingAlert ? (pendingAlertExpanded ? 'pt-44 lg:pt-32' : 'pt-28 lg:pt-20') : ''}>
           {children}
         </div>
       </div>
