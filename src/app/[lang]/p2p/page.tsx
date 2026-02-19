@@ -1958,6 +1958,7 @@ export default function OrangeXPage() {
                                             client={client}
                                             wallets={[wallet]}
                                             chain={activeChain}
+                                            locale="en_US"
                                             connectButton={{
                                                 label: 'Web3 Sign In',
                                                 className:
@@ -2562,34 +2563,6 @@ export default function OrangeXPage() {
 
                                     <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1">
                                         <h2 className="font-[var(--font-display)] text-2xl text-slate-900">Partner Banners</h2>
-                                        <a
-                                            href="mailto:support@orangex.center"
-                                            className="group inline-flex w-full flex-wrap items-center gap-2 rounded-full border border-rose-200/70 bg-[linear-gradient(120deg,rgba(255,255,255,0.95),rgba(254,242,242,0.95))] px-3 py-2 text-xs font-semibold text-rose-600 shadow-[0_14px_32px_-20px_rgba(244,63,94,0.65)] ring-1 ring-rose-200/60 transition hover:-translate-y-0.5 hover:text-rose-700 hover:shadow-[0_20px_45px_-20px_rgba(244,63,94,0.75)] sm:w-auto sm:flex-nowrap sm:py-1 sm:text-sm"
-                                            aria-label="Send partner application email"
-                                        >
-                                            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-rose-200/70 bg-rose-100 text-rose-600">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                                    <path
-                                                        d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"
-                                                        stroke="currentColor"
-                                                        strokeWidth="1.6"
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                    />
-                                                    <path
-                                                        d="m4 8 8 5 8-5"
-                                                        stroke="currentColor"
-                                                        strokeWidth="1.6"
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                    />
-                                                </svg>
-                                            </span>
-                                            <span className="tracking-tight">We accept partnership requests</span>
-                                            <span className="break-all rounded-full border border-rose-200/70 bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-rose-600 shadow-sm transition group-hover:border-rose-300 group-hover:text-rose-700 sm:text-[11px]">
-                                                support@orangex.center
-                                            </span>
-                                        </a>
                                     </div>
                                 </div>
 
@@ -3304,6 +3277,7 @@ export default function OrangeXPage() {
                 </div>
 
                 {/* FAQ */}
+                {/*
                 <div
                     data-reveal
                     className="glam-card rounded-2xl border border-slate-200/70 bg-white/80 p-8 mb-12 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur"
@@ -3344,8 +3318,10 @@ export default function OrangeXPage() {
                         </div>
                     </div>
                 </div>
+                    */}
 
                 {/* Final CTA */}
+                {/*
                 <div
                     data-reveal="pop"
                     className="glam-card relative overflow-hidden rounded-[28px] bg-[linear-gradient(120deg,var(--sea),var(--accent),var(--rose))] p-8 text-center text-white shadow-[0_40px_120px_-60px_rgba(15,23,42,0.8)]"
@@ -3371,6 +3347,8 @@ export default function OrangeXPage() {
                         </a>
                     </div>
                 </div>
+                */}
+
             </main>
 
             <footer className="relative z-10 border-t border-white/10 bg-[#1f1f1f] px-6 py-14 text-center text-slate-200">

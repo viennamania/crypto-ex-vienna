@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Chain } from 'thirdweb/chains';
 import { useConnectModal } from 'thirdweb/react';
@@ -21,7 +21,7 @@ type WalletConnectPromptProps = {
 export default function WalletConnectPrompt({
   wallets,
   chain,
-  lang,
+  lang: _lang,
   title,
   description,
   centered = false,
@@ -31,7 +31,7 @@ export default function WalletConnectPrompt({
   const [connectError, setConnectError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  const connectLocale = useMemo(() => (lang === 'en' ? 'en_US' : 'ko_KR'), [lang]);
+  const connectLocale = 'en_US';
 
   useEffect(() => {
     setMounted(true);
@@ -63,11 +63,11 @@ export default function WalletConnectPrompt({
         ...ORANGEX_CONNECT_OPTIONS,
         welcomeScreen: {
           ...ORANGEX_WELCOME_SCREEN,
-          subtitle: '전화번호 인증으로 빠르게 지갑을 연결하고 서비스를 시작하세요.',
+          subtitle: 'Quickly connect your wallet with phone verification and get started.',
         },
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : '지갑 연결에 실패했습니다.';
+      const message = error instanceof Error ? error.message : 'Failed to connect wallet.';
       setConnectError(message);
       setShowPreModal(true);
     }
@@ -95,10 +95,10 @@ export default function WalletConnectPrompt({
             onClick={handleOpenPreModal}
             className="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-transparent bg-[linear-gradient(135deg,#0f172a_0%,#0f766e_100%)] px-5 text-base font-extrabold tracking-tight text-white shadow-[0_20px_36px_-24px_rgba(15,23,42,0.95)] transition duration-200 hover:-translate-y-0.5 hover:text-white hover:brightness-105 active:translate-y-0"
           >
-            지갑 연결하고 시작하기
+            Connect Wallet and Start
           </button>
           <p className="mt-2 text-center text-[11px] font-medium text-slate-500">
-            전화번호 인증으로 빠르게 연결할 수 있습니다.
+            You can connect quickly with phone verification.
           </p>
         </div>
       </div>
@@ -114,7 +114,7 @@ export default function WalletConnectPrompt({
                   onClick={handleClosePreModal}
                   disabled={isConnecting}
                   className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 transition hover:border-slate-400 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="닫기"
+                  aria-label="Close"
                 >
                   ×
                 </button>
@@ -129,17 +129,17 @@ export default function WalletConnectPrompt({
                   className="mt-3 h-9 w-auto"
                   priority
                 />
-                <p className="mt-4 text-2xl font-extrabold tracking-tight text-slate-900">지갑 연결 시작</p>
+                <p className="mt-4 text-2xl font-extrabold tracking-tight text-slate-900">Connect Your Wallet</p>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  안전한 전화번호 인증으로 지갑을 연결한 뒤, 결제와 구매 기능을 바로 이용할 수 있습니다.
+                  Connect your wallet with secure phone verification, then immediately use payments and purchasing.
                 </p>
               </div>
 
               <div className="px-6 pb-6 pt-5">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">연결 안내</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Connection Guide</p>
                   <p className="mt-1.5 text-sm text-slate-700">
-                    전화번호 인증 시 표기를 010 으로 시작해야 합니다  10 으로 시작하면 인증되지 않습니다.
+                    For KR phone verification, start with 010. Numbers starting with 10 will fail verification.
                   </p>
                 </div>
 
@@ -156,7 +156,7 @@ export default function WalletConnectPrompt({
                     disabled={isConnecting}
                     className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    취소
+                    Cancel
                   </button>
                   <button
                     type="button"
@@ -164,7 +164,7 @@ export default function WalletConnectPrompt({
                     disabled={isConnecting}
                     className="inline-flex h-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#0f172a_0%,#0f766e_100%)] text-sm font-extrabold text-white transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {isConnecting ? '연결 중...' : '전화번호로 연결'}
+                    {isConnecting ? 'Connecting...' : 'Continue with Phone'}
                   </button>
                 </div>
               </div>
