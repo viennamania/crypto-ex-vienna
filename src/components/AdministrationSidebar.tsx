@@ -22,6 +22,7 @@ const buildMenuItems = (lang: string): MenuItem[] => {
   return [
     { label: '관리자 홈', hint: 'Dashboard', href: root },
     { label: '구매주문 대시보드', hint: 'Live Monitor', href: `${root}/buyorder-management` },
+    { label: '가맹점 결제 관리', hint: 'Payments', href: `${root}/payment-management` },
     { label: '에이전트 관리', hint: 'Agent', href: `${root}/agent-management` },
     {
       label: '가맹점 관리',

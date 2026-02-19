@@ -405,6 +405,165 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
   };
 }
 
+export async function getAllWalletUsdtPayments(
+{
+    limit = 20,
+    page = 1,
+    searchTerm = '',
+    status = 'confirmed',
+}: {
+    limit?: number;
+    page?: number;
+    searchTerm?: string;
+    status?: 'prepared' | 'confirmed' | 'all';
+}): Promise<{
+  totalCount: number;
+  totalKrwAmount: number;
+  totalUsdtAmount: number;
+  payments: any[];
+}> {
+  const normalizedLimit = Math.min(Math.max(Number(limit || 20), 1), 100);
+  const normalizedPage = Math.max(Number(page || 1), 1);
+  const skip = (normalizedPage - 1) * normalizedLimit;
+
+  const normalizedStatus = String(status || 'confirmed').trim().toLowerCase();
+  const normalizedSearchTerm = String(searchTerm || '').trim();
+  const searchRegex = normalizedSearchTerm
+    ? { $regex: escapeRegex(normalizedSearchTerm), $options: 'i' }
+    : null;
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('walletUsdtPayments');
+
+  const matchQuery: any = {};
+  if (normalizedStatus === 'prepared' || normalizedStatus === 'confirmed') {
+    matchQuery.status = normalizedStatus;
+  }
+
+  const basePipeline: any[] = [];
+  if (Object.keys(matchQuery).length > 0) {
+    basePipeline.push({ $match: matchQuery });
+  }
+
+  basePipeline.push(
+    {
+      $lookup: {
+        from: 'stores',
+        localField: 'storecode',
+        foreignField: 'storecode',
+        as: 'storeDocs',
+      },
+    },
+    {
+      $addFields: {
+        store: {
+          $let: {
+            vars: { storeDoc: { $arrayElemAt: ['$storeDocs', 0] } },
+            in: {
+              storecode: { $ifNull: ['$$storeDoc.storecode', '$storecode'] },
+              storeName: { $ifNull: ['$$storeDoc.storeName', '$storeName'] },
+              storeLogo: { $ifNull: ['$$storeDoc.storeLogo', ''] },
+            },
+          },
+        },
+      },
+    },
+  );
+
+  if (searchRegex) {
+    basePipeline.push({
+      $match: {
+        $or: [
+          { storecode: searchRegex },
+          { 'store.storeName': searchRegex },
+          { 'member.nickname': searchRegex },
+          { fromWalletAddress: searchRegex },
+          { toWalletAddress: searchRegex },
+          { transactionHash: searchRegex },
+          { agentcode: searchRegex },
+        ],
+      },
+    });
+  }
+
+  const [payments, countRows, totalRows] = await Promise.all([
+    collection
+      .aggregate([
+        ...basePipeline,
+        {
+          $project: {
+            _id: 1,
+            storecode: 1,
+            agentcode: 1,
+            status: 1,
+            orderProcessing: { $ifNull: ['$order_processing', 'PROCESSING'] },
+            orderProcessingUpdatedAt: { $ifNull: ['$order_processing_updated_at', ''] },
+            fromWalletAddress: 1,
+            toWalletAddress: 1,
+            transactionHash: 1,
+            usdtAmount: { $ifNull: ['$usdtAmount', 0] },
+            krwAmount: { $ifNull: ['$krwAmount', 0] },
+            exchangeRate: { $ifNull: ['$exchangeRate', 0] },
+            createdAt: 1,
+            confirmedAt: 1,
+            memberNickname: { $ifNull: ['$member.nickname', ''] },
+            store: 1,
+          },
+        },
+        { $sort: { confirmedAt: -1, createdAt: -1 } },
+        { $skip: skip },
+        { $limit: normalizedLimit },
+      ])
+      .toArray(),
+    collection
+      .aggregate([
+        ...basePipeline,
+        { $count: 'totalCount' },
+      ])
+      .toArray(),
+    collection
+      .aggregate([
+        ...basePipeline,
+        {
+          $group: {
+            _id: null,
+            totalKrwAmount: { $sum: { $ifNull: ['$krwAmount', 0] } },
+            totalUsdtAmount: { $sum: { $ifNull: ['$usdtAmount', 0] } },
+          },
+        },
+      ])
+      .toArray(),
+  ]);
+
+  return {
+    totalCount: Number(countRows?.[0]?.totalCount || 0),
+    totalKrwAmount: Number(totalRows?.[0]?.totalKrwAmount || 0),
+    totalUsdtAmount: Number(totalRows?.[0]?.totalUsdtAmount || 0),
+    payments: payments.map((payment: any) => ({
+      id: String(payment?._id || ''),
+      agentcode: String(payment?.agentcode || ''),
+      storecode: String(payment?.storecode || ''),
+      status: String(payment?.status || ''),
+      orderProcessing: String(payment?.orderProcessing || 'PROCESSING'),
+      orderProcessingUpdatedAt: String(payment?.orderProcessingUpdatedAt || ''),
+      fromWalletAddress: String(payment?.fromWalletAddress || ''),
+      toWalletAddress: String(payment?.toWalletAddress || ''),
+      transactionHash: String(payment?.transactionHash || ''),
+      usdtAmount: Number(payment?.usdtAmount || 0),
+      krwAmount: Number(payment?.krwAmount || 0),
+      exchangeRate: Number(payment?.exchangeRate || 0),
+      createdAt: String(payment?.createdAt || ''),
+      confirmedAt: String(payment?.confirmedAt || ''),
+      memberNickname: String(payment?.memberNickname || ''),
+      store: {
+        storecode: String(payment?.store?.storecode || payment?.storecode || ''),
+        storeName: String(payment?.store?.storeName || ''),
+        storeLogo: String(payment?.store?.storeLogo || ''),
+      },
+    })),
+  };
+}
+
 export async function updateWalletUsdtPaymentOrderProcessing({
   paymentId,
   orderProcessing = 'COMPLETED',

@@ -9,6 +9,7 @@ type BuyOrderItem = {
   tradeId?: string;
   privateSale?: boolean;
   status?: string;
+  storecode?: string;
   canceller?: string;
   cancelledByRole?: string;
   cancelledByWalletAddress?: string;
@@ -39,6 +40,7 @@ type BuyOrderItem = {
   };
   store?: {
     storeName?: string;
+    storeLogo?: string;
   };
 };
 
@@ -147,6 +149,12 @@ const getPaymentMethodLabel = (order: BuyOrderItem) => {
 
 const getBuyerIdLabel = (order: BuyOrderItem) =>
   String(order?.buyer?.nickname || order?.nickname || '').trim() || '-';
+
+const getStoreNameLabel = (order: BuyOrderItem) =>
+  String(order?.store?.storeName || order?.storecode || '').trim() || '-';
+
+const getStoreLogoUrl = (order: BuyOrderItem) =>
+  String(order?.store?.storeLogo || '').trim();
 
 const getCancellerLabel = (order: BuyOrderItem) => {
   const nickname = String(order?.cancelledByNickname || '').trim();
@@ -572,15 +580,16 @@ export default function BuyOrderManagementPage() {
             <div className="px-4 py-12 text-center text-sm text-slate-500">검색된 주문 데이터가 없습니다.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-[1220px] w-full table-fixed">
+              <table className="min-w-[1270px] w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
-                    <th className="w-[140px] px-3 py-3">상태</th>
-                    <th className="w-[150px] px-3 py-3">주문시각</th>
-                    <th className="w-[185px] px-3 py-3">주문식별</th>
-                    <th className="w-[175px] px-3 py-3">구매자</th>
-                    <th className="w-[170px] px-3 py-3">판매자</th>
-                    <th className="w-[96px] px-3 py-3">결제방법</th>
+                    <th className="w-[165px] px-3 py-3">가맹점</th>
+                    <th className="w-[132px] px-3 py-3">상태</th>
+                    <th className="w-[145px] px-3 py-3">주문시각</th>
+                    <th className="w-[170px] px-3 py-3">주문식별</th>
+                    <th className="w-[150px] px-3 py-3">구매자</th>
+                    <th className="w-[145px] px-3 py-3">판매자</th>
+                    <th className="w-[84px] px-3 py-3">결제방법</th>
                     <th className="w-[150px] px-3 py-3 text-right">주문금액</th>
                     <th className="w-[127px] px-3 py-3 text-center">관리</th>
                   </tr>
@@ -588,6 +597,28 @@ export default function BuyOrderManagementPage() {
                 <tbody className="divide-y divide-slate-100">
                   {orders.map((order, index) => (
                     <tr key={`${order?._id || order?.tradeId || 'order'}-${index}`} className="bg-white text-sm text-slate-700">
+                      <td className="px-3 py-3">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <span className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                            {getStoreLogoUrl(order) ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={encodeURI(getStoreLogoUrl(order))}
+                                alt={`${getStoreNameLabel(order)} 로고`}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-slate-500">
+                                SHOP
+                              </span>
+                            )}
+                          </span>
+                          <span className="truncate font-semibold text-slate-900">
+                            {getStoreNameLabel(order)}
+                          </span>
+                        </div>
+                      </td>
                       <td className="px-3 py-3">
                         <div className="space-y-1">
                           <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusBadgeClassName(order?.status)}`}>
