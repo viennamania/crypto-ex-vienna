@@ -792,6 +792,7 @@ export default function P2PBuyerPage() {
                   : '로그인 후 상담을 바로 시작할 수 있습니다.'}
               </p>
             </section>
+            {/*
             <section className="rounded-3xl border border-black/10 bg-white/90 p-4 text-black shadow-[0_18px_40px_-28px_rgba(0,0,0,0.25)]">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -818,6 +819,7 @@ export default function P2PBuyerPage() {
                 </a>
               </div>
             </section>
+            */}
 
             {!bannerLoading && bannerAds.length > 0 && (
               <div className="-mx-5 mt-6 border-t border-black/5 px-5 pb-8 lg:hidden">
