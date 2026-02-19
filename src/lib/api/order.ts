@@ -4094,6 +4094,133 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
   }
 }
 
+export async function getActivePrivateTradeByBuyerWallet(
+  {
+    buyerWalletAddress,
+  }: {
+    buyerWalletAddress: string;
+  }
+): Promise<{
+  isTrading: boolean;
+  status: string | null;
+  order: {
+    orderId: string;
+    tradeId: string;
+    status: string;
+    createdAt: string;
+    acceptedAt: string;
+    paymentRequestedAt: string;
+    paymentConfirmedAt: string;
+    cancelledAt: string;
+    krwAmount: number;
+    usdtAmount: number;
+    buyerWalletAddress: string;
+    sellerWalletAddress: string;
+    sellerNickname: string;
+    storeName: string;
+    storecode: string;
+  } | null;
+}> {
+  const emptyResult = {
+    isTrading: false,
+    status: null,
+    order: null,
+  };
+
+  const normalizedBuyerWalletAddress = String(buyerWalletAddress || '').trim();
+  if (!normalizedBuyerWalletAddress) {
+    return emptyResult;
+  }
+
+  const toWalletCandidates = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    return Array.from(new Set([trimmed, trimmed.toLowerCase(), trimmed.toUpperCase()]));
+  };
+
+  try {
+    const client = await clientPromise;
+    const buyordersCollection = client.db(dbName).collection('buyorders');
+    const buyerWalletCandidates = toWalletCandidates(normalizedBuyerWalletAddress);
+    const tradableStatuses = ['ordered', 'accepted', 'paymentRequested'];
+
+    const order = await buyordersCollection.findOne<any>(
+      {
+        privateSale: true,
+        status: { $in: tradableStatuses },
+        $or: [
+          { walletAddress: { $in: buyerWalletCandidates } },
+          { 'buyer.walletAddress': { $in: buyerWalletCandidates } },
+        ],
+      },
+      {
+        sort: { createdAt: -1 },
+        projection: {
+          _id: 1,
+          tradeId: 1,
+          status: 1,
+          createdAt: 1,
+          acceptedAt: 1,
+          paymentRequestedAt: 1,
+          paymentConfirmedAt: 1,
+          cancelledAt: 1,
+          krwAmount: 1,
+          usdtAmount: 1,
+          walletAddress: 1,
+          buyer: 1,
+          seller: 1,
+          store: 1,
+          storecode: 1,
+        },
+        maxTimeMS: 3500,
+      },
+    );
+
+    if (!order) {
+      return emptyResult;
+    }
+
+    const status = typeof order?.status === 'string' ? order.status : '';
+    const sellerWalletAddress =
+      (typeof order?.seller?.walletAddress === 'string' && order.seller.walletAddress)
+      || (typeof order?.sellerWalletAddress === 'string' ? order.sellerWalletAddress : '');
+    const sellerNickname =
+      (typeof order?.seller?.nickname === 'string' && order.seller.nickname)
+      || '';
+    const storeName =
+      (typeof order?.store?.storeName === 'string' && order.store.storeName)
+      || '';
+    const storecode = typeof order?.storecode === 'string' ? order.storecode : '';
+
+    return {
+      isTrading: true,
+      status: status || null,
+      order: {
+        orderId: order?._id?.toString?.() || '',
+        tradeId: typeof order?.tradeId === 'string' ? order.tradeId : '',
+        status,
+        createdAt: typeof order?.createdAt === 'string' ? order.createdAt : '',
+        acceptedAt: typeof order?.acceptedAt === 'string' ? order.acceptedAt : '',
+        paymentRequestedAt: typeof order?.paymentRequestedAt === 'string' ? order.paymentRequestedAt : '',
+        paymentConfirmedAt: typeof order?.paymentConfirmedAt === 'string' ? order.paymentConfirmedAt : '',
+        cancelledAt: typeof order?.cancelledAt === 'string' ? order.cancelledAt : '',
+        krwAmount: typeof order?.krwAmount === 'number' ? order.krwAmount : 0,
+        usdtAmount: typeof order?.usdtAmount === 'number' ? order.usdtAmount : 0,
+        buyerWalletAddress:
+          (typeof order?.buyer?.walletAddress === 'string' && order.buyer.walletAddress)
+          || (typeof order?.walletAddress === 'string' ? order.walletAddress : ''),
+        sellerWalletAddress,
+        sellerNickname,
+        storeName,
+        storecode,
+      },
+    };
+  } catch (error) {
+    console.error('getActivePrivateTradeByBuyerWallet error', error);
+    return emptyResult;
+  }
+}
+
 // get sell orders order by createdAt desc
 export async function getBuyOrdersForSeller(
 
