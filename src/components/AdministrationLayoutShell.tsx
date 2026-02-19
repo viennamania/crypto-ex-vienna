@@ -103,7 +103,7 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
   const previousPendingCountRef = useRef(0);
   const pendingCardTimerIdsRef = useRef<number[]>([]);
   const showPinnedPendingAlert = pendingSummary.pendingCount > 0 || pendingAlertCards.length > 0;
-  const buyOrderManagementHref = `/${lang}/administration/buyorder-management`;
+  const paymentManagementHref = `/${lang}/administration/payment-management`;
 
   const getPendingAlertAudio = useCallback(() => {
     if (typeof window === 'undefined') return null;
@@ -423,10 +423,10 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
                     {pendingAlertSoundEnabled ? '알림음 끄기' : '알림음 켜기'}
                   </button>
                   <Link
-                    href={buyOrderManagementHref}
+                    href={paymentManagementHref}
                     className="inline-flex h-7 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-[10px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                   >
-                    구매주문 대시보드
+                    가맹점 결제 관리
                   </Link>
                 </div>
               </div>

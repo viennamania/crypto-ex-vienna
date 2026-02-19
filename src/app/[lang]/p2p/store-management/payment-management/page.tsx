@@ -102,6 +102,9 @@ export default function P2PStorePaymentManagementPage() {
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [changedPaymentIds, setChangedPaymentIds] = useState<string[]>([]);
+  const [selectedPayment, setSelectedPayment] = useState<DashboardPayment | null>(null);
+  const [updatingOrderProcessing, setUpdatingOrderProcessing] = useState(false);
+  const [orderProcessingError, setOrderProcessingError] = useState<string | null>(null);
   const [loadingPaymentWalletBalance, setLoadingPaymentWalletBalance] = useState(false);
   const [paymentWalletBalanceError, setPaymentWalletBalanceError] = useState<string | null>(null);
   const [paymentWalletUsdtBalance, setPaymentWalletUsdtBalance] = useState<number | null>(null);
@@ -117,6 +120,8 @@ export default function P2PStorePaymentManagementPage() {
   useEffect(() => {
     setCurrentPage(1);
     setChangedPaymentIds([]);
+    setSelectedPayment(null);
+    setOrderProcessingError(null);
     previousOrderStatusMapRef.current = new Map();
   }, [storecode]);
 
@@ -303,6 +308,88 @@ export default function P2PStorePaymentManagementPage() {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
+
+  const openOrderProcessingModal = useCallback((payment: DashboardPayment) => {
+    setSelectedPayment(payment);
+    setOrderProcessingError(null);
+  }, []);
+
+  const closeOrderProcessingModal = useCallback(() => {
+    if (updatingOrderProcessing) return;
+    setSelectedPayment(null);
+    setOrderProcessingError(null);
+  }, [updatingOrderProcessing]);
+
+  const handleOrderProcessingComplete = useCallback(async () => {
+    if (!selectedPayment?.id) {
+      setOrderProcessingError('결제 식별자를 찾을 수 없습니다.');
+      return;
+    }
+
+    if (isOrderProcessingCompleted(selectedPayment.orderProcessing)) {
+      setSelectedPayment(null);
+      return;
+    }
+
+    setUpdatingOrderProcessing(true);
+    setOrderProcessingError(null);
+    try {
+      const response = await fetch('/api/payment/setWalletUsdtPaymentOrderProcessing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentId: selectedPayment.id,
+          orderProcessing: 'COMPLETED',
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String((payload as Record<string, unknown>)?.error || '주문처리 상태 변경에 실패했습니다.'));
+      }
+
+      const result = isRecord((payload as Record<string, unknown>)?.result)
+        ? ((payload as Record<string, unknown>).result as Record<string, unknown>)
+        : {};
+      const nextStatus = String(result.orderProcessing || 'COMPLETED').trim().toUpperCase();
+      const nextUpdatedAt = String(result.orderProcessingUpdatedAt || new Date().toISOString());
+
+      setDashboard((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          payments: prev.payments.map((payment) =>
+            payment.id === selectedPayment.id
+              ? {
+                  ...payment,
+                  orderProcessing: nextStatus,
+                  orderProcessingUpdatedAt: nextUpdatedAt,
+                }
+              : payment,
+          ),
+        };
+      });
+
+      setChangedPaymentIds([selectedPayment.id]);
+      if (paymentStatusHighlightTimerRef.current !== null) {
+        window.clearTimeout(paymentStatusHighlightTimerRef.current);
+      }
+      paymentStatusHighlightTimerRef.current = window.setTimeout(() => {
+        setChangedPaymentIds([]);
+        paymentStatusHighlightTimerRef.current = null;
+      }, PAYMENT_STATUS_HIGHLIGHT_MS);
+
+      setSelectedPayment(null);
+    } catch (updateError) {
+      setOrderProcessingError(
+        updateError instanceof Error
+          ? updateError.message
+          : '주문처리 상태 변경에 실패했습니다.',
+      );
+    } finally {
+      setUpdatingOrderProcessing(false);
+    }
+  }, [selectedPayment]);
 
   useEffect(() => {
     displayedBalanceRef.current = displayedPaymentWalletUsdtBalance;
@@ -664,9 +751,20 @@ export default function P2PStorePaymentManagementPage() {
                                 >
                                   {resolveOrderProcessingLabel(payment.orderProcessing)}
                                 </p>
-                                <p className="mt-1 text-[11px] text-slate-500">
-                                  {toDateTime(payment.orderProcessingUpdatedAt || '')}
-                                </p>
+                                {isOrderProcessingCompleted(payment.orderProcessing) && (
+                                  <p className="mt-1 text-[11px] text-slate-500">
+                                    완료시각 {toDateTime(payment.orderProcessingUpdatedAt || '')}
+                                  </p>
+                                )}
+                                {!isOrderProcessingCompleted(payment.orderProcessing) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openOrderProcessingModal(payment)}
+                                    className="mt-2 inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                                  >
+                                    주문처리완료
+                                  </button>
+                                )}
                                 {changedPaymentIds.includes(payment.id) && (
                                   <p className="mt-1 text-[10px] font-semibold text-cyan-700">상태 변경됨</p>
                                 )}
@@ -727,6 +825,72 @@ export default function P2PStorePaymentManagementPage() {
             </>
           )}
         </>
+      )}
+
+      {selectedPayment && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 px-4 py-6"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              closeOrderProcessingModal();
+            }
+          }}
+        >
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="border-b border-slate-200 px-4 py-3">
+              <p className="text-sm font-semibold text-slate-900">주문처리 확인</p>
+              <p className="mt-1 text-xs text-slate-500">결제 내역을 확인하고 주문처리완료로 변경합니다.</p>
+            </div>
+
+            <div className="space-y-3 px-4 py-4">
+              <div className="grid grid-cols-[108px_1fr] gap-x-3 gap-y-2 text-sm">
+                <p className="text-xs font-semibold text-slate-500">트랜잭션</p>
+                <p className="break-all font-semibold text-slate-900">{selectedPayment.transactionHash || selectedPayment.id || '-'}</p>
+                <p className="text-xs font-semibold text-slate-500">회원</p>
+                <p className="break-all text-slate-700">{String(selectedPayment.member?.nickname || '').trim() || '-'}</p>
+                <p className="text-xs font-semibold text-slate-500">결제지갑</p>
+                <p className="break-all text-slate-700">{selectedPayment.fromWalletAddress || '-'}</p>
+                <p className="text-xs font-semibold text-slate-500">수량 / 금액</p>
+                <p className="text-slate-700">{formatUsdt(selectedPayment.usdtAmount)} / {formatKrw(selectedPayment.krwAmount)}</p>
+                <p className="text-xs font-semibold text-slate-500">결제시각</p>
+                <p className="text-slate-700">{toDateTime(selectedPayment.confirmedAt || selectedPayment.createdAt)}</p>
+                <p className="text-xs font-semibold text-slate-500">주문처리 상태</p>
+                <p className="font-semibold text-slate-800">{resolveOrderProcessingLabel(selectedPayment.orderProcessing)}</p>
+                <p className="text-xs font-semibold text-slate-500">주문처리 완료시각</p>
+                <p className="text-slate-700">{toDateTime(selectedPayment.orderProcessingUpdatedAt || '')}</p>
+              </div>
+
+              {orderProcessingError && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                  {orderProcessingError}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
+              <button
+                type="button"
+                onClick={closeOrderProcessingModal}
+                disabled={updatingOrderProcessing}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                닫기
+              </button>
+              <button
+                type="button"
+                onClick={handleOrderProcessingComplete}
+                disabled={updatingOrderProcessing || isOrderProcessingCompleted(selectedPayment.orderProcessing)}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-cyan-600 bg-cyan-600 px-3 text-xs font-semibold text-white transition hover:border-cyan-700 hover:bg-cyan-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-500"
+              >
+                {isOrderProcessingCompleted(selectedPayment.orderProcessing)
+                  ? '처리완료됨'
+                  : updatingOrderProcessing
+                  ? '처리 중...'
+                  : '주문처리완료'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
