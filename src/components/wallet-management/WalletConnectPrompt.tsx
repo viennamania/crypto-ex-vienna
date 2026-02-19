@@ -31,7 +31,7 @@ export default function WalletConnectPrompt({
   const [connectError, setConnectError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  const connectLocale = 'en_US';
+  const connectLocale = 'ko_KR';
 
   useEffect(() => {
     setMounted(true);
@@ -58,16 +58,18 @@ export default function WalletConnectPrompt({
         client,
         wallets,
         chain,
+        ...ORANGEX_CONNECT_OPTIONS,
         locale: connectLocale,
         theme: 'light',
-        ...ORANGEX_CONNECT_OPTIONS,
+        title: 'OrangeX 로그인',
         welcomeScreen: {
           ...ORANGEX_WELCOME_SCREEN,
-          subtitle: 'Quickly connect your wallet with phone verification and get started.',
+          title: 'OrangeX 로그인',
+          subtitle: '휴대폰 본인 인증으로 지갑을 빠르게 연결하고 바로 시작하세요.',
         },
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to connect wallet.';
+      const message = error instanceof Error ? error.message : '지갑 연결에 실패했습니다.';
       setConnectError(message);
       setShowPreModal(true);
     }
@@ -84,7 +86,7 @@ export default function WalletConnectPrompt({
       >
         <div className={centered ? 'text-center' : ''}>
           <span className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-cyan-700">
-            Wallet Connect
+            지갑 연결
           </span>
           <p className="mt-2 text-base font-extrabold leading-snug text-slate-900">{title}</p>
           <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{description}</p>
@@ -95,10 +97,10 @@ export default function WalletConnectPrompt({
             onClick={handleOpenPreModal}
             className="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-transparent bg-[linear-gradient(135deg,#0f172a_0%,#0f766e_100%)] px-5 text-base font-extrabold tracking-tight text-white shadow-[0_20px_36px_-24px_rgba(15,23,42,0.95)] transition duration-200 hover:-translate-y-0.5 hover:text-white hover:brightness-105 active:translate-y-0"
           >
-            Connect Wallet and Start
+            지갑 연결하고 시작하기
           </button>
           <p className="mt-2 text-center text-[11px] font-medium text-slate-500">
-            You can connect quickly with phone verification.
+            휴대폰 인증으로 빠르게 연결할 수 있어요.
           </p>
         </div>
       </div>
@@ -114,12 +116,12 @@ export default function WalletConnectPrompt({
                   onClick={handleClosePreModal}
                   disabled={isConnecting}
                   className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 transition hover:border-slate-400 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Close"
+                  aria-label="닫기"
                 >
                   ×
                 </button>
                 <span className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold tracking-[0.12em] text-cyan-700">
-                  ORANGEX CONNECT
+                  ORANGEX 지갑 연결
                 </span>
                 <Image
                   src="/logo-orangex.png"
@@ -129,17 +131,17 @@ export default function WalletConnectPrompt({
                   className="mt-3 h-9 w-auto"
                   priority
                 />
-                <p className="mt-4 text-2xl font-extrabold tracking-tight text-slate-900">Connect Your Wallet</p>
+                <p className="mt-4 text-2xl font-extrabold tracking-tight text-slate-900">지갑 연결</p>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  Connect your wallet with secure phone verification, then immediately use payments and purchasing.
+                  휴대폰 본인 인증으로 지갑을 연결하고 결제와 구매를 바로 이용하세요.
                 </p>
               </div>
 
               <div className="px-6 pb-6 pt-5">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Connection Guide</p>
+                  <p className="text-xs font-semibold tracking-[0.02em] text-slate-500">연결 안내</p>
                   <p className="mt-1.5 text-sm text-slate-700">
-                    For KR phone verification, start with 010. Numbers starting with 10 will fail verification.
+                    한국 휴대폰 인증은 010으로 시작해 주세요. 10으로 시작하면 인증이 실패합니다.
                   </p>
                 </div>
 
@@ -156,7 +158,7 @@ export default function WalletConnectPrompt({
                     disabled={isConnecting}
                     className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Cancel
+                    취소
                   </button>
                   <button
                     type="button"
@@ -164,7 +166,7 @@ export default function WalletConnectPrompt({
                     disabled={isConnecting}
                     className="inline-flex h-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#0f172a_0%,#0f766e_100%)] text-sm font-extrabold text-white transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {isConnecting ? 'Connecting...' : 'Continue with Phone'}
+                    {isConnecting ? '연결 중...' : '휴대폰으로 계속'}
                   </button>
                 </div>
               </div>
