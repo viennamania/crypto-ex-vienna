@@ -846,3 +846,151 @@ export async function getWalletUsdtPendingOrderProcessingSummaryByAgentcode({
     })),
   };
 }
+
+export async function getWalletUsdtPendingOrderProcessingSummaryByStorecode({
+  storecode,
+  limit = 5,
+}: {
+  storecode: string;
+  limit?: number;
+}): Promise<{
+  pendingCount: number;
+  oldestPendingAt: string;
+  recentPayments: Array<{
+    id: string;
+    tradeId: string;
+    storecode: string;
+    storeName: string;
+    storeLogo: string;
+    memberNickname: string;
+    usdtAmount: number;
+    krwAmount: number;
+    createdAt: string;
+    confirmedAt: string;
+    orderProcessing: string;
+    orderProcessingUpdatedAt: string;
+  }>;
+}> {
+  const normalizedStorecode = String(storecode || '').trim();
+  if (!normalizedStorecode) {
+    return {
+      pendingCount: 0,
+      oldestPendingAt: '',
+      recentPayments: [],
+    };
+  }
+
+  const normalizedLimit = Math.min(Math.max(Number(limit || 5), 1), 20);
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('walletUsdtPayments');
+
+  const baseMatch: any = {
+    storecode: {
+      $regex: `^${escapeRegex(normalizedStorecode)}$`,
+      $options: 'i',
+    },
+    status: 'confirmed',
+  };
+
+  const pendingPipeline: any[] = [
+    { $match: baseMatch },
+    {
+      $addFields: {
+        normalizedOrderProcessing: {
+          $toUpper: { $ifNull: ['$order_processing', 'PROCESSING'] },
+        },
+      },
+    },
+    {
+      $match: {
+        normalizedOrderProcessing: { $ne: 'COMPLETED' },
+      },
+    },
+  ];
+
+  const [countRows, oldestRows, recentRows] = await Promise.all([
+    collection
+      .aggregate([
+        ...pendingPipeline,
+        { $count: 'pendingCount' },
+      ])
+      .toArray(),
+    collection
+      .aggregate([
+        ...pendingPipeline,
+        { $sort: { confirmedAt: 1, createdAt: 1 } },
+        { $limit: 1 },
+        {
+          $project: {
+            _id: 0,
+            oldestPendingAt: { $ifNull: ['$confirmedAt', '$createdAt'] },
+          },
+        },
+      ])
+      .toArray(),
+    collection
+      .aggregate([
+        ...pendingPipeline,
+        {
+          $lookup: {
+            from: 'stores',
+            localField: 'storecode',
+            foreignField: 'storecode',
+            as: 'storeDocs',
+          },
+        },
+        {
+          $addFields: {
+            store: {
+              $let: {
+                vars: { storeDoc: { $arrayElemAt: ['$storeDocs', 0] } },
+                in: {
+                  storecode: { $ifNull: ['$$storeDoc.storecode', '$storecode'] },
+                  storeName: { $ifNull: ['$$storeDoc.storeName', '$storeName'] },
+                  storeLogo: { $ifNull: ['$$storeDoc.storeLogo', ''] },
+                },
+              },
+            },
+          },
+        },
+        { $sort: { confirmedAt: -1, createdAt: -1 } },
+        { $limit: normalizedLimit },
+        {
+          $project: {
+            _id: 1,
+            transactionHash: 1,
+            storecode: 1,
+            store: 1,
+            memberNickname: { $ifNull: ['$member.nickname', ''] },
+            usdtAmount: { $ifNull: ['$usdtAmount', 0] },
+            krwAmount: { $ifNull: ['$krwAmount', 0] },
+            createdAt: 1,
+            confirmedAt: 1,
+            orderProcessing: '$normalizedOrderProcessing',
+            orderProcessingUpdatedAt: { $ifNull: ['$order_processing_updated_at', ''] },
+          },
+        },
+      ])
+      .toArray(),
+  ]);
+
+  return {
+    pendingCount: Number(countRows?.[0]?.pendingCount || 0),
+    oldestPendingAt: String(oldestRows?.[0]?.oldestPendingAt || ''),
+    recentPayments: recentRows.map((payment: any) => ({
+      id: String(payment?._id || ''),
+      tradeId: String(payment?.transactionHash || payment?._id || ''),
+      storecode: String(payment?.storecode || payment?.store?.storecode || ''),
+      storeName: String(payment?.store?.storeName || payment?.storecode || ''),
+      storeLogo: String(payment?.store?.storeLogo || ''),
+      memberNickname: String(payment?.memberNickname || ''),
+      usdtAmount: Number(payment?.usdtAmount || 0),
+      krwAmount: Number(payment?.krwAmount || 0),
+      createdAt: String(payment?.createdAt || ''),
+      confirmedAt: String(payment?.confirmedAt || ''),
+      orderProcessing: String(payment?.orderProcessing || 'PROCESSING'),
+      orderProcessingUpdatedAt: String(payment?.orderProcessingUpdatedAt || ''),
+    })),
+  };
+}

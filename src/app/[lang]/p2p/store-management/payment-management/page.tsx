@@ -37,6 +37,8 @@ type DashboardPayment = {
   usdtAmount: number;
   krwAmount: number;
   exchangeRate: number;
+  orderProcessing: string;
+  orderProcessingUpdatedAt: string;
   transactionHash: string;
   createdAt: string;
   confirmedAt: string;
@@ -79,7 +81,14 @@ const formatUsdt = (value: number) =>
 
 const formatRate = (value: number) =>
   `${new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0)} KRW`;
+const isOrderProcessingCompleted = (value: string | undefined) =>
+  String(value || '').trim().toUpperCase() === 'COMPLETED';
+const resolveOrderProcessingLabel = (value: string | undefined) =>
+  isOrderProcessingCompleted(value) ? '주문처리완료' : '주문처리중';
 
+const PAYMENT_HISTORY_PAGE_SIZE = 20;
+const PAYMENT_HISTORY_REFRESH_MS = 15_000;
+const PAYMENT_STATUS_HIGHLIGHT_MS = 2_200;
 const PAYMENT_BALANCE_REFRESH_MS = 10_000;
 const PAYMENT_BALANCE_DECIMALS = 6;
 const BALANCE_ANIMATION_DURATION_MS = 700;
@@ -91,6 +100,8 @@ export default function P2PStorePaymentManagementPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [changedPaymentIds, setChangedPaymentIds] = useState<string[]>([]);
   const [loadingPaymentWalletBalance, setLoadingPaymentWalletBalance] = useState(false);
   const [paymentWalletBalanceError, setPaymentWalletBalanceError] = useState<string | null>(null);
   const [paymentWalletUsdtBalance, setPaymentWalletUsdtBalance] = useState<number | null>(null);
@@ -100,16 +111,29 @@ export default function P2PStorePaymentManagementPage() {
   const displayedBalanceRef = useRef(0);
   const latestPaymentWalletBalanceRef = useRef<number | null>(null);
   const balanceAnimationFrameRef = useRef<number | null>(null);
+  const previousOrderStatusMapRef = useRef<Map<string, string>>(new Map());
+  const paymentStatusHighlightTimerRef = useRef<number | null>(null);
 
-  const loadDashboard = useCallback(async () => {
+  useEffect(() => {
+    setCurrentPage(1);
+    setChangedPaymentIds([]);
+    previousOrderStatusMapRef.current = new Map();
+  }, [storecode]);
+
+  const loadDashboard = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
     if (!storecode) {
       setDashboard(null);
       setError(null);
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    if (!silent) {
+      setLoading(true);
+    }
+    if (!silent) {
+      setError(null);
+    }
     try {
       const response = await fetch('/api/wallet/payment-usdt', {
         method: 'POST',
@@ -117,7 +141,8 @@ export default function P2PStorePaymentManagementPage() {
         body: JSON.stringify({
           action: 'store-dashboard',
           storecode,
-          limit: 50,
+          limit: PAYMENT_HISTORY_PAGE_SIZE,
+          page: currentPage,
         }),
       });
 
@@ -131,6 +156,64 @@ export default function P2PStorePaymentManagementPage() {
       const summaryData = isRecord(result.summary) ? result.summary : {};
       const paymentsData = Array.isArray(result.payments) ? result.payments : [];
       const dailyData = Array.isArray(result.daily) ? result.daily : [];
+
+      const nextPayments: DashboardPayment[] = paymentsData.map((item) => {
+        const payment = isRecord(item) ? item : {};
+        const member = isRecord(payment.member) ? payment.member : null;
+        return {
+          id: String(payment.id || ''),
+          usdtAmount: Number(payment.usdtAmount || 0),
+          krwAmount: Number(payment.krwAmount || 0),
+          exchangeRate: Number(payment.exchangeRate || 0),
+          orderProcessing: String(payment.orderProcessing || payment.order_processing || 'PROCESSING')
+            .trim()
+            .toUpperCase(),
+          orderProcessingUpdatedAt: String(
+            payment.orderProcessingUpdatedAt || payment.order_processing_updated_at || '',
+          ),
+          transactionHash: String(payment.transactionHash || ''),
+          createdAt: String(payment.createdAt || ''),
+          confirmedAt: String(payment.confirmedAt || ''),
+          fromWalletAddress: String(payment.fromWalletAddress || ''),
+          member: member
+            ? {
+                nickname: String(member.nickname || ''),
+                storecode: String(member.storecode || ''),
+              }
+            : null,
+        };
+      });
+
+      const nextOrderStatusMap = new Map<string, string>();
+      nextPayments.forEach((payment) => {
+        nextOrderStatusMap.set(payment.id, `${payment.orderProcessing}|${payment.orderProcessingUpdatedAt || ''}`);
+      });
+
+      const previousOrderStatusMap = previousOrderStatusMapRef.current;
+      const hasPreviousSnapshot = previousOrderStatusMap.size > 0;
+      const changedIds =
+        hasPreviousSnapshot
+          ? nextPayments
+              .filter((payment) => {
+                const previous = previousOrderStatusMap.get(payment.id);
+                if (!previous) return false;
+                return previous !== `${payment.orderProcessing}|${payment.orderProcessingUpdatedAt || ''}`;
+              })
+              .map((payment) => payment.id)
+          : [];
+
+      if (paymentStatusHighlightTimerRef.current !== null) {
+        window.clearTimeout(paymentStatusHighlightTimerRef.current);
+        paymentStatusHighlightTimerRef.current = null;
+      }
+      setChangedPaymentIds(changedIds);
+      if (changedIds.length > 0) {
+        paymentStatusHighlightTimerRef.current = window.setTimeout(() => {
+          setChangedPaymentIds([]);
+          paymentStatusHighlightTimerRef.current = null;
+        }, PAYMENT_STATUS_HIGHLIGHT_MS);
+      }
+      previousOrderStatusMapRef.current = nextOrderStatusMap;
 
       setDashboard({
         store: {
@@ -156,45 +239,70 @@ export default function P2PStorePaymentManagementPage() {
             totalKrwAmount: Number(row.totalKrwAmount || 0),
           };
         }),
-        payments: paymentsData.map((item) => {
-          const payment = isRecord(item) ? item : {};
-          const member = isRecord(payment.member) ? payment.member : null;
-          return {
-            id: String(payment.id || ''),
-            usdtAmount: Number(payment.usdtAmount || 0),
-            krwAmount: Number(payment.krwAmount || 0),
-            exchangeRate: Number(payment.exchangeRate || 0),
-            transactionHash: String(payment.transactionHash || ''),
-            createdAt: String(payment.createdAt || ''),
-            confirmedAt: String(payment.confirmedAt || ''),
-            fromWalletAddress: String(payment.fromWalletAddress || ''),
-            member: member
-              ? {
-                  nickname: String(member.nickname || ''),
-                  storecode: String(member.storecode || ''),
-                }
-              : null,
-          };
-        }),
+        payments: nextPayments,
       });
     } catch (loadError) {
-      setDashboard(null);
-      setError(loadError instanceof Error ? loadError.message : '결제 대시보드를 불러오지 못했습니다.');
+      if (!silent) {
+        setDashboard(null);
+        setError(loadError instanceof Error ? loadError.message : '결제 대시보드를 불러오지 못했습니다.');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
-  }, [storecode]);
+  }, [currentPage, storecode]);
 
   useEffect(() => {
-    loadDashboard();
+    void loadDashboard();
   }, [loadDashboard]);
 
-  const recentPayments = useMemo(() => dashboard?.payments.slice(0, 20) || [], [dashboard?.payments]);
+  useEffect(() => {
+    if (!storecode) return;
+
+    const timer = window.setInterval(() => {
+      void loadDashboard({ silent: true });
+    }, PAYMENT_HISTORY_REFRESH_MS);
+
+    return () => window.clearInterval(timer);
+  }, [loadDashboard, storecode]);
+
+  useEffect(
+    () => () => {
+      if (paymentStatusHighlightTimerRef.current !== null) {
+        window.clearTimeout(paymentStatusHighlightTimerRef.current);
+        paymentStatusHighlightTimerRef.current = null;
+      }
+    },
+    [],
+  );
+
+  const recentPayments = useMemo(() => dashboard?.payments || [], [dashboard?.payments]);
   const dailyStats = useMemo(() => dashboard?.daily.slice(-7) || [], [dashboard?.daily]);
+  const totalCount = Number(dashboard?.summary.totalCount || 0);
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(totalCount / PAYMENT_HISTORY_PAGE_SIZE)),
+    [totalCount],
+  );
+  const isPreviousDisabled = currentPage <= 1 || loading;
+  const isNextDisabled = currentPage >= totalPages || loading;
+  const visiblePageNumbers = useMemo(() => {
+    const windowSize = 5;
+    const start = Math.max(1, currentPage - Math.floor(windowSize / 2));
+    const end = Math.min(totalPages, start + windowSize - 1);
+    const adjustedStart = Math.max(1, end - windowSize + 1);
+    return Array.from({ length: end - adjustedStart + 1 }, (_, index) => adjustedStart + index);
+  }, [currentPage, totalPages]);
   const paymentWalletAddress = useMemo(
     () => String(dashboard?.store.paymentWalletAddress || '').trim(),
     [dashboard?.store.paymentWalletAddress],
   );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   useEffect(() => {
     displayedBalanceRef.current = displayedPaymentWalletUsdtBalance;
@@ -357,7 +465,9 @@ export default function P2PStorePaymentManagementPage() {
           <div className="flex items-center justify-end">
             <button
               type="button"
-              onClick={loadDashboard}
+              onClick={() => {
+                void loadDashboard();
+              }}
               disabled={loading}
               className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -489,13 +599,18 @@ export default function P2PStorePaymentManagementPage() {
               </section>
 
               <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <h2 className="text-base font-semibold text-slate-900">최근 결제 내역</h2>
+                <h2 className="text-base font-semibold text-slate-900">
+                  최근 결제 내역 ({totalCount.toLocaleString()}건)
+                </h2>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {Math.floor(PAYMENT_HISTORY_REFRESH_MS / 1000)}초마다 자동 갱신됩니다.
+                </p>
                 {recentPayments.length === 0 ? (
                   <p className="mt-3 text-sm text-slate-500">결제 내역이 없습니다.</p>
                 ) : (
                   <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200">
                     <div className="max-h-[540px] overflow-auto">
-                      <table className="min-w-[920px] w-full table-auto">
+                      <table className="min-w-[1040px] w-full table-auto">
                         <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                           <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                             <th className="px-3 py-2">일시</th>
@@ -505,11 +620,19 @@ export default function P2PStorePaymentManagementPage() {
                             <th className="px-3 py-2">KRW</th>
                             <th className="px-3 py-2">환율</th>
                             <th className="px-3 py-2">TX</th>
+                            <th className="px-3 py-2">주문처리</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
                           {recentPayments.map((payment) => (
-                            <tr key={payment.id} className="transition hover:bg-slate-50/70">
+                            <tr
+                              key={payment.id}
+                              className={`transition ${
+                                changedPaymentIds.includes(payment.id)
+                                  ? 'bg-cyan-50/70 animate-pulse'
+                                  : 'hover:bg-slate-50/70'
+                              }`}
+                            >
                               <td className="px-3 py-2.5 text-xs text-slate-500">
                                 {toDateTime(payment.confirmedAt || payment.createdAt)}
                               </td>
@@ -531,6 +654,23 @@ export default function P2PStorePaymentManagementPage() {
                               <td className="px-3 py-2.5 text-xs text-slate-500">
                                 {shortAddress(payment.transactionHash)}
                               </td>
+                              <td className="px-3 py-2.5 text-xs">
+                                <p
+                                  className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                                    isOrderProcessingCompleted(payment.orderProcessing)
+                                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                      : 'border-amber-200 bg-amber-50 text-amber-700'
+                                  }`}
+                                >
+                                  {resolveOrderProcessingLabel(payment.orderProcessing)}
+                                </p>
+                                <p className="mt-1 text-[11px] text-slate-500">
+                                  {toDateTime(payment.orderProcessingUpdatedAt || '')}
+                                </p>
+                                {changedPaymentIds.includes(payment.id) && (
+                                  <p className="mt-1 text-[10px] font-semibold text-cyan-700">상태 변경됨</p>
+                                )}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -539,6 +679,51 @@ export default function P2PStorePaymentManagementPage() {
                   </div>
                 )}
               </section>
+
+              {totalCount > 0 && (
+                <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-slate-600">
+                      페이지 {currentPage} / {totalPages} · 총 {totalCount.toLocaleString()}건
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={isPreviousDisabled}
+                        className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        이전
+                      </button>
+
+                      {visiblePageNumbers.map((pageNumber) => (
+                        <button
+                          key={pageNumber}
+                          type="button"
+                          onClick={() => setCurrentPage(pageNumber)}
+                          disabled={loading}
+                          className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-xs font-semibold transition ${
+                            pageNumber === currentPage
+                              ? 'border-cyan-300 bg-cyan-50 text-cyan-800'
+                              : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'
+                          } disabled:cursor-not-allowed disabled:opacity-45`}
+                        >
+                          {pageNumber}
+                        </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                        disabled={isNextDisabled}
+                        className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        다음
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              )}
             </>
           )}
         </>

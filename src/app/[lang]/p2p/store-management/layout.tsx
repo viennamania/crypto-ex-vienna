@@ -2,11 +2,18 @@
 
 import Link from 'next/link';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { AutoConnect, useActiveAccount } from 'thirdweb/react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  AutoConnect,
+  useActiveAccount,
+  useActiveWallet,
+  useConnectedWallets,
+  useDisconnect,
+} from 'thirdweb/react';
 
 import { client } from '@/app/client';
 import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { clearWalletConnectionState } from '@/lib/clearWalletConnectionState';
 import { useClientWallets } from '@/lib/useClientWallets';
 
 type MenuItem = {
@@ -17,7 +24,40 @@ type MenuItem = {
   basePath: string;
 };
 
+type PendingOrderProcessingItem = {
+  id: string;
+  tradeId: string;
+  storecode: string;
+  storeName: string;
+  storeLogo: string;
+  memberNickname: string;
+  usdtAmount: number;
+  krwAmount: number;
+  createdAt: string;
+  confirmedAt: string;
+  orderProcessing: string;
+  orderProcessingUpdatedAt: string;
+};
+
+type PendingOrderProcessingSummary = {
+  pendingCount: number;
+  oldestPendingAt: string;
+  recentPayments: PendingOrderProcessingItem[];
+};
+
+type PendingAlertCardItem = PendingOrderProcessingItem & {
+  cardKey: string;
+  cardState: 'entering' | 'stable' | 'exiting';
+};
+
 const WALLET_AUTH_OPTIONS = ['phone', 'google', 'email'];
+const ORDER_PROCESSING_ALERT_POLLING_MS = 15000;
+const ORDER_PROCESSING_ALERT_SOUND_INTERVAL_MS = 30000;
+const ORDER_PROCESSING_ALERT_SOUND_ENABLED_KEY = 'store-order-processing-alert-sound-enabled';
+const ORDER_PROCESSING_ALERT_SOUND_SRC = '/notification.mp3';
+const ORDER_PROCESSING_ALERT_SOUND_FALLBACK_SRC = '/notification.wav';
+const ORDER_PROCESSING_CARD_ENTER_MS = 1700;
+const ORDER_PROCESSING_CARD_EXIT_MS = 420;
 
 const shortAddress = (value: string) => {
   const normalized = String(value || '').trim();
@@ -25,6 +65,49 @@ const shortAddress = (value: string) => {
   if (normalized.length <= 14) return normalized;
   return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
 };
+const normalizeAddress = (value: string) => String(value || '').trim().toLowerCase();
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(Number(value || 0));
+const formatUsdtAmount = (value: number) =>
+  new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 6 }).format(Number(value || 0));
+const toDateTimeLabel = (value: string) => {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleString('ko-KR');
+};
+const toTimeAgoLabel = (value: string) => {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  const time = parsed.getTime();
+  if (Number.isNaN(time)) return '-';
+
+  const diffMs = Date.now() - time;
+  if (diffMs <= 0) return '방금 전';
+
+  const minutes = Math.floor(diffMs / (1000 * 60));
+  if (minutes < 1) return '방금 전';
+  if (minutes < 60) return `${minutes}분 전`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}시간 전`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}일 전`;
+
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}주 전`;
+
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}개월 전`;
+
+  const years = Math.floor(days / 365);
+  return `${years}년 전`;
+};
+const resolvePendingCardKey = (payment: PendingOrderProcessingItem) =>
+  String(payment.id || payment.tradeId || `${payment.storecode}-${payment.memberNickname}-${payment.createdAt || payment.confirmedAt}`);
 
 const MenuIcon = ({ itemKey, active }: { itemKey: string; active: boolean }) => {
   const iconClass = active
@@ -77,6 +160,9 @@ const MenuIcon = ({ itemKey, active }: { itemKey: string; active: boolean }) => 
 export default function P2PStoreManagementLayout({ children }: { children: ReactNode }) {
   const params = useParams<{ lang: string }>();
   const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang || 'ko';
+  const activeWallet = useActiveWallet();
+  const connectedWallets = useConnectedWallets();
+  const { disconnect } = useDisconnect();
   const { wallet, wallets } = useClientWallets({
     authOptions: WALLET_AUTH_OPTIONS,
     defaultSmsCountryCode: 'KR',
@@ -86,8 +172,9 @@ export default function P2PStoreManagementLayout({ children }: { children: React
   const storecode = String(searchParams?.get('storecode') || '').trim();
   const activeAccount = useActiveAccount();
   const connectedWalletAddress = String(activeAccount?.address || '').trim();
-  const normalizedConnectedWalletAddress = connectedWalletAddress.toLowerCase();
+  const normalizedConnectedWalletAddress = normalizeAddress(connectedWalletAddress);
   const storeQuery = storecode ? `?storecode=${encodeURIComponent(storecode)}` : '';
+  const paymentManagementHref = `/${lang}/p2p/store-management/payment-management${storeQuery}`;
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -96,6 +183,22 @@ export default function P2PStoreManagementLayout({ children }: { children: React
   const [storeAdminWalletAddress, setStoreAdminWalletAddress] = useState('');
   const [storeName, setStoreName] = useState('');
   const [storeLogo, setStoreLogo] = useState('');
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [disconnectModalOpen, setDisconnectModalOpen] = useState(false);
+  const [pendingSummary, setPendingSummary] = useState<PendingOrderProcessingSummary>({
+    pendingCount: 0,
+    oldestPendingAt: '',
+    recentPayments: [],
+  });
+  const [pendingAlertError, setPendingAlertError] = useState<string | null>(null);
+  const [pendingAlertLastCheckedAt, setPendingAlertLastCheckedAt] = useState('');
+  const [pendingAlertSoundEnabled, setPendingAlertSoundEnabled] = useState(true);
+  const [pendingAlertCards, setPendingAlertCards] = useState<PendingAlertCardItem[]>([]);
+  const pendingAlertAudioRef = useRef<HTMLAudioElement | null>(null);
+  const pendingAlertAudioUnlockedRef = useRef(false);
+  const lastAlertSoundAtRef = useRef(0);
+  const previousPendingCountRef = useRef(0);
+  const pendingCardTimerIdsRef = useRef<number[]>([]);
 
   useEffect(() => {
     if (!normalizedConnectedWalletAddress || !storecode) {
@@ -151,7 +254,7 @@ export default function P2PStoreManagementLayout({ children }: { children: React
     };
   }, [normalizedConnectedWalletAddress, storecode]);
 
-  const normalizedStoreAdminWalletAddress = storeAdminWalletAddress.toLowerCase();
+  const normalizedStoreAdminWalletAddress = normalizeAddress(storeAdminWalletAddress);
   const canAccessStorePages = useMemo(() => {
     if (!normalizedConnectedWalletAddress) return false;
     if (!storecode) return true;
@@ -168,6 +271,7 @@ export default function P2PStoreManagementLayout({ children }: { children: React
   ]);
 
   const showWalletConnectRequired = !normalizedConnectedWalletAddress;
+  const hasConnectedWallet = Boolean(connectedWalletAddress);
   const showStoreAccessChecking = Boolean(normalizedConnectedWalletAddress && storecode && loadingStoreAccess);
   const showStoreAccessDenied = Boolean(
     normalizedConnectedWalletAddress
@@ -175,6 +279,367 @@ export default function P2PStoreManagementLayout({ children }: { children: React
       && !loadingStoreAccess
       && !canAccessStorePages,
   );
+  const showPinnedPendingAlert = canAccessStorePages
+    && Boolean(storecode)
+    && (pendingSummary.pendingCount > 0 || pendingAlertCards.length > 0);
+
+  const getPendingAlertAudio = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+
+    if (!pendingAlertAudioRef.current) {
+      const audio = new Audio(ORDER_PROCESSING_ALERT_SOUND_SRC);
+      audio.preload = 'auto';
+      audio.volume = 1;
+      pendingAlertAudioRef.current = audio;
+    }
+
+    return pendingAlertAudioRef.current;
+  }, []);
+
+  const playPendingAlertTone = useCallback(async () => {
+    const audio = getPendingAlertAudio();
+    if (!audio) return;
+
+    audio.pause();
+    audio.currentTime = 0;
+
+    try {
+      await audio.play();
+    } catch (error) {
+      // Some environments fail on mp3 playback, so fallback to wav.
+      if (!audio.src.endsWith(ORDER_PROCESSING_ALERT_SOUND_FALLBACK_SRC)) {
+        audio.src = ORDER_PROCESSING_ALERT_SOUND_FALLBACK_SRC;
+        audio.load();
+        audio.currentTime = 0;
+        await audio.play();
+        return;
+      }
+
+      throw error;
+    }
+  }, [getPendingAlertAudio]);
+
+  const loadPendingOrderProcessingSummary = useCallback(async () => {
+    if (!storecode) {
+      setPendingSummary({
+        pendingCount: 0,
+        oldestPendingAt: '',
+        recentPayments: [],
+      });
+      setPendingAlertError(null);
+      setPendingAlertLastCheckedAt('');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/payment/getWalletUsdtPendingOrderProcessingSummaryByStorecode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode,
+          limit: 4,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String((payload as Record<string, unknown>)?.error || '주문처리 미완료 건수를 조회하지 못했습니다.'));
+      }
+
+      const result = isRecord((payload as Record<string, unknown>)?.result)
+        ? ((payload as Record<string, unknown>).result as Record<string, unknown>)
+        : {};
+
+      const rawPayments = Array.isArray(result.recentPayments) ? result.recentPayments : [];
+      setPendingSummary({
+        pendingCount: Number(result.pendingCount || 0),
+        oldestPendingAt: String(result.oldestPendingAt || ''),
+        recentPayments: rawPayments.map((item) => {
+          const source = isRecord(item) ? item : {};
+          return {
+            id: String(source.id || ''),
+            tradeId: String(source.tradeId || ''),
+            storecode: String(source.storecode || ''),
+            storeName: String(source.storeName || ''),
+            storeLogo: String(source.storeLogo || ''),
+            memberNickname: String(source.memberNickname || ''),
+            usdtAmount: Number(source.usdtAmount || 0),
+            krwAmount: Number(source.krwAmount || 0),
+            createdAt: String(source.createdAt || ''),
+            confirmedAt: String(source.confirmedAt || ''),
+            orderProcessing: String(source.orderProcessing || ''),
+            orderProcessingUpdatedAt: String(source.orderProcessingUpdatedAt || ''),
+          };
+        }),
+      });
+      setPendingAlertError(null);
+      setPendingAlertLastCheckedAt(new Date().toISOString());
+    } catch (error) {
+      setPendingAlertError(error instanceof Error ? error.message : '미완료 주문처리 현황 조회 중 오류가 발생했습니다.');
+    }
+  }, [storecode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const saved = window.localStorage.getItem(ORDER_PROCESSING_ALERT_SOUND_ENABLED_KEY);
+      setPendingAlertSoundEnabled(saved === null ? true : saved === 'true');
+    } catch (error) {
+      console.warn('failed to load pending alert sound option', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!canAccessStorePages || !storecode) {
+      setPendingSummary({
+        pendingCount: 0,
+        oldestPendingAt: '',
+        recentPayments: [],
+      });
+      setPendingAlertError(null);
+      setPendingAlertLastCheckedAt('');
+      return;
+    }
+
+    let isActive = true;
+    let loading = false;
+
+    const run = async () => {
+      if (loading || !isActive) return;
+      loading = true;
+      await loadPendingOrderProcessingSummary();
+      loading = false;
+    };
+
+    run();
+    const intervalId = window.setInterval(run, ORDER_PROCESSING_ALERT_POLLING_MS);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(intervalId);
+    };
+  }, [canAccessStorePages, loadPendingOrderProcessingSummary, storecode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    setPendingAlertCards((previousCards) => {
+      const incomingPayments = pendingSummary.recentPayments;
+      const incomingByKey = new Map<string, PendingOrderProcessingItem>();
+      incomingPayments.forEach((payment) => {
+        incomingByKey.set(resolvePendingCardKey(payment), payment);
+      });
+
+      const previousByKey = new Map(previousCards.map((card) => [card.cardKey, card]));
+      const nextCards: PendingAlertCardItem[] = [];
+
+      incomingPayments.forEach((payment) => {
+        const cardKey = resolvePendingCardKey(payment);
+        const previousCard = previousByKey.get(cardKey);
+
+        if (previousCard) {
+          nextCards.push({
+            ...previousCard,
+            ...payment,
+            cardKey,
+            cardState: previousCard.cardState === 'exiting' ? 'stable' : previousCard.cardState,
+          });
+          return;
+        }
+
+        nextCards.push({
+          ...payment,
+          cardKey,
+          cardState: 'entering',
+        });
+
+        const settleTimerId = window.setTimeout(() => {
+          setPendingAlertCards((cards) =>
+            cards.map((card) =>
+              card.cardKey === cardKey && card.cardState === 'entering'
+                ? { ...card, cardState: 'stable' }
+                : card,
+            ),
+          );
+        }, ORDER_PROCESSING_CARD_ENTER_MS);
+        pendingCardTimerIdsRef.current.push(settleTimerId);
+      });
+
+      previousCards.forEach((card) => {
+        if (incomingByKey.has(card.cardKey)) return;
+
+        if (card.cardState === 'exiting') {
+          nextCards.push(card);
+          return;
+        }
+
+        nextCards.push({
+          ...card,
+          cardState: 'exiting',
+        });
+
+        const removeTimerId = window.setTimeout(() => {
+          setPendingAlertCards((cards) => cards.filter((entry) => entry.cardKey !== card.cardKey));
+        }, ORDER_PROCESSING_CARD_EXIT_MS);
+        pendingCardTimerIdsRef.current.push(removeTimerId);
+      });
+
+      return nextCards;
+    });
+  }, [pendingSummary.recentPayments]);
+
+  useEffect(() => {
+    if (!canAccessStorePages || !storecode) {
+      previousPendingCountRef.current = 0;
+      return;
+    }
+
+    const pendingCount = Number(pendingSummary.pendingCount || 0);
+    const previousCount = previousPendingCountRef.current;
+    const countIncreased = pendingCount > previousCount;
+
+    if (pendingAlertSoundEnabled && pendingCount > 0) {
+      const now = Date.now();
+      const shouldPlayByInterval = now - lastAlertSoundAtRef.current > ORDER_PROCESSING_ALERT_SOUND_INTERVAL_MS;
+      if (countIncreased || shouldPlayByInterval) {
+        void playPendingAlertTone().catch(() => undefined);
+        lastAlertSoundAtRef.current = now;
+      }
+    }
+
+    previousPendingCountRef.current = pendingCount;
+  }, [canAccessStorePages, pendingAlertSoundEnabled, pendingSummary.pendingCount, playPendingAlertTone, storecode]);
+
+  useEffect(() => {
+    const audio = getPendingAlertAudio();
+    audio?.load();
+
+    const unlockAudio = () => {
+      if (pendingAlertAudioUnlockedRef.current) return;
+
+      const pendingCount = Number(pendingSummary.pendingCount || 0);
+      if (!pendingAlertSoundEnabled || pendingCount <= 0) return;
+
+      pendingAlertAudioUnlockedRef.current = true;
+      void playPendingAlertTone()
+        .then(() => {
+          lastAlertSoundAtRef.current = Date.now();
+        })
+        .catch(() => {
+          pendingAlertAudioUnlockedRef.current = false;
+        });
+    };
+
+    window.addEventListener('pointerdown', unlockAudio);
+    window.addEventListener('keydown', unlockAudio);
+
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+  }, [getPendingAlertAudio, pendingAlertSoundEnabled, pendingSummary.pendingCount, playPendingAlertTone]);
+
+  useEffect(() => {
+    return () => {
+      if (!pendingAlertAudioRef.current) return;
+      pendingAlertAudioRef.current.pause();
+      pendingAlertAudioRef.current.currentTime = 0;
+      pendingAlertAudioRef.current = null;
+      pendingAlertAudioUnlockedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      pendingCardTimerIdsRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      pendingCardTimerIdsRef.current = [];
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!canAccessStorePages || !storecode || typeof document === 'undefined') {
+      return;
+    }
+
+    const originalTitle = document.title;
+    const pendingCount = Number(pendingSummary.pendingCount || 0);
+    if (pendingCount > 0) {
+      document.title = `[미처리 ${pendingCount}건] ${originalTitle}`;
+    }
+
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [canAccessStorePages, pendingSummary.pendingCount, storecode]);
+
+  const togglePendingAlertSound = async () => {
+    const nextValue = !pendingAlertSoundEnabled;
+    setPendingAlertSoundEnabled(nextValue);
+
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(ORDER_PROCESSING_ALERT_SOUND_ENABLED_KEY, String(nextValue));
+      } catch (error) {
+        console.warn('failed to store pending alert sound option', error);
+      }
+    }
+
+    if (nextValue && Number(pendingSummary.pendingCount || 0) > 0) {
+      try {
+        await playPendingAlertTone();
+        lastAlertSoundAtRef.current = Date.now();
+      } catch (error) {
+        console.warn('failed to play pending alert tone', error);
+      }
+    }
+  };
+
+  const openDisconnectModal = () => {
+    if (!hasConnectedWallet || disconnecting) {
+      return;
+    }
+    setDisconnectModalOpen(true);
+  };
+
+  const closeDisconnectModal = () => {
+    if (disconnecting) {
+      return;
+    }
+    setDisconnectModalOpen(false);
+  };
+
+  const handleDisconnectWallet = async () => {
+    if (!hasConnectedWallet || disconnecting) {
+      return;
+    }
+
+    setDisconnecting(true);
+    try {
+      for (const walletItem of connectedWallets) {
+        try {
+          await disconnect(walletItem);
+        } catch (error) {
+          console.warn('disconnect(connectedWallet) failed', error);
+        }
+      }
+
+      if (activeWallet) {
+        await disconnect(activeWallet);
+      }
+    } catch (error) {
+      console.warn('disconnect() failed, fallback to wallet.disconnect()', error);
+      try {
+        await activeWallet?.disconnect?.();
+      } catch (fallbackError) {
+        console.warn('activeWallet.disconnect() failed', fallbackError);
+      }
+    } finally {
+      clearWalletConnectionState();
+      window.dispatchEvent(new Event('orangex-wallet-disconnected'));
+      window.location.replace(window.location.pathname + window.location.search);
+    }
+  };
 
   const menuItems = useMemo<MenuItem[]>(
     () => [
@@ -337,7 +802,127 @@ export default function P2PStoreManagementLayout({ children }: { children: React
       </aside>
 
       <div className={`min-h-screen transition-all duration-300 ${desktopSidebarWidthClass}`}>
-        <div className="px-4 pb-10 pt-16 lg:px-8 lg:pt-8">
+        {showPinnedPendingAlert && (
+          <div className={`pointer-events-none fixed inset-x-0 top-12 z-[120] px-3 lg:top-3 ${desktopSidebarWidthClass}`}>
+            <div className="mx-auto max-w-6xl">
+              <section className="pointer-events-auto rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-700">Order Processing Alert</p>
+                    <p className="mt-0.5 text-sm font-bold text-slate-900 sm:text-[15px]">
+                      주문처리 미완료 {formatNumber(pendingSummary.pendingCount)}건
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      oldest {toTimeAgoLabel(pendingSummary.oldestPendingAt)} · checked {toDateTimeLabel(pendingAlertLastCheckedAt)}
+                    </p>
+                    {pendingAlertError && <p className="mt-0.5 text-[11px] text-rose-700">조회 오류: {pendingAlertError}</p>}
+                  </div>
+
+                  <div className="flex shrink-0 flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={togglePendingAlertSound}
+                      className={`inline-flex h-7 items-center justify-center rounded-lg border px-2 text-[10px] font-semibold transition ${
+                        pendingAlertSoundEnabled
+                          ? 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300'
+                          : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
+                      }`}
+                    >
+                      {pendingAlertSoundEnabled ? '알림음 끄기' : '알림음 켜기'}
+                    </button>
+                    <Link
+                      href={paymentManagementHref}
+                      className="inline-flex h-7 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-[10px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                    >
+                      결제관리로 이동
+                    </Link>
+                  </div>
+                </div>
+
+                {pendingAlertCards.length > 0 && (
+                  <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+                    {pendingAlertCards.map((payment) => {
+                      const motionClass =
+                        payment.cardState === 'exiting'
+                          ? 'opacity-0 -translate-y-1 scale-[0.98]'
+                          : 'opacity-100 translate-y-0 scale-100';
+
+                      return (
+                        <article
+                          key={payment.cardKey}
+                          className={`min-w-[160px] rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 transition-all duration-500 ease-out ${motionClass} ${
+                            payment.cardState === 'entering' ? 'pending-order-flash' : ''
+                          }`}
+                        >
+                          <div className="mb-1 flex items-center gap-1.5">
+                            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white text-[10px] font-bold text-slate-600">
+                              {payment.storeLogo ? (
+                                <span
+                                  className="h-full w-full bg-cover bg-center"
+                                  style={{ backgroundImage: `url(${encodeURI(payment.storeLogo)})` }}
+                                  aria-label={payment.storeName || payment.storecode || 'store logo'}
+                                />
+                              ) : (
+                                (payment.storeName || payment.storecode || 'S').slice(0, 1)
+                              )}
+                            </span>
+                            <p className="truncate text-[11px] font-semibold text-slate-700">
+                              {payment.storeName || payment.storecode || '-'}
+                            </p>
+                          </div>
+
+                          <div className="flex items-end justify-between gap-2">
+                            <p className="truncate text-[13px] font-extrabold leading-tight text-slate-900">
+                              {payment.memberNickname || '-'}
+                            </p>
+                            <p className="shrink-0 text-[12px] font-extrabold leading-tight text-rose-700">
+                              {toTimeAgoLabel(payment.confirmedAt || payment.createdAt)}
+                            </p>
+                          </div>
+
+                          <div className="mt-1 flex justify-end gap-1">
+                            <div className="w-[72px] rounded-md border border-slate-200 bg-white px-1.5 py-1">
+                              <p className="text-[9px] font-semibold uppercase tracking-[0.02em] text-slate-500">USDT</p>
+                              <p className="text-right text-[12px] font-extrabold leading-tight text-slate-900">
+                                {formatUsdtAmount(payment.usdtAmount)}
+                              </p>
+                            </div>
+                            <div className="w-[72px] rounded-md border border-slate-200 bg-white px-1.5 py-1">
+                              <p className="text-[9px] font-semibold uppercase tracking-[0.02em] text-slate-500">KRW</p>
+                              <p className="text-right text-[12px] font-extrabold leading-tight text-slate-900">
+                                {formatNumber(payment.krwAmount)}
+                              </p>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            </div>
+          </div>
+        )}
+
+        <div className={`px-4 pb-10 lg:px-8 ${showPinnedPendingAlert ? 'pt-44 lg:pt-32' : 'pt-16 lg:pt-8'}`}>
+          {hasConnectedWallet && (
+            <div className="mb-4 flex justify-end">
+              <button
+                type="button"
+                onClick={openDisconnectModal}
+                disabled={disconnecting}
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.9">
+                  <path d="M10 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M15 12H4" strokeLinecap="round" />
+                  <path d="m8 8-4 4 4 4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {disconnecting ? '지갑 해제 중...' : '지갑 연결 해제'}
+              </button>
+            </div>
+          )}
+
           {showWalletConnectRequired ? (
             <section className="rounded-2xl border border-cyan-200 bg-cyan-50/70 px-4 py-4 shadow-[0_16px_32px_-24px_rgba(8,145,178,0.45)]">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -423,6 +1008,62 @@ export default function P2PStoreManagementLayout({ children }: { children: React
           )}
         </div>
       </div>
+
+      {disconnectModalOpen && (
+        <div
+          className="fixed inset-0 z-[130] flex items-end justify-center bg-slate-950/45 p-4 backdrop-blur-[2px] sm:items-center"
+          role="presentation"
+          onClick={closeDisconnectModal}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl border border-white/80 bg-[linear-gradient(160deg,rgba(255,255,255,0.98)_0%,rgba(254,242,242,0.96)_100%)] p-5 shadow-[0_40px_80px_-44px_rgba(15,23,42,0.85)]"
+            role="dialog"
+            aria-modal="true"
+            aria-label="지갑 연결 해제 확인"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.9">
+                <path d="M12 8v5m0 3h.01" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.72 3h16.92a2 2 0 0 0 1.72-3l-8.47-14.14a2 2 0 0 0-3.42 0Z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+
+            <h3 className="mt-3 text-xl font-extrabold tracking-tight text-slate-900">
+              지갑 연결을 해제할까요?
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              지갑 연결이 해제되며 웹에 저장된 연결 정보와 캐시도 함께 삭제됩니다.
+              계속 진행하려면 다시 로그인해야 합니다.
+            </p>
+
+            <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50/80 p-3">
+              <p className="text-[12px] font-semibold text-rose-700">
+                연결 해제 후 현재 페이지가 새로고침됩니다.
+              </p>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={closeDisconnectModal}
+                disabled={disconnecting}
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleDisconnectWallet}
+                disabled={disconnecting}
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-rose-600 text-sm font-semibold text-white shadow-[0_16px_30px_-20px_rgba(225,29,72,0.9)] transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {disconnecting ? '해제 중...' : '연결 해제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <style jsx global>{`
         .p2p-store-connect-btn.tw-connect-wallet,
         .p2p-store-connect-btn.tw-connect-wallet *,
@@ -443,6 +1084,26 @@ export default function P2PStoreManagementLayout({ children }: { children: React
           color: #164e63 !important;
           -webkit-text-fill-color: #164e63 !important;
           opacity: 1 !important;
+        }
+
+        @keyframes pendingOrderFlash {
+          0%,
+          100% {
+            background-color: rgb(248 250 252);
+            box-shadow: 0 0 0 0 rgba(225, 29, 72, 0);
+          }
+          30% {
+            background-color: rgb(255 241 242);
+            box-shadow: 0 0 0 1px rgba(225, 29, 72, 0.35);
+          }
+          60% {
+            background-color: rgb(248 250 252);
+            box-shadow: 0 0 0 0 rgba(225, 29, 72, 0);
+          }
+        }
+
+        .pending-order-flash {
+          animation: pendingOrderFlash 0.85s ease-in-out 2;
         }
       `}</style>
     </div>

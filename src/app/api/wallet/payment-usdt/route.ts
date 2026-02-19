@@ -39,6 +39,8 @@ type WalletPaymentDocument = {
   krwAmount?: number;
   exchangeRate?: number;
   status: PaymentStatus;
+  order_processing?: string;
+  order_processing_updated_at?: string;
   transactionHash?: string;
   createdAt: string;
   confirmedAt?: string;
@@ -231,6 +233,10 @@ const serializePayment = (doc: WalletPaymentDocument & { _id?: ObjectId }) => ({
   krwAmount: doc.krwAmount ?? 0,
   exchangeRate: doc.exchangeRate ?? 0,
   status: doc.status,
+  order_processing: String(doc.order_processing || "PROCESSING").trim().toUpperCase(),
+  order_processing_updated_at: doc.order_processing_updated_at || "",
+  orderProcessing: String(doc.order_processing || "PROCESSING").trim().toUpperCase(),
+  orderProcessingUpdatedAt: doc.order_processing_updated_at || "",
   transactionHash: doc.transactionHash || "",
   createdAt: doc.createdAt,
   confirmedAt: doc.confirmedAt || "",
@@ -573,6 +579,8 @@ export async function POST(request: NextRequest) {
     const storecode = String(body?.storecode || "").trim();
     const adminWalletAddress = normalizeAddress(body?.adminWalletAddress);
     const limit = Math.min(Math.max(Number(body?.limit || 30), 1), 100);
+    const page = Math.max(Number(body?.page || 1), 1);
+    const skip = (page - 1) * limit;
 
     if (!storecode) {
       return NextResponse.json({ error: "storecode is required" }, { status: 400 });
@@ -601,6 +609,7 @@ export async function POST(request: NextRequest) {
       collection
         .find(storeQuery)
         .sort({ confirmedAt: -1, createdAt: -1 })
+        .skip(skip)
         .limit(limit)
         .toArray(),
       collection
