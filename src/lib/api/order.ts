@@ -4383,15 +4383,15 @@ export async function getActivePrivateTradeByBuyerWallet(
     const buyordersCollection = client.db(dbName).collection('buyorders');
     const buyerWalletCandidates = toWalletCandidates(normalizedBuyerWalletAddress);
     const tradableStatuses = ['ordered', 'accepted', 'paymentRequested'];
+    const normalizedBuyerWalletLower = normalizedBuyerWalletAddress.toLowerCase();
+    const isSameWallet = (value: unknown) =>
+      typeof value === 'string' && value.trim().toLowerCase() === normalizedBuyerWalletLower;
 
-    const order = await buyordersCollection.findOne<any>(
+    const primaryOrder = await buyordersCollection.findOne<any>(
       {
         privateSale: true,
         status: { $in: tradableStatuses },
-        $or: [
-          { walletAddress: { $in: buyerWalletCandidates } },
-          { 'buyer.walletAddress': { $in: buyerWalletCandidates } },
-        ],
+        'buyer.walletAddress': { $in: buyerWalletCandidates },
       },
       {
         sort: { createdAt: -1 },
@@ -4416,7 +4416,55 @@ export async function getActivePrivateTradeByBuyerWallet(
       },
     );
 
+    let order = primaryOrder;
     if (!order) {
+      order = await buyordersCollection.findOne<any>(
+        {
+          privateSale: true,
+          status: { $in: tradableStatuses },
+          walletAddress: { $in: buyerWalletCandidates },
+          $or: [
+            { 'buyer.walletAddress': { $exists: false } },
+            { 'buyer.walletAddress': null },
+            { 'buyer.walletAddress': '' },
+          ],
+        },
+        {
+          sort: { createdAt: -1 },
+          projection: {
+            _id: 1,
+            tradeId: 1,
+            status: 1,
+            createdAt: 1,
+            acceptedAt: 1,
+            paymentRequestedAt: 1,
+            paymentConfirmedAt: 1,
+            cancelledAt: 1,
+            krwAmount: 1,
+            usdtAmount: 1,
+            walletAddress: 1,
+            buyer: 1,
+            seller: 1,
+            store: 1,
+            storecode: 1,
+          },
+          maxTimeMS: 3500,
+        },
+      );
+    }
+
+    if (!order) {
+      return emptyResult;
+    }
+
+    const orderBuyerWalletAddress =
+      (typeof order?.buyer?.walletAddress === 'string' && order.buyer.walletAddress.trim())
+      || '';
+    const orderRootWalletAddress = typeof order?.walletAddress === 'string' ? order.walletAddress.trim() : '';
+    if (orderBuyerWalletAddress && !isSameWallet(orderBuyerWalletAddress)) {
+      return emptyResult;
+    }
+    if (!orderBuyerWalletAddress && orderRootWalletAddress && !isSameWallet(orderRootWalletAddress)) {
       return emptyResult;
     }
 
