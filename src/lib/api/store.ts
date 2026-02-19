@@ -2,6 +2,7 @@ import { create } from 'domain';
 import clientPromise from '../mongodb';
 
 import { dbName } from '../mongodb';
+import { normalizeHexColor } from '../storeBranding';
 
 const STORE_WALLET_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
@@ -374,6 +375,52 @@ export async function updateStoreDescription(data: any) {
       message: 'Store description updated successfully',
     };
   
+}
+
+// updateStoreBranding
+export async function updateStoreBranding(
+  {
+    storecode,
+    storeName,
+    storeLogo,
+    backgroundColor,
+  }: {
+    storecode: string;
+    storeName: string;
+    storeLogo: string;
+    backgroundColor: string;
+  }
+): Promise<boolean> {
+  const normalizedStorecode = String(storecode || '').trim();
+  const normalizedStoreName = String(storeName || '').trim();
+  const normalizedStoreLogo = String(storeLogo || '').trim();
+  const normalizedBackgroundColor = normalizeHexColor(backgroundColor);
+
+  if (!normalizedStorecode || !normalizedStoreName) {
+    return false;
+  }
+
+  const updatePayload: Record<string, unknown> = {
+    storeName: normalizedStoreName,
+    storeLogo: normalizedStoreLogo,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (normalizedBackgroundColor) {
+    updatePayload.backgroundColor = normalizedBackgroundColor;
+  } else if (String(backgroundColor || '').trim() === '') {
+    updatePayload.backgroundColor = '';
+  }
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('stores');
+
+  const result = await collection.updateOne(
+    { storecode: normalizedStorecode },
+    { $set: updatePayload },
+  );
+
+  return result.matchedCount > 0;
 }
 
 

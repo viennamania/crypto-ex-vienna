@@ -13,6 +13,7 @@ import { ethereum, polygon, arbitrum, bsc, type Chain } from 'thirdweb/chains';
 import { client } from '@/app/client';
 import { useClientWallets } from '@/lib/useClientWallets';
 import { useClientSettings } from '@/components/ClientSettingsProvider';
+import { rgbaFromHex, resolveStoreBrandColor } from '@/lib/storeBranding';
 import WalletConnectPrompt from '@/components/wallet-management/WalletConnectPrompt';
 import WalletSummaryCard from '@/components/wallet-management/WalletSummaryCard';
 import WalletManagementBottomNav from '@/components/wallet-management/WalletManagementBottomNav';
@@ -46,7 +47,14 @@ type PaymentStoreInfo = {
   storecode: string;
   storeName: string;
   storeLogo: string;
+  storeDescription: string;
+  backgroundColor: string;
   paymentWalletAddress: string;
+};
+
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 };
 
 const displayFont = Playfair_Display({
@@ -119,6 +127,9 @@ const normalizeWalletAddressList = (value: unknown): string[] => {
 };
 
 const BALANCE_SYNC_WARNING_THRESHOLD = 3;
+const HOME_SHORTCUT_BANNER_HIDE_KEY = 'wallet-home-shortcut-banner-hide-until';
+const HOME_SHORTCUT_BANNER_HIDE_DAYS = 7;
+const HOME_SHORTCUT_PROMPT_DELAY_MS = 12000;
 
 export default function WalletManagementHomePage() {
   const params = useParams();
@@ -178,6 +189,26 @@ export default function WalletManagementHomePage() {
   const [selectedSellerWallet, setSelectedSellerWallet] = useState(sellerWalletFromQuery);
   const [paymentStoreInfo, setPaymentStoreInfo] = useState<PaymentStoreInfo | null>(null);
   const [loadingPaymentStoreInfo, setLoadingPaymentStoreInfo] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [isIosDevice, setIsIosDevice] = useState(false);
+  const [isStandaloneMode, setIsStandaloneMode] = useState(false);
+  const [showHomeShortcutBanner, setShowHomeShortcutBanner] = useState(false);
+  const [showHomeShortcutGuide, setShowHomeShortcutGuide] = useState(false);
+  const [deferredInstallPrompt, setDeferredInstallPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
+
+  const storeBrandColor = useMemo(
+    () => resolveStoreBrandColor(storecode, paymentStoreInfo?.backgroundColor),
+    [paymentStoreInfo?.backgroundColor, storecode],
+  );
+  const storeBrandSoftBackground = useMemo(
+    () => rgbaFromHex(storeBrandColor, 0.1),
+    [storeBrandColor],
+  );
+  const storeBrandLightBorder = useMemo(
+    () => rgbaFromHex(storeBrandColor, 0.35),
+    [storeBrandColor],
+  );
 
   const selectedSeller = useMemo(
     () =>
@@ -196,6 +227,100 @@ export default function WalletManagementHomePage() {
   const balanceSyncStatusLabel = isBalanceSyncWarning
     ? '잔액 갱신 지연'
     : '실시간 동기화 중';
+
+  const hideHomeShortcutBanner = useCallback((days: number = HOME_SHORTCUT_BANNER_HIDE_DAYS) => {
+    const hideUntil = Date.now() + days * 24 * 60 * 60 * 1000;
+    setShowHomeShortcutBanner(false);
+    setShowHomeShortcutGuide(false);
+    try {
+      window.localStorage.setItem(HOME_SHORTCUT_BANNER_HIDE_KEY, String(hideUntil));
+    } catch (error) {
+      console.warn('Failed to store home shortcut banner state', error);
+    }
+  }, []);
+
+  const handleOpenHomeShortcutGuide = useCallback(async () => {
+    if (deferredInstallPrompt) {
+      try {
+        await deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        if (choice.outcome === 'accepted') {
+          setShowHomeShortcutBanner(false);
+          setDeferredInstallPrompt(null);
+          return;
+        }
+      } catch (error) {
+        console.warn('Failed to open install prompt', error);
+      }
+      setDeferredInstallPrompt(null);
+      hideHomeShortcutBanner();
+      return;
+    }
+
+    setShowHomeShortcutGuide(true);
+  }, [deferredInstallPrompt, hideHomeShortcutBanner]);
+
+  useEffect(() => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const mobileByAgent = /android|iphone|ipad|ipod|mobile/.test(userAgent);
+    const mobileByViewport = window.matchMedia('(max-width: 768px)').matches;
+    const standaloneByDisplayMode = window.matchMedia('(display-mode: standalone)').matches;
+    const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
+    const standaloneByNavigator = Boolean(navigatorWithStandalone.standalone);
+    const isTouchMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    const iosByAgent = /iphone|ipad|ipod/.test(userAgent);
+
+    setIsMobileDevice(mobileByAgent || mobileByViewport);
+    setIsStandaloneMode(standaloneByDisplayMode || standaloneByNavigator);
+    setIsIosDevice(iosByAgent || isTouchMac);
+  }, []);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setDeferredInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+
+    const handleAppInstalled = () => {
+      setDeferredInstallPrompt(null);
+      hideHomeShortcutBanner(365);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, [hideHomeShortcutBanner]);
+
+  useEffect(() => {
+    if (!isMobileDevice || isStandaloneMode) {
+      setShowHomeShortcutBanner(false);
+      return;
+    }
+
+    let hiddenUntil = 0;
+    try {
+      hiddenUntil = Number(window.localStorage.getItem(HOME_SHORTCUT_BANNER_HIDE_KEY) || '0');
+    } catch (error) {
+      console.warn('Failed to read home shortcut banner state', error);
+    }
+
+    if (Number.isFinite(hiddenUntil) && hiddenUntil > Date.now()) {
+      setShowHomeShortcutBanner(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowHomeShortcutBanner(true);
+    }, HOME_SHORTCUT_PROMPT_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isMobileDevice, isStandaloneMode]);
 
   const loadBalance = useCallback(async () => {
     if (!activeAccount?.address) {
@@ -397,6 +522,8 @@ export default function WalletManagementHomePage() {
         storecode: String(storeResult.storecode || storecode).trim(),
         storeName: String(storeResult.storeName || storecode || '가맹점').trim() || '가맹점',
         storeLogo: String(storeResult.storeLogo || storeResult.storeUrl || '').trim(),
+        storeDescription: String(storeResult.storeDescription || '').trim(),
+        backgroundColor: String(storeResult.backgroundColor || '').trim(),
         paymentWalletAddress: String(storeResult.paymentWalletAddress || '').trim(),
       });
     } catch (error) {
@@ -438,13 +565,30 @@ export default function WalletManagementHomePage() {
     >
       <AutoConnect client={client} wallets={[wallet]} />
 
-      <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-cyan-300/40 blur-3xl" />
-      <div className="pointer-events-none absolute top-24 right-0 h-80 w-80 rounded-full bg-blue-300/30 blur-3xl" />
+      <div
+        className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full blur-3xl"
+        style={{ backgroundColor: rgbaFromHex(storeBrandColor, 0.32) }}
+      />
+      <div
+        className="pointer-events-none absolute top-24 right-0 h-80 w-80 rounded-full blur-3xl"
+        style={{ backgroundColor: rgbaFromHex(storeBrandColor, 0.2) }}
+      />
 
       <div className="relative mx-auto w-full max-w-[430px] px-4 pb-28 pt-8">
         <div className="mb-7">
-          <p className="mb-2 inline-flex rounded-full border border-slate-300/80 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600">
-            Wallet Management Home
+          <p
+            className="mb-2 inline-flex rounded-full border border-slate-300/80 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600"
+            style={
+              storecode
+                ? {
+                    borderColor: storeBrandLightBorder,
+                    backgroundColor: storeBrandSoftBackground,
+                    color: storeBrandColor,
+                  }
+                : undefined
+            }
+          >
+            {storecode ? `${paymentStoreInfo?.storeName || storecode} BRAND HOME` : 'Wallet Management Home'}
           </p>
           <h1
             className="text-3xl font-semibold tracking-tight text-slate-900"
@@ -453,8 +597,9 @@ export default function WalletManagementHomePage() {
             USDT Finance
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            자산 관리부터 상점 결제까지, 서비스 이용 흐름을 하나로 연결했습니다.
-            필요한 업무를 바로 시작하세요.
+            {storecode
+              ? `${paymentStoreInfo?.storeName || '가맹점'} 전용 흐름으로 결제와 지갑 관리를 빠르게 시작하세요.`
+              : '자산 관리부터 상점 결제까지, 서비스 이용 흐름을 하나로 연결했습니다. 필요한 업무를 바로 시작하세요.'}
           </p>
         </div>
 
@@ -475,6 +620,57 @@ export default function WalletManagementHomePage() {
               }}
             />
 
+            {storecode && paymentStoreInfo && (
+              <section
+                className="mb-5 rounded-3xl border bg-white/80 p-4 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.42)] backdrop-blur"
+                style={{
+                  borderColor: storeBrandLightBorder,
+                  background: `linear-gradient(140deg, ${rgbaFromHex(storeBrandColor, 0.13)} 0%, rgba(255,255,255,0.88) 58%, rgba(255,255,255,0.94) 100%)`,
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border bg-white"
+                    style={{ borderColor: rgbaFromHex(storeBrandColor, 0.3) }}
+                  >
+                    {paymentStoreInfo.storeLogo ? (
+                      <span
+                        className="block h-full w-full bg-cover bg-center"
+                        style={{ backgroundImage: `url(${encodeURI(paymentStoreInfo.storeLogo)})` }}
+                        aria-label={paymentStoreInfo.storeName}
+                      />
+                    ) : (
+                      <span
+                        className="flex h-full w-full items-center justify-center text-[10px] font-bold"
+                        style={{ color: storeBrandColor }}
+                      >
+                        SHOP
+                      </span>
+                    )}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-semibold text-slate-900">{paymentStoreInfo.storeName}</p>
+                    <p className="truncate text-xs text-slate-600">가맹점 코드: {paymentStoreInfo.storecode}</p>
+                  </div>
+                  <span
+                    className="ml-auto inline-flex h-7 items-center rounded-full border px-2.5 text-[11px] font-semibold"
+                    style={{
+                      borderColor: rgbaFromHex(storeBrandColor, 0.35),
+                      color: storeBrandColor,
+                      backgroundColor: rgbaFromHex(storeBrandColor, 0.1),
+                    }}
+                  >
+                    BRAND
+                  </span>
+                </div>
+                {paymentStoreInfo.storeDescription && (
+                  <p className="mt-2 text-xs text-slate-600">
+                    {paymentStoreInfo.storeDescription}
+                  </p>
+                )}
+              </section>
+            )}
+
             <section className="mb-5 rounded-3xl border border-white/70 bg-white/75 p-5 shadow-[0_26px_60px_-35px_rgba(15,23,42,0.45)] backdrop-blur">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 MY DASHBOARD
@@ -492,9 +688,29 @@ export default function WalletManagementHomePage() {
                   <p className="font-semibold text-slate-800">스마트 계정</p>
                   <p className="mt-1 text-slate-600">{smartAccountEnabled ? '활성' : '비활성'}</p>
                 </div>
-                <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-2 py-3">
-                  <p className="font-semibold text-cyan-800">선택 상점</p>
-                  <p className="mt-1 truncate text-cyan-700">{storecode || '미지정'}</p>
+                <div
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-3"
+                  style={
+                    storecode
+                      ? {
+                          borderColor: storeBrandLightBorder,
+                          backgroundColor: storeBrandSoftBackground,
+                        }
+                      : undefined
+                  }
+                >
+                  <p
+                    className="font-semibold text-slate-800"
+                    style={storecode ? { color: storeBrandColor } : undefined}
+                  >
+                    선택 상점
+                  </p>
+                  <p
+                    className="mt-1 truncate text-slate-600"
+                    style={storecode ? { color: storeBrandColor } : undefined}
+                  >
+                    {storecode || '미지정'}
+                  </p>
                 </div>
               </div>
 
@@ -507,7 +723,8 @@ export default function WalletManagementHomePage() {
                 </Link>
                 <Link
                   href={paymentPath}
-                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-cyan-600 px-2 text-xs font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-500"
+                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-cyan-600 px-2 text-xs font-semibold text-white transition hover:-translate-y-0.5 hover:opacity-95"
+                  style={storecode ? { backgroundColor: storeBrandColor } : undefined}
                 >
                   결제 진행
                 </Link>
@@ -531,6 +748,73 @@ export default function WalletManagementHomePage() {
               description="연결 후 내 지갑 요약, 네트워크 정보, 결제 진입을 바로 사용할 수 있습니다."
             />
           </div>
+        )}
+
+        {showHomeShortcutBanner && (
+          <section
+            className="mb-5 rounded-2xl border bg-white/85 p-4 shadow-[0_16px_36px_-28px_rgba(15,23,42,0.45)] backdrop-blur"
+            style={{
+              borderColor: storeBrandLightBorder,
+              background: `linear-gradient(145deg, ${rgbaFromHex(storeBrandColor, 0.12)} 0%, rgba(255,255,255,0.9) 60%, rgba(255,255,255,0.95) 100%)`,
+            }}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p
+                  className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+                  style={{ color: storeBrandColor }}
+                >
+                  QUICK ACCESS
+                </p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  홈 화면에 추가하고 앱처럼 바로 실행하세요.
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {deferredInstallPrompt
+                    ? '한 번 탭으로 바로 추가할 수 있습니다.'
+                    : isIosDevice
+                      ? 'Safari 공유 버튼에서 홈 화면에 추가를 선택하세요.'
+                      : '브라우저 메뉴에서 홈 화면에 추가를 선택하세요.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => hideHomeShortcutBanner()}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full border bg-white transition"
+                style={{
+                  borderColor: rgbaFromHex(storeBrandColor, 0.28),
+                  color: rgbaFromHex(storeBrandColor, 0.78),
+                }}
+                aria-label="홈 바로가기 안내 닫기"
+              >
+                <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M5 5l10 10M15 5 5 15" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={handleOpenHomeShortcutGuide}
+                className="inline-flex h-10 items-center justify-center rounded-xl px-3 text-xs font-semibold text-white transition hover:opacity-95"
+                style={{ backgroundColor: storeBrandColor }}
+              >
+                {deferredInstallPrompt ? '홈에 바로 추가' : '추가 방법 보기'}
+              </button>
+              <button
+                type="button"
+                onClick={() => hideHomeShortcutBanner()}
+                className="inline-flex h-10 items-center justify-center rounded-xl border bg-white px-3 text-xs font-semibold transition hover:opacity-90"
+                style={{
+                  borderColor: rgbaFromHex(storeBrandColor, 0.35),
+                  color: storeBrandColor,
+                }}
+              >
+                나중에
+              </button>
+            </div>
+          </section>
         )}
 
         <section className="rounded-3xl border border-white/70 bg-white/75 p-5 shadow-[0_26px_60px_-35px_rgba(15,23,42,0.45)] backdrop-blur">
@@ -603,10 +887,24 @@ export default function WalletManagementHomePage() {
             </div>
 
             {storecode && (
-              <div className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50/80 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">지정 상점</p>
+              <div
+                className="mt-3 rounded-2xl border p-3"
+                style={{
+                  borderColor: storeBrandLightBorder,
+                  backgroundColor: rgbaFromHex(storeBrandColor, 0.1),
+                }}
+              >
+                <p
+                  className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+                  style={{ color: storeBrandColor }}
+                >
+                  지정 상점
+                </p>
                 <div className="mt-2 flex items-center gap-2.5">
-                  <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-cyan-200 bg-white">
+                  <span
+                    className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border bg-white"
+                    style={{ borderColor: rgbaFromHex(storeBrandColor, 0.3) }}
+                  >
                     {paymentStoreInfo?.storeLogo ? (
                       <span
                         className="block h-full w-full bg-cover bg-center"
@@ -614,7 +912,10 @@ export default function WalletManagementHomePage() {
                         aria-label={paymentStoreInfo.storeName || storecode}
                       />
                     ) : (
-                      <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-cyan-700">
+                      <span
+                        className="flex h-full w-full items-center justify-center text-[10px] font-bold"
+                        style={{ color: storeBrandColor }}
+                      >
                         SHOP
                       </span>
                     )}
@@ -625,7 +926,7 @@ export default function WalletManagementHomePage() {
                         ? '상점 정보를 확인 중입니다...'
                         : paymentStoreInfo?.storeName || storecode}
                     </p>
-                    <p className="text-xs text-cyan-700">
+                    <p className="text-xs" style={{ color: storeBrandColor }}>
                       {paymentStoreInfo?.storecode || storecode}
                     </p>
                   </div>
@@ -647,7 +948,8 @@ export default function WalletManagementHomePage() {
             </p>
             <Link
               href={paymentPath}
-              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-cyan-600 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-500"
+              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-cyan-600 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:opacity-95"
+              style={storecode ? { backgroundColor: storeBrandColor } : undefined}
             >
               {storecode
                 ? loadingPaymentStoreInfo
@@ -813,6 +1115,83 @@ export default function WalletManagementHomePage() {
           거래 전 금액, 수신지갑, 네트워크 정보를 반드시 확인해 주세요.
         </p>
       </div>
+
+      {showHomeShortcutGuide && (
+        <div
+          className="fixed inset-0 z-[120] flex items-end justify-center bg-slate-950/40 p-4 backdrop-blur-[1px] sm:items-center"
+          role="presentation"
+          onClick={() => setShowHomeShortcutGuide(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl border bg-white p-5 shadow-[0_34px_70px_-40px_rgba(15,23,42,0.8)]"
+            style={{
+              borderColor: storeBrandLightBorder,
+              background: `linear-gradient(165deg, ${rgbaFromHex(storeBrandColor, 0.08)} 0%, rgba(255,255,255,0.97) 54%, rgba(255,255,255,1) 100%)`,
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="홈 화면 추가 안내"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p
+              className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+              style={{ color: storeBrandColor }}
+            >
+              QUICK ACCESS
+            </p>
+            <h3 className="mt-1 text-xl font-semibold tracking-tight text-slate-900">
+              홈 화면에 추가
+            </h3>
+            <p className="mt-2 text-sm text-slate-600">
+              {isIosDevice
+                ? 'iPhone Safari에서 아래 순서대로 추가하면 앱처럼 바로 실행할 수 있습니다.'
+                : '브라우저 메뉴에서 홈 화면에 추가하면 다음부터 앱처럼 바로 열 수 있습니다.'}
+            </p>
+
+            <div
+              className="mt-4 rounded-2xl border px-3 py-3 text-xs text-slate-700"
+              style={{
+                borderColor: rgbaFromHex(storeBrandColor, 0.26),
+                backgroundColor: rgbaFromHex(storeBrandColor, 0.08),
+              }}
+            >
+              {isIosDevice ? (
+                <>
+                  <p>1. Safari의 공유 버튼을 누릅니다.</p>
+                  <p className="mt-1">2. 홈 화면에 추가를 선택하고 완료를 누릅니다.</p>
+                </>
+              ) : (
+                <>
+                  <p>1. 브라우저 메뉴(⋮)를 엽니다.</p>
+                  <p className="mt-1">2. 홈 화면에 추가 또는 앱 설치를 선택합니다.</p>
+                </>
+              )}
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setShowHomeShortcutGuide(false)}
+                className="inline-flex h-10 items-center justify-center rounded-xl border bg-white text-sm font-semibold transition hover:opacity-90"
+                style={{
+                  borderColor: rgbaFromHex(storeBrandColor, 0.3),
+                  color: storeBrandColor,
+                }}
+              >
+                확인
+              </button>
+              <button
+                type="button"
+                onClick={() => hideHomeShortcutBanner()}
+                className="inline-flex h-10 items-center justify-center rounded-xl text-sm font-semibold text-white transition hover:opacity-95"
+                style={{ backgroundColor: storeBrandColor }}
+              >
+                7일간 닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <WalletManagementBottomNav lang={lang} active="home" />
     </main>

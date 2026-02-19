@@ -3,11 +3,13 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
+import { normalizeHexColor, resolveStoreBrandColor, rgbaFromHex } from '@/lib/storeBranding';
 
 type DashboardStore = {
   storecode: string;
   storeName: string;
   storeLogo: string;
+  backgroundColor: string;
   paymentWalletAddress: string;
   adminWalletAddress: string;
 };
@@ -93,6 +95,12 @@ export default function P2PStoreManagementHomePage() {
   const [error, setError] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const [members, setMembers] = useState<StoreMember[]>([]);
+  const [brandingStoreName, setBrandingStoreName] = useState('');
+  const [brandingStoreLogo, setBrandingStoreLogo] = useState('');
+  const [brandingBackgroundColor, setBrandingBackgroundColor] = useState('#0ea5e9');
+  const [savingBranding, setSavingBranding] = useState(false);
+  const [brandingError, setBrandingError] = useState<string | null>(null);
+  const [brandingSuccess, setBrandingSuccess] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!storecode) {
@@ -148,6 +156,7 @@ export default function P2PStoreManagementHomePage() {
           storecode: String(storeData.storecode || storecode),
           storeName: String(storeData.storeName || storecode),
           storeLogo: String(storeData.storeLogo || ''),
+          backgroundColor: String(storeData.backgroundColor || '').trim(),
           paymentWalletAddress: String(storeData.paymentWalletAddress || ''),
           adminWalletAddress: String(storeData.adminWalletAddress || ''),
         },
@@ -210,6 +219,124 @@ export default function P2PStoreManagementHomePage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!dashboard?.store) {
+      setBrandingStoreName('');
+      setBrandingStoreLogo('');
+      setBrandingBackgroundColor('#0ea5e9');
+      setBrandingError(null);
+      setBrandingSuccess(null);
+      return;
+    }
+
+    setBrandingStoreName(String(dashboard.store.storeName || '').trim());
+    setBrandingStoreLogo(String(dashboard.store.storeLogo || '').trim());
+    setBrandingBackgroundColor(resolveStoreBrandColor(
+      String(dashboard.store.storecode || ''),
+      dashboard.store.backgroundColor,
+    ));
+    setBrandingError(null);
+    setBrandingSuccess(null);
+  }, [
+    dashboard?.store,
+  ]);
+
+  const resolvedBrandColor = useMemo(
+    () => resolveStoreBrandColor(storecode, brandingBackgroundColor),
+    [brandingBackgroundColor, storecode],
+  );
+
+  const isBrandingChanged = useMemo(() => {
+    if (!dashboard?.store) return false;
+    const currentStoreName = String(dashboard.store.storeName || '').trim();
+    const currentStoreLogo = String(dashboard.store.storeLogo || '').trim();
+    const currentBackgroundColor = resolveStoreBrandColor(
+      String(dashboard.store.storecode || ''),
+      dashboard.store.backgroundColor,
+    );
+
+    return (
+      currentStoreName !== String(brandingStoreName || '').trim()
+      || currentStoreLogo !== String(brandingStoreLogo || '').trim()
+      || currentBackgroundColor !== resolveStoreBrandColor(storecode, brandingBackgroundColor)
+    );
+  }, [
+    brandingBackgroundColor,
+    brandingStoreLogo,
+    brandingStoreName,
+    dashboard?.store,
+    storecode,
+  ]);
+
+  const resetBrandingInputs = useCallback(() => {
+    if (!dashboard?.store) return;
+    setBrandingStoreName(String(dashboard.store.storeName || '').trim());
+    setBrandingStoreLogo(String(dashboard.store.storeLogo || '').trim());
+    setBrandingBackgroundColor(resolveStoreBrandColor(
+      String(dashboard.store.storecode || ''),
+      dashboard.store.backgroundColor,
+    ));
+    setBrandingError(null);
+    setBrandingSuccess(null);
+  }, [dashboard?.store]);
+
+  const saveBranding = useCallback(async () => {
+    if (!storecode || !dashboard?.store || savingBranding) {
+      return;
+    }
+
+    const nextStoreName = String(brandingStoreName || '').trim();
+    const nextStoreLogo = String(brandingStoreLogo || '').trim();
+    const nextBackgroundColor = normalizeHexColor(brandingBackgroundColor);
+
+    if (!nextStoreName) {
+      setBrandingError('가맹점 이름을 입력해 주세요.');
+      setBrandingSuccess(null);
+      return;
+    }
+    if (!nextBackgroundColor) {
+      setBrandingError('브랜드 컬러는 6자리 HEX 형식으로 입력해 주세요.');
+      setBrandingSuccess(null);
+      return;
+    }
+
+    setSavingBranding(true);
+    setBrandingError(null);
+    setBrandingSuccess(null);
+    try {
+      const response = await fetch('/api/store/updateStoreBranding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode,
+          storeName: nextStoreName,
+          storeLogo: nextStoreLogo,
+          backgroundColor: nextBackgroundColor,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.result !== true) {
+        throw new Error(String(data?.error || '브랜딩 저장에 실패했습니다.'));
+      }
+
+      setBrandingSuccess('브랜딩 설정을 저장했습니다.');
+      await loadData();
+    } catch (saveError) {
+      setBrandingError(saveError instanceof Error ? saveError.message : '브랜딩 저장에 실패했습니다.');
+      setBrandingSuccess(null);
+    } finally {
+      setSavingBranding(false);
+    }
+  }, [
+    brandingBackgroundColor,
+    brandingStoreLogo,
+    brandingStoreName,
+    dashboard?.store,
+    loadData,
+    savingBranding,
+    storecode,
+  ]);
 
   const verifiedCount = useMemo(
     () => members.filter((member) => member.verified).length,
@@ -287,6 +414,120 @@ export default function P2PStoreManagementHomePage() {
                   코드: {dashboard.store.storecode} · 결제지갑: {shortAddress(dashboard.store.paymentWalletAddress)}
                 </p>
               </div>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">홈 브랜딩 설정</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  wallet-management 홈에서 `storecode` 기준으로 적용됩니다.
+                </p>
+              </div>
+              <span
+                className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border px-3 text-[11px] font-semibold"
+                style={{
+                  color: resolvedBrandColor,
+                  borderColor: rgbaFromHex(resolvedBrandColor, 0.36),
+                  backgroundColor: rgbaFromHex(resolvedBrandColor, 0.12),
+                }}
+              >
+                Live
+              </span>
+            </div>
+
+            <div className="mt-3 grid gap-3">
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-600">가맹점 이름</span>
+                <input
+                  value={brandingStoreName}
+                  onChange={(event) => {
+                    setBrandingStoreName(event.target.value);
+                    setBrandingError(null);
+                    setBrandingSuccess(null);
+                  }}
+                  className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                  placeholder="가맹점 이름"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-600">로고 URL</span>
+                <input
+                  value={brandingStoreLogo}
+                  onChange={(event) => {
+                    setBrandingStoreLogo(event.target.value);
+                    setBrandingError(null);
+                    setBrandingSuccess(null);
+                  }}
+                  className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                  placeholder="https://..."
+                />
+              </label>
+
+              <div className="grid grid-cols-[60px_1fr] gap-2">
+                <label className="block">
+                  <span className="text-xs font-semibold text-slate-600">컬러</span>
+                  <input
+                    type="color"
+                    value={resolvedBrandColor}
+                    onChange={(event) => {
+                      setBrandingBackgroundColor(event.target.value);
+                      setBrandingError(null);
+                      setBrandingSuccess(null);
+                    }}
+                    className="mt-1 h-10 w-full cursor-pointer rounded-xl border border-slate-200 bg-transparent p-1"
+                    aria-label="브랜드 컬러"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-slate-600">HEX 코드</span>
+                  <input
+                    value={brandingBackgroundColor}
+                    onChange={(event) => {
+                      setBrandingBackgroundColor(event.target.value);
+                      setBrandingError(null);
+                      setBrandingSuccess(null);
+                    }}
+                    className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                    placeholder="#0ea5e9"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {brandingError && (
+              <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                {brandingError}
+              </p>
+            )}
+            {brandingSuccess && (
+              <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+                {brandingSuccess}
+              </p>
+            )}
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={saveBranding}
+                disabled={!isBrandingChanged || savingBranding}
+                className="inline-flex h-10 items-center justify-center rounded-xl text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60"
+                style={{
+                  backgroundColor: resolvedBrandColor,
+                }}
+              >
+                {savingBranding ? '저장 중...' : '브랜딩 저장'}
+              </button>
+              <button
+                type="button"
+                onClick={resetBrandingInputs}
+                disabled={!isBrandingChanged || savingBranding}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                원래값 복원
+              </button>
             </div>
           </section>
 
