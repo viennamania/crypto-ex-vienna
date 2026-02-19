@@ -22,6 +22,8 @@ const isOrderProcessingCompleted = (value: string | undefined) =>
 const resolveOrderProcessingLabel = (value: string | undefined) =>
   isOrderProcessingCompleted(value) ? '주문처리완료' : '주문처리중';
 
+const PAYMENT_LIST_POLLING_MS = 15000;
+
 export default function P2PAgentPaymentManagementPage() {
   const PAGE_SIZE = 20;
   const searchParams = useSearchParams();
@@ -40,7 +42,9 @@ export default function P2PAgentPaymentManagementPage() {
   const [updatingOrderProcessing, setUpdatingOrderProcessing] = useState(false);
   const [orderProcessingError, setOrderProcessingError] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+
     if (!agentcode) {
       setAgent(null);
       setPayments([]);
@@ -52,8 +56,10 @@ export default function P2PAgentPaymentManagementPage() {
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const [agentData, paymentsResult] = await Promise.all([
         fetchAgentSummary(agentcode),
@@ -71,6 +77,11 @@ export default function P2PAgentPaymentManagementPage() {
       setTotalKrwAmount(paymentsResult.totalKrwAmount);
       setTotalUsdtAmount(paymentsResult.totalUsdtAmount);
     } catch (loadError) {
+      if (silent) {
+        console.warn('payment list polling failed', loadError);
+        return;
+      }
+
       setAgent(null);
       setPayments([]);
       setTotalCount(0);
@@ -78,13 +89,35 @@ export default function P2PAgentPaymentManagementPage() {
       setTotalUsdtAmount(0);
       setError(loadError instanceof Error ? loadError.message : '결제 목록을 불러오지 못했습니다.');
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [PAGE_SIZE, agentcode, currentPage, keyword]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!agentcode) return;
+
+    let isActive = true;
+    let polling = false;
+
+    const run = async () => {
+      if (!isActive || polling) return;
+      polling = true;
+      await loadData({ silent: true });
+      polling = false;
+    };
+
+    const intervalId = window.setInterval(run, PAYMENT_LIST_POLLING_MS);
+    return () => {
+      isActive = false;
+      window.clearInterval(intervalId);
+    };
+  }, [agentcode, loadData]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalCount / PAGE_SIZE)),
