@@ -1203,7 +1203,7 @@ export default function PaymentUsdtPage({
             walletAddress={activeAccount.address}
             walletAddressDisplay={shortAddress(activeAccount.address)}
             networkLabel={activeNetwork.label}
-            usdtBalanceDisplay={`${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`}
+            usdtBalanceDisplay={`${balance.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })} USDT`}
             modeLabel={paymentTabLabel}
             smartAccountEnabled={smartAccountEnabled}
             disconnectRedirectPath={disconnectRedirectPath}

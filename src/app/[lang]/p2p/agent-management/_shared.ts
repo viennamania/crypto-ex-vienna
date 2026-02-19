@@ -11,6 +11,7 @@ export type AgentStoreItem = {
   storecode: string;
   storeName: string;
   storeLogo: string;
+  usdtToKrwRate: number;
   adminWalletAddress: string;
   paymentWalletAddress: string;
   totalPaymentConfirmedCount: number;
@@ -171,6 +172,7 @@ const normalizeStore = (value: unknown): AgentStoreItem => {
     storecode: toText(source.storecode),
     storeName: toText(source.storeName),
     storeLogo: toText(source.storeLogo),
+    usdtToKrwRate: toNumber(source.usdtToKrwRate),
     adminWalletAddress: toText(source.adminWalletAddress),
     paymentWalletAddress: toText(source.paymentWalletAddress),
     totalPaymentConfirmedCount: toNumber(source.totalPaymentConfirmedCount),

@@ -1148,6 +1148,7 @@ export async function getAllStoresByAgentcode(
           storecode: 1,
           storeName: 1,
           storeLogo: 1,
+          usdtToKrwRate: 1,
           adminWalletAddress: 1,
           paymentWalletAddress: 1,
           agentcode: 1,

@@ -46,7 +46,7 @@ export default function WalletSummaryCard({
   const usdtBalanceValueText = hasUsdtSuffix
     ? usdtBalanceDisplay.trim().replace(/\sUSDT$/i, '')
     : usdtBalanceDisplay;
-  const usdtBalanceDecimalMatch = usdtBalanceValueText.match(/([.,]\d{1,2})$/);
+  const usdtBalanceDecimalMatch = usdtBalanceValueText.match(/([.,]\d{1,6})$/);
   const usdtBalanceMainText = usdtBalanceDecimalMatch
     ? usdtBalanceValueText.slice(0, -usdtBalanceDecimalMatch[1].length)
     : usdtBalanceValueText;

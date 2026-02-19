@@ -98,6 +98,7 @@ export default function P2PStoreManagementHomePage() {
   const [brandingStoreName, setBrandingStoreName] = useState('');
   const [brandingStoreLogo, setBrandingStoreLogo] = useState('');
   const [brandingBackgroundColor, setBrandingBackgroundColor] = useState('#0ea5e9');
+  const [uploadingBrandingLogo, setUploadingBrandingLogo] = useState(false);
   const [savingBranding, setSavingBranding] = useState(false);
   const [brandingError, setBrandingError] = useState<string | null>(null);
   const [brandingSuccess, setBrandingSuccess] = useState<string | null>(null);
@@ -338,6 +339,47 @@ export default function P2PStoreManagementHomePage() {
     storecode,
   ]);
 
+  const uploadBrandingLogoToBlob = useCallback(async (file: File) => {
+    if (!file) {
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      setBrandingError('이미지 파일만 업로드할 수 있습니다.');
+      setBrandingSuccess(null);
+      return;
+    }
+
+    setUploadingBrandingLogo(true);
+    setBrandingError(null);
+    setBrandingSuccess(null);
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'content-type': file.type || 'application/octet-stream' },
+        body: file,
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || '로고 업로드에 실패했습니다.');
+      }
+
+      const payload = await response.json().catch(() => ({}));
+      const uploadedUrl = String(payload?.url || '').trim();
+      if (!uploadedUrl) {
+        throw new Error('업로드 URL을 받지 못했습니다.');
+      }
+
+      setBrandingStoreLogo(uploadedUrl);
+      setBrandingSuccess('로고 파일 업로드가 완료되었습니다. 저장 버튼으로 적용해 주세요.');
+    } catch (uploadError) {
+      setBrandingError(uploadError instanceof Error ? uploadError.message : '로고 업로드에 실패했습니다.');
+      setBrandingSuccess(null);
+    } finally {
+      setUploadingBrandingLogo(false);
+    }
+  }, []);
+
   const verifiedCount = useMemo(
     () => members.filter((member) => member.verified).length,
     [members],
@@ -452,19 +494,44 @@ export default function P2PStoreManagementHomePage() {
                 />
               </label>
 
-              <label className="block">
-                <span className="text-xs font-semibold text-slate-600">로고 URL</span>
-                <input
-                  value={brandingStoreLogo}
-                  onChange={(event) => {
-                    setBrandingStoreLogo(event.target.value);
-                    setBrandingError(null);
-                    setBrandingSuccess(null);
-                  }}
-                  className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                  placeholder="https://..."
-                />
-              </label>
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-600">로고 이미지 (Vercel Blob)</span>
+                  <label className="inline-flex h-8 cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900">
+                    {uploadingBrandingLogo ? '업로드 중...' : '파일 선택'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      disabled={uploadingBrandingLogo}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) {
+                          uploadBrandingLogoToBlob(file);
+                        }
+                        event.currentTarget.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
+                    {brandingStoreLogo ? (
+                      <span
+                        className="h-full w-full bg-cover bg-center"
+                        style={{ backgroundImage: `url(${encodeURI(brandingStoreLogo)})` }}
+                        aria-label="업로드 로고 미리보기"
+                      />
+                    ) : (
+                      <span className="text-[10px] font-semibold text-slate-500">LOGO</span>
+                    )}
+                  </span>
+                  <p className="min-w-0 truncate text-[11px] text-slate-500">
+                    {brandingStoreLogo || '업로드된 로고가 없습니다.'}
+                  </p>
+                </div>
+              </div>
 
               <div className="grid grid-cols-[60px_1fr] gap-2">
                 <label className="block">

@@ -1629,7 +1629,7 @@ export default function BuyUsdtPage({
             walletAddressDisplay={shortAddress(activeAccount.address)}
             networkLabel={activeNetwork.label}
             usdtBalanceDisplay={
-              `${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`
+              `${balance.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })} USDT`
             }
             modeLabel={buyTabLabel}
             smartAccountEnabled={smartAccountEnabled}

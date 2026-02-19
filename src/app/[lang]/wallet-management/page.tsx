@@ -609,7 +609,7 @@ export default function WalletManagementHomePage() {
               walletAddress={activeAccount.address}
               walletAddressDisplay={shortAddress(activeAccount.address)}
               networkLabel={activeNetwork.label}
-              usdtBalanceDisplay={`${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`}
+              usdtBalanceDisplay={`${balance.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })} USDT`}
               balanceUpdatedAtLabel={balanceSyncStatusLabel}
               balanceUpdatedAtWarning={isBalanceSyncWarning}
               modeLabel="홈"
