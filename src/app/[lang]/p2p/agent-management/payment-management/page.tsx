@@ -22,7 +22,7 @@ const isOrderProcessingCompleted = (value: string | undefined) =>
 const resolveOrderProcessingLabel = (value: string | undefined) =>
   isOrderProcessingCompleted(value) ? '주문처리완료' : '주문처리중';
 
-const PAYMENT_LIST_POLLING_MS = 15000;
+const PAYMENT_LIST_POLLING_MS = 10000;
 
 export default function P2PAgentPaymentManagementPage() {
   const PAGE_SIZE = 20;
