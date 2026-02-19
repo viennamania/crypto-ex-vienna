@@ -105,7 +105,12 @@ export default function P2PAgentManagementHomePage() {
 
           {!loading && !error && (
             <>
-              <AgentInfoCard agent={dashboard.agent} fallbackAgentcode={agentcode} />
+              <AgentInfoCard
+                agent={dashboard.agent}
+                fallbackAgentcode={agentcode}
+                editable
+                onUpdated={loadDashboard}
+              />
 
               <section className="grid grid-cols-2 gap-3 lg:grid-cols-3">
                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">

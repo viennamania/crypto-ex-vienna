@@ -2,6 +2,7 @@ export type AgentSummary = {
   agentcode: string;
   agentName: string;
   agentLogo: string;
+  agentDescription: string;
   adminWalletAddress: string;
   totalStoreCount: number;
 };
@@ -239,6 +240,7 @@ export async function fetchAgentSummary(agentcode: string): Promise<AgentSummary
     agentcode: toText(result.agentcode),
     agentName: toText(result.agentName) || toText(result.agentcode),
     agentLogo: toText(result.agentLogo),
+    agentDescription: toText(result.agentDescription),
     adminWalletAddress: toText(result.adminWalletAddress),
     totalStoreCount: toNumber(result.totalStoreCount),
   };
