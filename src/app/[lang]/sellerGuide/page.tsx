@@ -37,7 +37,7 @@ const normalizeBannerAds = (ads: GlobalAd[] = []): BannerAd[] =>
 
             return {
                 id: String(ad?._id ?? ad?.id ?? index),
-                title: ad?.title || ad?.name || '제휴 배너',
+                title: ad?.title || ad?.name || 'Partner Banner',
                 image,
                 link,
             } as BannerAd;
@@ -46,38 +46,38 @@ const normalizeBannerAds = (ads: GlobalAd[] = []): BannerAd[] =>
 
 const GUIDE_STEPS = [
     {
-        title: '판매자 설정 완료',
-        description: '프로필·계좌 정보를 등록하고 판매자 승인을 완료합니다.',
+        title: 'Complete Seller Setup',
+        description: 'Register profile and bank details, then complete seller approval.',
         icon: '/icon-manager.png',
         accent: 'bg-amber-400',
     },
     {
-        title: '에스크로 지갑 확인',
-        description: '에스크로 지갑 주소를 확인하고 운영 지갑을 준비합니다.',
+        title: 'Verify Escrow Wallet',
+        description: 'Check the escrow wallet address and prepare your operating wallet.',
         icon: '/icon-escrow-wallet.png',
         accent: 'bg-emerald-400',
     },
     {
-        title: 'USDT 충전',
-        description: '에스크로 지갑에 충분한 USDT를 충전합니다.',
+        title: 'Top Up USDT',
+        description: 'Fund the escrow wallet with sufficient USDT.',
         icon: '/logo-tether.png',
         accent: 'bg-sky-400',
     },
     {
-        title: '환율 설정',
-        description: '시장가 또는 고정가로 판매 환율을 설정합니다.',
+        title: 'Set Exchange Rate',
+        description: 'Set your sell rate using market pricing or a fixed price.',
         icon: '/icon-exchange-rate.png',
         accent: 'bg-orange-400',
     },
     {
-        title: '입금 확인',
-        description: '구매자 입금 내역과 입금자명을 확인합니다.',
+        title: 'Confirm Deposit',
+        description: 'Verify the buyer\'s deposit details and depositor name.',
         icon: '/icon-bank-check.png',
         accent: 'bg-rose-400',
     },
     {
-        title: '정산 완료',
-        description: '입금 확인 후 USDT가 자동 전송되고 정산됩니다.',
+        title: 'Settlement Complete',
+        description: 'After deposit confirmation, USDT is transferred and settled automatically.',
         icon: '/icon-settlement-completed.png',
         accent: 'bg-slate-400',
     },
@@ -85,43 +85,43 @@ const GUIDE_STEPS = [
 
 const SAFETY_CHECKS = [
     {
-        title: '에스크로 잔액 유지',
-        description: '잔액이 충분해야 주문이 원활히 배정됩니다.',
+        title: 'Maintain Escrow Balance',
+        description: 'Sufficient balance is required for smooth order allocation.',
         icon: '/icon-escrow.png',
     },
     {
-        title: '입금자명·금액 확인',
-        description: '입금자명과 금액을 반드시 확인하세요.',
+        title: 'Check Depositor Name & Amount',
+        description: 'Always verify depositor name and amount.',
         icon: '/icon-bank-check.png',
     },
     {
-        title: '환율·노출 상태 점검',
-        description: '환율 설정과 노출 상태를 수시로 확인합니다.',
+        title: 'Review Rate & Visibility Status',
+        description: 'Regularly check your rate settings and listing visibility.',
         icon: '/icon-exchange-rate.png',
     },
     {
-        title: '외부 연락 유도 주의',
-        description: '거래는 플랫폼 안에서 진행하는 것이 안전합니다.',
+        title: 'Watch for Off-Platform Contact Requests',
+        description: 'It is safest to keep transactions inside the platform.',
         icon: '/icon-shield.png',
     },
 ];
 
 const FAQS = [
     {
-        question: '에스크로 잔액은 얼마나 필요하나요?',
-        answer: '판매 금액보다 충분한 USDT 잔액이 있어야 주문이 원활히 배정됩니다.',
+        question: 'How much escrow balance is needed?',
+        answer: 'You should keep USDT balance well above your sell volume for smooth order allocation.',
     },
     {
-        question: '환율은 언제든 변경할 수 있나요?',
-        answer: '거래 진행 중이 아닐 때 변경하는 것을 권장합니다. 변경 후 환율이 업데이트됩니다.',
+        question: 'Can I change the exchange rate anytime?',
+        answer: 'It is recommended to change rates when no trade is in progress. The new rate is applied after update.',
     },
     {
-        question: '입금 확인은 어떻게 진행하나요?',
-        answer: '거래 화면에서 입금자명과 금액을 확인한 뒤 입금 확인을 진행합니다.',
+        question: 'How do I confirm a deposit?',
+        answer: 'On the trade screen, verify depositor name and amount, then confirm deposit.',
     },
     {
-        question: '분쟁 또는 취소 요청이 들어오면요?',
-        answer: '거래 상태를 확인한 뒤 고객지원 채팅으로 즉시 문의하세요.',
+        question: 'What if there is a dispute or cancellation request?',
+        answer: 'Check the trade status and contact customer support chat immediately.',
     },
 ];
 
@@ -172,27 +172,27 @@ export default async function SellerGuidePage({ params }: { params: { lang?: str
                                     className="h-10 w-auto"
                                 />
                                 <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-500">
-                                    판매자용
+                                    For Sellers
                                 </span>
                             </div>
                             <h1 className="font-[var(--font-display)] text-3xl text-[color:var(--ink)] sm:text-4xl">
-                                판매자 사용 메뉴얼
+                                Seller Guide
                             </h1>
                             <p className="max-w-xl text-base text-slate-600">
-                                판매자 운영을 위한 기본 흐름과 입금 확인 절차를 정리했습니다. 시작 전에 꼭 확인하세요.
+                                This guide covers core seller workflow and deposit-confirmation steps. Please review before you start.
                             </p>
                             <div className="flex flex-wrap gap-3">
                                 <Link
                                     href={`/${lang}/p2p/seller-settings`}
                                     className="inline-flex items-center justify-center rounded-full bg-[color:var(--accent)] px-6 py-3 text-sm font-semibold text-white shadow-[0_20px_45px_-22px_rgba(249,115,22,0.85)] transition hover:bg-[color:var(--accent-deep)]"
                                 >
-                                    판매자 설정 바로가기
+                                    Go to Seller Settings
                                 </Link>
                                 <Link
                                     href={`/${lang}/p2p`}
                                     className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white/90 px-6 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-white"
                                 >
-                                    P2P 홈으로 돌아가기
+                                    Back to P2P Home
                                 </Link>
                             </div>
                         </div>
@@ -203,25 +203,25 @@ export default async function SellerGuidePage({ params }: { params: { lang?: str
                                     Quick Check
                                 </span>
                                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                                    운영 체크
+                                    Operations Check
                                 </span>
                             </div>
                             <ul className="mt-4 space-y-3 text-sm text-slate-700">
                                 <li className="flex items-start gap-3">
                                     <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
-                                    에스크로 잔액을 충분히 유지하기
+                                    Keep escrow balance sufficiently funded
                                 </li>
                                 <li className="flex items-start gap-3">
                                     <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
-                                    환율과 프로모션 문구 수시 점검
+                                    Regularly review exchange rate and promo message
                                 </li>
                                 <li className="flex items-start gap-3">
                                     <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
-                                    입금자명·입금 금액 정확히 확인
+                                    Accurately verify depositor name and deposit amount
                                 </li>
                             </ul>
                             <div className="mt-5 rounded-xl border border-amber-200/70 bg-amber-50/80 px-4 py-3 text-xs font-semibold text-amber-700">
-                                입금 확인이 지연되면 구매자에게 메시지가 전달됩니다.
+                                If deposit confirmation is delayed, a message is sent to the buyer.
                             </div>
                         </div>
                     </div>
@@ -247,19 +247,19 @@ export default async function SellerGuidePage({ params }: { params: { lang?: str
                                             Partner
                                         </p>
                                         <h2 className="font-[var(--font-display)] text-2xl text-slate-900">
-                                            판매자 제휴 배너
+                                            Seller Partner Banners
                                         </h2>
                                         <p className="mt-1 text-sm text-slate-600">
-                                            판매 운영에 도움이 되는 파트너 정보를 확인하세요.
+                                            Explore partner resources that help your seller operations.
                                         </p>
                                     </div>
                                 </div>
-                                <span className="text-xs font-semibold text-slate-500">좌우로 스와이프</span>
+                                <span className="text-xs font-semibold text-slate-500">Swipe Left/Right</span>
                             </div>
 
                             <div
                                 className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 scrollbar-hide"
-                                aria-label="판매자 제휴 배너"
+                                aria-label="Seller partner banners"
                             >
                                 {bannerAds.map((ad) => (
                                     <a
@@ -297,7 +297,7 @@ export default async function SellerGuidePage({ params }: { params: { lang?: str
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Flow</p>
                             <h2 className="font-[var(--font-display)] text-2xl text-slate-900 sm:text-3xl">
-                                판매자 운영 절차
+                                Seller Operations Flow
                             </h2>
                         </div>
                     </div>
@@ -327,7 +327,7 @@ export default async function SellerGuidePage({ params }: { params: { lang?: str
                                             <p className="text-base font-semibold text-slate-900">{step.title}</p>
                                         </div>
                                     </div>
-                                    <span className="text-xs font-semibold text-slate-400">판매자</span>
+                                    <span className="text-xs font-semibold text-slate-400">Seller</span>
                                 </div>
                                 <p className="mt-4 text-sm text-slate-600">{step.description}</p>
                             </div>
@@ -347,7 +347,7 @@ export default async function SellerGuidePage({ params }: { params: { lang?: str
                                     className="h-5 w-5"
                                 />
                             </div>
-                            <h3 className="font-[var(--font-display)] text-2xl text-slate-900">운영 체크리스트</h3>
+                            <h3 className="font-[var(--font-display)] text-2xl text-slate-900">Operations Checklist</h3>
                         </div>
                         <div className="mt-5 space-y-4">
                             {SAFETY_CHECKS.map((item) => (
@@ -384,20 +384,20 @@ export default async function SellerGuidePage({ params }: { params: { lang?: str
                                     className="h-5 w-5"
                                 />
                             </div>
-                            <h3 className="font-[var(--font-display)] text-2xl text-slate-900">판매자 핵심 요약</h3>
+                            <h3 className="font-[var(--font-display)] text-2xl text-slate-900">Seller Key Summary</h3>
                         </div>
                         <div className="mt-5 space-y-4 text-sm text-slate-700">
                             <div className="rounded-xl border border-slate-200/70 bg-white px-4 py-3">
-                                에스크로 잔액과 환율을 꾸준히 관리하세요.
+                                Consistently manage escrow balance and exchange rates.
                             </div>
                             <div className="rounded-xl border border-slate-200/70 bg-white px-4 py-3">
-                                입금 확인은 거래 신뢰를 결정합니다.
+                                Deposit confirmation is critical to transaction trust.
                             </div>
                             <div className="rounded-xl border border-slate-200/70 bg-white px-4 py-3">
-                                자동 처리 설정과 알림을 수시로 확인하세요.
+                                Regularly check automation settings and notifications.
                             </div>
                             <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/70 px-4 py-3 text-emerald-700">
-                                문제가 생기면 고객지원 채팅으로 즉시 문의하세요.
+                                If an issue occurs, contact customer support chat immediately.
                             </div>
                         </div>
                     </div>
@@ -417,7 +417,7 @@ export default async function SellerGuidePage({ params }: { params: { lang?: str
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">FAQ</p>
                             <h2 className="font-[var(--font-display)] text-2xl text-slate-900 sm:text-3xl">
-                                자주 묻는 질문
+                                Frequently Asked Questions
                             </h2>
                         </div>
                     </div>
@@ -443,17 +443,17 @@ export default async function SellerGuidePage({ params }: { params: { lang?: str
                                     Ready
                                 </p>
                                 <h2 className="mt-2 font-[var(--font-display)] text-2xl sm:text-3xl">
-                                    판매 준비가 끝났다면 바로 시작하세요
+                                    Ready to sell? Start now.
                                 </h2>
                                 <p className="mt-3 text-sm text-white/80">
-                                    판매자 설정과 에스크로 충전을 완료했다면 이제 판매를 시작할 수 있습니다.
+                                    If seller setup and escrow funding are complete, you are ready to start selling.
                                 </p>
                             </div>
                             <Link
                                 href={`/${lang}/p2p/seller-settings`}
                                 className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-[0_20px_45px_-25px_rgba(15,23,42,0.5)] transition hover:-translate-y-0.5"
                             >
-                                판매자 설정 열기
+                                Open Seller Settings
                             </Link>
                         </div>
                     </div>
@@ -471,24 +471,24 @@ export default async function SellerGuidePage({ params }: { params: { lang?: str
                     />
                     <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-slate-300">
                         <Link href={`/${lang}/terms-of-service`} className="hover:text-white">
-                            이용약관
+                            Terms of Service
                         </Link>
                         <span className="text-slate-500">|</span>
                         <Link href={`/${lang}/privacy-policy`} className="hover:text-white">
-                            개인정보처리방침
+                            Privacy Policy
                         </Link>
                         <span className="text-slate-500">|</span>
                         <Link href={`/${lang}/refund-policy`} className="hover:text-white">
-                            환불·분쟁 정책
+                            Refund & Dispute Policy
                         </Link>
                     </div>
                     <p className="max-w-2xl text-xs leading-relaxed text-slate-400">
-                        리스크 고지: 가상자산 결제에는 가격 변동 및 네트워크 지연 등 위험이 수반될 수 있습니다.
-                        결제 전에 수수료·환율·정산 조건을 확인해 주세요.
+                        Risk notice: Crypto payments involve risks such as price volatility and network delays.
+                        Please review fees, exchange rates, and settlement terms before payment.
                     </p>
                     <div className="text-sm text-slate-400">
-                        <p>이메일 : help@orangex.center</p>
-                        <p>주소 : 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
+                        <p>Email: help@orangex.center</p>
+                        <p>Address: 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
                     </div>
                     <p className="text-sm text-slate-500">Copyright © OrangeX All Rights Reserved</p>
                 </div>

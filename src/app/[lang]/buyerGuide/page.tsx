@@ -37,7 +37,7 @@ const normalizeBannerAds = (ads: GlobalAd[] = []): BannerAd[] =>
 
             return {
                 id: String(ad?._id ?? ad?.id ?? index),
-                title: ad?.title || ad?.name || '제휴 배너',
+                title: ad?.title || ad?.name || 'Partner Banner',
                 image,
                 link,
             } as BannerAd;
@@ -46,38 +46,38 @@ const normalizeBannerAds = (ads: GlobalAd[] = []): BannerAd[] =>
 
 const GUIDE_STEPS = [
     {
-        title: '지갑 연결 & 로그인',
-        description: '웹3 지갑을 연결해 로그인하고 구매를 준비합니다.',
+        title: 'Connect Wallet & Sign In',
+        description: 'Connect your Web3 wallet, sign in, and prepare to buy.',
         icon: '/icon-login.png',
         accent: 'bg-amber-400',
     },
     {
-        title: '판매자 선택',
-        description: '환율·에스크로 잔액·프로필을 비교해 판매자를 고릅니다.',
+        title: 'Select a Seller',
+        description: 'Compare rate, escrow balance, and profile to pick a seller.',
         icon: '/icon-seller.png',
         accent: 'bg-emerald-400',
     },
     {
-        title: '구매 요청 생성',
-        description: '구매 금액을 입력하면 보호된 거래가 시작됩니다.',
+        title: 'Create Buy Request',
+        description: 'Enter the buy amount to start a protected trade.',
         icon: '/icon-matching-completed.png',
         accent: 'bg-sky-400',
     },
     {
-        title: '계좌 입금',
-        description: '안내된 계좌로 정확한 입금액을 입금하고 입금자명을 정확히 맞춥니다.',
+        title: 'Make Bank Deposit',
+        description: 'Deposit the exact instructed amount to the provided account and match the depositor name exactly.',
         icon: '/icon-bank-transfer.png',
         accent: 'bg-orange-400',
     },
     {
-        title: 'USDT 수령 확인',
-        description: '판매자 확인 후 자동으로 USDT가 전송됩니다.',
+        title: 'Confirm USDT Receipt',
+        description: 'USDT is sent automatically after seller confirmation.',
         icon: '/icon-transfer.png',
         accent: 'bg-rose-400',
     },
     {
-        title: '문제 발생 시 문의',
-        description: '상태가 지연되면 고객지원 채팅으로 문의하세요.',
+        title: 'Contact Support for Issues',
+        description: 'If status is delayed, contact customer support chat.',
         icon: '/icon-chat.png',
         accent: 'bg-slate-400',
     },
@@ -85,43 +85,43 @@ const GUIDE_STEPS = [
 
 const SAFETY_CHECKS = [
     {
-        title: '판매자 페이지 주소 확인',
-        description: 'URL과 판매자 정보를 다시 한번 확인합니다.',
+        title: 'Verify Seller Page URL',
+        description: 'Double-check the URL and seller details.',
         icon: '/icon-escrow-wallet.webp',
     },
     {
-        title: '입금자명·금액 일치',
-        description: '입금자명과 금액이 정확해야 빠르게 처리됩니다.',
+        title: 'Match Depositor Name & Amount',
+        description: 'Accurate depositor name and amount enable faster processing.',
         icon: '/icon-bank-check.png',
     },
     {
-        title: '외부 연락 유도 주의',
-        description: '거래는 플랫폼 안에서 진행하는 것이 안전합니다.',
+        title: 'Watch for Off-Platform Contact Requests',
+        description: 'It is safest to keep the transaction within the platform.',
         icon: '/icon-shield.png',
     },
     {
-        title: '상태 알림 확인',
-        description: '거래 상태와 알림을 꼭 확인하세요.',
+        title: 'Check Status Notifications',
+        description: 'Always review trade status and notifications.',
         icon: '/icon-info.png',
     },
 ];
 
 const FAQS = [
     {
-        question: '입금 후 얼마나 걸리나요?',
-        answer: '판매자 확인 후 자동 정산이 진행됩니다. 거래 화면의 상태를 확인해 주세요.',
+        question: 'How long does it take after deposit?',
+        answer: 'Automatic settlement proceeds after seller confirmation. Check the status on the trade screen.',
     },
     {
-        question: '판매자 잔액이 부족하면 어떻게 되나요?',
-        answer: '다른 판매자를 선택하거나 잔액이 충분한 판매자를 찾는 것이 좋습니다.',
+        question: 'What if the seller has insufficient balance?',
+        answer: 'Select another seller or find one with sufficient balance.',
     },
     {
-        question: '입금 정보를 잘못 입력했어요.',
-        answer: '즉시 거래 상태를 확인하고 고객지원 채팅으로 문의해 주세요.',
+        question: 'I entered incorrect deposit information.',
+        answer: 'Check trade status immediately and contact customer support chat.',
     },
     {
-        question: '취소는 언제 가능한가요?',
-        answer: '거래 단계에 따라 다를 수 있으니 주문 상세 안내를 확인해 주세요.',
+        question: 'When can I cancel?',
+        answer: 'It may vary by trade stage, so check the detailed order guidance.',
     },
 ];
 
@@ -172,28 +172,27 @@ export default async function BuyerGuidePage({ params }: { params: { lang?: stri
                                     className="h-10 w-auto"
                                 />
                                 <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-500">
-                                    구매자용
+                                    For Buyers
                                 </span>
                             </div>
                             <h1 className="font-[var(--font-display)] text-3xl text-[color:var(--ink)] sm:text-4xl">
-                                구매자 사용 메뉴얼
+                                Buyer Guide
                             </h1>
                             <p className="max-w-xl text-base text-slate-600">
-                                구매 전에 꼭 확인해야 하는 거래 흐름과 안전 수칙을 정리했습니다. 차근차근 확인하고
-                                안전하게 테더를 구매하세요.
+                                This guide summarizes the trade flow and safety rules you should review before buying. Follow each step and buy USDT safely.
                             </p>
                             <div className="flex flex-wrap gap-3">
                                 <Link
                                     href={`/${lang}/p2p/buy`}
                                     className="inline-flex items-center justify-center rounded-full bg-[color:var(--accent)] px-6 py-3 text-sm font-semibold text-white shadow-[0_20px_45px_-22px_rgba(249,115,22,0.85)] transition hover:bg-[color:var(--accent-deep)]"
                                 >
-                                    바로 구매하기
+                                    Buy Now
                                 </Link>
                                 <Link
                                     href={`/${lang}/p2p`}
                                     className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white/90 px-6 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-white"
                                 >
-                                    P2P 홈으로 돌아가기
+                                    Back to P2P Home
                                 </Link>
                             </div>
                         </div>
@@ -204,25 +203,25 @@ export default async function BuyerGuidePage({ params }: { params: { lang?: stri
                                     Quick Check
                                 </span>
                                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                                    안전 체크
+                                    Safety Check
                                 </span>
                             </div>
                             <ul className="mt-4 space-y-3 text-sm text-slate-700">
                                 <li className="flex items-start gap-3">
                                     <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
-                                    입금자명과 입금 금액을 동일하게 입력하기
+                                    Enter the depositor name and deposit amount exactly as required
                                 </li>
                                 <li className="flex items-start gap-3">
                                     <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
-                                    판매자 에스크로 잔액과 거래 상태 확인하기
+                                    Check seller escrow balance and trade status
                                 </li>
                                 <li className="flex items-start gap-3">
                                     <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
-                                    외부 메신저 유도는 응답하지 않기
+                                    Do not respond to requests to move to external messengers
                                 </li>
                             </ul>
                             <div className="mt-5 rounded-xl border border-amber-200/70 bg-amber-50/80 px-4 py-3 text-xs font-semibold text-amber-700">
-                                입금 후 상태가 업데이트되지 않으면 바로 문의하세요.
+                                If the status does not update after deposit, contact support immediately.
                             </div>
                         </div>
                     </div>
@@ -248,19 +247,19 @@ export default async function BuyerGuidePage({ params }: { params: { lang?: stri
                                             Partner
                                         </p>
                                         <h2 className="font-[var(--font-display)] text-2xl text-slate-900">
-                                            구매자 제휴 배너
+                                            Buyer Partner Banners
                                         </h2>
                                         <p className="mt-1 text-sm text-slate-600">
-                                            구매에 도움이 되는 파트너 정보를 확인하세요.
+                                            Explore partner information that helps buyers.
                                         </p>
                                     </div>
                                 </div>
-                                <span className="text-xs font-semibold text-slate-500">좌우로 스와이프</span>
+                                <span className="text-xs font-semibold text-slate-500">Swipe Left/Right</span>
                             </div>
 
                             <div
                                 className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 scrollbar-hide"
-                                aria-label="구매자 제휴 배너"
+                                aria-label="Buyer partner banners"
                             >
                                 {bannerAds.map((ad) => (
                                     <a
@@ -298,7 +297,7 @@ export default async function BuyerGuidePage({ params }: { params: { lang?: stri
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Flow</p>
                             <h2 className="font-[var(--font-display)] text-2xl text-slate-900 sm:text-3xl">
-                                구매 절차 한눈에 보기
+                                Buyer Flow at a Glance
                             </h2>
                         </div>
                     </div>
@@ -328,7 +327,7 @@ export default async function BuyerGuidePage({ params }: { params: { lang?: stri
                                             <p className="text-base font-semibold text-slate-900">{step.title}</p>
                                         </div>
                                     </div>
-                                    <span className="text-xs font-semibold text-slate-400">구매자</span>
+                                    <span className="text-xs font-semibold text-slate-400">Buyer</span>
                                 </div>
                                 <p className="mt-4 text-sm text-slate-600">{step.description}</p>
                             </div>
@@ -348,7 +347,7 @@ export default async function BuyerGuidePage({ params }: { params: { lang?: stri
                                     className="h-5 w-5"
                                 />
                             </div>
-                            <h3 className="font-[var(--font-display)] text-2xl text-slate-900">안전 체크리스트</h3>
+                            <h3 className="font-[var(--font-display)] text-2xl text-slate-900">Safety Checklist</h3>
                         </div>
                         <div className="mt-5 space-y-4">
                             {SAFETY_CHECKS.map((item) => (
@@ -385,20 +384,20 @@ export default async function BuyerGuidePage({ params }: { params: { lang?: stri
                                     className="h-5 w-5"
                                 />
                             </div>
-                            <h3 className="font-[var(--font-display)] text-2xl text-slate-900">구매 전 요약</h3>
+                            <h3 className="font-[var(--font-display)] text-2xl text-slate-900">Before You Buy Summary</h3>
                         </div>
                         <div className="mt-5 space-y-4 text-sm text-slate-700">
                             <div className="rounded-xl border border-slate-200/70 bg-white px-4 py-3">
-                                거래 시작 전 지갑 연결과 입금자명을 확인합니다.
+                                Before starting, verify your wallet connection and depositor name.
                             </div>
                             <div className="rounded-xl border border-slate-200/70 bg-white px-4 py-3">
-                                판매자 환율과 에스크로 잔액을 비교해 선택합니다.
+                                Compare seller exchange rates and escrow balances before selecting.
                             </div>
                             <div className="rounded-xl border border-slate-200/70 bg-white px-4 py-3">
-                                입금 후에는 상태 알림을 확인하고 USDT 수령을 체크합니다.
+                                After deposit, check status notifications and confirm USDT receipt.
                             </div>
                             <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/70 px-4 py-3 text-emerald-700">
-                                문제가 생기면 거래 화면의 고객지원 채팅을 이용하세요.
+                                If an issue occurs, use customer support chat from the trade screen.
                             </div>
                         </div>
                     </div>
@@ -418,7 +417,7 @@ export default async function BuyerGuidePage({ params }: { params: { lang?: stri
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">FAQ</p>
                             <h2 className="font-[var(--font-display)] text-2xl text-slate-900 sm:text-3xl">
-                                자주 묻는 질문
+                                Frequently Asked Questions
                             </h2>
                         </div>
                     </div>
@@ -444,17 +443,17 @@ export default async function BuyerGuidePage({ params }: { params: { lang?: stri
                                     Ready
                                 </p>
                                 <h2 className="mt-2 font-[var(--font-display)] text-2xl sm:text-3xl">
-                                    구매 준비가 끝났다면 바로 시작하세요
+                                    Ready to buy? Start now.
                                 </h2>
                                 <p className="mt-3 text-sm text-white/80">
-                                    안전한 거래 절차를 확인했다면 이제 실제 구매로 이동합니다.
+                                    If you reviewed the safe trading process, move on to your live purchase.
                                 </p>
                             </div>
                             <Link
                                 href={`/${lang}/p2p/buy`}
                                 className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow-[0_20px_45px_-25px_rgba(15,23,42,0.5)] transition hover:-translate-y-0.5"
                             >
-                                구매 시작하기
+                                Start Buying
                             </Link>
                         </div>
                     </div>
@@ -472,24 +471,24 @@ export default async function BuyerGuidePage({ params }: { params: { lang?: stri
                     />
                     <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-slate-300">
                         <Link href={`/${lang}/terms-of-service`} className="hover:text-white">
-                            이용약관
+                            Terms of Service
                         </Link>
                         <span className="text-slate-500">|</span>
                         <Link href={`/${lang}/privacy-policy`} className="hover:text-white">
-                            개인정보처리방침
+                            Privacy Policy
                         </Link>
                         <span className="text-slate-500">|</span>
                         <Link href={`/${lang}/refund-policy`} className="hover:text-white">
-                            환불·분쟁 정책
+                            Refund & Dispute Policy
                         </Link>
                     </div>
                     <p className="max-w-2xl text-xs leading-relaxed text-slate-400">
-                        리스크 고지: 가상자산 결제에는 가격 변동 및 네트워크 지연 등 위험이 수반될 수 있습니다.
-                        결제 전에 수수료·환율·정산 조건을 확인해 주세요.
+                        Risk notice: Crypto payments involve risks such as price volatility and network delays.
+                        Please review fees, exchange rates, and settlement terms before payment.
                     </p>
                     <div className="text-sm text-slate-400">
-                        <p>이메일 : help@orangex.center</p>
-                        <p>주소 : 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
+                        <p>Email: help@orangex.center</p>
+                        <p>Address: 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
                     </div>
                     <p className="text-sm text-slate-500">Copyright © OrangeX All Rights Reserved</p>
                 </div>

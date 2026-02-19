@@ -40,7 +40,7 @@ const nextConfig = {
       {
         source: '/',
         //destination: '/ko/administration/homepage',
-        destination: '/ko/p2p',
+        destination: '/en/p2p',
         permanent: true,
       },
     ]
