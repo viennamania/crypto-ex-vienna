@@ -23,6 +23,8 @@ type StoreSellerResult = {
 };
 
 const toText = (value: unknown) => (typeof value === 'string' ? value : '');
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 const isWalletAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(String(value || '').trim());
 const getInitial = (value: string) => (String(value || '').trim().charAt(0) || 'U').toUpperCase();
 
@@ -80,6 +82,9 @@ const normalizeSellerWalletList = (value: unknown) => {
     .filter((wallet) => isWalletAddress(String(wallet || '').trim()))
     .map((wallet) => String(wallet).trim());
 };
+
+const SELLER_FETCH_PAGE_SIZE = 500;
+const SELLER_FETCH_MAX_PAGES = 40;
 
 export default function AgentStoreSellerSettingsPage() {
   const params = useParams<{ lang?: string | string[]; storecode?: string | string[] }>();
@@ -213,28 +218,49 @@ export default function AgentStoreSellerSettingsPage() {
     setLoadingCandidateSellers(true);
     setCandidateSellersError(null);
     try {
-      const response = await fetch('/api/user/getAllUsersByStorecode', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storecode: '',
-          agentcode,
-          limit: 500,
-          page: 1,
-          includeUnverified: true,
-          requireProfile: true,
-          userType: 'seller',
-          includeWalletless: true,
-          searchTerm: '',
-          sortField: 'nickname',
-        }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(typeof payload?.error === 'string' ? payload.error : '판매자 목록을 불러오지 못했습니다.');
+      let page = 1;
+      let totalCount = 0;
+      const users: unknown[] = [];
+
+      while (page <= SELLER_FETCH_MAX_PAGES) {
+        const response = await fetch('/api/user/getAllUsersByStorecode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storecode: '',
+            limit: SELLER_FETCH_PAGE_SIZE,
+            page,
+            includeUnverified: true,
+            requireProfile: true,
+            userType: 'seller',
+            includeWalletless: true,
+            searchTerm: '',
+            sortField: 'nickname',
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(typeof payload?.error === 'string' ? payload.error : '판매자 목록을 불러오지 못했습니다.');
+        }
+
+        const result = isRecord(payload?.result) ? payload.result : {};
+        const pageUsers: unknown[] = Array.isArray(result.users) ? result.users : [];
+        const pageTotalCount = Number(result.totalCount || 0);
+        if (page === 1 && Number.isFinite(pageTotalCount) && pageTotalCount > 0) {
+          totalCount = pageTotalCount;
+        }
+
+        users.push(...pageUsers);
+
+        const reachedLastPage = pageUsers.length < SELLER_FETCH_PAGE_SIZE;
+        const reachedTotalCount = totalCount > 0 && users.length >= totalCount;
+        if (reachedLastPage || reachedTotalCount) {
+          break;
+        }
+
+        page += 1;
       }
 
-      const users: unknown[] = Array.isArray(payload?.result?.users) ? payload.result.users : [];
       const normalizedSellers = users
         .map((user) => normalizeCandidate(user))
         .filter((candidate: SellerCandidate | null): candidate is SellerCandidate => candidate !== null);
@@ -262,7 +288,7 @@ export default function AgentStoreSellerSettingsPage() {
     } finally {
       setLoadingCandidateSellers(false);
     }
-  }, [agentcode]);
+  }, []);
 
   const addSellerToStore = useCallback(async (walletAddress: string) => {
     if (!storecode || !isWalletAddress(walletAddress)) return;

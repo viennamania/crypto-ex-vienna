@@ -2177,6 +2177,7 @@ export async function getAllUsersByStorecode(
   const trimmedAgentcode = (agentcode || '').trim();
 
   if (trimmedAgentcode) {
+    const agentcodeRegex = { $regex: `^${escapeRegExp(trimmedAgentcode)}$`, $options: 'i' };
     const stores = await storeCollection
       .find(
         {
@@ -2192,9 +2193,10 @@ export async function getAllUsersByStorecode(
     const allowedStorecodes = stores
       .map((store: any) => String(store?.storecode || '').trim())
       .filter(Boolean);
+    const allowedStorecodeSet = new Set(allowedStorecodes.map((code) => code.toLowerCase()));
 
     if (normalizedStorecode) {
-      if (!allowedStorecodes.includes(normalizedStorecode)) {
+      if (!allowedStorecodeSet.has(normalizedStorecode.toLowerCase())) {
         return {
           totalCount: 0,
           totalResult: 0,
@@ -2203,14 +2205,16 @@ export async function getAllUsersByStorecode(
       }
       conditions.push({ storecode: normalizedStorecode });
     } else {
-      if (allowedStorecodes.length === 0) {
-        return {
-          totalCount: 0,
-          totalResult: 0,
-          users: [],
-        };
+      const agentScopeConditions: any[] = [
+        { agentcode: agentcodeRegex },
+        { 'seller.agentcode': agentcodeRegex },
+        { 'store.agentcode': agentcodeRegex },
+        { 'storeInfo.agentcode': agentcodeRegex },
+      ];
+      if (allowedStorecodes.length > 0) {
+        agentScopeConditions.unshift({ storecode: { $in: allowedStorecodes } });
       }
-      conditions.push({ storecode: { $in: allowedStorecodes } });
+      conditions.push({ $or: agentScopeConditions });
     }
   } else {
     conditions.push({ storecode: { $regex: normalizedStorecode, $options: 'i' } });

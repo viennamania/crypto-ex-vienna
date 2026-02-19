@@ -18,7 +18,9 @@ type MenuItem = {
   subItems?: MenuItem[];
 };
 
-const WALLET_AUTH_OPTIONS = ['phone'];
+const WALLET_AUTH_OPTIONS = ['google', 'email', 'phone'];
+const WALLET_DEFAULT_SMS_COUNTRY_CODE = 'KR';
+const WALLET_ALLOWED_SMS_COUNTRY_CODES = ['KR'];
 const normalizeAddress = (value: string) => String(value || '').trim().toLowerCase();
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -47,7 +49,11 @@ const MenuIcon = ({ itemKey, active }: { itemKey: string; active: boolean }) => 
 
 export default function P2PAgentManagementLayout({ children }: { children: ReactNode }) {
   const activeAccount = useActiveAccount();
-  const { wallet, wallets } = useClientWallets({ authOptions: WALLET_AUTH_OPTIONS });
+  const { wallet, wallets } = useClientWallets({
+    authOptions: WALLET_AUTH_OPTIONS,
+    defaultSmsCountryCode: WALLET_DEFAULT_SMS_COUNTRY_CODE,
+    allowedSmsCountryCodes: WALLET_ALLOWED_SMS_COUNTRY_CODES,
+  });
   const params = useParams<{ lang: string }>();
   const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang || 'ko';
   const pathname = usePathname();
@@ -374,7 +380,7 @@ export default function P2PAgentManagementLayout({ children }: { children: React
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-700">Wallet Required</p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">에이전트 관리 기능을 사용하려면 지갑 연결이 필요합니다.</p>
-                  <p className="mt-1 text-xs text-slate-600">전화번호 인증으로 지갑을 연결한 뒤 계속 진행해 주세요.</p>
+                  <p className="mt-1 text-xs text-slate-600">Google, 이메일 또는 전화번호(KR) 인증으로 지갑을 연결한 뒤 계속 진행해 주세요.</p>
                 </div>
 
                 <ConnectButton
