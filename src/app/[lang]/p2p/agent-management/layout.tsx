@@ -3,11 +3,18 @@
 import Link from 'next/link';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { AutoConnect, useActiveAccount } from 'thirdweb/react';
+import {
+  AutoConnect,
+  useActiveAccount,
+  useActiveWallet,
+  useConnectedWallets,
+  useDisconnect,
+} from 'thirdweb/react';
 
 import { client } from '@/app/client';
 import { ConnectButton } from '@/components/OrangeXConnectButton';
 import { useClientWallets } from '@/lib/useClientWallets';
+import { clearWalletConnectionState } from '@/lib/clearWalletConnectionState';
 
 type MenuItem = {
   key: string;
@@ -49,6 +56,9 @@ const MenuIcon = ({ itemKey, active }: { itemKey: string; active: boolean }) => 
 
 export default function P2PAgentManagementLayout({ children }: { children: ReactNode }) {
   const activeAccount = useActiveAccount();
+  const activeWallet = useActiveWallet();
+  const connectedWallets = useConnectedWallets();
+  const { disconnect } = useDisconnect();
   const { wallet, wallets } = useClientWallets({
     authOptions: WALLET_AUTH_OPTIONS,
     defaultSmsCountryCode: WALLET_DEFAULT_SMS_COUNTRY_CODE,
@@ -65,9 +75,12 @@ export default function P2PAgentManagementLayout({ children }: { children: React
   const [agentAdminWalletAddress, setAgentAdminWalletAddress] = useState('');
   const [checkingAgentAccess, setCheckingAgentAccess] = useState(false);
   const [agentAccessError, setAgentAccessError] = useState<string | null>(null);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [disconnectModalOpen, setDisconnectModalOpen] = useState(false);
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const hasConnectedWallet = Boolean(connectedWalletAddress);
 
   const menuItems = useMemo<MenuItem[]>(
     () => [
@@ -198,6 +211,52 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       isMounted = false;
     };
   }, [agentcode, normalizedConnectedWalletAddress]);
+
+  const openDisconnectModal = () => {
+    if (!hasConnectedWallet || disconnecting) {
+      return;
+    }
+    setDisconnectModalOpen(true);
+  };
+
+  const closeDisconnectModal = () => {
+    if (disconnecting) {
+      return;
+    }
+    setDisconnectModalOpen(false);
+  };
+
+  const handleDisconnectWallet = async () => {
+    if (!hasConnectedWallet || disconnecting) {
+      return;
+    }
+
+    setDisconnecting(true);
+    try {
+      for (const walletItem of connectedWallets) {
+        try {
+          await disconnect(walletItem);
+        } catch (error) {
+          console.warn('disconnect(connectedWallet) failed', error);
+        }
+      }
+
+      if (activeWallet) {
+        await disconnect(activeWallet);
+      }
+    } catch (error) {
+      console.warn('disconnect() failed, fallback to wallet.disconnect()', error);
+      try {
+        await activeWallet?.disconnect?.();
+      } catch (fallbackError) {
+        console.warn('activeWallet.disconnect() failed', fallbackError);
+      }
+    } finally {
+      clearWalletConnectionState();
+      window.dispatchEvent(new Event('orangex-wallet-disconnected'));
+      window.location.replace(window.location.pathname + window.location.search);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f2f7ff_0%,#edf4ff_45%,#f8fafc_100%)] text-slate-900">
@@ -374,6 +433,24 @@ export default function P2PAgentManagementLayout({ children }: { children: React
 
       <div className={`min-h-screen transition-all duration-300 ${desktopSidebarWidthClass}`}>
         <div className="space-y-4 px-4 pb-10 pt-16 lg:px-8 lg:pt-8">
+          {hasConnectedWallet && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={openDisconnectModal}
+                disabled={disconnecting}
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.9">
+                  <path d="M10 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M15 12H4" strokeLinecap="round" />
+                  <path d="m8 8-4 4 4 4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {disconnecting ? '지갑 해제 중...' : '지갑 연결 해제'}
+              </button>
+            </div>
+          )}
+
           {showWalletConnectRequired && (
             <section className="rounded-2xl border border-cyan-200 bg-cyan-50/70 px-4 py-4 shadow-[0_16px_32px_-24px_rgba(8,145,178,0.45)]">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -436,6 +513,62 @@ export default function P2PAgentManagementLayout({ children }: { children: React
           {isAgentAccessVerified && children}
         </div>
       </div>
+
+      {disconnectModalOpen && (
+        <div
+          className="fixed inset-0 z-[130] flex items-end justify-center bg-slate-950/45 p-4 backdrop-blur-[2px] sm:items-center"
+          role="presentation"
+          onClick={closeDisconnectModal}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl border border-white/80 bg-[linear-gradient(160deg,rgba(255,255,255,0.98)_0%,rgba(254,242,242,0.96)_100%)] p-5 shadow-[0_40px_80px_-44px_rgba(15,23,42,0.85)]"
+            role="dialog"
+            aria-modal="true"
+            aria-label="지갑 연결 해제 확인"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.9">
+                <path d="M12 8v5m0 3h.01" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.72 3h16.92a2 2 0 0 0 1.72-3l-8.47-14.14a2 2 0 0 0-3.42 0Z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+
+            <h3 className="mt-3 text-xl font-extrabold tracking-tight text-slate-900">
+              지갑 연결을 해제할까요?
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              지갑 연결이 해제되며 웹에 저장된 연결 정보와 캐시도 함께 삭제됩니다.
+              계속 진행하려면 다시 로그인해야 합니다.
+            </p>
+
+            <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50/80 p-3">
+              <p className="text-[12px] font-semibold text-rose-700">
+                연결 해제 후 현재 페이지가 새로고침됩니다.
+              </p>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={closeDisconnectModal}
+                disabled={disconnecting}
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleDisconnectWallet}
+                disabled={disconnecting}
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-rose-600 text-sm font-semibold text-white shadow-[0_16px_30px_-20px_rgba(225,29,72,0.9)] transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {disconnecting ? '해제 중...' : '연결 해제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
