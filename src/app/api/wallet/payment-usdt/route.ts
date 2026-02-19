@@ -686,6 +686,7 @@ export async function POST(request: NextRequest) {
           storecode: String(store?.storecode || storecode),
           storeName: String(store?.storeName || storecode),
           storeLogo: String(store?.storeLogo || ""),
+          backgroundColor: String(store?.backgroundColor || "").trim(),
           paymentWalletAddress: String(store?.paymentWalletAddress || ""),
           adminWalletAddress: String(store?.adminWalletAddress || ""),
         },
