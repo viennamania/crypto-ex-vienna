@@ -1,3 +1,5 @@
+import { ObjectId } from 'mongodb';
+
 import clientPromise from '../mongodb';
 
 import { dbName } from '../mongodb';
@@ -335,6 +337,8 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
             _id: 1,
             storecode: 1,
             status: 1,
+            orderProcessing: { $ifNull: ['$order_processing', 'PROCESSING'] },
+            orderProcessingUpdatedAt: { $ifNull: ['$order_processing_updated_at', ''] },
             fromWalletAddress: 1,
             toWalletAddress: 1,
             transactionHash: 1,
@@ -380,6 +384,8 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
       id: String(payment?._id || ''),
       storecode: String(payment?.storecode || ''),
       status: String(payment?.status || ''),
+      orderProcessing: String(payment?.orderProcessing || 'PROCESSING'),
+      orderProcessingUpdatedAt: String(payment?.orderProcessingUpdatedAt || ''),
       fromWalletAddress: String(payment?.fromWalletAddress || ''),
       toWalletAddress: String(payment?.toWalletAddress || ''),
       transactionHash: String(payment?.transactionHash || ''),
@@ -394,6 +400,207 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
         storeName: String(payment?.store?.storeName || ''),
         storeLogo: String(payment?.store?.storeLogo || ''),
       },
+    })),
+  };
+}
+
+export async function updateWalletUsdtPaymentOrderProcessing({
+  paymentId,
+  orderProcessing = 'COMPLETED',
+}: {
+  paymentId: string;
+  orderProcessing?: 'PROCESSING' | 'COMPLETED';
+}): Promise<{
+  id: string;
+  orderProcessing: string;
+  orderProcessingUpdatedAt: string;
+}> {
+  const normalizedPaymentId = String(paymentId || '').trim();
+  if (!ObjectId.isValid(normalizedPaymentId)) {
+    throw new Error('invalid paymentId');
+  }
+
+  const normalizedOrderProcessing = String(orderProcessing || '').trim().toUpperCase();
+  if (normalizedOrderProcessing !== 'PROCESSING' && normalizedOrderProcessing !== 'COMPLETED') {
+    throw new Error('invalid orderProcessing');
+  }
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('walletUsdtPayments');
+
+  const _id = new ObjectId(normalizedPaymentId);
+  const now = new Date().toISOString();
+
+  const updateResult = await collection.updateOne(
+    { _id },
+    {
+      $set: {
+        order_processing: normalizedOrderProcessing,
+        order_processing_updated_at: now,
+      },
+    },
+  );
+
+  if (updateResult.matchedCount === 0) {
+    throw new Error('payment not found');
+  }
+
+  const updated = await collection.findOne(
+    { _id },
+    { projection: { order_processing: 1, order_processing_updated_at: 1 } },
+  );
+
+  return {
+    id: normalizedPaymentId,
+    orderProcessing: String(updated?.order_processing || normalizedOrderProcessing),
+    orderProcessingUpdatedAt: String(updated?.order_processing_updated_at || now),
+  };
+}
+
+export async function getWalletUsdtPendingOrderProcessingSummaryByAgentcode({
+  agentcode,
+  limit = 5,
+}: {
+  agentcode: string;
+  limit?: number;
+}): Promise<{
+  pendingCount: number;
+  oldestPendingAt: string;
+  recentPayments: Array<{
+    id: string;
+    tradeId: string;
+    storecode: string;
+    storeName: string;
+    storeLogo: string;
+    memberNickname: string;
+    usdtAmount: number;
+    krwAmount: number;
+    createdAt: string;
+    confirmedAt: string;
+    orderProcessing: string;
+    orderProcessingUpdatedAt: string;
+  }>;
+}> {
+  const normalizedAgentcode = String(agentcode || '').trim();
+  if (!normalizedAgentcode) {
+    return {
+      pendingCount: 0,
+      oldestPendingAt: '',
+      recentPayments: [],
+    };
+  }
+
+  const normalizedLimit = Math.min(Math.max(Number(limit || 5), 1), 20);
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('walletUsdtPayments');
+
+  const baseMatch: any = {
+    agentcode: {
+      $regex: `^${escapeRegex(normalizedAgentcode)}$`,
+      $options: 'i',
+    },
+    status: 'confirmed',
+  };
+
+  const pendingPipeline: any[] = [
+    { $match: baseMatch },
+    {
+      $addFields: {
+        normalizedOrderProcessing: {
+          $toUpper: { $ifNull: ['$order_processing', 'PROCESSING'] },
+        },
+      },
+    },
+    {
+      $match: {
+        normalizedOrderProcessing: { $ne: 'COMPLETED' },
+      },
+    },
+  ];
+
+  const [countRows, oldestRows, recentRows] = await Promise.all([
+    collection
+      .aggregate([
+        ...pendingPipeline,
+        { $count: 'pendingCount' },
+      ])
+      .toArray(),
+    collection
+      .aggregate([
+        ...pendingPipeline,
+        { $sort: { confirmedAt: 1, createdAt: 1 } },
+        { $limit: 1 },
+        {
+          $project: {
+            _id: 0,
+            oldestPendingAt: { $ifNull: ['$confirmedAt', '$createdAt'] },
+          },
+        },
+      ])
+      .toArray(),
+    collection
+      .aggregate([
+        ...pendingPipeline,
+        {
+          $lookup: {
+            from: 'stores',
+            localField: 'storecode',
+            foreignField: 'storecode',
+            as: 'storeDocs',
+          },
+        },
+        {
+          $addFields: {
+            store: {
+              $let: {
+                vars: { storeDoc: { $arrayElemAt: ['$storeDocs', 0] } },
+                in: {
+                  storecode: { $ifNull: ['$$storeDoc.storecode', '$storecode'] },
+                  storeName: { $ifNull: ['$$storeDoc.storeName', '$storeName'] },
+                  storeLogo: { $ifNull: ['$$storeDoc.storeLogo', ''] },
+                },
+              },
+            },
+          },
+        },
+        { $sort: { confirmedAt: -1, createdAt: -1 } },
+        { $limit: normalizedLimit },
+        {
+          $project: {
+            _id: 1,
+            transactionHash: 1,
+            storecode: 1,
+            store: 1,
+            memberNickname: { $ifNull: ['$member.nickname', ''] },
+            usdtAmount: { $ifNull: ['$usdtAmount', 0] },
+            krwAmount: { $ifNull: ['$krwAmount', 0] },
+            createdAt: 1,
+            confirmedAt: 1,
+            orderProcessing: '$normalizedOrderProcessing',
+            orderProcessingUpdatedAt: { $ifNull: ['$order_processing_updated_at', ''] },
+          },
+        },
+      ])
+      .toArray(),
+  ]);
+
+  return {
+    pendingCount: Number(countRows?.[0]?.pendingCount || 0),
+    oldestPendingAt: String(oldestRows?.[0]?.oldestPendingAt || ''),
+    recentPayments: recentRows.map((payment: any) => ({
+      id: String(payment?._id || ''),
+      tradeId: String(payment?.transactionHash || payment?._id || ''),
+      storecode: String(payment?.storecode || payment?.store?.storecode || ''),
+      storeName: String(payment?.store?.storeName || payment?.storecode || ''),
+      storeLogo: String(payment?.store?.storeLogo || ''),
+      memberNickname: String(payment?.memberNickname || ''),
+      usdtAmount: Number(payment?.usdtAmount || 0),
+      krwAmount: Number(payment?.krwAmount || 0),
+      createdAt: String(payment?.createdAt || ''),
+      confirmedAt: String(payment?.confirmedAt || ''),
+      orderProcessing: String(payment?.orderProcessing || 'PROCESSING'),
+      orderProcessingUpdatedAt: String(payment?.orderProcessingUpdatedAt || ''),
     })),
   };
 }

@@ -40,6 +40,8 @@ export type AgentBuyOrderItem = {
   id: string;
   tradeId: string;
   status: string;
+  orderProcessing?: string;
+  orderProcessingUpdatedAt?: string;
   storecode: string;
   storeName: string;
   storeLogo: string;
@@ -107,6 +109,8 @@ const normalizeBuyOrder = (value: unknown): AgentBuyOrderItem => {
     id: toText(source._id) || toText(source.id),
     tradeId: toText(source.tradeId),
     status: toText(source.status),
+    orderProcessing: toText(source.orderProcessing) || toText(source.order_processing),
+    orderProcessingUpdatedAt: toText(source.orderProcessingUpdatedAt) || toText(source.order_processing_updated_at),
     storecode: toText(source.storecode),
     storeName: toText(store.storeName) || toText(source.storeName) || toText(source.storecode),
     storeLogo: toText(store.storeLogo) || toText(source.storeLogo),
@@ -129,6 +133,8 @@ const normalizeWalletUsdtPayment = (value: unknown): AgentBuyOrderItem => {
     id: toText(source.id) || toText(source._id),
     tradeId: toText(source.transactionHash) || toText(source.id) || toText(source._id),
     status: toText(source.status),
+    orderProcessing: toText(source.orderProcessing) || toText(source.order_processing) || 'PROCESSING',
+    orderProcessingUpdatedAt: toText(source.orderProcessingUpdatedAt) || toText(source.order_processing_updated_at),
     storecode: toText(source.storecode),
     storeName: toText(store.storeName) || toText(source.storeName) || toText(source.storecode),
     storeLogo: toText(store.storeLogo) || toText(source.storeLogo),
@@ -415,6 +421,30 @@ export async function fetchWalletUsdtPaymentsByAgent(
     totalKrwAmount: toNumber(result.totalKrwAmount),
     totalUsdtAmount: toNumber(result.totalUsdtAmount),
     orders: paymentsRaw.map((payment) => normalizeWalletUsdtPayment(payment)),
+  };
+}
+
+export async function updateWalletUsdtPaymentOrderProcessing(
+  paymentId: string,
+  orderProcessing: 'PROCESSING' | 'COMPLETED' = 'COMPLETED',
+): Promise<{
+  id: string;
+  orderProcessing: string;
+  orderProcessingUpdatedAt: string;
+}> {
+  const payload = await postJson('/api/payment/setWalletUsdtPaymentOrderProcessing', {
+    paymentId,
+    orderProcessing,
+  });
+
+  const result = isRecord((payload as Record<string, unknown>)?.result)
+    ? ((payload as Record<string, unknown>).result as Record<string, unknown>)
+    : {};
+
+  return {
+    id: toText(result.id),
+    orderProcessing: toText(result.orderProcessing),
+    orderProcessingUpdatedAt: toText(result.orderProcessingUpdatedAt),
   };
 }
 

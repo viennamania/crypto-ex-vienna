@@ -2334,6 +2334,8 @@ export default function OrangeXPage() {
                     </div>
                 </div>
                 */}
+                {/* 에스크로 서비스 섹션 */}
+                {/*
                 <section
                     data-reveal
                     className="glam-card relative mb-12 overflow-hidden rounded-[32px] bg-[linear-gradient(135deg,#0f172a,#0b1220_55%,#0f172a)] px-8 py-7 text-white shadow-[0_40px_120px_-80px_rgba(15,23,42,0.9)]"
@@ -2387,8 +2389,8 @@ export default function OrangeXPage() {
                         </div>
                     </div>
                 </section>
-
-
+                */}
+                
 
                 {/* 마켓 시세 섹션 */}
                 <div
