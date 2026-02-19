@@ -52,6 +52,16 @@ type PaymentStoreInfo = {
   paymentWalletAddress: string;
 };
 
+type NoticePreviewItem = {
+  id: string;
+  title: string;
+  summary?: string;
+  content?: string[] | string;
+  isPinned?: boolean;
+  publishedAt?: string;
+  createdAt?: string;
+};
+
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
@@ -126,6 +136,34 @@ const normalizeWalletAddressList = (value: unknown): string[] => {
   return Array.from(dedup.values());
 };
 
+const resolveNoticeSummary = (notice: NoticePreviewItem): string => {
+  if (notice.summary) {
+    return notice.summary;
+  }
+  if (Array.isArray(notice.content)) {
+    return notice.content.find((line) => String(line || '').trim()) || '';
+  }
+  if (typeof notice.content === 'string') {
+    return notice.content.split('\n').find((line) => line.trim()) || '';
+  }
+  return '';
+};
+
+const resolveNoticeDateLabel = (notice: NoticePreviewItem): string => {
+  const dateSource = String(notice.publishedAt || notice.createdAt || '').trim();
+  if (!dateSource) {
+    return '';
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateSource)) {
+    return dateSource;
+  }
+  const parsedDate = new Date(dateSource);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return dateSource.slice(0, 10);
+  }
+  return parsedDate.toISOString().slice(0, 10);
+};
+
 const BALANCE_SYNC_WARNING_THRESHOLD = 3;
 const HOME_SHORTCUT_BANNER_HIDE_KEY = 'wallet-home-shortcut-banner-hide-until';
 const HOME_SHORTCUT_BANNER_HIDE_DAYS = 7;
@@ -146,6 +184,7 @@ export default function WalletManagementHomePage() {
   }, [storecode]);
   const walletPath = `/${lang}/wallet-management/wallet-usdt${baseQueryString ? `?${baseQueryString}` : ''}`;
   const paymentPath = `/${lang}/wallet-management/payment-usdt${baseQueryString ? `?${baseQueryString}` : ''}`;
+  const noticePath = `/${lang}/wallet-management/notice${baseQueryString ? `?${baseQueryString}` : ''}`;
   const buildBuyPath = useCallback((sellerWalletAddress?: string) => {
     const query = new URLSearchParams(baseQueryString);
     const sellerWallet = String(sellerWalletAddress || '').trim();
@@ -196,6 +235,9 @@ export default function WalletManagementHomePage() {
   const [showHomeShortcutGuide, setShowHomeShortcutGuide] = useState(false);
   const [deferredInstallPrompt, setDeferredInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
+  const [notices, setNotices] = useState<NoticePreviewItem[]>([]);
+  const [loadingNotices, setLoadingNotices] = useState(true);
+  const [noticesError, setNoticesError] = useState<string | null>(null);
 
   const storeBrandColor = useMemo(
     () => resolveStoreBrandColor(storecode, paymentStoreInfo?.backgroundColor),
@@ -544,6 +586,69 @@ export default function WalletManagementHomePage() {
     }
   }, [sellerWalletFromQuery]);
 
+  useEffect(() => {
+    let mounted = true;
+    const loadNotices = async () => {
+      setLoadingNotices(true);
+      setNoticesError(null);
+      try {
+        const response = await fetch('/api/notice/getActive?limit=3&sortBy=publishedAt&pinnedFirst=true');
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(String(data?.error || '공지사항을 불러오지 못했습니다.'));
+        }
+
+        const source = Array.isArray(data?.result) ? data.result : [];
+        const normalized = source
+          .map((item: unknown): NoticePreviewItem | null => {
+            if (!isRecord(item)) {
+              return null;
+            }
+            const id = String(item._id || item.id || '').trim();
+            const title = String(item.title || '').trim();
+            if (!id || !title) {
+              return null;
+            }
+            return {
+              id,
+              title,
+              summary: String(item.summary || '').trim(),
+              content: Array.isArray(item.content)
+                ? item.content.map((line: unknown) => String(line || ''))
+                : typeof item.content === 'string'
+                  ? item.content
+                  : '',
+              isPinned: item.isPinned === true,
+              publishedAt: String(item.publishedAt || '').trim(),
+              createdAt: String(item.createdAt || '').trim(),
+            };
+          })
+          .filter((item: NoticePreviewItem | null): item is NoticePreviewItem => item !== null);
+
+        if (mounted) {
+          setNotices(normalized);
+        }
+      } catch (error) {
+        console.error('Failed to load notices on wallet home', error);
+        if (mounted) {
+          const message = error instanceof Error ? error.message : '공지사항을 불러오지 못했습니다.';
+          setNoticesError(message);
+          setNotices([]);
+        }
+      } finally {
+        if (mounted) {
+          setLoadingNotices(false);
+        }
+      }
+    };
+
+    loadNotices();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   if (clientSettingsLoading) {
     return (
       <main
@@ -837,6 +942,76 @@ export default function WalletManagementHomePage() {
               <p className="font-semibold text-slate-800">투명</p>
               <p className="mt-1 text-slate-500">거래내역 추적</p>
             </div>
+          </div>
+        </section>
+
+        <section className="mt-5 rounded-3xl border border-white/70 bg-white/80 p-5 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.42)] backdrop-blur">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">NOTICE</p>
+              <h2 className="mt-1 text-xl font-semibold text-slate-900">공지사항</h2>
+            </div>
+            <Link
+              href={noticePath}
+              className="inline-flex h-9 items-center justify-center rounded-xl border px-3 text-xs font-semibold transition hover:opacity-95"
+              style={{
+                borderColor: storeBrandLightBorder,
+                color: storeBrandColor,
+                backgroundColor: rgbaFromHex(storeBrandColor, 0.08),
+              }}
+            >
+              공지사항 보러가기
+            </Link>
+          </div>
+          <p className="mt-2 text-sm text-slate-600">
+            서비스 공지, 정책 변경, 업데이트 소식을 빠르게 확인하세요.
+          </p>
+
+          <div className="mt-3 grid gap-2">
+            {loadingNotices && (
+              <>
+                <div className="h-[72px] animate-pulse rounded-2xl border border-slate-200 bg-slate-100/80" />
+                <div className="h-[72px] animate-pulse rounded-2xl border border-slate-200 bg-slate-100/70" />
+              </>
+            )}
+
+            {!loadingNotices && noticesError && (
+              <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">
+                {noticesError}
+              </p>
+            )}
+
+            {!loadingNotices && !noticesError && notices.length === 0 && (
+              <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-500">
+                등록된 공지사항이 없습니다.
+              </p>
+            )}
+
+            {!loadingNotices &&
+              !noticesError &&
+              notices.map((notice) => {
+                const noticeQuery = new URLSearchParams(baseQueryString);
+                noticeQuery.set('noticeId', notice.id);
+                const noticeDetailPath = `/${lang}/wallet-management/notice?${noticeQuery.toString()}`;
+                const summary = resolveNoticeSummary(notice);
+                const dateLabel = resolveNoticeDateLabel(notice);
+                return (
+                  <Link
+                    key={notice.id}
+                    href={noticeDetailPath}
+                    className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 transition hover:border-slate-300 hover:bg-slate-50/80"
+                  >
+                    <div className="flex items-center justify-between gap-2 text-[11px] font-medium text-slate-500">
+                      <span>{dateLabel || '공지'}</span>
+                      <span>{notice.isPinned ? '중요 공지' : '상세보기'}</span>
+                    </div>
+                    <p className="mt-1 line-clamp-1 text-sm font-semibold text-slate-900">{notice.title}</p>
+                    {summary && (
+                      <p className="mt-1 line-clamp-2 text-xs text-slate-500">{summary}</p>
+                    )}
+                  </Link>
+                );
+              })}
           </div>
         </section>
 

@@ -13,7 +13,7 @@ import {
 
 import { client } from '@/app/client';
 import { ConnectButton } from '@/components/OrangeXConnectButton';
-import { useClientWallets } from '@/lib/useClientWallets';
+import { useClientWallets, type SupportedSmsCountry } from '@/lib/useClientWallets';
 import { clearWalletConnectionState } from '@/lib/clearWalletConnectionState';
 
 type MenuItem = {
@@ -26,8 +26,8 @@ type MenuItem = {
 };
 
 const WALLET_AUTH_OPTIONS = ['google', 'email', 'phone'];
-const WALLET_DEFAULT_SMS_COUNTRY_CODE = 'KR';
-const WALLET_ALLOWED_SMS_COUNTRY_CODES = ['KR'];
+const WALLET_DEFAULT_SMS_COUNTRY_CODE: SupportedSmsCountry = 'KR';
+const WALLET_ALLOWED_SMS_COUNTRY_CODES: SupportedSmsCountry[] = ['KR'];
 const normalizeAddress = (value: string) => String(value || '').trim().toLowerCase();
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);

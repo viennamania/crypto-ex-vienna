@@ -29,7 +29,7 @@ type InAppAuthOption =
   | 'wallet';
 
 type InAppWalletOptions = Parameters<typeof inAppWallet>[0];
-type SupportedSmsCountry = Exclude<
+export type SupportedSmsCountry = Exclude<
   NonNullable<NonNullable<InAppWalletOptions>["auth"]>["defaultSmsCountryCode"],
   undefined
 >;
