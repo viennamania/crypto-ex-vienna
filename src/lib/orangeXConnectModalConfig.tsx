@@ -74,8 +74,8 @@ const chipStyle: CSSProperties = {
 };
 
 export const ORANGEX_WELCOME_SCREEN: OrangeXWelcomeScreenData = {
-  title: 'OrangeX 로그인',
-  subtitle: '전화번호 인증으로 빠르게 지갑을 연결하고 서비스를 시작하세요.',
+  title: 'OrangeX Sign In',
+  subtitle: 'Quickly connect your wallet with phone verification and get started.',
   img: {
     src: '/logo-orangex.png',
     width: 320,
@@ -110,10 +110,10 @@ export const OrangeXConnectWelcomeScreen = () => {
             letterSpacing: '-0.02em',
           }}
         >
-          전화번호로 빠르게 로그인
+          Fast sign-in with your phone number
         </h2>
         <p style={{ marginTop: 10, marginBottom: 0, color: '#334155', fontSize: 14, lineHeight: 1.65 }}>
-          간편 인증으로 지갑을 연결하고 결제, 구매, 정산 기능을 안전하게 시작하세요.
+          Connect your wallet with simple verification and securely start payments, buying, and settlement.
         </p>
       </div>
 
@@ -127,12 +127,12 @@ export const OrangeXConnectWelcomeScreen = () => {
           }}
         >
           <p style={{ margin: 0, color: '#0f172a', fontSize: 13, fontWeight: 800 }}>
-            연결 후 바로 가능한 작업
+            Available right after connection
           </p>
           <ul style={{ margin: '10px 0 0', paddingLeft: 18, color: '#334155', fontSize: 13, lineHeight: 1.7 }}>
-            <li>USDT 지갑 자산 확인</li>
-            <li>USDT 결제 및 구매 진행</li>
-            <li>거래 내역 실시간 조회</li>
+            <li>Check your USDT wallet balance</li>
+            <li>Start USDT payments and purchases</li>
+            <li>Track transaction history in real time</li>
           </ul>
         </div>
 
@@ -149,7 +149,7 @@ export const OrangeXConnectWelcomeScreen = () => {
 export const ORANGEX_CONNECT_MODAL: OrangeXConnectModalConfig &
   NonNullable<ConnectButtonProps['connectModal']> = {
   size: 'wide',
-  title: 'OrangeX 로그인',
+  title: 'OrangeX Sign In',
   titleIcon: '/logo-orangex-mark.svg',
   showThirdwebBranding: false,
   welcomeScreen: () => <OrangeXConnectWelcomeScreen />,
@@ -158,6 +158,6 @@ export const ORANGEX_CONNECT_MODAL: OrangeXConnectModalConfig &
 export const ORANGEX_CONNECT_OPTIONS: OrangeXConnectModalConfig &
   Pick<UseConnectModalOptions, 'theme' | 'locale'> = {
   theme: 'light',
-  locale: 'ko_KR',
+  locale: 'en_US',
   ...ORANGEX_CONNECT_MODAL,
 };

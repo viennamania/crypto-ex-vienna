@@ -357,14 +357,14 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-[12px] font-medium text-slate-500">
                   <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
-                  <span>내 지갑주소</span>
+                  <span>My Wallet Address</span>
                 </div>
                 {smartAccountEnabled && (
                 <div className="relative">
                   <span className="smart-account-glow absolute -inset-1 rounded-full" />
                     <span className="smart-account-badge inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 px-2.5 py-0.5 text-[10px] font-bold text-white">
                       <span className="inline-flex h-2 w-2 rounded-full bg-white shadow-[0_0_14px_rgba(255,255,255,0.95)]" />
-                      스마트 어카운트
+                      Smart Account
                     </span>
                 </div>
                 )}
@@ -378,7 +378,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                   onClick={() => {
                     navigator.clipboard.writeText(address);
                     //toast.success(Copied_Wallet_Address);
-                    alert("지갑주소가 복사되었습니다.");
+                    alert("Wallet address copied.");
                   }}
                 >
                   <Image
@@ -394,13 +394,13 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                 </button>
 
                 <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-                  <span>QR 코드</span>
+                  <span>QR Code</span>
                   <button
                     type="button"
                     onClick={() => setShowQrCode((prev) => !prev)}
                     className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm transition hover:border-slate-300"
                   >
-                    {showQrCode ? 'QR 접기' : 'QR 펼치기'}
+                    {showQrCode ? 'Hide QR' : 'Show QR'}
                   </button>
                 </div>
 
@@ -444,7 +444,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                   height={35}
                   className="h-6 w-6 rounded-lg bg-white p-1 shadow-sm"
                 />
-                <span>내 테더 잔액(USDT)</span>
+                <span>My Tether Balance (USDT)</span>
               </div>
 
               <div className="mt-2 flex w-full items-baseline justify-end gap-2 text-right">
@@ -503,7 +503,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                       className="rounded-lg"
                     />
                     <span className="text-[12px] font-medium text-slate-500">
-                      가스보유량
+                      Gas Balance
                     </span>
                   </div>
                   <div className="flex items-baseline gap-2">
@@ -530,7 +530,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
             >
               <div className="flex w-full items-center justify-between">
                 <span className="text-[12px] font-semibold uppercase tracking-[0.2em]">
-                  현재 네트워크
+                  Current Network
                 </span>
                 <div className="flex items-center gap-2">
                   <Image
@@ -551,7 +551,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                 px-3 py-2 text-[11px] text-emerald-700"
                 style={{ animationDelay: "0.22s" }}
               >
-                스마트 어카운트는 출금 시 가스비용이 필요 없어 편리합니다.
+                Smart accounts are convenient because no gas fee is required for withdrawals.
               </div>
             ) : (
               nativeBalance < 0.0001 && (
@@ -560,7 +560,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                   px-3 py-2 text-[11px] text-rose-600"
                   style={{ animationDelay: "0.22s" }}
                 >
-                  가스비용이 부족합니다.<br />가스비용이 부족하면 입금은 가능하지만 출금은 불가능합니다.
+                  Insufficient gas fee.<br />Deposits are possible, but withdrawals are unavailable with insufficient gas.
                 </div>
               )
             )}
@@ -585,7 +585,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                     width={16}
                     height={16}
                   />
-                  <span>USDT 출금하기</span>
+                  <span>Withdraw USDT</span>
               </button>
 
               {isP2pSection && (
@@ -603,7 +603,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                     width={16}
                     height={16}
                   />
-                  <span>USDT 결제하기</span>
+                  <span>Pay with USDT</span>
                 </button>
               )}
 
@@ -613,13 +613,13 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                   transition hover:border-rose-300 hover:bg-rose-50"
                   onClick={() => {
                     // Add your disconnect wallet logic here
-                    confirm("지갑 연결을 해제하시겠습니까?") && activeWallet?.disconnect()
+                    confirm("Are you sure you want to disconnect the wallet?") && activeWallet?.disconnect()
                     .then(() => {
-                      toast.success('로그아웃 되었습니다');
+                      toast.success('Logged out.');
                     });
                     
                   }}>
-                  지갑 연결 해제
+                  Disconnect Wallet
                 </button>
 
 
@@ -636,7 +636,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
           >
             {/* 로그인하고 나의 자산을 확인하세요 */}
             <span className="text-[13px] font-medium text-slate-500">
-              로그인하고 나의 지갑주소에서 자산을 확인하세요
+              Sign in to check assets in your wallet address.
             </span>
 
 
@@ -659,7 +659,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                     height: "42px",
                     boxShadow: "0 14px 30px -18px rgba(15, 23, 42, 0.6)",
                   },
-                  label: "웹3 로그인",
+                  label: "Web3 Sign In",
                 }}
 
                 connectModal={{
@@ -669,8 +669,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                   showThirdwebBranding: false,
                 }}
 
-                locale={"ko_KR"}
-                //locale={"en_US"}
+                locale={"en_US"}
               />
             </div>
 

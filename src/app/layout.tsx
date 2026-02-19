@@ -97,7 +97,7 @@ const WalletConsoleShell = () => {
       if (showChain) {
         setShowChain(false);
       }
-      toast('지갑 연결이 해제되어 지갑 패널이 닫혔습니다.', { icon: '🔒' });
+      toast('Wallet disconnected. Wallet panel closed.', { icon: '🔒' });
     }
 
     if (!prevAddress && nextAddress) {
@@ -178,7 +178,7 @@ const WalletConsoleShell = () => {
                   <span className={`text-sm font-semibold tracking-tight ${
                     showChain ? 'text-white drop-shadow-[0_1px_2px_rgba(15,23,42,0.6)]' : 'text-slate-100'
                   }`}>
-                    {showChain ? '내 지갑 닫기' : '내 지갑 열기'}
+                    {showChain ? 'Close My Wallet' : 'Open My Wallet'}
                   </span>
 
                 </div>

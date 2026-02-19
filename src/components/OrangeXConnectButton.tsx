@@ -20,7 +20,7 @@ export function ConnectButton(props: ConnectButtonProps) {
   } = props;
 
   const mergedConnectButton = {
-    label: connectButton?.label ?? '지갑 연결하기',
+    label: connectButton?.label ?? 'Connect Wallet',
     className: [DEFAULT_CONNECT_BUTTON_CLASS, connectButton?.className]
       .filter(Boolean)
       .join(' '),
@@ -35,7 +35,7 @@ export function ConnectButton(props: ConnectButtonProps) {
   return (
     <ThirdwebConnectButton
       {...rest}
-      locale={locale ?? 'ko_KR'}
+      locale={locale ?? 'en_US'}
       theme={theme ?? 'light'}
       connectButton={mergedConnectButton}
       connectModal={mergedConnectModal}
