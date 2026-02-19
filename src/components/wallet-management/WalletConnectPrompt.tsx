@@ -139,7 +139,7 @@ export default function WalletConnectPrompt({
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">연결 안내</p>
                   <p className="mt-1.5 text-sm text-slate-700">
-                    전화번호 인증 시 번호는 01로 시작해야 합니다. 1로 시작하면 인증되지 않습니다.
+                    전화번호 인증 시 표기를 010 으로 시작해야 합니다  10 으로 시작하면 인증되지 않습니다.
                   </p>
                 </div>
 
