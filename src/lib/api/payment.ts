@@ -5,6 +5,7 @@ import clientPromise from '../mongodb';
 import { dbName } from '../mongodb';
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const pad2 = (value: number) => String(value).padStart(2, '0');
 
 // payments collection
 /*
@@ -454,6 +455,247 @@ export async function updateWalletUsdtPaymentOrderProcessing({
     id: normalizedPaymentId,
     orderProcessing: String(updated?.order_processing || normalizedOrderProcessing),
     orderProcessingUpdatedAt: String(updated?.order_processing_updated_at || now),
+  };
+}
+
+export async function getWalletUsdtPaymentStatsByAgentcode({
+  agentcode,
+  hourlyHours = 24,
+  dailyDays = 14,
+  monthlyMonths = 12,
+}: {
+  agentcode: string;
+  hourlyHours?: number;
+  dailyDays?: number;
+  monthlyMonths?: number;
+}): Promise<{
+  generatedAt: string;
+  totals: {
+    count: number;
+    usdtAmount: number;
+    krwAmount: number;
+  };
+  hourly: {
+    hours: number;
+    points: Array<{
+      bucket: string;
+      label: string;
+      count: number;
+      usdtAmount: number;
+      krwAmount: number;
+    }>;
+  };
+  daily: {
+    days: number;
+    points: Array<{
+      bucket: string;
+      label: string;
+      count: number;
+      usdtAmount: number;
+      krwAmount: number;
+    }>;
+  };
+  monthly: {
+    months: number;
+    points: Array<{
+      bucket: string;
+      label: string;
+      count: number;
+      usdtAmount: number;
+      krwAmount: number;
+    }>;
+  };
+}> {
+  const normalizedAgentcode = String(agentcode || '').trim();
+  if (!normalizedAgentcode) {
+    return {
+      generatedAt: new Date().toISOString(),
+      totals: {
+        count: 0,
+        usdtAmount: 0,
+        krwAmount: 0,
+      },
+      hourly: { hours: 0, points: [] },
+      daily: { days: 0, points: [] },
+      monthly: { months: 0, points: [] },
+    };
+  }
+
+  const normalizedHourlyHours = Math.min(Math.max(Number(hourlyHours || 24), 6), 72);
+  const normalizedDailyDays = Math.min(Math.max(Number(dailyDays || 14), 7), 62);
+  const normalizedMonthlyMonths = Math.min(Math.max(Number(monthlyMonths || 12), 6), 24);
+
+  const now = new Date();
+  const hourlyStart = new Date(now.getTime() - (normalizedHourlyHours - 1) * 60 * 60 * 1000);
+  const dailyStart = new Date(now.getTime() - (normalizedDailyDays - 1) * 24 * 60 * 60 * 1000);
+  const monthlyStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (normalizedMonthlyMonths - 1), 1));
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('walletUsdtPayments');
+
+  const baseMatch: any = {
+    agentcode: {
+      $regex: `^${escapeRegex(normalizedAgentcode)}$`,
+      $options: 'i',
+    },
+    status: 'confirmed',
+  };
+
+  const basePipeline: any[] = [
+    { $match: baseMatch },
+    {
+      $addFields: {
+        eventAt: {
+          $ifNull: [
+            { $convert: { input: '$confirmedAt', to: 'date', onError: null, onNull: null } },
+            { $convert: { input: '$createdAt', to: 'date', onError: null, onNull: null } },
+          ],
+        },
+      },
+    },
+    { $match: { eventAt: { $ne: null } } },
+  ];
+
+  const [totalRows, hourlyRows, dailyRows, monthlyRows] = await Promise.all([
+    collection
+      .aggregate([
+        ...basePipeline,
+        {
+          $group: {
+            _id: null,
+            count: { $sum: 1 },
+            usdtAmount: { $sum: { $ifNull: ['$usdtAmount', 0] } },
+            krwAmount: { $sum: { $ifNull: ['$krwAmount', 0] } },
+          },
+        },
+      ])
+      .toArray(),
+    collection
+      .aggregate([
+        ...basePipeline,
+        { $match: { eventAt: { $gte: hourlyStart, $lte: now } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d %H:00', date: '$eventAt', timezone: 'UTC' } },
+            count: { $sum: 1 },
+            usdtAmount: { $sum: { $ifNull: ['$usdtAmount', 0] } },
+            krwAmount: { $sum: { $ifNull: ['$krwAmount', 0] } },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ])
+      .toArray(),
+    collection
+      .aggregate([
+        ...basePipeline,
+        { $match: { eventAt: { $gte: dailyStart, $lte: now } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$eventAt', timezone: 'UTC' } },
+            count: { $sum: 1 },
+            usdtAmount: { $sum: { $ifNull: ['$usdtAmount', 0] } },
+            krwAmount: { $sum: { $ifNull: ['$krwAmount', 0] } },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ])
+      .toArray(),
+    collection
+      .aggregate([
+        ...basePipeline,
+        { $match: { eventAt: { $gte: monthlyStart, $lte: now } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m', date: '$eventAt', timezone: 'UTC' } },
+            count: { $sum: 1 },
+            usdtAmount: { $sum: { $ifNull: ['$usdtAmount', 0] } },
+            krwAmount: { $sum: { $ifNull: ['$krwAmount', 0] } },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ])
+      .toArray(),
+  ]);
+
+  const buildHourlyBucket = (date: Date) =>
+    `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())} ${pad2(date.getUTCHours())}:00`;
+  const buildDailyBucket = (date: Date) =>
+    `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
+  const buildMonthlyBucket = (date: Date) =>
+    `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}`;
+
+  const hourlySeed = Array.from({ length: normalizedHourlyHours }, (_, index) => {
+    const date = new Date(now.getTime() - (normalizedHourlyHours - 1 - index) * 60 * 60 * 1000);
+    return {
+      bucket: buildHourlyBucket(date),
+      label: `${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())} ${pad2(date.getUTCHours())}시`,
+    };
+  });
+  const dailySeed = Array.from({ length: normalizedDailyDays }, (_, index) => {
+    const date = new Date(now.getTime() - (normalizedDailyDays - 1 - index) * 24 * 60 * 60 * 1000);
+    return {
+      bucket: buildDailyBucket(date),
+      label: `${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`,
+    };
+  });
+  const monthlySeed = Array.from({ length: normalizedMonthlyMonths }, (_, index) => {
+    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (normalizedMonthlyMonths - 1 - index), 1));
+    return {
+      bucket: buildMonthlyBucket(date),
+      label: `${String(date.getUTCFullYear()).slice(-2)}.${pad2(date.getUTCMonth() + 1)}`,
+    };
+  });
+
+  const toSeriesMap = (rows: any[]) =>
+    new Map(
+      rows.map((row: any) => [
+        String(row?._id || ''),
+        {
+          count: Number(row?.count || 0),
+          usdtAmount: Number(row?.usdtAmount || 0),
+          krwAmount: Number(row?.krwAmount || 0),
+        },
+      ]),
+    );
+
+  const hourlyMap = toSeriesMap(hourlyRows);
+  const dailyMap = toSeriesMap(dailyRows);
+  const monthlyMap = toSeriesMap(monthlyRows);
+
+  const hydrateSeries = (
+    seed: Array<{ bucket: string; label: string }>,
+    sourceMap: Map<string, { count: number; usdtAmount: number; krwAmount: number }>,
+  ) =>
+    seed.map((item) => {
+      const source = sourceMap.get(item.bucket);
+      return {
+        bucket: item.bucket,
+        label: item.label,
+        count: Number(source?.count || 0),
+        usdtAmount: Number(source?.usdtAmount || 0),
+        krwAmount: Number(source?.krwAmount || 0),
+      };
+    });
+
+  return {
+    generatedAt: now.toISOString(),
+    totals: {
+      count: Number(totalRows?.[0]?.count || 0),
+      usdtAmount: Number(totalRows?.[0]?.usdtAmount || 0),
+      krwAmount: Number(totalRows?.[0]?.krwAmount || 0),
+    },
+    hourly: {
+      hours: normalizedHourlyHours,
+      points: hydrateSeries(hourlySeed, hourlyMap),
+    },
+    daily: {
+      days: normalizedDailyDays,
+      points: hydrateSeries(dailySeed, dailyMap),
+    },
+    monthly: {
+      months: normalizedMonthlyMonths,
+      points: hydrateSeries(monthlySeed, monthlyMap),
+    },
   };
 }
 

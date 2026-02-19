@@ -90,6 +90,35 @@ export type AgentDashboardResult = {
   recentPayments: AgentBuyOrderItem[];
 };
 
+export type AgentPaymentStatsPoint = {
+  bucket: string;
+  label: string;
+  count: number;
+  usdtAmount: number;
+  krwAmount: number;
+};
+
+export type AgentPaymentStatsResult = {
+  generatedAt: string;
+  totals: {
+    count: number;
+    usdtAmount: number;
+    krwAmount: number;
+  };
+  hourly: {
+    hours: number;
+    points: AgentPaymentStatsPoint[];
+  };
+  daily: {
+    days: number;
+    points: AgentPaymentStatsPoint[];
+  };
+  monthly: {
+    months: number;
+    points: AgentPaymentStatsPoint[];
+  };
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -445,6 +474,71 @@ export async function updateWalletUsdtPaymentOrderProcessing(
     id: toText(result.id),
     orderProcessing: toText(result.orderProcessing),
     orderProcessingUpdatedAt: toText(result.orderProcessingUpdatedAt),
+  };
+}
+
+const normalizePaymentStatsPoint = (value: unknown): AgentPaymentStatsPoint => {
+  const source = isRecord(value) ? value : {};
+  return {
+    bucket: toText(source.bucket),
+    label: toText(source.label),
+    count: toNumber(source.count),
+    usdtAmount: toNumber(source.usdtAmount),
+    krwAmount: toNumber(source.krwAmount),
+  };
+};
+
+export async function fetchWalletUsdtPaymentStatsByAgent(
+  agentcode: string,
+  {
+    hourlyHours = 24,
+    dailyDays = 14,
+    monthlyMonths = 12,
+  }: {
+    hourlyHours?: number;
+    dailyDays?: number;
+    monthlyMonths?: number;
+  } = {},
+): Promise<AgentPaymentStatsResult> {
+  const payload = await postJson('/api/payment/getWalletUsdtPaymentStatsByAgentcode', {
+    agentcode,
+    hourlyHours,
+    dailyDays,
+    monthlyMonths,
+  });
+
+  const result = isRecord((payload as Record<string, unknown>)?.result)
+    ? ((payload as Record<string, unknown>).result as Record<string, unknown>)
+    : {};
+
+  const totals = isRecord(result.totals) ? result.totals : {};
+  const hourly = isRecord(result.hourly) ? result.hourly : {};
+  const daily = isRecord(result.daily) ? result.daily : {};
+  const monthly = isRecord(result.monthly) ? result.monthly : {};
+
+  const hourlyPointsRaw = Array.isArray(hourly.points) ? hourly.points : [];
+  const dailyPointsRaw = Array.isArray(daily.points) ? daily.points : [];
+  const monthlyPointsRaw = Array.isArray(monthly.points) ? monthly.points : [];
+
+  return {
+    generatedAt: toText(result.generatedAt),
+    totals: {
+      count: toNumber(totals.count),
+      usdtAmount: toNumber(totals.usdtAmount),
+      krwAmount: toNumber(totals.krwAmount),
+    },
+    hourly: {
+      hours: toNumber(hourly.hours),
+      points: hourlyPointsRaw.map((point) => normalizePaymentStatsPoint(point)),
+    },
+    daily: {
+      days: toNumber(daily.days),
+      points: dailyPointsRaw.map((point) => normalizePaymentStatsPoint(point)),
+    },
+    monthly: {
+      months: toNumber(monthly.months),
+      points: monthlyPointsRaw.map((point) => normalizePaymentStatsPoint(point)),
+    },
   };
 }
 

@@ -57,6 +57,8 @@ const WALLET_ALLOWED_SMS_COUNTRY_CODES: SupportedSmsCountry[] = ['KR'];
 const ORDER_PROCESSING_ALERT_POLLING_MS = 15000;
 const ORDER_PROCESSING_ALERT_SOUND_INTERVAL_MS = 30000;
 const ORDER_PROCESSING_ALERT_SOUND_ENABLED_KEY = 'agent-order-processing-alert-sound-enabled';
+const ORDER_PROCESSING_ALERT_SOUND_SRC = '/notification.mp3';
+const ORDER_PROCESSING_ALERT_SOUND_FALLBACK_SRC = '/notification.wav';
 const ORDER_PROCESSING_CARD_ENTER_MS = 1700;
 const ORDER_PROCESSING_CARD_EXIT_MS = 420;
 const normalizeAddress = (value: string) => String(value || '').trim().toLowerCase();
@@ -158,7 +160,8 @@ export default function P2PAgentManagementLayout({ children }: { children: React
   const [pendingAlertLastCheckedAt, setPendingAlertLastCheckedAt] = useState('');
   const [pendingAlertSoundEnabled, setPendingAlertSoundEnabled] = useState(true);
   const [pendingAlertCards, setPendingAlertCards] = useState<PendingAlertCardItem[]>([]);
-  const pendingAudioContextRef = useRef<AudioContext | null>(null);
+  const pendingAlertAudioRef = useRef<HTMLAudioElement | null>(null);
+  const pendingAlertAudioUnlockedRef = useRef(false);
   const lastAlertSoundAtRef = useRef(0);
   const previousPendingCountRef = useRef(0);
   const pendingCardTimerIdsRef = useRef<number[]>([]);
@@ -204,6 +207,13 @@ export default function P2PAgentManagementLayout({ children }: { children: React
             description: '결제 확정 거래',
             basePath: `/${lang}/p2p/agent-management/payment-management`,
           },
+          {
+            key: 'payment-stats',
+            label: '결제 통계',
+            compactLabel: '통계',
+            description: '시간/일/월 통계',
+            basePath: `/${lang}/p2p/agent-management/payment-stats`,
+          },
         ],
       },
     ],
@@ -233,35 +243,41 @@ export default function P2PAgentManagementLayout({ children }: { children: React
   );
   const showPinnedPendingAlert = isAgentAccessVerified && (pendingSummary.pendingCount > 0 || pendingAlertCards.length > 0);
 
-  const playPendingAlertTone = useCallback(async () => {
-    if (typeof window === 'undefined') return;
+  const getPendingAlertAudio = useCallback(() => {
+    if (typeof window === 'undefined') return null;
 
-    const AudioContextCtor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextCtor) return;
-
-    if (!pendingAudioContextRef.current) {
-      pendingAudioContextRef.current = new AudioContextCtor();
+    if (!pendingAlertAudioRef.current) {
+      const audio = new Audio(ORDER_PROCESSING_ALERT_SOUND_SRC);
+      audio.preload = 'auto';
+      audio.volume = 1;
+      pendingAlertAudioRef.current = audio;
     }
 
-    const audioContext = pendingAudioContextRef.current;
-    if (!audioContext) return;
-
-    if (audioContext.state === 'suspended') {
-      await audioContext.resume();
-    }
-
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    oscillator.type = 'triangle';
-    oscillator.frequency.setValueAtTime(988, audioContext.currentTime);
-    gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.05, audioContext.currentTime + 0.015);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.24);
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.26);
+    return pendingAlertAudioRef.current;
   }, []);
+
+  const playPendingAlertTone = useCallback(async () => {
+    const audio = getPendingAlertAudio();
+    if (!audio) return;
+
+    audio.pause();
+    audio.currentTime = 0;
+
+    try {
+      await audio.play();
+    } catch (error) {
+      // If mp3 decoding/playback fails on some environments, fallback to wav.
+      if (!audio.src.endsWith(ORDER_PROCESSING_ALERT_SOUND_FALLBACK_SRC)) {
+        audio.src = ORDER_PROCESSING_ALERT_SOUND_FALLBACK_SRC;
+        audio.load();
+        audio.currentTime = 0;
+        await audio.play();
+        return;
+      }
+
+      throw error;
+    }
+  }, [getPendingAlertAudio]);
 
   const loadPendingOrderProcessingSummary = useCallback(async () => {
     if (!agentcode) {
@@ -456,10 +472,41 @@ export default function P2PAgentManagementLayout({ children }: { children: React
   }, [isAgentAccessVerified, pendingAlertSoundEnabled, pendingSummary.pendingCount, playPendingAlertTone]);
 
   useEffect(() => {
+    const audio = getPendingAlertAudio();
+    audio?.load();
+
+    const unlockAudio = () => {
+      if (pendingAlertAudioUnlockedRef.current) return;
+
+      const pendingCount = Number(pendingSummary.pendingCount || 0);
+      if (!pendingAlertSoundEnabled || pendingCount <= 0) return;
+
+      pendingAlertAudioUnlockedRef.current = true;
+      void playPendingAlertTone()
+        .then(() => {
+          lastAlertSoundAtRef.current = Date.now();
+        })
+        .catch(() => {
+          pendingAlertAudioUnlockedRef.current = false;
+        });
+    };
+
+    window.addEventListener('pointerdown', unlockAudio);
+    window.addEventListener('keydown', unlockAudio);
+
     return () => {
-      if (!pendingAudioContextRef.current) return;
-      void pendingAudioContextRef.current.close().catch(() => undefined);
-      pendingAudioContextRef.current = null;
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+  }, [getPendingAlertAudio, pendingAlertSoundEnabled, pendingSummary.pendingCount, playPendingAlertTone]);
+
+  useEffect(() => {
+    return () => {
+      if (!pendingAlertAudioRef.current) return;
+      pendingAlertAudioRef.current.pause();
+      pendingAlertAudioRef.current.currentTime = 0;
+      pendingAlertAudioRef.current = null;
+      pendingAlertAudioUnlockedRef.current = false;
     };
   }, []);
 

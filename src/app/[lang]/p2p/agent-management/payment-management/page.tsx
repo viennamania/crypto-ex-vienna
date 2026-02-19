@@ -235,7 +235,7 @@ export default function P2PAgentPaymentManagementPage() {
                     <th className="px-4 py-3">회원/결제지갑</th>
                     <th className="px-4 py-3 text-right">수량</th>
                     <th className="px-4 py-3 text-right">금액</th>
-                    <th className="px-4 py-3">확정시각</th>
+                    <th className="px-4 py-3">결제시각</th>
                     <th className="px-4 py-3 text-center">주문처리</th>
                   </tr>
                 </thead>
@@ -280,16 +280,13 @@ export default function P2PAgentPaymentManagementPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3 text-slate-600">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                              결제 회원 아이디
-                            </p>
-                            <p className="mt-1 break-all text-base font-extrabold leading-tight text-slate-900 sm:text-lg">
+                            <p className="break-all text-base font-extrabold leading-tight text-slate-900 sm:text-lg">
                               {payment.buyerNickname || '-'}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">결제지갑 {shortAddress(payment.sellerNickname || '')}</p>
                           </td>
-                          <td className="px-4 py-3 text-right text-xs font-semibold text-slate-700">{formatUsdt(payment.usdtAmount)}</td>
-                          <td className="px-4 py-3 text-right text-xs font-semibold text-slate-700">{formatKrw(payment.krwAmount)}</td>
+                          <td className="px-4 py-3 text-right text-sm font-extrabold tabular-nums text-slate-900 sm:text-base">{formatUsdt(payment.usdtAmount)}</td>
+                          <td className="px-4 py-3 text-right text-sm font-extrabold tabular-nums text-slate-900 sm:text-base">{formatKrw(payment.krwAmount)}</td>
                           <td className="px-4 py-3 text-xs text-slate-600">{toDateTime(payment.paymentConfirmedAt || payment.createdAt)}</td>
                           <td className="px-4 py-3 text-center">
                             <p
