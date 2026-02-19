@@ -30,19 +30,6 @@ const NEXT_PUBLIC_SENDBIRD_APP_ID = process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '
 const SUPPORT_ADMIN_ID = 'orangexManager';
 const SUPPORT_REQUEST_TIMEOUT_MS = 12000;
 
-const STAT_ITEMS = [
-    {
-        label: 'Total Settled Volume',
-        value: 12876432,
-        suffix: 'USDT',
-    },
-    {
-        label: 'Total Payment Volume',
-        value: 51298412000,
-        suffix: 'KRW',
-    },
-];
-
 const SCROLL_BANNER_ADS = [
     { id: 1, title: 'Binance Pay', image: '/images/crypto-1218x350-1.gif', link: 'https://pay.binance.com' },
     { id: 2, title: 'CoinPayments', image: '/images/ad-2.gif', link: 'https://www.coinpayments.net' },
@@ -156,19 +143,6 @@ const STABLECOIN_NEWS: StablecoinNewsItem[] = [
         tag: 'Risk',
         url: 'https://www.imf.org/en/Topics/Fintech',
         image: '/icon-stability.png',
-    },
-];
-
-const STAT_CARD_STYLES = [
-    {
-        base: 'bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,237,213,0.88))]',
-        orb: 'bg-[radial-gradient(circle_at_center,var(--sun)_0%,transparent_70%)]',
-        value: 'text-amber-700',
-    },
-    {
-        base: 'bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(219,234,254,0.88))]',
-        orb: 'bg-[radial-gradient(circle_at_center,var(--sea)_0%,transparent_70%)]',
-        value: 'text-sky-700',
     },
 ];
 
@@ -419,7 +393,6 @@ export default function OrangeXPage() {
             : polygon;
     const isSupportEligible = Boolean(walletAddress);
     const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
-    const [animatedStats, setAnimatedStats] = useState(() => STAT_ITEMS.map(() => 0));
     const [chatOpen, setChatOpen] = useState(false);
     const [supportUserId, setSupportUserId] = useState<string | null>(null);
     const [supportSessionToken, setSupportSessionToken] = useState<string | null>(null);
@@ -948,37 +921,6 @@ export default function OrangeXPage() {
         return () => {
             observer.disconnect();
         };
-    }, []);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') {
-            return;
-        }
-
-        const shouldReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        if (shouldReduceMotion) {
-            setAnimatedStats(STAT_ITEMS.map((item) => item.value));
-            return;
-        }
-
-        let frame = 0;
-        const start = performance.now();
-        const durationMs = 1600;
-
-        const tick = (now: number) => {
-            const progress = Math.min((now - start) / durationMs, 1);
-            const eased = 1 - Math.pow(1 - progress, 3);
-            setAnimatedStats(STAT_ITEMS.map((item) => Math.floor(item.value * eased)));
-
-            if (progress < 1) {
-                frame = window.requestAnimationFrame(tick);
-            }
-        };
-
-        frame = window.requestAnimationFrame(tick);
-
-        return () => window.cancelAnimationFrame(frame);
     }, []);
 
     useEffect(() => {
@@ -2602,38 +2544,6 @@ export default function OrangeXPage() {
                         </div>
                     </div>
                 )}
-
-                {/* Stats Section */}
-                <div className="grid gap-6 mb-12 md:grid-cols-2">
-                    {STAT_ITEMS.map((item, index) => {
-                        const style = STAT_CARD_STYLES[index % STAT_CARD_STYLES.length];
-                        return (
-                            <div
-                                key={item.label}
-                                data-reveal
-                                style={{ '--reveal-delay': `${index * 0.08}s` } as React.CSSProperties}
-                                className={`glam-card relative overflow-hidden rounded-2xl border border-slate-200/70 p-6 shadow-[0_30px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur ${style.base}`}
-                            >
-                                <div className={`absolute -right-10 -top-10 h-32 w-32 rounded-full ${style.orb} opacity-40`} />
-                            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-200/70 bg-white/80 text-emerald-600">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                        <path d="M20 7L9 18l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                </span>
-                                {item.label}
-                            </p>
-                            <div className="mt-4 grid grid-cols-[1fr_auto] items-baseline gap-3">
-                                <span className={`text-right font-[var(--font-display)] text-3xl font-bold tracking-tight tabular-nums sm:text-4xl md:text-5xl ${style.value}`}>
-                                    {numberFormatter.format(animatedStats[index])}
-                                </span>
-                                <span className="w-14 text-sm font-semibold text-slate-500">{item.suffix}</span>
-                            </div>
-                            <p className="mt-3 text-right text-sm text-slate-600">Reflects real-time cumulative metrics.</p>
-                            </div>
-                        );
-                    })}
-                </div>
 
                 {/* News Feed Section */}
                 
