@@ -757,14 +757,17 @@ export default function SettingsPage({ params }: any) {
       setApplying(true);
 
       try {
+        const nowIso = new Date().toISOString();
         const nextBankInfo = {
           ...(seller?.bankInfo || {}),
           bankName: selectedBankName,
           accountNumber: selectedAccountNumber,
           accountHolder: selectedAccountHolder,
           contactMemo: selectedContactMemo,
-          status: 'pending',
-          submittedAt: new Date().toISOString(),
+          status: 'approved',
+          submittedAt: nowIso,
+          reviewedAt: nowIso,
+          approvedAt: nowIso,
           rejectionReason: '',
         };
 
@@ -1788,7 +1791,7 @@ export default function SettingsPage({ params }: any) {
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-semibold text-slate-900">입금받을 계좌 정보</span>
-                                                <span className="text-xs text-slate-500">계좌 정보 제출 후 심사됩니다.</span>
+                                                <span className="text-xs text-slate-500">계좌 정보 신청 시 즉시 심사완료 처리됩니다.</span>
                                             </div>
                                         </div>
                                         <span
