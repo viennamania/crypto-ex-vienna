@@ -365,13 +365,11 @@ export default function AdministrationStoreMemberManagementPage() {
           {selectedStorecode && (
             <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200">
               <div className="max-h-[620px] overflow-auto">
-                <table className="w-full min-w-[940px] table-auto">
+                <table className="w-full min-w-[760px] table-auto">
                   <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                     <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                       <th className="px-3 py-2">회원 아이디</th>
                       <th className="px-3 py-2">지갑주소</th>
-                      <th className="px-3 py-2">상태</th>
-                      <th className="px-3 py-2">권한</th>
                       <th className="px-3 py-2">등록일</th>
                       <th className="px-3 py-2">관리</th>
                     </tr>
@@ -379,7 +377,7 @@ export default function AdministrationStoreMemberManagementPage() {
                   <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
                     {loadingMembers && (
                       <tr>
-                        <td colSpan={6} className="px-3 py-4 text-center text-sm text-slate-500">
+                        <td colSpan={4} className="px-3 py-4 text-center text-sm text-slate-500">
                           회원 목록을 불러오는 중입니다...
                         </td>
                       </tr>
@@ -397,16 +395,6 @@ export default function AdministrationStoreMemberManagementPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-2.5">
-                          <span
-                            className={`inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold ${
-                              member.verified ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                            }`}
-                          >
-                            {member.verified ? '인증' : '미인증'}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2.5 text-xs text-slate-600">{member.role}</td>
                         <td className="px-3 py-2.5 text-xs text-slate-500">{toDateTime(member.createdAt)}</td>
                         <td className="px-3 py-2.5 text-xs">
                           <button
