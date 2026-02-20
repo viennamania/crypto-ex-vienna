@@ -155,7 +155,7 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
 
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(String((payload as Record<string, unknown>)?.error || '주문처리 미완료 건수를 조회하지 못했습니다.'));
+        throw new Error(String((payload as Record<string, unknown>)?.error || '결제처리 미완료 건수를 조회하지 못했습니다.'));
       }
 
       const result = isRecord((payload as Record<string, unknown>)?.result)
@@ -187,7 +187,7 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
       setPendingAlertError(null);
       setPendingAlertLastCheckedAt(new Date().toISOString());
     } catch (error) {
-      setPendingAlertError(error instanceof Error ? error.message : '미완료 주문처리 현황 조회 중 오류가 발생했습니다.');
+      setPendingAlertError(error instanceof Error ? error.message : '미완료 결제처리 현황 조회 중 오류가 발생했습니다.');
     }
   }, []);
 
@@ -429,9 +429,9 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
             <section className="pointer-events-auto rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-700">Order Processing Alert</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-700">Payment Processing Alert</p>
                   <p className="mt-0.5 text-sm font-bold text-slate-900 sm:text-[15px]">
-                    주문처리 미완료 {formatNumber(pendingSummary.pendingCount)}건
+                    결제처리 미완료 {formatNumber(pendingSummary.pendingCount)}건
                   </p>
                   <p className="mt-0.5 text-[11px] text-slate-500">
                     oldest {toTimeAgoLabel(pendingSummary.oldestPendingAt)} · checked {toDateTimeLabel(pendingAlertLastCheckedAt)}

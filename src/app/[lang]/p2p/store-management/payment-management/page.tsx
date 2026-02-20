@@ -46,6 +46,7 @@ type DashboardPayment = {
   member?: {
     nickname?: string;
     storecode?: string;
+    depositName?: string;
   } | null;
 };
 
@@ -84,7 +85,13 @@ const formatRate = (value: number) =>
 const isOrderProcessingCompleted = (value: string | undefined) =>
   String(value || '').trim().toUpperCase() === 'COMPLETED';
 const resolveOrderProcessingLabel = (value: string | undefined) =>
-  isOrderProcessingCompleted(value) ? '주문처리완료' : '주문처리중';
+  isOrderProcessingCompleted(value) ? '결제처리완료' : '결제처리중';
+const resolveMemberDepositName = (member: Record<string, unknown> | null) => {
+  if (!member) return '';
+  const buyer = isRecord(member.buyer) ? member.buyer : null;
+  const bankInfo = buyer && isRecord(buyer.bankInfo) ? buyer.bankInfo : null;
+  return String(bankInfo?.accountHolder || bankInfo?.depositName || buyer?.depositName || '').trim();
+};
 
 const PAYMENT_HISTORY_PAGE_SIZE = 20;
 const PAYMENT_HISTORY_REFRESH_MS = 15_000;
@@ -165,6 +172,7 @@ export default function P2PStorePaymentManagementPage() {
       const nextPayments: DashboardPayment[] = paymentsData.map((item) => {
         const payment = isRecord(item) ? item : {};
         const member = isRecord(payment.member) ? payment.member : null;
+        const memberDepositName = resolveMemberDepositName(member);
         return {
           id: String(payment.id || ''),
           usdtAmount: Number(payment.usdtAmount || 0),
@@ -184,6 +192,7 @@ export default function P2PStorePaymentManagementPage() {
             ? {
                 nickname: String(member.nickname || ''),
                 storecode: String(member.storecode || ''),
+                depositName: memberDepositName,
               }
             : null,
         };
@@ -345,7 +354,7 @@ export default function P2PStorePaymentManagementPage() {
 
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(String((payload as Record<string, unknown>)?.error || '주문처리 상태 변경에 실패했습니다.'));
+        throw new Error(String((payload as Record<string, unknown>)?.error || '결제처리 상태 변경에 실패했습니다.'));
       }
 
       const result = isRecord((payload as Record<string, unknown>)?.result)
@@ -384,7 +393,7 @@ export default function P2PStorePaymentManagementPage() {
       setOrderProcessingError(
         updateError instanceof Error
           ? updateError.message
-          : '주문처리 상태 변경에 실패했습니다.',
+          : '결제처리 상태 변경에 실패했습니다.',
       );
     } finally {
       setUpdatingOrderProcessing(false);
@@ -707,7 +716,7 @@ export default function P2PStorePaymentManagementPage() {
                             <th className="px-3 py-2">KRW</th>
                             <th className="px-3 py-2">환율</th>
                             <th className="px-3 py-2">TX</th>
-                            <th className="px-3 py-2">주문처리</th>
+                            <th className="px-3 py-2">결제처리</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
@@ -723,8 +732,13 @@ export default function P2PStorePaymentManagementPage() {
                               <td className="px-3 py-2.5 text-xs text-slate-500">
                                 {toDateTime(payment.confirmedAt || payment.createdAt)}
                               </td>
-                              <td className="px-3 py-2.5 font-semibold text-slate-900">
-                                {String(payment.member?.nickname || '').trim() || '-'}
+                              <td className="px-3 py-2.5">
+                                <p className="font-semibold text-slate-900">
+                                  {String(payment.member?.nickname || '').trim() || '-'}
+                                </p>
+                                <p className="mt-0.5 text-[11px] text-slate-500">
+                                  입금자명 {String(payment.member?.depositName || '').trim() || '-'}
+                                </p>
                               </td>
                               <td className="px-3 py-2.5 text-xs text-slate-500">
                                 {shortAddress(payment.fromWalletAddress)}
@@ -762,7 +776,7 @@ export default function P2PStorePaymentManagementPage() {
                                     onClick={() => openOrderProcessingModal(payment)}
                                     className="mt-2 inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                                   >
-                                    주문처리완료
+                                    결제처리완료
                                   </button>
                                 )}
                                 {changedPaymentIds.includes(payment.id) && (
@@ -838,8 +852,8 @@ export default function P2PStorePaymentManagementPage() {
         >
           <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="border-b border-slate-200 px-4 py-3">
-              <p className="text-sm font-semibold text-slate-900">주문처리 확인</p>
-              <p className="mt-1 text-xs text-slate-500">결제 내역을 확인하고 주문처리완료로 변경합니다.</p>
+              <p className="text-sm font-semibold text-slate-900">결제처리 확인</p>
+              <p className="mt-1 text-xs text-slate-500">결제 내역을 확인하고 결제처리완료로 변경합니다.</p>
             </div>
 
             <div className="space-y-3 px-4 py-4">
@@ -854,9 +868,9 @@ export default function P2PStorePaymentManagementPage() {
                 <p className="text-slate-700">{formatUsdt(selectedPayment.usdtAmount)} / {formatKrw(selectedPayment.krwAmount)}</p>
                 <p className="text-xs font-semibold text-slate-500">결제시각</p>
                 <p className="text-slate-700">{toDateTime(selectedPayment.confirmedAt || selectedPayment.createdAt)}</p>
-                <p className="text-xs font-semibold text-slate-500">주문처리 상태</p>
+                <p className="text-xs font-semibold text-slate-500">결제처리 상태</p>
                 <p className="font-semibold text-slate-800">{resolveOrderProcessingLabel(selectedPayment.orderProcessing)}</p>
-                <p className="text-xs font-semibold text-slate-500">주문처리 완료시각</p>
+                <p className="text-xs font-semibold text-slate-500">결제처리 완료시각</p>
                 <p className="text-slate-700">{toDateTime(selectedPayment.orderProcessingUpdatedAt || '')}</p>
               </div>
 
@@ -886,7 +900,7 @@ export default function P2PStorePaymentManagementPage() {
                   ? '처리완료됨'
                   : updatingOrderProcessing
                   ? '처리 중...'
-                  : '주문처리완료'}
+                  : '결제처리완료'}
               </button>
             </div>
           </div>

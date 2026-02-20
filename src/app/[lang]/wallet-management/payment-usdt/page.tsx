@@ -118,6 +118,7 @@ const bodyFont = Manrope({
 
 const WALLET_AUTH_OPTIONS = ['phone'];
 const QUICK_USDT_AMOUNTS = [10, 30, 50, 100, 300, 500];
+const MEMBER_PROFILE_LOADING_MIN_MS = 5000;
 const SENDBIRD_APP_ID =
   process.env.NEXT_PUBLIC_SENDBIRD_APP_ID ||
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID ||
@@ -200,6 +201,10 @@ const formatUsdt = (value: number) => `${value.toLocaleString(undefined, { maxim
 const formatRate = (value: number) => `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })} KRW`;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+const waitFor = (ms: number) =>
+  new Promise<void>((resolve) => {
+    window.setTimeout(() => resolve(), ms);
+  });
 
 const resolveBuyerBankInfo = (buyer: unknown): BuyerBankInfoSnapshot | null => {
   if (!isRecord(buyer)) return null;
@@ -717,6 +722,7 @@ export default function PaymentUsdtPage({
   const loadMemberProfile = useCallback(async () => {
     const requestId = memberProfileRequestIdRef.current + 1;
     memberProfileRequestIdRef.current = requestId;
+    const loadingStartedAt = Date.now();
 
     if (!activeAccount?.address || !selectedStorecode) {
       setMyMemberProfile(null);
@@ -766,6 +772,11 @@ export default function PaymentUsdtPage({
       setMyMemberProfile(null);
       setMemberProfileError(error instanceof Error ? error.message : '회원 정보를 불러오지 못했습니다.');
     } finally {
+      const elapsed = Date.now() - loadingStartedAt;
+      const remaining = Math.max(0, MEMBER_PROFILE_LOADING_MIN_MS - elapsed);
+      if (remaining > 0) {
+        await waitFor(remaining);
+      }
       if (requestId === memberProfileRequestIdRef.current) {
         setLoadingMemberProfile(false);
       }
@@ -1283,7 +1294,7 @@ export default function PaymentUsdtPage({
                       </p>
                     </div>
                     <p className="mt-1 text-xs font-semibold text-slate-700">
-                      적용 환율 {latestPaymentRecord.exchangeRate > 0 ? `1 USDT = ${formatRate(latestPaymentRecord.exchangeRate)}` : '-'}
+                      적용 환율 {latestPaymentRecord.exchangeRate > 0 ? formatRate(latestPaymentRecord.exchangeRate) : '-'}
                     </p>
                     <p className="mt-1 text-xs text-slate-600">
                       결제완료 {formatDateTime(latestPaymentRecord.confirmedAt || latestPaymentRecord.createdAt)}
@@ -1426,14 +1437,51 @@ export default function PaymentUsdtPage({
                         </p>
                         <p className="mt-2 text-[11px] font-semibold text-slate-500">회원 아이디</p>
                         <div className="mt-1 h-10 w-40 animate-pulse rounded-lg bg-slate-200/80" />
+                        <div className="mt-2 flex items-center gap-1.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce [animation-delay:120ms]" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce [animation-delay:240ms]" />
+                          <span className="text-[11px] font-semibold text-cyan-700">검색 중...</span>
+                        </div>
                       </>
                     ) : hasMemberProfile ? (
                       <>
                         <p className="font-semibold text-emerald-800">결제 가능한 회원입니다.</p>
-                        <p className="mt-2 text-[11px] font-semibold text-emerald-700">회원 아이디</p>
-                        <p className="mt-1 break-all text-2xl font-extrabold leading-tight text-emerald-900">
-                          {myMemberProfile?.nickname || '-'}
-                        </p>
+                        <div className="mt-2 grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-[11px] font-semibold text-emerald-700">가맹점</p>
+                            <div className="mt-1 inline-flex max-w-full items-center gap-2 rounded-xl border border-emerald-200 bg-white/80 px-2.5 py-2">
+                              <div className="h-6 w-6 shrink-0 overflow-hidden rounded-md bg-slate-100 ring-1 ring-emerald-200">
+                                {selectedMerchant.storeLogo ? (
+                                  <div
+                                    className="h-full w-full bg-cover bg-center"
+                                    style={{ backgroundImage: `url(${encodeURI(selectedMerchant.storeLogo)})` }}
+                                    aria-label={selectedMerchant.storeName}
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-[8px] font-bold text-emerald-700">
+                                    SHOP
+                                  </div>
+                                )}
+                              </div>
+                              <span className="truncate text-sm font-bold text-emerald-900">
+                                {selectedMerchant.storeName || '-'}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-semibold text-emerald-700">회원 아이디</p>
+                            <p className="mt-1 break-all text-2xl font-extrabold leading-tight text-emerald-900">
+                              {myMemberProfile?.nickname || '-'}
+                            </p>
+                          </div>
+                          <div className="col-span-2">
+                            <p className="text-[11px] font-semibold text-emerald-700">이름</p>
+                            <p className="mt-1 break-all text-lg font-bold leading-tight text-emerald-900">
+                              {memberBankInfoSnapshot?.accountHolder || memberBankInfoSnapshot?.depositName || '-'}
+                            </p>
+                          </div>
+                        </div>
                       </>
                     ) : (
                       <>
@@ -1598,8 +1646,8 @@ export default function PaymentUsdtPage({
                   </div>
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-slate-500">적용 환율</span>
-                    <span className="text-2xl font-extrabold leading-none text-slate-900 tabular-nums">
-                      {exchangeRate > 0 ? `1 USDT = ${formatRate(exchangeRate)}` : '조회 중'}
+                    <span className="text-lg font-extrabold leading-none text-slate-900 tabular-nums sm:text-2xl">
+                      {exchangeRate > 0 ? formatRate(exchangeRate) : '조회 중'}
                     </span>
                   </div>
                   <div className="mt-2 flex items-center justify-between">
@@ -1690,7 +1738,7 @@ export default function PaymentUsdtPage({
                             <div>
                               <p className="font-semibold text-slate-500">적용 환율</p>
                               <p className="mt-0.5 text-slate-800">
-                                {item.exchangeRate > 0 ? `1 USDT = ${formatRate(item.exchangeRate)}` : '-'}
+                                {item.exchangeRate > 0 ? formatRate(item.exchangeRate) : '-'}
                               </p>
                             </div>
                             <div>
@@ -1934,7 +1982,7 @@ export default function PaymentUsdtPage({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">적용 환율</span>
-                <span className="text-lg font-bold text-slate-900 tabular-nums">1 USDT = {formatRate(exchangeRate)}</span>
+                <span className="text-base font-bold text-slate-900 tabular-nums sm:text-lg">{formatRate(exchangeRate)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">실제 전송 (USDT)</span>

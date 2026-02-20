@@ -20,7 +20,7 @@ const isOrderProcessingCompleted = (value: string | undefined) =>
   String(value || '').trim().toUpperCase() === 'COMPLETED';
 
 const resolveOrderProcessingLabel = (value: string | undefined) =>
-  isOrderProcessingCompleted(value) ? '주문처리완료' : '주문처리중';
+  isOrderProcessingCompleted(value) ? '결제처리완료' : '결제처리중';
 
 const PAYMENT_LIST_POLLING_MS = 10000;
 
@@ -176,7 +176,7 @@ export default function P2PAgentPaymentManagementPage() {
       );
       setSelectedPayment(null);
     } catch (error) {
-      setOrderProcessingError(error instanceof Error ? error.message : '주문처리 상태 변경에 실패했습니다.');
+      setOrderProcessingError(error instanceof Error ? error.message : '결제처리 상태 변경에 실패했습니다.');
     } finally {
       setUpdatingOrderProcessing(false);
     }
@@ -271,7 +271,7 @@ export default function P2PAgentPaymentManagementPage() {
                     <th className="px-4 py-3 text-right">수량</th>
                     <th className="px-4 py-3 text-right">금액</th>
                     <th className="px-4 py-3">결제시각</th>
-                    <th className="px-4 py-3 text-center">주문처리</th>
+                    <th className="px-4 py-3 text-center">결제처리</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -344,7 +344,7 @@ export default function P2PAgentPaymentManagementPage() {
                                 onClick={() => openOrderProcessingModal(payment)}
                                 className="mt-2 inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                               >
-                                주문처리완료
+                                결제처리완료
                               </button>
                             )}
                           </td>
@@ -413,8 +413,8 @@ export default function P2PAgentPaymentManagementPage() {
             >
               <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl">
                 <div className="border-b border-slate-200 px-4 py-3">
-                  <p className="text-sm font-semibold text-slate-900">주문처리 확인</p>
-                  <p className="mt-1 text-xs text-slate-500">결제 내역을 확인하고 주문처리완료로 변경합니다.</p>
+                  <p className="text-sm font-semibold text-slate-900">결제처리 확인</p>
+                  <p className="mt-1 text-xs text-slate-500">결제 내역을 확인하고 결제처리완료로 변경합니다.</p>
                 </div>
 
                 <div className="space-y-3 px-4 py-4">
@@ -431,9 +431,9 @@ export default function P2PAgentPaymentManagementPage() {
                     <p className="text-slate-700">{formatUsdt(selectedPayment.usdtAmount)} / {formatKrw(selectedPayment.krwAmount)}</p>
                     <p className="text-xs font-semibold text-slate-500">확정시각</p>
                     <p className="text-slate-700">{toDateTime(selectedPayment.paymentConfirmedAt || selectedPayment.createdAt)}</p>
-                    <p className="text-xs font-semibold text-slate-500">주문처리 상태</p>
+                    <p className="text-xs font-semibold text-slate-500">결제처리 상태</p>
                     <p className="font-semibold text-slate-800">{resolveOrderProcessingLabel(selectedPayment.orderProcessing)}</p>
-                    <p className="text-xs font-semibold text-slate-500">주문처리 완료시각</p>
+                    <p className="text-xs font-semibold text-slate-500">결제처리 완료시각</p>
                     <p className="text-slate-700">{toDateTime(selectedPayment.orderProcessingUpdatedAt || '')}</p>
                   </div>
 
@@ -463,7 +463,7 @@ export default function P2PAgentPaymentManagementPage() {
                       ? '처리완료됨'
                       : updatingOrderProcessing
                       ? '처리 중...'
-                      : '주문처리완료'}
+                      : '결제처리완료'}
                   </button>
                 </div>
               </div>
