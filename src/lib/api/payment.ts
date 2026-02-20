@@ -567,13 +567,16 @@ export async function getAllWalletUsdtPayments(
 export async function updateWalletUsdtPaymentOrderProcessing({
   paymentId,
   orderProcessing = 'COMPLETED',
+  orderProcessingMemo = '',
 }: {
   paymentId: string;
   orderProcessing?: 'PROCESSING' | 'COMPLETED';
+  orderProcessingMemo?: string;
 }): Promise<{
   id: string;
   orderProcessing: string;
   orderProcessingUpdatedAt: string;
+  orderProcessingMemo: string;
 }> {
   const normalizedPaymentId = String(paymentId || '').trim();
   if (!ObjectId.isValid(normalizedPaymentId)) {
@@ -584,6 +587,7 @@ export async function updateWalletUsdtPaymentOrderProcessing({
   if (normalizedOrderProcessing !== 'PROCESSING' && normalizedOrderProcessing !== 'COMPLETED') {
     throw new Error('invalid orderProcessing');
   }
+  const normalizedOrderProcessingMemo = String(orderProcessingMemo || '').trim().slice(0, 2000);
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('walletUsdtPayments');
@@ -597,6 +601,7 @@ export async function updateWalletUsdtPaymentOrderProcessing({
       $set: {
         order_processing: normalizedOrderProcessing,
         order_processing_updated_at: now,
+        order_processing_memo: normalizedOrderProcessingMemo,
       },
     },
   );
@@ -607,13 +612,14 @@ export async function updateWalletUsdtPaymentOrderProcessing({
 
   const updated = await collection.findOne(
     { _id },
-    { projection: { order_processing: 1, order_processing_updated_at: 1 } },
+    { projection: { order_processing: 1, order_processing_updated_at: 1, order_processing_memo: 1 } },
   );
 
   return {
     id: normalizedPaymentId,
     orderProcessing: String(updated?.order_processing || normalizedOrderProcessing),
     orderProcessingUpdatedAt: String(updated?.order_processing_updated_at || now),
+    orderProcessingMemo: String(updated?.order_processing_memo || normalizedOrderProcessingMemo),
   };
 }
 

@@ -41,6 +41,7 @@ type WalletPaymentDocument = {
   status: PaymentStatus;
   order_processing?: string;
   order_processing_updated_at?: string;
+  order_processing_memo?: string;
   transactionHash?: string;
   createdAt: string;
   confirmedAt?: string;
@@ -235,8 +236,10 @@ const serializePayment = (doc: WalletPaymentDocument & { _id?: ObjectId }) => ({
   status: doc.status,
   order_processing: String(doc.order_processing || "PROCESSING").trim().toUpperCase(),
   order_processing_updated_at: doc.order_processing_updated_at || "",
+  order_processing_memo: String(doc.order_processing_memo || ""),
   orderProcessing: String(doc.order_processing || "PROCESSING").trim().toUpperCase(),
   orderProcessingUpdatedAt: doc.order_processing_updated_at || "",
+  orderProcessingMemo: String(doc.order_processing_memo || ""),
   transactionHash: doc.transactionHash || "",
   createdAt: doc.createdAt,
   confirmedAt: doc.confirmedAt || "",

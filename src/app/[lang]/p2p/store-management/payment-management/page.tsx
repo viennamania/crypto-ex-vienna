@@ -39,6 +39,7 @@ type DashboardPayment = {
   exchangeRate: number;
   orderProcessing: string;
   orderProcessingUpdatedAt: string;
+  orderProcessingMemo: string;
   transactionHash: string;
   createdAt: string;
   confirmedAt: string;
@@ -92,6 +93,8 @@ const resolveMemberDepositName = (member: Record<string, unknown> | null) => {
   const bankInfo = buyer && isRecord(buyer.bankInfo) ? buyer.bankInfo : null;
   return String(bankInfo?.accountHolder || bankInfo?.depositName || buyer?.depositName || '').trim();
 };
+const buildDefaultOrderProcessingMemo = (payment: DashboardPayment) =>
+  `원화 정보: ${formatKrw(payment.krwAmount)} (환율 1 USDT = ${formatRate(payment.exchangeRate)})\n충전완료 처리했습니다.`;
 
 const PAYMENT_HISTORY_PAGE_SIZE = 20;
 const PAYMENT_HISTORY_REFRESH_MS = 15_000;
@@ -112,6 +115,7 @@ export default function P2PStorePaymentManagementPage() {
   const [selectedPayment, setSelectedPayment] = useState<DashboardPayment | null>(null);
   const [updatingOrderProcessing, setUpdatingOrderProcessing] = useState(false);
   const [orderProcessingError, setOrderProcessingError] = useState<string | null>(null);
+  const [orderProcessingMemoInput, setOrderProcessingMemoInput] = useState('');
   const [loadingPaymentWalletBalance, setLoadingPaymentWalletBalance] = useState(false);
   const [paymentWalletBalanceError, setPaymentWalletBalanceError] = useState<string | null>(null);
   const [paymentWalletUsdtBalance, setPaymentWalletUsdtBalance] = useState<number | null>(null);
@@ -129,6 +133,7 @@ export default function P2PStorePaymentManagementPage() {
     setChangedPaymentIds([]);
     setSelectedPayment(null);
     setOrderProcessingError(null);
+    setOrderProcessingMemoInput('');
     previousOrderStatusMapRef.current = new Map();
   }, [storecode]);
 
@@ -184,6 +189,7 @@ export default function P2PStorePaymentManagementPage() {
           orderProcessingUpdatedAt: String(
             payment.orderProcessingUpdatedAt || payment.order_processing_updated_at || '',
           ),
+          orderProcessingMemo: String(payment.orderProcessingMemo || payment.order_processing_memo || ''),
           transactionHash: String(payment.transactionHash || ''),
           createdAt: String(payment.createdAt || ''),
           confirmedAt: String(payment.confirmedAt || ''),
@@ -321,12 +327,15 @@ export default function P2PStorePaymentManagementPage() {
   const openOrderProcessingModal = useCallback((payment: DashboardPayment) => {
     setSelectedPayment(payment);
     setOrderProcessingError(null);
+    const existingMemo = String(payment.orderProcessingMemo || '').trim();
+    setOrderProcessingMemoInput(existingMemo || buildDefaultOrderProcessingMemo(payment));
   }, []);
 
   const closeOrderProcessingModal = useCallback(() => {
     if (updatingOrderProcessing) return;
     setSelectedPayment(null);
     setOrderProcessingError(null);
+    setOrderProcessingMemoInput('');
   }, [updatingOrderProcessing]);
 
   const handleOrderProcessingComplete = useCallback(async () => {
@@ -337,18 +346,21 @@ export default function P2PStorePaymentManagementPage() {
 
     if (isOrderProcessingCompleted(selectedPayment.orderProcessing)) {
       setSelectedPayment(null);
+      setOrderProcessingMemoInput('');
       return;
     }
 
     setUpdatingOrderProcessing(true);
     setOrderProcessingError(null);
     try {
+      const nextMemo = orderProcessingMemoInput.trim() || buildDefaultOrderProcessingMemo(selectedPayment);
       const response = await fetch('/api/payment/setWalletUsdtPaymentOrderProcessing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           paymentId: selectedPayment.id,
           orderProcessing: 'COMPLETED',
+          orderProcessingMemo: nextMemo,
         }),
       });
 
@@ -362,6 +374,7 @@ export default function P2PStorePaymentManagementPage() {
         : {};
       const nextStatus = String(result.orderProcessing || 'COMPLETED').trim().toUpperCase();
       const nextUpdatedAt = String(result.orderProcessingUpdatedAt || new Date().toISOString());
+      const nextStoredMemo = String(result.orderProcessingMemo || nextMemo);
 
       setDashboard((prev) => {
         if (!prev) return prev;
@@ -373,6 +386,7 @@ export default function P2PStorePaymentManagementPage() {
                   ...payment,
                   orderProcessing: nextStatus,
                   orderProcessingUpdatedAt: nextUpdatedAt,
+                  orderProcessingMemo: nextStoredMemo,
                 }
               : payment,
           ),
@@ -389,6 +403,7 @@ export default function P2PStorePaymentManagementPage() {
       }, PAYMENT_STATUS_HIGHLIGHT_MS);
 
       setSelectedPayment(null);
+      setOrderProcessingMemoInput('');
     } catch (updateError) {
       setOrderProcessingError(
         updateError instanceof Error
@@ -398,7 +413,7 @@ export default function P2PStorePaymentManagementPage() {
     } finally {
       setUpdatingOrderProcessing(false);
     }
-  }, [selectedPayment]);
+  }, [orderProcessingMemoInput, selectedPayment]);
 
   useEffect(() => {
     displayedBalanceRef.current = displayedPaymentWalletUsdtBalance;
@@ -713,7 +728,7 @@ export default function P2PStorePaymentManagementPage() {
                 ) : (
                   <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200">
                     <div className="max-h-[540px] overflow-auto">
-                      <table className="min-w-[1040px] w-full table-auto">
+                      <table className="min-w-[1220px] w-full table-auto">
                         <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                           <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                             <th className="px-3 py-2">일시</th>
@@ -723,6 +738,7 @@ export default function P2PStorePaymentManagementPage() {
                             <th className="px-3 py-2">KRW</th>
                             <th className="px-3 py-2">환율</th>
                             <th className="px-3 py-2">TX</th>
+                            <th className="px-3 py-2">메모</th>
                             <th className="px-3 py-2">결제처리</th>
                           </tr>
                         </thead>
@@ -766,6 +782,11 @@ export default function P2PStorePaymentManagementPage() {
                               </td>
                               <td className="px-3 py-2.5 text-xs text-slate-500">
                                 {shortAddress(payment.transactionHash)}
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <p className="max-w-[280px] whitespace-pre-wrap break-words text-xs leading-relaxed text-slate-600">
+                                  {String(payment.orderProcessingMemo || '').trim() || '-'}
+                                </p>
                               </td>
                               <td className="px-3 py-2.5 text-xs">
                                 <p
@@ -866,7 +887,7 @@ export default function P2PStorePaymentManagementPage() {
           <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="border-b border-slate-200 px-4 py-3">
               <p className="text-sm font-semibold text-slate-900">결제처리 확인</p>
-              <p className="mt-1 text-xs text-slate-500">결제 내역을 확인하고 결제처리완료로 변경합니다.</p>
+              <p className="mt-1 text-xs text-slate-500">결제 내역을 확인하고 메모를 입력한 뒤 결제처리완료로 변경합니다.</p>
             </div>
 
             <div className="space-y-3 px-4 py-4">
@@ -885,6 +906,21 @@ export default function P2PStorePaymentManagementPage() {
                 <p className="font-semibold text-slate-800">{resolveOrderProcessingLabel(selectedPayment.orderProcessing)}</p>
                 <p className="text-xs font-semibold text-slate-500">결제처리 완료시각</p>
                 <p className="text-slate-700">{toDateTime(selectedPayment.orderProcessingUpdatedAt || '')}</p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-slate-500">결제처리 메모</p>
+                <textarea
+                  value={orderProcessingMemoInput}
+                  onChange={(event) => setOrderProcessingMemoInput(event.target.value)}
+                  rows={4}
+                  disabled={updatingOrderProcessing}
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  placeholder="원화 정보와 충전완료 메모를 입력해 주세요."
+                />
+                <p className="mt-1 text-[11px] text-slate-500">
+                  기본 문구를 수정할 수 있으며, 완료 시 결제 내역 메모로 저장됩니다.
+                </p>
               </div>
 
               {orderProcessingError && (

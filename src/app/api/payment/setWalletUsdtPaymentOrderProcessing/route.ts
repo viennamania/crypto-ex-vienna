@@ -8,10 +8,12 @@ export async function POST(request: NextRequest) {
 
     const paymentId = String(body?.paymentId || '').trim();
     const orderProcessing = String(body?.orderProcessing || 'COMPLETED').trim().toUpperCase();
+    const orderProcessingMemo = String(body?.orderProcessingMemo || '');
 
     const result = await updateWalletUsdtPaymentOrderProcessing({
       paymentId,
       orderProcessing: orderProcessing === 'PROCESSING' ? 'PROCESSING' : 'COMPLETED',
+      orderProcessingMemo,
     });
 
     return NextResponse.json({
