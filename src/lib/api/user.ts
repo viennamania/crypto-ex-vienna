@@ -1166,17 +1166,45 @@ export async function updateSeller({
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
 
-  return await collection.updateOne(
-    {
-      storecode: storecode,
-      walletAddress: walletAddress,
-    },
+  const normalizedWalletAddress = String(walletAddress || '').trim();
+  if (!normalizedWalletAddress) {
+    return null;
+  }
+
+  const walletRegex = {
+    $regex: `^${escapeRegExp(normalizedWalletAddress)}$`,
+    $options: 'i',
+  };
+
+  const primaryFilter: Record<string, unknown> = {
+    walletAddress: walletRegex,
+  };
+  if (storecode) {
+    primaryFilter.storecode = storecode;
+  }
+
+  let result = await collection.updateOne(
+    primaryFilter,
     {
       $set: {
         seller,
       },
-    }
+    },
   );
+
+  // Fallback: if storecode-scoped match fails, retry with wallet-only scope.
+  if (result.matchedCount === 0 && storecode) {
+    result = await collection.updateOne(
+      { walletAddress: walletRegex },
+      {
+        $set: {
+          seller,
+        },
+      },
+    );
+  }
+
+  return result;
 }
 
 

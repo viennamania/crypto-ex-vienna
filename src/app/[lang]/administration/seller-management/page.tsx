@@ -476,7 +476,12 @@ export default function SellerManagementPage() {
                     const agentInfo = agentcode ? agentsMap[agentcode] : undefined;
                     const bankInfo = sellerUser?.seller?.bankInfo;
                     const bankInfoStatus =
-                      bankInfo?.status || (bankInfo?.accountNumber ? 'pending' : 'none');
+                      bankInfo?.status ||
+                      (bankInfo?.accountNumber
+                        ? normalizedSellerStatus === 'confirmed'
+                          ? 'approved'
+                          : 'pending'
+                        : 'none');
                     const bankInfoLabel =
                       bankInfoStatus === 'approved'
                         ? '승인완료'

@@ -211,7 +211,12 @@ export default function SellerDetailPage() {
   const kycStatus: KycStatus = seller?.kyc?.status || (seller?.kyc?.idImageUrl ? 'pending' : 'none');
   const kycImageUrl = seller?.kyc?.idImageUrl;
   const bankInfoStatus: KycStatus =
-    seller?.bankInfo?.status || (seller?.bankInfo?.accountNumber ? 'pending' : 'none');
+    seller?.bankInfo?.status ||
+    (seller?.bankInfo?.accountNumber
+      ? sellerStatus === 'confirmed'
+        ? 'approved'
+        : 'pending'
+      : 'none');
   const normalizedSellerStatus: SellerStatusValue = sellerStatus === 'confirmed' ? 'confirmed' : 'pending';
   const sellerEnabled = seller?.enabled === true;
 

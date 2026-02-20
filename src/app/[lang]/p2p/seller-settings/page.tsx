@@ -778,7 +778,7 @@ export default function SettingsPage({ params }: any) {
           bankInfo: nextBankInfo,
         };
 
-        await fetch('/api/user/updateSellerInfo', {
+        const updateResponse = await fetch('/api/user/updateSellerInfo', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -794,6 +794,11 @@ export default function SettingsPage({ params }: any) {
             seller: updatedSeller,
           }),
         });
+        const updatePayload = await updateResponse.json().catch(() => ({}));
+        const matchedCount = Number(updatePayload?.result?.matchedCount || 0);
+        if (!updateResponse.ok || matchedCount <= 0) {
+          throw new Error(updatePayload?.error || 'Failed to save bank info');
+        }
 
         const response = await fetch('/api/user/getUser', {
           method: 'POST',
