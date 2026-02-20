@@ -210,6 +210,13 @@ export default function P2PAgentManagementLayout({ children }: { children: React
             basePath: `/${lang}/p2p/agent-management/payment-management`,
           },
           {
+            key: 'sales-management',
+            label: '판매관리',
+            compactLabel: '판매',
+            description: 'P2P 거래내역',
+            basePath: `/${lang}/p2p/agent-management/sales-management`,
+          },
+          {
             key: 'payment-stats',
             label: '결제 통계',
             compactLabel: '통계',
