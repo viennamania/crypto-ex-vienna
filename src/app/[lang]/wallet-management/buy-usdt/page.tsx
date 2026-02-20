@@ -51,6 +51,17 @@ type SellerItem = {
   };
 };
 
+type StoreDisplayInfo = {
+  storecode: string;
+  storeName: string;
+  storeLogo: string;
+};
+
+type StoreMemberProfile = {
+  nickname: string;
+  buyer: Record<string, unknown> | null;
+};
+
 type BuyerProfile = {
   nickname: string;
   avatar: string;
@@ -125,6 +136,8 @@ const WALLET_AUTH_OPTIONS = ['phone'];
 const QUICK_BUY_AMOUNTS = [10, 30, 50, 100, 300, 500];
 const TRADABLE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
 const PRIVATE_TRADE_PAYMENT_WINDOW_MS = 30 * 60 * 1000;
+const BUYER_PROFILE_LOADING_MIN_MS = 5000;
+const STORE_MEMBER_LINKING_MIN_MS = 5000;
 const JACKPOT_AUTO_HIDE_MS = 5200;
 const PRIVATE_TRADE_STATUS_LABEL: Record<string, string> = {
   ordered: '주문 대기',
@@ -323,6 +336,10 @@ const formatCountdownClock = (remainingMs: number) => {
 const toTrimmedString = (value: unknown) => String(value ?? '').trim();
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+const waitFor = (ms: number) =>
+  new Promise<void>((resolve) => {
+    window.setTimeout(() => resolve(), ms);
+  });
 const WALLET_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 const normalizeWalletAddress = (value: unknown) => {
   const raw = String(value || '').trim();
@@ -341,6 +358,25 @@ const normalizeWalletAddressList = (values: unknown[]): string[] => {
     result.push(normalized);
   });
   return result;
+};
+
+const resolveBuyerBankSnapshot = (buyer: unknown) => {
+  const safeBuyer = isRecord(buyer) ? buyer : null;
+  const bankInfo = isRecord(safeBuyer?.bankInfo) ? safeBuyer.bankInfo : null;
+
+  const bankName = toTrimmedString(bankInfo?.bankName ?? safeBuyer?.depositBankName);
+  const accountNumber = toTrimmedString(
+    bankInfo?.accountNumber ?? safeBuyer?.depositBankAccountNumber,
+  );
+  const accountHolder = toTrimmedString(
+    bankInfo?.accountHolder ?? bankInfo?.depositName ?? safeBuyer?.depositName,
+  );
+
+  return {
+    bankName,
+    accountNumber,
+    accountHolder,
+  };
 };
 
 const normalizeSellerFromUser = (rawUser: unknown): SellerItem | null => {
@@ -467,6 +503,7 @@ export default function BuyUsdtPage({
   const [sellersError, setSellersError] = useState<string | null>(null);
   const [selectedSellerWallet, setSelectedSellerWallet] = useState(sellerFromQuery);
   const [configuredSellerWalletCount, setConfiguredSellerWalletCount] = useState(0);
+  const [selectedStoreInfo, setSelectedStoreInfo] = useState<StoreDisplayInfo | null>(null);
   const [sellerKeyword, setSellerKeyword] = useState('');
   const [sellerPickerOpen, setSellerPickerOpen] = useState(false);
   const [sellerSortOption, setSellerSortOption] = useState<'rate' | 'balance'>('rate');
@@ -477,6 +514,14 @@ export default function BuyUsdtPage({
   const [buyerNicknameInput, setBuyerNicknameInput] = useState('');
   const [buyerDepositNameInput, setBuyerDepositNameInput] = useState('');
   const [savingBuyerProfile, setSavingBuyerProfile] = useState(false);
+  const [buyerProfileModalForceNextStep, setBuyerProfileModalForceNextStep] = useState(false);
+  const [storeMemberProfile, setStoreMemberProfile] = useState<StoreMemberProfile | null>(null);
+  const [loadingStoreMemberProfile, setLoadingStoreMemberProfile] = useState(false);
+  const [storeMemberProfileError, setStoreMemberProfileError] = useState<string | null>(null);
+  const [storeMemberLinkNicknameInput, setStoreMemberLinkNicknameInput] = useState('');
+  const [storeMemberLinkPasswordInput, setStoreMemberLinkPasswordInput] = useState('');
+  const [linkingStoreMember, setLinkingStoreMember] = useState(false);
+  const storeMemberProfileRequestIdRef = useRef(0);
 
   const [amountInput, setAmountInput] = useState('');
   const [krwInput, setKrwInput] = useState('');
@@ -503,6 +548,7 @@ export default function BuyUsdtPage({
   const [loadingLatestBuyHistory, setLoadingLatestBuyHistory] = useState(false);
   const [latestHistoryNowMs, setLatestHistoryNowMs] = useState<number>(() => Date.now());
   const [purchaseCompleteJackpot, setPurchaseCompleteJackpot] = useState<PurchaseCompleteJackpot | null>(null);
+  const buyerProfileRequestIdRef = useRef(0);
   const paymentRequestedWatchRef = useRef<{ orderId: string; tradeId: string; usdtAmount: number } | null>(null);
   const jackpotShownOrderKeysRef = useRef<Set<string>>(new Set());
 
@@ -605,6 +651,23 @@ export default function BuyUsdtPage({
     if (!activeAccount?.address) return '';
     return `user_${activeAccount.address.replace(/^0x/i, '').slice(0, 6)}`;
   }, [activeAccount?.address]);
+  const isStoreScopedPurchase = useMemo(
+    () => Boolean(storecode && storecode.toLowerCase() !== 'admin'),
+    [storecode],
+  );
+  const hasStoreMemberProfile = Boolean(storeMemberProfile);
+  const storeMemberBankSnapshot = useMemo(
+    () => resolveBuyerBankSnapshot(storeMemberProfile?.buyer),
+    [storeMemberProfile?.buyer],
+  );
+  const storeMemberAccountHolder = toTrimmedString(storeMemberBankSnapshot.accountHolder);
+  const needsStoreMemberLinkForPurchase = isStoreScopedPurchase && !hasStoreMemberProfile;
+  const shouldShowBuyerProfileNextStep = !loadingBuyerProfile && (
+    buyerProfileModalForceNextStep
+    || !hasBuyerProfileForPurchase
+    || needsStoreMemberLinkForPurchase
+  );
+  const canBuyByStoreMemberRule = !isStoreScopedPurchase || hasStoreMemberProfile;
   const buyerDisplayName = useMemo(() => {
     if (buyerProfileNickname) return buyerProfileNickname;
     return fallbackBuyerNickname;
@@ -619,6 +682,7 @@ export default function BuyUsdtPage({
   );
   const canSubmitBuy = Boolean(
     activeAccount?.address &&
+      canBuyByStoreMemberRule &&
       hasBuyerProfileForPurchase &&
       selectedSeller &&
       !isSelectedSellerBuyer &&
@@ -692,6 +756,12 @@ export default function BuyUsdtPage({
     if (!activeAccount?.address) {
       return '지갑 연결 후 진행';
     }
+    if (isStoreScopedPurchase && loadingStoreMemberProfile) {
+      return '가맹점 회원 확인 중...';
+    }
+    if (isStoreScopedPurchase && !hasStoreMemberProfile) {
+      return '가맹점 회원 연동 필요';
+    }
     if (!hasBuyerProfileForPurchase) {
       return '구매자 정보 불러오는중';
     }
@@ -711,6 +781,9 @@ export default function BuyUsdtPage({
   }, [
     submittingBuy,
     activeAccount?.address,
+    isStoreScopedPurchase,
+    loadingStoreMemberProfile,
+    hasStoreMemberProfile,
     hasBuyerProfileForPurchase,
     selectedSeller,
     sellerFromQuery,
@@ -754,13 +827,24 @@ export default function BuyUsdtPage({
           throw new Error(String(storeData?.error || '가맹점 정보를 불러오지 못했습니다.'));
         }
 
-        const storeResult = isRecord(storeData?.result) ? storeData.result : {};
+        const storeResult = isRecord(storeData?.result) ? storeData.result : null;
+        if (storeResult) {
+          setSelectedStoreInfo({
+            storecode: toTrimmedString(storeResult.storecode || storecode),
+            storeName: toTrimmedString(storeResult.storeName || storecode),
+            storeLogo: toTrimmedString(storeResult.storeLogo),
+          });
+        } else {
+          setSelectedStoreInfo(null);
+        }
         walletAddressesFilter = normalizeWalletAddressList(
-          Array.isArray(storeResult.sellerWalletAddresses) ? storeResult.sellerWalletAddresses : [],
+          Array.isArray(storeResult?.sellerWalletAddresses) ? storeResult.sellerWalletAddresses : [],
         );
         if (walletAddressesFilter.length === 0) {
           shouldPickSingleFallbackSeller = true;
         }
+      } else {
+        setSelectedStoreInfo(null);
       }
       setConfiguredSellerWalletCount(walletAddressesFilter.length);
 
@@ -862,6 +946,7 @@ export default function BuyUsdtPage({
       setSellersError(error instanceof Error ? error.message : '판매자 목록을 불러오지 못했습니다.');
       setSellers([]);
       setSellerPickerSellers([]);
+      setSelectedStoreInfo(null);
     } finally {
       setLoadingSellers(false);
     }
@@ -917,8 +1002,15 @@ export default function BuyUsdtPage({
   }, [activeAccount?.address, selectedSeller?.walletAddress]);
 
   const loadBuyerProfile = useCallback(async () => {
+    const requestId = buyerProfileRequestIdRef.current + 1;
+    buyerProfileRequestIdRef.current = requestId;
+    const loadingStartedAt = Date.now();
+
     if (!activeAccount?.address) {
       setBuyerProfile(null);
+      if (requestId === buyerProfileRequestIdRef.current) {
+        setLoadingBuyerProfile(false);
+      }
       return;
     }
     setLoadingBuyerProfile(true);
@@ -934,6 +1026,9 @@ export default function BuyUsdtPage({
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data?.error || '회원 정보를 불러오지 못했습니다.');
+      }
+      if (requestId !== buyerProfileRequestIdRef.current) {
+        return;
       }
       if (data?.result && typeof data.result === 'object') {
         const result = data.result as Record<string, unknown>;
@@ -961,11 +1056,173 @@ export default function BuyUsdtPage({
       }
     } catch (error) {
       console.error('Failed to load buyer profile', error);
+      if (requestId !== buyerProfileRequestIdRef.current) {
+        return;
+      }
       setBuyerProfile(null);
     } finally {
-      setLoadingBuyerProfile(false);
+      const elapsed = Date.now() - loadingStartedAt;
+      const remaining = Math.max(0, BUYER_PROFILE_LOADING_MIN_MS - elapsed);
+      if (remaining > 0) {
+        await waitFor(remaining);
+      }
+      if (requestId === buyerProfileRequestIdRef.current) {
+        setLoadingBuyerProfile(false);
+      }
     }
   }, [activeAccount?.address]);
+
+  const loadStoreMemberProfile = useCallback(async () => {
+    const requestId = storeMemberProfileRequestIdRef.current + 1;
+    storeMemberProfileRequestIdRef.current = requestId;
+
+    if (!activeAccount?.address || !isStoreScopedPurchase) {
+      setStoreMemberProfile(null);
+      setStoreMemberProfileError(null);
+      setLoadingStoreMemberProfile(false);
+      return;
+    }
+
+    setLoadingStoreMemberProfile(true);
+    try {
+      const response = await fetch('/api/user/getUser', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode,
+          walletAddress: activeAccount.address,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || '가맹점 회원 정보를 조회하지 못했습니다.');
+      }
+
+      if (requestId !== storeMemberProfileRequestIdRef.current) {
+        return;
+      }
+
+      const member = data?.result;
+      if (member && typeof member === 'object') {
+        setStoreMemberProfile({
+          nickname: toTrimmedString(member?.nickname),
+          buyer:
+            member?.buyer && typeof member.buyer === 'object'
+              ? (member.buyer as Record<string, unknown>)
+              : null,
+        });
+        setStoreMemberProfileError(null);
+        setStoreMemberLinkNicknameInput('');
+        setStoreMemberLinkPasswordInput('');
+      } else {
+        setStoreMemberProfile(null);
+        setStoreMemberProfileError(null);
+      }
+    } catch (error) {
+      console.error('Failed to load store member profile', error);
+      if (requestId !== storeMemberProfileRequestIdRef.current) {
+        return;
+      }
+      setStoreMemberProfile(null);
+      setStoreMemberProfileError(
+        error instanceof Error ? error.message : '가맹점 회원 정보를 불러오지 못했습니다.',
+      );
+    } finally {
+      if (requestId === storeMemberProfileRequestIdRef.current) {
+        setLoadingStoreMemberProfile(false);
+      }
+    }
+  }, [activeAccount?.address, isStoreScopedPurchase, storecode]);
+
+  const upsertAdminBuyerProfile = useCallback(
+    async ({
+      nicknameInput,
+      depositNameInput,
+      sourceBuyer,
+      mobileOverride,
+    }: {
+      nicknameInput?: string;
+      depositNameInput: string;
+      sourceBuyer?: Record<string, unknown> | null;
+      mobileOverride?: string;
+    }) => {
+      if (!activeAccount?.address) {
+        throw new Error('지갑을 먼저 연결해 주세요.');
+      }
+
+      const nickname = toTrimmedString(nicknameInput || buyerProfileNickname || fallbackBuyerNickname);
+      const depositName = toTrimmedString(depositNameInput);
+      if (!nickname) {
+        throw new Error('구매자 정보를 확인해 주세요.');
+      }
+      if (!depositName) {
+        throw new Error('입금자명을 입력해 주세요.');
+      }
+
+      const thirdwebMobile = toTrimmedString(mobileOverride);
+
+      const setUserResponse = await fetch('/api/user/setUser', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: 'admin',
+          walletAddress: activeAccount.address,
+          nickname,
+          ...(thirdwebMobile ? { mobile: thirdwebMobile } : {}),
+        }),
+      });
+      const setUserData = await setUserResponse.json().catch(() => ({}));
+      if (!setUserResponse.ok || !setUserData?.result) {
+        throw new Error(setUserData?.error || '구매자 정보 저장에 실패했습니다.');
+      }
+
+      const existingBuyer: Record<string, unknown> =
+        buyerProfile?.buyer && typeof buyerProfile.buyer === 'object'
+          ? { ...buyerProfile.buyer }
+          : {};
+      const existingBank = resolveBuyerBankSnapshot(existingBuyer);
+      const sourceBank = resolveBuyerBankSnapshot(sourceBuyer);
+      const bankName = toTrimmedString(sourceBank.bankName || existingBank.bankName);
+      const accountNumber = toTrimmedString(sourceBank.accountNumber || existingBank.accountNumber);
+
+      const existingBankInfoRaw = existingBuyer.bankInfo;
+      const existingBankInfo: Record<string, unknown> =
+        existingBankInfoRaw && typeof existingBankInfoRaw === 'object'
+          ? { ...(existingBankInfoRaw as Record<string, unknown>) }
+          : {};
+
+      const updateBuyerResponse = await fetch('/api/user/updateBuyer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: 'admin',
+          walletAddress: activeAccount.address,
+          bankName: bankName || undefined,
+          accountNumber: accountNumber || undefined,
+          accountHolder: depositName,
+          buyer: {
+            ...existingBuyer,
+            ...(sourceBuyer || {}),
+            depositName,
+            depositBankName: bankName || existingBuyer.depositBankName,
+            depositBankAccountNumber: accountNumber || existingBuyer.depositBankAccountNumber,
+            bankInfo: {
+              ...existingBankInfo,
+              ...(sourceBuyer && isRecord(sourceBuyer.bankInfo) ? sourceBuyer.bankInfo : {}),
+              accountHolder: depositName,
+              ...(bankName ? { bankName } : {}),
+              ...(accountNumber ? { accountNumber } : {}),
+            },
+          },
+        }),
+      });
+      const updateBuyerData = await updateBuyerResponse.json().catch(() => ({}));
+      if (!updateBuyerResponse.ok || !updateBuyerData?.result) {
+        throw new Error(updateBuyerData?.error || '구매자 입금자명 저장에 실패했습니다.');
+      }
+    },
+    [activeAccount?.address, buyerProfile?.buyer, buyerProfileNickname, fallbackBuyerNickname],
+  );
 
   const loadBuyHistory = useCallback(async () => {
     if (!activeAccount?.address) {
@@ -1131,6 +1388,10 @@ export default function BuyUsdtPage({
   useEffect(() => {
     loadBuyerProfile();
   }, [loadBuyerProfile]);
+
+  useEffect(() => {
+    loadStoreMemberProfile();
+  }, [loadStoreMemberProfile]);
 
   useEffect(() => {
     if (sellerFromQuery) {
@@ -1305,8 +1566,16 @@ export default function BuyUsdtPage({
       return;
     }
 
+    setBuyerProfileModalForceNextStep(false);
     setBuyerNicknameInput(buyerProfileNickname || fallbackBuyerNickname);
-    setBuyerDepositNameInput(buyerDepositName);
+    setBuyerDepositNameInput(buyerDepositName || storeMemberAccountHolder);
+    if (storeMemberProfile?.nickname) {
+      setStoreMemberLinkNicknameInput(storeMemberProfile.nickname);
+    }
+    void loadBuyerProfile();
+    if (isStoreScopedPurchase) {
+      void loadStoreMemberProfile();
+    }
     setBuyerProfileModalOpen(true);
   };
 
@@ -1320,6 +1589,10 @@ export default function BuyUsdtPage({
     const nickname = toTrimmedString(buyerNicknameInput || buyerProfileNickname || fallbackBuyerNickname);
     const depositName = toTrimmedString(buyerDepositNameInput);
 
+    if (isStoreScopedPurchase && !hasStoreMemberProfile) {
+      toast.error('가맹점 회원정보 연동을 먼저 완료해 주세요.');
+      return;
+    }
     if (!nickname) {
       toast.error('구매자 정보를 확인해 주세요.');
       return;
@@ -1338,62 +1611,12 @@ export default function BuyUsdtPage({
         console.warn('Failed to read thirdweb phone number for buyer profile', phoneError);
       }
 
-      const setUserResponse = await fetch('/api/user/setUser', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storecode: 'admin',
-          walletAddress: activeAccount.address,
-          nickname,
-          ...(thirdwebMobile ? { mobile: thirdwebMobile } : {}),
-        }),
+      await upsertAdminBuyerProfile({
+        nicknameInput: nickname,
+        depositNameInput: depositName,
+        sourceBuyer: storeMemberProfile?.buyer || undefined,
+        mobileOverride: thirdwebMobile,
       });
-      const setUserData = await setUserResponse.json().catch(() => ({}));
-      if (!setUserResponse.ok || !setUserData?.result) {
-        throw new Error(setUserData?.error || '구매자 정보 저장에 실패했습니다.');
-      }
-
-      const existingBuyer: Record<string, unknown> =
-        buyerProfile?.buyer && typeof buyerProfile.buyer === 'object'
-          ? { ...buyerProfile.buyer }
-          : {};
-      const existingBankInfoRaw = existingBuyer['bankInfo'];
-      const existingBankInfo: Record<string, unknown> =
-        existingBankInfoRaw && typeof existingBankInfoRaw === 'object'
-          ? { ...(existingBankInfoRaw as Record<string, unknown>) }
-          : {};
-      const bankName = toTrimmedString(existingBankInfo['bankName'] ?? existingBuyer['depositBankName']);
-      const accountNumber = toTrimmedString(
-        existingBankInfo['accountNumber'] ?? existingBuyer['depositBankAccountNumber'],
-      );
-
-      const updateBuyerResponse = await fetch('/api/user/updateBuyer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storecode: 'admin',
-          walletAddress: activeAccount.address,
-          bankName: bankName || undefined,
-          accountNumber: accountNumber || undefined,
-          accountHolder: depositName,
-          buyer: {
-            ...existingBuyer,
-            depositName,
-            depositBankName: bankName || existingBuyer['depositBankName'],
-            depositBankAccountNumber: accountNumber || existingBuyer['depositBankAccountNumber'],
-            bankInfo: {
-              ...existingBankInfo,
-              accountHolder: depositName,
-              ...(bankName ? { bankName } : {}),
-              ...(accountNumber ? { accountNumber } : {}),
-            },
-          },
-        }),
-      });
-      const updateBuyerData = await updateBuyerResponse.json().catch(() => ({}));
-      if (!updateBuyerResponse.ok || !updateBuyerData?.result) {
-        throw new Error(updateBuyerData?.error || '구매자 입금자명 저장에 실패했습니다.');
-      }
 
       await loadBuyerProfile();
       setBuyerProfileModalOpen(false);
@@ -1406,9 +1629,114 @@ export default function BuyUsdtPage({
     }
   };
 
+  const linkStoreMemberForPurchase = async () => {
+    if (!activeAccount?.address) {
+      toast.error('지갑을 먼저 연결해 주세요.');
+      return;
+    }
+    if (!isStoreScopedPurchase) {
+      return;
+    }
+    if (!storecode) {
+      toast.error('가맹점 코드를 확인해 주세요.');
+      return;
+    }
+    if (linkingStoreMember) return;
+
+    const nickname = toTrimmedString(storeMemberLinkNicknameInput);
+    const password = toTrimmedString(storeMemberLinkPasswordInput);
+    if (nickname.length < 2) {
+      toast.error('가맹점 회원 아이디를 2자 이상 입력해 주세요.');
+      return;
+    }
+    if (!password) {
+      toast.error('가맹점 회원 비밀번호를 입력해 주세요.');
+      return;
+    }
+
+    const linkingStartedAt = Date.now();
+    setLinkingStoreMember(true);
+    setStoreMemberProfileError(null);
+    try {
+      let thirdwebMobile = '';
+      try {
+        thirdwebMobile = String(await getUserPhoneNumber({ client }) || '').trim();
+      } catch (phoneError) {
+        console.warn('Failed to read thirdweb phone number for store member link', phoneError);
+      }
+
+      const response = await fetch('/api/user/linkWalletByStorecodeNicknamePassword', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode,
+          walletAddress: activeAccount.address,
+          mobile: thirdwebMobile,
+          nickname,
+          password,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.error) {
+        throw new Error(data?.error || '회원 인증에 실패했습니다.');
+      }
+
+      const linkedMember = data?.result && typeof data.result === 'object'
+        ? (data.result as Record<string, unknown>)
+        : null;
+      const linkedBuyer =
+        linkedMember?.buyer && typeof linkedMember.buyer === 'object'
+          ? (linkedMember.buyer as Record<string, unknown>)
+          : null;
+      const linkedSnapshot = resolveBuyerBankSnapshot(linkedBuyer);
+      const linkedDepositName = toTrimmedString(linkedSnapshot.accountHolder);
+      if (!linkedDepositName) {
+        throw new Error('연동된 가맹점 회원의 입금자명을 찾지 못했습니다. 가맹점에 문의해 주세요.');
+      }
+
+      const memberNickname = toTrimmedString(linkedMember?.nickname);
+      await upsertAdminBuyerProfile({
+        nicknameInput: buyerNicknameInput || buyerProfileNickname || memberNickname || fallbackBuyerNickname,
+        depositNameInput: linkedDepositName,
+        sourceBuyer: linkedBuyer || undefined,
+        mobileOverride: thirdwebMobile,
+      });
+
+      if (!toTrimmedString(buyerNicknameInput) && memberNickname) {
+        setBuyerNicknameInput(memberNickname);
+      }
+      setBuyerDepositNameInput(linkedDepositName);
+      setStoreMemberLinkPasswordInput('');
+
+      await Promise.all([loadStoreMemberProfile(), loadBuyerProfile()]);
+      toast.success('가맹점 회원 연동 및 구매자 정보 반영이 완료되었습니다.');
+    } catch (error) {
+      console.error('Failed to link store member for purchase', error);
+      const message = error instanceof Error ? error.message : '가맹점 회원 연동 중 오류가 발생했습니다.';
+      setStoreMemberProfileError(message);
+      toast.error(message);
+    } finally {
+      const elapsed = Date.now() - linkingStartedAt;
+      const remaining = Math.max(0, STORE_MEMBER_LINKING_MIN_MS - elapsed);
+      if (remaining > 0) {
+        await waitFor(remaining);
+      }
+      setLinkingStoreMember(false);
+    }
+  };
+
   const onPrimaryAction = () => {
     if (!activeAccount?.address) {
       toast.error('지갑을 먼저 연결해 주세요.');
+      return;
+    }
+    if (isStoreScopedPurchase && loadingStoreMemberProfile) {
+      toast.error('가맹점 회원 여부를 확인 중입니다. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+    if (isStoreScopedPurchase && !hasStoreMemberProfile) {
+      openBuyerProfileModal();
+      toast.error('가맹점 회원정보를 먼저 연동해야 구매할 수 있습니다.');
       return;
     }
     if (!hasBuyerProfileForPurchase) {
@@ -1448,12 +1776,17 @@ export default function BuyUsdtPage({
       toast.error('같은 판매자와 진행중인 거래가 있어 새 주문을 생성할 수 없습니다.');
       return;
     }
+    if (isStoreScopedPurchase && !hasStoreMemberProfile) {
+      toast.error('가맹점 회원정보 연동 후 구매할 수 있습니다.');
+      return;
+    }
     if (isSelectedSellerBuyer) {
       toast.error('현재 지갑과 동일한 판매자는 선택할 수 없습니다. 판매자를 다시 선택해 주세요.');
       return;
     }
     if (
       !activeAccount?.address ||
+      !canBuyByStoreMemberRule ||
       !hasBuyerProfileForPurchase ||
       !selectedSeller ||
       usdtAmount <= 0 ||
@@ -1688,21 +2021,24 @@ export default function BuyUsdtPage({
             </div>
 
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">구매자 정보</p>
-                {hasBuyerProfileForPurchase && (
-                  <button
-                    type="button"
-                    onClick={openBuyerProfileModal}
-                    className="inline-flex h-7 items-center rounded-lg border border-slate-300 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                  >
-                    정보 수정
-                  </button>
-                )}
-              </div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">구매자 정보</p>
 
               {loadingBuyerProfile ? (
-                <p className="mt-2 text-xs text-slate-500">구매자 정보를 불러오는 중입니다...</p>
+                <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="relative inline-flex h-5 w-5 items-center justify-center">
+                      <span className="absolute h-5 w-5 rounded-full border-2 border-cyan-300/80" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-cyan-600 animate-ping" />
+                    </span>
+                    <p className="text-sm font-semibold text-cyan-800">나의 지갑과 연동된 구매자 정보를 조회중입니다...</p>
+                  </div>
+                  <div className="mt-2 flex items-center gap-1.5 pl-7">
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce [animation-delay:120ms]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce [animation-delay:240ms]" />
+                    <span className="text-[11px] font-semibold text-cyan-700">검색 중...</span>
+                  </div>
+                </div>
               ) : hasBuyerProfileForPurchase ? (
                 <div className="mt-2 grid grid-cols-1 gap-2 text-xs">
                   <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
@@ -1713,18 +2049,32 @@ export default function BuyUsdtPage({
                   </div>
                 </div>
               ) : (
-                <div className="mt-3 rounded-2xl border border-amber-200 bg-[linear-gradient(135deg,#fff7ed_0%,#fffbeb_100%)] px-3 py-3">
-                  <p className="text-xs font-semibold text-amber-800">
-                    구매 신청 전에 구매자 정보(입금자명)를 먼저 입력해 주세요.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={openBuyerProfileModal}
-                    className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl border border-amber-300 bg-white text-sm font-semibold text-amber-800 transition hover:border-amber-400 hover:bg-amber-50"
-                  >
-                    구매자 정보 입력하기
-                  </button>
-                </div>
+                <>
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                    <span className="text-xs font-semibold text-rose-700">
+                      조회 결과: 등록된 구매자 정보가 없습니다.
+                    </span>
+                  </div>
+
+                  <div className="mt-3 rounded-2xl border border-amber-200 bg-[linear-gradient(135deg,#fff7ed_0%,#fffbeb_100%)] px-3 py-3">
+                    <p className="text-xs font-semibold text-amber-800">
+                      구매 신청 전에 구매자 정보(입금자명)를 먼저 입력해 주세요.
+                    </p>
+                    {isStoreScopedPurchase && !hasStoreMemberProfile && (
+                      <p className="mt-1 text-xs font-semibold text-amber-800">
+                        가맹점 회원정보 연동이 먼저 완료되어야 구매를 진행할 수 있습니다.
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={openBuyerProfileModal}
+                      className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl border border-amber-300 bg-white text-sm font-semibold text-amber-800 transition hover:border-amber-400 hover:bg-amber-50"
+                    >
+                      구매자 정보 입력하기
+                    </button>
+                  </div>
+                </>
               )}
             </div>
 
@@ -2208,7 +2558,9 @@ export default function BuyUsdtPage({
                     {primaryLabel}
                   </button>
                   <p className="mt-2 text-xs text-slate-500">
-                    구매자 정보(입금자명)를 확인하고, 판매자와 구매 수량/금액을 점검한 뒤 신청하세요.
+                    {isStoreScopedPurchase && !hasStoreMemberProfile
+                      ? '가맹점 회원정보 연동 후 구매자 정보(입금자명)를 확인하고 주문을 진행하세요.'
+                      : '구매자 정보(입금자명)를 확인하고, 판매자와 구매 수량/금액을 점검한 뒤 신청하세요.'}
                   </p>
                 </>
               )
@@ -2633,7 +2985,7 @@ export default function BuyUsdtPage({
             type="button"
             aria-label="구매자 정보 입력 닫기"
             onClick={() => {
-              if (!savingBuyerProfile) {
+              if (!savingBuyerProfile && !linkingStoreMember) {
                 setBuyerProfileModalOpen(false);
               }
             }}
@@ -2643,49 +2995,206 @@ export default function BuyUsdtPage({
             <p className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
               구매자 정보 입력
             </p>
-            <h3 className="mt-3 text-xl font-semibold text-slate-900">입금자명을 입력해 주세요</h3>
+            <h3 className="mt-3 text-xl font-semibold text-slate-900">
+              {shouldShowBuyerProfileNextStep ? '입금자명을 입력해 주세요' : '구매자 정보를 확인해 주세요'}
+            </h3>
             <p className="mt-2 text-sm text-slate-600">
-              구매자 정보가 있어야 구매 신청을 진행할 수 있습니다.
+              1단계에서 현재 구매자 정보를 먼저 조회하고, 정보가 없을 경우에만 다음 단계로 진행됩니다.
             </p>
 
-            <div className="mt-4 space-y-3">
-              <label className="block">
-                <span className="text-xs font-semibold text-slate-500">입금자명</span>
-                <input
-                  type="text"
-                  value={buyerDepositNameInput}
-                  onChange={(event) => setBuyerDepositNameInput(event.target.value)}
-                  maxLength={32}
-                  disabled={savingBuyerProfile}
-                  placeholder="입금자명 입력"
-                  className="mt-1 h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-sm text-slate-800 outline-none transition focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-100"
-                />
-              </label>
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">1단계 · 구매자 정보 조회</p>
+              {loadingBuyerProfile ? (
+                <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="relative inline-flex h-5 w-5 items-center justify-center">
+                      <span className="absolute h-5 w-5 rounded-full border-2 border-cyan-300/80" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-cyan-600 animate-ping" />
+                    </span>
+                    <p className="text-sm font-semibold text-cyan-800">나의 지갑과 연동된 구매자 정보를 조회중입니다...</p>
+                  </div>
+                  <div className="mt-2 flex items-center gap-1.5 pl-7">
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce [animation-delay:120ms]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce [animation-delay:240ms]" />
+                    <span className="text-[11px] font-semibold text-cyan-700">검색 중...</span>
+                  </div>
+                </div>
+              ) : hasBuyerProfileForPurchase ? (
+                <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+                  <p className="text-xs font-semibold text-emerald-700">등록된 구매자 정보가 확인되었습니다.</p>
+                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
+                    <p className="font-semibold text-emerald-700">닉네임</p>
+                    <p className="font-bold text-emerald-900">{buyerProfileNickname || '-'}</p>
+                    <p className="font-semibold text-emerald-700">입금자명</p>
+                    <p className="font-bold text-emerald-900">{buyerDepositName || '-'}</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm font-semibold text-amber-700">
+                  등록된 구매자 정보가 없습니다. 2단계로 이동하여 정보를 입력해 주세요.
+                </p>
+              )}
             </div>
 
-            {savingBuyerProfile && (
-              <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
-                구매자 정보를 저장 중입니다. 완료될 때까지 이 창을 닫지 마세요.
-              </p>
+            {shouldShowBuyerProfileNextStep && (
+              <>
+                {isStoreScopedPurchase && (
+                  <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/60 px-3 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700">지정 가맹점</p>
+
+                    <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full border border-amber-200 bg-white px-2.5 py-1.5">
+                      <div className="h-6 w-6 shrink-0 overflow-hidden rounded-md bg-slate-100 ring-1 ring-amber-200">
+                        {selectedStoreInfo?.storeLogo ? (
+                          <Image
+                            src={selectedStoreInfo.storeLogo}
+                            alt={selectedStoreInfo.storeName || 'Store'}
+                            width={24}
+                            height={24}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[9px] font-bold text-amber-700">
+                            SHOP
+                          </div>
+                        )}
+                      </div>
+                      <span className="truncate text-xs font-semibold text-amber-900">
+                        {selectedStoreInfo?.storeName || storecode}
+                      </span>
+                    </div>
+
+                    <div
+                      className={`mt-3 rounded-xl border px-3 py-3 ${
+                        hasStoreMemberProfile
+                          ? 'border-emerald-200 bg-emerald-50'
+                          : 'border-amber-200 bg-white'
+                      }`}
+                    >
+                      {loadingStoreMemberProfile ? (
+                        <p className="text-xs font-semibold text-slate-600">내 지갑 기준 가맹점 회원정보를 확인 중입니다...</p>
+                      ) : hasStoreMemberProfile ? (
+                        <>
+                          <p className="text-xs font-semibold text-emerald-700">내 지갑이 가맹점 회원으로 연동되어 있습니다.</p>
+                          <p className="mt-1 break-all text-base font-extrabold text-emerald-900">
+                            {storeMemberProfile?.nickname || '-'}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xs font-semibold text-amber-800">
+                            구매를 위해 가맹점 회원 아이디/비밀번호를 입력해 먼저 나의 지갑과 가맹점 회원을 연동해야합니다.
+                          </p>
+                          {storeMemberProfileError && (
+                            <p className="mt-1 text-xs font-semibold text-rose-600">{storeMemberProfileError}</p>
+                          )}
+                          <div className="mt-2 grid grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              value={storeMemberLinkNicknameInput}
+                              onChange={(event) => setStoreMemberLinkNicknameInput(event.target.value)}
+                              placeholder="가맹점 회원아이디"
+                              maxLength={24}
+                              disabled={linkingStoreMember || savingBuyerProfile}
+                              className="h-11 w-full rounded-xl border border-amber-300 bg-white px-3 text-base font-semibold text-slate-800 outline-none transition focus:border-amber-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                            />
+                            <input
+                              type="password"
+                              value={storeMemberLinkPasswordInput}
+                              onChange={(event) => setStoreMemberLinkPasswordInput(event.target.value)}
+                              placeholder="가맹점 비밀번호"
+                              autoComplete="current-password"
+                              maxLength={64}
+                              disabled={linkingStoreMember || savingBuyerProfile}
+                              className="h-11 w-full rounded-xl border border-amber-300 bg-white px-3 text-base font-semibold text-slate-800 outline-none transition focus:border-amber-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                            />
+                          </div>
+                          {linkingStoreMember ? (
+                            <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <span className="relative inline-flex h-5 w-5 items-center justify-center">
+                                  <span className="absolute h-5 w-5 rounded-full border-2 border-cyan-300/80" />
+                                  <span className="h-2.5 w-2.5 rounded-full bg-cyan-600 animate-ping" />
+                                </span>
+                                <p className="text-xs font-semibold text-cyan-700">
+                                  가맹점 회원정보를 연동 중입니다. 완료될 때까지 잠시 기다려 주세요.
+                                </p>
+                              </div>
+                              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-cyan-100">
+                                <div className="h-full rounded-full bg-cyan-500 animate-[modalLinkProgress_5s_linear_forwards]" />
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={linkStoreMemberForPurchase}
+                              disabled={savingBuyerProfile}
+                              className="mt-2 inline-flex h-10 items-center justify-center rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              회원연동하기
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4 space-y-3">
+                  <label className="block">
+                    <span className="text-xs font-semibold text-slate-500">2단계 · 입금자명 입력</span>
+                    <input
+                      type="text"
+                      value={buyerDepositNameInput}
+                      onChange={(event) => setBuyerDepositNameInput(event.target.value)}
+                      maxLength={32}
+                      disabled={savingBuyerProfile || linkingStoreMember || (isStoreScopedPurchase && !hasStoreMemberProfile)}
+                      placeholder={
+                        isStoreScopedPurchase && !hasStoreMemberProfile
+                          ? '가맹점 회원 연동 후 자동 반영됩니다'
+                          : '입금자명 입력'
+                      }
+                      className="mt-1 h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-sm text-slate-800 outline-none transition focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                    />
+                  </label>
+                </div>
+
+                {savingBuyerProfile && (
+                  <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                    구매자 정보를 저장 중입니다. 완료될 때까지 이 창을 닫지 마세요.
+                  </p>
+                )}
+              </>
             )}
 
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setBuyerProfileModalOpen(false)}
-                disabled={savingBuyerProfile}
+                disabled={savingBuyerProfile || linkingStoreMember}
                 className="h-11 rounded-2xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 닫기
               </button>
-              <button
-                type="button"
-                onClick={submitBuyerProfile}
-                disabled={savingBuyerProfile}
-                className="h-11 rounded-2xl bg-cyan-700 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:bg-slate-400"
-              >
-                {savingBuyerProfile ? '저장 중...' : '저장하기'}
-              </button>
+              {shouldShowBuyerProfileNextStep ? (
+                <button
+                  type="button"
+                  onClick={submitBuyerProfile}
+                  disabled={savingBuyerProfile || linkingStoreMember || (isStoreScopedPurchase && !hasStoreMemberProfile)}
+                  className="h-11 rounded-2xl bg-cyan-700 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:bg-slate-400"
+                >
+                  {savingBuyerProfile ? '저장 중...' : '저장하기'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setBuyerProfileModalForceNextStep(true)}
+                  disabled={savingBuyerProfile || linkingStoreMember}
+                  className="h-11 rounded-2xl bg-slate-900 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                >
+                  다음 단계
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -2777,6 +3286,15 @@ export default function BuyUsdtPage({
           100% {
             transform: scale(1) translateY(0);
             opacity: 1;
+          }
+        }
+
+        @keyframes modalLinkProgress {
+          0% {
+            width: 0%;
+          }
+          100% {
+            width: 100%;
           }
         }
       `}</style>
