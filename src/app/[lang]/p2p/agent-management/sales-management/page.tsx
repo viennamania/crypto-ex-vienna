@@ -29,7 +29,12 @@ type AgentSalesOrderItem = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const toText = (value: unknown) => (typeof value === 'string' ? value : '');
+const toText = (value: unknown) => {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (isRecord(value) && typeof value.$oid === 'string') return value.$oid;
+  return '';
+};
 const toNumber = (value: unknown) => {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : 0;
@@ -112,15 +117,23 @@ export default function P2PAgentSalesManagementPage() {
         throw new Error(String((payload as Record<string, unknown>)?.error || '판매 거래내역을 불러오지 못했습니다.'));
       }
 
-      const items = Array.isArray((payload as Record<string, unknown>)?.items)
-        ? ((payload as Record<string, unknown>).items as unknown[])
+      const payloadRecord = isRecord(payload) ? payload : {};
+      const payloadResult = isRecord(payloadRecord.result) ? payloadRecord.result : {};
+      const items = Array.isArray(payloadRecord.items)
+        ? (payloadRecord.items as unknown[])
+        : Array.isArray(payloadResult.orders)
+        ? (payloadResult.orders as unknown[])
         : [];
+      const normalizedOrders = items.map((item) => normalizeSalesOrder(item));
+      const resolvedTotalCount = toNumber(payloadRecord.totalCount || payloadResult.totalCount || normalizedOrders.length);
+      const resolvedTotalKrwAmount = toNumber(payloadRecord.totalKrwAmount || payloadResult.totalKrwAmount);
+      const resolvedTotalUsdtAmount = toNumber(payloadRecord.totalUsdtAmount || payloadResult.totalUsdtAmount);
 
       setAgent(agentData);
-      setOrders(items.map((item) => normalizeSalesOrder(item)));
-      setTotalCount(toNumber((payload as Record<string, unknown>)?.totalCount));
-      setTotalKrwAmount(toNumber((payload as Record<string, unknown>)?.totalKrwAmount));
-      setTotalUsdtAmount(toNumber((payload as Record<string, unknown>)?.totalUsdtAmount));
+      setOrders(normalizedOrders);
+      setTotalCount(resolvedTotalCount);
+      setTotalKrwAmount(resolvedTotalKrwAmount);
+      setTotalUsdtAmount(resolvedTotalUsdtAmount);
     } catch (loadError) {
       setAgent(null);
       setOrders([]);
