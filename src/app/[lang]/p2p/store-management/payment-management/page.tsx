@@ -543,11 +543,27 @@ export default function P2PStorePaymentManagementPage() {
   }, [storecode, paymentWalletAddress, loadPaymentWalletBalance]);
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">Payment Management</p>
-        <h1 className="mt-1 text-2xl font-bold text-slate-900">결제관리</h1>
-        <p className="mt-1 text-sm text-slate-600">가맹점 결제 흐름과 최근 결제 내역을 확인합니다.</p>
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">Payment Management</p>
+            <h1 className="mt-0.5 text-xl font-bold text-slate-900">결제관리</h1>
+            <p className="mt-0.5 text-xs text-slate-600">가맹점 결제 흐름과 최근 결제 내역을 확인합니다.</p>
+          </div>
+          {storecode && (
+            <button
+              type="button"
+              onClick={() => {
+                void loadDashboard();
+              }}
+              disabled={loading}
+              className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? '조회 중...' : '새로고침'}
+            </button>
+          )}
+        </div>
       </div>
 
       {!storecode && (
@@ -558,19 +574,6 @@ export default function P2PStorePaymentManagementPage() {
 
       {storecode && (
         <>
-          <div className="flex items-center justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                void loadDashboard();
-              }}
-              disabled={loading}
-              className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? '조회 중...' : '새로고침'}
-            </button>
-          </div>
-
           {loading && (
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-500">
               결제 대시보드를 불러오는 중입니다...
@@ -585,95 +588,99 @@ export default function P2PStorePaymentManagementPage() {
 
           {!loading && !error && dashboard && (
             <>
-              <section className="rounded-2xl border border-cyan-200 bg-cyan-50/60 px-4 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-cyan-200">
-                    {dashboard.store.storeLogo ? (
-                      <div
-                        className="h-full w-full bg-cover bg-center"
-                        style={{ backgroundImage: `url(${encodeURI(dashboard.store.storeLogo)})` }}
-                        aria-label={dashboard.store.storeName}
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-cyan-700">
-                        SHOP
-                      </div>
-                    )}
+              <section className="grid grid-cols-1 gap-2.5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-3 py-3 shadow-[0_20px_50px_-42px_rgba(5,150,105,0.6)]">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                        Payment Wallet USDT
+                      </p>
+                      <p className="mt-0.5 text-xs font-semibold text-slate-800">결제지갑 실시간 USDT 잔액</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void loadPaymentWalletBalance();
+                      }}
+                      disabled={loadingPaymentWalletBalance}
+                      className="inline-flex h-7 shrink-0 items-center justify-center rounded-lg border border-emerald-300 bg-white px-2 text-[10px] font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {loadingPaymentWalletBalance ? '조회 중...' : '잔액 새로고침'}
+                    </button>
                   </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-base font-semibold text-slate-900">{dashboard.store.storeName}</p>
-                    <p className="truncate text-xs text-slate-600">
-                      결제지갑: {shortAddress(dashboard.store.paymentWalletAddress)}
-                    </p>
-                  </div>
-                </div>
-              </section>
 
-              <section className="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-4 py-4 shadow-[0_20px_50px_-40px_rgba(5,150,105,0.65)]">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
-                      Payment Wallet USDT
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-slate-800">결제지갑 실시간 USDT 잔액</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void loadPaymentWalletBalance();
-                    }}
-                    disabled={loadingPaymentWalletBalance}
-                    className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-emerald-300 bg-white px-2.5 text-[11px] font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  <p
+                    className={`mt-1.5 break-all text-3xl font-black tracking-tight transition-[transform,color] duration-300 ${
+                      isBalanceAnimating ? 'scale-[1.03] text-emerald-700' : 'scale-100 text-slate-900'
+                    }`}
                   >
-                    {loadingPaymentWalletBalance ? '조회 중...' : '잔액 새로고침'}
-                  </button>
-                </div>
-
-                <p
-                  className={`mt-2 break-all text-4xl font-black tracking-tight transition-[transform,color] duration-300 ${
-                    isBalanceAnimating ? 'scale-[1.03] text-emerald-700' : 'scale-100 text-slate-900'
-                  }`}
-                >
-                  {formatUsdt(displayedPaymentWalletUsdtBalance)}
-                </p>
-
-                <p className="mt-1 text-[11px] text-slate-600">
-                  폴리곤 USDT 기준 · {Math.floor(PAYMENT_BALANCE_REFRESH_MS / 1000)}초마다 자동 갱신
-                </p>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  {paymentWalletBalanceUpdatedAt
-                    ? `마지막 업데이트: ${toDateTime(paymentWalletBalanceUpdatedAt)}`
-                    : '잔액 정보를 불러오는 중입니다.'}
-                </p>
-                {paymentWalletUsdtBalance === null && !loadingPaymentWalletBalance && (
-                  <p className="mt-1 text-[11px] text-slate-500">결제지갑 USDT 잔액이 없습니다.</p>
-                )}
-                {paymentWalletBalanceError && (
-                  <p className="mt-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
-                    {paymentWalletBalanceError}
+                    {formatUsdt(displayedPaymentWalletUsdtBalance)}
                   </p>
-                )}
-              </section>
 
-              <section className="grid grid-cols-2 gap-3">
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                  <p className="text-xs font-semibold text-slate-500">결제 건수</p>
-                  <p className="mt-1 text-2xl font-bold text-slate-900">
-                    {Number(dashboard.summary.totalCount || 0).toLocaleString()}
+                  <p className="mt-0.5 text-[10px] text-slate-600">
+                    폴리곤 USDT 기준 · {Math.floor(PAYMENT_BALANCE_REFRESH_MS / 1000)}초마다 자동 갱신
                   </p>
+                  <p className="mt-0.5 text-[10px] text-slate-500">
+                    {paymentWalletBalanceUpdatedAt
+                      ? `마지막 업데이트: ${toDateTime(paymentWalletBalanceUpdatedAt)}`
+                      : '잔액 정보를 불러오는 중입니다.'}
+                  </p>
+                  {paymentWalletUsdtBalance === null && !loadingPaymentWalletBalance && (
+                    <p className="mt-0.5 text-[10px] text-slate-500">결제지갑 USDT 잔액이 없습니다.</p>
+                  )}
+                  {paymentWalletBalanceError && (
+                    <p className="mt-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-semibold text-rose-700">
+                      {paymentWalletBalanceError}
+                    </p>
+                  )}
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                  <p className="text-xs font-semibold text-slate-500">누적 결제량</p>
-                  <p className="mt-1 text-2xl font-bold text-cyan-700">{formatUsdt(dashboard.summary.totalUsdtAmount)}</p>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                  <p className="text-xs font-semibold text-slate-500">누적 결제금액</p>
-                  <p className="mt-1 text-2xl font-bold text-slate-900">{formatKrw(dashboard.summary.totalKrwAmount)}</p>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                  <p className="text-xs font-semibold text-slate-500">평균 환율</p>
-                  <p className="mt-1 text-2xl font-bold text-slate-900">1 USDT = {formatRate(dashboard.summary.avgExchangeRate)}</p>
-                  <p className="mt-1 text-[11px] text-slate-500">{toDateTime(dashboard.summary.latestConfirmedAt)}</p>
+
+                <div className="space-y-2.5">
+                  <div className="rounded-2xl border border-cyan-200 bg-cyan-50/60 px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-white ring-1 ring-cyan-200">
+                        {dashboard.store.storeLogo ? (
+                          <div
+                            className="h-full w-full bg-cover bg-center"
+                            style={{ backgroundImage: `url(${encodeURI(dashboard.store.storeLogo)})` }}
+                            aria-label={dashboard.store.storeName}
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[9px] font-bold text-cyan-700">
+                            SHOP
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">{dashboard.store.storeName}</p>
+                        <p className="truncate text-[11px] text-slate-600">
+                          결제지갑: {shortAddress(dashboard.store.paymentWalletAddress)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+                      <p className="text-[11px] font-semibold text-slate-500">결제 건수</p>
+                      <p className="mt-0.5 text-xl font-bold text-slate-900">
+                        {Number(dashboard.summary.totalCount || 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+                      <p className="text-[11px] font-semibold text-slate-500">누적 결제량</p>
+                      <p className="mt-0.5 text-xl font-bold text-cyan-700">{formatUsdt(dashboard.summary.totalUsdtAmount)}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+                      <p className="text-[11px] font-semibold text-slate-500">누적 결제금액</p>
+                      <p className="mt-0.5 text-xl font-bold text-slate-900">{formatKrw(dashboard.summary.totalKrwAmount)}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+                      <p className="text-[11px] font-semibold text-slate-500">평균 환율</p>
+                      <p className="mt-0.5 text-sm font-bold text-slate-900">1 USDT = {formatRate(dashboard.summary.avgExchangeRate)}</p>
+                      <p className="mt-0.5 text-[10px] text-slate-500">{toDateTime(dashboard.summary.latestConfirmedAt)}</p>
+                    </div>
+                  </div>
                 </div>
               </section>
 
@@ -733,11 +740,11 @@ export default function P2PStorePaymentManagementPage() {
                                 {toDateTime(payment.confirmedAt || payment.createdAt)}
                               </td>
                               <td className="px-3 py-2.5">
-                                <p className="font-semibold text-slate-900">
+                                <p className="break-all text-lg font-extrabold leading-tight text-slate-900">
                                   {String(payment.member?.nickname || '').trim() || '-'}
                                 </p>
-                                <p className="mt-0.5 text-[11px] text-slate-500">
-                                  입금자명 {String(payment.member?.depositName || '').trim() || '-'}
+                                <p className="mt-0.5 break-all text-base font-bold leading-tight text-slate-700">
+                                  {String(payment.member?.depositName || '').trim() || '-'}
                                 </p>
                               </td>
                               <td className="px-3 py-2.5 text-xs text-slate-500">
