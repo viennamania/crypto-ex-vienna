@@ -43,13 +43,8 @@ export async function POST(request: Request) {
     const agentRegex = { $regex: `^${escapeRegex(agentcode)}$`, $options: 'i' };
 
     const match: Record<string, unknown> = {
-      // Some legacy rows only keep agentcode on nested fields.
-      $or: [
-        { agentcode: agentRegex },
-        { 'seller.agentcode': agentRegex },
-        { 'store.agentcode': agentRegex },
-        { 'agent.agentcode': agentRegex },
-      ],
+      // User requested: match only buyorders.agentcode.
+      agentcode: agentRegex,
     };
 
     if (status && status !== 'all') {

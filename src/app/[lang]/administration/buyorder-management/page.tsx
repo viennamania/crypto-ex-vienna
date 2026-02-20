@@ -599,7 +599,7 @@ export default function BuyOrderManagementPage() {
                     <th className="w-[170px] px-3 py-3">주문식별</th>
                     <th className="w-[150px] px-3 py-3">구매자</th>
                     <th className="w-[145px] px-3 py-3">판매자</th>
-                    <th className="w-[84px] px-3 py-3">결제방법</th>
+                    <th className="w-[112px] px-3 py-3">결제방법</th>
                     <th className="w-[150px] px-3 py-3 text-right">주문금액</th>
                     <th className="w-[127px] px-3 py-3 text-center">관리</th>
                   </tr>
@@ -657,7 +657,7 @@ export default function BuyOrderManagementPage() {
                         </div>
                       </td>
                       <td className="px-3 py-3">
-                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                        <span className="inline-flex whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">
                           {getPaymentMethodLabel(order)}
                         </span>
                       </td>
