@@ -1815,7 +1815,7 @@ export async function insertBuyOrder(data: any) {
 
   // get agent by storecode
 
-  const agentcode = store.agentcode || '';
+  const agentcode = String(data?.agentcode || store?.agentcode || '').trim();
 
 
   if (!agentcode) {
@@ -2054,7 +2054,7 @@ export async function insertBuyOrderForClearance(data: any) {
 
   // get agent by storecode
 
-  const agentcode = store.agentcode || '';
+  const agentcode = String(data?.agentcode || store?.agentcode || '').trim();
 
 
   if (!agentcode) {
@@ -2245,7 +2245,7 @@ export async function insertBuyOrderForUser(data: any) {
 
   // get agent by storecode
 
-  const agentcode = store.agentcode || '';
+  const agentcode = String(data?.agentcode || store?.agentcode || '').trim();
 
 
   if (!agentcode) {
@@ -10399,6 +10399,7 @@ export async function acceptBuyOrderPrivateSale(
     }
 
     const nowIso = new Date().toISOString();
+    const privateSaleAgentcode = String(seller?.agentcode || '').trim();
 
     const newBuyOrder = {
       tradeId: tradeId,
@@ -10413,6 +10414,7 @@ export async function acceptBuyOrderPrivateSale(
       paymentMethod: normalizedPaymentMethod,
       paymentBankName: sellerBankName,
       storecode: 'admin',
+      ...(privateSaleAgentcode ? { agentcode: privateSaleAgentcode } : {}),
       totalAmount: normalizedUsdtAmount,
       status: 'paymentRequested',
       createdAt: nowIso,
