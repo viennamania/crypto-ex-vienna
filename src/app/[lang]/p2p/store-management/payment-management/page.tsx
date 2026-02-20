@@ -727,15 +727,20 @@ export default function P2PStorePaymentManagementPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
-                          {recentPayments.map((payment) => (
-                            <tr
-                              key={payment.id}
-                              className={`transition ${
-                                changedPaymentIds.includes(payment.id)
-                                  ? 'bg-cyan-50/70 animate-pulse'
-                                  : 'hover:bg-slate-50/70'
-                              }`}
-                            >
+                          {recentPayments.map((payment) => {
+                            const completed = isOrderProcessingCompleted(payment.orderProcessing);
+                            const isChanged = changedPaymentIds.includes(payment.id);
+                            const rowClass = isChanged
+                              ? 'bg-cyan-50/70 animate-pulse'
+                              : completed
+                                ? 'hover:bg-slate-50/70'
+                                : 'bg-amber-50/55 hover:bg-amber-100/60';
+
+                            return (
+                              <tr
+                                key={payment.id}
+                                className={`transition ${rowClass}`}
+                              >
                               <td className="px-3 py-2.5 text-xs text-slate-500">
                                 {toDateTime(payment.confirmedAt || payment.createdAt)}
                               </td>
@@ -765,19 +770,19 @@ export default function P2PStorePaymentManagementPage() {
                               <td className="px-3 py-2.5 text-xs">
                                 <p
                                   className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-                                    isOrderProcessingCompleted(payment.orderProcessing)
+                                    completed
                                       ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                                       : 'border-amber-200 bg-amber-50 text-amber-700'
                                   }`}
                                 >
                                   {resolveOrderProcessingLabel(payment.orderProcessing)}
                                 </p>
-                                {isOrderProcessingCompleted(payment.orderProcessing) && (
+                                {completed && (
                                   <p className="mt-1 text-[11px] text-slate-500">
                                     완료시각 {toDateTime(payment.orderProcessingUpdatedAt || '')}
                                   </p>
                                 )}
-                                {!isOrderProcessingCompleted(payment.orderProcessing) && (
+                                {!completed && (
                                   <button
                                     type="button"
                                     onClick={() => openOrderProcessingModal(payment)}
@@ -786,12 +791,13 @@ export default function P2PStorePaymentManagementPage() {
                                     결제처리완료
                                   </button>
                                 )}
-                                {changedPaymentIds.includes(payment.id) && (
+                                {isChanged && (
                                   <p className="mt-1 text-[10px] font-semibold text-cyan-700">상태 변경됨</p>
                                 )}
                               </td>
-                            </tr>
-                          ))}
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
