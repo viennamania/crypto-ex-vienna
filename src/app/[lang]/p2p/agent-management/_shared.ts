@@ -38,6 +38,7 @@ export type AgentUserItem = {
 
 export type AgentBuyOrderItem = {
   id: string;
+  paymentId: string;
   tradeId: string;
   status: string;
   orderProcessing?: string;
@@ -136,6 +137,7 @@ const normalizeBuyOrder = (value: unknown): AgentBuyOrderItem => {
 
   return {
     id: toText(source._id) || toText(source.id),
+    paymentId: '',
     tradeId: toText(source.tradeId),
     status: toText(source.status),
     orderProcessing: toText(source.orderProcessing) || toText(source.order_processing),
@@ -160,6 +162,7 @@ const normalizeWalletUsdtPayment = (value: unknown): AgentBuyOrderItem => {
 
   return {
     id: toText(source.id) || toText(source._id),
+    paymentId: toText(source.paymentId),
     tradeId: toText(source.transactionHash) || toText(source.id) || toText(source._id),
     status: toText(source.status),
     orderProcessing: toText(source.orderProcessing) || toText(source.order_processing) || 'PROCESSING',

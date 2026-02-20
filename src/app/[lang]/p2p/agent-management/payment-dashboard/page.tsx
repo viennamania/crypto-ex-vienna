@@ -194,6 +194,7 @@ export default function P2PAgentPaymentDashboardPage() {
                 <table className="min-w-full text-sm">
                   <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                     <tr>
+                      <th className="px-4 py-3">결제번호</th>
                       <th className="px-4 py-3">트랜잭션</th>
                       <th className="px-4 py-3">가맹점</th>
                       <th className="px-4 py-3">회원/결제지갑</th>
@@ -205,13 +206,16 @@ export default function P2PAgentPaymentDashboardPage() {
                   <tbody className="divide-y divide-slate-100">
                     {recentPayments.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">
+                        <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
                           결제 데이터가 없습니다.
                         </td>
                       </tr>
                     ) : (
                       recentPayments.slice(0, 12).map((order) => (
                         <tr key={order.id || order.tradeId} className="text-slate-700">
+                          <td className="px-4 py-3 text-xs font-semibold text-slate-900">
+                            {order.paymentId || '-'}
+                          </td>
                           <td className="px-4 py-3">
                             <p className="font-semibold text-slate-900">{shortAddress(order.tradeId || '')}</p>
                             <p className="text-xs text-slate-500">{order.status || '-'}</p>

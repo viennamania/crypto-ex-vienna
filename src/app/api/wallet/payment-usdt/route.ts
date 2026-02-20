@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ObjectId, type Collection } from "mongodb";
+import { randomInt } from "crypto";
 import { createThirdwebClient, Engine, getContract } from "thirdweb";
 import { balanceOf, transfer } from "thirdweb/extensions/erc20";
 import { ethereum, polygon, arbitrum, bsc } from "thirdweb/chains";
@@ -29,6 +30,7 @@ type PaymentMemberSnapshot = {
 
 type WalletPaymentDocument = {
   _id?: ObjectId;
+  paymentId?: string;
   agentcode?: string;
   storecode: string;
   storeName: string;
@@ -97,6 +99,9 @@ const CHAIN_TO_TOKEN_DECIMALS: Record<ChainKey, number> = {
   arbitrum: 6,
   bsc: 18,
 };
+const PAYMENT_ID_MIN = 10_000_000;
+const PAYMENT_ID_MAX_EXCLUSIVE = 100_000_000;
+const PAYMENT_ID_MAX_RETRIES = 24;
 
 const isWalletAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(value);
 const isTransactionHash = (value: string) => /^0x[a-fA-F0-9]{64}$/.test(value);
@@ -222,8 +227,27 @@ const normalizeExchangeRate = (value: unknown) => {
   return rounded;
 };
 
+const generateRandomPaymentId = () =>
+  String(randomInt(PAYMENT_ID_MIN, PAYMENT_ID_MAX_EXCLUSIVE));
+
+const generateUniquePaymentId = async (collection: Collection<WalletPaymentDocument>) => {
+  for (let attempt = 0; attempt < PAYMENT_ID_MAX_RETRIES; attempt += 1) {
+    const candidate = generateRandomPaymentId();
+    const duplicated = await collection.findOne(
+      { paymentId: candidate },
+      { projection: { _id: 1 } },
+    );
+    if (!duplicated) {
+      return candidate;
+    }
+  }
+
+  throw new Error("failed to generate paymentId");
+};
+
 const serializePayment = (doc: WalletPaymentDocument & { _id?: ObjectId }) => ({
   id: doc._id?.toString() || "",
+  paymentId: String(doc.paymentId || ""),
   agentcode: doc.agentcode || "",
   storecode: doc.storecode,
   storeName: doc.storeName,
@@ -449,7 +473,10 @@ export async function POST(request: NextRequest) {
           }
         : undefined;
 
+    const paymentId = await generateUniquePaymentId(collection);
+
     const paymentRequest: WalletPaymentDocument = {
+      paymentId,
       agentcode: String(store?.agentcode || '').trim(),
       storecode,
       storeName: String(store?.storeName || storecode),
@@ -469,6 +496,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       result: {
         paymentRequestId: inserted.insertedId.toString(),
+        paymentId: paymentRequest.paymentId || "",
         agentcode: paymentRequest.agentcode || '',
         storecode: paymentRequest.storecode,
         storeName: paymentRequest.storeName,

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type WalletPaymentItem = {
   id: string;
+  paymentId: string;
   tradeId: string;
   status: string;
   orderProcessing: string;
@@ -65,6 +66,7 @@ const normalizeWalletPayment = (value: unknown): WalletPaymentItem => {
 
   return {
     id: toText(source.id) || toText(source._id),
+    paymentId: toText(source.paymentId),
     tradeId: toText(source.transactionHash) || toText(source.id) || toText(source._id),
     status: toText(source.status),
     orderProcessing: toText(source.orderProcessing) || toText(source.order_processing) || 'PROCESSING',
@@ -321,7 +323,7 @@ export default function AdministrationPaymentManagementPage() {
                 setKeyword(event.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="트랜잭션/가맹점/회원/지갑 검색"
+              placeholder="결제번호/트랜잭션/가맹점/회원/지갑 검색"
               className="h-9 w-full max-w-xs rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
             />
           </div>
@@ -342,6 +344,7 @@ export default function AdministrationPaymentManagementPage() {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>
+                  <th className="px-4 py-3">결제번호</th>
                   <th className="px-4 py-3">트랜잭션</th>
                   <th className="px-4 py-3">가맹점</th>
                   <th className="px-4 py-3">회원/결제지갑</th>
@@ -354,7 +357,7 @@ export default function AdministrationPaymentManagementPage() {
               <tbody className="divide-y divide-slate-100">
                 {payments.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-500">
                       표시할 결제가 없습니다.
                     </td>
                   </tr>
@@ -364,6 +367,9 @@ export default function AdministrationPaymentManagementPage() {
 
                     return (
                       <tr key={payment.id || payment.tradeId} className="text-slate-700">
+                        <td className="px-4 py-3">
+                          <p className="font-semibold text-slate-900">{payment.paymentId || '-'}</p>
+                        </td>
                         <td className="px-4 py-3">
                           <p className="font-semibold text-slate-900">
                             {payment.tradeId ? shortAddress(payment.tradeId) : '#-'}
@@ -503,6 +509,8 @@ export default function AdministrationPaymentManagementPage() {
 
             <div className="space-y-3 px-4 py-4">
               <div className="grid grid-cols-[108px_1fr] gap-x-3 gap-y-2 text-sm">
+                <p className="text-xs font-semibold text-slate-500">결제번호</p>
+                <p className="break-all font-semibold text-slate-900">{selectedPayment.paymentId || '-'}</p>
                 <p className="text-xs font-semibold text-slate-500">트랜잭션</p>
                 <p className="break-all font-semibold text-slate-900">{selectedPayment.tradeId || '-'}</p>
                 <p className="text-xs font-semibold text-slate-500">가맹점</p>

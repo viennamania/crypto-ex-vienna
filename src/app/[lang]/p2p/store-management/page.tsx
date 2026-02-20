@@ -24,6 +24,7 @@ type DashboardSummary = {
 
 type DashboardPayment = {
   id: string;
+  paymentId: string;
   fromWalletAddress: string;
   usdtAmount: number;
   krwAmount: number;
@@ -173,6 +174,7 @@ export default function P2PStoreManagementHomePage() {
           const member = isRecord(payment.member) ? payment.member : null;
           return {
             id: String(payment.id || ''),
+            paymentId: String(payment.paymentId || ''),
             fromWalletAddress: String(payment.fromWalletAddress || ''),
             usdtAmount: Number(payment.usdtAmount || 0),
             krwAmount: Number(payment.krwAmount || 0),
@@ -676,6 +678,7 @@ export default function P2PStoreManagementHomePage() {
                       </span>
                       <span>{toDateTime(payment.confirmedAt || payment.createdAt)}</span>
                     </div>
+                    <p className="mt-1 text-[11px] text-slate-500">결제번호: {payment.paymentId || '-'}</p>
                     <p className="mt-1 text-[11px] text-slate-500">환율: 1 USDT = {formatRate(payment.exchangeRate)}</p>
                   </div>
                 ))}

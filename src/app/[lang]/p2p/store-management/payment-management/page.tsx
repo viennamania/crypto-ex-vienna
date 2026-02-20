@@ -34,6 +34,7 @@ type DashboardDaily = {
 
 type DashboardPayment = {
   id: string;
+  paymentId: string;
   usdtAmount: number;
   krwAmount: number;
   exchangeRate: number;
@@ -180,6 +181,7 @@ export default function P2PStorePaymentManagementPage() {
         const memberDepositName = resolveMemberDepositName(member);
         return {
           id: String(payment.id || ''),
+          paymentId: String(payment.paymentId || ''),
           usdtAmount: Number(payment.usdtAmount || 0),
           krwAmount: Number(payment.krwAmount || 0),
           exchangeRate: Number(payment.exchangeRate || 0),
@@ -728,10 +730,11 @@ export default function P2PStorePaymentManagementPage() {
                 ) : (
                   <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200">
                     <div className="max-h-[540px] overflow-auto">
-                      <table className="min-w-[1220px] w-full table-auto">
+                      <table className="min-w-[1310px] w-full table-auto">
                         <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                           <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                             <th className="px-3 py-2">일시</th>
+                            <th className="px-3 py-2">결제번호</th>
                             <th className="px-3 py-2">회원</th>
                             <th className="px-3 py-2">송신 지갑</th>
                             <th className="px-3 py-2">USDT</th>
@@ -759,6 +762,9 @@ export default function P2PStorePaymentManagementPage() {
                               >
                               <td className="px-3 py-2.5 text-xs text-slate-500">
                                 {toDateTime(payment.confirmedAt || payment.createdAt)}
+                              </td>
+                              <td className="px-3 py-2.5 text-sm font-semibold text-slate-900">
+                                {payment.paymentId || '-'}
                               </td>
                               <td className="px-3 py-2.5">
                                 <p className="break-all text-lg font-extrabold leading-tight text-slate-900">
@@ -892,6 +898,8 @@ export default function P2PStorePaymentManagementPage() {
 
             <div className="space-y-3 px-4 py-4">
               <div className="grid grid-cols-[108px_1fr] gap-x-3 gap-y-2 text-sm">
+                <p className="text-xs font-semibold text-slate-500">결제번호</p>
+                <p className="break-all font-semibold text-slate-900">{selectedPayment.paymentId || '-'}</p>
                 <p className="text-xs font-semibold text-slate-500">트랜잭션</p>
                 <p className="break-all font-semibold text-slate-900">{selectedPayment.transactionHash || selectedPayment.id || '-'}</p>
                 <p className="text-xs font-semibold text-slate-500">회원</p>

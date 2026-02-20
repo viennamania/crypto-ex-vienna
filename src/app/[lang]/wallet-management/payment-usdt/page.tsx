@@ -62,6 +62,7 @@ type Merchant = {
 
 type PaymentRecord = {
   id: string;
+  paymentId: string;
   storecode: string;
   storeName: string;
   chain: NetworkKey;
@@ -257,6 +258,7 @@ const normalizePaymentRecord = (value: unknown): PaymentRecord | null => {
 
   return {
     id: String(value.id || value._id || '').trim(),
+    paymentId: String(value.paymentId || '').trim(),
     storecode: String(value.storecode || '').trim(),
     storeName: String(value.storeName || value.storecode || '').trim(),
     chain,
@@ -1735,6 +1737,10 @@ export default function PaymentUsdtPage({
                           </div>
 
                           <div className="mt-2 grid gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 text-xs">
+                            <div>
+                              <p className="font-semibold text-slate-500">결제번호</p>
+                              <p className="mt-0.5 text-slate-800">{item.paymentId || '-'}</p>
+                            </div>
                             <div>
                               <p className="font-semibold text-slate-500">적용 환율</p>
                               <p className="mt-0.5 text-slate-800">

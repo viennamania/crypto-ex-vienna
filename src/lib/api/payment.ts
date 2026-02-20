@@ -318,6 +318,7 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
     basePipeline.push({
       $match: {
         $or: [
+          { paymentId: searchRegex },
           { storecode: searchRegex },
           { 'store.storeName': searchRegex },
           { 'member.nickname': searchRegex },
@@ -336,6 +337,7 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
         {
           $project: {
             _id: 1,
+            paymentId: { $ifNull: ['$paymentId', ''] },
             storecode: 1,
             status: 1,
             orderProcessing: { $ifNull: ['$order_processing', 'PROCESSING'] },
@@ -383,6 +385,7 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
     totalUsdtAmount: Number(totalRows?.[0]?.totalUsdtAmount || 0),
     payments: payments.map((payment: any) => ({
       id: String(payment?._id || ''),
+      paymentId: String(payment?.paymentId || ''),
       storecode: String(payment?.storecode || ''),
       status: String(payment?.status || ''),
       orderProcessing: String(payment?.orderProcessing || 'PROCESSING'),
@@ -474,6 +477,7 @@ export async function getAllWalletUsdtPayments(
     basePipeline.push({
       $match: {
         $or: [
+          { paymentId: searchRegex },
           { storecode: searchRegex },
           { 'store.storeName': searchRegex },
           { 'member.nickname': searchRegex },
@@ -493,6 +497,7 @@ export async function getAllWalletUsdtPayments(
         {
           $project: {
             _id: 1,
+            paymentId: { $ifNull: ['$paymentId', ''] },
             storecode: 1,
             agentcode: 1,
             status: 1,
@@ -541,6 +546,7 @@ export async function getAllWalletUsdtPayments(
     totalUsdtAmount: Number(totalRows?.[0]?.totalUsdtAmount || 0),
     payments: payments.map((payment: any) => ({
       id: String(payment?._id || ''),
+      paymentId: String(payment?.paymentId || ''),
       agentcode: String(payment?.agentcode || ''),
       storecode: String(payment?.storecode || ''),
       status: String(payment?.status || ''),
@@ -875,6 +881,7 @@ export async function getWalletUsdtPendingOrderProcessingSummaryByAgentcode({
   oldestPendingAt: string;
   recentPayments: Array<{
     id: string;
+    paymentId: string;
     tradeId: string;
     storecode: string;
     storeName: string;
@@ -976,6 +983,7 @@ export async function getWalletUsdtPendingOrderProcessingSummaryByAgentcode({
         {
           $project: {
             _id: 1,
+            paymentId: { $ifNull: ['$paymentId', ''] },
             transactionHash: 1,
             storecode: 1,
             store: 1,
@@ -997,6 +1005,7 @@ export async function getWalletUsdtPendingOrderProcessingSummaryByAgentcode({
     oldestPendingAt: String(oldestRows?.[0]?.oldestPendingAt || ''),
     recentPayments: recentRows.map((payment: any) => ({
       id: String(payment?._id || ''),
+      paymentId: String(payment?.paymentId || ''),
       tradeId: String(payment?.transactionHash || payment?._id || ''),
       storecode: String(payment?.storecode || payment?.store?.storecode || ''),
       storeName: String(payment?.store?.storeName || payment?.storecode || ''),
@@ -1023,6 +1032,7 @@ export async function getWalletUsdtPendingOrderProcessingSummaryByStorecode({
   oldestPendingAt: string;
   recentPayments: Array<{
     id: string;
+    paymentId: string;
     tradeId: string;
     storecode: string;
     storeName: string;
@@ -1124,6 +1134,7 @@ export async function getWalletUsdtPendingOrderProcessingSummaryByStorecode({
         {
           $project: {
             _id: 1,
+            paymentId: { $ifNull: ['$paymentId', ''] },
             transactionHash: 1,
             storecode: 1,
             store: 1,
@@ -1145,6 +1156,7 @@ export async function getWalletUsdtPendingOrderProcessingSummaryByStorecode({
     oldestPendingAt: String(oldestRows?.[0]?.oldestPendingAt || ''),
     recentPayments: recentRows.map((payment: any) => ({
       id: String(payment?._id || ''),
+      paymentId: String(payment?.paymentId || ''),
       tradeId: String(payment?.transactionHash || payment?._id || ''),
       storecode: String(payment?.storecode || payment?.store?.storecode || ''),
       storeName: String(payment?.store?.storeName || payment?.storecode || ''),
@@ -1169,6 +1181,7 @@ export async function getWalletUsdtPendingOrderProcessingSummaryAll({
   oldestPendingAt: string;
   recentPayments: Array<{
     id: string;
+    paymentId: string;
     tradeId: string;
     storecode: string;
     storeName: string;
@@ -1253,6 +1266,7 @@ export async function getWalletUsdtPendingOrderProcessingSummaryAll({
         {
           $project: {
             _id: 1,
+            paymentId: { $ifNull: ['$paymentId', ''] },
             transactionHash: 1,
             storecode: 1,
             store: 1,
@@ -1274,6 +1288,7 @@ export async function getWalletUsdtPendingOrderProcessingSummaryAll({
     oldestPendingAt: String(oldestRows?.[0]?.oldestPendingAt || ''),
     recentPayments: recentRows.map((payment: any) => ({
       id: String(payment?._id || ''),
+      paymentId: String(payment?.paymentId || ''),
       tradeId: String(payment?.transactionHash || payment?._id || ''),
       storecode: String(payment?.storecode || payment?.store?.storecode || ''),
       storeName: String(payment?.store?.storeName || payment?.storecode || ''),

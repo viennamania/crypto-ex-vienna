@@ -173,6 +173,7 @@ export default function P2PAgentManagementHomePage() {
                           <p className="mt-1 text-xs text-slate-500">
                             회원 {order.buyerNickname || '-'} · 결제지갑 {shortAddress(order.sellerNickname || '')}
                           </p>
+                          <p className="mt-1 text-xs text-slate-500">결제번호 {order.paymentId || '-'}</p>
                           <p className="mt-1 text-xs text-slate-500">
                             TX {shortAddress(order.tradeId || '')} · {formatUsdt(order.usdtAmount)} · {formatKrw(order.krwAmount)} · {toDateTime(order.paymentConfirmedAt || order.createdAt)}
                           </p>
