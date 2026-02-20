@@ -742,7 +742,7 @@ export default function P2PStoreManagementLayout({ children }: { children: React
         <div className="flex h-full flex-col">
           <div className="relative border-b border-white/10 px-3 py-4">
             <div className="rounded-2xl border border-white/12 bg-white/5 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200/90">P2P Control</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200/90">Payment Control</p>
               {!collapsed && (
                 <>
                   <p className="mt-1 text-base font-semibold text-white/95">Store Management</p>
