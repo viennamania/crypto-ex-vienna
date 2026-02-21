@@ -113,6 +113,7 @@ export default function P2PStorePaymentManagementPage() {
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [changedPaymentIds, setChangedPaymentIds] = useState<string[]>([]);
+  const [copiedPaymentId, setCopiedPaymentId] = useState('');
   const [selectedPayment, setSelectedPayment] = useState<DashboardPayment | null>(null);
   const [updatingOrderProcessing, setUpdatingOrderProcessing] = useState(false);
   const [orderProcessingError, setOrderProcessingError] = useState<string | null>(null);
@@ -339,6 +340,22 @@ export default function P2PStorePaymentManagementPage() {
     setOrderProcessingError(null);
     setOrderProcessingMemoInput('');
   }, [updatingOrderProcessing]);
+
+  const copyPaymentId = useCallback(async (paymentId: string) => {
+    const normalizedPaymentId = String(paymentId || '').trim();
+    if (!normalizedPaymentId) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(normalizedPaymentId);
+      setCopiedPaymentId(normalizedPaymentId);
+      window.setTimeout(() => {
+        setCopiedPaymentId((prev) => (prev === normalizedPaymentId ? '' : prev));
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to copy payment id', error);
+    }
+  }, []);
 
   const handleOrderProcessingComplete = useCallback(async () => {
     if (!selectedPayment?.id) {
@@ -729,12 +746,12 @@ export default function P2PStorePaymentManagementPage() {
                   <p className="mt-3 text-sm text-slate-500">결제 내역이 없습니다.</p>
                 ) : (
                   <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200">
-                    <div className="max-h-[540px] overflow-auto">
+                    <div className="overflow-x-auto">
                       <table className="min-w-[1310px] w-full table-auto">
                         <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                           <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                             <th className="px-3 py-2">일시</th>
-                            <th className="px-3 py-2">결제번호</th>
+                            <th className="px-3 py-2">결제번호(PID)</th>
                             <th className="px-3 py-2">회원</th>
                             <th className="px-3 py-2">송신 지갑</th>
                             <th className="px-3 py-2">USDT</th>
@@ -764,7 +781,22 @@ export default function P2PStorePaymentManagementPage() {
                                 {toDateTime(payment.confirmedAt || payment.createdAt)}
                               </td>
                               <td className="px-3 py-2.5 text-sm font-semibold text-slate-900">
-                                {payment.paymentId || '-'}
+                                {payment.paymentId ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      void copyPaymentId(payment.paymentId);
+                                    }}
+                                    className="inline-flex items-center gap-1 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                                  >
+                                    {payment.paymentId}
+                                    {copiedPaymentId === payment.paymentId && (
+                                      <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                                    )}
+                                  </button>
+                                ) : (
+                                  '-'
+                                )}
                               </td>
                               <td className="px-3 py-2.5">
                                 <p className="break-all text-lg font-extrabold leading-tight text-slate-900">
