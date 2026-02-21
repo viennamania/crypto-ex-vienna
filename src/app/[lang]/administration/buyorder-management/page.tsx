@@ -354,6 +354,7 @@ const createDefaultFilters = (): SearchFilters => {
 export default function BuyOrderManagementPage() {
   const activeAccount = useActiveAccount();
   const adminWalletAddress = String(activeAccount?.address || '').trim();
+  const isWalletConnected = Boolean(adminWalletAddress);
   const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
 
   const [orders, setOrders] = useState<BuyOrderItem[]>([]);
@@ -597,6 +598,10 @@ export default function BuyOrderManagementPage() {
 
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!isWalletConnected) {
+      toast.error('지갑을 연결해주세요.');
+      return;
+    }
     const normalizedFilters: SearchFilters = {
       date: draftFilters.date || getTodayDate(),
       searchTradeId: draftFilters.searchTradeId.trim(),
@@ -609,6 +614,10 @@ export default function BuyOrderManagementPage() {
   };
 
   const handleSearchReset = () => {
+    if (!isWalletConnected) {
+      toast.error('지갑을 연결해주세요.');
+      return;
+    }
     const defaults = createDefaultFilters();
     setDraftFilters(defaults);
     setAppliedFilters(defaults);
@@ -622,6 +631,12 @@ export default function BuyOrderManagementPage() {
   };
 
   const cancelPrivateOrderByAdmin = useCallback(async () => {
+    if (!isWalletConnected) {
+      const message = '지갑을 연결해주세요.';
+      setCancelError(message);
+      toast.error(message);
+      return;
+    }
     const targetOrderId = String(cancelTargetOrder?._id || '').trim();
     if (!targetOrderId) {
       setCancelError('취소할 주문 식별자를 찾을 수 없습니다.');
@@ -669,8 +684,15 @@ export default function BuyOrderManagementPage() {
     cancelTargetOrder?._id,
     cancelingOrder,
     fetchLatestBuyOrders,
+    isWalletConnected,
     publicIpAddress,
   ]);
+
+  useEffect(() => {
+    if (isWalletConnected) return;
+    setCancelTargetOrder(null);
+    setCancelError(null);
+  }, [isWalletConnected]);
 
   const copyTradeId = useCallback(async (tradeId: string) => {
     const normalizedTradeId = String(tradeId || '').trim();
@@ -712,8 +734,12 @@ export default function BuyOrderManagementPage() {
               </span>
               <button
                 type="button"
-                onClick={() => fetchLatestBuyOrders('query')}
-                className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                onClick={() => {
+                  if (!isWalletConnected) return;
+                  void fetchLatestBuyOrders('query');
+                }}
+                disabled={!isWalletConnected}
+                className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 새로고침
               </button>
@@ -721,7 +747,7 @@ export default function BuyOrderManagementPage() {
           </div>
         </section>
 
-        {!adminWalletAddress && (
+        {!isWalletConnected && (
           <section className="rounded-2xl border border-cyan-200/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.98)_100%)] p-4 shadow-[0_20px_48px_-36px_rgba(14,116,144,0.65)]">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -773,6 +799,7 @@ export default function BuyOrderManagementPage() {
                 type="date"
                 value={draftFilters.date}
                 onChange={(event) => setDraftFilters((prev) => ({ ...prev, date: event.target.value }))}
+                disabled={!isWalletConnected}
                 className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-slate-500"
               />
             </div>
@@ -785,6 +812,7 @@ export default function BuyOrderManagementPage() {
                 value={draftFilters.searchTradeId}
                 onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchTradeId: event.target.value }))}
                 placeholder="거래번호 검색"
+                disabled={!isWalletConnected}
                 className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500"
               />
             </div>
@@ -797,6 +825,7 @@ export default function BuyOrderManagementPage() {
                 value={draftFilters.searchBuyer}
                 onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchBuyer: event.target.value }))}
                 placeholder="구매자 검색"
+                disabled={!isWalletConnected}
                 className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500"
               />
             </div>
@@ -809,6 +838,7 @@ export default function BuyOrderManagementPage() {
                 value={draftFilters.searchDepositName}
                 onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchDepositName: event.target.value }))}
                 placeholder="입금자명 검색"
+                disabled={!isWalletConnected}
                 className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500"
               />
             </div>
@@ -821,6 +851,7 @@ export default function BuyOrderManagementPage() {
                 value={draftFilters.searchStoreName}
                 onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchStoreName: event.target.value }))}
                 placeholder="가맹점명 검색"
+                disabled={!isWalletConnected}
                 className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500"
               />
             </div>
@@ -831,10 +862,12 @@ export default function BuyOrderManagementPage() {
               <select
                 value={pageSize}
                 onChange={(event) => {
+                  if (!isWalletConnected) return;
                   const nextSize = Number(event.target.value) || DEFAULT_PAGE_SIZE;
                   setPageSize(nextSize);
                   setPageNumber(1);
                 }}
+                disabled={!isWalletConnected}
                 className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-slate-500"
               >
                 {PAGE_SIZE_OPTIONS.map((sizeOption) => (
@@ -848,13 +881,15 @@ export default function BuyOrderManagementPage() {
               <button
                 type="button"
                 onClick={handleSearchReset}
-                className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                disabled={!isWalletConnected}
+                className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 초기화
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                disabled={!isWalletConnected}
+                className="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 검색
               </button>
@@ -967,7 +1002,8 @@ export default function BuyOrderManagementPage() {
                       && escrowTransferTxHash !== fallbackTransferTxHash;
                     const hasTransferDetails =
                       hasSellerLockTx || hasCancelReleaseTx || hasFallbackTransferTx || hasEscrowTransferTx;
-                    const canCancelOrder = isAdminCancelablePrivateOrder(order);
+                    const canCancelOrderByStatus = isAdminCancelablePrivateOrder(order);
+                    const canCancelOrder = isWalletConnected && canCancelOrderByStatus;
 
                     return (
                     <tr key={`${order?._id || order?.tradeId || 'order'}-${index}`} className="bg-white text-sm text-slate-700">
@@ -1155,15 +1191,17 @@ export default function BuyOrderManagementPage() {
                         )}
                       </td>
                       <td className="px-3 py-3 text-center">
-                        {canCancelOrder ? (
+                        {canCancelOrderByStatus ? (
                           <button
                             type="button"
                             onClick={() => {
+                              if (!isWalletConnected) return;
                               setCancelTargetOrder(order);
                               setCancelError(null);
                               void fetchPublicIpAddress();
                             }}
-                            className="inline-flex items-center justify-center rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 transition hover:border-rose-400 hover:bg-rose-100"
+                            disabled={!isWalletConnected}
+                            className="inline-flex items-center justify-center rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 transition hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-400"
                           >
                             취소
                           </button>
@@ -1187,7 +1225,7 @@ export default function BuyOrderManagementPage() {
               <button
                 type="button"
                 onClick={() => setPageNumber(1)}
-                disabled={pageNumber <= 1 || loading}
+                disabled={!isWalletConnected || pageNumber <= 1 || loading}
                 className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition enabled:hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 처음
@@ -1195,7 +1233,7 @@ export default function BuyOrderManagementPage() {
               <button
                 type="button"
                 onClick={() => setPageNumber((prev) => Math.max(1, prev - 1))}
-                disabled={pageNumber <= 1 || loading}
+                disabled={!isWalletConnected || pageNumber <= 1 || loading}
                 className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition enabled:hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 이전
@@ -1206,7 +1244,7 @@ export default function BuyOrderManagementPage() {
               <button
                 type="button"
                 onClick={() => setPageNumber((prev) => Math.min(totalPages, prev + 1))}
-                disabled={pageNumber >= totalPages || loading}
+                disabled={!isWalletConnected || pageNumber >= totalPages || loading}
                 className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition enabled:hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 다음
@@ -1214,7 +1252,7 @@ export default function BuyOrderManagementPage() {
               <button
                 type="button"
                 onClick={() => setPageNumber(totalPages)}
-                disabled={pageNumber >= totalPages || loading}
+                disabled={!isWalletConnected || pageNumber >= totalPages || loading}
                 className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition enabled:hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 마지막
@@ -1315,7 +1353,7 @@ export default function BuyOrderManagementPage() {
               <button
                 type="button"
                 onClick={cancelPrivateOrderByAdmin}
-                disabled={cancelingOrder || !isAdminCancelablePrivateOrder(cancelTargetOrder)}
+                disabled={cancelingOrder || !isWalletConnected || !isAdminCancelablePrivateOrder(cancelTargetOrder)}
                 className="inline-flex h-11 items-center justify-center rounded-lg border border-rose-600 bg-rose-600 px-4 text-sm font-semibold text-white transition hover:border-rose-700 hover:bg-rose-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-500"
               >
                 {cancelingOrder ? '취소 처리 중...' : 'USDT 반환 후 주문 취소'}

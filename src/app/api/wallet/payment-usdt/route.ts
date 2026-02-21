@@ -1247,6 +1247,8 @@ export async function POST(request: NextRequest) {
     const agentcode = normalizeAgentcode(body?.agentcode);
     const adminWalletAddress = normalizeAddress(body?.adminWalletAddress);
     const limit = Math.min(Math.max(Number(body?.limit || 30), 1), 100);
+    const page = Math.max(Number(body?.page || 1), 1);
+    const skip = (page - 1) * limit;
 
     if (!storecode) {
       return NextResponse.json({ error: "storecode is required" }, { status: 400 });
@@ -1270,16 +1272,29 @@ export async function POST(request: NextRequest) {
     }
     void requester;
 
-    const history = await collectCollection
-      .find({
-        storecode: { $regex: `^${escapeRegex(storecode)}$`, $options: "i" },
-      })
-      .sort({ createdAt: -1, updatedAt: -1 })
-      .limit(limit)
-      .toArray();
+    const historyQuery = {
+      storecode: { $regex: `^${escapeRegex(storecode)}$`, $options: "i" },
+    };
+
+    const [history, totalCount] = await Promise.all([
+      collectCollection
+        .find(historyQuery)
+        .sort({ createdAt: -1, updatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
+      collectCollection.countDocuments(historyQuery),
+    ]);
+    const totalPages = Math.max(1, Math.ceil(totalCount / limit));
 
     return NextResponse.json({
-      result: history.map((item) => serializeCollect(item)),
+      result: {
+        items: history.map((item) => serializeCollect(item)),
+        totalCount,
+        page,
+        limit,
+        totalPages,
+      },
     });
   }
 
