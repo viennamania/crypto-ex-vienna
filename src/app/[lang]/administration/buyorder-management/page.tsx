@@ -61,6 +61,7 @@ const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
 type SearchFilters = {
   date: string;
+  searchTradeId: string;
   searchBuyer: string;
   searchDepositName: string;
   searchStoreName: string;
@@ -276,6 +277,7 @@ const createDefaultFilters = (): SearchFilters => {
   const today = getTodayDate();
   return {
     date: today,
+    searchTradeId: '',
     searchBuyer: '',
     searchDepositName: '',
     searchStoreName: '',
@@ -327,6 +329,7 @@ export default function BuyOrderManagementPage() {
           limit: pageSize,
           page: pageNumber,
           searchStoreName: appliedFilters.searchStoreName || '',
+          searchTradeId: appliedFilters.searchTradeId || '',
           searchBuyer: appliedFilters.searchBuyer || '',
           searchDepositName: appliedFilters.searchDepositName || '',
           fromDate: selectedDate,
@@ -420,6 +423,7 @@ export default function BuyOrderManagementPage() {
     event.preventDefault();
     const normalizedFilters: SearchFilters = {
       date: draftFilters.date || getTodayDate(),
+      searchTradeId: draftFilters.searchTradeId.trim(),
       searchBuyer: draftFilters.searchBuyer.trim(),
       searchDepositName: draftFilters.searchDepositName.trim(),
       searchStoreName: draftFilters.searchStoreName.trim(),
@@ -530,7 +534,7 @@ export default function BuyOrderManagementPage() {
 
         <section className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.42)]">
           <form className="grid grid-cols-1 gap-3 lg:grid-cols-12" onSubmit={handleSearchSubmit}>
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-2">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 조회 일자 (Daily)
               </label>
@@ -541,7 +545,19 @@ export default function BuyOrderManagementPage() {
                 className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-slate-500"
               />
             </div>
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-2">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                거래번호
+              </label>
+              <input
+                type="text"
+                value={draftFilters.searchTradeId}
+                onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchTradeId: event.target.value }))}
+                placeholder="거래번호 검색"
+                className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500"
+              />
+            </div>
+            <div className="lg:col-span-2">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 구매자 닉네임
               </label>
@@ -785,7 +801,7 @@ export default function BuyOrderManagementPage() {
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex flex-col">
-                          <span className="truncate font-medium text-slate-900">{order?.seller?.nickname || '-'}</span>
+                          <span className="truncate text-base font-extrabold leading-tight text-slate-900">{order?.seller?.nickname || '-'}</span>
                           <span className="truncate text-xs text-slate-500">{shortWallet(order?.seller?.walletAddress)}</span>
                         </div>
                       </td>

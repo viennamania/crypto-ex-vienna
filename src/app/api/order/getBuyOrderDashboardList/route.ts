@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
     const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(200, Math.floor(limitRaw)) : 20;
 
     const storecodeRegex = toRegexFilter(body?.storecode);
+    const searchTradeIdRegex = toRegexFilter(body?.searchTradeId);
     const searchBuyerRegex = toRegexFilter(body?.searchBuyer);
     const searchDepositNameRegex = toRegexFilter(body?.searchDepositName);
     const searchStoreNameRegex = toRegexFilter(body?.searchStoreName);
@@ -42,6 +43,7 @@ export async function POST(request: NextRequest) {
     const filter: Record<string, any> = {
       createdAt: { $gte: fromDateIso, $lte: toDateIso },
       ...(storecodeRegex ? { storecode: storecodeRegex } : { storecode: { $ne: null } }),
+      ...(searchTradeIdRegex ? { tradeId: searchTradeIdRegex } : {}),
       ...(searchBuyerRegex ? { nickname: searchBuyerRegex } : {}),
       ...(searchStoreNameRegex ? { 'store.storeName': searchStoreNameRegex } : {}),
       ...(searchDepositNameRegex
@@ -99,4 +101,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch buy order dashboard list.' }, { status: 500 });
   }
 }
-
