@@ -44,6 +44,13 @@ type WalletPaymentDocument = {
   order_processing?: string;
   order_processing_updated_at?: string;
   order_processing_memo?: string;
+  order_processing_updated_by?: {
+    walletAddress?: string;
+    nickname?: string;
+    role?: string;
+  } | null;
+  order_processing_updated_by_ip?: string;
+  order_processing_updated_by_user_agent?: string;
   transactionHash?: string;
   createdAt: string;
   confirmedAt?: string;
@@ -245,30 +252,46 @@ const generateUniquePaymentId = async (collection: Collection<WalletPaymentDocum
   throw new Error("failed to generate paymentId");
 };
 
-const serializePayment = (doc: WalletPaymentDocument & { _id?: ObjectId }) => ({
-  id: doc._id?.toString() || "",
-  paymentId: String(doc.paymentId || ""),
-  agentcode: doc.agentcode || "",
-  storecode: doc.storecode,
-  storeName: doc.storeName,
-  chain: doc.chain,
-  fromWalletAddress: doc.fromWalletAddress,
-  toWalletAddress: doc.toWalletAddress,
-  usdtAmount: doc.usdtAmount,
-  krwAmount: doc.krwAmount ?? 0,
-  exchangeRate: doc.exchangeRate ?? 0,
-  status: doc.status,
-  order_processing: String(doc.order_processing || "PROCESSING").trim().toUpperCase(),
-  order_processing_updated_at: doc.order_processing_updated_at || "",
-  order_processing_memo: String(doc.order_processing_memo || ""),
-  orderProcessing: String(doc.order_processing || "PROCESSING").trim().toUpperCase(),
-  orderProcessingUpdatedAt: doc.order_processing_updated_at || "",
-  orderProcessingMemo: String(doc.order_processing_memo || ""),
-  transactionHash: doc.transactionHash || "",
-  createdAt: doc.createdAt,
-  confirmedAt: doc.confirmedAt || "",
-  member: doc.member || null,
-});
+const serializePayment = (doc: WalletPaymentDocument & { _id?: ObjectId }) => {
+  const orderProcessingUpdatedBy = isRecord(doc.order_processing_updated_by)
+    ? {
+        walletAddress: String(doc.order_processing_updated_by.walletAddress || ""),
+        nickname: String(doc.order_processing_updated_by.nickname || ""),
+        role: String(doc.order_processing_updated_by.role || ""),
+      }
+    : null;
+
+  return {
+    id: doc._id?.toString() || "",
+    paymentId: String(doc.paymentId || ""),
+    agentcode: doc.agentcode || "",
+    storecode: doc.storecode,
+    storeName: doc.storeName,
+    chain: doc.chain,
+    fromWalletAddress: doc.fromWalletAddress,
+    toWalletAddress: doc.toWalletAddress,
+    usdtAmount: doc.usdtAmount,
+    krwAmount: doc.krwAmount ?? 0,
+    exchangeRate: doc.exchangeRate ?? 0,
+    status: doc.status,
+    order_processing: String(doc.order_processing || "PROCESSING").trim().toUpperCase(),
+    order_processing_updated_at: doc.order_processing_updated_at || "",
+    order_processing_memo: String(doc.order_processing_memo || ""),
+    order_processing_updated_by: orderProcessingUpdatedBy,
+    order_processing_updated_by_ip: String(doc.order_processing_updated_by_ip || ""),
+    order_processing_updated_by_user_agent: String(doc.order_processing_updated_by_user_agent || ""),
+    orderProcessing: String(doc.order_processing || "PROCESSING").trim().toUpperCase(),
+    orderProcessingUpdatedAt: doc.order_processing_updated_at || "",
+    orderProcessingMemo: String(doc.order_processing_memo || ""),
+    orderProcessingUpdatedBy: orderProcessingUpdatedBy,
+    orderProcessingUpdatedByIp: String(doc.order_processing_updated_by_ip || ""),
+    orderProcessingUpdatedByUserAgent: String(doc.order_processing_updated_by_user_agent || ""),
+    transactionHash: doc.transactionHash || "",
+    createdAt: doc.createdAt,
+    confirmedAt: doc.confirmedAt || "",
+    member: doc.member || null,
+  };
+};
 
 const serializeCollect = (doc: WalletCollectDocument & { _id?: ObjectId }) => ({
   id: doc._id?.toString() || "",

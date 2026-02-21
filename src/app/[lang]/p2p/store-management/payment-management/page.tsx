@@ -5,9 +5,11 @@ import { useSearchParams } from 'next/navigation';
 import { getContract } from 'thirdweb';
 import { balanceOf } from 'thirdweb/extensions/erc20';
 import { polygon } from 'thirdweb/chains';
+import { useActiveAccount } from 'thirdweb/react';
 
 import { client } from '@/app/client';
 import { polygonContractAddressUSDT } from '@/app/config/contractAddresses';
+import { isPublicIpAddress, normalizeIpAddress } from '@/lib/ip-address';
 
 type DashboardStore = {
   storecode: string;
@@ -41,6 +43,12 @@ type DashboardPayment = {
   orderProcessing: string;
   orderProcessingUpdatedAt: string;
   orderProcessingMemo: string;
+  orderProcessingUpdatedBy: {
+    walletAddress: string;
+    nickname: string;
+    role: string;
+  } | null;
+  orderProcessingUpdatedByIp: string;
   transactionHash: string;
   createdAt: string;
   confirmedAt: string;
@@ -88,6 +96,13 @@ const isOrderProcessingCompleted = (value: string | undefined) =>
   String(value || '').trim().toUpperCase() === 'COMPLETED';
 const resolveOrderProcessingLabel = (value: string | undefined) =>
   isOrderProcessingCompleted(value) ? '결제처리완료' : '결제처리중';
+const resolveActorRoleLabel = (value: string | undefined) => {
+  const role = String(value || '').trim().toLowerCase();
+  if (role === 'admin') return '어드민';
+  if (role === 'agent' || role === 'agent-admin') return '에이전트';
+  if (role === 'store' || role === 'store-admin') return '가맹점';
+  return role || '-';
+};
 const resolveMemberDepositName = (member: Record<string, unknown> | null) => {
   if (!member) return '';
   const buyer = isRecord(member.buyer) ? member.buyer : null;
@@ -105,8 +120,10 @@ const PAYMENT_BALANCE_DECIMALS = 6;
 const BALANCE_ANIMATION_DURATION_MS = 700;
 
 export default function P2PStorePaymentManagementPage() {
+  const activeAccount = useActiveAccount();
   const searchParams = useSearchParams();
   const storecode = String(searchParams?.get('storecode') || '').trim();
+  const processingWalletAddress = String(activeAccount?.address || '').trim();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +135,12 @@ export default function P2PStorePaymentManagementPage() {
   const [updatingOrderProcessing, setUpdatingOrderProcessing] = useState(false);
   const [orderProcessingError, setOrderProcessingError] = useState<string | null>(null);
   const [orderProcessingMemoInput, setOrderProcessingMemoInput] = useState('');
+  const [orderProcessingActorInfo, setOrderProcessingActorInfo] = useState({
+    role: 'store-admin',
+    nickname: '가맹점 관리자',
+  });
+  const [publicIpAddress, setPublicIpAddress] = useState('');
+  const [loadingPublicIpAddress, setLoadingPublicIpAddress] = useState(false);
   const [loadingPaymentWalletBalance, setLoadingPaymentWalletBalance] = useState(false);
   const [paymentWalletBalanceError, setPaymentWalletBalanceError] = useState<string | null>(null);
   const [paymentWalletUsdtBalance, setPaymentWalletUsdtBalance] = useState<number | null>(null);
@@ -138,6 +161,132 @@ export default function P2PStorePaymentManagementPage() {
     setOrderProcessingMemoInput('');
     previousOrderStatusMapRef.current = new Map();
   }, [storecode]);
+
+  const fetchPublicIpAddress = useCallback(async () => {
+    setLoadingPublicIpAddress(true);
+    try {
+      let resolvedIpAddress = '';
+
+      try {
+        const ipifyResponse = await fetch('https://api64.ipify.org?format=json', {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        const ipifyPayload = await ipifyResponse.json().catch(() => ({}));
+        const ipifyCandidate = normalizeIpAddress(ipifyPayload?.ip);
+        if (ipifyResponse.ok && isPublicIpAddress(ipifyCandidate)) {
+          resolvedIpAddress = ipifyCandidate;
+        }
+      } catch (ipifyError) {
+        console.error('Failed to fetch browser public ip address', ipifyError);
+      }
+
+      if (!resolvedIpAddress) {
+        try {
+          const fallbackIpifyResponse = await fetch('https://api.ipify.org?format=json', {
+            method: 'GET',
+            cache: 'no-store',
+          });
+          const fallbackIpifyPayload = await fallbackIpifyResponse.json().catch(() => ({}));
+          const fallbackIpifyCandidate = normalizeIpAddress(fallbackIpifyPayload?.ip);
+          if (fallbackIpifyResponse.ok && isPublicIpAddress(fallbackIpifyCandidate)) {
+            resolvedIpAddress = fallbackIpifyCandidate;
+          }
+        } catch (fallbackIpifyError) {
+          console.error('Failed to fetch browser public ip address (fallback)', fallbackIpifyError);
+        }
+      }
+
+      if (!resolvedIpAddress) {
+        try {
+          const response = await fetch('/api/server/getServerInfo', {
+            method: 'GET',
+            cache: 'no-store',
+          });
+          const payload = await response.json().catch(() => ({}));
+          const serverCandidate = normalizeIpAddress(payload?.ipAddress);
+          if (response.ok && isPublicIpAddress(serverCandidate)) {
+            resolvedIpAddress = serverCandidate;
+          }
+        } catch (serverIpError) {
+          console.error('Failed to fetch server side ip address', serverIpError);
+        }
+      }
+
+      setPublicIpAddress(resolvedIpAddress);
+      return resolvedIpAddress;
+    } catch (fetchPublicIpError) {
+      console.error('Failed to fetch public ip address', fetchPublicIpError);
+      setPublicIpAddress('');
+      return '';
+    } finally {
+      setLoadingPublicIpAddress(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchPublicIpAddress();
+  }, [fetchPublicIpAddress]);
+
+  useEffect(() => {
+    if (!selectedPayment) return;
+    if (publicIpAddress || loadingPublicIpAddress) return;
+    void fetchPublicIpAddress();
+  }, [fetchPublicIpAddress, loadingPublicIpAddress, publicIpAddress, selectedPayment]);
+
+  useEffect(() => {
+    let mounted = true;
+    const resolvedWalletAddress = String(processingWalletAddress || '').trim();
+    if (!resolvedWalletAddress) {
+      setOrderProcessingActorInfo({
+        role: 'store-admin',
+        nickname: '가맹점 관리자',
+      });
+      return () => {
+        mounted = false;
+      };
+    }
+
+    const fetchActorInfo = async () => {
+      try {
+        const response = await fetch('/api/user/getUser', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storecode: 'admin',
+            walletAddress: resolvedWalletAddress,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(String(payload?.error || '처리자 정보를 불러오지 못했습니다.'));
+        }
+
+        const nextRole = String(payload?.result?.role || 'store-admin').trim() || 'store-admin';
+        const nextNickname = String(payload?.result?.nickname || '').trim() || '가맹점 관리자';
+
+        if (mounted) {
+          setOrderProcessingActorInfo({
+            role: nextRole,
+            nickname: nextNickname,
+          });
+        }
+      } catch (error) {
+        if (!mounted) return;
+        console.error('Failed to fetch order processing actor info', error);
+        setOrderProcessingActorInfo({
+          role: 'store-admin',
+          nickname: '가맹점 관리자',
+        });
+      }
+    };
+
+    void fetchActorInfo();
+
+    return () => {
+      mounted = false;
+    };
+  }, [processingWalletAddress]);
 
   const loadDashboard = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent === true;
@@ -180,6 +329,9 @@ export default function P2PStorePaymentManagementPage() {
         const payment = isRecord(item) ? item : {};
         const member = isRecord(payment.member) ? payment.member : null;
         const memberDepositName = resolveMemberDepositName(member);
+        const rawUpdatedBy = isRecord(payment.orderProcessingUpdatedBy)
+          ? payment.orderProcessingUpdatedBy
+          : (isRecord(payment.order_processing_updated_by) ? payment.order_processing_updated_by : null);
         return {
           id: String(payment.id || ''),
           paymentId: String(payment.paymentId || ''),
@@ -193,6 +345,16 @@ export default function P2PStorePaymentManagementPage() {
             payment.orderProcessingUpdatedAt || payment.order_processing_updated_at || '',
           ),
           orderProcessingMemo: String(payment.orderProcessingMemo || payment.order_processing_memo || ''),
+          orderProcessingUpdatedBy: rawUpdatedBy
+            ? {
+                walletAddress: String(rawUpdatedBy.walletAddress || ''),
+                nickname: String(rawUpdatedBy.nickname || ''),
+                role: String(rawUpdatedBy.role || ''),
+              }
+            : null,
+          orderProcessingUpdatedByIp: String(
+            payment.orderProcessingUpdatedByIp || payment.order_processing_updated_by_ip || '',
+          ),
           transactionHash: String(payment.transactionHash || ''),
           createdAt: String(payment.createdAt || ''),
           confirmedAt: String(payment.confirmedAt || ''),
@@ -368,11 +530,16 @@ export default function P2PStorePaymentManagementPage() {
       setOrderProcessingMemoInput('');
       return;
     }
+    if (!processingWalletAddress) {
+      setOrderProcessingError('지갑 연결 정보를 확인하지 못했습니다. 다시 연결해 주세요.');
+      return;
+    }
 
     setUpdatingOrderProcessing(true);
     setOrderProcessingError(null);
     try {
       const nextMemo = orderProcessingMemoInput.trim() || buildDefaultOrderProcessingMemo(selectedPayment);
+      const resolvedPublicIpAddress = publicIpAddress || (await fetchPublicIpAddress());
       const response = await fetch('/api/payment/setWalletUsdtPaymentOrderProcessing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -380,6 +547,13 @@ export default function P2PStorePaymentManagementPage() {
           paymentId: selectedPayment.id,
           orderProcessing: 'COMPLETED',
           orderProcessingMemo: nextMemo,
+          orderProcessingUpdatedBy: {
+            walletAddress: processingWalletAddress,
+            nickname: String(orderProcessingActorInfo.nickname || '').trim(),
+            role: String(orderProcessingActorInfo.role || '').trim(),
+          },
+          orderProcessingUpdatedByIp: String(resolvedPublicIpAddress || '').trim(),
+          orderProcessingUpdatedByUserAgent: typeof window !== 'undefined' ? window.navigator.userAgent : '',
         }),
       });
 
@@ -394,6 +568,23 @@ export default function P2PStorePaymentManagementPage() {
       const nextStatus = String(result.orderProcessing || 'COMPLETED').trim().toUpperCase();
       const nextUpdatedAt = String(result.orderProcessingUpdatedAt || new Date().toISOString());
       const nextStoredMemo = String(result.orderProcessingMemo || nextMemo);
+      const nextUpdatedBySource = isRecord(result.orderProcessingUpdatedBy)
+        ? result.orderProcessingUpdatedBy
+        : (isRecord(result.order_processing_updated_by) ? result.order_processing_updated_by : null);
+      const nextUpdatedBy = nextUpdatedBySource
+        ? {
+            walletAddress: String(nextUpdatedBySource.walletAddress || ''),
+            nickname: String(nextUpdatedBySource.nickname || ''),
+            role: String(nextUpdatedBySource.role || ''),
+          }
+        : {
+            walletAddress: processingWalletAddress,
+            nickname: String(orderProcessingActorInfo.nickname || '').trim(),
+            role: String(orderProcessingActorInfo.role || '').trim(),
+          };
+      const nextUpdatedByIp = String(
+        result.orderProcessingUpdatedByIp || result.order_processing_updated_by_ip || resolvedPublicIpAddress || '',
+      );
 
       setDashboard((prev) => {
         if (!prev) return prev;
@@ -406,6 +597,8 @@ export default function P2PStorePaymentManagementPage() {
                   orderProcessing: nextStatus,
                   orderProcessingUpdatedAt: nextUpdatedAt,
                   orderProcessingMemo: nextStoredMemo,
+                  orderProcessingUpdatedBy: nextUpdatedBy,
+                  orderProcessingUpdatedByIp: nextUpdatedByIp,
                 }
               : payment,
           ),
@@ -432,7 +625,15 @@ export default function P2PStorePaymentManagementPage() {
     } finally {
       setUpdatingOrderProcessing(false);
     }
-  }, [orderProcessingMemoInput, selectedPayment]);
+  }, [
+    fetchPublicIpAddress,
+    orderProcessingActorInfo.nickname,
+    orderProcessingActorInfo.role,
+    orderProcessingMemoInput,
+    processingWalletAddress,
+    publicIpAddress,
+    selectedPayment,
+  ]);
 
   useEffect(() => {
     displayedBalanceRef.current = displayedPaymentWalletUsdtBalance;
@@ -837,9 +1038,20 @@ export default function P2PStorePaymentManagementPage() {
                                   {resolveOrderProcessingLabel(payment.orderProcessing)}
                                 </p>
                                 {completed && (
-                                  <p className="mt-1 text-[11px] text-slate-500">
-                                    완료시각 {toDateTime(payment.orderProcessingUpdatedAt || '')}
-                                  </p>
+                                  <>
+                                    <p className="mt-1 text-[11px] text-slate-500">
+                                      완료시각 {toDateTime(payment.orderProcessingUpdatedAt || '')}
+                                    </p>
+                                    <p className="mt-0.5 text-[11px] text-slate-500">
+                                      처리자 {String(payment.orderProcessingUpdatedBy?.nickname || '').trim() || '-'}
+                                      {payment.orderProcessingUpdatedBy?.walletAddress
+                                        ? ` (${shortAddress(payment.orderProcessingUpdatedBy.walletAddress)})`
+                                        : ''}
+                                    </p>
+                                    <p className="mt-0.5 text-[11px] text-slate-500">
+                                      역할 {resolveActorRoleLabel(payment.orderProcessingUpdatedBy?.role)} · 접속IP {payment.orderProcessingUpdatedByIp || '-'}
+                                    </p>
+                                  </>
                                 )}
                                 {!completed && (
                                   <button
@@ -946,6 +1158,17 @@ export default function P2PStorePaymentManagementPage() {
                 <p className="font-semibold text-slate-800">{resolveOrderProcessingLabel(selectedPayment.orderProcessing)}</p>
                 <p className="text-xs font-semibold text-slate-500">결제처리 완료시각</p>
                 <p className="text-slate-700">{toDateTime(selectedPayment.orderProcessingUpdatedAt || '')}</p>
+                <p className="text-xs font-semibold text-slate-500">처리 관리자</p>
+                <p className="break-all text-slate-700">
+                  {String(orderProcessingActorInfo.nickname || '').trim() || '가맹점 관리자'}
+                  {processingWalletAddress ? ` (${shortAddress(processingWalletAddress)})` : ''}
+                </p>
+                <p className="text-xs font-semibold text-slate-500">관리자 역할</p>
+                <p className="text-slate-700">{resolveActorRoleLabel(orderProcessingActorInfo.role)}</p>
+                <p className="text-xs font-semibold text-slate-500">접속 퍼블릭 IP</p>
+                <p className="break-all text-slate-700">
+                  {loadingPublicIpAddress ? '조회 중...' : publicIpAddress || '-'}
+                </p>
               </div>
 
               <div>

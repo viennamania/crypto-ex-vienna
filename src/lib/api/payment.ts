@@ -608,15 +608,32 @@ export async function updateWalletUsdtPaymentOrderProcessing({
   paymentId,
   orderProcessing = 'COMPLETED',
   orderProcessingMemo = '',
+  orderProcessingUpdatedBy,
+  orderProcessingUpdatedByIp = '',
+  orderProcessingUpdatedByUserAgent = '',
 }: {
   paymentId: string;
   orderProcessing?: 'PROCESSING' | 'COMPLETED';
   orderProcessingMemo?: string;
+  orderProcessingUpdatedBy?: {
+    walletAddress?: string;
+    nickname?: string;
+    role?: string;
+  };
+  orderProcessingUpdatedByIp?: string;
+  orderProcessingUpdatedByUserAgent?: string;
 }): Promise<{
   id: string;
   orderProcessing: string;
   orderProcessingUpdatedAt: string;
   orderProcessingMemo: string;
+  orderProcessingUpdatedBy: {
+    walletAddress: string;
+    nickname: string;
+    role: string;
+  } | null;
+  orderProcessingUpdatedByIp: string;
+  orderProcessingUpdatedByUserAgent: string;
 }> {
   const normalizedPaymentId = String(paymentId || '').trim();
   if (!ObjectId.isValid(normalizedPaymentId)) {
@@ -628,6 +645,22 @@ export async function updateWalletUsdtPaymentOrderProcessing({
     throw new Error('invalid orderProcessing');
   }
   const normalizedOrderProcessingMemo = String(orderProcessingMemo || '').trim().slice(0, 2000);
+  const normalizedOrderProcessingUpdatedByWalletAddress = String(orderProcessingUpdatedBy?.walletAddress || '').trim();
+  const normalizedOrderProcessingUpdatedByNickname = String(orderProcessingUpdatedBy?.nickname || '').trim().slice(0, 120);
+  const normalizedOrderProcessingUpdatedByRole = String(orderProcessingUpdatedBy?.role || '').trim().slice(0, 40);
+  const normalizedOrderProcessingUpdatedByIp = String(orderProcessingUpdatedByIp || '').trim().slice(0, 120);
+  const normalizedOrderProcessingUpdatedByUserAgent = String(orderProcessingUpdatedByUserAgent || '').trim().slice(0, 512);
+  const normalizedOrderProcessingUpdatedBy = (
+    normalizedOrderProcessingUpdatedByWalletAddress
+    || normalizedOrderProcessingUpdatedByNickname
+    || normalizedOrderProcessingUpdatedByRole
+  )
+    ? {
+        walletAddress: normalizedOrderProcessingUpdatedByWalletAddress,
+        nickname: normalizedOrderProcessingUpdatedByNickname,
+        role: normalizedOrderProcessingUpdatedByRole,
+      }
+    : null;
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('walletUsdtPayments');
@@ -642,6 +675,9 @@ export async function updateWalletUsdtPaymentOrderProcessing({
         order_processing: normalizedOrderProcessing,
         order_processing_updated_at: now,
         order_processing_memo: normalizedOrderProcessingMemo,
+        order_processing_updated_by: normalizedOrderProcessingUpdatedBy,
+        order_processing_updated_by_ip: normalizedOrderProcessingUpdatedByIp,
+        order_processing_updated_by_user_agent: normalizedOrderProcessingUpdatedByUserAgent,
       },
     },
   );
@@ -652,14 +688,40 @@ export async function updateWalletUsdtPaymentOrderProcessing({
 
   const updated = await collection.findOne(
     { _id },
-    { projection: { order_processing: 1, order_processing_updated_at: 1, order_processing_memo: 1 } },
+    {
+      projection: {
+        order_processing: 1,
+        order_processing_updated_at: 1,
+        order_processing_memo: 1,
+        order_processing_updated_by: 1,
+        order_processing_updated_by_ip: 1,
+        order_processing_updated_by_user_agent: 1,
+      },
+    },
   );
+  const updatedBySource =
+    updated?.order_processing_updated_by && typeof updated.order_processing_updated_by === 'object'
+      ? updated.order_processing_updated_by as Record<string, unknown>
+      : null;
 
   return {
     id: normalizedPaymentId,
     orderProcessing: String(updated?.order_processing || normalizedOrderProcessing),
     orderProcessingUpdatedAt: String(updated?.order_processing_updated_at || now),
     orderProcessingMemo: String(updated?.order_processing_memo || normalizedOrderProcessingMemo),
+    orderProcessingUpdatedBy: updatedBySource
+      ? {
+          walletAddress: String(updatedBySource.walletAddress || ''),
+          nickname: String(updatedBySource.nickname || ''),
+          role: String(updatedBySource.role || ''),
+        }
+      : normalizedOrderProcessingUpdatedBy,
+    orderProcessingUpdatedByIp: String(
+      updated?.order_processing_updated_by_ip || normalizedOrderProcessingUpdatedByIp,
+    ),
+    orderProcessingUpdatedByUserAgent: String(
+      updated?.order_processing_updated_by_user_agent || normalizedOrderProcessingUpdatedByUserAgent,
+    ),
   };
 }
 
