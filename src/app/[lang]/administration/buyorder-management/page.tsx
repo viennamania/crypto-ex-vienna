@@ -251,6 +251,7 @@ export default function BuyOrderManagementPage() {
   const [cancelTargetOrder, setCancelTargetOrder] = useState<BuyOrderItem | null>(null);
   const [cancelingOrder, setCancelingOrder] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [copiedTradeId, setCopiedTradeId] = useState('');
 
   const mountedRef = useRef(true);
   const requestInFlightRef = useRef(false);
@@ -437,6 +438,21 @@ export default function BuyOrderManagementPage() {
       setCancelingOrder(false);
     }
   }, [cancelTargetOrder?._id, cancelingOrder, fetchLatestBuyOrders]);
+
+  const copyTradeId = useCallback(async (tradeId: string) => {
+    const normalizedTradeId = String(tradeId || '').trim();
+    if (!normalizedTradeId) return;
+
+    try {
+      await navigator.clipboard.writeText(normalizedTradeId);
+      setCopiedTradeId(normalizedTradeId);
+      window.setTimeout(() => {
+        setCopiedTradeId((prev) => (prev === normalizedTradeId ? '' : prev));
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to copy trade id', error);
+    }
+  }, []);
 
   return (
     <main className="min-h-screen bg-transparent">
@@ -630,7 +646,7 @@ export default function BuyOrderManagementPage() {
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
                     <th className="w-[132px] px-3 py-3">상태</th>
                     <th className="w-[145px] px-3 py-3">주문시각</th>
-                    <th className="w-[170px] px-3 py-3">주문식별</th>
+                    <th className="w-[170px] px-3 py-3">거래번호(TID)</th>
                     <th className="w-[150px] px-3 py-3">구매자</th>
                     <th className="w-[145px] px-3 py-3">판매자</th>
                     <th className="w-[112px] px-3 py-3">결제방법</th>
@@ -670,7 +686,22 @@ export default function BuyOrderManagementPage() {
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex flex-col">
-                          <span className="truncate font-semibold text-slate-900">TID {order?.tradeId || '-'}</span>
+                          {order?.tradeId ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void copyTradeId(order.tradeId || '');
+                              }}
+                              className="inline-flex w-fit items-center gap-1 truncate font-semibold text-slate-900 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                            >
+                              {order.tradeId}
+                              {copiedTradeId === order.tradeId && (
+                                <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                              )}
+                            </button>
+                          ) : (
+                            <span className="truncate font-semibold text-slate-900">-</span>
+                          )}
                           <span className="truncate text-xs text-slate-500">{shortWallet(order?._id)}</span>
                         </div>
                       </td>
