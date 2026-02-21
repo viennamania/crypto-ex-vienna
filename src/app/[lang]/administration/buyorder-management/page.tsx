@@ -7,6 +7,10 @@ import { toast } from 'react-hot-toast';
 type BuyOrderItem = {
   _id?: string;
   tradeId?: string;
+  chain?: string;
+  transactionHash?: string;
+  cancelReleaseTransactionHash?: string;
+  escrowTransactionHash?: string;
   privateSale?: boolean;
   status?: string;
   storecode?: string;
@@ -27,6 +31,7 @@ type BuyOrderItem = {
     walletAddress?: string;
     nickname?: string;
     depositName?: string;
+    releaseTransactionHash?: string;
     bankInfo?: {
       accountHolder?: string;
       depositName?: string;
@@ -35,6 +40,8 @@ type BuyOrderItem = {
   seller?: {
     walletAddress?: string;
     nickname?: string;
+    lockTransactionHash?: string;
+    releaseTransactionHash?: string;
     bankInfo?: {
       bankName?: string;
       accountNumber?: string;
@@ -90,6 +97,48 @@ const formatKrw = (value?: number) =>
 
 const formatUsdt = (value?: number) =>
   new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(Number(value || 0));
+
+const TX_EXPLORER_BASE_BY_CHAIN: Record<string, string> = {
+  ethereum: 'https://etherscan.io/tx/',
+  polygon: 'https://polygonscan.com/tx/',
+  arbitrum: 'https://arbiscan.io/tx/',
+  bsc: 'https://bscscan.com/tx/',
+};
+
+const normalizeChainKey = (value?: string) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return '';
+  if (normalized === 'eth') return 'ethereum';
+  if (normalized === 'matic') return 'polygon';
+  if (normalized === 'arb') return 'arbitrum';
+  if (normalized === 'bnb') return 'bsc';
+  return normalized;
+};
+
+const resolveTransferTransactionHash = (order: BuyOrderItem) =>
+  String(
+    order?.transactionHash
+    || order?.buyer?.releaseTransactionHash
+    || order?.seller?.releaseTransactionHash
+    || '',
+  ).trim();
+
+const resolveTransferChain = (order: BuyOrderItem) => {
+  const chainFromOrder = normalizeChainKey(order?.chain);
+  if (chainFromOrder) return chainFromOrder;
+  return normalizeChainKey(process.env.NEXT_PUBLIC_CHAIN) || 'polygon';
+};
+
+const getTransferExplorerUrlByHash = (order: BuyOrderItem, txHash: string) => {
+  const normalizedTxHash = String(txHash || '').trim();
+  if (!normalizedTxHash) return '';
+
+  const chain = resolveTransferChain(order);
+  const explorerBaseUrl = TX_EXPLORER_BASE_BY_CHAIN[chain];
+  if (!explorerBaseUrl) return '';
+
+  return `${explorerBaseUrl}${normalizedTxHash}`;
+};
 
 const formatDateTime = (value?: string) => {
   if (!value) return '-';
@@ -386,15 +435,6 @@ export default function BuyOrderManagementPage() {
     setPageNumber(1);
   };
 
-  const openCancelOrderModal = (order: BuyOrderItem) => {
-    if (!isAdminCancelablePrivateOrder(order)) {
-      toast.error('입금요청 상태(private sale) 주문만 취소할 수 있습니다.');
-      return;
-    }
-    setCancelTargetOrder(order);
-    setCancelError(null);
-  };
-
   const closeCancelOrderModal = () => {
     if (cancelingOrder) return;
     setCancelTargetOrder(null);
@@ -641,21 +681,46 @@ export default function BuyOrderManagementPage() {
             <div className="px-4 py-12 text-center text-sm text-slate-500">검색된 주문 데이터가 없습니다.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-[1100px] w-full table-fixed">
+              <table className="min-w-[1130px] w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
                     <th className="w-[132px] px-3 py-3">상태</th>
-                    <th className="w-[145px] px-3 py-3">주문시각</th>
-                    <th className="w-[170px] px-3 py-3">거래번호(TID)</th>
-                    <th className="w-[150px] px-3 py-3">구매자</th>
-                    <th className="w-[145px] px-3 py-3">판매자</th>
-                    <th className="w-[112px] px-3 py-3">결제방법</th>
-                    <th className="w-[150px] px-3 py-3 text-right">주문금액</th>
-                    <th className="w-[127px] px-3 py-3 text-center">관리</th>
+                    <th className="w-[118px] px-3 py-3">주문시각</th>
+                    <th className="w-[140px] px-3 py-3">거래번호(TID)</th>
+                    <th className="w-[138px] px-3 py-3">구매자</th>
+                    <th className="w-[132px] px-3 py-3">판매자</th>
+                    <th className="w-[104px] px-3 py-3">결제방법</th>
+                    <th className="w-[128px] px-3 py-3 text-right">주문금액</th>
+                    <th className="w-[175px] px-3 py-3">전송내역</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {orders.map((order, index) => (
+                  {orders.map((order, index) => {
+                    const orderStatus = String(order?.status || '').trim();
+                    const isPaymentRequested = orderStatus === 'paymentRequested';
+                    const isPaymentConfirmed = orderStatus === 'paymentConfirmed';
+                    const isCancelled = orderStatus === 'cancelled';
+                    const transferTxHash = resolveTransferTransactionHash(order);
+                    const cancelReleaseTxHash = String(order?.cancelReleaseTransactionHash || '').trim();
+                    const cancelReleaseTxUrl = getTransferExplorerUrlByHash(order, cancelReleaseTxHash);
+                    const fallbackTransferTxHash = isCancelled ? '' : transferTxHash;
+                    const fallbackTransferTxUrl = getTransferExplorerUrlByHash(order, fallbackTransferTxHash);
+                    const sellerLockTxHash = String(order?.seller?.lockTransactionHash || '').trim();
+                    const sellerLockTxUrl = getTransferExplorerUrlByHash(order, sellerLockTxHash);
+                    const escrowTransferTxHash = String(order?.escrowTransactionHash || '').trim();
+                    const escrowTransferTxUrl = getTransferExplorerUrlByHash(order, escrowTransferTxHash);
+                    const hasSellerLockTx = Boolean(sellerLockTxHash);
+                    const hasCancelReleaseTx = Boolean(cancelReleaseTxHash);
+                    const hasFallbackTransferTx = Boolean(fallbackTransferTxHash);
+                    const hasEscrowTransferTx =
+                      Boolean(escrowTransferTxHash)
+                      && escrowTransferTxHash !== sellerLockTxHash
+                      && escrowTransferTxHash !== cancelReleaseTxHash
+                      && escrowTransferTxHash !== fallbackTransferTxHash;
+                    const hasTransferDetails =
+                      hasSellerLockTx || hasCancelReleaseTx || hasFallbackTransferTx || hasEscrowTransferTx;
+
+                    return (
                     <tr key={`${order?._id || order?.tradeId || 'order'}-${index}`} className="bg-white text-sm text-slate-700">
                       <td className="px-3 py-3">
                         <div className="space-y-1">
@@ -707,14 +772,14 @@ export default function BuyOrderManagementPage() {
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex flex-col">
+                          <span className="break-all text-base font-extrabold leading-tight text-slate-900">
+                            {getBuyerDepositNameLabel(order)}
+                          </span>
                           <span className="truncate font-medium text-slate-900">
                             {order?.buyer?.nickname || order?.nickname || '-'}
                           </span>
                           <span className="truncate text-xs text-slate-500">
                             {shortWallet(order?.buyer?.walletAddress || order?.walletAddress)}
-                          </span>
-                          <span className="truncate text-xs text-slate-500">
-                            입금자명 {getBuyerDepositNameLabel(order)}
                           </span>
                         </div>
                       </td>
@@ -736,26 +801,100 @@ export default function BuyOrderManagementPage() {
                       </td>
                       <td className="px-3 py-3 text-right">
                         <div className="flex flex-col items-end">
-                          <span className="font-bold text-slate-900">{formatKrw(order?.krwAmount)} KRW</span>
-                          <span className="text-xs font-semibold text-slate-500">{formatUsdt(order?.usdtAmount)} USDT</span>
+                          <span className="text-base font-extrabold leading-tight text-slate-900">{formatKrw(order?.krwAmount)} KRW</span>
+                          <span className="text-sm font-bold text-slate-600">{formatUsdt(order?.usdtAmount)} USDT</span>
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-center">
-                        {isAdminCancelablePrivateOrder(order) ? (
-                          <button
-                            type="button"
-                            onClick={() => openCancelOrderModal(order)}
-                            disabled={cancelingOrder}
-                            className="inline-flex h-8 items-center justify-center rounded-lg border border-rose-300 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 transition hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {cancelingOrder && cancelTargetOrder?._id === order?._id ? '취소 처리 중...' : '거래취소'}
-                          </button>
+                      <td className="px-3 py-3">
+                        {(isPaymentRequested || isPaymentConfirmed || isCancelled) && hasTransferDetails ? (
+                          <div className="flex flex-col gap-1 leading-tight">
+                            {hasSellerLockTx && (
+                              <div className="flex flex-col">
+                                <span className="inline-flex w-fit rounded-md bg-sky-50 px-2 py-0.5 text-xs font-extrabold text-sky-700">
+                                  에스크로
+                                </span>
+                                {sellerLockTxUrl ? (
+                                  <a
+                                    href={sellerLockTxUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-0.5 inline-flex w-fit items-center truncate text-xs font-semibold text-sky-700 underline decoration-sky-300 underline-offset-2"
+                                  >
+                                    {shortWallet(sellerLockTxHash)}
+                                  </a>
+                                ) : (
+                                  <span className="mt-0.5 truncate text-xs font-semibold text-sky-800">{shortWallet(sellerLockTxHash)}</span>
+                                )}
+                              </div>
+                            )}
+
+                            {hasCancelReleaseTx && (
+                              <div className={`flex flex-col ${hasSellerLockTx ? 'border-t border-slate-200 pt-1' : ''}`}>
+                                <span className="inline-flex w-fit rounded-md bg-rose-50 px-2 py-0.5 text-xs font-extrabold text-rose-700">
+                                  회수
+                                </span>
+                                {cancelReleaseTxUrl ? (
+                                  <a
+                                    href={cancelReleaseTxUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-0.5 inline-flex w-fit items-center truncate text-xs font-semibold text-rose-700 underline decoration-rose-300 underline-offset-2"
+                                  >
+                                    {shortWallet(cancelReleaseTxHash)}
+                                  </a>
+                                ) : (
+                                  <span className="mt-0.5 truncate text-xs font-semibold text-rose-800">{shortWallet(cancelReleaseTxHash)}</span>
+                                )}
+                              </div>
+                            )}
+
+                            {hasFallbackTransferTx && (
+                              <div className={`flex flex-col ${hasSellerLockTx || hasCancelReleaseTx ? 'border-t border-slate-200 pt-1' : ''}`}>
+                                <span className="inline-flex w-fit rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-extrabold text-emerald-700">
+                                  전송
+                                </span>
+                                {fallbackTransferTxUrl ? (
+                                  <a
+                                    href={fallbackTransferTxUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-0.5 inline-flex w-fit items-center truncate text-xs font-semibold text-emerald-700 underline decoration-emerald-300 underline-offset-2"
+                                  >
+                                    {shortWallet(fallbackTransferTxHash)}
+                                  </a>
+                                ) : (
+                                  <span className="mt-0.5 truncate text-xs font-semibold text-emerald-800">{shortWallet(fallbackTransferTxHash)}</span>
+                                )}
+                              </div>
+                            )}
+
+                            {hasEscrowTransferTx && (
+                              <div className={`flex flex-col ${hasSellerLockTx || hasCancelReleaseTx || hasFallbackTransferTx ? 'border-t border-slate-200 pt-1' : ''}`}>
+                                <span className="inline-flex w-fit rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                                  Escrow
+                                </span>
+                                {escrowTransferTxUrl ? (
+                                  <a
+                                    href={escrowTransferTxUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-0.5 inline-flex w-fit items-center truncate text-xs font-semibold text-amber-700 underline decoration-amber-300 underline-offset-2"
+                                  >
+                                    {shortWallet(escrowTransferTxHash)}
+                                  </a>
+                                ) : (
+                                  <span className="mt-0.5 truncate text-xs font-semibold text-amber-800">{shortWallet(escrowTransferTxHash)}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-xs text-slate-400">-</span>
                         )}
                       </td>
                     </tr>
-                  ))}
+                  );
+                  })}
                 </tbody>
               </table>
             </div>
