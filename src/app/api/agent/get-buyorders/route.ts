@@ -130,6 +130,26 @@ export async function POST(request: Request) {
                   },
                 },
               },
+              totalPlatformFeeAmount: {
+                $sum: {
+                  $convert: {
+                    input: {
+                      $ifNull: [
+                        '$platformFeeAmount',
+                        {
+                          $ifNull: [
+                            '$platform_fee_amount',
+                            { $ifNull: ['$settlement.platformFeeAmount', 0] },
+                          ],
+                        },
+                      ],
+                    },
+                    to: 'double',
+                    onError: 0,
+                    onNull: 0,
+                  },
+                },
+              },
             },
           },
         ])
@@ -141,6 +161,7 @@ export async function POST(request: Request) {
       totalCount: toNumber(totalCount),
       totalKrwAmount: toNumber(totals?.[0]?.totalKrwAmount),
       totalUsdtAmount: toNumber(totals?.[0]?.totalUsdtAmount),
+      totalPlatformFeeAmount: toNumber(totals?.[0]?.totalPlatformFeeAmount),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to load buy orders.';

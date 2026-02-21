@@ -26,6 +26,7 @@ export type AgentUserItem = {
   storecode: string;
   storeName: string;
   storeLogo: string;
+  avatar: string;
   nickname: string;
   walletAddress: string;
   role: string;
@@ -220,6 +221,7 @@ const normalizeUser = (value: unknown): AgentUserItem => {
     storecode: toText(source.storecode),
     storeName: toText(store.storeName) || toText(source.storeName),
     storeLogo: toText(store.storeLogo) || toText(source.storeLogo),
+    avatar: toText(source.avatar) || toText(source.profileImage),
     nickname: toText(source.nickname),
     walletAddress: toText(source.walletAddress),
     role: toText(source.role) || 'member',

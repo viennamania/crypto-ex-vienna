@@ -143,6 +143,7 @@ const formatPercent = (value: number) => {
   if (!Number.isFinite(numeric) || numeric <= 0) return '0';
   return (Math.round(numeric * 100) / 100).toFixed(2).replace(/\.?0+$/, '');
 };
+const PAGE_SIZE = 20;
 
 const resolveCancellerRole = (order: AgentSalesOrderItem): 'buyer' | 'seller' | 'admin' | 'agent' | 'unknown' => {
   const role = String(order.cancelledByRole || order.canceller || '').trim().toLowerCase();
@@ -187,9 +188,11 @@ export default function P2PAgentSalesManagementPage() {
   const [keyword, setKeyword] = useState('');
   const [agent, setAgent] = useState<AgentSummary | null>(null);
   const [orders, setOrders] = useState<AgentSalesOrderItem[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [totalKrwAmount, setTotalKrwAmount] = useState(0);
   const [totalUsdtAmount, setTotalUsdtAmount] = useState(0);
+  const [totalPlatformFeeAmount, setTotalPlatformFeeAmount] = useState(0);
   const [cancelTargetOrder, setCancelTargetOrder] = useState<AgentSalesOrderItem | null>(null);
   const [cancelingOrder, setCancelingOrder] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -201,6 +204,7 @@ export default function P2PAgentSalesManagementPage() {
       setTotalCount(0);
       setTotalKrwAmount(0);
       setTotalUsdtAmount(0);
+      setTotalPlatformFeeAmount(0);
       setError(null);
       return;
     }
@@ -240,18 +244,23 @@ export default function P2PAgentSalesManagementPage() {
       const resolvedTotalCount = toNumber(payloadRecord.totalCount || payloadResult.totalCount || normalizedOrders.length);
       const resolvedTotalKrwAmount = toNumber(payloadRecord.totalKrwAmount || payloadResult.totalKrwAmount);
       const resolvedTotalUsdtAmount = toNumber(payloadRecord.totalUsdtAmount || payloadResult.totalUsdtAmount);
+      const resolvedTotalPlatformFeeAmount = toNumber(
+        payloadRecord.totalPlatformFeeAmount || payloadResult.totalPlatformFeeAmount,
+      );
 
       setAgent(agentData);
       setOrders(normalizedOrders);
       setTotalCount(resolvedTotalCount);
       setTotalKrwAmount(resolvedTotalKrwAmount);
       setTotalUsdtAmount(resolvedTotalUsdtAmount);
+      setTotalPlatformFeeAmount(resolvedTotalPlatformFeeAmount);
     } catch (loadError) {
       setAgent(null);
       setOrders([]);
       setTotalCount(0);
       setTotalKrwAmount(0);
       setTotalUsdtAmount(0);
+      setTotalPlatformFeeAmount(0);
       setError(loadError instanceof Error ? loadError.message : '판매 거래내역을 불러오지 못했습니다.');
     } finally {
       setLoading(false);
@@ -278,6 +287,33 @@ export default function P2PAgentSalesManagementPage() {
       );
     });
   }, [orders, keyword]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE)),
+    [filteredOrders.length],
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredOrders.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [currentPage, filteredOrders]);
+
+  const visiblePageNumbers = useMemo(() => {
+    const windowSize = 5;
+    const start = Math.max(1, currentPage - Math.floor(windowSize / 2));
+    const end = Math.min(totalPages, start + windowSize - 1);
+    const adjustedStart = Math.max(1, end - windowSize + 1);
+    return Array.from({ length: end - adjustedStart + 1 }, (_, index) => adjustedStart + index);
+  }, [currentPage, totalPages]);
+
+  const isPreviousDisabled = currentPage <= 1 || loading;
+  const isNextDisabled = currentPage >= totalPages || loading;
 
   const closeCancelModal = () => {
     if (cancelingOrder) return;
@@ -331,14 +367,14 @@ export default function P2PAgentSalesManagementPage() {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">Sales Management</p>
-        <h1 className="mt-1 text-2xl font-bold text-slate-900">판매관리</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">Buyorder Management</p>
+        <h1 className="mt-1 text-2xl font-bold text-slate-900">구매주문 관리</h1>
         <p className="mt-1 text-sm text-slate-600">agentcode 기준 buyorders P2P 거래내역을 조회합니다.</p>
       </div>
 
       {!agentcode && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-          URL에 `?agentcode=...` 파라미터를 추가해야 판매관리 페이지를 사용할 수 있습니다.
+          URL에 `?agentcode=...` 파라미터를 추가해야 구매주문 관리 페이지를 사용할 수 있습니다.
         </div>
       )}
 
@@ -359,7 +395,7 @@ export default function P2PAgentSalesManagementPage() {
 
           <AgentInfoCard agent={agent} fallbackAgentcode={agentcode} />
 
-          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
               <p className="text-xs font-semibold text-slate-500">전체 거래</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">{totalCount.toLocaleString()}건</p>
@@ -376,6 +412,10 @@ export default function P2PAgentSalesManagementPage() {
               <p className="text-xs font-semibold text-slate-500">표시중</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">{filteredOrders.length.toLocaleString()}건</p>
             </div>
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+              <p className="text-xs font-semibold text-slate-500">플랫폼 수수료</p>
+              <p className="mt-1 text-xl font-bold text-indigo-700">{formatUsdt(totalPlatformFeeAmount)}</p>
+            </div>
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
@@ -384,7 +424,10 @@ export default function P2PAgentSalesManagementPage() {
               <input
                 type="text"
                 value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
+                onChange={(event) => {
+                  setKeyword(event.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="거래ID/상태/가맹점/구매자/판매자 검색"
                 className="h-9 w-full max-w-xs rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
               />
@@ -424,7 +467,7 @@ export default function P2PAgentSalesManagementPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredOrders.map((order) => {
+                    paginatedOrders.map((order) => {
                       const canCancelOrder = order.privateSale === true && order.status === 'paymentRequested';
 
                       return (
@@ -490,6 +533,51 @@ export default function P2PAgentSalesManagementPage() {
                 </tbody>
               </table>
             </div>
+          )}
+
+          {!loading && !error && filteredOrders.length > 0 && (
+            <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-slate-600">
+                  페이지 {currentPage} / {totalPages} · 총 {filteredOrders.length.toLocaleString()}건
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={isPreviousDisabled}
+                    className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    이전
+                  </button>
+
+                  {visiblePageNumbers.map((pageNumber) => (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      onClick={() => setCurrentPage(pageNumber)}
+                      disabled={loading}
+                      className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-xs font-semibold transition ${
+                        pageNumber === currentPage
+                          ? 'border-cyan-300 bg-cyan-50 text-cyan-800'
+                          : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'
+                      } disabled:cursor-not-allowed disabled:opacity-45`}
+                    >
+                      {pageNumber}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={isNextDisabled}
+                    className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    다음
+                  </button>
+                </div>
+              </div>
+            </section>
           )}
         </>
       )}

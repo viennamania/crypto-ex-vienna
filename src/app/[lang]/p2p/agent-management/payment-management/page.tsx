@@ -22,12 +22,6 @@ const isOrderProcessingCompleted = (value: string | undefined) =>
 const resolveOrderProcessingLabel = (value: string | undefined) =>
   isOrderProcessingCompleted(value) ? '결제처리완료' : '결제처리중';
 
-const formatPercent = (value: number) => {
-  const numeric = Number(value || 0);
-  if (!Number.isFinite(numeric) || numeric <= 0) return '0';
-  return (Math.round(numeric * 100) / 100).toFixed(2).replace(/\.?0+$/, '');
-};
-
 const PAYMENT_LIST_POLLING_MS = 10000;
 
 export default function P2PAgentPaymentManagementPage() {
@@ -277,7 +271,6 @@ export default function P2PAgentPaymentManagementPage() {
                     <th className="px-4 py-3">회원/결제지갑</th>
                     <th className="px-4 py-3 text-right">수량</th>
                     <th className="px-4 py-3 text-right">금액</th>
-                    <th className="px-4 py-3">플랫폼 수수료</th>
                     <th className="px-4 py-3">결제시각</th>
                     <th className="px-4 py-3 text-center">결제처리</th>
                   </tr>
@@ -285,7 +278,7 @@ export default function P2PAgentPaymentManagementPage() {
                 <tbody className="divide-y divide-slate-100">
                   {payments.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-500">
+                      <td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-500">
                         표시할 결제가 없습니다.
                       </td>
                     </tr>
@@ -333,17 +326,6 @@ export default function P2PAgentPaymentManagementPage() {
                           </td>
                           <td className="px-4 py-3 text-right text-sm font-extrabold tabular-nums text-slate-900 sm:text-base">{formatUsdt(payment.usdtAmount)}</td>
                           <td className="px-4 py-3 text-right text-sm font-extrabold tabular-nums text-slate-900 sm:text-base">{formatKrw(payment.krwAmount)}</td>
-                          <td className="px-4 py-3 text-xs text-slate-600">
-                            {payment.platformFeeRate > 0 || payment.platformFeeAmount > 0 || payment.platformFeeWalletAddress ? (
-                              <div className="space-y-0.5">
-                                <p className="font-semibold text-indigo-700">{formatPercent(payment.platformFeeRate)}%</p>
-                                <p className="font-semibold text-indigo-800">{formatUsdt(payment.platformFeeAmount)}</p>
-                                <p className="truncate text-slate-500">{payment.platformFeeWalletAddress || '-'}</p>
-                              </div>
-                            ) : (
-                              <p>-</p>
-                            )}
-                          </td>
                           <td className="px-4 py-3 text-xs text-slate-600">{toDateTime(payment.paymentConfirmedAt || payment.createdAt)}</td>
                           <td className="px-4 py-3 text-center">
                             <p
