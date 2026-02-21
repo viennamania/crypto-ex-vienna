@@ -351,6 +351,22 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
             createdAt: 1,
             confirmedAt: 1,
             memberNickname: { $ifNull: ['$member.nickname', ''] },
+            memberAccountHolder: {
+              $ifNull: [
+                '$member.buyer.bankInfo.accountHolder',
+                {
+                  $ifNull: [
+                    '$member.buyer.bankInfo.depositName',
+                    {
+                      $ifNull: [
+                        '$member.buyer.depositName',
+                        { $ifNull: ['$member.depositName', ''] },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
             store: 1,
           },
         },
@@ -399,6 +415,7 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
       createdAt: String(payment?.createdAt || ''),
       confirmedAt: String(payment?.confirmedAt || ''),
       memberNickname: String(payment?.memberNickname || ''),
+      memberAccountHolder: String(payment?.memberAccountHolder || ''),
       store: {
         storecode: String(payment?.store?.storecode || payment?.storecode || ''),
         storeName: String(payment?.store?.storeName || ''),
@@ -512,6 +529,22 @@ export async function getAllWalletUsdtPayments(
             createdAt: 1,
             confirmedAt: 1,
             memberNickname: { $ifNull: ['$member.nickname', ''] },
+            memberAccountHolder: {
+              $ifNull: [
+                '$member.buyer.bankInfo.accountHolder',
+                {
+                  $ifNull: [
+                    '$member.buyer.bankInfo.depositName',
+                    {
+                      $ifNull: [
+                        '$member.buyer.depositName',
+                        { $ifNull: ['$member.depositName', ''] },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
             store: 1,
           },
         },
@@ -561,6 +594,7 @@ export async function getAllWalletUsdtPayments(
       createdAt: String(payment?.createdAt || ''),
       confirmedAt: String(payment?.confirmedAt || ''),
       memberNickname: String(payment?.memberNickname || ''),
+      memberAccountHolder: String(payment?.memberAccountHolder || ''),
       store: {
         storecode: String(payment?.store?.storecode || payment?.storecode || ''),
         storeName: String(payment?.store?.storeName || ''),

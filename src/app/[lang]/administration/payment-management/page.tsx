@@ -14,6 +14,7 @@ type WalletPaymentItem = {
   storeName: string;
   storeLogo: string;
   buyerNickname: string;
+  buyerAccountHolder: string;
   sellerWalletAddress: string;
   usdtAmount: number;
   krwAmount: number;
@@ -63,6 +64,9 @@ const resolveOrderProcessingLabel = (value: string | undefined) =>
 const normalizeWalletPayment = (value: unknown): WalletPaymentItem => {
   const source = isRecord(value) ? value : {};
   const store = isRecord(source.store) ? source.store : {};
+  const member = isRecord(source.member) ? source.member : {};
+  const buyer = isRecord(member.buyer) ? member.buyer : {};
+  const bankInfo = isRecord(buyer.bankInfo) ? buyer.bankInfo : {};
 
   return {
     id: toText(source.id) || toText(source._id),
@@ -76,6 +80,11 @@ const normalizeWalletPayment = (value: unknown): WalletPaymentItem => {
     storeName: toText(store.storeName) || toText(source.storeName) || toText(source.storecode),
     storeLogo: toText(store.storeLogo) || toText(source.storeLogo),
     buyerNickname: toText(source.memberNickname),
+    buyerAccountHolder:
+      toText(source.memberAccountHolder) ||
+      toText(bankInfo.accountHolder) ||
+      toText(bankInfo.depositName) ||
+      toText(buyer.depositName),
     sellerWalletAddress: toText(source.toWalletAddress),
     usdtAmount: toNumber(source.usdtAmount),
     krwAmount: toNumber(source.krwAmount),
@@ -347,7 +356,7 @@ export default function AdministrationPaymentManagementPage() {
                   <th className="px-4 py-3">결제번호</th>
                   <th className="px-4 py-3">트랜잭션</th>
                   <th className="px-4 py-3">가맹점</th>
-                  <th className="px-4 py-3">회원/결제지갑</th>
+                  <th className="px-4 py-3">회원/결제지갑/이름</th>
                   <th className="px-4 py-3 text-right">수량</th>
                   <th className="px-4 py-3 text-right">금액</th>
                   <th className="px-4 py-3">결제시각</th>
@@ -402,6 +411,7 @@ export default function AdministrationPaymentManagementPage() {
                             {payment.buyerNickname || '-'}
                           </p>
                           <p className="mt-1 text-xs text-slate-500">결제지갑 {shortAddress(payment.sellerWalletAddress || '')}</p>
+                          <p className="mt-1 text-xs text-slate-500">이름 {payment.buyerAccountHolder || '-'}</p>
                         </td>
                         <td className="px-4 py-3 text-right text-sm font-extrabold tabular-nums text-slate-900 sm:text-base">
                           {formatUsdt(payment.usdtAmount)}
