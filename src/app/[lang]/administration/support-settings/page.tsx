@@ -300,14 +300,7 @@ export default function SupportSettingsPage() {
     <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900">
       <AutoConnect client={client} wallets={[wallet]} />
       <div className="mx-auto w-full max-w-3xl">
-        <div className="mb-6 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => router.push(`/${params.lang}/administration`)}
-            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm"
-          >
-            뒤로가기
-          </button>
+        <div className="mb-6 flex items-center justify-end">
           <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
             SUPPORT SETTINGS
           </span>

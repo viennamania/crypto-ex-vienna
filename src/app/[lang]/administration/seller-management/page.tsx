@@ -1,8 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation';
+
+type SellerDashboardMetrics = {
+  totalSellers: number;
+  confirmedSellers: number;
+  pendingSellers: number;
+  enabledSellers: number;
+  disabledSellers: number;
+  bankApprovedSellers: number;
+  bankReviewRequiredSellers: number;
+  newSellers7d: number;
+  activeAgentCount: number;
+  confirmedRate: number;
+  updatedAt: string;
+};
 
 export default function SellerManagementPage() {
   const params = useParams<{ lang?: string }>();
@@ -43,6 +57,8 @@ export default function SellerManagementPage() {
   const [enabledModalTarget, setEnabledModalTarget] = useState<{ wallet: string; enabled?: boolean } | null>(null);
   const [selectedEnabled, setSelectedEnabled] = useState<boolean | null>(null);
   const [initializedFromParams, setInitializedFromParams] = useState(false);
+  const [dashboard, setDashboard] = useState<SellerDashboardMetrics | null>(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
 
   const fetchSellers = async () => {
     setLoading(true);
@@ -80,6 +96,57 @@ export default function SellerManagementPage() {
     setLoading(false);
   };
 
+  const fetchSellerDashboard = async () => {
+    setDashboardLoading(true);
+    try {
+      const response = await fetch('/api/user/getSellerManagementDashboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: '',
+          includeUnverified: true,
+          searchTerm,
+          agentcode: agentFilter || undefined,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String(data?.error || '판매자 현황을 불러오지 못했습니다.'));
+      }
+      const summary = data?.result || {};
+      setDashboard({
+        totalSellers: Number(summary.totalSellers || 0),
+        confirmedSellers: Number(summary.confirmedSellers || 0),
+        pendingSellers: Number(summary.pendingSellers || 0),
+        enabledSellers: Number(summary.enabledSellers || 0),
+        disabledSellers: Number(summary.disabledSellers || 0),
+        bankApprovedSellers: Number(summary.bankApprovedSellers || 0),
+        bankReviewRequiredSellers: Number(summary.bankReviewRequiredSellers || 0),
+        newSellers7d: Number(summary.newSellers7d || 0),
+        activeAgentCount: Number(summary.activeAgentCount || 0),
+        confirmedRate: Number(summary.confirmedRate || 0),
+        updatedAt: String(summary.updatedAt || ''),
+      });
+    } catch (error) {
+      console.error('Error fetching seller dashboard', error);
+      setDashboard({
+        totalSellers: 0,
+        confirmedSellers: 0,
+        pendingSellers: 0,
+        enabledSellers: 0,
+        disabledSellers: 0,
+        bankApprovedSellers: 0,
+        bankReviewRequiredSellers: 0,
+        newSellers7d: 0,
+        activeAgentCount: 0,
+        confirmedRate: 0,
+        updatedAt: '',
+      });
+    } finally {
+      setDashboardLoading(false);
+    }
+  };
+
   const fetchAgents = async () => {
     try {
       const res = await fetch('/api/agents?limit=500');
@@ -105,6 +172,11 @@ export default function SellerManagementPage() {
     if (!initializedFromParams) return;
     fetchSellers();
   }, [page, searchTerm, agentFilter, initializedFromParams]);
+
+  useEffect(() => {
+    if (!initializedFromParams) return;
+    fetchSellerDashboard();
+  }, [searchTerm, agentFilter, initializedFromParams]);
 
   useEffect(() => {
     fetchAgents();
@@ -141,6 +213,15 @@ export default function SellerManagementPage() {
     const normalizedStatus = seller?.seller?.status === 'confirmed' ? 'confirmed' : 'pending';
     return normalizedStatus === statusFilter;
   }); // 서버 검색/필터 결과 사용 + 상태 필터
+  const sortedFilteredSellers = useMemo(
+    () =>
+      [...filteredSellers].sort((a, b) => {
+        const aTime = new Date(a?.createdAt || 0).getTime();
+        const bTime = new Date(b?.createdAt || 0).getTime();
+        return bTime - aTime;
+      }),
+    [filteredSellers],
+  );
   const filteredAgents = agentsList.filter((agent) => {
     const q = agentSearch.trim().toLowerCase();
     if (!q) return true;
@@ -270,28 +351,62 @@ export default function SellerManagementPage() {
     }
   }, [enabledModalOpen]);
 
+  const formatCount = (value: number) =>
+    new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(Number(value) || 0);
+
+  const dashboardCards = [
+    {
+      key: 'total',
+      title: '전체 판매자',
+      value: formatCount(dashboard?.totalSellers || 0),
+      subtitle: '현재 검색 조건 기준',
+      tone: 'from-cyan-500 to-sky-500',
+    },
+    {
+      key: 'confirmed',
+      title: '판매가능',
+      value: formatCount(dashboard?.confirmedSellers || 0),
+      subtitle: `판매가능 비율 ${Number(dashboard?.confirmedRate || 0).toFixed(1)}%`,
+      tone: 'from-emerald-500 to-teal-500',
+    },
+    {
+      key: 'enabled',
+      title: '사용중 판매자',
+      value: formatCount(dashboard?.enabledSellers || 0),
+      subtitle: `미사용 ${formatCount(dashboard?.disabledSellers || 0)}명`,
+      tone: 'from-indigo-500 to-blue-500',
+    },
+    {
+      key: 'new',
+      title: '최근 7일 신규',
+      value: formatCount(dashboard?.newSellers7d || 0),
+      subtitle: `활성 에이전트 ${formatCount(dashboard?.activeAgentCount || 0)}개`,
+      tone: 'from-amber-500 to-orange-500',
+    },
+  ];
+
+  const dashboardUpdatedAtLabel = dashboard?.updatedAt
+    ? new Date(dashboard.updatedAt).toLocaleString()
+    : '-';
+
   return (
     <>
     <main className="p-6 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
       <div className="w-full">
-        <div className="flex items-center gap-2 text-sm text-slate-600 mb-4">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-2xl font-black tracking-tight text-slate-900">판매자 관리</span>
           <button
             type="button"
-            onClick={() => router.back()}
-            className="flex items-center justify-center rounded-full border border-slate-200/70 bg-white/90 p-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <Image src="/icon-back.png" alt="Back" width={20} height={20} className="rounded-full" />
-          </button>
-          <span className="font-semibold">판매자 관리</span>
-          <button
-            type="button"
-            onClick={fetchSellers}
-            disabled={loading}
+            onClick={() => {
+              fetchSellers();
+              fetchSellerDashboard();
+            }}
+            disabled={loading || dashboardLoading}
             className={`ml-auto inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition ${
-              loading ? 'cursor-not-allowed opacity-60' : 'hover:-translate-y-0.5 hover:shadow-md'
+              loading || dashboardLoading ? 'cursor-not-allowed opacity-60' : 'hover:-translate-y-0.5 hover:shadow-md'
             }`}
           >
-            {loading ? (
+            {loading || dashboardLoading ? (
               <svg
                 className="h-3.5 w-3.5 animate-spin text-slate-500"
                 viewBox="0 0 24 24"
@@ -322,6 +437,56 @@ export default function SellerManagementPage() {
           </button>
         </div>
 
+        <section className="mb-4 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-5 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.55)]">
+          <div className="relative">
+            <div className="absolute -top-20 right-[-60px] h-56 w-56 rounded-full bg-sky-200/35 blur-3xl" />
+            <div className="absolute -bottom-20 left-[-40px] h-56 w-56 rounded-full bg-emerald-200/30 blur-3xl" />
+            <div className="relative">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Seller Dashboard</p>
+                  <h1 className="text-2xl font-black tracking-tight text-slate-900">판매자 현황</h1>
+                  <p className="mt-1 text-sm text-slate-600">
+                    판매자 운영 상태를 실시간으로 확인하고, 위험 지표를 빠르게 파악할 수 있습니다.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-right shadow-sm">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Updated</p>
+                  <p className="text-xs font-semibold text-slate-700">
+                    {dashboardLoading ? '갱신 중...' : dashboardUpdatedAtLabel}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {dashboardCards.map((card) => (
+                  <article
+                    key={card.key}
+                    className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  >
+                    <div className={`mb-3 h-1.5 w-16 rounded-full bg-gradient-to-r ${card.tone}`} />
+                    <p className="text-[12px] font-semibold text-slate-600">{card.title}</p>
+                    <p className="mt-1 text-3xl font-black tracking-tight text-slate-900">{card.value}</p>
+                    <p className="mt-1 text-xs font-semibold text-slate-500">{card.subtitle}</p>
+                  </article>
+                ))}
+              </div>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <div className="rounded-xl border border-amber-200/70 bg-amber-50/80 px-3 py-2 text-xs font-semibold text-amber-800">
+                  판매불가능 {formatCount(dashboard?.pendingSellers || 0)}명
+                </div>
+                <div className="rounded-xl border border-rose-200/70 bg-rose-50/80 px-3 py-2 text-xs font-semibold text-rose-800">
+                  계좌 심사 필요 {formatCount(dashboard?.bankReviewRequiredSellers || 0)}명
+                </div>
+                <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/80 px-3 py-2 text-xs font-semibold text-emerald-800">
+                  계좌 승인 완료 {formatCount(dashboard?.bankApprovedSellers || 0)}명
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <div className="w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
@@ -329,7 +494,7 @@ export default function SellerManagementPage() {
               <h2 className="text-lg font-bold text-slate-900">판매자 목록</h2>
             </div>
             <span className="text-sm font-semibold text-slate-600">
-              {filteredSellers.length} / {totalCount} 명
+              {sortedFilteredSellers.length} / {totalCount} 명
             </span>
             <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
               <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm sm:min-w-[260px]">
@@ -462,7 +627,7 @@ export default function SellerManagementPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSellers.map((sellerUser, index) => {
+                  {sortedFilteredSellers.map((sellerUser, index) => {
                     const sellerStatus = sellerUser?.seller?.status;
                     const normalizedSellerStatus = sellerStatus === 'confirmed' ? 'confirmed' : 'pending';
                     const kycStatus =

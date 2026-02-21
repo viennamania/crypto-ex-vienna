@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 
 type UserItem = {
@@ -19,7 +19,6 @@ type UserItem = {
 
 export default function AdminManagementPage() {
   const params = useParams<{ lang?: string }>();
-  const router = useRouter();
   const langParam = params?.lang;
   const lang = Array.isArray(langParam) ? langParam[0] : langParam || 'ko';
 
@@ -155,15 +154,8 @@ export default function AdminManagementPage() {
     <>
       <main className="p-6 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
         <div className="w-full">
-          <div className="flex items-center gap-2 text-sm text-slate-600 mb-4">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="flex items-center justify-center rounded-full border border-slate-200/70 bg-white/90 p-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <Image src="/icon-back.png" alt="Back" width={20} height={20} className="rounded-full" />
-            </button>
-            <span className="font-semibold">관리자 관리</span>
+          <div className="mb-4 flex items-center gap-2">
+            <span className="text-2xl font-black tracking-tight text-slate-900">관리자 관리</span>
             <button
               type="button"
               onClick={fetchAdmins}
