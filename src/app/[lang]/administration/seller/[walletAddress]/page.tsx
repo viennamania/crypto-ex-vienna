@@ -250,15 +250,7 @@ export default function SellerDetailPage() {
     }
     setSavingFee(true);
     try {
-      const updatedSeller = {
-        ...seller,
-        platformFee: {
-          walletAddress: feeWalletAddress.trim(),
-          rate: rateNum,
-        },
-      };
-
-      await fetch('/api/user/updatePlatformFee', {
+      const response = await fetch('/api/user/updateSellerPlatformFee', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -272,28 +264,14 @@ export default function SellerDetailPage() {
         }),
       });
 
-      // seller 객체에도 최신 값 반영
-      await fetch('/api/user/updateSellerInfo', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          storecode: user?.storecode || storecode,
-          walletAddress,
-          sellerStatus: seller?.status,
-          bankName: seller?.bankInfo?.bankName || '',
-          accountNumber: seller?.bankInfo?.accountNumber || '',
-          accountHolder: seller?.bankInfo?.accountHolder || '',
-          seller: {
-            ...seller,
-            platformFee: {
-              walletAddress: feeWalletAddress.trim(),
-              rate: rateNum,
-            },
-          },
-        }),
-      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === 'string'
+            ? payload.error
+            : '수수료 정보를 저장하지 못했습니다.',
+        );
+      }
 
       toast.success('플랫폼 수수료 정보가 저장되었습니다.');
       await fetchUser();
