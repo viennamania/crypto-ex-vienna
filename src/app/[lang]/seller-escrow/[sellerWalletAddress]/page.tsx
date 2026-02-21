@@ -155,6 +155,7 @@ interface BuyOrder {
 
   storecode: string;
   store: any;
+  sellerWalletAddress?: string;
 
   settlement: any;
 
@@ -438,6 +439,19 @@ const maskWalletAddressPartial = (value?: string | null) => {
 
 const toWalletKey = (walletAddress?: string | null) =>
   String(walletAddress || '').trim().toLowerCase();
+
+const getBuyOrderSellerWalletAddress = (order: Partial<BuyOrder> | null | undefined) => {
+  if (!order || typeof order !== 'object') {
+    return '';
+  }
+  const directSellerWalletAddress =
+    typeof order?.sellerWalletAddress === 'string' ? order.sellerWalletAddress : '';
+  const nestedSellerWalletAddress =
+    typeof order?.seller?.walletAddress === 'string'
+      ? order.seller.walletAddress
+      : '';
+  return String(directSellerWalletAddress || nestedSellerWalletAddress || '').trim();
+};
 
 const normalizePrivateTradeOrderSummary = (order: any): PrivateTradeOrderSummary | null => {
   if (!order || typeof order !== 'object') {
@@ -1715,9 +1729,20 @@ export default function Index({ params }: any) {
     () => buyOrders.filter((item) => isActiveTradingOrderStatus(item?.status)),
     [buyOrders],
   );
+  const myActiveTradingOrders = useMemo(
+    () => {
+      if (!address || !isOwnerSeller) {
+        return [] as BuyOrder[];
+      }
+      return activeTradingOrders.filter((item) =>
+        isSameWalletAddress(getBuyOrderSellerWalletAddress(item), address),
+      );
+    },
+    [activeTradingOrders, address, isOwnerSeller],
+  );
   const activeTradingAudioEnabledOrders = useMemo(
-    () => activeTradingOrders.filter((item) => item?.audioOn !== false),
-    [activeTradingOrders],
+    () => myActiveTradingOrders.filter((item) => item?.audioOn !== false),
+    [myActiveTradingOrders],
   );
   const hasActiveTradingAudioEnabledOrders = activeTradingAudioEnabledOrders.length > 0;
 
@@ -5808,9 +5833,9 @@ const fetchBuyOrders = async () => {
   const bannerAds = visibleBannerAds;
   const bannerAdsRight = visibleBannerAdsRight;
   const showPromotionBanner = false;
-  const hasActiveTradingOrders = activeTradingOrders.length > 0;
-  const topAlertOrders = activeTradingOrders.slice(0, 4);
-  const mainTopPaddingClass = hasActiveTradingOrders ? 'pt-24 sm:pt-28' : 'pt-6';
+  const hasMyActiveTradingOrders = myActiveTradingOrders.length > 0;
+  const topAlertOrders = myActiveTradingOrders.slice(0, 4);
+  const mainTopPaddingClass = hasMyActiveTradingOrders ? 'pt-24 sm:pt-28' : 'pt-6';
 
 
 
@@ -5836,17 +5861,17 @@ const fetchBuyOrders = async () => {
           wallets={[wallet]}
       />
 
-      {hasActiveTradingOrders && (
+      {hasMyActiveTradingOrders && (
         <div className="fixed inset-x-0 top-3 z-[95] px-4 sm:top-4 sm:px-6 lg:px-8">
           <div className="mx-auto w-full max-w-5xl rounded-2xl border border-amber-300 bg-amber-50/95 px-4 py-3 shadow-[0_22px_52px_-30px_rgba(161,98,7,0.55)] backdrop-blur-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">Trading Alert</p>
                 <p className="text-sm font-semibold text-amber-900">
-                  거래중인 주문이 {activeTradingOrders.length.toLocaleString()}건 있습니다.
+                  내 거래중 주문이 {myActiveTradingOrders.length.toLocaleString()}건 있습니다.
                 </p>
                 <p className="text-xs text-amber-800/80">
-                  알림 ON 주문이 있는 동안 소리가 연속 재생되며, 주문별 알림을 끄면 제외됩니다.
+                  지갑 연결된 내 판매자 주문에 대해서만 알림이 울립니다.
                 </p>
                 {notificationAudioUnlockNeeded && (
                   <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -5890,9 +5915,9 @@ const fetchBuyOrders = async () => {
                     </div>
                   );
                 })}
-                {activeTradingOrders.length > topAlertOrders.length && (
+                {myActiveTradingOrders.length > topAlertOrders.length && (
                   <span className="text-xs font-semibold text-amber-800">
-                    +{activeTradingOrders.length - topAlertOrders.length}건
+                    +{myActiveTradingOrders.length - topAlertOrders.length}건
                   </span>
                 )}
               </div>
@@ -6616,12 +6641,14 @@ const fetchBuyOrders = async () => {
           )}
 
           <div className="rounded-2xl border border-slate-200/90 bg-white/95 p-3 shadow-[0_14px_34px_-26px_rgba(15,23,42,0.55)]">
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-              <span className="inline-block h-2 w-2 rounded-full bg-slate-500" />
-              오늘 거래량
-            </div>
-            <div className="mt-2 text-3xl font-semibold text-slate-900">
-              {Math.round(animatedTodayTradeCount).toLocaleString()}
+            <div className="flex items-center justify-between gap-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                <span className="inline-block h-2 w-2 rounded-full bg-slate-500" />
+                오늘 거래량
+              </div>
+              <div className="text-3xl font-semibold text-slate-900">
+                {Math.round(animatedTodayTradeCount).toLocaleString()}
+              </div>
             </div>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/30 p-2">
@@ -6969,27 +6996,23 @@ const fetchBuyOrders = async () => {
 
             <div className="w-full flex flex-col gap-3">
 
-              <div className="w-full flex flex-row items-center justify-between gap-2">              
-                <div className="flex flex-col gap-1">
-                  {/* background color is 파스텔 오렌지  */}
-                  <div className="
-                    bg-slate-100
-                    px-2 py-1 rounded-full
-                    text-xs font-semibold text-slate-700
-                    border border-slate-200
-                  "
-                  >
-                    {/* dot before */}
-                    <div className="inline-block w-2 h-2 bg-slate-500 rounded-full mr-2"></div>
-                    <span className="align-middle">
-                      오늘 거래량
-                    </span>
-                  </div>
-                  <div className="text-3xl font-semibold text-slate-900">
-                    {
-                      Math.round(animatedTodayTradeCount).toLocaleString()
-                    }
-                  </div>
+              <div className="w-full flex flex-row items-center justify-between gap-2">
+                {/* background color is 파스텔 오렌지  */}
+                <div className="
+                  bg-slate-100
+                  px-2 py-1 rounded-full
+                  text-xs font-semibold text-slate-700
+                  border border-slate-200
+                "
+                >
+                  {/* dot before */}
+                  <div className="inline-block w-2 h-2 bg-slate-500 rounded-full mr-2"></div>
+                  <span className="align-middle">
+                    오늘 거래량
+                  </span>
+                </div>
+                <div className="text-3xl font-semibold text-slate-900">
+                  {Math.round(animatedTodayTradeCount).toLocaleString()}
                 </div>
               </div>
 
