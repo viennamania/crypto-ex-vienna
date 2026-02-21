@@ -77,10 +77,38 @@ export async function POST(request: NextRequest) {
         .aggregate([
           { $match: filter },
           {
+            $addFields: {
+              normalizedPlatformFeeAmount: {
+                $convert: {
+                  input: {
+                    $ifNull: [
+                      '$platformFeeAmount',
+                      {
+                        $ifNull: [
+                          '$platformFee.amountUsdt',
+                          {
+                            $ifNull: [
+                              '$platformFee.amount',
+                              { $ifNull: ['$settlement.platformFeeAmount', 0] },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                  to: 'double',
+                  onError: 0,
+                  onNull: 0,
+                },
+              },
+            },
+          },
+          {
             $group: {
               _id: null,
               totalKrwAmount: { $sum: { $ifNull: ['$krwAmount', 0] } },
               totalUsdtAmount: { $sum: { $ifNull: ['$usdtAmount', 0] } },
+              totalPlatformFeeAmount: { $sum: '$normalizedPlatformFeeAmount' },
             },
           },
         ])
@@ -95,6 +123,7 @@ export async function POST(request: NextRequest) {
         totalCount,
         totalKrwAmount: Number(totalAmount?.totalKrwAmount || 0),
         totalUsdtAmount: Number(totalAmount?.totalUsdtAmount || 0),
+        totalPlatformFeeAmount: Number(totalAmount?.totalPlatformFeeAmount || 0),
       },
     });
   } catch (error) {

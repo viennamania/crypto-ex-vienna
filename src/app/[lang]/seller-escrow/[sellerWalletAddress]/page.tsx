@@ -11705,11 +11705,13 @@ const fetchBuyOrders = async () => {
                       <span className="text-[11px] font-bold tracking-[0.12em] text-emerald-700">
                         완료 처리자
                       </span>
-                      <div className="mt-1 text-sm font-extrabold text-emerald-900">
-                        {user?.nickname || '판매자'}
-                      </div>
-                      <div className="text-[11px] font-semibold text-emerald-800 tabular-nums">
-                        {address ? formatShortWalletAddress(address) : '-'}
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-extrabold text-emerald-900">
+                          {user?.nickname || '판매자'}
+                        </span>
+                        <span className="text-[11px] font-semibold text-emerald-800 tabular-nums">
+                          {address ? formatShortWalletAddress(address) : '-'}
+                        </span>
                       </div>
                     </div>
                     <div className="rounded-lg border border-sky-200 bg-sky-50/80 px-3 py-2">
@@ -11761,37 +11763,39 @@ const fetchBuyOrders = async () => {
                   </div>
 
                   <div className="rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-slate-500">입금자명</span>
-                      <span className="text-lg font-extrabold leading-tight text-slate-900 sm:text-xl">
-                        {getBuyerDepositName(selectedActivePaymentRequestedOrder)}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex items-center justify-between gap-2">
-                      <span className="text-slate-500">입금요청 시간</span>
-                      <span className="font-semibold text-slate-900">
-                        {formatTradeHistoryTime(
-                          selectedActivePaymentRequestedOrder.paymentRequestedAt
-                          || selectedActivePaymentRequestedOrder.createdAt,
-                        )}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 border-t border-slate-200 pt-1.5">
-                      <span className="text-[11px] text-slate-500">구매자 지갑</span>
-                      <div className="mt-0.5 break-all font-semibold text-slate-800 tabular-nums">
-                        {selectedActivePaymentRequestedOrder.buyer?.walletAddress || selectedActivePaymentRequestedOrder.walletAddress || '-'}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+                        <span className="text-slate-500">입금자명</span>
+                        <span className="truncate text-base font-extrabold leading-tight text-slate-900 sm:text-lg">
+                          {getBuyerDepositName(selectedActivePaymentRequestedOrder)}
+                        </span>
                       </div>
-                    </div>
-                    <div className="mt-1">
-                      <span className="text-[11px] text-slate-500">에스크로 지갑</span>
-                      <div className="mt-0.5 break-all font-semibold text-slate-800 tabular-nums">
-                        {selectedActivePaymentRequestedOrder.buyer?.escrowWalletAddress || '-'}
+                      <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+                        <span className="text-slate-500">입금요청 시간</span>
+                        <span className="font-semibold text-slate-900 tabular-nums">
+                          {formatTradeHistoryTime(
+                            selectedActivePaymentRequestedOrder.paymentRequestedAt
+                            || selectedActivePaymentRequestedOrder.createdAt,
+                          )}
+                        </span>
                       </div>
-                    </div>
-                    <div className="mt-1">
-                      <span className="text-[11px] text-slate-500">플랫폼 수수료 지갑</span>
-                      <div className="mt-0.5 break-all font-semibold text-slate-800 tabular-nums">
-                        {activeOrderCompleteFeePreview?.feeWalletAddress || '-'}
+                      <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+                        <span className="text-slate-500">구매자 지갑</span>
+                        <span className="font-semibold text-slate-800 tabular-nums">
+                          {formatShortWalletAddress(
+                            selectedActivePaymentRequestedOrder.buyer?.walletAddress
+                            || selectedActivePaymentRequestedOrder.walletAddress
+                            || '',
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+                        <span className="text-slate-500">에스크로 지갑</span>
+                        <span className="font-semibold text-slate-800 tabular-nums">
+                          {formatShortWalletAddress(
+                            selectedActivePaymentRequestedOrder.buyer?.escrowWalletAddress || '',
+                          )}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -11811,7 +11815,7 @@ const fetchBuyOrders = async () => {
                     </div>
                   </div>
 
-                  <div className="mt-2 space-y-1.5 text-xs font-semibold">
+                  <div className="mt-2 grid grid-cols-2 gap-1.5 text-xs font-semibold">
                     <div className="flex items-center justify-between gap-2 rounded-md bg-white/70 px-2 py-1.5">
                       <span className="text-amber-700">구매자 지갑 전송</span>
                       <span className="text-base font-extrabold text-amber-900 tabular-nums">

@@ -440,6 +440,7 @@ export default function BuyOrderManagementPage() {
   const [summary, setSummary] = useState({
     totalKrwAmount: 0,
     totalUsdtAmount: 0,
+    totalFeeAmount: 0,
   });
   const [draftFilters, setDraftFilters] = useState<SearchFilters>(() => createDefaultFilters());
   const [appliedFilters, setAppliedFilters] = useState<SearchFilters>(() => createDefaultFilters());
@@ -600,6 +601,7 @@ export default function BuyOrderManagementPage() {
       setSummary({
         totalKrwAmount: Number(payload?.result?.totalKrwAmount || 0) || 0,
         totalUsdtAmount: Number(payload?.result?.totalUsdtAmount || 0) || 0,
+        totalFeeAmount: Number(payload?.result?.totalPlatformFeeAmount || 0) || 0,
       });
       setError(null);
       setLastUpdatedAt(new Date().toISOString());
@@ -663,10 +665,11 @@ export default function BuyOrderManagementPage() {
       totalCount,
       totalKrwAmount: summary.totalKrwAmount,
       totalUsdtAmount: summary.totalUsdtAmount,
+      totalFeeAmount: summary.totalFeeAmount,
       activeCount,
       statusItems,
     };
-  }, [orders, summary.totalKrwAmount, summary.totalUsdtAmount, totalCount]);
+  }, [orders, summary.totalFeeAmount, summary.totalKrwAmount, summary.totalUsdtAmount, totalCount]);
 
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -969,7 +972,7 @@ export default function BuyOrderManagementPage() {
           </form>
         </section>
 
-        <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_38px_-32px_rgba(15,23,42,0.55)]">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">최신 주문 수</p>
             <p className="mt-2 text-3xl font-bold text-slate-900">{dashboardStats.totalCount.toLocaleString()}</p>
@@ -989,6 +992,11 @@ export default function BuyOrderManagementPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">총 주문 수량</p>
             <p className="mt-2 text-3xl font-bold text-slate-900">{formatUsdt(dashboardStats.totalUsdtAmount)}</p>
             <p className="mt-1 text-xs text-slate-500">USDT</p>
+          </div>
+          <div className="rounded-2xl border border-indigo-200 bg-indigo-50/55 p-4 shadow-[0_18px_38px_-32px_rgba(79,70,229,0.35)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700">총 수수료량</p>
+            <p className="mt-2 text-3xl font-bold text-indigo-900">{formatUsdt(dashboardStats.totalFeeAmount)}</p>
+            <p className="mt-1 text-xs text-indigo-700/80">USDT</p>
           </div>
         </section>
 
