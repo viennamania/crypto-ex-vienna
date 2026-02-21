@@ -238,12 +238,14 @@ export async function getAllPaymentsByStorecode(
 export async function getAllWalletUsdtPaymentsByAgentcode(
 {
     agentcode,
+    storecode = '',
     limit = 20,
     page = 1,
     searchTerm = '',
     status = 'confirmed',
 }: {
     agentcode: string;
+    storecode?: string;
     limit?: number;
     page?: number;
     searchTerm?: string;
@@ -269,6 +271,7 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
   const skip = (normalizedPage - 1) * normalizedLimit;
 
   const normalizedStatus = String(status || 'confirmed').trim().toLowerCase();
+  const normalizedStorecode = String(storecode || '').trim();
   const normalizedSearchTerm = String(searchTerm || '').trim();
   const searchRegex = normalizedSearchTerm
     ? { $regex: escapeRegex(normalizedSearchTerm), $options: 'i' }
@@ -283,6 +286,13 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
       $options: 'i',
     },
   };
+
+  if (normalizedStorecode) {
+    matchQuery.storecode = {
+      $regex: `^${escapeRegex(normalizedStorecode)}$`,
+      $options: 'i',
+    };
+  }
 
   if (normalizedStatus === 'prepared' || normalizedStatus === 'confirmed') {
     matchQuery.status = normalizedStatus;

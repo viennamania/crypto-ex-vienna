@@ -453,11 +453,13 @@ export async function fetchPaymentsByAgent(
 export async function fetchWalletUsdtPaymentsByAgent(
   agentcode: string,
   {
+    storecode = '',
     limit = 20,
     page = 1,
     searchTerm = '',
     status = 'confirmed',
   }: {
+    storecode?: string;
     limit?: number;
     page?: number;
     searchTerm?: string;
@@ -466,6 +468,7 @@ export async function fetchWalletUsdtPaymentsByAgent(
 ): Promise<AgentPaymentsResult> {
   const payload = await postJson('/api/payment/getAllWalletUsdtPaymentsByAgentcode', {
     agentcode,
+    storecode,
     limit,
     page,
     searchTerm,

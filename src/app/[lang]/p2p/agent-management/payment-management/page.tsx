@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import AgentInfoCard from '../_components/AgentInfoCard';
 import {
   fetchAgentSummary,
+  fetchStoresByAgent,
   fetchWalletUsdtPaymentsByAgent,
   formatKrw,
   formatUsdt,
@@ -13,6 +14,7 @@ import {
   toDateTime,
   updateWalletUsdtPaymentOrderProcessing,
   type AgentBuyOrderItem,
+  type AgentStoreItem,
   type AgentSummary,
 } from '../_shared';
 
@@ -33,6 +35,8 @@ export default function P2PAgentPaymentManagementPage() {
   const [error, setError] = useState<string | null>(null);
   const [keyword, setKeyword] = useState('');
   const [agent, setAgent] = useState<AgentSummary | null>(null);
+  const [stores, setStores] = useState<AgentStoreItem[]>([]);
+  const [selectedStorecode, setSelectedStorecode] = useState('');
   const [payments, setPayments] = useState<AgentBuyOrderItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [totalKrwAmount, setTotalKrwAmount] = useState(0);
@@ -47,6 +51,8 @@ export default function P2PAgentPaymentManagementPage() {
 
     if (!agentcode) {
       setAgent(null);
+      setStores([]);
+      setSelectedStorecode('');
       setPayments([]);
       setTotalCount(0);
       setTotalKrwAmount(0);
@@ -61,9 +67,27 @@ export default function P2PAgentPaymentManagementPage() {
       setError(null);
     }
     try {
-      const [agentData, paymentsResult] = await Promise.all([
+      if (silent) {
+        const paymentsResult = await fetchWalletUsdtPaymentsByAgent(agentcode, {
+          storecode: selectedStorecode,
+          limit: PAGE_SIZE,
+          page: currentPage,
+          searchTerm: keyword.trim(),
+          status: 'confirmed',
+        });
+
+        setPayments(paymentsResult.orders);
+        setTotalCount(paymentsResult.totalCount);
+        setTotalKrwAmount(paymentsResult.totalKrwAmount);
+        setTotalUsdtAmount(paymentsResult.totalUsdtAmount);
+        return;
+      }
+
+      const [agentData, storesResult, paymentsResult] = await Promise.all([
         fetchAgentSummary(agentcode),
+        fetchStoresByAgent(agentcode, 1000, 1),
         fetchWalletUsdtPaymentsByAgent(agentcode, {
+          storecode: selectedStorecode,
           limit: PAGE_SIZE,
           page: currentPage,
           searchTerm: keyword.trim(),
@@ -72,10 +96,19 @@ export default function P2PAgentPaymentManagementPage() {
       ]);
 
       setAgent(agentData);
+      setStores(storesResult.stores);
       setPayments(paymentsResult.orders);
       setTotalCount(paymentsResult.totalCount);
       setTotalKrwAmount(paymentsResult.totalKrwAmount);
       setTotalUsdtAmount(paymentsResult.totalUsdtAmount);
+
+      if (
+        selectedStorecode
+        && !storesResult.stores.some((store) => store.storecode === selectedStorecode)
+      ) {
+        setSelectedStorecode('');
+        setCurrentPage(1);
+      }
     } catch (loadError) {
       if (silent) {
         console.warn('payment list polling failed', loadError);
@@ -83,6 +116,7 @@ export default function P2PAgentPaymentManagementPage() {
       }
 
       setAgent(null);
+      setStores([]);
       setPayments([]);
       setTotalCount(0);
       setTotalKrwAmount(0);
@@ -93,7 +127,7 @@ export default function P2PAgentPaymentManagementPage() {
         setLoading(false);
       }
     }
-  }, [PAGE_SIZE, agentcode, currentPage, keyword]);
+  }, [PAGE_SIZE, agentcode, currentPage, keyword, selectedStorecode]);
 
   useEffect(() => {
     loadData();
@@ -244,9 +278,79 @@ export default function P2PAgentPaymentManagementPage() {
                   setKeyword(event.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder="결제번호/트랜잭션/가맹점/회원/지갑 검색"
+                placeholder="결제번호(PID)/트랜잭션/가맹점/회원/지갑 검색"
                 className="h-9 w-full max-w-xs rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
               />
+            </div>
+
+            <div className="mt-3 border-t border-slate-100 pt-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">가맹점 선택</p>
+              <div className="mt-2 max-h-[280px] overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedStorecode('');
+                      setCurrentPage(1);
+                    }}
+                    className={`flex min-h-[66px] items-center gap-3 rounded-xl border px-3 py-2 text-left transition ${
+                      selectedStorecode
+                        ? 'border-slate-200 bg-white hover:border-slate-300'
+                        : 'border-cyan-300 bg-cyan-50 shadow-[0_14px_30px_-22px_rgba(6,182,212,0.9)]'
+                    }`}
+                  >
+                    <span
+                      className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
+                        selectedStorecode ? 'bg-slate-100 text-slate-600' : 'bg-cyan-100 text-cyan-700'
+                      }`}
+                    >
+                      ALL
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold text-slate-900">전체 가맹점</span>
+                      <span className="block truncate text-xs text-slate-500">agentcode 소속 전체 결제 조회</span>
+                    </span>
+                  </button>
+
+                  {stores.map((store) => {
+                    const isActive = selectedStorecode === store.storecode;
+                    const storeTitle = store.storeName || store.storecode || '-';
+                    const storeCode = store.storecode || '-';
+
+                    return (
+                      <button
+                        key={store.id || store.storecode}
+                        type="button"
+                        onClick={() => {
+                          setSelectedStorecode(store.storecode || '');
+                          setCurrentPage(1);
+                        }}
+                        className={`flex min-h-[66px] items-center gap-3 rounded-xl border px-3 py-2 text-left transition ${
+                          isActive
+                            ? 'border-cyan-300 bg-cyan-50 shadow-[0_14px_30px_-22px_rgba(6,182,212,0.9)]'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white text-[11px] font-semibold text-slate-600">
+                          {store.storeLogo ? (
+                            <div
+                              className="h-full w-full bg-cover bg-center"
+                              style={{ backgroundImage: `url(${encodeURI(store.storeLogo)})` }}
+                              aria-label={storeTitle}
+                            />
+                          ) : (
+                            storeTitle.slice(0, 1)
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-slate-900">{storeTitle}</span>
+                          <span className="block truncate text-xs text-slate-500">코드 {storeCode}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </section>
 
@@ -265,7 +369,7 @@ export default function P2PAgentPaymentManagementPage() {
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                   <tr>
-                    <th className="px-4 py-3">결제번호</th>
+                    <th className="px-4 py-3">결제번호(PID)</th>
                     <th className="px-4 py-3">트랜잭션</th>
                     <th className="px-4 py-3">가맹점</th>
                     <th className="px-4 py-3">회원/결제지갑</th>
@@ -423,7 +527,7 @@ export default function P2PAgentPaymentManagementPage() {
 
                 <div className="space-y-3 px-4 py-4">
                   <div className="grid grid-cols-[108px_1fr] gap-x-3 gap-y-2 text-sm">
-                    <p className="text-xs font-semibold text-slate-500">결제번호</p>
+                    <p className="text-xs font-semibold text-slate-500">결제번호(PID)</p>
                     <p className="break-all font-semibold text-slate-900">{selectedPayment.paymentId || '-'}</p>
                     <p className="text-xs font-semibold text-slate-500">트랜잭션</p>
                     <p className="break-all font-semibold text-slate-900">{selectedPayment.tradeId || '-'}</p>

@@ -9,6 +9,7 @@ export async function POST(request: NextRequest) {
 
   const {
     agentcode,
+    storecode,
     limit,
     page,
     searchTerm,
@@ -17,6 +18,7 @@ export async function POST(request: NextRequest) {
 
   const result = await getAllWalletUsdtPaymentsByAgentcode({
     agentcode,
+    storecode,
     limit,
     page,
     searchTerm,
