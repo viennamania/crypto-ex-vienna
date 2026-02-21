@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useActiveAccount } from 'thirdweb/react';
 
 type WalletPaymentItem = {
   id: string;
@@ -9,6 +10,12 @@ type WalletPaymentItem = {
   status: string;
   orderProcessing: string;
   orderProcessingUpdatedAt: string;
+  orderProcessingUpdatedBy: {
+    walletAddress: string;
+    nickname: string;
+    role: string;
+  } | null;
+  orderProcessingUpdatedByIp: string;
   agentcode: string;
   storecode: string;
   storeName: string;
@@ -19,9 +26,6 @@ type WalletPaymentItem = {
   usdtAmount: number;
   krwAmount: number;
   rate: number;
-  platformFeeRate: number;
-  platformFeeAmount: number;
-  platformFeeWalletAddress: string;
   createdAt: string;
   paymentConfirmedAt: string;
 };
@@ -58,12 +62,6 @@ const formatKrw = (value: number) =>
 const formatUsdt = (value: number) =>
   `${new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 6 }).format(toNumber(value))} USDT`;
 
-const formatPercent = (value: number) => {
-  const numeric = toNumber(value);
-  if (numeric <= 0) return '0';
-  return (Math.round(numeric * 100) / 100).toFixed(2).replace(/\.?0+$/, '');
-};
-
 const isOrderProcessingCompleted = (value: string | undefined) =>
   String(value || '').trim().toUpperCase() === 'COMPLETED';
 
@@ -76,6 +74,9 @@ const normalizeWalletPayment = (value: unknown): WalletPaymentItem => {
   const member = isRecord(source.member) ? source.member : {};
   const buyer = isRecord(member.buyer) ? member.buyer : {};
   const bankInfo = isRecord(buyer.bankInfo) ? buyer.bankInfo : {};
+  const rawUpdatedBy = isRecord(source.orderProcessingUpdatedBy)
+    ? source.orderProcessingUpdatedBy
+    : (isRecord(source.order_processing_updated_by) ? source.order_processing_updated_by : null);
 
   return {
     id: toText(source.id) || toText(source._id),
@@ -84,6 +85,14 @@ const normalizeWalletPayment = (value: unknown): WalletPaymentItem => {
     status: toText(source.status),
     orderProcessing: toText(source.orderProcessing) || toText(source.order_processing) || 'PROCESSING',
     orderProcessingUpdatedAt: toText(source.orderProcessingUpdatedAt) || toText(source.order_processing_updated_at),
+    orderProcessingUpdatedBy: rawUpdatedBy
+      ? {
+          walletAddress: toText(rawUpdatedBy.walletAddress),
+          nickname: toText(rawUpdatedBy.nickname),
+          role: toText(rawUpdatedBy.role),
+        }
+      : null,
+    orderProcessingUpdatedByIp: toText(source.orderProcessingUpdatedByIp || source.order_processing_updated_by_ip),
     agentcode: toText(source.agentcode),
     storecode: toText(source.storecode),
     storeName: toText(store.storeName) || toText(source.storeName) || toText(source.storecode),
@@ -98,15 +107,14 @@ const normalizeWalletPayment = (value: unknown): WalletPaymentItem => {
     usdtAmount: toNumber(source.usdtAmount),
     krwAmount: toNumber(source.krwAmount),
     rate: toNumber(source.exchangeRate),
-    platformFeeRate: toNumber(source.platformFeeRate || source.platform_fee_rate),
-    platformFeeAmount: toNumber(source.platformFeeAmount || source.platform_fee_amount),
-    platformFeeWalletAddress: toText(source.platformFeeWalletAddress || source.platform_fee_wallet_address),
     createdAt: toText(source.createdAt),
     paymentConfirmedAt: toText(source.confirmedAt),
   };
 };
 
 export default function AdministrationPaymentManagementPage() {
+  const activeAccount = useActiveAccount();
+  const processingWalletAddress = toText(activeAccount?.address);
   const [loading, setLoading] = useState(false);
   const [polling, setPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +128,7 @@ export default function AdministrationPaymentManagementPage() {
   const [selectedPayment, setSelectedPayment] = useState<WalletPaymentItem | null>(null);
   const [updatingOrderProcessing, setUpdatingOrderProcessing] = useState(false);
   const [orderProcessingError, setOrderProcessingError] = useState<string | null>(null);
+  const [orderProcessingActorNickname, setOrderProcessingActorNickname] = useState('');
 
   const loadData = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent === true;
@@ -200,6 +209,51 @@ export default function AdministrationPaymentManagementPage() {
     };
   }, [loadData]);
 
+  useEffect(() => {
+    if (!processingWalletAddress) {
+      setOrderProcessingActorNickname('');
+      return;
+    }
+
+    let mounted = true;
+
+    const loadActorNickname = async () => {
+      try {
+        const response = await fetch('/api/user/getUserByWalletAddress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storecode: 'admin',
+            walletAddress: processingWalletAddress,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        const source = isRecord(payload) ? payload : {};
+        const result = isRecord(source.result) ? source.result : {};
+        const admin = isRecord(result.admin) ? result.admin : {};
+        const seller = isRecord(result.seller) ? result.seller : {};
+        const buyer = isRecord(result.buyer) ? result.buyer : {};
+        const nickname =
+          toText(result.nickname)
+          || toText(admin.nickname)
+          || toText(seller.nickname)
+          || toText(buyer.nickname);
+
+        if (!mounted) return;
+        setOrderProcessingActorNickname(nickname);
+      } catch (error) {
+        if (!mounted) return;
+        setOrderProcessingActorNickname('');
+      }
+    };
+
+    void loadActorNickname();
+
+    return () => {
+      mounted = false;
+    };
+  }, [processingWalletAddress]);
+
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalCount / PAGE_SIZE)),
     [totalCount],
@@ -247,12 +301,19 @@ export default function AdministrationPaymentManagementPage() {
     setUpdatingOrderProcessing(true);
     setOrderProcessingError(null);
     try {
+      const actorNickname = orderProcessingActorNickname || '관리자';
       const response = await fetch('/api/payment/setWalletUsdtPaymentOrderProcessing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           paymentId: selectedPayment.id,
           orderProcessing: 'COMPLETED',
+          orderProcessingUpdatedBy: {
+            walletAddress: processingWalletAddress,
+            nickname: actorNickname,
+            role: 'admin',
+          },
+          orderProcessingUpdatedByUserAgent: typeof window !== 'undefined' ? window.navigator.userAgent : '',
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -265,6 +326,21 @@ export default function AdministrationPaymentManagementPage() {
       const result = isRecord(source.result) ? source.result : {};
       const nextStatus = toText(result.orderProcessing || 'COMPLETED').toUpperCase();
       const nextUpdatedAt = toText(result.orderProcessingUpdatedAt || new Date().toISOString());
+      const nextUpdatedBySource = isRecord(result.orderProcessingUpdatedBy)
+        ? result.orderProcessingUpdatedBy
+        : (isRecord(result.order_processing_updated_by) ? result.order_processing_updated_by : null);
+      const nextUpdatedBy = nextUpdatedBySource
+        ? {
+            walletAddress: toText(nextUpdatedBySource.walletAddress),
+            nickname: toText(nextUpdatedBySource.nickname),
+            role: toText(nextUpdatedBySource.role),
+          }
+        : {
+            walletAddress: processingWalletAddress,
+            nickname: actorNickname,
+            role: 'admin',
+          };
+      const nextUpdatedByIp = toText(result.orderProcessingUpdatedByIp || result.order_processing_updated_by_ip);
 
       setPayments((prev) =>
         prev.map((payment) =>
@@ -273,6 +349,8 @@ export default function AdministrationPaymentManagementPage() {
                 ...payment,
                 orderProcessing: nextStatus,
                 orderProcessingUpdatedAt: nextUpdatedAt,
+                orderProcessingUpdatedBy: nextUpdatedBy,
+                orderProcessingUpdatedByIp: nextUpdatedByIp || payment.orderProcessingUpdatedByIp,
               }
             : payment,
         ),
@@ -284,7 +362,7 @@ export default function AdministrationPaymentManagementPage() {
     } finally {
       setUpdatingOrderProcessing(false);
     }
-  }, [selectedPayment]);
+  }, [orderProcessingActorNickname, processingWalletAddress, selectedPayment]);
 
   return (
     <main className="min-h-screen bg-transparent">
@@ -371,7 +449,6 @@ export default function AdministrationPaymentManagementPage() {
                   <th className="px-4 py-3">회원/결제지갑/이름</th>
                   <th className="px-4 py-3 text-right">수량</th>
                   <th className="px-4 py-3 text-right">금액</th>
-                  <th className="px-4 py-3">플랫폼 수수료</th>
                   <th className="px-4 py-3">결제시각</th>
                   <th className="px-4 py-3 text-center">결제처리</th>
                 </tr>
@@ -379,7 +456,7 @@ export default function AdministrationPaymentManagementPage() {
               <tbody className="divide-y divide-slate-100">
                 {payments.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-500">
                       표시할 결제가 없습니다.
                     </td>
                   </tr>
@@ -433,19 +510,6 @@ export default function AdministrationPaymentManagementPage() {
                           {formatKrw(payment.krwAmount)}
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600">
-                          {payment.platformFeeRate > 0 || payment.platformFeeAmount > 0 || payment.platformFeeWalletAddress ? (
-                            <div className="space-y-0.5">
-                              <p className="font-semibold text-indigo-700">{formatPercent(payment.platformFeeRate)}%</p>
-                              <p className="font-semibold text-indigo-800">{formatUsdt(payment.platformFeeAmount)}</p>
-                              <p className="truncate text-slate-500">
-                                {payment.platformFeeWalletAddress || '-'}
-                              </p>
-                            </div>
-                          ) : (
-                            <p>-</p>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-slate-600">
                           {toDateTime(payment.paymentConfirmedAt || payment.createdAt)}
                         </td>
                         <td className="px-4 py-3 text-center">
@@ -459,9 +523,20 @@ export default function AdministrationPaymentManagementPage() {
                             {resolveOrderProcessingLabel(payment.orderProcessing)}
                           </p>
                           {completed && (
-                            <p className="mt-1 text-[11px] text-slate-500">
-                              완료시각 {toDateTime(payment.orderProcessingUpdatedAt || '')}
-                            </p>
+                            <>
+                              <p className="mt-1 text-[11px] text-slate-500">
+                                완료시각 {toDateTime(payment.orderProcessingUpdatedAt || '')}
+                              </p>
+                              <p className="mt-0.5 text-[11px] text-slate-500">
+                                처리자 {toText(payment.orderProcessingUpdatedBy?.nickname) || '-'}
+                                {toText(payment.orderProcessingUpdatedBy?.walletAddress)
+                                  ? ` (${shortAddress(toText(payment.orderProcessingUpdatedBy?.walletAddress))})`
+                                  : ''}
+                              </p>
+                              <p className="mt-0.5 text-[11px] text-slate-500">
+                                퍼블릭IP {toText(payment.orderProcessingUpdatedByIp) || '-'}
+                              </p>
+                            </>
                           )}
                           {!completed && (
                             <button

@@ -32,6 +32,8 @@ type AgentSalesOrderItem = {
   sellerWalletAddress: string;
   usdtAmount: number;
   krwAmount: number;
+  platformFeeRate: number;
+  platformFeeAmount: number;
   createdAt: string;
   paymentConfirmedAt: string;
 };
@@ -49,12 +51,53 @@ const toNumber = (value: unknown) => {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : 0;
 };
+const toNonNegativeNumber = (value: unknown): number | null => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return null;
+  return numeric;
+};
 
 const normalizeSalesOrder = (value: unknown): AgentSalesOrderItem => {
   const source = isRecord(value) ? value : {};
   const store = isRecord(source.store) ? source.store : {};
   const buyer = isRecord(source.buyer) ? source.buyer : {};
   const seller = isRecord(source.seller) ? source.seller : {};
+  const platformFee = isRecord(source.platformFee) ? source.platformFee : {};
+  const settlement = isRecord(source.settlement) ? source.settlement : {};
+  const usdtAmount = toNumber(source.usdtAmount);
+
+  const resolvedPlatformFeeRate =
+    [
+      source.platformFeeRate,
+      source.platform_fee_rate,
+      platformFee.rate,
+      platformFee.percentage,
+      settlement.platformFeePercent,
+      source.tradeFeeRate,
+      source.centerFeeRate,
+    ]
+      .map((candidate) => toNonNegativeNumber(candidate))
+      .find((candidate) => candidate !== null)
+    || 0;
+
+  const storedPlatformFeeAmount =
+    [
+      source.platformFeeAmount,
+      source.platform_fee_amount,
+      platformFee.amountUsdt,
+      platformFee.amount,
+      settlement.platformFeeAmount,
+    ]
+      .map((candidate) => toNonNegativeNumber(candidate))
+      .find((candidate) => candidate !== null)
+    || 0;
+
+  const resolvedPlatformFeeAmount =
+    storedPlatformFeeAmount > 0
+      ? storedPlatformFeeAmount
+      : resolvedPlatformFeeRate > 0 && usdtAmount > 0
+        ? Number(((usdtAmount * resolvedPlatformFeeRate) / 100).toFixed(6))
+        : 0;
 
   return {
     id: toText(source._id) || toText(source.id),
@@ -72,8 +115,10 @@ const normalizeSalesOrder = (value: unknown): AgentSalesOrderItem => {
     buyerWalletAddress: toText(buyer.walletAddress) || toText(source.walletAddress),
     sellerNickname: toText(seller.nickname),
     sellerWalletAddress: toText(seller.walletAddress),
-    usdtAmount: toNumber(source.usdtAmount),
+    usdtAmount,
     krwAmount: toNumber(source.krwAmount),
+    platformFeeRate: resolvedPlatformFeeRate,
+    platformFeeAmount: resolvedPlatformFeeAmount,
     createdAt: toText(source.createdAt),
     paymentConfirmedAt: toText(source.paymentConfirmedAt),
   };
@@ -92,6 +137,11 @@ const shortWallet = (value: string) => {
   if (!source) return '-';
   if (source.length <= 12) return source;
   return `${source.slice(0, 6)}...${source.slice(-4)}`;
+};
+const formatPercent = (value: number) => {
+  const numeric = Number(value || 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) return '0';
+  return (Math.round(numeric * 100) / 100).toFixed(2).replace(/\.?0+$/, '');
 };
 
 const resolveCancellerRole = (order: AgentSalesOrderItem): 'buyer' | 'seller' | 'admin' | 'agent' | 'unknown' => {
@@ -353,13 +403,14 @@ export default function P2PAgentSalesManagementPage() {
 
           {!loading && !error && (
             <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-              <table className="min-w-[1080px] w-full text-sm">
+              <table className="min-w-[1190px] w-full text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                   <tr>
                     <th className="px-4 py-3">거래</th>
                     <th className="px-4 py-3">가맹점</th>
                     <th className="px-4 py-3">구매자/판매자</th>
                     <th className="px-4 py-3 text-right">수량</th>
+                    <th className="px-4 py-3 text-right">플랫폼 수수료</th>
                     <th className="px-4 py-3 text-right">금액</th>
                     <th className="px-4 py-3">생성/확정</th>
                     <th className="px-4 py-3 text-center">액션</th>
@@ -368,7 +419,7 @@ export default function P2PAgentSalesManagementPage() {
                 <tbody className="divide-y divide-slate-100">
                   {filteredOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
+                      <td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-500">
                         표시할 거래가 없습니다.
                       </td>
                     </tr>
@@ -401,6 +452,16 @@ export default function P2PAgentSalesManagementPage() {
                           <p>판매자 {order.sellerNickname || '-'}</p>
                         </td>
                         <td className="px-4 py-3 text-right text-xs font-semibold text-slate-700">{formatUsdt(order.usdtAmount)}</td>
+                        <td className="px-4 py-3 text-right text-xs text-slate-600">
+                          {order.platformFeeRate > 0 || order.platformFeeAmount > 0 ? (
+                            <div className="space-y-0.5">
+                              <p className="font-semibold text-indigo-700">{formatPercent(order.platformFeeRate)}%</p>
+                              <p className="font-semibold text-indigo-800">{formatUsdt(order.platformFeeAmount)}</p>
+                            </div>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-right text-xs font-semibold text-slate-700">{formatKrw(order.krwAmount)}</td>
                         <td className="px-4 py-3 text-xs text-slate-600">
                           <p>생성 {toDateTime(order.createdAt)}</p>

@@ -342,6 +342,8 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
             status: 1,
             orderProcessing: { $ifNull: ['$order_processing', 'PROCESSING'] },
             orderProcessingUpdatedAt: { $ifNull: ['$order_processing_updated_at', ''] },
+            orderProcessingUpdatedBy: { $ifNull: ['$order_processing_updated_by', null] },
+            orderProcessingUpdatedByIp: { $ifNull: ['$order_processing_updated_by_ip', ''] },
             fromWalletAddress: 1,
             toWalletAddress: 1,
             transactionHash: 1,
@@ -528,6 +530,8 @@ export async function getAllWalletUsdtPayments(
             status: 1,
             orderProcessing: { $ifNull: ['$order_processing', 'PROCESSING'] },
             orderProcessingUpdatedAt: { $ifNull: ['$order_processing_updated_at', ''] },
+            orderProcessingUpdatedBy: { $ifNull: ['$order_processing_updated_by', null] },
+            orderProcessingUpdatedByIp: { $ifNull: ['$order_processing_updated_by_ip', ''] },
             fromWalletAddress: 1,
             toWalletAddress: 1,
             transactionHash: 1,
@@ -590,33 +594,48 @@ export async function getAllWalletUsdtPayments(
     totalCount: Number(countRows?.[0]?.totalCount || 0),
     totalKrwAmount: Number(totalRows?.[0]?.totalKrwAmount || 0),
     totalUsdtAmount: Number(totalRows?.[0]?.totalUsdtAmount || 0),
-    payments: payments.map((payment: any) => ({
-      id: String(payment?._id || ''),
-      paymentId: String(payment?.paymentId || ''),
-      agentcode: String(payment?.agentcode || ''),
-      storecode: String(payment?.storecode || ''),
-      status: String(payment?.status || ''),
-      orderProcessing: String(payment?.orderProcessing || 'PROCESSING'),
-      orderProcessingUpdatedAt: String(payment?.orderProcessingUpdatedAt || ''),
-      fromWalletAddress: String(payment?.fromWalletAddress || ''),
-      toWalletAddress: String(payment?.toWalletAddress || ''),
-      transactionHash: String(payment?.transactionHash || ''),
-      usdtAmount: Number(payment?.usdtAmount || 0),
-      krwAmount: Number(payment?.krwAmount || 0),
-      exchangeRate: Number(payment?.exchangeRate || 0),
-      platformFeeRate: Number(payment?.platformFeeRate || 0),
-      platformFeeAmount: Number(payment?.platformFeeAmount || 0),
-      platformFeeWalletAddress: String(payment?.platformFeeWalletAddress || ''),
-      createdAt: String(payment?.createdAt || ''),
-      confirmedAt: String(payment?.confirmedAt || ''),
-      memberNickname: String(payment?.memberNickname || ''),
-      memberAccountHolder: String(payment?.memberAccountHolder || ''),
-      store: {
-        storecode: String(payment?.store?.storecode || payment?.storecode || ''),
-        storeName: String(payment?.store?.storeName || ''),
-        storeLogo: String(payment?.store?.storeLogo || ''),
-      },
-    })),
+    payments: payments.map((payment: any) => {
+      const orderProcessingUpdatedBySource =
+        payment?.orderProcessingUpdatedBy && typeof payment.orderProcessingUpdatedBy === 'object'
+          ? payment.orderProcessingUpdatedBy
+          : null;
+
+      return {
+        id: String(payment?._id || ''),
+        paymentId: String(payment?.paymentId || ''),
+        agentcode: String(payment?.agentcode || ''),
+        storecode: String(payment?.storecode || ''),
+        status: String(payment?.status || ''),
+        orderProcessing: String(payment?.orderProcessing || 'PROCESSING'),
+        orderProcessingUpdatedAt: String(payment?.orderProcessingUpdatedAt || ''),
+        orderProcessingUpdatedBy: orderProcessingUpdatedBySource
+          ? {
+              walletAddress: String(orderProcessingUpdatedBySource.walletAddress || ''),
+              nickname: String(orderProcessingUpdatedBySource.nickname || ''),
+              role: String(orderProcessingUpdatedBySource.role || ''),
+            }
+          : null,
+        orderProcessingUpdatedByIp: String(payment?.orderProcessingUpdatedByIp || ''),
+        fromWalletAddress: String(payment?.fromWalletAddress || ''),
+        toWalletAddress: String(payment?.toWalletAddress || ''),
+        transactionHash: String(payment?.transactionHash || ''),
+        usdtAmount: Number(payment?.usdtAmount || 0),
+        krwAmount: Number(payment?.krwAmount || 0),
+        exchangeRate: Number(payment?.exchangeRate || 0),
+        platformFeeRate: Number(payment?.platformFeeRate || 0),
+        platformFeeAmount: Number(payment?.platformFeeAmount || 0),
+        platformFeeWalletAddress: String(payment?.platformFeeWalletAddress || ''),
+        createdAt: String(payment?.createdAt || ''),
+        confirmedAt: String(payment?.confirmedAt || ''),
+        memberNickname: String(payment?.memberNickname || ''),
+        memberAccountHolder: String(payment?.memberAccountHolder || ''),
+        store: {
+          storecode: String(payment?.store?.storecode || payment?.storecode || ''),
+          storeName: String(payment?.store?.storeName || ''),
+          storeLogo: String(payment?.store?.storeLogo || ''),
+        },
+      };
+    }),
   };
 }
 
