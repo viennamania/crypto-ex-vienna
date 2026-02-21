@@ -3668,9 +3668,15 @@ export async function cancelPrivateBuyOrderByBuyer(
 export async function cancelPrivateBuyOrderByAdminToBuyer({
   orderId,
   adminWalletAddress = '',
+  cancelledByRole = 'admin',
+  cancelledByNickname = '',
+  cancelledByIpAddress = '',
 }: {
   orderId: string;
   adminWalletAddress?: string;
+  cancelledByRole?: string;
+  cancelledByNickname?: string;
+  cancelledByIpAddress?: string;
 }): Promise<{
   success: boolean;
   transactionHash?: string;
@@ -3812,9 +3818,15 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   }
 
   const now = new Date().toISOString();
-  const cancelledByRole = 'admin';
+  const normalizedCancelledByRole = String(cancelledByRole || 'admin').trim().toLowerCase() || 'admin';
   const cancelledByWalletAddress = String(adminWalletAddress || 'admin').trim();
-  const cancelledByNickname = '관리자';
+  const normalizedCancelledByNickname = String(cancelledByNickname || '').trim()
+    || (normalizedCancelledByRole === 'agent' ? '에이전트' : '관리자');
+  const normalizedCancelledByIpAddress = String(cancelledByIpAddress || '').trim();
+  const cancelTradeReason =
+    normalizedCancelledByRole === 'agent'
+      ? '에이전트 취소(판매자 지갑 반환)'
+      : '관리자 취소(판매자 지갑 반환)';
   const sellerWalletCandidates = toWalletCandidates(
     typeof order?.seller?.walletAddress === 'string' ? order.seller.walletAddress : '',
   );
@@ -3829,11 +3841,12 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
       $set: {
         status: 'cancelled',
         cancelledAt: now,
-        cancelTradeReason: '관리자 취소(판매자 지갑 반환)',
-        canceller: cancelledByRole,
-        cancelledByRole,
+        cancelTradeReason,
+        canceller: normalizedCancelledByRole,
+        cancelledByRole: normalizedCancelledByRole,
         cancelledByWalletAddress,
-        cancelledByNickname,
+        cancelledByNickname: normalizedCancelledByNickname,
+        cancelledByIpAddress: normalizedCancelledByIpAddress,
         cancelReleaseTransactionHash: releaseTransactionHash,
         'buyer.releaseTransactionHash': releaseTransactionHash,
         'seller.releaseTransactionHash': releaseTransactionHash,
@@ -3856,11 +3869,12 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
         $set: {
           'seller.buyOrder.status': 'cancelled',
           'seller.buyOrder.cancelledAt': now,
-          'seller.buyOrder.cancelTradeReason': '관리자 취소(판매자 지갑 반환)',
-          'seller.buyOrder.canceller': cancelledByRole,
-          'seller.buyOrder.cancelledByRole': cancelledByRole,
+          'seller.buyOrder.cancelTradeReason': cancelTradeReason,
+          'seller.buyOrder.canceller': normalizedCancelledByRole,
+          'seller.buyOrder.cancelledByRole': normalizedCancelledByRole,
           'seller.buyOrder.cancelledByWalletAddress': cancelledByWalletAddress,
-          'seller.buyOrder.cancelledByNickname': cancelledByNickname,
+          'seller.buyOrder.cancelledByNickname': normalizedCancelledByNickname,
+          'seller.buyOrder.cancelledByIpAddress': normalizedCancelledByIpAddress,
           'seller.buyOrder.cancelReleaseTransactionHash': releaseTransactionHash,
           'seller.buyOrder.buyer.releaseTransactionHash': releaseTransactionHash,
           'seller.buyOrder.seller.releaseTransactionHash': releaseTransactionHash,
@@ -3896,9 +3910,13 @@ export async function completePrivateBuyOrderBySeller(
   {
     orderId,
     sellerWalletAddress,
+    requesterIpAddress = '',
+    requesterUserAgent = '',
   }: {
     orderId: string;
     sellerWalletAddress: string;
+    requesterIpAddress?: string;
+    requesterUserAgent?: string;
   },
 ): Promise<{
   success: boolean;
@@ -3958,6 +3976,35 @@ export async function completePrivateBuyOrderBySeller(
   if (!sellerMatched) {
     return { success: false, error: 'SELLER_MISMATCH' };
   }
+
+  const sellerUser = await usersCollection.findOne<any>(
+    {
+      walletAddress: { $in: sellerWalletCandidates },
+      storecode: 'admin',
+      seller: { $exists: true },
+    },
+    {
+      projection: {
+        walletAddress: 1,
+        nickname: 1,
+        seller: 1,
+      },
+    },
+  );
+
+  if (!sellerUser) {
+    return { success: false, error: 'SELLER_WALLET_NOT_ALLOWED' };
+  }
+
+  const sellerWalletForAudit =
+    (typeof sellerUser?.walletAddress === 'string' && sellerUser.walletAddress.trim())
+    || sellerWalletAddress.trim();
+  const sellerNicknameForAudit =
+    (typeof sellerUser?.seller?.nickname === 'string' && sellerUser.seller.nickname.trim())
+    || (typeof sellerUser?.nickname === 'string' && sellerUser.nickname.trim())
+    || '판매자';
+  const normalizedRequesterIpAddress = String(requesterIpAddress || '').trim();
+  const normalizedRequesterUserAgent = String(requesterUserAgent || '').trim();
 
   const buyerEscrowWalletAddress = resolveBuyerEscrowWalletAddress(order);
   const orderBuyerWalletAddress =
@@ -4055,6 +4102,14 @@ export async function completePrivateBuyOrderBySeller(
   }
 
   const now = new Date().toISOString();
+  const paymentConfirmedAudit = {
+    role: 'seller',
+    walletAddress: sellerWalletForAudit,
+    nickname: sellerNicknameForAudit,
+    ipAddress: normalizedRequesterIpAddress,
+    userAgent: normalizedRequesterUserAgent,
+    confirmedAt: now,
+  };
   const completeResult = await buyordersCollection.updateOne(
     {
       _id: objectId,
@@ -4072,6 +4127,12 @@ export async function completePrivateBuyOrderBySeller(
         transactionHash: releaseTransactionHash,
         'buyer.releaseTransactionHash': releaseTransactionHash,
         'seller.releaseTransactionHash': releaseTransactionHash,
+        paymentConfirmedByRole: 'seller',
+        paymentConfirmedByWalletAddress: sellerWalletForAudit,
+        paymentConfirmedByNickname: sellerNicknameForAudit,
+        paymentConfirmedByIpAddress: normalizedRequesterIpAddress,
+        paymentConfirmedByUserAgent: normalizedRequesterUserAgent,
+        paymentConfirmedBy: paymentConfirmedAudit,
       },
     },
   );
@@ -4093,6 +4154,7 @@ export async function completePrivateBuyOrderBySeller(
         'seller.buyOrder.transactionHash': releaseTransactionHash,
         'seller.buyOrder.buyer.releaseTransactionHash': releaseTransactionHash,
         'seller.buyOrder.seller.releaseTransactionHash': releaseTransactionHash,
+        'seller.buyOrder.paymentConfirmedBy': paymentConfirmedAudit,
       },
     },
   );

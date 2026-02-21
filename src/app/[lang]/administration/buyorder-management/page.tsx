@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
+import { useActiveAccount } from 'thirdweb/react';
 
 type BuyOrderItem = {
   _id?: string;
@@ -21,6 +22,11 @@ type BuyOrderItem = {
   createdAt?: string;
   paymentRequestedAt?: string;
   paymentConfirmedAt?: string;
+  paymentConfirmedByRole?: string;
+  paymentConfirmedByWalletAddress?: string;
+  paymentConfirmedByNickname?: string;
+  paymentConfirmedByIpAddress?: string;
+  paymentConfirmedByUserAgent?: string;
   cancelledAt?: string;
   krwAmount?: number;
   usdtAmount?: number;
@@ -48,6 +54,14 @@ type BuyOrderItem = {
       accountHolder?: string;
       contactMemo?: string;
     };
+  };
+  paymentConfirmedBy?: {
+    role?: string;
+    walletAddress?: string;
+    nickname?: string;
+    ipAddress?: string;
+    userAgent?: string;
+    confirmedAt?: string;
   };
   store?: {
     storeName?: string;
@@ -234,12 +248,13 @@ const getBuyerDepositNameLabel = (order: BuyOrderItem) =>
     || '',
   ).trim() || '-';
 
-const resolveCancellerRole = (order: BuyOrderItem): 'buyer' | 'seller' | 'admin' | 'unknown' => {
+const resolveCancellerRole = (order: BuyOrderItem): 'buyer' | 'seller' | 'admin' | 'agent' | 'unknown' => {
   const role = String(order?.cancelledByRole || order?.canceller || '').trim().toLowerCase();
 
   if (role === 'buyer' || role.includes('구매')) return 'buyer';
   if (role === 'seller' || role.includes('판매')) return 'seller';
   if (role === 'admin' || role.includes('관리')) return 'admin';
+  if (role === 'agent' || role.includes('에이전트')) return 'agent';
   return 'unknown';
 };
 
@@ -248,6 +263,7 @@ const getCancellerRoleLabel = (order: BuyOrderItem) => {
   if (role === 'buyer') return '구매자';
   if (role === 'seller') return '판매자';
   if (role === 'admin') return '관리자';
+  if (role === 'agent') return '에이전트';
   return '미확인';
 };
 
@@ -262,8 +278,44 @@ const getCancellerLabel = (order: BuyOrderItem) => {
   if (role === 'buyer') return '구매자';
   if (role === 'seller') return '판매자';
   if (role === 'admin') return '관리자';
+  if (role === 'agent') return '에이전트';
   return '-';
 };
+
+const resolvePaymentConfirmerRole = (order: BuyOrderItem): 'buyer' | 'seller' | 'admin' | 'unknown' => {
+  const role = String(order?.paymentConfirmedByRole || order?.paymentConfirmedBy?.role || '').trim().toLowerCase();
+  if (role === 'buyer' || role.includes('구매')) return 'buyer';
+  if (role === 'seller' || role.includes('판매')) return 'seller';
+  if (role === 'admin' || role.includes('관리')) return 'admin';
+  return 'unknown';
+};
+
+const getPaymentConfirmerLabel = (order: BuyOrderItem) => {
+  const nickname = String(
+    order?.paymentConfirmedByNickname
+    || order?.paymentConfirmedBy?.nickname
+    || order?.seller?.nickname
+    || '',
+  ).trim();
+  const walletAddress = String(
+    order?.paymentConfirmedByWalletAddress
+    || order?.paymentConfirmedBy?.walletAddress
+    || order?.seller?.walletAddress
+    || '',
+  ).trim();
+  const role = resolvePaymentConfirmerRole(order);
+
+  if (nickname && walletAddress) return `${nickname} (${shortWallet(walletAddress)})`;
+  if (nickname) return nickname;
+  if (walletAddress) return shortWallet(walletAddress);
+  if (role === 'buyer') return '구매자';
+  if (role === 'seller') return '판매자';
+  if (role === 'admin') return '관리자';
+  return '-';
+};
+
+const getPaymentConfirmerIp = (order: BuyOrderItem) =>
+  String(order?.paymentConfirmedByIpAddress || order?.paymentConfirmedBy?.ipAddress || '').trim() || '-';
 
 const getTodayDate = () => {
   const now = new Date();
@@ -285,6 +337,9 @@ const createDefaultFilters = (): SearchFilters => {
 };
 
 export default function BuyOrderManagementPage() {
+  const activeAccount = useActiveAccount();
+  const adminWalletAddress = String(activeAccount?.address || '').trim();
+
   const [orders, setOrders] = useState<BuyOrderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
@@ -461,6 +516,9 @@ export default function BuyOrderManagementPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId: targetOrderId,
+          adminWalletAddress,
+          cancelledByRole: 'admin',
+          cancelledByNickname: '관리자',
         }),
       });
 
@@ -481,7 +539,7 @@ export default function BuyOrderManagementPage() {
     } finally {
       setCancelingOrder(false);
     }
-  }, [cancelTargetOrder?._id, cancelingOrder, fetchLatestBuyOrders]);
+  }, [adminWalletAddress, cancelTargetOrder?._id, cancelingOrder, fetchLatestBuyOrders]);
 
   const copyTradeId = useCallback(async (tradeId: string) => {
     const normalizedTradeId = String(tradeId || '').trim();
@@ -697,7 +755,7 @@ export default function BuyOrderManagementPage() {
             <div className="px-4 py-12 text-center text-sm text-slate-500">검색된 주문 데이터가 없습니다.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-[1130px] w-full table-fixed">
+              <table className="min-w-[1240px] w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
                     <th className="w-[132px] px-3 py-3">상태</th>
@@ -708,6 +766,7 @@ export default function BuyOrderManagementPage() {
                     <th className="w-[104px] px-3 py-3">결제방법</th>
                     <th className="w-[128px] px-3 py-3 text-right">주문금액</th>
                     <th className="w-[175px] px-3 py-3">전송내역</th>
+                    <th className="w-[110px] px-3 py-3 text-center">액션</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -735,6 +794,7 @@ export default function BuyOrderManagementPage() {
                       && escrowTransferTxHash !== fallbackTransferTxHash;
                     const hasTransferDetails =
                       hasSellerLockTx || hasCancelReleaseTx || hasFallbackTransferTx || hasEscrowTransferTx;
+                    const canCancelOrder = isAdminCancelablePrivateOrder(order);
 
                     return (
                     <tr key={`${order?._id || order?.tradeId || 'order'}-${index}`} className="bg-white text-sm text-slate-700">
@@ -750,6 +810,16 @@ export default function BuyOrderManagementPage() {
                               </p>
                               <p className="truncate text-[11px] text-slate-500">
                                 취소자 {getCancellerLabel(order)}
+                              </p>
+                            </>
+                          )}
+                          {isPaymentConfirmed && (
+                            <>
+                              <p className="text-[11px] font-semibold text-emerald-700">
+                                처리자 {getPaymentConfirmerLabel(order)}
+                              </p>
+                              <p className="break-all text-[11px] leading-tight text-slate-500">
+                                IP {getPaymentConfirmerIp(order)}
                               </p>
                             </>
                           )}
@@ -908,6 +978,22 @@ export default function BuyOrderManagementPage() {
                           <span className="text-xs text-slate-400">-</span>
                         )}
                       </td>
+                      <td className="px-3 py-3 text-center">
+                        {canCancelOrder ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCancelTargetOrder(order);
+                              setCancelError(null);
+                            }}
+                            className="inline-flex items-center justify-center rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 transition hover:border-rose-400 hover:bg-rose-100"
+                          >
+                            취소
+                          </button>
+                        ) : (
+                          <span className="text-xs text-slate-400">-</span>
+                        )}
+                      </td>
                     </tr>
                   );
                   })}
@@ -1000,7 +1086,7 @@ export default function BuyOrderManagementPage() {
               <div className="grid grid-cols-[126px_1fr] gap-x-3 gap-y-3">
                 <p className="text-sm font-semibold text-slate-500">주문 ID</p>
                 <p className="break-all text-base font-medium text-slate-900">{cancelTargetOrder._id || '-'}</p>
-                <p className="text-sm font-semibold text-slate-500">거래 ID</p>
+                <p className="text-sm font-semibold text-slate-500">거래번호(TID)</p>
                 <p className="break-all text-base font-medium text-slate-900">{cancelTargetOrder.tradeId || '-'}</p>
                 <p className="text-sm font-semibold text-slate-500">구매자 아이디</p>
                 <p className="break-all text-base font-semibold text-slate-900">
