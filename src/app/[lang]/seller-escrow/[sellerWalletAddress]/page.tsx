@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, act, useRef, useMemo, type ReactNode } from "react";
+import { useState, useEffect, use, act, useRef, useMemo, useCallback, type ReactNode } from "react";
 
 import Image from "next/image";
 
@@ -242,6 +242,10 @@ type PrivateTradeStatusState = {
 
 const walletAuthOptions = ["google", "email", "phone"];
 const ACTIVE_PRIVATE_TRADE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
+const ACTIVE_TRADING_ORDER_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
+
+const isActiveTradingOrderStatus = (status?: string) =>
+  ACTIVE_TRADING_ORDER_STATUSES.has(String(status || '').trim());
 
 // 클라이언트에서 접근 가능한 공개 App ID가 비어 있으면 기본값으로 설정
 const NEXT_PUBLIC_SENDBIRD_APP_ID =
@@ -1665,6 +1669,10 @@ export default function Index({ params }: any) {
   const [isActiveOrderCompleteModalOpen, setIsActiveOrderCompleteModalOpen] = useState(false);
   const [selectedActivePaymentRequestedOrder, setSelectedActivePaymentRequestedOrder] = useState<BuyOrder | null>(null);
   const [completingActiveOrder, setCompletingActiveOrder] = useState(false);
+  const [updatingAudioByOrderId, setUpdatingAudioByOrderId] = useState<Record<string, boolean>>({});
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [notificationAudioUnlocked, setNotificationAudioUnlocked] = useState(false);
+  const [notificationAudioUnlockNeeded, setNotificationAudioUnlockNeeded] = useState(false);
 
   const isSameWalletAddress = (walletA?: string, walletB?: string) =>
     Boolean(walletA && walletB && walletA.toLowerCase() === walletB.toLowerCase());
@@ -1703,6 +1711,136 @@ export default function Index({ params }: any) {
   );
   const ownerHasActivePaymentRequestedOrders =
     isOwnerSeller && activePaymentRequestedOrders.length > 0;
+  const activeTradingOrders = useMemo(
+    () => buyOrders.filter((item) => isActiveTradingOrderStatus(item?.status)),
+    [buyOrders],
+  );
+  const activeTradingAudioEnabledOrders = useMemo(
+    () => activeTradingOrders.filter((item) => item?.audioOn !== false),
+    [activeTradingOrders],
+  );
+  const hasActiveTradingAudioEnabledOrders = activeTradingAudioEnabledOrders.length > 0;
+
+  const startNotificationLoop = useCallback(async () => {
+    const audio = notificationAudioRef.current;
+    if (!audio) {
+      return false;
+    }
+
+    try {
+      audio.muted = false;
+      audio.volume = 1;
+      audio.loop = true;
+      if (audio.paused) {
+        audio.currentTime = 0;
+        await audio.play();
+      }
+      setNotificationAudioUnlocked(true);
+      setNotificationAudioUnlockNeeded(false);
+      return true;
+    } catch (error) {
+      console.warn('notification audio play blocked', error);
+      setNotificationAudioUnlockNeeded(true);
+      return false;
+    }
+  }, []);
+
+  const stopNotificationLoop = useCallback(() => {
+    const audio = notificationAudioRef.current;
+    if (!audio) {
+      return;
+    }
+    audio.loop = false;
+    audio.pause();
+    audio.currentTime = 0;
+  }, []);
+
+  const unlockNotificationAudio = useCallback(async () => {
+    const audio = notificationAudioRef.current;
+    if (!audio) {
+      return false;
+    }
+
+    const prevMuted = audio.muted;
+    const prevVolume = audio.volume;
+
+    try {
+      audio.muted = true;
+      audio.volume = 0;
+      audio.currentTime = 0;
+      await audio.play();
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = prevMuted;
+      audio.volume = prevVolume;
+
+      setNotificationAudioUnlocked(true);
+      setNotificationAudioUnlockNeeded(false);
+
+      if (hasActiveTradingAudioEnabledOrders) {
+        await startNotificationLoop();
+      }
+
+      return true;
+    } catch (error) {
+      console.warn('notification audio unlock failed', error);
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = prevMuted;
+      audio.volume = prevVolume;
+      setNotificationAudioUnlocked(false);
+      setNotificationAudioUnlockNeeded(true);
+      return false;
+    }
+  }, [hasActiveTradingAudioEnabledOrders, startNotificationLoop]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const audio = new Audio('/notification.mp3');
+    audio.preload = 'auto';
+    notificationAudioRef.current = audio;
+    setNotificationAudioUnlocked(false);
+    setNotificationAudioUnlockNeeded(false);
+
+    return () => {
+      if (!notificationAudioRef.current) {
+        return;
+      }
+      notificationAudioRef.current.pause();
+      notificationAudioRef.current.currentTime = 0;
+      notificationAudioRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || notificationAudioUnlocked) {
+      return;
+    }
+
+    const handleUserUnlock = () => {
+      void unlockNotificationAudio();
+    };
+
+    window.addEventListener('pointerdown', handleUserUnlock, { passive: true });
+    window.addEventListener('keydown', handleUserUnlock);
+
+    return () => {
+      window.removeEventListener('pointerdown', handleUserUnlock);
+      window.removeEventListener('keydown', handleUserUnlock);
+    };
+  }, [notificationAudioUnlocked, unlockNotificationAudio]);
+
+  useEffect(() => {
+    if (!hasActiveTradingAudioEnabledOrders) {
+      stopNotificationLoop();
+      return;
+    }
+
+    void startNotificationLoop();
+  }, [hasActiveTradingAudioEnabledOrders, startNotificationLoop, stopNotificationLoop]);
 
   useEffect(() => {
     let cancelled = false;
@@ -4373,54 +4511,73 @@ const fetchBuyOrders = async () => {
   }, [totalNumberOfClearanceOrders, loadingTotalNumberOfClearanceOrders]);
   */
 
+  const handleAudioToggle = async (orderId: string, currentAudioOn: boolean) => {
+    const normalizedOrderId = String(orderId || '').trim();
+    if (!normalizedOrderId) {
+      toast.error('주문 ID를 확인할 수 없습니다.');
+      return;
+    }
+    if (updatingAudioByOrderId[normalizedOrderId]) {
+      return;
+    }
 
-    // audio notification state
-  const [audioNotification, setAudioNotification] = useState<boolean[]>([]);
-  
-  // keep audioNotification in sync with buyOrders
-  useEffect(() => {
-    setAudioNotification(
-      buyOrders.map((item) => !!item.audioOn)
-    );
-  }, [buyOrders]);
-  
-  // handleAudioToggle
-  const handleAudioToggle = (index: number, orderId: string) => {
-    // api call
-    fetch('/api/order/toggleAudioNotification', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        orderId: orderId,
-        audioOn: !audioNotification[index],
-        walletAddress: address,
-      }),
-    })
-    .then(response => response.json())
-    .then(data => {
-      
-      //console.log('toggleAudioNotification data', data);
-      //alert('toggleAudioNotification data: ' + JSON.stringify(data));
-      /*
-      {"success":true,"message":"Audio notification setting updated successfully"}
-      */
+    const nextAudioOn = !currentAudioOn;
+    setUpdatingAudioByOrderId((prev) => ({
+      ...prev,
+      [normalizedOrderId]: true,
+    }));
 
-      if (data.success) {
-        // update local state for immediate UI feedback
-        setAudioNotification((prev) =>
-          prev.map((v, i) => (i === index ? !v : v))
-        );
-        toast.success('오디오 알림 설정이 변경되었습니다.');
-      } else {
-        toast.error('오디오 알림 설정 변경에 실패했습니다.');
+    try {
+      const response = await fetch('/api/order/toggleAudioNotification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: normalizedOrderId,
+          audioOn: nextAudioOn,
+          walletAddress: address,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data?.success) {
+        throw new Error(String(data?.message || '오디오 알림 설정 변경에 실패했습니다.'));
       }
-    })
-    .catch(error => {
+
+      setBuyOrders((prev) =>
+        prev.map((item) =>
+          item._id === normalizedOrderId
+            ? { ...item, audioOn: nextAudioOn }
+            : item,
+        ),
+      );
+      setActivePaymentRequestedOrders((prev) =>
+        prev.map((item) =>
+          item._id === normalizedOrderId
+            ? { ...item, audioOn: nextAudioOn }
+            : item,
+        ),
+      );
+      setProcessingBuyOrders((prev) =>
+        prev.map((item) =>
+          item._id === normalizedOrderId
+            ? { ...item, audioOn: nextAudioOn }
+            : item,
+        ),
+      );
+      setTotalNumberOfAudioOnBuyOrders((prev) => Math.max(0, prev + (nextAudioOn ? 1 : -1)));
+      toast.success(`오디오 알림을 ${nextAudioOn ? '켰습니다' : '껐습니다'}.`);
+    } catch (error) {
       console.error('Error toggling audio notification:', error);
-      toast.error('오디오 알림 설정 변경에 실패했습니다.' + error.message);
-    });
+      toast.error(error instanceof Error ? error.message : '오디오 알림 설정 변경에 실패했습니다.');
+    } finally {
+      setUpdatingAudioByOrderId((prev) => {
+        const next = { ...prev };
+        delete next[normalizedOrderId];
+        return next;
+      });
+    }
   };
 
 
@@ -5651,6 +5808,9 @@ const fetchBuyOrders = async () => {
   const bannerAds = visibleBannerAds;
   const bannerAdsRight = visibleBannerAdsRight;
   const showPromotionBanner = false;
+  const hasActiveTradingOrders = activeTradingOrders.length > 0;
+  const topAlertOrders = activeTradingOrders.slice(0, 4);
+  const mainTopPaddingClass = hasActiveTradingOrders ? 'pt-24 sm:pt-28' : 'pt-6';
 
 
 
@@ -5659,7 +5819,7 @@ const fetchBuyOrders = async () => {
   return (
 
     <main
-      className="escrow-detail-page relative min-h-[100vh] w-full bg-slate-100 px-4 pb-12 pt-6 text-slate-800 sm:px-6 lg:px-8"
+      className={`escrow-detail-page relative min-h-[100vh] w-full bg-slate-100 px-4 pb-12 ${mainTopPaddingClass} text-slate-800 sm:px-6 lg:px-8`}
       style={{ fontFamily: '"SUIT Variable", "Pretendard", "Noto Sans KR", sans-serif' }}
     >
 
@@ -5675,6 +5835,71 @@ const fetchBuyOrders = async () => {
           client={client}
           wallets={[wallet]}
       />
+
+      {hasActiveTradingOrders && (
+        <div className="fixed inset-x-0 top-3 z-[95] px-4 sm:top-4 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-5xl rounded-2xl border border-amber-300 bg-amber-50/95 px-4 py-3 shadow-[0_22px_52px_-30px_rgba(161,98,7,0.55)] backdrop-blur-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">Trading Alert</p>
+                <p className="text-sm font-semibold text-amber-900">
+                  거래중인 주문이 {activeTradingOrders.length.toLocaleString()}건 있습니다.
+                </p>
+                <p className="text-xs text-amber-800/80">
+                  알림 ON 주문이 있는 동안 소리가 연속 재생되며, 주문별 알림을 끄면 제외됩니다.
+                </p>
+                {notificationAudioUnlockNeeded && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold text-amber-800">
+                      브라우저가 자동재생을 차단했습니다.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void unlockNotificationAudio();
+                      }}
+                      className="rounded-md border border-amber-400 bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900 transition hover:bg-amber-200"
+                    >
+                      알림 소리 켜기
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {topAlertOrders.map((order) => {
+                  const isAudioOn = order.audioOn !== false;
+                  const isUpdating = Boolean(updatingAudioByOrderId[order._id]);
+                  return (
+                    <div
+                      key={`top-alert-${order._id}`}
+                      className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-white/90 px-2.5 py-1.5 text-xs shadow-sm"
+                    >
+                      <span className="font-semibold text-slate-800">#{order.tradeId || '-'}</span>
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getTradeStatusBadgeClass(order.status)}`}>
+                        {getTradeStatusLabel(order.status)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleAudioToggle(order._id, isAudioOn)}
+                        disabled={isUpdating}
+                        className="rounded-md border border-amber-300 bg-amber-100 px-2 py-0.5 font-semibold text-amber-800 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isUpdating ? '처리중...' : (isAudioOn ? '알림 끄기' : '알림 켜기')}
+                      </button>
+                    </div>
+                  );
+                })}
+                {activeTradingOrders.length > topAlertOrders.length && (
+                  <span className="text-xs font-semibold text-amber-800">
+                    +{activeTradingOrders.length - topAlertOrders.length}건
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!address && (
         <div className="relative z-10 mx-auto mb-5 w-full max-w-5xl rounded-3xl border border-slate-200/90 bg-white/90 px-4 py-4 text-slate-800 shadow-[0_24px_64px_-42px_rgba(15,23,42,0.45)] backdrop-blur-sm">
@@ -10071,10 +10296,10 @@ const fetchBuyOrders = async () => {
                                 )}
                               </span>
                               {/* audioOn */}
-                              {item.status === 'ordered' || item.status === 'paymentRequested' && (
+                              {isActiveTradingOrderStatus(item.status) && (
                                 <div className="flex flex-row items-center justify-center gap-1">
                                   <span className="text-xl text-slate-700 font-semibold">
-                                    {item.audioOn ? (
+                                    {(item.audioOn !== false) ? (
                                       '🔊'
                                     ) : '🔇'}
                                   </span>
@@ -10082,11 +10307,14 @@ const fetchBuyOrders = async () => {
                                   <button
                                     className="text-sm text-blue-400 font-semibold underline"
                                     onClick={() => handleAudioToggle(
-                                      index,
-                                      item._id
+                                      item._id,
+                                      item.audioOn !== false
                                     )}
+                                    disabled={Boolean(updatingAudioByOrderId[item._id])}
                                   >
-                                    {item.audioOn ? '끄기' : '켜기'}
+                                    {Boolean(updatingAudioByOrderId[item._id])
+                                      ? '처리중...'
+                                      : (item.audioOn !== false ? '끄기' : '켜기')}
                                   </button>
                                 </div>
                               )}
