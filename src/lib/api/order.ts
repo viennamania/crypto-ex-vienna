@@ -231,8 +231,6 @@ const resolveStoredPrivateOrderTransferPlan = (orderLike: any) => {
     { source: 'order.platformFee.rate', value: orderLike?.platformFee?.rate },
     { source: 'order.platformFee.percentage', value: orderLike?.platformFee?.percentage },
     { source: 'order.settlement.platformFeePercent', value: orderLike?.settlement?.platformFeePercent },
-    { source: 'order.tradeFeeRate', value: orderLike?.tradeFeeRate },
-    { source: 'order.centerFeeRate', value: orderLike?.centerFeeRate },
   ];
   const feeWalletCandidates: Array<{ source: string; value: unknown }> = [
     { source: 'order.platformFeeWalletAddress', value: orderLike?.platformFeeWalletAddress },
@@ -4188,8 +4186,6 @@ export async function completePrivateBuyOrderBySeller(
         platformFeeAmount: 1,
         platformFeeWalletAddress: 1,
         settlement: 1,
-        tradeFeeRate: 1,
-        centerFeeRate: 1,
       },
     },
   );

@@ -1843,53 +1843,44 @@ export default function Index({ params }: any) {
       return null;
     }
 
-    const targetSellerWalletAddress =
-      getBuyOrderSellerWalletAddress(selectedActivePaymentRequestedOrder) || ownerWalletAddress;
-    const targetSellerProfile =
-      sellersBalance.find((item) =>
-        isSameWalletAddress(String(item?.walletAddress || ''), targetSellerWalletAddress),
-      )
-      || sellersBalance.find((item) =>
-        isSameWalletAddress(String(item?.walletAddress || ''), ownerWalletAddress),
-      )
-      || null;
-
-    const toRate = (value: unknown) => {
-      const numeric = Number(value);
-      if (!Number.isFinite(numeric) || numeric < 0) {
-        return null;
-      }
-      return numeric;
-    };
-
-    const feeRate =
-      [
-        toRate(targetSellerProfile?.seller?.platformFee?.rate),
-        toRate(targetSellerProfile?.seller?.platformFee?.percentage),
-        toRate((selectedActivePaymentRequestedOrder as any)?.platformFee?.rate),
-        toRate((selectedActivePaymentRequestedOrder as any)?.platformFee?.percentage),
-        toRate((selectedActivePaymentRequestedOrder as any)?.seller?.platformFee?.rate),
-        toRate((selectedActivePaymentRequestedOrder as any)?.seller?.platformFee?.percentage),
-        toRate((selectedActivePaymentRequestedOrder as any)?.tradeFeeRate),
-        toRate((selectedActivePaymentRequestedOrder as any)?.centerFeeRate),
-      ].find((value) => typeof value === 'number')
-      || 0;
-
-    const feeWalletAddress = String(
-      targetSellerProfile?.seller?.platformFee?.walletAddress
-      || targetSellerProfile?.seller?.platformFee?.address
-      || (selectedActivePaymentRequestedOrder as any)?.platformFee?.walletAddress
-      || (selectedActivePaymentRequestedOrder as any)?.platformFee?.address
-      || (selectedActivePaymentRequestedOrder as any)?.seller?.platformFee?.walletAddress
-      || '',
-    ).trim();
+    const feeRate = Number(getOrderPlatformFeeRate(selectedActivePaymentRequestedOrder) || 0);
+    const feeWalletAddress = getOrderPlatformFeeWalletAddress(selectedActivePaymentRequestedOrder);
+    const storedFeeAmount = getOrderPlatformFeeAmount(selectedActivePaymentRequestedOrder);
 
     const buyerTransferUsdt = roundDownUsdt(Number(selectedActivePaymentRequestedOrder.usdtAmount || 0));
-    const platformFeeUsdt =
-      feeRate > 0 && buyerTransferUsdt > 0
-        ? roundDownUsdt((buyerTransferUsdt * feeRate) / 100)
+    const totalTransferCandidate = [
+      (selectedActivePaymentRequestedOrder as any)?.escrowLockUsdtAmount,
+      (selectedActivePaymentRequestedOrder as any)?.platformFee?.totalEscrowAmount,
+      (selectedActivePaymentRequestedOrder as any)?.platformFee?.escrowLockAmount,
+      (selectedActivePaymentRequestedOrder as any)?.platformFee?.totalTransferAmount,
+      (selectedActivePaymentRequestedOrder as any)?.settlement?.totalTransferAmount,
+      (selectedActivePaymentRequestedOrder as any)?.settlement?.transferTotalAmount,
+      (selectedActivePaymentRequestedOrder as any)?.buyer?.escrowLockedUsdtAmount,
+      (selectedActivePaymentRequestedOrder as any)?.seller?.escrowLockedUsdtAmount,
+    ]
+      .map((value) => toFiniteNumberOrNull(value))
+      .find((value) => value !== null && value > 0);
+
+    let platformFeeUsdt =
+      storedFeeAmount !== null && storedFeeAmount > 0
+        ? roundDownUsdt(storedFeeAmount)
         : 0;
-    const totalTransferUsdt = roundDownUsdt(buyerTransferUsdt + platformFeeUsdt);
+
+    if (platformFeeUsdt <= 0 && totalTransferCandidate && totalTransferCandidate > buyerTransferUsdt) {
+      platformFeeUsdt = roundDownUsdt(totalTransferCandidate - buyerTransferUsdt);
+    }
+
+    if (platformFeeUsdt <= 0 && feeRate > 0 && buyerTransferUsdt > 0) {
+      platformFeeUsdt = roundDownUsdt((buyerTransferUsdt * feeRate) / 100);
+    }
+
+    let totalTransferUsdt = totalTransferCandidate
+      ? roundDownUsdt(totalTransferCandidate)
+      : roundDownUsdt(buyerTransferUsdt + platformFeeUsdt);
+
+    if (totalTransferUsdt < buyerTransferUsdt + platformFeeUsdt) {
+      totalTransferUsdt = roundDownUsdt(buyerTransferUsdt + platformFeeUsdt);
+    }
 
     return {
       feeRate,
@@ -1898,11 +1889,7 @@ export default function Index({ params }: any) {
       platformFeeUsdt,
       totalTransferUsdt,
     };
-  }, [
-    ownerWalletAddress,
-    selectedActivePaymentRequestedOrder,
-    sellersBalance,
-  ]);
+  }, [selectedActivePaymentRequestedOrder]);
 
   const startNotificationLoop = useCallback(async () => {
     const audio = notificationAudioRef.current;
