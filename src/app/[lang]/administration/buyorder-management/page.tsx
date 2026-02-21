@@ -28,6 +28,7 @@ type BuyOrderItem = {
     nickname?: string;
     depositName?: string;
     bankInfo?: {
+      accountHolder?: string;
       depositName?: string;
     };
   };
@@ -36,6 +37,9 @@ type BuyOrderItem = {
     nickname?: string;
     bankInfo?: {
       bankName?: string;
+      accountNumber?: string;
+      accountHolder?: string;
+      contactMemo?: string;
     };
   };
   store?: {
@@ -147,8 +151,38 @@ const getPaymentMethodLabel = (order: BuyOrderItem) => {
   return '기타';
 };
 
+const isContactTransferPayment = (order: BuyOrderItem) => {
+  const method = String(order?.paymentMethod || '').trim().toLowerCase();
+  const bankName = String(order?.seller?.bankInfo?.bankName || '').trim();
+  return bankName === '연락처송금' || method === 'contact';
+};
+
+const getPaymentMethodDetail = (order: BuyOrderItem) => {
+  if (isContactTransferPayment(order)) {
+    return String(order?.seller?.bankInfo?.contactMemo || '').trim() || '-';
+  }
+
+  const method = String(order?.paymentMethod || '').trim().toLowerCase();
+  const bankName = String(order?.seller?.bankInfo?.bankName || '').trim();
+  const accountNumber = String(order?.seller?.bankInfo?.accountNumber || '').trim();
+  const accountHolder = String(order?.seller?.bankInfo?.accountHolder || '').trim();
+  const isBankInfoPayment = method === 'bank' || Boolean(bankName || accountNumber || accountHolder);
+  if (!isBankInfoPayment) return '-';
+
+  const bankInfoParts = [bankName, accountNumber, accountHolder].filter(Boolean);
+  return bankInfoParts.join(' ').trim() || '-';
+};
+
 const getBuyerIdLabel = (order: BuyOrderItem) =>
   String(order?.buyer?.nickname || order?.nickname || '').trim() || '-';
+
+const getBuyerDepositNameLabel = (order: BuyOrderItem) =>
+  String(
+    order?.buyer?.depositName
+    || order?.buyer?.bankInfo?.accountHolder
+    || order?.buyer?.bankInfo?.depositName
+    || '',
+  ).trim() || '-';
 
 const resolveCancellerRole = (order: BuyOrderItem): 'buyer' | 'seller' | 'admin' | 'unknown' => {
   const role = String(order?.cancelledByRole || order?.canceller || '').trim().toLowerCase();
@@ -648,6 +682,9 @@ export default function BuyOrderManagementPage() {
                           <span className="truncate text-xs text-slate-500">
                             {shortWallet(order?.buyer?.walletAddress || order?.walletAddress)}
                           </span>
+                          <span className="truncate text-xs text-slate-500">
+                            입금자명 {getBuyerDepositNameLabel(order)}
+                          </span>
                         </div>
                       </td>
                       <td className="px-3 py-3">
@@ -657,9 +694,14 @@ export default function BuyOrderManagementPage() {
                         </div>
                       </td>
                       <td className="px-3 py-3">
-                        <span className="inline-flex whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">
-                          {getPaymentMethodLabel(order)}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className="inline-flex w-fit whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                            {getPaymentMethodLabel(order)}
+                          </span>
+                          <span className="truncate text-xs text-slate-500">
+                            {getPaymentMethodDetail(order)}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-3 py-3 text-right">
                         <div className="flex flex-col items-end">
