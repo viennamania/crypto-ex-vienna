@@ -68,6 +68,17 @@ const isOrderProcessingCompleted = (value: string | undefined) =>
 const resolveOrderProcessingLabel = (value: string | undefined) =>
   isOrderProcessingCompleted(value) ? '결제처리완료' : '결제처리중';
 
+const resolveTransactionExplorerUrl = (transactionValue: string) => {
+  const normalized = toText(transactionValue);
+  if (!normalized || normalized === '-') return '';
+
+  if (/^0x[a-fA-F0-9]{64}$/.test(normalized)) {
+    return `https://polygonscan.com/tx/${normalized}`;
+  }
+
+  return `https://polygonscan.com/search?query=${encodeURIComponent(normalized)}`;
+};
+
 const normalizeWalletPayment = (value: unknown): WalletPaymentItem => {
   const source = isRecord(value) ? value : {};
   const store = isRecord(source.store) ? source.store : {};
@@ -463,6 +474,7 @@ export default function AdministrationPaymentManagementPage() {
                 ) : (
                   payments.map((payment) => {
                     const completed = isOrderProcessingCompleted(payment.orderProcessing);
+                    const transactionUrl = resolveTransactionExplorerUrl(payment.tradeId);
 
                     return (
                       <tr key={payment.id || payment.tradeId} className="text-slate-700">
@@ -470,9 +482,19 @@ export default function AdministrationPaymentManagementPage() {
                           <p className="font-semibold text-slate-900">{payment.paymentId || '-'}</p>
                         </td>
                         <td className="px-4 py-3">
-                          <p className="font-semibold text-slate-900">
-                            {payment.tradeId ? shortAddress(payment.tradeId) : '#-'}
-                          </p>
+                          {payment.tradeId && transactionUrl ? (
+                            <a
+                              href={transactionUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex font-semibold text-cyan-700 underline-offset-2 transition hover:text-cyan-800 hover:underline"
+                              title="새 창에서 스캔 페이지 열기"
+                            >
+                              {shortAddress(payment.tradeId)}
+                            </a>
+                          ) : (
+                            <p className="font-semibold text-slate-900">{payment.tradeId ? shortAddress(payment.tradeId) : '#-'}</p>
+                          )}
                           <p className="text-xs text-slate-500">{payment.status || '-'}</p>
                         </td>
                         <td className="px-4 py-3">
