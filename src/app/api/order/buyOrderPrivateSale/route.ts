@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
           THIRDWEB_SECRET_KEY_MISSING: '서버 지갑 설정이 누락되었습니다.',
           BUYER_ESCROW_WALLET_CREATE_FAILED: '구매자 에스크로 지갑 생성에 실패했습니다.',
           BUYER_ESCROW_WALLET_EMPTY: '구매자 에스크로 지갑 주소가 비어 있습니다.',
+          PLATFORM_FEE_WALLET_NOT_CONFIGURED: '플랫폼 수수료 지갑이 설정되지 않았습니다.',
           ESCROW_TRANSFER_FAILED: '에스크로 전송에 실패했습니다.',
           BUYORDER_INSERT_FAILED: '구매 주문 저장에 실패했습니다.',
         };

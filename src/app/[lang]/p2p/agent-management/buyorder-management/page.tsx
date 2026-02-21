@@ -14,6 +14,12 @@ import {
   type AgentSummary,
 } from '../_shared';
 
+const formatPercent = (value: number) => {
+  const numeric = Number(value || 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) return '0';
+  return (Math.round(numeric * 100) / 100).toFixed(2).replace(/\.?0+$/, '');
+};
+
 export default function P2PAgentBuyOrderManagementPage() {
   const searchParams = useSearchParams();
   const agentcode = String(searchParams?.get('agentcode') || '').trim();
@@ -180,13 +186,14 @@ export default function P2PAgentBuyOrderManagementPage() {
                     <th className="px-4 py-3">구매자/판매자</th>
                     <th className="px-4 py-3 text-right">수량</th>
                     <th className="px-4 py-3 text-right">금액</th>
+                    <th className="px-4 py-3">플랫폼 수수료</th>
                     <th className="px-4 py-3">생성/확정</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">
+                      <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
                         표시할 거래가 없습니다.
                       </td>
                     </tr>
@@ -207,6 +214,17 @@ export default function P2PAgentBuyOrderManagementPage() {
                         </td>
                         <td className="px-4 py-3 text-right text-xs font-semibold text-slate-700">{formatUsdt(order.usdtAmount)}</td>
                         <td className="px-4 py-3 text-right text-xs font-semibold text-slate-700">{formatKrw(order.krwAmount)}</td>
+                        <td className="px-4 py-3 text-xs text-slate-600">
+                          {order.platformFeeRate > 0 || order.platformFeeAmount > 0 || order.platformFeeWalletAddress ? (
+                            <div className="space-y-0.5">
+                              <p className="font-semibold text-indigo-700">{formatPercent(order.platformFeeRate)}%</p>
+                              <p className="font-semibold text-indigo-800">{formatUsdt(order.platformFeeAmount)}</p>
+                              <p className="truncate text-slate-500">{order.platformFeeWalletAddress || '-'}</p>
+                            </div>
+                          ) : (
+                            <p>-</p>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-xs text-slate-600">
                           <p>생성 {toDateTime(order.createdAt)}</p>
                           <p>확정 {toDateTime(order.paymentConfirmedAt)}</p>

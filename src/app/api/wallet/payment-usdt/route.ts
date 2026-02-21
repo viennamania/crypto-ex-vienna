@@ -51,6 +51,12 @@ type WalletPaymentDocument = {
   } | null;
   order_processing_updated_by_ip?: string;
   order_processing_updated_by_user_agent?: string;
+  platformFeeRate?: number;
+  platformFeeAmount?: number;
+  platformFeeWalletAddress?: string;
+  platform_fee_rate?: number;
+  platform_fee_amount?: number;
+  platform_fee_wallet_address?: string;
   transactionHash?: string;
   createdAt: string;
   confirmedAt?: string;
@@ -286,6 +292,12 @@ const serializePayment = (doc: WalletPaymentDocument & { _id?: ObjectId }) => {
     orderProcessingUpdatedBy: orderProcessingUpdatedBy,
     orderProcessingUpdatedByIp: String(doc.order_processing_updated_by_ip || ""),
     orderProcessingUpdatedByUserAgent: String(doc.order_processing_updated_by_user_agent || ""),
+    platform_fee_rate: Number(doc.platform_fee_rate ?? doc.platformFeeRate ?? 0),
+    platform_fee_amount: Number(doc.platform_fee_amount ?? doc.platformFeeAmount ?? 0),
+    platform_fee_wallet_address: String(doc.platform_fee_wallet_address ?? doc.platformFeeWalletAddress ?? ""),
+    platformFeeRate: Number(doc.platform_fee_rate ?? doc.platformFeeRate ?? 0),
+    platformFeeAmount: Number(doc.platform_fee_amount ?? doc.platformFeeAmount ?? 0),
+    platformFeeWalletAddress: String(doc.platform_fee_wallet_address ?? doc.platformFeeWalletAddress ?? ""),
     transactionHash: doc.transactionHash || "",
     createdAt: doc.createdAt,
     confirmedAt: doc.confirmedAt || "",
@@ -419,6 +431,29 @@ export async function POST(request: NextRequest) {
     const hasExchangeRate = body?.exchangeRate !== undefined;
     const krwAmount = hasKrwAmount ? normalizeKrwAmount(body?.krwAmount) : undefined;
     const exchangeRate = hasExchangeRate ? normalizeExchangeRate(body?.exchangeRate) : undefined;
+    const rawPlatformFeeRate = Number(
+      body?.platformFeeRate
+      ?? body?.platform_fee_rate
+      ?? process.env.NEXT_PUBLIC_PLATFORM_FEE_PERCENTAGE
+      ?? 0,
+    );
+    const platformFeeRate =
+      Number.isFinite(rawPlatformFeeRate) && rawPlatformFeeRate > 0
+        ? Number(rawPlatformFeeRate.toFixed(4))
+        : 0;
+    const rawPlatformFeeWalletAddress = String(
+      body?.platformFeeWalletAddress
+      ?? body?.platform_fee_wallet_address
+      ?? process.env.NEXT_PUBLIC_PLATFORM_FEE_ADDRESS
+      ?? '',
+    ).trim();
+    const platformFeeWalletAddress = isWalletAddress(rawPlatformFeeWalletAddress)
+      ? rawPlatformFeeWalletAddress
+      : '';
+    const platformFeeAmount =
+      platformFeeRate > 0
+        ? Number((((usdtAmount ?? 0) * platformFeeRate) / 100).toFixed(6))
+        : 0;
 
     if (!storecode) {
       return NextResponse.json({ error: "storecode is required" }, { status: 400 });
@@ -509,6 +544,14 @@ export async function POST(request: NextRequest) {
       usdtAmount,
       ...(krwAmount ? { krwAmount } : {}),
       ...(exchangeRate ? { exchangeRate } : {}),
+      ...(platformFeeRate > 0 ? { platformFeeRate, platform_fee_rate: platformFeeRate } : {}),
+      ...(platformFeeAmount > 0 ? { platformFeeAmount, platform_fee_amount: platformFeeAmount } : {}),
+      ...(platformFeeWalletAddress
+        ? {
+            platformFeeWalletAddress,
+            platform_fee_wallet_address: platformFeeWalletAddress,
+          }
+        : {}),
       status: "prepared",
       createdAt: new Date().toISOString(),
       ...(memberSnapshot ? { member: memberSnapshot } : {}),

@@ -3,7 +3,7 @@ import clientPromise from '../mongodb';
 
 import { dbName } from '../mongodb';
 import { createThirdwebClient, Engine, getContract } from 'thirdweb';
-import { transfer } from 'thirdweb/extensions/erc20';
+import { transfer, balanceOf } from 'thirdweb/extensions/erc20';
 import { ethereum, polygon, arbitrum, bsc } from 'thirdweb/chains';
 import {
   chain as configuredChain,
@@ -141,6 +141,178 @@ const waitMs = async (ms: number) =>
     setTimeout(resolve, ms);
   });
 
+const roundDownUsdtAmount = (value: number) => Math.floor(value * 1000) / 1000;
+
+const toUsdtAmountOrZero = (value: unknown) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 0;
+  }
+  return roundDownUsdtAmount(numeric);
+};
+
+const toNonNegativeUsdtAmountOrNull = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return null;
+  }
+  return roundDownUsdtAmount(numeric);
+};
+
+const isWalletAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(String(value || '').trim());
+
+const toFeeRateOrNull = (value: unknown) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return null;
+  }
+  return Math.round(numeric * 10000) / 10000;
+};
+
+const resolvePrivateOrderPlatformFee = (
+  {
+    order,
+    sellerUser,
+  }: {
+    order: any;
+    sellerUser: any;
+  },
+) => {
+  const rateCandidates: Array<{ source: string; value: unknown }> = [
+    { source: 'seller.platformFee.rate', value: sellerUser?.seller?.platformFee?.rate },
+    { source: 'seller.platformFee.percentage', value: sellerUser?.seller?.platformFee?.percentage },
+    { source: 'order.platformFee.rate', value: order?.platformFee?.rate },
+    { source: 'order.platformFee.percentage', value: order?.platformFee?.percentage },
+    { source: 'order.seller.platformFee.rate', value: order?.seller?.platformFee?.rate },
+    { source: 'order.seller.platformFee.percentage', value: order?.seller?.platformFee?.percentage },
+    { source: 'order.tradeFeeRate', value: order?.tradeFeeRate },
+    { source: 'order.centerFeeRate', value: order?.centerFeeRate },
+    { source: 'env.NEXT_PUBLIC_PLATFORM_FEE_PERCENTAGE', value: process.env.NEXT_PUBLIC_PLATFORM_FEE_PERCENTAGE },
+  ];
+
+  const walletCandidates: Array<{ source: string; value: unknown }> = [
+    { source: 'seller.platformFee.walletAddress', value: sellerUser?.seller?.platformFee?.walletAddress },
+    { source: 'seller.platformFee.address', value: sellerUser?.seller?.platformFee?.address },
+    { source: 'order.platformFee.walletAddress', value: order?.platformFee?.walletAddress },
+    { source: 'order.platformFee.address', value: order?.platformFee?.address },
+    { source: 'order.seller.platformFee.walletAddress', value: order?.seller?.platformFee?.walletAddress },
+    { source: 'order.seller.platformFee.address', value: order?.seller?.platformFee?.address },
+    { source: 'env.NEXT_PUBLIC_PLATFORM_FEE_ADDRESS', value: process.env.NEXT_PUBLIC_PLATFORM_FEE_ADDRESS },
+  ];
+
+  const matchedRateCandidate = rateCandidates.find((candidate) => toFeeRateOrNull(candidate.value) !== null);
+  const matchedWalletCandidate = walletCandidates.find((candidate) =>
+    isWalletAddress(String(candidate.value || '').trim()),
+  );
+
+  const resolvedFeeRate = matchedRateCandidate ? (toFeeRateOrNull(matchedRateCandidate.value) || 0) : 0;
+  const resolvedFeeWalletAddress = matchedWalletCandidate
+    ? String(matchedWalletCandidate.value || '').trim()
+    : '';
+
+  return {
+    feeRatePercent: resolvedFeeRate,
+    feeWalletAddress: resolvedFeeWalletAddress,
+    source: [
+      matchedRateCandidate?.source || '',
+      matchedWalletCandidate?.source || '',
+    ].filter(Boolean).join(' | '),
+  };
+};
+
+const resolveStoredPrivateOrderTransferPlan = (orderLike: any) => {
+  const buyerTransferUsdtAmount = toUsdtAmountOrZero(orderLike?.usdtAmount);
+
+  const feeRateCandidates: Array<{ source: string; value: unknown }> = [
+    { source: 'order.platformFeeRate', value: orderLike?.platformFeeRate },
+    { source: 'order.platformFee.rate', value: orderLike?.platformFee?.rate },
+    { source: 'order.platformFee.percentage', value: orderLike?.platformFee?.percentage },
+    { source: 'order.settlement.platformFeePercent', value: orderLike?.settlement?.platformFeePercent },
+    { source: 'order.tradeFeeRate', value: orderLike?.tradeFeeRate },
+    { source: 'order.centerFeeRate', value: orderLike?.centerFeeRate },
+  ];
+  const feeWalletCandidates: Array<{ source: string; value: unknown }> = [
+    { source: 'order.platformFeeWalletAddress', value: orderLike?.platformFeeWalletAddress },
+    { source: 'order.platformFee.walletAddress', value: orderLike?.platformFee?.walletAddress },
+    { source: 'order.platformFee.address', value: orderLike?.platformFee?.address },
+    { source: 'order.settlement.platformFeeWalletAddress', value: orderLike?.settlement?.platformFeeWalletAddress },
+  ];
+  const feeAmountCandidates: Array<{ source: string; value: unknown }> = [
+    { source: 'order.platformFeeAmount', value: orderLike?.platformFeeAmount },
+    { source: 'order.platformFee.amount', value: orderLike?.platformFee?.amount },
+    { source: 'order.platformFee.amountUsdt', value: orderLike?.platformFee?.amountUsdt },
+    { source: 'order.settlement.platformFeeAmount', value: orderLike?.settlement?.platformFeeAmount },
+  ];
+  const escrowLockCandidates: Array<{ source: string; value: unknown }> = [
+    { source: 'order.escrowLockUsdtAmount', value: orderLike?.escrowLockUsdtAmount },
+    { source: 'order.escrow.lockUsdtAmount', value: orderLike?.escrow?.lockUsdtAmount },
+    { source: 'order.buyer.escrowLockedUsdtAmount', value: orderLike?.buyer?.escrowLockedUsdtAmount },
+    { source: 'order.seller.escrowLockedUsdtAmount', value: orderLike?.seller?.escrowLockedUsdtAmount },
+    { source: 'order.platformFee.escrowLockAmount', value: orderLike?.platformFee?.escrowLockAmount },
+    { source: 'order.platformFee.totalEscrowAmount', value: orderLike?.platformFee?.totalEscrowAmount },
+    { source: 'order.platformFee.totalTransferAmount', value: orderLike?.platformFee?.totalTransferAmount },
+    { source: 'order.settlement.totalTransferAmount', value: orderLike?.settlement?.totalTransferAmount },
+    { source: 'order.settlement.transferTotalAmount', value: orderLike?.settlement?.transferTotalAmount },
+  ];
+
+  const matchedFeeRate = feeRateCandidates.find((candidate) => toFeeRateOrNull(candidate.value) !== null);
+  const matchedFeeWallet = feeWalletCandidates.find((candidate) =>
+    isWalletAddress(String(candidate.value || '').trim()),
+  );
+  const matchedFeeAmount = feeAmountCandidates.find((candidate) => toNonNegativeUsdtAmountOrNull(candidate.value) !== null);
+  const matchedEscrowLock = escrowLockCandidates.find((candidate) => toUsdtAmountOrZero(candidate.value) > 0);
+
+  const feeRatePercent = matchedFeeRate ? (toFeeRateOrNull(matchedFeeRate.value) || 0) : 0;
+  const feeWalletAddress = matchedFeeWallet ? String(matchedFeeWallet.value || '').trim() : '';
+
+  let platformFeeUsdtAmount = matchedFeeAmount
+    ? (toNonNegativeUsdtAmountOrNull(matchedFeeAmount.value) || 0)
+    : 0;
+
+  let totalTransferUsdtAmount = matchedEscrowLock
+    ? toUsdtAmountOrZero(matchedEscrowLock.value)
+    : 0;
+
+  if (totalTransferUsdtAmount <= 0) {
+    totalTransferUsdtAmount = roundDownUsdtAmount(buyerTransferUsdtAmount + platformFeeUsdtAmount);
+  }
+
+  if (platformFeeUsdtAmount <= 0 && totalTransferUsdtAmount > buyerTransferUsdtAmount) {
+    platformFeeUsdtAmount = roundDownUsdtAmount(totalTransferUsdtAmount - buyerTransferUsdtAmount);
+  }
+
+  if (totalTransferUsdtAmount <= 0) {
+    totalTransferUsdtAmount = buyerTransferUsdtAmount;
+  }
+
+  const minExpectedTotal = roundDownUsdtAmount(buyerTransferUsdtAmount + platformFeeUsdtAmount);
+  if (totalTransferUsdtAmount < minExpectedTotal) {
+    totalTransferUsdtAmount = minExpectedTotal;
+  }
+
+  const shouldTransferPlatformFee =
+    platformFeeUsdtAmount > 0 && totalTransferUsdtAmount > buyerTransferUsdtAmount;
+
+  return {
+    buyerTransferUsdtAmount,
+    platformFeeUsdtAmount: shouldTransferPlatformFee ? platformFeeUsdtAmount : 0,
+    totalTransferUsdtAmount,
+    feeRatePercent,
+    feeWalletAddress,
+    shouldTransferPlatformFee,
+    transferCount: shouldTransferPlatformFee ? 2 : 1,
+    source: [
+      matchedFeeRate?.source || '',
+      matchedFeeAmount?.source || '',
+      matchedEscrowLock?.source || '',
+      matchedFeeWallet?.source || '',
+    ].filter(Boolean).join(' | '),
+  };
+};
+
 const resolveUsdtTransferConfig = () => {
   const currentChain = String(configuredChain || process.env.NEXT_PUBLIC_CHAIN || 'polygon').toLowerCase();
   if (currentChain === 'ethereum') {
@@ -165,6 +337,19 @@ const resolveUsdtTransferConfig = () => {
     chain: polygon,
     contractAddress: polygonContractAddressUSDT,
   };
+};
+
+const resolveUsdtDecimals = () => {
+  const currentChain = String(configuredChain || process.env.NEXT_PUBLIC_CHAIN || 'polygon').toLowerCase();
+  return currentChain === 'bsc' ? 18 : 6;
+};
+
+const convertRawUsdtToDisplayAmount = (rawAmount: bigint, decimals: number) => {
+  const numeric = Number(rawAmount);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 0;
+  }
+  return roundDownUsdtAmount(numeric / (10 ** decimals));
 };
 
 
@@ -3388,7 +3573,21 @@ export async function cancelPrivateBuyOrderByBuyer(
 
   const order = await buyordersCollection.findOne<any>(
     { _id: objectId },
-    { projection: { walletAddress: 1, buyer: 1, seller: 1, usdtAmount: 1, privateSale: 1, status: 1, tradeId: 1 } },
+    {
+      projection: {
+        walletAddress: 1,
+        buyer: 1,
+        seller: 1,
+        usdtAmount: 1,
+        escrowLockUsdtAmount: 1,
+        platformFee: 1,
+        platformFeeAmount: 1,
+        settlement: 1,
+        privateSale: 1,
+        status: 1,
+        tradeId: 1,
+      },
+    },
   );
 
   if (!order || order.privateSale !== true) {
@@ -3418,9 +3617,14 @@ export async function cancelPrivateBuyOrderByBuyer(
     return false;
   }
 
-  const normalizedUsdtAmount = Math.floor(Number(order?.usdtAmount || 0) * 1000) / 1000;
-  if (!Number.isFinite(normalizedUsdtAmount) || normalizedUsdtAmount <= 0) {
-    console.error('cancelPrivateBuyOrderByBuyer: invalid usdt amount', order?.usdtAmount);
+  const transferPlan = resolveStoredPrivateOrderTransferPlan(order);
+  const rollbackUsdtAmount = transferPlan.totalTransferUsdtAmount;
+  if (!Number.isFinite(rollbackUsdtAmount) || rollbackUsdtAmount <= 0) {
+    console.error('cancelPrivateBuyOrderByBuyer: invalid rollback usdt amount', {
+      rollbackUsdtAmount,
+      usdtAmount: order?.usdtAmount,
+      escrowLockUsdtAmount: order?.escrowLockUsdtAmount,
+    });
     return false;
   }
 
@@ -3449,7 +3653,7 @@ export async function cancelPrivateBuyOrderByBuyer(
     const rollbackTransaction = transfer({
       contract: usdtContract,
       to: sellerEscrowWalletAddress,
-      amount: normalizedUsdtAmount,
+      amount: rollbackUsdtAmount,
     });
 
     const { transactionId } = await buyerEscrowWallet.enqueueTransaction({
@@ -3530,6 +3734,7 @@ export async function cancelPrivateBuyOrderByBuyer(
         cancelledByRole,
         cancelledByWalletAddress,
         cancelledByNickname,
+        rollbackUsdtAmount,
         'buyer.rollbackTransactionHash': rollbackTransactionHash,
         'seller.rollbackTransactionHash': rollbackTransactionHash,
       },
@@ -3565,6 +3770,7 @@ export async function cancelPrivateBuyOrderByBuyer(
           'seller.buyOrder.cancelledByRole': cancelledByRole,
           'seller.buyOrder.cancelledByWalletAddress': cancelledByWalletAddress,
           'seller.buyOrder.cancelledByNickname': cancelledByNickname,
+          'seller.buyOrder.rollbackUsdtAmount': rollbackUsdtAmount,
           'seller.buyOrder.buyer.rollbackTransactionHash': rollbackTransactionHash,
           'seller.buyOrder.seller.rollbackTransactionHash': rollbackTransactionHash,
         },
@@ -3655,6 +3861,7 @@ export async function cancelPrivateBuyOrderByBuyer(
       reputationScoreAfter: nextReputationScore,
       cancelCountBefore: prevCancelCount,
       cancelCountAfter: nextCancelCount,
+      rollbackUsdtAmount,
       rollbackTransactionHash: rollbackTransactionHash || '',
       createdAt: now,
     });
@@ -3707,6 +3914,10 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
         privateSale: 1,
         status: 1,
         usdtAmount: 1,
+        escrowLockUsdtAmount: 1,
+        platformFee: 1,
+        platformFeeAmount: 1,
+        settlement: 1,
         walletAddress: 1,
         buyer: 1,
         seller: 1,
@@ -3737,9 +3948,14 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
     return { success: false, error: 'WALLET_ADDRESS_MISSING' };
   }
 
-  const normalizedUsdtAmount = Math.floor(Number(order?.usdtAmount || 0) * 1000) / 1000;
-  if (!Number.isFinite(normalizedUsdtAmount) || normalizedUsdtAmount <= 0) {
-    console.error('cancelPrivateBuyOrderByAdminToBuyer: invalid usdt amount', order?.usdtAmount);
+  const transferPlan = resolveStoredPrivateOrderTransferPlan(order);
+  const rollbackUsdtAmount = transferPlan.totalTransferUsdtAmount;
+  if (!Number.isFinite(rollbackUsdtAmount) || rollbackUsdtAmount <= 0) {
+    console.error('cancelPrivateBuyOrderByAdminToBuyer: invalid rollback usdt amount', {
+      rollbackUsdtAmount,
+      usdtAmount: order?.usdtAmount,
+      escrowLockUsdtAmount: order?.escrowLockUsdtAmount,
+    });
     return { success: false, error: 'INVALID_USDT_AMOUNT' };
   }
 
@@ -3768,7 +3984,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
     const releaseTransaction = transfer({
       contract: usdtContract,
       to: sellerEscrowWalletAddress,
-      amount: normalizedUsdtAmount,
+      amount: rollbackUsdtAmount,
     });
 
     const { transactionId } = await buyerEscrowWallet.enqueueTransaction({
@@ -3851,6 +4067,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
         cancelledByNickname: normalizedCancelledByNickname,
         cancelledByIpAddress: normalizedCancelledByIpAddress,
         cancelledByUserAgent: normalizedCancelledByUserAgent,
+        rollbackUsdtAmount,
         cancelReleaseTransactionHash: releaseTransactionHash,
         'buyer.releaseTransactionHash': releaseTransactionHash,
         'seller.releaseTransactionHash': releaseTransactionHash,
@@ -3880,6 +4097,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
           'seller.buyOrder.cancelledByNickname': normalizedCancelledByNickname,
           'seller.buyOrder.cancelledByIpAddress': normalizedCancelledByIpAddress,
           'seller.buyOrder.cancelledByUserAgent': normalizedCancelledByUserAgent,
+          'seller.buyOrder.rollbackUsdtAmount': rollbackUsdtAmount,
           'seller.buyOrder.cancelReleaseTransactionHash': releaseTransactionHash,
           'seller.buyOrder.buyer.releaseTransactionHash': releaseTransactionHash,
           'seller.buyOrder.seller.releaseTransactionHash': releaseTransactionHash,
@@ -3927,6 +4145,12 @@ export async function completePrivateBuyOrderBySeller(
   success: boolean;
   transactionHash?: string;
   paymentConfirmedAt?: string;
+  platformFeeRatePercent?: number;
+  platformFeeUsdtAmount?: number;
+  platformFeeWalletAddress?: string;
+  buyerTransferUsdtAmount?: number;
+  totalTransferUsdtAmount?: number;
+  transferCount?: number;
   error?: string;
 }> {
   if (!ObjectId.isValid(orderId)) {
@@ -3955,9 +4179,17 @@ export async function completePrivateBuyOrderBySeller(
         privateSale: 1,
         status: 1,
         usdtAmount: 1,
+        escrowLockUsdtAmount: 1,
         walletAddress: 1,
         buyer: 1,
         seller: 1,
+        platformFee: 1,
+        platformFeeRate: 1,
+        platformFeeAmount: 1,
+        platformFeeWalletAddress: 1,
+        settlement: 1,
+        tradeFeeRate: 1,
+        centerFeeRate: 1,
       },
     },
   );
@@ -4030,6 +4262,35 @@ export async function completePrivateBuyOrderBySeller(
     return { success: false, error: 'INVALID_USDT_AMOUNT' };
   }
 
+  const transferPlan = resolveStoredPrivateOrderTransferPlan(order);
+  const buyerTransferUsdtAmount = transferPlan.buyerTransferUsdtAmount;
+  const platformFeeUsdtAmount = transferPlan.platformFeeUsdtAmount;
+  const totalTransferUsdtAmount = transferPlan.totalTransferUsdtAmount;
+  const shouldTransferPlatformFee = transferPlan.shouldTransferPlatformFee;
+  const transferCount = transferPlan.transferCount;
+  const resolvedPlatformFee = {
+    feeRatePercent: transferPlan.feeRatePercent,
+    feeWalletAddress: transferPlan.feeWalletAddress,
+    source: transferPlan.source,
+  };
+
+  if (!Number.isFinite(buyerTransferUsdtAmount) || buyerTransferUsdtAmount <= 0) {
+    return { success: false, error: 'INVALID_USDT_AMOUNT' };
+  }
+
+  if (!Number.isFinite(totalTransferUsdtAmount) || totalTransferUsdtAmount <= 0) {
+    return { success: false, error: 'INVALID_USDT_AMOUNT' };
+  }
+
+  if (shouldTransferPlatformFee && !isWalletAddress(resolvedPlatformFee.feeWalletAddress)) {
+    console.error('completePrivateBuyOrderBySeller: platform fee wallet is missing', {
+      feeRatePercent: resolvedPlatformFee.feeRatePercent,
+      feeWalletAddress: resolvedPlatformFee.feeWalletAddress,
+      source: resolvedPlatformFee.source,
+    });
+    return { success: false, error: 'PLATFORM_FEE_WALLET_NOT_CONFIGURED' };
+  }
+
   const thirdwebSecretKey = process.env.THIRDWEB_SECRET_KEY || '';
   if (!thirdwebSecretKey) {
     console.error('completePrivateBuyOrderBySeller: THIRDWEB_SECRET_KEY is missing');
@@ -4040,6 +4301,7 @@ export async function completePrivateBuyOrderBySeller(
   let releaseTransactionHash = '';
   try {
     const transferConfig = resolveUsdtTransferConfig();
+    const usdtDecimals = resolveUsdtDecimals();
     const usdtContract = getContract({
       client: thirdwebClient,
       chain: transferConfig.chain,
@@ -4052,55 +4314,99 @@ export async function completePrivateBuyOrderBySeller(
       chain: transferConfig.chain,
     });
 
-    const releaseTransaction = transfer({
-      contract: usdtContract,
-      to: orderBuyerWalletAddress,
-      amount: normalizedUsdtAmount,
-    });
-
-    const { transactionId } = await buyerEscrowWallet.enqueueTransaction({
-      transaction: releaseTransaction,
-    });
-
-    const hashResult = await Engine.waitForTransactionHash({
-      client: thirdwebClient,
-      transactionId,
-      timeoutInSeconds: 90,
-    });
-    const txHash = typeof hashResult?.transactionHash === 'string' ? hashResult.transactionHash : '';
-    if (!txHash) {
-      throw new Error('empty release transaction hash');
-    }
-
-    let transferConfirmed = false;
-    for (let i = 0; i < 25; i += 1) {
-      const txStatus = await Engine.getTransactionStatus({
+    const waitForConfirmedTransactionHash = async (
+      transactionId: string,
+      contextLabel: string,
+    ) => {
+      const hashResult = await Engine.waitForTransactionHash({
         client: thirdwebClient,
         transactionId,
+        timeoutInSeconds: 90,
       });
-
-      if (txStatus.status === 'FAILED') {
-        throw new Error(txStatus.error || 'release transfer failed');
+      const txHash = typeof hashResult?.transactionHash === 'string' ? hashResult.transactionHash : '';
+      if (!txHash) {
+        throw new Error(`${contextLabel}: empty transaction hash`);
       }
 
-      if (txStatus.status === 'CONFIRMED') {
-        if (txStatus.onchainStatus !== 'SUCCESS') {
-          throw new Error(`release transfer reverted: ${txStatus.onchainStatus}`);
+      let transferConfirmed = false;
+      let confirmedHash = txHash;
+
+      for (let i = 0; i < 25; i += 1) {
+        const txStatus = await Engine.getTransactionStatus({
+          client: thirdwebClient,
+          transactionId,
+        });
+
+        if (txStatus.status === 'FAILED') {
+          throw new Error(`${contextLabel}: ${txStatus.error || 'engine transaction failed'}`);
         }
-        releaseTransactionHash =
-          typeof txStatus.transactionHash === 'string' && txStatus.transactionHash
-            ? txStatus.transactionHash
-            : txHash;
-        transferConfirmed = true;
-        break;
+
+        if (txStatus.status === 'CONFIRMED') {
+          if (txStatus.onchainStatus !== 'SUCCESS') {
+            throw new Error(`${contextLabel}: transaction reverted (${txStatus.onchainStatus})`);
+          }
+          confirmedHash =
+            typeof txStatus.transactionHash === 'string' && txStatus.transactionHash
+              ? txStatus.transactionHash
+              : txHash;
+          transferConfirmed = true;
+          break;
+        }
+
+        await waitMs(1500);
       }
 
-      await waitMs(1500);
+      if (!transferConfirmed) {
+        throw new Error(`${contextLabel}: confirmation timeout`);
+      }
+
+      return confirmedHash;
+    };
+
+    const rawBuyerEscrowUsdtBalance = await balanceOf({
+      contract: usdtContract,
+      address: buyerEscrowWalletAddress,
+    });
+    const buyerEscrowUsdtBalance = convertRawUsdtToDisplayAmount(rawBuyerEscrowUsdtBalance, usdtDecimals);
+    if (buyerEscrowUsdtBalance + 0.000001 < totalTransferUsdtAmount) {
+      console.error('completePrivateBuyOrderBySeller: buyer escrow balance is insufficient for total transfer', {
+        buyerEscrowWalletAddress,
+        buyerEscrowUsdtBalance,
+        buyerTransferUsdtAmount,
+        platformFeeUsdtAmount,
+        totalTransferUsdtAmount,
+      });
+      return { success: false, error: 'ESCROW_BALANCE_INSUFFICIENT' };
     }
 
-    if (!transferConfirmed) {
-      throw new Error('release transfer confirmation timeout');
-    }
+    const buyerReleaseTransaction = transfer({
+      contract: usdtContract,
+      to: orderBuyerWalletAddress,
+      amount: buyerTransferUsdtAmount,
+    });
+
+    const transactionId = shouldTransferPlatformFee
+      ? (
+          await buyerEscrowWallet.enqueueBatchTransaction({
+            transactions: [
+              buyerReleaseTransaction,
+              transfer({
+                contract: usdtContract,
+                to: resolvedPlatformFee.feeWalletAddress,
+                amount: platformFeeUsdtAmount,
+              }),
+            ],
+          })
+        ).transactionId
+      : (
+          await buyerEscrowWallet.enqueueTransaction({
+            transaction: buyerReleaseTransaction,
+          })
+        ).transactionId;
+    releaseTransactionHash = await waitForConfirmedTransactionHash(
+      transactionId,
+      'private buyorder release transfer',
+    );
   } catch (error) {
     console.error('completePrivateBuyOrderBySeller: release transfer failed', error);
     return { success: false, error: 'TRANSFER_FAILED' };
@@ -4114,6 +4420,16 @@ export async function completePrivateBuyOrderBySeller(
     ipAddress: normalizedRequesterIpAddress,
     userAgent: normalizedRequesterUserAgent,
     confirmedAt: now,
+  };
+  const transferResultRecord = {
+    transactionHash: releaseTransactionHash,
+    buyerTransferUsdtAmount,
+    platformFeeUsdtAmount,
+    totalTransferUsdtAmount,
+    transferCount,
+    transferMode: shouldTransferPlatformFee ? 'batch' : 'single',
+    completedAt: now,
+    source: resolvedPlatformFee.source,
   };
   const completeResult = await buyordersCollection.updateOne(
     {
@@ -4138,6 +4454,7 @@ export async function completePrivateBuyOrderBySeller(
         paymentConfirmedByIpAddress: normalizedRequesterIpAddress,
         paymentConfirmedByUserAgent: normalizedRequesterUserAgent,
         paymentConfirmedBy: paymentConfirmedAudit,
+        'settlement.transferResult': transferResultRecord,
       },
     },
   );
@@ -4160,6 +4477,7 @@ export async function completePrivateBuyOrderBySeller(
         'seller.buyOrder.buyer.releaseTransactionHash': releaseTransactionHash,
         'seller.buyOrder.seller.releaseTransactionHash': releaseTransactionHash,
         'seller.buyOrder.paymentConfirmedBy': paymentConfirmedAudit,
+        'seller.buyOrder.settlement.transferResult': transferResultRecord,
       },
     },
   );
@@ -4184,6 +4502,12 @@ export async function completePrivateBuyOrderBySeller(
     success: true,
     transactionHash: releaseTransactionHash,
     paymentConfirmedAt: now,
+    platformFeeRatePercent: resolvedPlatformFee.feeRatePercent,
+    platformFeeUsdtAmount,
+    platformFeeWalletAddress: resolvedPlatformFee.feeWalletAddress,
+    buyerTransferUsdtAmount,
+    totalTransferUsdtAmount,
+    transferCount,
   };
 }
 
@@ -10209,6 +10533,7 @@ export type AcceptBuyOrderPrivateSaleResult =
         | 'THIRDWEB_SECRET_KEY_MISSING'
         | 'BUYER_ESCROW_WALLET_CREATE_FAILED'
         | 'BUYER_ESCROW_WALLET_EMPTY'
+        | 'PLATFORM_FEE_WALLET_NOT_CONFIGURED'
         | 'ESCROW_TRANSFER_FAILED'
         | 'BUYORDER_INSERT_FAILED';
       detail?: string;
@@ -10364,6 +10689,27 @@ export async function acceptBuyOrderPrivateSale(
       return { success: false, error: 'INVALID_USDT_AMOUNT' };
     }
 
+    const resolvedPlatformFee = resolvePrivateOrderPlatformFee({
+      order: null,
+      sellerUser: seller,
+    });
+    const platformFeeUsdtAmount =
+      resolvedPlatformFee.feeRatePercent > 0
+        ? roundDownUsdtAmount((normalizedUsdtAmount * resolvedPlatformFee.feeRatePercent) / 100)
+        : 0;
+    const shouldTransferPlatformFee = platformFeeUsdtAmount > 0;
+
+    if (shouldTransferPlatformFee && !isWalletAddress(resolvedPlatformFee.feeWalletAddress)) {
+      console.error('acceptBuyOrderPrivateSale: platform fee wallet is missing', {
+        sellerWalletAddress: matchedSellerWalletAddress,
+        feeRatePercent: resolvedPlatformFee.feeRatePercent,
+        feeWalletAddress: resolvedPlatformFee.feeWalletAddress,
+      });
+      return { success: false, error: 'PLATFORM_FEE_WALLET_NOT_CONFIGURED' };
+    }
+
+    const escrowLockUsdtAmount = roundDownUsdtAmount(normalizedUsdtAmount + platformFeeUsdtAmount);
+
     // create a dedicated buyer escrow smart wallet address (thirdweb server wallet)
     const thirdwebSecretKey = process.env.THIRDWEB_SECRET_KEY || '';
     if (!thirdwebSecretKey) {
@@ -10410,7 +10756,7 @@ export async function acceptBuyOrderPrivateSale(
       const transferTx = transfer({
         contract: usdtContract,
         to: buyerEscrowWalletAddress,
-        amount: normalizedUsdtAmount,
+        amount: escrowLockUsdtAmount,
       });
 
       const { transactionId } = await sellerEscrowWallet.enqueueTransaction({
@@ -10476,13 +10822,36 @@ export async function acceptBuyOrderPrivateSale(
       avatar: buyer.avatar || '',
       privateSale: true,
       usdtAmount: normalizedUsdtAmount,
+      escrowLockUsdtAmount,
       rate: usdtToKrwRate,
       krwAmount: normalizedKrwAmount,
+      tradeFeeRate: resolvedPlatformFee.feeRatePercent,
+      centerFeeRate: resolvedPlatformFee.feeRatePercent,
+      platformFeeRate: resolvedPlatformFee.feeRatePercent,
+      platformFeeAmount: platformFeeUsdtAmount,
+      platformFeeWalletAddress: resolvedPlatformFee.feeWalletAddress,
+      platformFee: {
+        percentage: resolvedPlatformFee.feeRatePercent,
+        rate: resolvedPlatformFee.feeRatePercent,
+        amount: platformFeeUsdtAmount,
+        amountUsdt: platformFeeUsdtAmount,
+        walletAddress: resolvedPlatformFee.feeWalletAddress,
+        address: resolvedPlatformFee.feeWalletAddress,
+        escrowLockAmount: escrowLockUsdtAmount,
+        totalEscrowAmount: escrowLockUsdtAmount,
+        source: resolvedPlatformFee.source,
+      },
       paymentMethod: normalizedPaymentMethod,
       paymentBankName: sellerBankName,
       storecode: 'admin',
       ...(privateSaleAgentcode ? { agentcode: privateSaleAgentcode } : {}),
       totalAmount: normalizedUsdtAmount,
+      settlement: {
+        platformFeePercent: resolvedPlatformFee.feeRatePercent,
+        platformFeeAmount: platformFeeUsdtAmount,
+        platformFeeWalletAddress: resolvedPlatformFee.feeWalletAddress,
+        escrowLockUsdtAmount,
+      },
       status: 'paymentRequested',
       createdAt: nowIso,
       acceptedAt: nowIso,
@@ -10493,6 +10862,7 @@ export async function acceptBuyOrderPrivateSale(
         walletAddress: matchedBuyerWalletAddress,
         escrowWalletAddress: buyerEscrowWalletAddress,
         lockTransactionHash: escrowTransferTransactionHash,
+        escrowLockedUsdtAmount: escrowLockUsdtAmount,
         depositName: buyerAccountHolder,
         depositCompleted: false,
       },
@@ -10501,6 +10871,7 @@ export async function acceptBuyOrderPrivateSale(
         walletAddress: matchedSellerWalletAddress,
         escrowWalletAddress: sellerEscrowWalletAddress,
         lockTransactionHash: escrowTransferTransactionHash,
+        escrowLockedUsdtAmount: escrowLockUsdtAmount,
         nickname: seller.nickname || '',
         avatar: seller.avatar || '',
         storecode: seller.storecode || '',

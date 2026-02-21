@@ -52,6 +52,12 @@ export async function POST(request: NextRequest) {
       result: true,
       transactionHash: result.transactionHash || '',
       paymentConfirmedAt: result.paymentConfirmedAt || '',
+      platformFeeRatePercent: Number(result.platformFeeRatePercent || 0),
+      platformFeeUsdtAmount: Number(result.platformFeeUsdtAmount || 0),
+      platformFeeWalletAddress: String(result.platformFeeWalletAddress || ''),
+      buyerTransferUsdtAmount: Number(result.buyerTransferUsdtAmount || 0),
+      totalTransferUsdtAmount: Number(result.totalTransferUsdtAmount || 0),
+      transferCount: Number(result.transferCount || 0),
     });
   } catch (error) {
     return NextResponse.json(

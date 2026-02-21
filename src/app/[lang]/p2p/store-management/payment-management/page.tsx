@@ -49,6 +49,9 @@ type DashboardPayment = {
     role: string;
   } | null;
   orderProcessingUpdatedByIp: string;
+  platformFeeRate: number;
+  platformFeeAmount: number;
+  platformFeeWalletAddress: string;
   transactionHash: string;
   createdAt: string;
   confirmedAt: string;
@@ -92,6 +95,11 @@ const formatUsdt = (value: number) =>
 
 const formatRate = (value: number) =>
   `${new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0)} KRW`;
+const formatPercent = (value: number) => {
+  const numeric = Number(value || 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) return '0';
+  return (Math.round(numeric * 100) / 100).toFixed(2).replace(/\.?0+$/, '');
+};
 const isOrderProcessingCompleted = (value: string | undefined) =>
   String(value || '').trim().toUpperCase() === 'COMPLETED';
 const resolveOrderProcessingLabel = (value: string | undefined) =>
@@ -354,6 +362,13 @@ export default function P2PStorePaymentManagementPage() {
             : null,
           orderProcessingUpdatedByIp: String(
             payment.orderProcessingUpdatedByIp || payment.order_processing_updated_by_ip || '',
+          ),
+          platformFeeRate: Number(payment.platformFeeRate || payment.platform_fee_rate || 0),
+          platformFeeAmount: Number(payment.platformFeeAmount || payment.platform_fee_amount || 0),
+          platformFeeWalletAddress: String(
+            payment.platformFeeWalletAddress
+            || payment.platform_fee_wallet_address
+            || '',
           ),
           transactionHash: String(payment.transactionHash || ''),
           createdAt: String(payment.createdAt || ''),
@@ -958,6 +973,7 @@ export default function P2PStorePaymentManagementPage() {
                             <th className="px-3 py-2">USDT</th>
                             <th className="px-3 py-2">KRW</th>
                             <th className="px-3 py-2">환율</th>
+                            <th className="px-3 py-2">플랫폼 수수료</th>
                             <th className="px-3 py-2">TX</th>
                             <th className="px-3 py-2">메모</th>
                             <th className="px-3 py-2">결제처리</th>
@@ -1018,6 +1034,19 @@ export default function P2PStorePaymentManagementPage() {
                               </td>
                               <td className="px-3 py-2.5 text-xs text-slate-600">
                                 1 USDT = {formatRate(payment.exchangeRate)}
+                              </td>
+                              <td className="px-3 py-2.5 text-xs text-slate-600">
+                                {payment.platformFeeRate > 0 || payment.platformFeeAmount > 0 || payment.platformFeeWalletAddress ? (
+                                  <div className="flex flex-col gap-0.5 leading-tight">
+                                    <span className="font-semibold text-indigo-700">{formatPercent(payment.platformFeeRate)}%</span>
+                                    <span className="font-semibold text-indigo-800">{formatUsdt(payment.platformFeeAmount)}</span>
+                                    <span className="truncate text-[11px] text-slate-500">
+                                      {payment.platformFeeWalletAddress ? shortAddress(payment.platformFeeWalletAddress) : '-'}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  '-'
+                                )}
                               </td>
                               <td className="px-3 py-2.5 text-xs text-slate-500">
                                 {shortAddress(payment.transactionHash)}

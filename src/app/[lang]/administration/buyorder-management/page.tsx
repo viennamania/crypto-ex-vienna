@@ -37,8 +37,23 @@ type BuyOrderItem = {
   krwAmount?: number;
   usdtAmount?: number;
   paymentMethod?: string;
+  tradeFeeRate?: number;
+  centerFeeRate?: number;
+  platformFeeRate?: number;
+  platformFeeAmount?: number;
+  platformFeeWalletAddress?: string;
   walletAddress?: string;
   nickname?: string;
+  platformFee?: {
+    percentage?: number;
+    rate?: number;
+    address?: string;
+    walletAddress?: string;
+    amount?: number;
+    amountUsdt?: number;
+    buyerTransferAmount?: number;
+    totalTransferAmount?: number;
+  };
   buyer?: {
     walletAddress?: string;
     nickname?: string;
@@ -72,6 +87,13 @@ type BuyOrderItem = {
   store?: {
     storeName?: string;
     storeLogo?: string;
+  };
+  settlement?: {
+    platformFeePercent?: number;
+    platformFeeAmount?: number | string;
+    platformFeeWalletAddress?: string;
+    buyerTransferAmount?: number | string;
+    totalTransferAmount?: number | string;
   };
 };
 
@@ -124,6 +146,56 @@ const formatKrw = (value?: number) =>
 
 const formatUsdt = (value?: number) =>
   new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(Number(value || 0));
+
+const toFiniteNumber = (value: unknown) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const formatPercent = (value?: number) => {
+  const numeric = toFiniteNumber(value);
+  if (numeric <= 0) return '0';
+  return (Math.round(numeric * 100) / 100).toFixed(2).replace(/\.?0+$/, '');
+};
+
+const getOrderPlatformFeeRate = (order: BuyOrderItem) => {
+  const candidates = [
+    order?.platformFeeRate,
+    order?.platformFee?.rate,
+    order?.platformFee?.percentage,
+    order?.settlement?.platformFeePercent,
+    order?.tradeFeeRate,
+    order?.centerFeeRate,
+  ];
+  for (const candidate of candidates) {
+    const numeric = toFiniteNumber(candidate);
+    if (numeric > 0) return numeric;
+  }
+  return 0;
+};
+
+const getOrderPlatformFeeAmount = (order: BuyOrderItem) => {
+  const candidates = [
+    order?.platformFeeAmount,
+    order?.platformFee?.amountUsdt,
+    order?.platformFee?.amount,
+    order?.settlement?.platformFeeAmount,
+  ];
+  for (const candidate of candidates) {
+    const numeric = toFiniteNumber(candidate);
+    if (numeric > 0) return numeric;
+  }
+  return 0;
+};
+
+const getOrderPlatformFeeWalletAddress = (order: BuyOrderItem) =>
+  String(
+    order?.platformFeeWalletAddress
+    || order?.platformFee?.walletAddress
+    || order?.platformFee?.address
+    || order?.settlement?.platformFeeWalletAddress
+    || '',
+  ).trim();
 
 const TX_EXPLORER_BASE_BY_CHAIN: Record<string, string> = {
   ethereum: 'https://etherscan.io/tx/',
@@ -963,7 +1035,7 @@ export default function BuyOrderManagementPage() {
             <div className="px-4 py-12 text-center text-sm text-slate-500">검색된 주문 데이터가 없습니다.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-[1240px] w-full table-fixed">
+              <table className="min-w-[1390px] w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
                     <th className="w-[132px] px-3 py-3">상태</th>
@@ -973,6 +1045,7 @@ export default function BuyOrderManagementPage() {
                     <th className="w-[132px] px-3 py-3">판매자</th>
                     <th className="w-[104px] px-3 py-3">결제방법</th>
                     <th className="w-[128px] px-3 py-3 text-right">주문금액</th>
+                    <th className="w-[170px] px-3 py-3">플랫폼 수수료</th>
                     <th className="w-[175px] px-3 py-3">전송내역</th>
                     <th className="w-[110px] px-3 py-3 text-center">액션</th>
                   </tr>
@@ -1004,6 +1077,11 @@ export default function BuyOrderManagementPage() {
                       hasSellerLockTx || hasCancelReleaseTx || hasFallbackTransferTx || hasEscrowTransferTx;
                     const canCancelOrderByStatus = isAdminCancelablePrivateOrder(order);
                     const canCancelOrder = isWalletConnected && canCancelOrderByStatus;
+                    const platformFeeRate = getOrderPlatformFeeRate(order);
+                    const platformFeeAmount = getOrderPlatformFeeAmount(order);
+                    const platformFeeWalletAddress = getOrderPlatformFeeWalletAddress(order);
+                    const hasPlatformFeeInfo =
+                      platformFeeRate > 0 || platformFeeAmount > 0 || Boolean(platformFeeWalletAddress);
 
                     return (
                     <tr key={`${order?._id || order?.tradeId || 'order'}-${index}`} className="bg-white text-sm text-slate-700">
@@ -1102,6 +1180,23 @@ export default function BuyOrderManagementPage() {
                           <span className="text-base font-extrabold leading-tight text-slate-900">{formatKrw(order?.krwAmount)} KRW</span>
                           <span className="text-sm font-bold text-slate-600">{formatUsdt(order?.usdtAmount)} USDT</span>
                         </div>
+                      </td>
+                      <td className="px-3 py-3">
+                        {hasPlatformFeeInfo ? (
+                          <div className="flex flex-col gap-1 leading-tight">
+                            <span className="inline-flex w-fit rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-extrabold text-indigo-700">
+                              {formatPercent(platformFeeRate)}%
+                            </span>
+                            <span className="text-xs font-semibold text-indigo-800">
+                              {formatUsdt(platformFeeAmount)} USDT
+                            </span>
+                            <span className="truncate text-[11px] text-slate-500">
+                              {platformFeeWalletAddress ? shortWallet(platformFeeWalletAddress) : '-'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400">-</span>
+                        )}
                       </td>
                       <td className="px-3 py-3">
                         {(isPaymentRequested || isPaymentConfirmed || isCancelled) && hasTransferDetails ? (

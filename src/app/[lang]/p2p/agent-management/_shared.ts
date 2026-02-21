@@ -52,6 +52,9 @@ export type AgentBuyOrderItem = {
   usdtAmount: number;
   krwAmount: number;
   rate: number;
+  platformFeeRate: number;
+  platformFeeAmount: number;
+  platformFeeWalletAddress: string;
   createdAt: string;
   paymentConfirmedAt: string;
 };
@@ -134,6 +137,8 @@ const normalizeBuyOrder = (value: unknown): AgentBuyOrderItem => {
   const buyer = isRecord(source.buyer) ? source.buyer : {};
   const seller = isRecord(source.seller) ? source.seller : {};
   const store = isRecord(source.store) ? source.store : {};
+  const platformFee = isRecord(source.platformFee) ? source.platformFee : {};
+  const settlement = isRecord(source.settlement) ? source.settlement : {};
 
   return {
     id: toText(source._id) || toText(source.id),
@@ -151,6 +156,26 @@ const normalizeBuyOrder = (value: unknown): AgentBuyOrderItem => {
     usdtAmount: toNumber(source.usdtAmount),
     krwAmount: toNumber(source.krwAmount),
     rate: toNumber(source.rate),
+    platformFeeRate: toNumber(
+      source.platformFeeRate
+      ?? platformFee.rate
+      ?? platformFee.percentage
+      ?? settlement.platformFeePercent
+      ?? source.tradeFeeRate
+      ?? source.centerFeeRate,
+    ),
+    platformFeeAmount: toNumber(
+      source.platformFeeAmount
+      ?? platformFee.amountUsdt
+      ?? platformFee.amount
+      ?? settlement.platformFeeAmount,
+    ),
+    platformFeeWalletAddress: toText(
+      source.platformFeeWalletAddress
+      || platformFee.walletAddress
+      || platformFee.address
+      || settlement.platformFeeWalletAddress,
+    ),
     createdAt: toText(source.createdAt),
     paymentConfirmedAt: toText(source.paymentConfirmedAt),
   };
@@ -176,6 +201,9 @@ const normalizeWalletUsdtPayment = (value: unknown): AgentBuyOrderItem => {
     usdtAmount: toNumber(source.usdtAmount),
     krwAmount: toNumber(source.krwAmount),
     rate: toNumber(source.exchangeRate),
+    platformFeeRate: toNumber(source.platformFeeRate),
+    platformFeeAmount: toNumber(source.platformFeeAmount),
+    platformFeeWalletAddress: toText(source.platformFeeWalletAddress),
     createdAt: toText(source.createdAt),
     paymentConfirmedAt: toText(source.confirmedAt),
   };

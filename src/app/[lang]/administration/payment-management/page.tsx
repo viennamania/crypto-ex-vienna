@@ -19,6 +19,9 @@ type WalletPaymentItem = {
   usdtAmount: number;
   krwAmount: number;
   rate: number;
+  platformFeeRate: number;
+  platformFeeAmount: number;
+  platformFeeWalletAddress: string;
   createdAt: string;
   paymentConfirmedAt: string;
 };
@@ -55,6 +58,12 @@ const formatKrw = (value: number) =>
 const formatUsdt = (value: number) =>
   `${new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 6 }).format(toNumber(value))} USDT`;
 
+const formatPercent = (value: number) => {
+  const numeric = toNumber(value);
+  if (numeric <= 0) return '0';
+  return (Math.round(numeric * 100) / 100).toFixed(2).replace(/\.?0+$/, '');
+};
+
 const isOrderProcessingCompleted = (value: string | undefined) =>
   String(value || '').trim().toUpperCase() === 'COMPLETED';
 
@@ -89,6 +98,9 @@ const normalizeWalletPayment = (value: unknown): WalletPaymentItem => {
     usdtAmount: toNumber(source.usdtAmount),
     krwAmount: toNumber(source.krwAmount),
     rate: toNumber(source.exchangeRate),
+    platformFeeRate: toNumber(source.platformFeeRate || source.platform_fee_rate),
+    platformFeeAmount: toNumber(source.platformFeeAmount || source.platform_fee_amount),
+    platformFeeWalletAddress: toText(source.platformFeeWalletAddress || source.platform_fee_wallet_address),
     createdAt: toText(source.createdAt),
     paymentConfirmedAt: toText(source.confirmedAt),
   };
@@ -359,6 +371,7 @@ export default function AdministrationPaymentManagementPage() {
                   <th className="px-4 py-3">회원/결제지갑/이름</th>
                   <th className="px-4 py-3 text-right">수량</th>
                   <th className="px-4 py-3 text-right">금액</th>
+                  <th className="px-4 py-3">플랫폼 수수료</th>
                   <th className="px-4 py-3">결제시각</th>
                   <th className="px-4 py-3 text-center">결제처리</th>
                 </tr>
@@ -366,7 +379,7 @@ export default function AdministrationPaymentManagementPage() {
               <tbody className="divide-y divide-slate-100">
                 {payments.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-500">
                       표시할 결제가 없습니다.
                     </td>
                   </tr>
@@ -418,6 +431,19 @@ export default function AdministrationPaymentManagementPage() {
                         </td>
                         <td className="px-4 py-3 text-right text-sm font-extrabold tabular-nums text-slate-900 sm:text-base">
                           {formatKrw(payment.krwAmount)}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-600">
+                          {payment.platformFeeRate > 0 || payment.platformFeeAmount > 0 || payment.platformFeeWalletAddress ? (
+                            <div className="space-y-0.5">
+                              <p className="font-semibold text-indigo-700">{formatPercent(payment.platformFeeRate)}%</p>
+                              <p className="font-semibold text-indigo-800">{formatUsdt(payment.platformFeeAmount)}</p>
+                              <p className="truncate text-slate-500">
+                                {payment.platformFeeWalletAddress || '-'}
+                              </p>
+                            </div>
+                          ) : (
+                            <p>-</p>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600">
                           {toDateTime(payment.paymentConfirmedAt || payment.createdAt)}

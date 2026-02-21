@@ -193,6 +193,14 @@ interface BuyOrder {
   platformFee: {
     percentage: number;
     address: string;
+    rate?: number;
+    amount?: number;
+    amountUsdt?: number;
+    walletAddress?: string;
+    buyerTransferAmount?: number;
+    totalTransferAmount?: number;
+    transferCount?: number;
+    transferMode?: string;
   };
 
 }
@@ -362,6 +370,91 @@ const formatKrwValue = (value: number | string | null | undefined) => {
   return numeric.toLocaleString('ko-KR', { maximumFractionDigits: 0 });
 };
 
+const roundDownUsdt = (value: number) => Math.floor(value * 1000) / 1000;
+
+const formatUsdtDisplay = (value: number | string | null | undefined) => {
+  const numeric = Number(value ?? 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return '0.000';
+  }
+  return roundDownUsdt(numeric).toLocaleString('en-US', {
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
+  });
+};
+
+const formatPercentDisplay = (value: number | string | null | undefined) => {
+  const numeric = Number(value ?? 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return '0';
+  }
+  const rounded = Math.round(numeric * 100) / 100;
+  return rounded.toFixed(2).replace(/\.?0+$/, '');
+};
+
+const toFiniteNumberOrNull = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+const getOrderPlatformFeeRate = (orderLike: any): number | null => {
+  const candidates = [
+    orderLike?.platformFeeRate,
+    orderLike?.platformFee?.rate,
+    orderLike?.platformFee?.percentage,
+    orderLike?.settlement?.platformFeePercent,
+    orderLike?.seller?.platformFee?.rate,
+    orderLike?.seller?.platformFee?.percentage,
+  ];
+
+  for (const value of candidates) {
+    const numeric = toFiniteNumberOrNull(value);
+    if (numeric !== null) {
+      return numeric;
+    }
+  }
+
+  return null;
+};
+
+const getOrderPlatformFeeAmount = (orderLike: any): number | null => {
+  const candidates = [
+    orderLike?.platformFeeAmount,
+    orderLike?.platformFee?.amount,
+    orderLike?.platformFee?.amountUsdt,
+    orderLike?.settlement?.platformFeeAmount,
+  ];
+
+  for (const value of candidates) {
+    const numeric = toFiniteNumberOrNull(value);
+    if (numeric !== null) {
+      return numeric;
+    }
+  }
+
+  return null;
+};
+
+const getOrderPlatformFeeWalletAddress = (orderLike: any): string => {
+  const candidates = [
+    orderLike?.platformFeeWalletAddress,
+    orderLike?.platformFee?.walletAddress,
+    orderLike?.platformFee?.address,
+    orderLike?.settlement?.platformFeeWalletAddress,
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return '';
+};
+
 const maskBuyerId = (value?: string | null) => {
   const name = (value ?? '').trim();
   if (!name) {
@@ -376,7 +469,7 @@ const maskBuyerId = (value?: string | null) => {
 const getTradeStatusLabel = (status?: string) => {
   if (status === 'ordered') return '주문접수';
   if (status === 'accepted') return '결제대기';
-  if (status === 'paymentRequested') return '결제요청';
+  if (status === 'paymentRequested') return '입금요청';
   if (status === 'paymentConfirmed') return '결제확인';
   if (status === 'completed') return '거래완료';
   if (status === 'cancelled') return '취소됨';
@@ -1745,6 +1838,71 @@ export default function Index({ params }: any) {
     [myActiveTradingOrders],
   );
   const hasActiveTradingAudioEnabledOrders = activeTradingAudioEnabledOrders.length > 0;
+  const activeOrderCompleteFeePreview = useMemo(() => {
+    if (!selectedActivePaymentRequestedOrder) {
+      return null;
+    }
+
+    const targetSellerWalletAddress =
+      getBuyOrderSellerWalletAddress(selectedActivePaymentRequestedOrder) || ownerWalletAddress;
+    const targetSellerProfile =
+      sellersBalance.find((item) =>
+        isSameWalletAddress(String(item?.walletAddress || ''), targetSellerWalletAddress),
+      )
+      || sellersBalance.find((item) =>
+        isSameWalletAddress(String(item?.walletAddress || ''), ownerWalletAddress),
+      )
+      || null;
+
+    const toRate = (value: unknown) => {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric) || numeric < 0) {
+        return null;
+      }
+      return numeric;
+    };
+
+    const feeRate =
+      [
+        toRate(targetSellerProfile?.seller?.platformFee?.rate),
+        toRate(targetSellerProfile?.seller?.platformFee?.percentage),
+        toRate((selectedActivePaymentRequestedOrder as any)?.platformFee?.rate),
+        toRate((selectedActivePaymentRequestedOrder as any)?.platformFee?.percentage),
+        toRate((selectedActivePaymentRequestedOrder as any)?.seller?.platformFee?.rate),
+        toRate((selectedActivePaymentRequestedOrder as any)?.seller?.platformFee?.percentage),
+        toRate((selectedActivePaymentRequestedOrder as any)?.tradeFeeRate),
+        toRate((selectedActivePaymentRequestedOrder as any)?.centerFeeRate),
+      ].find((value) => typeof value === 'number')
+      || 0;
+
+    const feeWalletAddress = String(
+      targetSellerProfile?.seller?.platformFee?.walletAddress
+      || targetSellerProfile?.seller?.platformFee?.address
+      || (selectedActivePaymentRequestedOrder as any)?.platformFee?.walletAddress
+      || (selectedActivePaymentRequestedOrder as any)?.platformFee?.address
+      || (selectedActivePaymentRequestedOrder as any)?.seller?.platformFee?.walletAddress
+      || '',
+    ).trim();
+
+    const buyerTransferUsdt = roundDownUsdt(Number(selectedActivePaymentRequestedOrder.usdtAmount || 0));
+    const platformFeeUsdt =
+      feeRate > 0 && buyerTransferUsdt > 0
+        ? roundDownUsdt((buyerTransferUsdt * feeRate) / 100)
+        : 0;
+    const totalTransferUsdt = roundDownUsdt(buyerTransferUsdt + platformFeeUsdt);
+
+    return {
+      feeRate,
+      feeWalletAddress,
+      buyerTransferUsdt,
+      platformFeeUsdt,
+      totalTransferUsdt,
+    };
+  }, [
+    ownerWalletAddress,
+    selectedActivePaymentRequestedOrder,
+    sellersBalance,
+  ]);
 
   const startNotificationLoop = useCallback(async () => {
     const audio = notificationAudioRef.current;
@@ -4988,7 +5146,18 @@ const fetchBuyOrders = async () => {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data?.result) {
-        throw new Error(data?.error || '주문 완료 처리에 실패했습니다.');
+        const errorCode = typeof data?.error === 'string' ? data.error : '';
+        const friendlyErrorMessage =
+          errorCode === 'PLATFORM_FEE_WALLET_NOT_CONFIGURED'
+            ? '플랫폼 수수료 지갑이 설정되지 않아 완료 처리할 수 없습니다.'
+            : errorCode === 'ESCROW_BALANCE_INSUFFICIENT'
+              ? '에스크로 잔액이 부족하여 주문 완료 처리를 진행할 수 없습니다.'
+              : errorCode === 'ESCROW_BALANCE_INSUFFICIENT_FOR_PLATFORM_FEE'
+                ? '플랫폼 수수료 전송에 필요한 에스크로 잔액이 부족합니다. 잠시 후 다시 시도해주세요.'
+                : errorCode === 'SELLER_ESCROW_WALLET_MISSING'
+                  ? '판매자 에스크로 지갑 정보를 찾을 수 없어 완료 처리에 실패했습니다.'
+                  : '';
+        throw new Error(friendlyErrorMessage || data?.error || '주문 완료 처리에 실패했습니다.');
       }
 
       const confirmedAt =
@@ -4997,6 +5166,12 @@ const fetchBuyOrders = async () => {
           : new Date().toISOString();
       const releaseTxHash =
         typeof data?.transactionHash === 'string' ? data.transactionHash : '';
+      const platformFeeRatePercent = Number(data?.platformFeeRatePercent || 0);
+      const platformFeeUsdtAmount = Number(data?.platformFeeUsdtAmount || 0);
+      const platformFeeWalletAddress = String(data?.platformFeeWalletAddress || '').trim();
+      const buyerTransferUsdtAmount = Number(data?.buyerTransferUsdtAmount || 0);
+      const totalTransferUsdtAmount = Number(data?.totalTransferUsdtAmount || 0);
+      const transferCount = Number(data?.transferCount || 0);
 
       setActivePaymentRequestedOrders((prev) =>
         prev.filter((item) => item._id !== selectedActivePaymentRequestedOrder._id),
@@ -5021,6 +5196,29 @@ const fetchBuyOrders = async () => {
                 status: 'paymentConfirmed',
                 paymentConfirmedAt: confirmedAt,
                 transactionHash: releaseTxHash || seller.seller?.buyOrder?.transactionHash,
+                platformFee: {
+                  ...(seller.seller?.buyOrder?.platformFee || {}),
+                  percentage: platformFeeRatePercent,
+                  rate: platformFeeRatePercent,
+                  amount: platformFeeUsdtAmount,
+                  amountUsdt: platformFeeUsdtAmount,
+                  walletAddress: platformFeeWalletAddress,
+                  address: platformFeeWalletAddress,
+                  buyerTransferAmount: buyerTransferUsdtAmount,
+                  totalTransferAmount: totalTransferUsdtAmount,
+                  transferCount,
+                  transferMode: transferCount > 1 ? 'batch' : 'single',
+                },
+                settlement: {
+                  ...(seller.seller?.buyOrder?.settlement || {}),
+                  platformFeePercent: platformFeeRatePercent,
+                  platformFeeAmount: platformFeeUsdtAmount,
+                  platformFeeWalletAddress,
+                  buyerTransferAmount: buyerTransferUsdtAmount,
+                  totalTransferAmount: totalTransferUsdtAmount,
+                  platformFeeTransferCount: transferCount,
+                  platformFeeTransferMode: transferCount > 1 ? 'batch' : 'single',
+                },
                 buyer: {
                   ...(seller.seller?.buyOrder?.buyer || {}),
                   releaseTransactionHash:
@@ -8442,7 +8640,7 @@ const fetchBuyOrders = async () => {
                             />
                             {/* TID */}
                             <span className="text-sm text-slate-700">
-                              TID: #<button
+                              거래번호(TID): #<button
                                   className="text-sm text-slate-800 underline"
                                   style={{ fontFamily: 'monospace' }}
                                   onClick={() => {
@@ -8534,7 +8732,7 @@ const fetchBuyOrders = async () => {
                             <div className="flex flex-row items-center justify-start gap-2">
 
                               <span className="text-sm">
-                                TID: #<button
+                                거래번호(TID): #<button
                                     className="text-sm text-slate-600 underline"
                                     style={{ fontFamily: 'monospace' }}
                                     onClick={() => {
@@ -8784,7 +8982,7 @@ const fetchBuyOrders = async () => {
                                       >
                                         <div className="w-full flex flex-row items-start justify-between gap-2">
                                           <span className="text-sm font-semibold text-slate-900">
-                                            TID #{order.tradeId || '-'}
+                                            거래번호(TID) #{order.tradeId || '-'}
                                           </span>
                                           <div className="flex flex-col items-end gap-1">
                                             <span className="text-xs text-slate-600">
@@ -8858,7 +9056,7 @@ const fetchBuyOrders = async () => {
                                 </div>
                                 <div className="mt-2 grid grid-cols-1 gap-2 text-sm text-slate-700 sm:grid-cols-2">
                                   <div className="rounded-lg border border-slate-200 bg-white/80 px-2 py-1.5">
-                                    TID {currentTradeOrder.tradeId || '-'}
+                                    거래번호(TID) {currentTradeOrder.tradeId || '-'}
                                   </div>
                                   <div className="rounded-lg border border-slate-200 bg-white/80 px-2 py-1.5">
                                     주문 금액 {formatKrwValue(currentTradeOrder.krwAmount)} 원
@@ -9833,7 +10031,7 @@ const fetchBuyOrders = async () => {
                     />
                   </svg>
                 </span>
-                <span className="text-sm font-bold tracking-wide">거래내역</span>
+                <span className="text-sm font-bold tracking-wide">거래내역(TID)</span>
                 <span className="rounded-full border border-white/25 bg-white/10 px-2 py-0.5 text-[10px] font-semibold">
                   최신순
                 </span>
@@ -9881,7 +10079,7 @@ const fetchBuyOrders = async () => {
             )}
 
             <div className="w-full overflow-x-auto">
-              <table className="min-w-[860px] w-full table-auto border-collapse text-sm text-slate-700">
+              <table className="min-w-[980px] w-full table-auto border-collapse text-sm text-slate-700">
                 <thead className="bg-slate-100/95 text-[11px] uppercase tracking-[0.16em] text-slate-500">
                   <tr>
                     <th className="px-4 py-3 text-left font-semibold">거래번호</th>
@@ -9889,13 +10087,19 @@ const fetchBuyOrders = async () => {
                     <th className="px-4 py-3 text-left font-semibold">구매자</th>
                     <th className="px-4 py-3 text-right font-semibold">USDT</th>
                     <th className="px-4 py-3 text-right font-semibold">KRW</th>
+                    {isOwnerSeller && (
+                      <th className="px-4 py-3 text-left font-semibold">플랫폼 수수료</th>
+                    )}
                     <th className="px-4 py-3 text-left font-semibold">상태</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
                   {buyOrders.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-sm font-medium text-slate-500">
+                      <td
+                        colSpan={isOwnerSeller ? 7 : 6}
+                        className="px-4 py-10 text-center text-sm font-medium text-slate-500"
+                      >
                         거래내역이 없습니다.
                       </td>
                     </tr>
@@ -9935,6 +10139,9 @@ const fetchBuyOrders = async () => {
                     const buyerDisplayBankAccount = isMaskedBuyerInfo
                       ? maskBuyerId(String(buyerBankAccount))
                       : String(buyerBankAccount);
+                    const platformFeeRate = getOrderPlatformFeeRate(item);
+                    const platformFeeAmount = getOrderPlatformFeeAmount(item);
+                    const platformFeeWalletAddress = getOrderPlatformFeeWalletAddress(item);
 
                     return (
                       <tr
@@ -9984,6 +10191,23 @@ const fetchBuyOrders = async () => {
                             ? formatKrwValue(item.krwAmount)
                             : '-'}
                         </td>
+                        {isOwnerSeller && (
+                          <td className="px-4 py-3 text-slate-700">
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-slate-900">
+                                {platformFeeRate !== null || platformFeeAmount !== null
+                                  ? `${formatPercentDisplay(platformFeeRate ?? 0)}% / ${formatUsdtDisplay(platformFeeAmount ?? 0)} USDT`
+                                  : '-'}
+                              </span>
+                              <span
+                                className="text-[11px] text-slate-500"
+                                title={platformFeeWalletAddress || undefined}
+                              >
+                                지갑: {platformFeeWalletAddress ? formatShortWalletAddress(platformFeeWalletAddress) : '-'}
+                              </span>
+                            </div>
+                          </td>
+                        )}
                         <td className="px-4 py-3">
                           <span
                             className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getTradeStatusBadgeClass(
@@ -11368,7 +11592,7 @@ const fetchBuyOrders = async () => {
           isOpen={isBuyOrderConfirmModalOpen}
           onClose={closeBuyOrderConfirmModal}
         >
-          <div className="w-[min(94vw,520px)] rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+          <div className="w-[min(94vw,480px)] rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h3 className="text-base font-bold text-slate-900">구매 주문 확인</h3>
@@ -11378,7 +11602,7 @@ const fetchBuyOrders = async () => {
                 type="button"
                 onClick={closeBuyOrderConfirmModal}
                 disabled={isBuyOrderConfirmProcessing}
-                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-500 hover:text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300"
+                className="whitespace-nowrap rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-500 hover:text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300"
               >
                 닫기
               </button>
@@ -11455,17 +11679,19 @@ const fetchBuyOrders = async () => {
           isOpen={isActiveOrderCompleteModalOpen}
           onClose={closeActiveOrderCompleteModal}
         >
-          <div className="w-[min(94vw,520px)] rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
+          <div className="w-[min(94vw,480px)] rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h3 className="text-base font-bold text-slate-900">주문 완료 처리</h3>
-                <p className="text-xs text-slate-500">에스크로에서 구매자 지갑으로 USDT를 전송합니다.</p>
+                <p className="text-xs text-slate-500">
+                  에스크로 지갑에서 구매자 지갑 전송분과 플랫폼 수수료 지갑 전송분을 함께 안내합니다.
+                </p>
               </div>
               <button
                 type="button"
                 onClick={closeActiveOrderCompleteModal}
                 disabled={completingActiveOrder}
-                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-500 hover:text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300"
+                className="whitespace-nowrap rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-500 hover:text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300"
               >
                 닫기
               </button>
@@ -11498,7 +11724,7 @@ const fetchBuyOrders = async () => {
 
                   <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 text-xs text-slate-700">
                     <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5">
-                      <span className="text-[11px] text-slate-500">TID</span>
+                      <span className="text-[11px] text-slate-500">거래번호(TID)</span>
                       <div className="mt-0.5 font-bold text-slate-900 tabular-nums">
                         {selectedActivePaymentRequestedOrder.tradeId || '-'}
                       </div>
@@ -11506,31 +11732,38 @@ const fetchBuyOrders = async () => {
                     <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5">
                       <span className="text-[11px] text-slate-500">주문 상태</span>
                       <div className="mt-0.5 font-bold text-amber-700">
-                        {selectedActivePaymentRequestedOrder.status || 'paymentRequested'}
+                        {getTradeStatusLabel(
+                          selectedActivePaymentRequestedOrder.status || 'paymentRequested',
+                        )}
                       </div>
                     </div>
-                    <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5">
+                    <div className="rounded-md border border-emerald-200 bg-emerald-50/60 px-2 py-1.5">
                       <span className="text-[11px] text-slate-500">입금 금액</span>
-                      <div className="mt-0.5 font-bold text-slate-900 tabular-nums">
+                      <div className="mt-1 text-xl font-extrabold leading-tight text-emerald-800 tabular-nums sm:text-2xl">
                         {formatKrwValue(selectedActivePaymentRequestedOrder.krwAmount)} 원
                       </div>
                     </div>
-                    <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5">
+                    <div className="rounded-md border border-sky-200 bg-sky-50/60 px-2 py-1.5">
                       <span className="text-[11px] text-slate-500">주문 수량</span>
-                      <div className="mt-0.5 font-bold text-slate-900 tabular-nums">
+                      <div className="mt-1 text-xl font-extrabold leading-tight text-sky-800 tabular-nums sm:text-2xl">
                         {(Number(selectedActivePaymentRequestedOrder.usdtAmount || 0)).toFixed(3)} USDT
+                      </div>
+                    </div>
+                    <div className="rounded-md border border-indigo-200 bg-indigo-50/60 px-2 py-1.5">
+                      <span className="text-[11px] text-slate-500">플랫폼 수수료(%)</span>
+                      <div className="mt-1 text-xl font-extrabold leading-tight text-indigo-800 tabular-nums sm:text-2xl">
+                        {formatPercentDisplay(activeOrderCompleteFeePreview?.feeRate || 0)}%
+                      </div>
+                      <div className="text-[11px] font-semibold text-indigo-700 tabular-nums">
+                        추가 전송: {formatUsdtDisplay(activeOrderCompleteFeePreview?.platformFeeUsdt || 0)} USDT
                       </div>
                     </div>
                   </div>
 
                   <div className="rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-slate-500">주문번호</span>
-                      <span className="font-semibold text-slate-900 tabular-nums">{selectedActivePaymentRequestedOrder._id}</span>
-                    </div>
-                    <div className="mt-1 flex items-center justify-between gap-2">
                       <span className="text-slate-500">입금자명</span>
-                      <span className="font-semibold text-slate-900">
+                      <span className="text-lg font-extrabold leading-tight text-slate-900 sm:text-xl">
                         {getBuyerDepositName(selectedActivePaymentRequestedOrder)}
                       </span>
                     </div>
@@ -11550,16 +11783,48 @@ const fetchBuyOrders = async () => {
                       </div>
                     </div>
                     <div className="mt-1">
-                      <span className="text-[11px] text-slate-500">구매자 에스크로 지갑</span>
+                      <span className="text-[11px] text-slate-500">에스크로 지갑</span>
                       <div className="mt-0.5 break-all font-semibold text-slate-800 tabular-nums">
                         {selectedActivePaymentRequestedOrder.buyer?.escrowWalletAddress || '-'}
+                      </div>
+                    </div>
+                    <div className="mt-1">
+                      <span className="text-[11px] text-slate-500">플랫폼 수수료 지갑</span>
+                      <div className="mt-0.5 break-all font-semibold text-slate-800 tabular-nums">
+                        {activeOrderCompleteFeePreview?.feeWalletAddress || '-'}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800">
-                  완료 시 구매자 에스크로 지갑에서 구매자 지갑으로 USDT가 전송되고, 주문 상태가 결제완료로 변경됩니다.
+                <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50/80 p-2.5 text-amber-900">
+                  <div className="rounded-lg border border-orange-300 bg-white px-2.5 py-2">
+                    <div className="text-[11px] font-bold tracking-[0.08em] text-orange-700">
+                      플랫폼 수수료 추가 전송
+                    </div>
+                    <div className="mt-0.5 text-lg font-extrabold leading-tight text-orange-800 tabular-nums sm:text-xl">
+                      +{formatUsdtDisplay(activeOrderCompleteFeePreview?.platformFeeUsdt || 0)} USDT
+                    </div>
+                    <div className="mt-0.5 text-[11px] font-semibold text-orange-700">
+                      수수료율 {formatPercentDisplay(activeOrderCompleteFeePreview?.feeRate || 0)}% 기준으로
+                      {' '}플랫폼 수수료 지갑에 별도 전송됩니다.
+                    </div>
+                  </div>
+
+                  <div className="mt-2 space-y-1.5 text-xs font-semibold">
+                    <div className="flex items-center justify-between gap-2 rounded-md bg-white/70 px-2 py-1.5">
+                      <span className="text-amber-700">구매자 지갑 전송</span>
+                      <span className="text-base font-extrabold text-amber-900 tabular-nums">
+                        {formatUsdtDisplay(activeOrderCompleteFeePreview?.buyerTransferUsdt || 0)} USDT
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 rounded-md bg-white/70 px-2 py-1.5">
+                      <span className="text-amber-700">총 전송 예정 수량</span>
+                      <span className="text-base font-extrabold text-amber-900 tabular-nums">
+                        {formatUsdtDisplay(activeOrderCompleteFeePreview?.totalTransferUsdt || 0)} USDT
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </>
             )}
@@ -11847,7 +12112,7 @@ const UserPaymentPage = (
 
       <button
         onClick={closeModal}
-        className="bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
+        className="whitespace-nowrap bg-[#0047ab] text-white px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
       >
         닫기
       </button>
@@ -12423,7 +12688,7 @@ const SendbirdChatEmbed = ({
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900"
+              className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900"
             >
               닫기
             </button>
