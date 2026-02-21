@@ -5,6 +5,10 @@ import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 import { useActiveAccount } from 'thirdweb/react';
 
+import { client } from '@/app/client';
+import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { useClientWallets } from '@/lib/useClientWallets';
+
 type BuyOrderItem = {
   _id?: string;
   tradeId?: string;
@@ -19,6 +23,8 @@ type BuyOrderItem = {
   cancelledByRole?: string;
   cancelledByWalletAddress?: string;
   cancelledByNickname?: string;
+  cancelledByIpAddress?: string;
+  cancelledByUserAgent?: string;
   createdAt?: string;
   paymentRequestedAt?: string;
   paymentConfirmedAt?: string;
@@ -72,6 +78,7 @@ type BuyOrderItem = {
 const POLLING_INTERVAL_MS = 5000;
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
+const walletAuthOptions = ['google', 'email', 'phone'];
 
 type SearchFilters = {
   date: string;
@@ -79,6 +86,11 @@ type SearchFilters = {
   searchBuyer: string;
   searchDepositName: string;
   searchStoreName: string;
+};
+
+type CancelActorInfo = {
+  role: string;
+  nickname: string;
 };
 
 const ACTIVE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
@@ -282,6 +294,9 @@ const getCancellerLabel = (order: BuyOrderItem) => {
   return '-';
 };
 
+const getCancellerIp = (order: BuyOrderItem) =>
+  String(order?.cancelledByIpAddress || '').trim() || '-';
+
 const resolvePaymentConfirmerRole = (order: BuyOrderItem): 'buyer' | 'seller' | 'admin' | 'unknown' => {
   const role = String(order?.paymentConfirmedByRole || order?.paymentConfirmedBy?.role || '').trim().toLowerCase();
   if (role === 'buyer' || role.includes('구매')) return 'buyer';
@@ -339,6 +354,7 @@ const createDefaultFilters = (): SearchFilters => {
 export default function BuyOrderManagementPage() {
   const activeAccount = useActiveAccount();
   const adminWalletAddress = String(activeAccount?.address || '').trim();
+  const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
 
   const [orders, setOrders] = useState<BuyOrderItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -358,10 +374,115 @@ export default function BuyOrderManagementPage() {
   const [cancelingOrder, setCancelingOrder] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [copiedTradeId, setCopiedTradeId] = useState('');
+  const [cancelActorInfo, setCancelActorInfo] = useState<CancelActorInfo>({
+    role: 'admin',
+    nickname: '관리자',
+  });
+  const [publicIpAddress, setPublicIpAddress] = useState('');
+  const [loadingPublicIpAddress, setLoadingPublicIpAddress] = useState(false);
 
   const mountedRef = useRef(true);
   const requestInFlightRef = useRef(false);
   const initializedRef = useRef(false);
+
+  const fetchPublicIpAddress = useCallback(async () => {
+    setLoadingPublicIpAddress(true);
+    try {
+      let resolvedIpAddress = '';
+
+      try {
+        const response = await fetch('/api/server/getServerInfo', {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.ok) {
+          resolvedIpAddress = String(payload?.ipAddress || '').trim();
+        }
+      } catch (serverIpError) {
+        console.error('Failed to fetch server side ip address', serverIpError);
+      }
+
+      if (!resolvedIpAddress) {
+        const ipifyResponse = await fetch('https://api64.ipify.org?format=json', {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        const ipifyPayload = await ipifyResponse.json().catch(() => ({}));
+        if (ipifyResponse.ok) {
+          resolvedIpAddress = String(ipifyPayload?.ip || '').trim();
+        }
+      }
+
+      setPublicIpAddress(resolvedIpAddress);
+    } catch (fetchPublicIpError) {
+      console.error('Failed to fetch public ip address', fetchPublicIpError);
+      setPublicIpAddress('');
+    } finally {
+      setLoadingPublicIpAddress(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchPublicIpAddress();
+  }, [fetchPublicIpAddress]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCancelActorInfo = async () => {
+      const resolvedWalletAddress = String(adminWalletAddress || '').trim();
+      if (!resolvedWalletAddress) {
+        if (isMounted) {
+          setCancelActorInfo({
+            role: 'admin',
+            nickname: '관리자',
+          });
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/user/getUser', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storecode: 'admin',
+            walletAddress: resolvedWalletAddress,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(String(payload?.error || 'FAILED_TO_FETCH_ADMIN_PROFILE'));
+        }
+
+        const role = String(payload?.result?.role || 'admin').trim().toLowerCase() || 'admin';
+        const nickname = String(payload?.result?.nickname || '').trim()
+          || (role === 'agent' ? '에이전트' : '관리자');
+        if (!isMounted) return;
+        setCancelActorInfo({
+          role,
+          nickname,
+        });
+      } catch (fetchActorError) {
+        console.error('Failed to fetch cancel actor info', fetchActorError);
+        if (!isMounted) return;
+        setCancelActorInfo({
+          role: 'admin',
+          nickname: '관리자',
+        });
+      }
+    };
+
+    void fetchCancelActorInfo();
+    return () => {
+      isMounted = false;
+    };
+  }, [adminWalletAddress]);
+
+  const cancelActorRole = String(cancelActorInfo.role || 'admin').trim().toLowerCase() || 'admin';
+  const cancelActorRoleLabel = cancelActorRole === 'agent' ? '에이전트' : '관리자';
+  const cancelActorNickname = String(cancelActorInfo.nickname || '').trim()
+    || (cancelActorRole === 'agent' ? '에이전트' : '관리자');
 
   const fetchLatestBuyOrders = useCallback(async (mode: 'initial' | 'query' | 'polling' = 'query') => {
     if (requestInFlightRef.current) return;
@@ -517,8 +638,10 @@ export default function BuyOrderManagementPage() {
         body: JSON.stringify({
           orderId: targetOrderId,
           adminWalletAddress,
-          cancelledByRole: 'admin',
-          cancelledByNickname: '관리자',
+          cancelledByRole: cancelActorRole,
+          cancelledByNickname: cancelActorNickname,
+          cancelledByIpAddress: String(publicIpAddress || '').trim(),
+          cancelledByUserAgent: typeof window !== 'undefined' ? window.navigator.userAgent : '',
         }),
       });
 
@@ -539,7 +662,15 @@ export default function BuyOrderManagementPage() {
     } finally {
       setCancelingOrder(false);
     }
-  }, [adminWalletAddress, cancelTargetOrder?._id, cancelingOrder, fetchLatestBuyOrders]);
+  }, [
+    adminWalletAddress,
+    cancelActorNickname,
+    cancelActorRole,
+    cancelTargetOrder?._id,
+    cancelingOrder,
+    fetchLatestBuyOrders,
+    publicIpAddress,
+  ]);
 
   const copyTradeId = useCallback(async (tradeId: string) => {
     const normalizedTradeId = String(tradeId || '').trim();
@@ -589,6 +720,48 @@ export default function BuyOrderManagementPage() {
             </div>
           </div>
         </section>
+
+        {!adminWalletAddress && (
+          <section className="rounded-2xl border border-cyan-200/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.98)_100%)] p-4 shadow-[0_20px_48px_-36px_rgba(14,116,144,0.65)]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-extrabold text-slate-900">지갑 연결이 필요합니다</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  구매주문 관리 기능을 사용하려면 지갑을 연결해 주세요.
+                </p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  지원 방식: 구글, 이메일, 전화번호
+                </p>
+              </div>
+              <div className="w-full sm:w-auto">
+                <ConnectButton
+                  client={client}
+                  wallets={wallets.length ? wallets : wallet ? [wallet] : []}
+                  locale="ko_KR"
+                  theme="light"
+                  connectButton={{
+                    label: '지갑 연결',
+                    style: {
+                      backgroundColor: '#0f172a',
+                      color: '#ffffff',
+                      borderRadius: '9999px',
+                      border: '1px solid rgba(15,23,42,0.3)',
+                      height: '42px',
+                      minWidth: '148px',
+                      fontWeight: 700,
+                      fontSize: '14px',
+                      width: '100%',
+                    },
+                  }}
+                  connectModal={{
+                    size: 'wide',
+                    showThirdwebBranding: false,
+                  }}
+                />
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.42)]">
           <form className="grid grid-cols-1 gap-3 lg:grid-cols-12" onSubmit={handleSearchSubmit}>
@@ -811,6 +984,9 @@ export default function BuyOrderManagementPage() {
                               <p className="truncate text-[11px] text-slate-500">
                                 취소자 {getCancellerLabel(order)}
                               </p>
+                              <p className="break-all text-[11px] leading-tight text-slate-500">
+                                IP {getCancellerIp(order)}
+                              </p>
                             </>
                           )}
                           {isPaymentConfirmed && (
@@ -985,6 +1161,7 @@ export default function BuyOrderManagementPage() {
                             onClick={() => {
                               setCancelTargetOrder(order);
                               setCancelError(null);
+                              void fetchPublicIpAddress();
                             }}
                             className="inline-flex items-center justify-center rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 transition hover:border-rose-400 hover:bg-rose-100"
                           >
@@ -1099,6 +1276,19 @@ export default function BuyOrderManagementPage() {
                 <p className="text-sm font-semibold text-slate-500">판매자 지갑</p>
                 <p className="break-all text-base font-medium text-slate-900">
                   {cancelTargetOrder.seller?.walletAddress || '-'}
+                </p>
+                <p className="text-sm font-semibold text-slate-500">취소 관리자</p>
+                <p className="break-all text-base font-semibold text-slate-900">
+                  {cancelActorNickname}
+                  {adminWalletAddress ? ` (${shortWallet(adminWalletAddress)})` : ''}
+                </p>
+                <p className="text-sm font-semibold text-slate-500">관리자 역할</p>
+                <p className="text-base font-medium text-slate-900">
+                  {cancelActorRoleLabel}
+                </p>
+                <p className="text-sm font-semibold text-slate-500">접속 퍼블릭 IP</p>
+                <p className="break-all text-base font-medium text-slate-900">
+                  {loadingPublicIpAddress ? '조회 중...' : publicIpAddress || '-'}
                 </p>
                 <p className="text-sm font-semibold text-slate-500">반환 수량</p>
                 <p className="text-base font-bold text-slate-900">{formatUsdt(cancelTargetOrder.usdtAmount)} USDT</p>

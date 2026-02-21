@@ -13,6 +13,9 @@ const getClientIp = (request: NextRequest) => {
   return toText(request.headers.get('x-real-ip'));
 };
 
+const getClientUserAgent = (request: NextRequest) =>
+  toText(request.headers.get('user-agent'));
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -25,6 +28,8 @@ export async function POST(request: NextRequest) {
       typeof body?.cancelledByNickname === 'string' ? body.cancelledByNickname.trim() : '';
     const cancelledByIpAddress =
       typeof body?.cancelledByIpAddress === 'string' ? body.cancelledByIpAddress.trim() : '';
+    const cancelledByUserAgent =
+      typeof body?.cancelledByUserAgent === 'string' ? body.cancelledByUserAgent.trim() : '';
 
     if (!orderId) {
       return NextResponse.json(
@@ -39,6 +44,7 @@ export async function POST(request: NextRequest) {
       cancelledByRole,
       cancelledByNickname,
       cancelledByIpAddress: cancelledByIpAddress || getClientIp(request),
+      cancelledByUserAgent: cancelledByUserAgent || getClientUserAgent(request),
     });
 
     if (!result.success) {

@@ -1,28 +1,48 @@
+import { NextResponse, type NextRequest } from 'next/server';
 
+const toText = (value: unknown) => String(value ?? '').trim();
 
-import { NextResponse, type NextRequest } from "next/server";
-
-
+const extractForwardedIp = (value: string) => {
+  const normalized = toText(value);
+  if (!normalized) return '';
+  const [first] = normalized.split(',');
+  return toText(first);
+};
 
 export async function GET(request: NextRequest) {
+  try {
+    const headerCandidates = [
+      extractForwardedIp(toText(request.headers.get('x-forwarded-for'))),
+      extractForwardedIp(toText(request.headers.get('x-vercel-forwarded-for'))),
+      toText(request.headers.get('x-real-ip')),
+      toText(request.headers.get('cf-connecting-ip')),
+      toText(request.headers.get('true-client-ip')),
+      toText(request.headers.get('x-client-ip')),
+    ].filter(Boolean);
 
-  const xForwardedFor = request.headers.get("x-forwarded-for");
-  const xRealIp = request.headers.get("x-real-ip");
-  const forwardedIp = xForwardedFor?.split(",")[0]?.trim();
-  const directIp = xRealIp?.trim();
+    let ipAddress = headerCandidates[0] || '';
 
-  let ipAddress = forwardedIp || directIp || "";
+    // Fallback for local/proxy environments where forwarding headers are unavailable.
+    if (!ipAddress) {
+      try {
+        const response = await fetch('https://api64.ipify.org?format=json', { cache: 'no-store' });
+        const data = await response.json().catch(() => ({}));
+        ipAddress = toText(data?.ip);
+      } catch (ipLookupError) {
+        console.error('getServerInfo: failed to resolve external ip', ipLookupError);
+      }
+    }
 
-  // Fallback for local/proxy environments where forwarding headers are unavailable.
-  if (!ipAddress) {
-    const myIpAddressUrl = "https://api.ipify.org?format=json";
-    const response = await fetch(myIpAddressUrl, { cache: "no-store" });
-    const data = await response.json();
-    ipAddress = data?.ip || "";
+    return NextResponse.json({
+      ipAddress,
+    });
+  } catch (error) {
+    console.error('getServerInfo: unexpected error', error);
+    return NextResponse.json(
+      {
+        ipAddress: '',
+      },
+      { status: 200 },
+    );
   }
-
-  return NextResponse.json({
-    ipAddress,
-  });
-
 }

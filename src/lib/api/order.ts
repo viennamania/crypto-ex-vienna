@@ -3671,12 +3671,14 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   cancelledByRole = 'admin',
   cancelledByNickname = '',
   cancelledByIpAddress = '',
+  cancelledByUserAgent = '',
 }: {
   orderId: string;
   adminWalletAddress?: string;
   cancelledByRole?: string;
   cancelledByNickname?: string;
   cancelledByIpAddress?: string;
+  cancelledByUserAgent?: string;
 }): Promise<{
   success: boolean;
   transactionHash?: string;
@@ -3823,6 +3825,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   const normalizedCancelledByNickname = String(cancelledByNickname || '').trim()
     || (normalizedCancelledByRole === 'agent' ? '에이전트' : '관리자');
   const normalizedCancelledByIpAddress = String(cancelledByIpAddress || '').trim();
+  const normalizedCancelledByUserAgent = String(cancelledByUserAgent || '').trim();
   const cancelTradeReason =
     normalizedCancelledByRole === 'agent'
       ? '에이전트 취소(판매자 지갑 반환)'
@@ -3847,6 +3850,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
         cancelledByWalletAddress,
         cancelledByNickname: normalizedCancelledByNickname,
         cancelledByIpAddress: normalizedCancelledByIpAddress,
+        cancelledByUserAgent: normalizedCancelledByUserAgent,
         cancelReleaseTransactionHash: releaseTransactionHash,
         'buyer.releaseTransactionHash': releaseTransactionHash,
         'seller.releaseTransactionHash': releaseTransactionHash,
@@ -3875,6 +3879,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
           'seller.buyOrder.cancelledByWalletAddress': cancelledByWalletAddress,
           'seller.buyOrder.cancelledByNickname': normalizedCancelledByNickname,
           'seller.buyOrder.cancelledByIpAddress': normalizedCancelledByIpAddress,
+          'seller.buyOrder.cancelledByUserAgent': normalizedCancelledByUserAgent,
           'seller.buyOrder.cancelReleaseTransactionHash': releaseTransactionHash,
           'seller.buyOrder.buyer.releaseTransactionHash': releaseTransactionHash,
           'seller.buyOrder.seller.releaseTransactionHash': releaseTransactionHash,
