@@ -17,6 +17,9 @@ const getClientIp = (request: NextRequest) => {
     'x-real-ip',
     'cf-connecting-ip',
     'x-vercel-forwarded-for',
+    'x-client-ip',
+    'true-client-ip',
+    'x-original-forwarded-for',
   ];
   for (const headerName of fallbackHeaders) {
     const headerValue = toText(request.headers.get(headerName));

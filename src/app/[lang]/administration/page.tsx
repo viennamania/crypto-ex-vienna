@@ -1060,20 +1060,6 @@ export default function Index({ params }: any) {
 
               {isAdmin && (
                 <button
-                  onClick={() => {
-                    router.push('/' + params.lang + '/administration/banner');
-                  }}
-                  className="inline-flex items-center gap-2 rounded-full border border-orange-200/70 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700 shadow-[0_12px_30px_-22px_rgba(234,88,12,0.45)] transition hover:bg-orange-100"
-                >
-                  <Image src="/icon-admin.png" alt="Banner" width={16} height={16} className="h-4 w-4" />
-                  제휴 배너 관리
-                </button>
-              )}
-
-
-
-              {isAdmin && (
-                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     router.push('/' + params.lang + '/administration/client-settings');

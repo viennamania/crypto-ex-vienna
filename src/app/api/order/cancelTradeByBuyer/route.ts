@@ -8,6 +8,38 @@ import {
 // Download the helper library from https://www.twilio.com/docs/node/install
 import twilio from "twilio";
 
+const toText = (value: unknown) => String(value ?? '').trim();
+
+const getClientIp = (request: NextRequest) => {
+  const xForwardedFor = toText(request.headers.get('x-forwarded-for'));
+  if (xForwardedFor) {
+    const [firstIp] = xForwardedFor.split(',');
+    const normalizedFirstIp = toText(firstIp);
+    if (normalizedFirstIp) {
+      return normalizedFirstIp;
+    }
+  }
+
+  const fallbackHeaders = [
+    'x-real-ip',
+    'cf-connecting-ip',
+    'x-vercel-forwarded-for',
+    'x-client-ip',
+    'true-client-ip',
+    'x-original-forwarded-for',
+  ];
+  for (const headerName of fallbackHeaders) {
+    const headerValue = toText(request.headers.get(headerName));
+    if (headerValue) {
+      return headerValue;
+    }
+  }
+
+  return '';
+};
+
+const getClientUserAgent = (request: NextRequest) =>
+  toText(request.headers.get('user-agent'));
 
 export async function POST(request: NextRequest) {
 
@@ -17,7 +49,14 @@ export async function POST(request: NextRequest) {
     orderId,
     walletAddress,
     cancelTradeReason,
+    cancelledByIpAddress: rawCancelledByIpAddress,
+    cancelledByUserAgent: rawCancelledByUserAgent,
    } = body;
+
+  const cancelledByIpAddress =
+    typeof rawCancelledByIpAddress === 'string' ? rawCancelledByIpAddress.trim() : '';
+  const cancelledByUserAgent =
+    typeof rawCancelledByUserAgent === 'string' ? rawCancelledByUserAgent.trim() : '';
 
   //console.log("orderId", orderId);
   //console.log("walletAddress", walletAddress);
@@ -27,6 +66,8 @@ export async function POST(request: NextRequest) {
     orderId: orderId,
     walletAddress: walletAddress,
     cancelTradeReason: cancelTradeReason,
+    cancelledByIpAddress: cancelledByIpAddress || getClientIp(request),
+    cancelledByUserAgent: cancelledByUserAgent || getClientUserAgent(request),
   });
 
   ////console.log("result", result);

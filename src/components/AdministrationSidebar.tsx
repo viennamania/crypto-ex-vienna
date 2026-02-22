@@ -64,10 +64,10 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
   }, []);
 
   useEffect(() => {
-    if (isMobileViewport && isOpen) {
-      onOpenChange(false);
-    }
-  }, [pathname, isMobileViewport, isOpen, onOpenChange]);
+    if (!isMobileViewport) return;
+    // Mobile UX: close the drawer only when route/viewport changes.
+    onOpenChange(false);
+  }, [pathname, isMobileViewport, onOpenChange]);
 
   const menuContent = (
     <>

@@ -1008,10 +1008,14 @@ export async function cancelTradeByBuyer(
     orderId,
     walletAddress,
     cancelTradeReason,
+    cancelledByIpAddress = '',
+    cancelledByUserAgent = '',
   }: {
     orderId: string;
     walletAddress: string;
     cancelTradeReason: string;
+    cancelledByIpAddress?: string;
+    cancelledByUserAgent?: string;
   
   }
 
@@ -1041,6 +1045,10 @@ export async function cancelTradeByBuyer(
   // check status is 'accepted'
 
   // update status to 'cancelled'
+  const now = new Date().toISOString();
+  const normalizedCancelledByIpAddress = String(cancelledByIpAddress || '').trim();
+  const normalizedCancelledByUserAgent = String(cancelledByUserAgent || '').trim();
+  const normalizedCancelledByWalletAddress = String(walletAddress || '').trim();
 
   
   const result = await collection.updateOne(
@@ -1051,7 +1059,12 @@ export async function cancelTradeByBuyer(
     { $set: {
       status: 'cancelled',
       cancelTradeReason: cancelTradeReason,
-      cancelledAt: new Date().toISOString(),
+      cancelledAt: now,
+      canceller: 'buyer',
+      cancelledByRole: 'buyer',
+      cancelledByWalletAddress: normalizedCancelledByWalletAddress,
+      cancelledByIpAddress: normalizedCancelledByIpAddress,
+      cancelledByUserAgent: normalizedCancelledByUserAgent,
     } }
   );
 

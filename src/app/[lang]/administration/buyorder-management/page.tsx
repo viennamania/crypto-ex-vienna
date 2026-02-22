@@ -376,8 +376,23 @@ const getCancellerLabel = (order: BuyOrderItem) => {
   return '-';
 };
 
-const getCancellerIp = (order: BuyOrderItem) =>
-  String(order?.cancelledByIpAddress || '').trim() || '-';
+const getCancellerIp = (order: BuyOrderItem) => {
+  const candidates = [
+    order?.cancelledByIpAddress,
+    (order as any)?.cancelledBy?.ipAddress,
+    (order as any)?.seller?.buyOrder?.cancelledByIpAddress,
+    (order as any)?.buyer?.buyOrder?.cancelledByIpAddress,
+  ];
+
+  for (const candidate of candidates) {
+    const normalizedIpAddress = String(candidate || '').trim();
+    if (normalizedIpAddress) {
+      return normalizedIpAddress;
+    }
+  }
+
+  return '-';
+};
 
 const resolvePaymentConfirmerRole = (order: BuyOrderItem): 'buyer' | 'seller' | 'admin' | 'unknown' => {
   const role = String(order?.paymentConfirmedByRole || order?.paymentConfirmedBy?.role || '').trim().toLowerCase();
@@ -1056,15 +1071,14 @@ export default function BuyOrderManagementPage() {
               <table className="min-w-[1240px] w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
-                    <th className="w-[120px] px-3 py-3">상태</th>
-                    <th className="w-[108px] px-3 py-3">주문시각</th>
-                    <th className="w-[132px] px-3 py-3">거래번호(TID)</th>
-                    <th className="w-[130px] px-3 py-3">구매자</th>
-                    <th className="w-[124px] px-3 py-3">판매자</th>
-                    <th className="w-[96px] px-3 py-3">결제방법</th>
-                    <th className="w-[118px] px-3 py-3 text-right">주문금액</th>
-                    <th className="w-[154px] px-3 py-3">플랫폼 수수료</th>
-                    <th className="w-[158px] px-3 py-3">전송내역</th>
+                    <th className="w-[108px] px-3 py-3">상태</th>
+                    <th className="w-[96px] px-3 py-3">주문시각</th>
+                    <th className="w-[100px] px-3 py-3">거래번호(TID)</th>
+                    <th className="w-[104px] px-3 py-3">구매자</th>
+                    <th className="w-[124px] px-3 py-3">판매자/결제방법</th>
+                    <th className="w-[108px] px-3 py-3 text-right">주문금액</th>
+                    <th className="w-[96px] px-3 py-3">플랫폼 수수료</th>
+                    <th className="w-[88px] px-3 py-3">전송내역</th>
                     <th className="w-[96px] px-3 py-3 text-center">액션</th>
                   </tr>
                 </thead>
@@ -1178,19 +1192,19 @@ export default function BuyOrderManagementPage() {
                         </div>
                       </td>
                       <td className="px-3 py-3">
-                        <div className="flex flex-col">
-                          <span className="truncate text-base font-extrabold leading-tight text-slate-900">{order?.seller?.nickname || '-'}</span>
-                          <span className="truncate text-xs text-slate-500">{shortWallet(order?.seller?.walletAddress)}</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="flex flex-col gap-1">
-                          <span className="inline-flex w-fit whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">
-                            {getPaymentMethodLabel(order)}
-                          </span>
-                          <span className="truncate text-xs text-slate-500">
-                            {getPaymentMethodDetail(order)}
-                          </span>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex flex-col">
+                            <span className="truncate text-base font-extrabold leading-tight text-slate-900">{order?.seller?.nickname || '-'}</span>
+                            <span className="truncate text-xs text-slate-500">{shortWallet(order?.seller?.walletAddress)}</span>
+                          </div>
+                          <div className="flex flex-col gap-1 border-t border-slate-100 pt-2">
+                            <span className="inline-flex w-fit whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                              {getPaymentMethodLabel(order)}
+                            </span>
+                            <span className="truncate text-xs text-slate-500">
+                              {getPaymentMethodDetail(order)}
+                            </span>
+                          </div>
                         </div>
                       </td>
                       <td className="px-3 py-3 text-right">

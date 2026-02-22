@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import AdministrationLayoutShell from '@/components/AdministrationLayoutShell';
+import AdministrationSubpageAccessGate from '@/components/AdministrationSubpageAccessGate';
 
 export default function AdministrationLayout({
   children,
@@ -12,8 +12,6 @@ export default function AdministrationLayout({
   const lang = langParam || 'ko';
 
   return (
-    <AdministrationLayoutShell lang={lang}>
-      {children}
-    </AdministrationLayoutShell>
+    <AdministrationSubpageAccessGate lang={lang}>{children}</AdministrationSubpageAccessGate>
   );
 }

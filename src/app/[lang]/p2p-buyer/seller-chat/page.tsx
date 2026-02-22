@@ -485,6 +485,38 @@ export default function SellerChatPage() {
     setBuyStatusMessage('구매 주문을 취소하는 중입니다...');
 
     try {
+      let cancelledByIpAddress = '';
+      try {
+        const response = await fetch('/api/server/getServerInfo', {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.ok) {
+          cancelledByIpAddress = String((payload as { ipAddress?: string })?.ipAddress || '').trim();
+        }
+      } catch (serverIpError) {
+        console.error('Failed to fetch server side ip address', serverIpError);
+      }
+
+      if (!cancelledByIpAddress) {
+        try {
+          const ipifyResponse = await fetch('https://api64.ipify.org?format=json', {
+            method: 'GET',
+            cache: 'no-store',
+          });
+          const ipifyPayload = await ipifyResponse.json().catch(() => ({}));
+          if (ipifyResponse.ok) {
+            cancelledByIpAddress = String((ipifyPayload as { ip?: string })?.ip || '').trim();
+          }
+        } catch (ipifyError) {
+          console.error('Failed to fetch client public ip address', ipifyError);
+        }
+      }
+
+      const cancelledByUserAgent =
+        typeof window !== 'undefined' ? String(window.navigator.userAgent || '').trim() : '';
+
       const response = await fetch('/api/order/cancelPrivateBuyOrderByBuyer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -492,6 +524,8 @@ export default function SellerChatPage() {
           orderId: currentBuyOrderId,
           buyerWalletAddress: address,
           sellerWalletAddress: sellerId,
+          cancelledByIpAddress,
+          cancelledByUserAgent,
         }),
       });
       const data = await response.json().catch(() => ({}));
