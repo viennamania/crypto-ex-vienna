@@ -29,6 +29,8 @@ const AGENT_FIELDS: (keyof AgentDoc)[] = [
   'adminWalletAddress',
 ];
 
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const getCollection = async () => {
   const client = await clientPromise;
   return client.db(dbName).collection<AgentDoc>('agents');
@@ -72,7 +74,10 @@ export async function GET(request: NextRequest) {
       : {};
 
   if (adminWalletAddress) {
-    query.adminWalletAddress = { $regex: `^${adminWalletAddress}$`, $options: 'i' };
+    query.adminWalletAddress = {
+      $regex: `^${escapeRegex(adminWalletAddress)}$`,
+      $options: 'i',
+    };
   }
 
   const pipeline = [
@@ -83,8 +88,32 @@ export async function GET(request: NextRequest) {
     {
       $lookup: {
         from: 'users',
-        localField: 'adminWalletAddress',
-        foreignField: 'walletAddress',
+        let: { adminWalletAddress: '$adminWalletAddress' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$storecode', 'admin'] },
+                  {
+                    $eq: [
+                      { $toLower: { $ifNull: ['$walletAddress', ''] } },
+                      { $toLower: { $ifNull: ['$$adminWalletAddress', ''] } },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              nickname: 1,
+              avatar: 1,
+            },
+          },
+          { $limit: 1 },
+        ],
         as: 'adminUser',
       },
     },
