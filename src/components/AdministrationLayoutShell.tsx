@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import AdministrationSidebar from '@/components/AdministrationSidebar';
 import AdminSupportChatWidget from '@/components/AdminSupportChatWidget';
 
@@ -416,8 +416,15 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
     });
   };
 
+  const shellStyle = {
+    ['--admin-shell-half-offset' as string]: isSidebarOpen ? '140px' : '0px',
+  } as CSSProperties;
+
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)] text-slate-800">
+    <div
+      className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)] text-slate-800"
+      style={shellStyle}
+    >
       <AdministrationSidebar
         lang={lang}
         isOpen={isSidebarOpen}

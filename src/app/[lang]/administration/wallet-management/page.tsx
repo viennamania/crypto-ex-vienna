@@ -392,7 +392,7 @@ export default function SendUsdt({ params }: any) {
   const [memberLoading, setMemberLoading] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
   const [consentChecked, setConsentChecked] = useState(false);
-  const [footerTab, setFooterTab] = useState<'withdraw' | 'deposit' | 'history'>('withdraw');
+  const [footerTab, setFooterTab] = useState<'withdraw' | 'deposit' | 'history'>('deposit');
   const footerTabLabel = useMemo(() => {
     if (footerTab === 'withdraw') return '출금하기';
     if (footerTab === 'deposit') return '입금하기';
@@ -1405,26 +1405,6 @@ export default function SendUsdt({ params }: any) {
       <div className="w-full max-w-md mx-auto">
         
         <div className="py-2">
-
-  
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <button
-            onClick={() => window.history.back()}
-            className="group inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white">
-              <Image
-                src="/icon-back.png"
-                alt="Back"
-                width={18}
-                  height={18}
-                  className="rounded-full"
-                />
-              </span>
-              돌아가기
-            </button>
-
-          </div>
 
         <div className="mt-6 flex flex-col gap-1">
           <div className="flex items-center gap-3">
@@ -2548,19 +2528,11 @@ export default function SendUsdt({ params }: any) {
         }
       `}</style>
 
-      <nav className="fixed bottom-0 left-1/2 z-40 w-full max-w-md -translate-x-1/2 border-t border-slate-200 bg-white/95 backdrop-blur px-3 py-3 sm:max-w-lg md:max-w-xl">
-        <div className="mx-auto flex w-full flex-nowrap items-center justify-center gap-2 overflow-x-auto whitespace-nowrap">
+      <nav
+        className="fixed bottom-0 left-1/2 z-40 w-[calc(100%-1rem)] max-w-md -translate-x-1/2 border-t border-slate-200 bg-white/95 backdrop-blur sm:w-[calc(100%-1.5rem)] sm:max-w-lg md:max-w-xl lg:left-[calc(50%+var(--admin-shell-half-offset))]"
+      >
+        <div className="mx-auto flex w-full flex-nowrap items-center justify-center gap-2 overflow-x-auto whitespace-nowrap px-3 py-3">
           {[
-            {
-              key: 'withdraw',
-              label: '출금하기',
-              icon: (
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <path d="M12 5v14m0 0 4-4m-4 4-4-4" strokeLinecap="round" strokeLinejoin="round" />
-                  <rect x="4" y="3" width="16" height="6" rx="2" />
-                </svg>
-              ),
-            },
             {
               key: 'deposit',
               label: '입금하기',
@@ -2568,6 +2540,16 @@ export default function SendUsdt({ params }: any) {
                 <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
                   <path d="M12 19V5m0 0-4 4m4-4 4 4" strokeLinecap="round" strokeLinejoin="round" />
                   <rect x="4" y="15" width="16" height="4" rx="1.5" />
+                </svg>
+              ),
+            },
+            {
+              key: 'withdraw',
+              label: '출금하기',
+              icon: (
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M12 5v14m0 0 4-4m-4 4-4-4" strokeLinecap="round" strokeLinejoin="round" />
+                  <rect x="4" y="3" width="16" height="6" rx="2" />
                 </svg>
               ),
             },

@@ -1,7 +1,6 @@
 'use client';
 
-import Link from 'next/link';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 
@@ -17,10 +16,15 @@ type StoreMemberItem = {
   id: string;
   nickname: string;
   walletAddress: string;
+  email: string;
+  mobile: string;
   verified: boolean;
   role: string;
   createdAt: string;
 };
+
+const MEMBER_PAGE_SIZE = 20;
+const MEMBER_PAGINATION_BUTTON_COUNT = 5;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -40,9 +44,6 @@ const toDateTime = (value: string) => {
 };
 
 export default function AdministrationStoreMemberManagementPage() {
-  const params = useParams<{ lang?: string | string[] }>();
-  const langParam = params?.lang;
-  const lang = Array.isArray(langParam) ? (langParam[0] || 'ko') : (langParam || 'ko');
   const searchParams = useSearchParams();
   const storecodeFromQuery = String(searchParams?.get('storecode') || '').trim();
 
@@ -55,6 +56,9 @@ export default function AdministrationStoreMemberManagementPage() {
   const [membersError, setMembersError] = useState<string | null>(null);
   const [members, setMembers] = useState<StoreMemberItem[]>([]);
   const [keyword, setKeyword] = useState('');
+  const [appliedKeyword, setAppliedKeyword] = useState('');
+  const [membersPage, setMembersPage] = useState(1);
+  const [membersTotalCount, setMembersTotalCount] = useState(0);
   const [deleteTargetMember, setDeleteTargetMember] = useState<StoreMemberItem | null>(null);
   const [deletingMember, setDeletingMember] = useState(false);
 
@@ -118,6 +122,7 @@ export default function AdministrationStoreMemberManagementPage() {
   const loadMembers = useCallback(async () => {
     if (!selectedStorecode) {
       setMembers([]);
+      setMembersTotalCount(0);
       setMembersError(null);
       return;
     }
@@ -130,9 +135,10 @@ export default function AdministrationStoreMemberManagementPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storecode: selectedStorecode,
-          limit: 1000,
-          page: 1,
+          limit: MEMBER_PAGE_SIZE,
+          page: membersPage,
           includeUnverified: true,
+          searchTerm: appliedKeyword,
           includeWalletless: true,
           sortField: 'createdAt',
           requireProfile: false,
@@ -145,26 +151,41 @@ export default function AdministrationStoreMemberManagementPage() {
       }
 
       const rawUsers = Array.isArray(payload.result.users) ? payload.result.users : [];
+      const totalCount = Math.max(
+        0,
+        Number(payload.result.totalCount || payload.result.totalResult || rawUsers.length || 0),
+      );
+      const totalPages = Math.max(1, Math.ceil(totalCount / MEMBER_PAGE_SIZE));
+      const normalizedPage = Math.min(membersPage, totalPages);
       const normalizedMembers = rawUsers.map((item: unknown) => {
         const row = isRecord(item) ? item : {};
         return {
           id: String(row._id || row.id || ''),
           nickname: String(row.nickname || '').trim() || '-',
           walletAddress: String(row.walletAddress || '').trim(),
+          email: String(row.email || '').trim(),
+          mobile: String(row.mobile || '').trim(),
           verified: row.verified === true,
           role: String(row.role || 'member').trim() || 'member',
           createdAt: String(row.createdAt || ''),
         };
       });
 
+      setMembersTotalCount(totalCount);
+      if (normalizedPage !== membersPage) {
+        setMembers([]);
+        setMembersPage(normalizedPage);
+        return;
+      }
       setMembers(normalizedMembers);
     } catch (fetchError) {
       setMembers([]);
+      setMembersTotalCount(0);
       setMembersError(fetchError instanceof Error ? fetchError.message : '회원 목록을 불러오지 못했습니다.');
     } finally {
       setLoadingMembers(false);
     }
-  }, [selectedStorecode]);
+  }, [appliedKeyword, membersPage, selectedStorecode]);
 
   useEffect(() => {
     loadStores();
@@ -174,19 +195,43 @@ export default function AdministrationStoreMemberManagementPage() {
     loadMembers();
   }, [loadMembers]);
 
+  useEffect(() => {
+    setMembersPage(1);
+  }, [selectedStorecode]);
+
   const selectedStore = useMemo(
     () => stores.find((store) => store.storecode === selectedStorecode) || null,
     [stores, selectedStorecode],
   );
 
-  const filteredMembers = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLowerCase();
-    if (!normalizedKeyword) return members;
-    return members.filter((member) => (
-      member.nickname.toLowerCase().includes(normalizedKeyword) ||
-      member.walletAddress.toLowerCase().includes(normalizedKeyword)
-    ));
-  }, [keyword, members]);
+  const membersTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(membersTotalCount / MEMBER_PAGE_SIZE)),
+    [membersTotalCount],
+  );
+
+  const visibleMemberPageNumbers = useMemo(() => {
+    let start = Math.max(1, membersPage - Math.floor(MEMBER_PAGINATION_BUTTON_COUNT / 2));
+    let end = start + MEMBER_PAGINATION_BUTTON_COUNT - 1;
+    if (end > membersTotalPages) {
+      end = membersTotalPages;
+      start = Math.max(1, end - MEMBER_PAGINATION_BUTTON_COUNT + 1);
+    }
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }, [membersPage, membersTotalPages]);
+
+  const applyKeywordSearch = useCallback(() => {
+    const nextKeyword = keyword.trim();
+    if (nextKeyword === appliedKeyword) {
+      if (membersPage === 1) {
+        void loadMembers();
+      } else {
+        setMembersPage(1);
+      }
+      return;
+    }
+    setMembersPage(1);
+    setAppliedKeyword(nextKeyword);
+  }, [appliedKeyword, keyword, loadMembers, membersPage]);
 
   const openDeleteModal = useCallback((member: StoreMemberItem) => {
     setDeleteTargetMember(member);
@@ -219,9 +264,9 @@ export default function AdministrationStoreMemberManagementPage() {
         throw new Error(String(payload?.error || '회원 삭제에 실패했습니다.'));
       }
 
-      setMembers((prev) => prev.filter((member) => member.id !== deleteTargetMember.id));
       setDeleteTargetMember(null);
       toast.success('회원이 삭제되었습니다.');
+      await loadMembers();
     } catch (deleteError) {
       const message = deleteError instanceof Error ? deleteError.message : '회원 삭제에 실패했습니다.';
       setMembersError(message);
@@ -229,21 +274,15 @@ export default function AdministrationStoreMemberManagementPage() {
     } finally {
       setDeletingMember(false);
     }
-  }, [deleteTargetMember, deletingMember, selectedStorecode]);
+  }, [deleteTargetMember, deletingMember, loadMembers, selectedStorecode]);
 
   return (
     <main className="px-4 pb-10 pt-6 lg:px-6 lg:pt-8">
       <div className="mx-auto w-full max-w-7xl space-y-4">
         <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">Store Member Management</p>
-          <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+          <div className="mt-1">
             <h1 className="text-xl font-bold text-slate-900">가맹점 회원 관리</h1>
-            <Link
-              href={`/${lang}/administration/store-management`}
-              className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-            >
-              가맹점 관리로 이동
-            </Link>
           </div>
           <p className="mt-1 text-sm text-slate-600">
             상단 가맹점 목록에서 하나를 선택하면 해당 가맹점의 회원 목록을 아래 표로 확인할 수 있습니다.
@@ -334,9 +373,23 @@ export default function AdministrationStoreMemberManagementPage() {
               <input
                 value={keyword}
                 onChange={(event) => setKeyword(event.target.value)}
-                placeholder="회원 아이디 또는 지갑주소 검색"
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    applyKeywordSearch();
+                  }
+                }}
+                placeholder="회원 아이디/지갑주소/이메일/전화 검색"
                 className="h-9 w-60 rounded-lg border border-slate-300 bg-white px-3 text-xs text-slate-700 outline-none transition focus:border-cyan-500"
               />
+              <button
+                type="button"
+                onClick={applyKeywordSearch}
+                disabled={loadingMembers || !selectedStorecode}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-cyan-300 bg-cyan-50 px-3 text-xs font-semibold text-cyan-700 transition hover:border-cyan-400 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                검색
+              </button>
               <button
                 type="button"
                 onClick={loadMembers}
@@ -358,14 +411,14 @@ export default function AdministrationStoreMemberManagementPage() {
             <p className="mt-3 text-sm text-slate-500">가맹점을 먼저 선택해 주세요.</p>
           )}
 
-          {!membersError && selectedStorecode && !loadingMembers && filteredMembers.length === 0 && (
+          {!membersError && selectedStorecode && !loadingMembers && members.length === 0 && (
             <p className="mt-3 text-sm text-slate-500">조건에 맞는 회원이 없습니다.</p>
           )}
 
           {selectedStorecode && (
             <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200">
-              <div className="max-h-[620px] overflow-auto">
-                <table className="w-full min-w-[760px] table-auto">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[900px] table-auto">
                   <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                     <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                       <th className="px-3 py-2">회원 아이디</th>
@@ -382,34 +435,79 @@ export default function AdministrationStoreMemberManagementPage() {
                         </td>
                       </tr>
                     )}
-                    {!loadingMembers && filteredMembers.map((member) => (
-                      <tr key={`${member.id}-${member.walletAddress}`} className="transition hover:bg-slate-50/70">
-                        <td className="px-3 py-2.5 font-semibold text-slate-900">{member.nickname}</td>
-                        <td className="px-3 py-2.5 text-xs text-slate-500">
-                          <div className="inline-flex items-center gap-1.5">
-                            <span>{shortAddress(member.walletAddress)}</span>
-                            {member.walletAddress.trim() && (
-                              <span className="inline-flex h-5 items-center rounded-full border border-emerald-200 bg-emerald-50 px-1.5 text-[10px] font-semibold text-emerald-700">
-                                연동완료
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2.5 text-xs text-slate-500">{toDateTime(member.createdAt)}</td>
-                        <td className="px-3 py-2.5 text-xs">
-                          <button
-                            type="button"
-                            onClick={() => openDeleteModal(member)}
-                            disabled={!member.id}
-                            className="inline-flex h-7 items-center justify-center rounded-md border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            삭제
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {!loadingMembers && members.map((member) => {
+                      const hasLinkedWallet = Boolean(member.walletAddress.trim());
+
+                      return (
+                        <tr key={`${member.id}-${member.walletAddress}`} className="transition hover:bg-slate-50/70">
+                          <td className="px-3 py-2.5 font-semibold text-slate-900">{member.nickname}</td>
+                          <td className="px-3 py-2.5 text-xs text-slate-500">
+                            <div className="inline-flex items-center gap-1.5">
+                              <span>{shortAddress(member.walletAddress)}</span>
+                              {hasLinkedWallet && (
+                                <span className="inline-flex h-5 items-center rounded-full border border-emerald-200 bg-emerald-50 px-1.5 text-[10px] font-semibold text-emerald-700">
+                                  연동완료
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-xs text-slate-500">{toDateTime(member.createdAt)}</td>
+                          <td className="px-3 py-2.5 text-xs">
+                            <button
+                              type="button"
+                              onClick={() => openDeleteModal(member)}
+                              disabled={!member.id}
+                              className="inline-flex h-7 items-center justify-center rounded-md border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              삭제
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {!membersError && selectedStorecode && membersTotalCount > 0 && (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-slate-600">
+                페이지 {membersPage} / {membersTotalPages} · 총 {membersTotalCount.toLocaleString()}명
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setMembersPage((prev) => Math.max(1, prev - 1))}
+                  disabled={loadingMembers || membersPage <= 1}
+                  className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  이전
+                </button>
+                {visibleMemberPageNumbers.map((pageNumber) => (
+                  <button
+                    key={pageNumber}
+                    type="button"
+                    onClick={() => setMembersPage(pageNumber)}
+                    disabled={loadingMembers}
+                    className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-xs font-semibold transition ${
+                      pageNumber === membersPage
+                        ? 'border-cyan-300 bg-cyan-50 text-cyan-800'
+                        : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'
+                    } disabled:cursor-not-allowed disabled:opacity-45`}
+                  >
+                    {pageNumber}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setMembersPage((prev) => Math.min(membersTotalPages, prev + 1))}
+                  disabled={loadingMembers || membersPage >= membersTotalPages}
+                  className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  다음
+                </button>
               </div>
             </div>
           )}

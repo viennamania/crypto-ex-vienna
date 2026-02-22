@@ -2738,7 +2738,7 @@ const fetchBuyOrders = async () => {
                     {/* 출금하기 버튼 */}
                     <button
                       onClick={() => {
-                        router.push('/' + params.lang + '/administration/withdraw-usdt');
+                        router.push('/' + params.lang + '/administration/wallet-management');
                         //window.open(
                         //  '/'+ params.lang + '/home/withdraw',
                         //  '_blank'

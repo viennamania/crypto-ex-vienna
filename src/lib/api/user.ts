@@ -2268,6 +2268,11 @@ export async function getAllUsersByStorecode(
       $or: [
         { nickname: searchRegex },
         { walletAddress: searchRegex },
+        { email: searchRegex },
+        { mobile: searchRegex },
+        { phone: searchRegex },
+        { 'buyer.email': searchRegex },
+        { 'buyer.mobile': searchRegex },
         { 'seller.bankInfo.bankName': searchRegex },
         { 'seller.bankInfo.accountNumber': searchRegex },
         { 'seller.status': searchRegex },

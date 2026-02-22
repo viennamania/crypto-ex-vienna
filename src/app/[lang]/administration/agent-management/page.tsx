@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import { useActiveAccount } from 'thirdweb/react';
 
 type Agent = {
   _id?: string;
@@ -16,26 +17,86 @@ type Agent = {
   updatedAt?: string;
 };
 
+type AdminWalletHistoryItem = {
+  id: string;
+  agentcode: string;
+  agentName: string;
+  agentLogo?: string;
+  previousAdminWalletAddress: string;
+  previousAdminNickname?: string;
+  previousAdminAvatar?: string;
+  nextAdminWalletAddress: string;
+  nextAdminNickname?: string;
+  nextAdminAvatar?: string;
+  changedByWalletAddress?: string;
+  changedByName?: string;
+  changedAt: string;
+};
+
+type AgentEditSnapshot = {
+  agentName: string;
+  agentDescription: string;
+  agentLogo: string;
+};
+
 const emptyForm: Agent = {
   agentName: '',
   agentDescription: '',
   agentLogo: '',
-  adminWalletAddress: '',
 };
 
+const shortWallet = (value?: string) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '-';
+  if (normalized.length <= 14) return normalized;
+  return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
+};
+
+const formatDateTime = (value?: string) => {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleString('ko-KR');
+};
+
+const normalizeAgentFormForCompare = (value: Partial<Agent>): AgentEditSnapshot => ({
+  agentName: String(value.agentName || '').trim(),
+  agentDescription: String(value.agentDescription || '').trim(),
+  agentLogo: String(value.agentLogo || '').trim(),
+});
+
+const HISTORY_PAGE_SIZE = 20;
+const HISTORY_PAGE_WINDOW = 5;
+
 export default function AgentManagementPage() {
+  const activeAccount = useActiveAccount();
+  const connectedWalletAddress = String(activeAccount?.address || '').trim();
+
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState<Agent>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingSnapshot, setEditingSnapshot] = useState<AgentEditSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [adminUsers, setAdminUsers] = useState<{ walletAddress: string; nickname?: string; avatar?: string }[]>([]);
   const [adminUserLoading, setAdminUserLoading] = useState(false);
   const [adminUserQuery, setAdminUserQuery] = useState('');
   const [showAdminModal, setShowAdminModal] = useState(false);
+  const [walletModalAgent, setWalletModalAgent] = useState<Agent | null>(null);
+  const [selectedAdminWalletAddress, setSelectedAdminWalletAddress] = useState('');
+  const [walletChanging, setWalletChanging] = useState(false);
+  const [walletChangeError, setWalletChangeError] = useState<string | null>(null);
+  const [adminWalletHistories, setAdminWalletHistories] = useState<AdminWalletHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
+  const [historyTotalCount, setHistoryTotalCount] = useState(0);
+  const [historyAppliedSearch, setHistoryAppliedSearch] = useState('');
+  const [connectedAdminNickname, setConnectedAdminNickname] = useState('');
 
   const stats = useMemo(() => {
     const total = agents.length;
@@ -49,16 +110,78 @@ export default function AgentManagementPage() {
     };
   }, [agents]);
 
-  const loadAgents = async () => {
+  const loadAdminWalletHistories = async (searchText = '', pageNumber = 1) => {
+    const normalizedSearch = searchText.trim();
+    const normalizedPage = Math.max(1, Number(pageNumber) || 1);
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const res = await fetch('/api/agent/admin-wallet-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'list',
+          page: normalizedPage,
+          limit: HISTORY_PAGE_SIZE,
+          search: normalizedSearch,
+        }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(String(payload?.error || '관리 지갑 변경 이력을 불러오지 못했습니다.'));
+      }
+      const result =
+        payload && typeof payload === 'object' && payload.result && typeof payload.result === 'object'
+          ? payload.result
+          : {};
+      const items = Array.isArray((result as any).items) ? (result as any).items : [];
+      const resolvedTotalPages = Math.max(1, Number((result as any).totalPages || 1) || 1);
+      const resolvedPage = Math.min(Math.max(1, Number((result as any).page || normalizedPage) || normalizedPage), resolvedTotalPages);
+      const resolvedTotalCount = Math.max(0, Number((result as any).totalCount || 0) || 0);
+      const normalizedItems: AdminWalletHistoryItem[] = items.map((item: any) => ({
+        id: String(item?.id || item?._id || ''),
+        agentcode: String(item?.agentcode || ''),
+        agentName: String(item?.agentName || ''),
+        agentLogo: String(item?.agentLogo || ''),
+        previousAdminWalletAddress: String(item?.previousAdminWalletAddress || ''),
+        previousAdminNickname: String(item?.previousAdminNickname || ''),
+        previousAdminAvatar: String(item?.previousAdminAvatar || ''),
+        nextAdminWalletAddress: String(item?.nextAdminWalletAddress || ''),
+        nextAdminNickname: String(item?.nextAdminNickname || ''),
+        nextAdminAvatar: String(item?.nextAdminAvatar || ''),
+        changedByWalletAddress: String(item?.changedByWalletAddress || ''),
+        changedByName: String(item?.changedByName || ''),
+        changedAt: String(item?.changedAt || ''),
+      }));
+      setAdminWalletHistories(normalizedItems);
+      setHistoryPage(resolvedPage);
+      setHistoryTotalPages(resolvedTotalPages);
+      setHistoryTotalCount(resolvedTotalCount);
+      setHistoryAppliedSearch(normalizedSearch);
+    } catch (e) {
+      setAdminWalletHistories([]);
+      setHistoryError(e instanceof Error ? e.message : '관리 지갑 변경 이력을 불러오지 못했습니다.');
+      setHistoryPage(1);
+      setHistoryTotalPages(1);
+      setHistoryTotalCount(0);
+      setHistoryAppliedSearch(normalizedSearch);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const loadAgents = async (searchText?: string) => {
+    const normalizedSearch = String(searchText ?? search).trim();
     setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (search.trim()) params.set('search', search.trim());
+      if (normalizedSearch) params.set('search', normalizedSearch);
       const res = await fetch(`/api/agents?${params.toString()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('에이전트 목록을 불러오지 못했습니다.');
       const data = await res.json();
       setAgents(data.items ?? []);
+      await loadAdminWalletHistories(normalizedSearch, 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : '불러오기 실패');
     } finally {
@@ -67,7 +190,7 @@ export default function AgentManagementPage() {
   };
 
   useEffect(() => {
-    loadAgents();
+    void loadAgents('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -105,8 +228,49 @@ export default function AgentManagementPage() {
         setAdminUserLoading(false);
       }
     };
-    fetchAdminUsers();
+    void fetchAdminUsers();
   }, []);
+
+  useEffect(() => {
+    if (!connectedWalletAddress) {
+      setConnectedAdminNickname('');
+      return;
+    }
+
+    let active = true;
+    const fetchConnectedAdminProfile = async () => {
+      try {
+        const response = await fetch('/api/user/getUser', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            storecode: 'admin',
+            walletAddress: connectedWalletAddress,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(String((payload as Record<string, unknown>)?.error || 'ADMIN_PROFILE_NOT_FOUND'));
+        }
+        if (!active) return;
+        const result =
+          payload && typeof payload === 'object' && payload.result && typeof payload.result === 'object'
+            ? (payload.result as Record<string, unknown>)
+            : {};
+        setConnectedAdminNickname(String(result.nickname || '').trim());
+      } catch {
+        if (!active) return;
+        setConnectedAdminNickname('');
+      }
+    };
+
+    void fetchConnectedAdminProfile();
+    return () => {
+      active = false;
+    };
+  }, [connectedWalletAddress]);
 
   const handleSave = async () => {
     if (!form.agentName.trim()) {
@@ -130,6 +294,7 @@ export default function AgentManagementPage() {
       await loadAgents();
       setForm(emptyForm);
       setEditingId(null);
+      setEditingSnapshot(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : '저장 실패');
     } finally {
@@ -138,14 +303,15 @@ export default function AgentManagementPage() {
   };
 
   const handleEdit = (agent: Agent) => {
-    setForm({
+    const nextForm: Agent = {
       agentcode: agent.agentcode,
       agentName: agent.agentName,
       agentDescription: agent.agentDescription ?? '',
       agentLogo: agent.agentLogo ?? '',
-      adminWalletAddress: agent.adminWalletAddress ?? '',
-    });
+    };
+    setForm(nextForm);
     setEditingId(agent._id ?? null);
+    setEditingSnapshot(normalizeAgentFormForCompare(nextForm));
   };
 
   const filteredAdminUsers = useMemo(() => {
@@ -157,10 +323,100 @@ export default function AgentManagementPage() {
     });
   }, [adminUsers, adminUserQuery]);
 
-  const selectedAdmin = useMemo(
-    () => adminUsers.find((u) => u.walletAddress === form.adminWalletAddress),
-    [adminUsers, form.adminWalletAddress],
+  const selectedAdminForModal = useMemo(
+    () => adminUsers.find((u) => u.walletAddress === selectedAdminWalletAddress),
+    [adminUsers, selectedAdminWalletAddress],
   );
+
+  const isEditUnchanged = useMemo(() => {
+    if (!editingId || !editingSnapshot) {
+      return false;
+    }
+    const current = normalizeAgentFormForCompare(form);
+    return (
+      current.agentName === editingSnapshot.agentName
+      && current.agentDescription === editingSnapshot.agentDescription
+      && current.agentLogo === editingSnapshot.agentLogo
+    );
+  }, [editingId, editingSnapshot, form]);
+
+  const historyPageNumbers = useMemo(() => {
+    const total = Math.max(1, historyTotalPages);
+    const current = Math.min(Math.max(1, historyPage), total);
+    const halfWindow = Math.floor(HISTORY_PAGE_WINDOW / 2);
+
+    let start = Math.max(1, current - halfWindow);
+    let end = Math.min(total, start + HISTORY_PAGE_WINDOW - 1);
+    start = Math.max(1, end - HISTORY_PAGE_WINDOW + 1);
+
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }, [historyPage, historyTotalPages]);
+
+  const openAdminWalletModal = (agent: Agent) => {
+    setWalletModalAgent(agent);
+    setSelectedAdminWalletAddress(String(agent.adminWalletAddress || '').trim());
+    setAdminUserQuery('');
+    setWalletChangeError(null);
+    setShowAdminModal(true);
+  };
+
+  const closeAdminWalletModal = () => {
+    if (walletChanging) return;
+    setShowAdminModal(false);
+    setWalletModalAgent(null);
+    setSelectedAdminWalletAddress('');
+    setWalletChangeError(null);
+    setAdminUserQuery('');
+  };
+
+  const applyAdminWalletChange = async () => {
+    const agentcode = String(walletModalAgent?.agentcode || '').trim();
+    const nextAdminWalletAddress = String(selectedAdminWalletAddress || '').trim();
+    const currentAdminWalletAddress = String(walletModalAgent?.adminWalletAddress || '').trim();
+
+    if (!agentcode) {
+      setWalletChangeError('에이전트 코드가 없어 변경할 수 없습니다.');
+      return;
+    }
+    if (!nextAdminWalletAddress) {
+      setWalletChangeError('변경할 관리 지갑을 선택해 주세요.');
+      return;
+    }
+    if (currentAdminWalletAddress.toLowerCase() === nextAdminWalletAddress.toLowerCase()) {
+      setWalletChangeError('기존 관리 지갑과 동일합니다.');
+      return;
+    }
+
+    setWalletChanging(true);
+    setWalletChangeError(null);
+
+    try {
+      const response = await fetch('/api/agent/admin-wallet-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'update',
+          agentcode,
+          nextAdminWalletAddress,
+          changedByWalletAddress: connectedWalletAddress,
+          changedByName: connectedAdminNickname,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String((payload as Record<string, unknown>)?.error || '관리 지갑 변경에 실패했습니다.'));
+      }
+
+      await loadAgents(search);
+      closeAdminWalletModal();
+    } catch (e) {
+      setWalletChangeError(e instanceof Error ? e.message : '관리 지갑 변경에 실패했습니다.');
+    } finally {
+      setWalletChanging(false);
+    }
+  };
 
   const AccentCard = ({
     label,
@@ -222,12 +478,18 @@ export default function AgentManagementPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && loadAgents()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    void loadAgents(search);
+                  }
+                }}
                 placeholder="에이전트명 / 코드 검색"
                 className="w-64 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none"
               />
               <button
-                onClick={loadAgents}
+                onClick={() => {
+                  void loadAgents(search);
+                }}
                 className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
               >
                 새로고침
@@ -315,8 +577,8 @@ export default function AgentManagementPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-slate-700 font-mono text-xs">
-                        {agent.adminWalletAddress
-                          ? (
+                        <div className="space-y-2">
+                          {agent.adminWalletAddress ? (
                             <div className="flex items-center gap-2">
                               <div className="relative h-8 w-8 overflow-hidden rounded-full bg-slate-100">
                                 {agent.adminAvatar ? (
@@ -342,8 +604,16 @@ export default function AgentManagementPage() {
                                 </p>
                               </div>
                             </div>
-                          )
-                          : '-'}
+                          ) : (
+                            <p className="text-xs text-slate-500">-</p>
+                          )}
+                          <button
+                            onClick={() => openAdminWalletModal(agent)}
+                            className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700 hover:bg-cyan-100"
+                          >
+                            관리 지갑 변경
+                          </button>
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-slate-700 line-clamp-2">
                         {agent.agentDescription || '-'}
@@ -391,6 +661,7 @@ export default function AgentManagementPage() {
                   onClick={() => {
                     setForm(emptyForm);
                     setEditingId(null);
+                    setEditingSnapshot(null);
                   }}
                 >
                   초기화
@@ -413,23 +684,24 @@ export default function AgentManagementPage() {
 
             <div className="space-y-2">
               <label className="text-xs font-semibold text-slate-600">로고 업로드</label>
-              <div className="flex items-center gap-3">
-                <div className="relative h-16 w-16 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                  {form.agentLogo ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                <div className="flex items-start gap-3">
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-1">
+                    {form.agentLogo ? (
                       <Image
                         src={form.agentLogo}
                         alt="Agent logo"
                         fill
-                        className="object-contain"
-                        sizes="64px"
+                        className="object-contain p-1"
+                        sizes="80px"
                       />
                     ) : (
                       <span className="flex h-full w-full items-center justify-center text-xs text-slate-400">
-                        없음
+                        미리보기
                       </span>
                     )}
                   </div>
-                  <div className="flex flex-col gap-1">
+                  <div className="min-w-0 flex-1 space-y-1.5">
                     <input
                       type="file"
                       accept="image/*"
@@ -456,59 +728,14 @@ export default function AgentManagementPage() {
                           setUploadingLogo(false);
                         }
                       }}
-                      className="text-sm"
+                      className="block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-800"
                     />
                     <p className="text-[11px] text-slate-500">이미지 선택 시 자동 업로드됩니다.</p>
+                    {uploadingLogo && <p className="text-[11px] font-semibold text-cyan-700">업로드 중...</p>}
+                  </div>
                 </div>
               </div>
             </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-600">관리 지갑 선택</label>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowAdminModal(true)}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 whitespace-nowrap"
-                  >
-                    목록에서 선택
-                  </button>
-                  {selectedAdmin ? (
-                    <div className="flex min-w-0 items-center gap-2">
-                      <div className="relative h-8 w-8 overflow-hidden rounded-full bg-slate-100">
-                        {selectedAdmin.avatar ? (
-                          <Image
-                            src={selectedAdmin.avatar}
-                            alt={selectedAdmin.nickname || 'avatar'}
-                            fill
-                            sizes="32px"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <span className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-slate-600">
-                            {(selectedAdmin.nickname || selectedAdmin.walletAddress).slice(0, 2).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold text-slate-800">
-                          {selectedAdmin.nickname || '닉네임 없음'}
-                        </p>
-                        <p className="truncate text-[11px] font-mono text-slate-500">
-                          {selectedAdmin.walletAddress.length > 18
-                            ? `${selectedAdmin.walletAddress.slice(0, 6)}...${selectedAdmin.walletAddress.slice(-4)}`
-                            : selectedAdmin.walletAddress}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-xs font-semibold text-slate-500">선택 안 됨</span>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-500">
-                  회원 목록에서 관리 지갑을 선택합니다.
-                </p>
-              </div>
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-600">설명</label>
@@ -529,7 +756,7 @@ export default function AgentManagementPage() {
             )}
 
             <button
-              disabled={saving || uploadingLogo}
+              disabled={saving || uploadingLogo || (Boolean(editingId) && isEditUnchanged)}
               onClick={handleSave}
               className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.65)] transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
@@ -544,23 +771,231 @@ export default function AgentManagementPage() {
             </p>
             </div>
           </section>
+
+          <section className="mt-4 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_18px_42px_-34px_rgba(15,23,42,0.4)]">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">관리 지갑 변경 이력</p>
+                <p className="text-xs text-slate-500">
+                  에이전트별 관리 지갑 변경 내역을 기록하고 조회합니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  void loadAdminWalletHistories(historyAppliedSearch, historyPage);
+                }}
+                className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+              >
+                {historyLoading ? '조회 중...' : '이력 새로고침'}
+              </button>
+            </div>
+
+            {historyError && (
+              <div className="border-b border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
+                {historyError}
+              </div>
+            )}
+
+            <div className="overflow-x-auto">
+              <table className="min-w-[980px] w-full table-fixed">
+                <thead className="bg-slate-50">
+                  <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
+                    <th className="w-[180px] px-3 py-3">변경시각</th>
+                    <th className="w-[240px] px-3 py-3">에이전트</th>
+                    <th className="w-[220px] px-3 py-3">이전 관리 지갑</th>
+                    <th className="w-[220px] px-3 py-3">변경 관리 지갑</th>
+                    <th className="w-[220px] px-3 py-3">변경자</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
+                  {historyLoading ? (
+                    <tr>
+                      <td className="px-4 py-8 text-center text-slate-500" colSpan={5}>
+                        변경 이력을 불러오는 중입니다...
+                      </td>
+                    </tr>
+                  ) : adminWalletHistories.length === 0 ? (
+                    <tr>
+                      <td className="px-4 py-8 text-center text-slate-500" colSpan={5}>
+                        표시할 변경 이력이 없습니다.
+                      </td>
+                    </tr>
+                  ) : (
+                    adminWalletHistories.map((item) => (
+                      <tr key={item.id || `${item.agentcode}-${item.changedAt}`} className="hover:bg-slate-50/70">
+                        <td className="px-3 py-2.5 text-xs text-slate-500">
+                          {formatDateTime(item.changedAt)}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-2.5">
+                            <div className="relative h-8 w-8 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                              {item.agentLogo ? (
+                                <Image
+                                  src={item.agentLogo}
+                                  alt={item.agentName || item.agentcode || 'agent'}
+                                  fill
+                                  className="object-contain"
+                                  sizes="32px"
+                                />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-500">
+                                  {(item.agentName || item.agentcode || 'AG').slice(0, 2).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-slate-900">{item.agentName || '-'}</p>
+                              <p className="truncate text-xs text-slate-500">{item.agentcode || '-'}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <div className="relative h-7 w-7 overflow-hidden rounded-full bg-slate-100">
+                              {item.previousAdminAvatar ? (
+                                <Image
+                                  src={item.previousAdminAvatar}
+                                  alt={item.previousAdminNickname || 'admin'}
+                                  fill
+                                  className="object-cover"
+                                  sizes="28px"
+                                />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-600">
+                                  {(item.previousAdminNickname || item.previousAdminWalletAddress || 'A').slice(0, 1).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-semibold text-slate-800">
+                                {item.previousAdminNickname || '-'}
+                              </p>
+                              <p className="truncate text-[11px] font-mono text-slate-500">
+                                {shortWallet(item.previousAdminWalletAddress)}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <div className="relative h-7 w-7 overflow-hidden rounded-full bg-slate-100">
+                              {item.nextAdminAvatar ? (
+                                <Image
+                                  src={item.nextAdminAvatar}
+                                  alt={item.nextAdminNickname || 'admin'}
+                                  fill
+                                  className="object-cover"
+                                  sizes="28px"
+                                />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-600">
+                                  {(item.nextAdminNickname || item.nextAdminWalletAddress || 'A').slice(0, 1).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-semibold text-slate-800">
+                                {item.nextAdminNickname || '-'}
+                              </p>
+                              <p className="truncate text-[11px] font-mono text-slate-500">
+                                {shortWallet(item.nextAdminWalletAddress)}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <p className="truncate text-xs font-semibold text-slate-700">
+                            {item.changedByName || '-'}
+                          </p>
+                          <p className="truncate text-[11px] font-mono text-slate-500">
+                            {shortWallet(item.changedByWalletAddress)}
+                          </p>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 px-4 py-3">
+              <p className="text-xs text-slate-500">
+                전체 {historyTotalCount.toLocaleString()}건 · {historyPage.toLocaleString()} / {historyTotalPages.toLocaleString()} 페이지
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (historyLoading || historyPage <= 1) return;
+                    void loadAdminWalletHistories(historyAppliedSearch, historyPage - 1);
+                  }}
+                  disabled={historyLoading || historyPage <= 1}
+                  className="inline-flex h-8 items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  이전
+                </button>
+
+                {historyPageNumbers.map((page) => (
+                  <button
+                    key={`admin-wallet-history-page-${page}`}
+                    type="button"
+                    onClick={() => {
+                      if (historyLoading || page === historyPage) return;
+                      void loadAdminWalletHistories(historyAppliedSearch, page);
+                    }}
+                    disabled={historyLoading || page === historyPage}
+                    className={`inline-flex h-8 min-w-[32px] items-center justify-center rounded-md border px-2 text-xs font-semibold transition ${
+                      page === historyPage
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50'
+                    } disabled:cursor-not-allowed disabled:opacity-80`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (historyLoading || historyPage >= historyTotalPages) return;
+                    void loadAdminWalletHistories(historyAppliedSearch, historyPage + 1);
+                  }}
+                  disabled={historyLoading || historyPage >= historyTotalPages}
+                  className="inline-flex h-8 items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  다음
+                </button>
+              </div>
+            </div>
+          </section>
         </div>
       </main>
 
-    {showAdminModal && (
+    {showAdminModal && walletModalAgent && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
         <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_30px_120px_-60px_rgba(15,23,42,0.65)]">
           <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Admin Wallets</p>
-              <h3 className="text-lg font-bold text-slate-900">관리 지갑 선택</h3>
+              <h3 className="text-lg font-bold text-slate-900">관리 지갑 변경</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                {walletModalAgent.agentName || '-'} ({walletModalAgent.agentcode || '-'})
+              </p>
             </div>
             <button
-              onClick={() => setShowAdminModal(false)}
+              onClick={closeAdminWalletModal}
               className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
             >
               닫기
             </button>
+          </div>
+          <div className="border-b border-slate-200 bg-slate-50/70 px-5 py-3 text-xs text-slate-600">
+            현재 관리 지갑: <span className="font-mono font-semibold text-slate-800">{shortWallet(walletModalAgent.adminWalletAddress)}</span>
+            {connectedWalletAddress ? (
+              <span className="ml-2 text-slate-500">
+                변경자: {connectedAdminNickname || '관리자'} ({shortWallet(connectedWalletAddress)})
+              </span>
+            ) : null}
           </div>
           <div className="flex items-center gap-2 px-5 py-3">
             <input
@@ -585,10 +1020,14 @@ export default function AgentManagementPage() {
                 <button
                   key={user.walletAddress}
                   onClick={() => {
-                    setForm((prev) => ({ ...prev, adminWalletAddress: user.walletAddress }));
-                    setShowAdminModal(false);
+                    setSelectedAdminWalletAddress(user.walletAddress);
+                    setWalletChangeError(null);
                   }}
-                  className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+                  className={`flex items-center gap-3 rounded-xl border px-3 py-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                    selectedAdminWalletAddress === user.walletAddress
+                      ? 'border-cyan-300 bg-cyan-50'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
                 >
                   <div className="relative h-10 w-10 overflow-hidden rounded-full bg-slate-100">
                     {user.avatar ? (
@@ -610,10 +1049,10 @@ export default function AgentManagementPage() {
                       {user.nickname || '닉네임 없음'}
                     </p>
                     <p className="text-xs font-mono text-slate-500">
-                      {user.walletAddress.slice(0, 6)}...{user.walletAddress.slice(-4)}
+                      {shortWallet(user.walletAddress)}
                     </p>
                   </div>
-                  {form.adminWalletAddress === user.walletAddress && (
+                  {selectedAdminWalletAddress === user.walletAddress && (
                     <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-white">
                       선택됨
                     </span>
@@ -621,6 +1060,41 @@ export default function AgentManagementPage() {
                 </button>
               ))}
             </div>
+          </div>
+          {selectedAdminForModal && (
+            <div className="border-t border-slate-200 bg-slate-50/60 px-5 py-3 text-xs text-slate-600">
+              변경 대상: <span className="font-semibold text-slate-800">{selectedAdminForModal.nickname || '닉네임 없음'}</span>{' '}
+              <span className="font-mono text-slate-500">({shortWallet(selectedAdminForModal.walletAddress)})</span>
+            </div>
+          )}
+          {walletChangeError && (
+            <div className="border-t border-rose-200 bg-rose-50 px-5 py-2.5 text-xs font-semibold text-rose-700">
+              {walletChangeError}
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
+            <button
+              type="button"
+              onClick={closeAdminWalletModal}
+              disabled={walletChanging}
+              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void applyAdminWalletChange();
+              }}
+              disabled={
+                walletChanging
+                || !selectedAdminWalletAddress
+                || String(walletModalAgent.adminWalletAddress || '').trim().toLowerCase() === selectedAdminWalletAddress.toLowerCase()
+              }
+              className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {walletChanging ? '변경 중...' : '관리 지갑 변경'}
+            </button>
           </div>
         </div>
       </div>

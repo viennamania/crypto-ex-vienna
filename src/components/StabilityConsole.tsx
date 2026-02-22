@@ -134,7 +134,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
   const isP2pSection = pathSegments[1] === "p2p" || pathSegments[1] === "p2p-buyer";
   const withdrawUsdtPath = isP2pSection
     ? `/${langFromPath}/wallet-management/wallet-usdt`
-    : `/${langFromPath}/administration/withdraw-usdt`;
+    : `/${langFromPath}/administration/wallet-management`;
   const paymentUsdtPath = `/${langFromPath}/wallet-management/payment-usdt`;
 
 
@@ -464,7 +464,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
                 onClick={() => {
                   // redirect to send USDT page
                   router.push(
-                    "/kr/administration/withdraw-usdt"
+                    "/kr/administration/wallet-management"
                   );
 
                 }}
@@ -573,7 +573,7 @@ const StabilityConsole = ({ onRequestClose }: { onRequestClose?: () => void }) =
               <button
                 className="group inline-flex h-11 items-center justify-center gap-2 rounded-full bg-slate-900
                 px-4 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
-                //onClick={() => router.push("/ko/administration/withdraw-usdt")}
+                //onClick={() => router.push("/ko/administration/wallet-management")}
                 /* router and hide button for withdraw USDT */
                 onClick={() => {
                   onRequestClose?.();
