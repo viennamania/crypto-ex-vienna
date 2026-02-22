@@ -102,7 +102,7 @@ import {
 } from "next//navigation";
 
 
-const walletAuthOptions = ['google', 'email', 'phone'];
+const walletAuthOptions = ['email', 'google', 'phone'];
 
 
 export default function SettingsPage({ params }: any) {
@@ -265,6 +265,7 @@ export default function SettingsPage({ params }: any) {
 
     const { wallet, wallets, smartAccountEnabled, chain } = useClientWallets({
         authOptions: walletAuthOptions,
+        defaultSmsCountryCode: 'KR',
         sponsorGas: true, // enable paymaster for smart accounts to cover gas
     });
 

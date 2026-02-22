@@ -55,7 +55,10 @@ export default function SellerTradeStatusPage() {
   const searchParams = useSearchParams();
   const agentcodeParam = searchParams?.get('agentcode') || null;
 
-  const { wallet } = useClientWallets();
+  const { wallet } = useClientWallets({
+    authOptions: ['email', 'google', 'phone'],
+    defaultSmsCountryCode: 'KR',
+  });
   const activeAccount = useActiveAccount();
   const walletAddress = activeAccount?.address ?? '';
 

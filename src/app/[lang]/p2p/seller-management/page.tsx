@@ -28,7 +28,10 @@ export default function SellerManagementByAgentPage() {
   const searchParams = useSearchParams();
   const agentcodeParam = searchParams?.get('agentcode') || null;
 
-  const { wallet, wallets } = useClientWallets();
+  const { wallet, wallets } = useClientWallets({
+    authOptions: ['email', 'google', 'phone'],
+    defaultSmsCountryCode: 'KR',
+  });
   const activeAccount = useActiveAccount();
   const walletAddress = activeAccount?.address ?? '';
 

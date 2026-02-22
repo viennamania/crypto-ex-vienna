@@ -50,7 +50,7 @@ type PendingAlertCardItem = PendingOrderProcessingItem & {
   cardState: 'entering' | 'stable' | 'exiting';
 };
 
-const WALLET_AUTH_OPTIONS = ['phone', 'google', 'email'];
+const WALLET_AUTH_OPTIONS = ['email', 'google', 'phone'];
 const ORDER_PROCESSING_ALERT_POLLING_MS = 15000;
 const ORDER_PROCESSING_ALERT_SOUND_INTERVAL_MS = 30000;
 const ORDER_PROCESSING_ALERT_SOUND_ENABLED_KEY = 'store-order-processing-alert-sound-enabled';

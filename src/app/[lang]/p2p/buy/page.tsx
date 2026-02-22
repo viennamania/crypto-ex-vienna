@@ -194,7 +194,7 @@ interface BuyOrder {
 
 
 
-const walletAuthOptions = ["google", "email", "phone"];
+const walletAuthOptions = ["email", "google", "phone"];
 const SELLER_CARD_TONES = [
   {
     card: "border-slate-200 bg-white",
@@ -239,7 +239,10 @@ const SELLER_STATUS_DOT: Record<string, string> = {
 export default function Index({ params }: any) {
 
   const searchParams = useSearchParams();
-  const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
+  const { wallet, wallets } = useClientWallets({
+    authOptions: walletAuthOptions,
+    defaultSmsCountryCode: 'KR',
+  });
   const availableWallets = wallets.length ? wallets : [wallet];
  
   ////////const wallet = searchParams.get('wallet');

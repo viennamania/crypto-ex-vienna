@@ -51,7 +51,7 @@ type PendingAlertCardItem = PendingOrderProcessingItem & {
   cardState: 'entering' | 'stable' | 'exiting';
 };
 
-const WALLET_AUTH_OPTIONS = ['google', 'email', 'phone'];
+const WALLET_AUTH_OPTIONS = ['email', 'google', 'phone'];
 const WALLET_DEFAULT_SMS_COUNTRY_CODE: SupportedSmsCountry = 'KR';
 const WALLET_ALLOWED_SMS_COUNTRY_CODES: SupportedSmsCountry[] = ['KR'];
 const ORDER_PROCESSING_ALERT_POLLING_MS = 15000;

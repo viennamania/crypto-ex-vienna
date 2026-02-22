@@ -194,14 +194,17 @@ interface BuyOrder {
 
 
 
-const walletAuthOptions = ["google", "email"];
+const walletAuthOptions = ["email", "google", "phone"];
 
 
 
 export default function Index({ params }: any) {
 
   const searchParams = useSearchParams();
-  const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
+  const { wallet, wallets } = useClientWallets({
+    authOptions: walletAuthOptions,
+    defaultSmsCountryCode: 'KR',
+  });
  
   ////////const wallet = searchParams.get('wallet');
 

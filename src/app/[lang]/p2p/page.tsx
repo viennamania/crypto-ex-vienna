@@ -29,6 +29,7 @@ const bodyFont = Manrope({
 const NEXT_PUBLIC_SENDBIRD_APP_ID = process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
 const SUPPORT_ADMIN_ID = 'orangexManager';
 const SUPPORT_REQUEST_TIMEOUT_MS = 12000;
+const walletAuthOptions = ['email', 'google', 'phone'];
 
 const SCROLL_BANNER_ADS = [
     { id: 1, title: 'Binance Pay', image: '/images/crypto-1218x350-1.gif', link: 'https://pay.binance.com' },
@@ -323,7 +324,10 @@ export default function OrangeXPage() {
         process.env.NODE_ENV === 'development';
     const activeAccount = useActiveAccount();
     const walletAddress = activeAccount?.address ?? '';
-    const { smartAccountEnabled, wallet, chain } = useClientWallets();
+    const { smartAccountEnabled, wallet, chain } = useClientWallets({
+        authOptions: walletAuthOptions,
+        defaultSmsCountryCode: 'KR',
+    });
     const hasWallet = Boolean(walletAddress);
     const buyPageHref = `/${lang}/p2p/buy`;
     const [sellerEscrowWalletAddress, setSellerEscrowWalletAddress] = useState<string | null>(null);

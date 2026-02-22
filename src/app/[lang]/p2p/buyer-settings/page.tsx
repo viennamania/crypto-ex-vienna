@@ -292,7 +292,10 @@ export default function SettingsPage({ params }: any) {
 
     const router = useRouter();
 
-    const { smartAccountEnabled, wallet } = useClientWallets();
+    const { smartAccountEnabled, wallet } = useClientWallets({
+        authOptions: ['email', 'google', 'phone'],
+        defaultSmsCountryCode: 'KR',
+    });
 
     // get the active wallet
     const activeWallet = useActiveWallet();
