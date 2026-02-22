@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { pickFirstPublicIpAddress, normalizeIpAddress } from '@/lib/ip-address';
 
 import {
   acceptBuyOrderPrivateSale,
@@ -16,6 +17,21 @@ export async function POST(request: NextRequest) {
     const krwAmountRaw = Number(body?.krwAmount || 0);
     const krwAmount =
       Number.isFinite(krwAmountRaw) && krwAmountRaw > 0 ? Math.floor(krwAmountRaw) : undefined;
+    const bodyPublicIpAddress =
+      typeof body?.publicIpAddress === 'string' ? body.publicIpAddress.trim() : '';
+    const bodyBuyerIpAddress =
+      typeof body?.buyerIpAddress === 'string' ? body.buyerIpAddress.trim() : '';
+    const requesterIpAddress = pickFirstPublicIpAddress([
+      bodyPublicIpAddress,
+      bodyBuyerIpAddress,
+      request.headers.get('x-forwarded-for'),
+      request.headers.get('x-vercel-forwarded-for'),
+      request.headers.get('x-real-ip'),
+      request.headers.get('cf-connecting-ip'),
+      request.headers.get('true-client-ip'),
+      request.headers.get('x-client-ip'),
+      request.headers.get('x-original-forwarded-for'),
+    ]) || normalizeIpAddress(bodyPublicIpAddress || bodyBuyerIpAddress);
 
     if (!buyerWalletAddress || !sellerWalletAddress || !Number.isFinite(usdtAmount) || usdtAmount <= 0) {
       return NextResponse.json(
@@ -40,6 +56,7 @@ export async function POST(request: NextRequest) {
         sellerWalletAddress,
         usdtAmount,
         krwAmount,
+        requesterIpAddress,
       });
       if (!created.success) {
         const failureMessageByReason: Record<string, string> = {

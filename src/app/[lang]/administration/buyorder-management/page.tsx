@@ -97,6 +97,8 @@ type BuyOrderItem = {
     buyerTransferAmount?: number | string;
     totalTransferAmount?: number | string;
   };
+  buyerIpAddress?: string;
+  ipAddress?: string;
 };
 
 const POLLING_INTERVAL_MS = 5000;
@@ -318,6 +320,31 @@ const getBuyerDepositNameLabel = (order: BuyOrderItem) =>
     || order?.buyer?.bankInfo?.depositName
     || '',
   ).trim() || '-';
+
+const getBuyerIp = (order: BuyOrderItem) => {
+  const candidates = [
+    order?.buyerIpAddress,
+    order?.ipAddress,
+    (order as any)?.buyer?.ipAddress,
+    (order as any)?.buyer?.publicIpAddress,
+    (order as any)?.buyer?.buyOrder?.ipAddress,
+    (order as any)?.buyer?.buyOrder?.publicIpAddress,
+    (order as any)?.buyer?.buyOrder?.createdByIpAddress,
+    (order as any)?.buyer?.buyOrder?.cancelledByIpAddress,
+    (order as any)?.buyer?.buyOrder?.paymentConfirmedByIpAddress,
+    String(order?.cancelledByRole || '').trim().toLowerCase() === 'buyer' ? order?.cancelledByIpAddress : '',
+    String(order?.paymentConfirmedByRole || '').trim().toLowerCase() === 'buyer' ? order?.paymentConfirmedByIpAddress : '',
+  ];
+
+  for (const candidate of candidates) {
+    const normalizedIpAddress = String(candidate || '').trim();
+    if (normalizedIpAddress) {
+      return normalizedIpAddress;
+    }
+  }
+
+  return '-';
+};
 
 const resolveCancellerRole = (order: BuyOrderItem): 'buyer' | 'seller' | 'admin' | 'agent' | 'unknown' => {
   const role = String(order?.cancelledByRole || order?.canceller || '').trim().toLowerCase();
@@ -1156,6 +1183,9 @@ export default function BuyOrderManagementPage() {
                           </span>
                           <span className="truncate text-xs text-slate-500">
                             {shortWallet(order?.buyer?.walletAddress || order?.walletAddress)}
+                          </span>
+                          <span className="break-all text-[11px] leading-tight text-slate-500">
+                            IP {getBuyerIp(order)}
                           </span>
                         </div>
                       </td>

@@ -12,6 +12,7 @@ import {
   arbitrumContractAddressUSDT,
   bscContractAddressUSDT,
 } from '@/app/config/contractAddresses';
+import { normalizeIpAddress } from '@/lib/ip-address';
 
 
 // object id
@@ -10702,11 +10703,13 @@ export async function acceptBuyOrderPrivateSale(
     sellerWalletAddress,
     usdtAmount,
     krwAmount,
+    requesterIpAddress = '',
   }: {
     buyerWalletAddress: string;
     sellerWalletAddress: string;
     usdtAmount: number;
     krwAmount?: number;
+    requesterIpAddress?: string;
   }): Promise<AcceptBuyOrderPrivateSaleResult> {
 
     const toErrorMessage = (error: unknown) => {
@@ -10824,6 +10827,7 @@ export async function acceptBuyOrderPrivateSale(
       $regex: `^${escapeRegex(matchedBuyerWalletAddress)}$`,
       $options: 'i',
     };
+    const normalizedRequesterIpAddress = normalizeIpAddress(requesterIpAddress);
 
  
     const collection = client.db(dbName).collection('buyorders');
@@ -10978,6 +10982,8 @@ export async function acceptBuyOrderPrivateSale(
     const newBuyOrder = {
       tradeId: tradeId,
       walletAddress: matchedBuyerWalletAddress,
+      buyerIpAddress: normalizedRequesterIpAddress,
+      ipAddress: normalizedRequesterIpAddress,
       isWeb3Wallet: true,
       nickname: buyer.nickname || '',
       avatar: buyer.avatar || '',
@@ -11021,6 +11027,8 @@ export async function acceptBuyOrderPrivateSale(
         nickname: buyer.nickname || '',
         avatar: buyer.avatar || '',
         walletAddress: matchedBuyerWalletAddress,
+        ipAddress: normalizedRequesterIpAddress,
+        publicIpAddress: normalizedRequesterIpAddress,
         escrowWalletAddress: buyerEscrowWalletAddress,
         lockTransactionHash: escrowTransferTransactionHash,
         escrowLockedUsdtAmount: escrowLockUsdtAmount,

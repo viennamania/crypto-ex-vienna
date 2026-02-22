@@ -759,7 +759,8 @@ export default function SettingsPage({ params }: any) {
 
     // /api/client/setClientInfo
 
-    const [updatingClientInfo, setUpdatingClientInfo] = useState(false);
+    const [savingCenterBasicInfo, setSavingCenterBasicInfo] = useState(false);
+    const [savingExchangeRateUSDT, setSavingExchangeRateUSDT] = useState(false);
     const [updatingNetwork, setUpdatingNetwork] = useState(false);
     const [updatingSmartAccount, setUpdatingSmartAccount] = useState(false);
 
@@ -855,49 +856,88 @@ export default function SettingsPage({ params }: any) {
         }
     };
 
-    const updateClientInfo = async () => {
-        if (updatingClientInfo) {
+    const updateCenterBasicInfo = async () => {
+        if (savingCenterBasicInfo) {
             return;
         }
-        
-        setUpdatingClientInfo(true);
-        const response = await fetch("/api/client/setClientInfo", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                data: {
-                    chain: chain,
-                    name: clientName,
-                    description: clientDescription,
 
-                    exchangeRateUSDT: exchangeRateUSDT,
-                    smartAccountEnabled: smartAccountEnabled,
-                }
-            }),
-        });
+        setSavingCenterBasicInfo(true);
 
-        const data = await response.json();
+        try {
+            const response = await fetch("/api/client/setClientBasicInfo", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    data: {
+                        name: clientName,
+                        description: clientDescription,
+                    },
+                }),
+            });
 
-        //console.log("setClientInfo", data);
+            const data = await response.json().catch(() => ({}));
 
-        if (data.result) {
+            if (!response.ok || !data.result) {
+                throw new Error(data?.error || "센터 기본 정보 저장에 실패했습니다.");
+            }
+
             setClientInfo((prev: any) => ({
                 ...(prev || {}),
-                chain: chain,
                 name: clientName,
                 description: clientDescription,
-                exchangeRateUSDT: exchangeRateUSDT,
-                smartAccountEnabled: smartAccountEnabled,
             }));
-            toast.success('Client info updated');
+            toast.success("센터 기본 정보가 저장되었습니다.");
             notifySettingsUpdated();
-        } else {
-            toast.error('Failed to update client info');
+        } catch (error) {
+            const message =
+                error instanceof Error ? error.message : "센터 기본 정보 저장에 실패했습니다.";
+            toast.error(message);
+        } finally {
+            setSavingCenterBasicInfo(false);
+        }
+    };
+
+    const updateExchangeRateSettings = async () => {
+        if (savingExchangeRateUSDT) {
+            return;
         }
 
-        setUpdatingClientInfo(false);
+        setSavingExchangeRateUSDT(true);
+
+        try {
+            const response = await fetch("/api/client/setClientExchangeRateUSDT", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    data: {
+                        exchangeRateUSDT,
+                    },
+                }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok || !data.result) {
+                throw new Error(data?.error || "환율 설정 저장에 실패했습니다.");
+            }
+
+            setClientInfo((prev: any) => ({
+                ...(prev || {}),
+                exchangeRateUSDT,
+            }));
+            toast.success("환율 설정이 저장되었습니다.");
+            notifySettingsUpdated();
+        } catch (error) {
+            const message =
+                error instanceof Error ? error.message : "환율 설정 저장에 실패했습니다.";
+            toast.error(message);
+        } finally {
+            setSavingExchangeRateUSDT(false);
+        }
     };
 
 
@@ -1117,6 +1157,20 @@ export default function SettingsPage({ params }: any) {
                                         />
                                     </div>
                                 </div>
+                                <div className="mt-4 flex justify-end">
+                                    <button
+                                        type="button"
+                                        disabled={savingCenterBasicInfo}
+                                        onClick={updateCenterBasicInfo}
+                                        className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${
+                                            savingCenterBasicInfo
+                                                ? 'cursor-not-allowed bg-slate-300 text-slate-100'
+                                                : 'bg-emerald-600 hover:bg-emerald-500'
+                                        }`}
+                                    >
+                                        {savingCenterBasicInfo ? '저장 중...' : '저장하기'}
+                                    </button>
+                                </div>
                             </section>
 
                             <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.5)]">
@@ -1189,19 +1243,21 @@ export default function SettingsPage({ params }: any) {
                                         />
                                     </div>
                                 </div>
+                                <div className="mt-4 flex justify-end">
+                                    <button
+                                        type="button"
+                                        disabled={savingExchangeRateUSDT}
+                                        onClick={updateExchangeRateSettings}
+                                        className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${
+                                            savingExchangeRateUSDT
+                                                ? 'cursor-not-allowed bg-slate-300 text-slate-100'
+                                                : 'bg-emerald-600 hover:bg-emerald-500'
+                                        }`}
+                                    >
+                                        {savingExchangeRateUSDT ? '저장 중...' : '저장하기'}
+                                    </button>
+                                </div>
                             </section>
-
-                            <button
-                                disabled={updatingClientInfo}
-                                onClick={() => updateClientInfo()}
-                                className={`w-full rounded-2xl px-4 py-3 text-lg font-semibold text-white transition-all duration-200 ease-in-out ${
-                                    updatingClientInfo
-                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-[0_20px_40px_-22px_rgba(16,185,129,0.7)] hover:from-emerald-500 hover:to-emerald-400 hover:-translate-y-0.5'
-                                }`}
-                            >
-                                {updatingClientInfo ? '저장 중...' : '저장하기'}
-                            </button>
                         </div>
                     ) : (
                         <div className="mt-6 flex flex-col items-center justify-center">
