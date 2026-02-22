@@ -632,6 +632,7 @@ export async function updateOne(data: any) {
     {
       $set: {
         nickname: data.nickname,
+        ...(String(data.email || '').trim() ? { email: String(data.email || '').trim() } : {}),
         ...(String(data.mobile || '').trim() ? { mobile: String(data.mobile || '').trim() } : {}),
         updatedAt: new Date().toISOString(),
       },
@@ -667,20 +668,32 @@ export async function updateAvatar(data: any) {
     return null;
   }
 
+  const normalizedStorecode = String(data.storecode || '').trim();
+  const normalizedWalletAddress = String(data.walletAddress || '').trim();
+
+  if (!normalizedStorecode || !normalizedWalletAddress) {
+    return null;
+  }
+
 
   const result = await collection.updateOne(
     {
-      storecode: data.storecode,
-      walletAddress: data.walletAddress
+      storecode: normalizedStorecode,
+      walletAddress: { $regex: `^${escapeRegExp(normalizedWalletAddress)}$`, $options: 'i' }
     },
-    { $set: { avatar: data.avatar } }
+    {
+      $set: {
+        avatar: data.avatar,
+        updatedAt: new Date().toISOString(),
+      }
+    }
   );
 
-  if (result) {
+  if (result?.matchedCount) {
     const updated = await collection.findOne<UserProps>(
       {
-        storecode: data.storecode,
-        walletAddress: data.walletAddress
+        storecode: normalizedStorecode,
+        walletAddress: { $regex: `^${escapeRegExp(normalizedWalletAddress)}$`, $options: 'i' }
       },
       { projection: { _id: 0, emailVerified: 0 } }
     );

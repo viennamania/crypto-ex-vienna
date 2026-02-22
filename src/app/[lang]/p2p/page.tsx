@@ -1882,22 +1882,30 @@ export default function OrangeXPage() {
                                         </div>
                                     </div>
                                     {walletAddress ? (
-                                        <div className="inline-flex min-w-[200px] items-center justify-center gap-3 rounded-full bg-slate-900 px-6 py-2.5 text-xs font-semibold text-white shadow-[0_18px_40px_-22px_rgba(15,23,42,0.55)]">
-                                            <span className="flex h-2 w-2 rounded-full bg-emerald-400" />
-                                            <span className="hidden sm:inline">Wallet Connected</span>
-                                            <span className="text-[11px] font-mono tracking-tight">
-                                                {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-                                            </span>
-                                            <span className="flex items-center gap-1 rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[10px] font-semibold">
-                                                <Image
-                                                    src={chainBadge.icon}
-                                                    alt={`${chainBadge.label} icon`}
-                                                    width={14}
-                                                    height={14}
-                                                    className="h-3.5 w-3.5 object-contain"
-                                                />
-                                                <span className="hidden sm:inline">{chainBadge.label}</span>
-                                            </span>
+                                        <div className="flex flex-col items-stretch gap-2">
+                                            <div className="inline-flex min-w-[200px] items-center justify-center gap-3 rounded-full bg-slate-900 px-6 py-2.5 text-xs font-semibold text-white shadow-[0_18px_40px_-22px_rgba(15,23,42,0.55)]">
+                                                <span className="flex h-2 w-2 rounded-full bg-emerald-400" />
+                                                <span className="hidden sm:inline">Wallet Connected</span>
+                                                <span className="text-[11px] font-mono tracking-tight">
+                                                    {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                                                </span>
+                                                <span className="flex items-center gap-1 rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[10px] font-semibold">
+                                                    <Image
+                                                        src={chainBadge.icon}
+                                                        alt={`${chainBadge.label} icon`}
+                                                        width={14}
+                                                        height={14}
+                                                        className="h-3.5 w-3.5 object-contain"
+                                                    />
+                                                    <span className="hidden sm:inline">{chainBadge.label}</span>
+                                                </span>
+                                            </div>
+                                            <Link
+                                                href={`/${lang}/p2p/profile-settings`}
+                                                className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                                            >
+                                                프로필 설정
+                                            </Link>
                                         </div>
                                     ) : (
                                         <ConnectButton

@@ -263,29 +263,6 @@ const formatDateTime = (value?: string) => {
   });
 };
 
-const formatDateOnly = (value?: string) => {
-  if (!value) return '-';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '-';
-  return parsed.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-};
-
-const formatTimeOnly = (value?: string) => {
-  if (!value) return '-';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '-';
-  return parsed.toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-};
-
 const shortWallet = (value?: string) => {
   const source = String(value || '').trim();
   if (!source) return '-';
@@ -1068,18 +1045,17 @@ export default function BuyOrderManagementPage() {
             <div className="px-4 py-12 text-center text-sm text-slate-500">검색된 주문 데이터가 없습니다.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-[1240px] w-full table-fixed">
+              <table className="min-w-[1120px] w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
                     <th className="w-[108px] px-3 py-3">상태</th>
-                    <th className="w-[96px] px-3 py-3">주문시각</th>
-                    <th className="w-[100px] px-3 py-3">거래번호(TID)</th>
+                    <th className="w-[140px] px-3 py-3">주문시각/거래번호(TID)</th>
                     <th className="w-[104px] px-3 py-3">구매자</th>
-                    <th className="w-[124px] px-3 py-3">판매자/결제방법</th>
+                    <th className="w-[104px] px-3 py-3">판매자/결제방법</th>
                     <th className="w-[108px] px-3 py-3 text-right">주문금액</th>
-                    <th className="w-[96px] px-3 py-3">플랫폼 수수료</th>
-                    <th className="w-[88px] px-3 py-3">전송내역</th>
-                    <th className="w-[96px] px-3 py-3 text-center">액션</th>
+                    <th className="w-[84px] px-3 py-3">플랫폼 수수료</th>
+                    <th className="w-[76px] px-3 py-3">전송내역</th>
+                    <th className="w-[72px] px-3 py-3 text-center">액션</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1149,23 +1125,16 @@ export default function BuyOrderManagementPage() {
                       </td>
                       <td className="px-3 py-3 text-slate-600">
                         <div className="flex flex-col leading-tight">
-                          <span className="text-[13px] font-medium text-slate-700">
-                            {formatDateOnly(order?.createdAt)}
+                          <span className="whitespace-nowrap text-[13px] font-medium text-slate-700">
+                            {formatDateTime(order?.createdAt)}
                           </span>
-                          <span className="mt-0.5 text-xs text-slate-500">
-                            {formatTimeOnly(order?.createdAt)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="flex flex-col">
                           {order?.tradeId ? (
                             <button
                               type="button"
                               onClick={() => {
                                 void copyTradeId(order.tradeId || '');
                               }}
-                              className="inline-flex w-fit items-center gap-1 truncate font-semibold text-slate-900 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                              className="mt-0.5 inline-flex w-fit items-center gap-1 truncate text-xs font-semibold text-slate-900 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
                             >
                               {order.tradeId}
                               {copiedTradeId === order.tradeId && (
@@ -1173,9 +1142,8 @@ export default function BuyOrderManagementPage() {
                               )}
                             </button>
                           ) : (
-                            <span className="truncate font-semibold text-slate-900">-</span>
+                            <span className="mt-0.5 truncate text-xs font-semibold text-slate-900">-</span>
                           )}
-                          <span className="truncate text-xs text-slate-500">{shortWallet(order?._id)}</span>
                         </div>
                       </td>
                       <td className="px-3 py-3">

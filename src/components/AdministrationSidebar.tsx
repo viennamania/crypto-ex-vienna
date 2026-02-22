@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 type AdministrationSidebarProps = {
   lang: string;
@@ -42,6 +42,8 @@ const buildMenuItems = (lang: string): MenuItem[] => {
   ];
 };
 
+const ACTIVE_BUY_ORDER_POLLING_MS = 15000;
+
 const isActiveRoute = (pathname: string, href: string) => {
   if (href.endsWith('/administration')) {
     return pathname === href;
@@ -52,7 +54,33 @@ const isActiveRoute = (pathname: string, href: string) => {
 export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: AdministrationSidebarProps) {
   const pathname = usePathname() || '';
   const menuItems = buildMenuItems(lang);
+  const buyOrderManagementHref = `/${lang}/administration/buyorder-management`;
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [activeBuyOrderCount, setActiveBuyOrderCount] = useState(0);
+
+  const loadActiveBuyOrderCount = useCallback(async () => {
+    try {
+      const response = await fetch('/api/order/getActiveBuyOrderCount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String((payload as Record<string, unknown>)?.error || '진행중 구매주문 개수를 조회하지 못했습니다.'));
+      }
+
+      const source = (typeof payload === 'object' && payload !== null ? payload : {}) as Record<string, unknown>;
+      const result = (typeof source.result === 'object' && source.result !== null
+        ? source.result
+        : {}) as Record<string, unknown>;
+      const nextCount = Number(result.count || 0);
+      setActiveBuyOrderCount(Number.isFinite(nextCount) ? Math.max(0, Math.floor(nextCount)) : 0);
+    } catch (error) {
+      console.error('failed to load active buy order count', error);
+    }
+  }, []);
 
   useEffect(() => {
     const updateViewport = () => {
@@ -69,6 +97,26 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
     onOpenChange(false);
   }, [pathname, isMobileViewport, onOpenChange]);
 
+  useEffect(() => {
+    let isActive = true;
+    let inFlight = false;
+
+    const run = async () => {
+      if (!isActive || inFlight) return;
+      inFlight = true;
+      await loadActiveBuyOrderCount();
+      inFlight = false;
+    };
+
+    void run();
+    const intervalId = window.setInterval(run, ACTIVE_BUY_ORDER_POLLING_MS);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(intervalId);
+    };
+  }, [loadActiveBuyOrderCount]);
+
   const menuContent = (
     <>
       <Link
@@ -82,6 +130,8 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
       <nav className="mt-5 flex-1 space-y-1 overflow-y-auto pr-1">
         {menuItems.map((item) => {
           const isActive = isActiveRoute(pathname, item.href);
+          const isBuyOrderManagementItem = item.href === buyOrderManagementHref;
+          const showBuyOrderAlert = isBuyOrderManagementItem && activeBuyOrderCount > 0;
           return (
             <div key={item.href}>
               <Link
@@ -101,6 +151,17 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
                     {item.hint}
                   </span>
                 </span>
+                {showBuyOrderAlert && (
+                  <span
+                    className={`buyorder-menu-alert-blink inline-flex h-5 min-w-5 items-center justify-center rounded-full border px-1.5 text-[10px] font-extrabold leading-none ${
+                      isActive
+                        ? 'border-rose-300 bg-rose-100 text-rose-700'
+                        : 'border-rose-200 bg-rose-50 text-rose-700'
+                    }`}
+                  >
+                    {activeBuyOrderCount > 99 ? '99+' : activeBuyOrderCount}
+                  </span>
+                )}
               </Link>
 
               {item.children && item.children.length > 0 && (
@@ -201,6 +262,24 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
           {menuContent}
         </div>
       </aside>
+
+      <style jsx global>{`
+        @keyframes buyorderMenuAlertBlink {
+          0%,
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.32;
+            transform: scale(0.88);
+          }
+        }
+
+        .buyorder-menu-alert-blink {
+          animation: buyorderMenuAlertBlink 1s step-end infinite;
+        }
+      `}</style>
     </>
   );
 }
