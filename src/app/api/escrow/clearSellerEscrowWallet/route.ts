@@ -9,7 +9,6 @@ import {
 
 import {
   createThirdwebClient,
-  Engine,
   getContract,
   sendAndConfirmTransaction,
   sendTransaction,
@@ -39,6 +38,7 @@ import {
 
   bscContractAddressMKRW,
 } from "@/app/config/contractAddresses";
+import { createEngineServerWallet } from "@/lib/engineServerWallet";
 
 
 
@@ -90,18 +90,21 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Thirdweb client not created' }, { status: 500 });
         }
         
+        const chainInfo = selectedChain === 'ethereum' ? ethereum :
+               selectedChain === 'polygon' ? polygon :
+               selectedChain === 'arbitrum' ? arbitrum :
+               selectedChain === 'bsc' ? bsc :
+               polygon;
+        const usdtContractAddress = selectedChain === 'ethereum' ? ethereumContractAddressUSDT :
+                 selectedChain === 'polygon' ? polygonContractAddressUSDT :
+                 selectedChain === 'arbitrum' ? arbitrumContractAddressUSDT :
+                 selectedChain === 'bsc' ? bscContractAddressUSDT :
+                 polygonContractAddressUSDT;
+
         const contract = getContract({
             client: client,
-            chain: selectedChain === 'ethereum' ? ethereum :
-                   selectedChain === 'polygon' ? polygon :
-                   selectedChain === 'arbitrum' ? arbitrum :
-                   selectedChain === 'bsc' ? bsc :
-                   polygon, // default to polygon
-            address: selectedChain === 'ethereum' ? ethereumContractAddressUSDT :
-                     selectedChain === 'polygon' ? polygonContractAddressUSDT :
-                     selectedChain === 'arbitrum' ? arbitrumContractAddressUSDT :
-                     selectedChain === 'bsc' ? bscContractAddressUSDT :
-                     polygonContractAddressUSDT, // default to polygon
+            chain: chainInfo,
+            address: usdtContractAddress,
         });
 
         // get balance of escrow wallet
@@ -122,9 +125,10 @@ export async function POST(request: NextRequest) {
 
         // create server wallet for escrow wallet
 
-        const wallet = Engine.serverWallet({
-            client: client,
-            address: escrowWalletAddress, // your server wallet signer (EOA) address
+        const wallet = await createEngineServerWallet({
+            client,
+            walletAddress: escrowWalletAddress,
+            chain: chainInfo,
         });
 
         const transaction = transfer({
@@ -153,4 +157,3 @@ export async function POST(request: NextRequest) {
     }
 
 }
-

@@ -110,6 +110,142 @@ const resolveEngineWalletAddress = (createdWallet: any): string => {
   return '';
 };
 
+type EngineWalletResolution = {
+  signerAddress: string;
+  smartAccountAddress: string;
+};
+
+const engineWalletResolutionCache = new Map<string, EngineWalletResolution>();
+
+const cacheEngineWalletResolution = (
+  {
+    signerAddress,
+    smartAccountAddress,
+  }: {
+    signerAddress: string;
+    smartAccountAddress?: string;
+  },
+) => {
+  const normalizedSignerAddress = String(signerAddress || '').trim();
+  if (!isWalletAddress(normalizedSignerAddress)) {
+    return;
+  }
+
+  const signerKey = normalizedSignerAddress.toLowerCase();
+  engineWalletResolutionCache.set(signerKey, {
+    signerAddress: normalizedSignerAddress,
+    smartAccountAddress: '',
+  });
+
+  const normalizedSmartAccountAddress = String(smartAccountAddress || '').trim();
+  if (!isWalletAddress(normalizedSmartAccountAddress)) {
+    return;
+  }
+
+  const smartKey = normalizedSmartAccountAddress.toLowerCase();
+  engineWalletResolutionCache.set(smartKey, {
+    signerAddress: normalizedSignerAddress,
+    smartAccountAddress: normalizedSmartAccountAddress,
+  });
+};
+
+const resolveEngineWalletResolution = async (
+  {
+    client,
+    walletAddress,
+  }: {
+    client: any;
+    walletAddress: string;
+  },
+): Promise<EngineWalletResolution> => {
+  const normalizedWalletAddress = String(walletAddress || '').trim();
+  if (!isWalletAddress(normalizedWalletAddress)) {
+    return {
+      signerAddress: normalizedWalletAddress,
+      smartAccountAddress: '',
+    };
+  }
+
+  const cacheKey = normalizedWalletAddress.toLowerCase();
+  const cached = engineWalletResolutionCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const pageLimit = 200;
+  try {
+    let page = 1;
+    while (page <= 100) {
+      const response = await Engine.getServerWallets({
+        client,
+        page,
+        limit: pageLimit,
+      });
+
+      const accounts = Array.isArray(response?.accounts) ? response.accounts : [];
+      for (const account of accounts) {
+        cacheEngineWalletResolution({
+          signerAddress: String(account?.address || '').trim(),
+          smartAccountAddress: String(account?.smartAccountAddress || '').trim(),
+        });
+      }
+
+      const matched = engineWalletResolutionCache.get(cacheKey);
+      if (matched) {
+        return matched;
+      }
+
+      const totalCount = Number(response?.pagination?.totalCount || 0);
+      const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageLimit) : page;
+      if (page >= totalPages) {
+        break;
+      }
+      page += 1;
+    }
+  } catch (error) {
+    console.error('resolveEngineWalletResolution: failed to fetch engine server wallets', error);
+  }
+
+  const fallback = {
+    signerAddress: normalizedWalletAddress,
+    smartAccountAddress: '',
+  };
+  engineWalletResolutionCache.set(cacheKey, fallback);
+  return fallback;
+};
+
+const createEngineServerWallet = async (
+  {
+    client,
+    walletAddress,
+    chain,
+  }: {
+    client: any;
+    walletAddress: string;
+    chain: any;
+  },
+) => {
+  const walletResolution = await resolveEngineWalletResolution({
+    client,
+    walletAddress,
+  });
+
+  const executionOptions = walletResolution.smartAccountAddress
+    ? {
+        type: 'ERC4337' as const,
+        signerAddress: walletResolution.signerAddress,
+        smartAccountAddress: walletResolution.smartAccountAddress,
+      }
+    : undefined;
+
+  return Engine.serverWallet({
+    client,
+    address: walletResolution.signerAddress,
+    chain,
+    ...(executionOptions ? { executionOptions } : {}),
+  });
+};
+
 const resolveSellerEscrowWalletAddress = (orderLike: any): string => {
   const candidates = [
     orderLike?.seller?.escrowWalletAddress,
@@ -3642,9 +3778,9 @@ export async function cancelPrivateBuyOrderByBuyer(
       address: transferConfig.contractAddress,
     });
 
-    const buyerEscrowWallet = Engine.serverWallet({
+    const buyerEscrowWallet = await createEngineServerWallet({
       client: thirdwebClient,
-      address: buyerEscrowWalletAddress,
+      walletAddress: buyerEscrowWalletAddress,
       chain: transferConfig.chain,
     });
 
@@ -3973,9 +4109,9 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
       address: transferConfig.contractAddress,
     });
 
-    const buyerEscrowWallet = Engine.serverWallet({
+    const buyerEscrowWallet = await createEngineServerWallet({
       client: thirdwebClient,
-      address: buyerEscrowWalletAddress,
+      walletAddress: buyerEscrowWalletAddress,
       chain: transferConfig.chain,
     });
 
@@ -4304,9 +4440,9 @@ export async function completePrivateBuyOrderBySeller(
       address: transferConfig.contractAddress,
     });
 
-    const buyerEscrowWallet = Engine.serverWallet({
+    const buyerEscrowWallet = await createEngineServerWallet({
       client: thirdwebClient,
-      address: buyerEscrowWalletAddress,
+      walletAddress: buyerEscrowWalletAddress,
       chain: transferConfig.chain,
     });
 
@@ -10721,6 +10857,10 @@ export async function acceptBuyOrderPrivateSale(
         client: thirdwebClient,
         label: `private-buy-${matchedBuyerWalletAddress.slice(0, 8)}-${Date.now()}`,
       });
+      cacheEngineWalletResolution({
+        signerAddress: String((createdServerWallet as any)?.address || '').trim(),
+        smartAccountAddress: String((createdServerWallet as any)?.smartAccountAddress || '').trim(),
+      });
       buyerEscrowWalletAddress = resolveEngineWalletAddress(createdServerWallet);
     } catch (error) {
       console.error('acceptBuyOrderPrivateSale: failed to create buyer escrow wallet', error);
@@ -10744,9 +10884,9 @@ export async function acceptBuyOrderPrivateSale(
         chain: transferConfig.chain,
         address: transferConfig.contractAddress,
       });
-      const sellerEscrowWallet = Engine.serverWallet({
+      const sellerEscrowWallet = await createEngineServerWallet({
         client: thirdwebClient,
-        address: sellerEscrowWalletAddress,
+        walletAddress: sellerEscrowWalletAddress,
         chain: transferConfig.chain,
       });
       const transferTx = transfer({

@@ -15,6 +15,7 @@ import {
   arbitrumContractAddressUSDT,
   bscContractAddressUSDT,
 } from "@/app/config/contractAddresses";
+import { createEngineServerWallet } from "@/lib/engineServerWallet";
 
 type ChainKey = "ethereum" | "polygon" | "arbitrum" | "bsc";
 type PaymentStatus = "prepared" | "confirmed";
@@ -1012,9 +1013,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "payment wallet balance is zero" }, { status: 400 });
       }
 
-      const paymentWallet = Engine.serverWallet({
+      const paymentWallet = await createEngineServerWallet({
         client: thirdwebClient,
-        address: paymentWalletAddress,
+        walletAddress: paymentWalletAddress,
+        chain: chainInfo,
       });
 
       const transaction = transfer({
