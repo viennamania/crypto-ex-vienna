@@ -281,6 +281,31 @@ const formatDateTime = (value: string) => {
   return parsed.toLocaleString('ko-KR');
 };
 
+const formatTimeAgo = (value: string, nowMs: number = Date.now()) => {
+  if (!value) return '-';
+  const parsedMs = new Date(value).getTime();
+  if (Number.isNaN(parsedMs)) return '-';
+
+  const diffMs = nowMs - parsedMs;
+  const absSeconds = Math.floor(Math.abs(diffMs) / 1000);
+  if (absSeconds < 10) {
+    return diffMs >= 0 ? '방금 전' : '곧';
+  }
+
+  const units: Array<{ seconds: number; label: string }> = [
+    { seconds: 60 * 60 * 24 * 365, label: '년' },
+    { seconds: 60 * 60 * 24 * 30, label: '개월' },
+    { seconds: 60 * 60 * 24, label: '일' },
+    { seconds: 60 * 60, label: '시간' },
+    { seconds: 60, label: '분' },
+    { seconds: 1, label: '초' },
+  ];
+
+  const unit = units.find((item) => absSeconds >= item.seconds) || units[units.length - 1];
+  const amount = Math.floor(absSeconds / unit.seconds);
+  return diffMs >= 0 ? `${amount}${unit.label} 전` : `${amount}${unit.label} 후`;
+};
+
 type ExchangeRateItem = {
   id: string;
   name: string;
@@ -1214,16 +1239,10 @@ export default function PaymentUsdtPage({
         {activeAccount?.address ? (
           <WalletSummaryCard
             walletAddress={activeAccount.address}
-            walletAddressDisplay={shortAddress(activeAccount.address)}
-            networkLabel={activeNetwork.label}
             usdtBalanceDisplay={`${balance.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })} USDT`}
             modeLabel={paymentTabLabel}
             smartAccountEnabled={smartAccountEnabled}
             disconnectRedirectPath={disconnectRedirectPath}
-            onCopyAddress={(walletAddress) => {
-              navigator.clipboard.writeText(walletAddress);
-              toast.success('지갑 주소를 복사했습니다.');
-            }}
           />
         ) : (
           <div className="mb-6 rounded-2xl border border-white/70 bg-white/70 p-4 shadow-[0_20px_50px_-30px_rgba(15,23,42,0.5)] backdrop-blur">
@@ -1263,7 +1282,7 @@ export default function PaymentUsdtPage({
               <>
                 {latestPaymentRecord && (
                   <div
-                    className={`mb-4 rounded-2xl border px-4 py-3 text-sm ${
+                    className={`mb-3 rounded-xl border px-3 py-2.5 text-sm ${
                       justPaidRecordId &&
                       (justPaidRecordId === latestPaymentRecord.id ||
                         justPaidRecordId === latestPaymentRecord.transactionHash)
@@ -1271,58 +1290,64 @@ export default function PaymentUsdtPage({
                         : 'border-cyan-200 bg-cyan-50/70'
                     }`}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-700">
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-700">
                         최근 결제 완료 정보
                       </p>
                       {justPaidRecordId &&
                         (justPaidRecordId === latestPaymentRecord.id ||
                           justPaidRecordId === latestPaymentRecord.transactionHash) && (
-                          <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                          <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-semibold text-white">
                             방금 결제됨
                           </span>
                         )}
                     </div>
 
-                    <p className="mt-1 text-base font-semibold text-slate-900">
-                      {latestPaymentRecord.storeName || '-'} ({latestPaymentRecord.storecode || '-'})
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-end gap-x-2 gap-y-1">
-                      <p className="text-2xl font-extrabold leading-none tabular-nums text-slate-900">
-                        {formatUsdt(latestPaymentRecord.usdtAmount)}
-                      </p>
-                      <p className="text-sm font-semibold tabular-nums text-slate-600">
-                        {formatKrw(latestPaymentRecord.krwAmount)}
-                      </p>
-                    </div>
-                    <p className="mt-1 text-xs font-semibold text-slate-700">
-                      적용 환율 {latestPaymentRecord.exchangeRate > 0 ? formatRate(latestPaymentRecord.exchangeRate) : '-'}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-600">
-                      결제완료 {formatDateTime(latestPaymentRecord.confirmedAt || latestPaymentRecord.createdAt)}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      TX {shortAddress(latestPaymentRecord.transactionHash || '-')}
-                    </p>
+                    <div className="mt-1 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {latestPaymentRecord.storeName || '-'} ({latestPaymentRecord.storecode || '-'})
+                        </p>
+                        <div className="mt-0.5 flex flex-wrap items-end gap-x-2 gap-y-0.5">
+                          <p className="text-lg font-extrabold leading-none tabular-nums text-slate-900">
+                            {formatUsdt(latestPaymentRecord.usdtAmount)}
+                          </p>
+                          <p className="text-xs font-semibold tabular-nums text-slate-600">
+                            {formatKrw(latestPaymentRecord.krwAmount)}
+                          </p>
+                          <p className="text-[11px] font-semibold text-slate-700">
+                            환율 {latestPaymentRecord.exchangeRate > 0 ? formatRate(latestPaymentRecord.exchangeRate) : '-'}
+                          </p>
+                        </div>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-600">
+                          <p title={formatDateTime(latestPaymentRecord.confirmedAt || latestPaymentRecord.createdAt)}>
+                            결제완료 {formatTimeAgo(latestPaymentRecord.confirmedAt || latestPaymentRecord.createdAt)}
+                          </p>
+                          <p className="text-slate-500">
+                            TX {shortAddress(latestPaymentRecord.transactionHash || '-')}
+                          </p>
+                        </div>
+                      </div>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setPaymentTab('history')}
-                        className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                      >
-                        결제내역 상세 보기
-                      </button>
-                      {latestPaymentTxUrl && (
-                        <a
-                          href={latestPaymentTxUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex h-8 items-center justify-center rounded-lg border border-cyan-300 bg-cyan-50 px-2.5 text-xs font-semibold text-cyan-800 transition hover:border-cyan-400 hover:text-cyan-900"
+                      <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentTab('history')}
+                          className="inline-flex h-7 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                         >
-                          TX 확인
-                        </a>
-                      )}
+                          결제내역 상세
+                        </button>
+                        {latestPaymentTxUrl && (
+                          <a
+                            href={latestPaymentTxUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex h-7 items-center justify-center rounded-lg border border-cyan-300 bg-cyan-50 px-2.5 text-[11px] font-semibold text-cyan-800 transition hover:border-cyan-400 hover:text-cyan-900"
+                          >
+                            TX 확인
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

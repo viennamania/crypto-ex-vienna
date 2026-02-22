@@ -12,27 +12,21 @@ import { clearWalletConnectionState } from '@/lib/clearWalletConnectionState';
 
 type WalletSummaryCardProps = {
   walletAddress: string;
-  walletAddressDisplay: string;
-  networkLabel: string;
   usdtBalanceDisplay: string;
   balanceUpdatedAtLabel?: string;
   balanceUpdatedAtWarning?: boolean;
   modeLabel: string;
   smartAccountEnabled?: boolean;
-  onCopyAddress?: (walletAddress: string) => void;
   disconnectRedirectPath?: string;
 };
 
 export default function WalletSummaryCard({
   walletAddress,
-  walletAddressDisplay,
-  networkLabel,
   usdtBalanceDisplay,
   balanceUpdatedAtLabel,
   balanceUpdatedAtWarning = false,
   modeLabel,
   smartAccountEnabled = false,
-  onCopyAddress,
   disconnectRedirectPath,
 }: WalletSummaryCardProps) {
   useSyncConnectedWalletUser(walletAddress);
@@ -42,14 +36,22 @@ export default function WalletSummaryCard({
   const [disconnecting, setDisconnecting] = useState(false);
   const [disconnectModalOpen, setDisconnectModalOpen] = useState(false);
   const hasConnectedWallet = Boolean(activeWallet) || connectedWallets.length > 0;
-  const hasUsdtSuffix = /\sUSDT$/i.test(usdtBalanceDisplay.trim());
+  const normalizedUsdtBalanceDisplay = usdtBalanceDisplay.trim();
+  const hasUsdtSuffix = /\sUSDT$/i.test(normalizedUsdtBalanceDisplay);
   const usdtBalanceValueText = hasUsdtSuffix
-    ? usdtBalanceDisplay.trim().replace(/\sUSDT$/i, '')
-    : usdtBalanceDisplay;
-  const usdtBalanceDecimalMatch = usdtBalanceValueText.match(/([.,]\d{1,6})$/);
-  const usdtBalanceMainText = usdtBalanceDecimalMatch
-    ? usdtBalanceValueText.slice(0, -usdtBalanceDecimalMatch[1].length)
+    ? normalizedUsdtBalanceDisplay.replace(/\sUSDT$/i, '')
+    : normalizedUsdtBalanceDisplay;
+  const usdtBalanceNumber = Number(usdtBalanceValueText.replace(/,/g, ''));
+  const usdtBalanceText = Number.isFinite(usdtBalanceNumber)
+    ? usdtBalanceNumber.toLocaleString(undefined, {
+        minimumFractionDigits: 8,
+        maximumFractionDigits: 8,
+      })
     : usdtBalanceValueText;
+  const usdtBalanceDecimalMatch = usdtBalanceText.match(/([.,]\d{1,8})$/);
+  const usdtBalanceMainText = usdtBalanceDecimalMatch
+    ? usdtBalanceText.slice(0, -usdtBalanceDecimalMatch[1].length)
+    : usdtBalanceText;
   const usdtBalanceDecimalText = usdtBalanceDecimalMatch?.[1] || '';
 
   const openDisconnectModal = useCallback(() => {
@@ -108,10 +110,10 @@ export default function WalletSummaryCard({
 
   return (
     <>
-      <div className="mb-6 rounded-2xl border border-white/70 bg-white/75 p-4 shadow-[0_20px_50px_-30px_rgba(15,23,42,0.5)] backdrop-blur">
-        <section className="mb-3 rounded-xl border border-slate-200/80 bg-white/80 px-3.5 py-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">USDT 잔액</p>
+      <div className="mb-4 rounded-2xl border border-white/70 bg-white/75 p-3 shadow-[0_20px_50px_-30px_rgba(15,23,42,0.5)] backdrop-blur">
+        <section className="rounded-xl border border-slate-200/80 bg-white/80 px-3 py-2.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">USDT 잔액</p>
             {balanceUpdatedAtLabel && (
               <span
                 className={`inline-flex h-5 items-center gap-1 rounded-full border px-2 text-[10px] font-semibold whitespace-nowrap ${
@@ -129,37 +131,41 @@ export default function WalletSummaryCard({
               </span>
             )}
           </div>
-          <p className="mt-2 text-center text-[clamp(2.1rem,9.5vw,2.875rem)] font-black leading-none tracking-tight text-slate-800 tabular-nums">
-            <span className="inline-flex items-end justify-center gap-0.5">
+          <p className="mt-1 text-right text-[clamp(1.8rem,7.8vw,2.5rem)] font-black leading-none tracking-tight text-slate-800 tabular-nums">
+            <span className="inline-flex items-end justify-end gap-0.5">
               <span className="leading-none">{usdtBalanceMainText}</span>
               {usdtBalanceDecimalText && (
-                <span className="text-lg font-bold leading-none">
+                <span className="text-base font-bold leading-none">
                   {usdtBalanceDecimalText}
                 </span>
               )}
-              {hasUsdtSuffix && <span className="text-lg font-bold leading-none">USDT</span>}
+              {hasUsdtSuffix && <span className="text-base font-bold leading-none">USDT</span>}
             </span>
           </p>
         </section>
 
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <span className="inline-flex h-7 items-center rounded-lg border border-slate-200/80 bg-white/80 px-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
               Connected Wallet
-            </p>
+            </span>
             {smartAccountEnabled && (
-              <span className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50/70 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                <span className="h-2 w-2 rounded-full bg-amber-500" />
+              <span className="inline-flex h-7 items-center gap-1 rounded-full border border-amber-200 bg-amber-50/70 px-2 text-[10px] font-semibold text-amber-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                 스마트 어카운트
               </span>
             )}
+            <span className="inline-flex h-7 items-center rounded-lg border border-slate-200/80 bg-white/80 px-2.5 text-[11px] font-semibold text-slate-600">
+              모드 <span className="ml-1 text-[13px] text-slate-900">{modeLabel}</span>
+            </span>
           </div>
+
           {hasConnectedWallet && (
             <button
               type="button"
               onClick={openDisconnectModal}
               disabled={disconnecting}
-              className="inline-flex h-8 items-center justify-center gap-1.5 self-start rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-7 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.9">
                 <path d="M10 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
@@ -169,31 +175,6 @@ export default function WalletSummaryCard({
               {disconnecting ? '해제 중...' : '연결 해제'}
             </button>
           )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">내 지갑</p>
-            {onCopyAddress ? (
-              <button
-                type="button"
-                className="mt-1.5 text-base font-semibold text-slate-800 underline decoration-slate-300 underline-offset-2 transition hover:text-slate-900"
-                onClick={() => onCopyAddress(walletAddress)}
-              >
-                {walletAddressDisplay}
-              </button>
-            ) : (
-              <p className="mt-1.5 text-base font-semibold text-slate-800">{walletAddressDisplay}</p>
-            )}
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">네트워크</p>
-            <p className="mt-1.5 text-base font-semibold text-slate-800">{networkLabel}</p>
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">모드</p>
-            <p className="mt-1.5 text-base font-semibold text-slate-800">{modeLabel}</p>
-          </div>
         </div>
       </div>
 

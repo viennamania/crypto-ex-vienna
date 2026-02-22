@@ -712,17 +712,11 @@ export default function WalletManagementHomePage() {
           <>
             <WalletSummaryCard
               walletAddress={activeAccount.address}
-              walletAddressDisplay={shortAddress(activeAccount.address)}
-              networkLabel={activeNetwork.label}
               usdtBalanceDisplay={`${balance.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })} USDT`}
               balanceUpdatedAtLabel={balanceSyncStatusLabel}
               balanceUpdatedAtWarning={isBalanceSyncWarning}
               modeLabel="홈"
               smartAccountEnabled={smartAccountEnabled}
-              onCopyAddress={(walletAddress) => {
-                navigator.clipboard.writeText(walletAddress);
-                toast.success('지갑 주소를 복사했습니다.');
-              }}
             />
 
             {storecode && paymentStoreInfo && (

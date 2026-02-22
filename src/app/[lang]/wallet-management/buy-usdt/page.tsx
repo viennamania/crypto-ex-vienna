@@ -2007,18 +2007,12 @@ export default function BuyUsdtPage({
         {activeAccount?.address ? (
           <WalletSummaryCard
             walletAddress={activeAccount.address}
-            walletAddressDisplay={shortAddress(activeAccount.address)}
-            networkLabel={activeNetwork.label}
             usdtBalanceDisplay={
               `${balance.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })} USDT`
             }
             modeLabel={buyTabLabel}
             smartAccountEnabled={smartAccountEnabled}
             disconnectRedirectPath={disconnectRedirectPath}
-            onCopyAddress={(walletAddress) => {
-              navigator.clipboard.writeText(walletAddress);
-              toast.success('지갑 주소를 복사했습니다.');
-            }}
           />
         ) : (
           <div className="mb-6 rounded-2xl border border-white/70 bg-white/70 p-4 shadow-[0_20px_50px_-30px_rgba(15,23,42,0.5)] backdrop-blur">
