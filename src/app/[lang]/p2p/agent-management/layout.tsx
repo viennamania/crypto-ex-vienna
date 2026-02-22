@@ -233,6 +233,13 @@ export default function P2PAgentManagementLayout({ children }: { children: React
             basePath: `/${lang}/p2p/agent-management/sales-management`,
           },
           {
+            key: 'sales-fee-wallet-management',
+            label: '수수료 지급용 지갑 관리',
+            compactLabel: '수수료',
+            description: '수수료 지급 지갑',
+            basePath: `/${lang}/p2p/agent-management/fee-wallet-management`,
+          },
+          {
             key: 'sales-seller-management',
             label: '판매자 관리',
             compactLabel: '판매자',

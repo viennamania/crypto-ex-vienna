@@ -14,6 +14,13 @@ type AgentDoc = {
   agentLogo?: string;
   agentBanner?: string;
   adminWalletAddress?: string;
+  creditWallet?: {
+    signerAddress?: string;
+    smartAccountAddress?: string;
+  };
+  // Legacy fallback fields
+  signerAddress?: string;
+  smartAccountAddress?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -132,6 +139,10 @@ export async function GET(request: NextRequest) {
         agentLogo: 1,
         agentBanner: 1,
         adminWalletAddress: 1,
+        creditWallet: {
+          signerAddress: { $ifNull: ['$creditWallet.signerAddress', '$signerAddress'] },
+          smartAccountAddress: { $ifNull: ['$creditWallet.smartAccountAddress', '$smartAccountAddress'] },
+        },
         createdAt: 1,
         updatedAt: 1,
         adminNickname: '$adminUser.nickname',

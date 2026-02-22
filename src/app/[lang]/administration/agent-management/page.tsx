@@ -201,7 +201,7 @@ export default function AgentManagementPage() {
                 className="w-6 h-6"
               />
               <div className="text-lg font-semibold text-slate-900">
-                에이전트관리
+                에이전트 관리
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -256,7 +256,7 @@ export default function AgentManagementPage() {
             />
           </section>
 
-          <section className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(360px,1fr)]">
+          <section className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(360px,1fr)]">
             <div className="rounded-2xl border border-slate-200/70 bg-white/95 p-4 shadow-sm">
             <div className="flex items-center justify-between px-2 pb-3">
               <div>

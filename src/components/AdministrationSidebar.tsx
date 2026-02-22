@@ -23,7 +23,14 @@ const buildMenuItems = (lang: string): MenuItem[] => {
     { label: '관리자 홈', hint: 'Dashboard', href: root },
     { label: '구매주문 관리', hint: 'P2P', href: `${root}/buyorder-management` },
     { label: '가맹점 결제 관리', hint: 'Payments', href: `${root}/payment-management` },
-    { label: '에이전트 관리', hint: 'Agent', href: `${root}/agent-management` },
+    {
+      label: '에이전트 관리',
+      hint: 'Agent',
+      href: `${root}/agent-management`,
+      children: [
+        { label: '수수료 지급용 지갑 관리', hint: 'Fee Wallet', href: `${root}/agent-management/fee-wallet-management` },
+      ],
+    },
     {
       label: '가맹점 관리',
       hint: 'Store',

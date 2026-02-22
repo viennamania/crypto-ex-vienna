@@ -9,6 +9,7 @@ type EngineWalletResolution = {
 const engineWalletResolutionCache = new Map<string, EngineWalletResolution>();
 
 const isWalletAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(String(value || "").trim());
+const normalizeAddress = (value: string) => String(value || "").trim().toLowerCase();
 
 const cacheEngineWalletResolution = ({
   signerAddress,
@@ -33,11 +34,34 @@ const cacheEngineWalletResolution = ({
     return;
   }
 
+  // signer/smart가 동일하면 ERC4337 실행옵션으로 사용할 수 없으므로 smart 매핑을 저장하지 않는다.
+  if (normalizeAddress(normalizedSmartAccountAddress) === signerKey) {
+    return;
+  }
+
   const smartKey = normalizedSmartAccountAddress.toLowerCase();
   engineWalletResolutionCache.set(smartKey, {
     signerAddress: normalizedSignerAddress,
     smartAccountAddress: normalizedSmartAccountAddress,
   });
+};
+
+const isUsableResolution = (resolution: EngineWalletResolution) => {
+  const normalizedSignerAddress = String(resolution.signerAddress || "").trim();
+  if (!isWalletAddress(normalizedSignerAddress)) {
+    return false;
+  }
+
+  const normalizedSmartAccountAddress = String(resolution.smartAccountAddress || "").trim();
+  if (!normalizedSmartAccountAddress) {
+    return true;
+  }
+
+  if (!isWalletAddress(normalizedSmartAccountAddress)) {
+    return false;
+  }
+
+  return normalizeAddress(normalizedSmartAccountAddress) !== normalizeAddress(normalizedSignerAddress);
 };
 
 const resolveEngineWalletResolution = async ({
@@ -57,7 +81,7 @@ const resolveEngineWalletResolution = async ({
 
   const cacheKey = normalizedWalletAddress.toLowerCase();
   const cached = engineWalletResolutionCache.get(cacheKey);
-  if (cached) {
+  if (cached && isUsableResolution(cached)) {
     return cached;
   }
 
@@ -145,4 +169,3 @@ export const primeEngineServerWalletResolution = ({
     smartAccountAddress,
   });
 };
-
