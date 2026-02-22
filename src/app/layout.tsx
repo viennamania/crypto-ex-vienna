@@ -85,12 +85,12 @@ const WalletConsoleShell = () => {
   const administrationIndex = pathSegments.indexOf('administration');
   const isAgentManagementRoute = p2pIndex >= 0 && pathSegments[p2pIndex + 1] === 'agent-management';
   const isStoreManagementRoute = p2pIndex >= 0 && pathSegments[p2pIndex + 1] === 'store-management';
-  const isAdministrationHomeRoute = administrationIndex >= 0 && pathSegments.length === administrationIndex + 1;
+  const isAdministrationRoute = administrationIndex >= 0;
   const shouldHideWalletConsole =
     walletManagementIndex >= 0
     || isAgentManagementRoute
     || isStoreManagementRoute
-    || isAdministrationHomeRoute;
+    || isAdministrationRoute;
 
   useEffect(() => {
     const prevAddress = previousAddressRef.current;

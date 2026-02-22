@@ -543,7 +543,9 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
           isSidebarOpen ? 'lg:pl-[280px]' : 'lg:pl-0'
         }`}
       >
-        <div className={showPinnedPendingAlert ? (pendingAlertExpanded ? 'pt-44 lg:pt-32' : 'pt-28 lg:pt-20') : ''}>
+        <div
+          className={`${showPinnedPendingAlert ? (pendingAlertExpanded ? 'pt-44 lg:pt-32' : 'pt-28 lg:pt-20') : ''} pb-[calc(11rem+env(safe-area-inset-bottom))] md:pb-[calc(9rem+env(safe-area-inset-bottom))]`}
+        >
           {children}
         </div>
       </div>
