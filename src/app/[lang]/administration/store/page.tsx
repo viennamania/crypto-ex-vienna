@@ -2522,11 +2522,11 @@ export default function Index({ params }: any) {
                         <th className="p-2">
                           <div className="flex flex-col items-center justify-center gap-2">
                             <span className="text-center">
-                              센터 수수료율(%)
+                              센터 수수료 USDT지갑
                             </span>
 
                             <span className="text-center">
-                              AG 수수료율(%)
+                              AG 수수료 USDT지갑
                             </span>
 
                           </div>
@@ -3077,14 +3077,6 @@ export default function Index({ params }: any) {
                                         {item.settlementFeeWalletAddress.substring(0, 6) + '...'
                                         }
                                       </button>
-
-                                      <span className="text-xl text-slate-700 font-semibold">
-                                        {
-                                          item.settlementFeePercent ? item.settlementFeePercent : 0.00
-                                        }%
-                                      </span>
-
-
                                     </div>
 
                                   ) : (
@@ -3116,13 +3108,6 @@ export default function Index({ params }: any) {
                                       에이전트 USDT지갑 없음
                                     </span>
                                   )}
-
-                                  {' '}
-                                  <span className="text-xl text-slate-700 font-semibold">
-                                    {
-                                      item.agentFeePercent ? item.agentFeePercent : 0.00
-                                    }%
-                                  </span>
                                 </div>
 
                               </div>

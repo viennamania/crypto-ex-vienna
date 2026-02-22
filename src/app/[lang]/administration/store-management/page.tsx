@@ -214,15 +214,12 @@ const normalizeAgentItem = (value: unknown): AgentItem | null => {
 };
 
 const getRiskLevel = (store: StoreItem): RiskLevel => {
-  const hasCriticalWalletGap =
-    !store.adminWalletAddress.trim() ||
-    !store.sellerWalletAddress.trim() ||
-    !store.settlementWalletAddress.trim();
-  if (hasCriticalWalletGap || store.settlementFeePercent >= 4.5) {
+  const hasPaymentWalletGap = !isWalletAddress(store.paymentWalletAddress.trim());
+  if (hasPaymentWalletGap) {
     return 'alert';
   }
 
-  if (store.totalPaymentConfirmedCount === 0 || store.totalSettlementCount === 0 || store.totalKrwAmount === 0) {
+  if (store.totalPaymentConfirmedCount === 0) {
     return 'watch';
   }
 
@@ -1336,7 +1333,7 @@ export default function StoreManagementPage() {
           </form>
         </section>
 
-        <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           <article className="reveal-up rounded-2xl border border-teal-100 bg-[linear-gradient(145deg,#f0fdfa_0%,#ccfbf1_100%)] p-4 shadow-[0_20px_40px_-30px_rgba(15,118,110,0.5)]" style={{ animationDelay: '160ms' }}>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">등록 가맹점</p>
             <p className="mt-2 text-3xl font-bold text-teal-950">{totalCount.toLocaleString()}</p>
@@ -1351,11 +1348,6 @@ export default function StoreManagementPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">페이지 거래금액</p>
             <p className="mt-2 text-3xl font-bold text-sky-900">{formatKrw(stats.totalKrwAmount)}</p>
             <p className="mt-1 text-xs text-sky-700/90">{formatUsdt(stats.totalUsdtAmount)} USDT</p>
-          </article>
-          <article className="reveal-up rounded-2xl border border-amber-100 bg-[linear-gradient(145deg,#fffbeb_0%,#fef3c7_100%)] p-4 shadow-[0_20px_40px_-30px_rgba(217,119,6,0.5)]" style={{ animationDelay: '340ms' }}>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">정산 커버리지</p>
-            <p className="mt-2 text-3xl font-bold text-amber-900">{stats.settlementCoverage.toFixed(1)}%</p>
-            <p className="mt-1 text-xs text-amber-700/90">평균 수수료 {stats.avgFeePercent.toFixed(2)}%</p>
           </article>
         </section>
 
@@ -1403,7 +1395,7 @@ export default function StoreManagementPage() {
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-slate-900">리스크 워치리스트</p>
-                <p className="text-xs text-slate-500">지갑 누락/낮은 활동/높은 수수료 감시</p>
+                <p className="text-xs text-slate-500">지갑 누락/낮은 활동 감시</p>
               </div>
             </div>
             <div className="divide-y divide-slate-100">
@@ -1421,10 +1413,10 @@ export default function StoreManagementPage() {
                         </span>
                       </div>
                       <p className="mt-1 text-xs text-slate-500">
-                        수수료 {store.settlementFeePercent.toFixed(2)}% · 결제확정 {store.totalPaymentConfirmedCount.toLocaleString()}건
+                        결제확정 {store.totalPaymentConfirmedCount.toLocaleString()}건
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
-                        정산지갑 {shortWallet(store.settlementWalletAddress)}
+                        결제지갑 {isWalletAddress(store.paymentWalletAddress.trim()) ? shortWallet(store.paymentWalletAddress) : '미설정'}
                       </p>
                     </div>
                   );
@@ -1437,7 +1429,7 @@ export default function StoreManagementPage() {
         <section className="reveal-up overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_28px_60px_-42px_rgba(15,23,42,0.45)]" style={{ animationDelay: '560ms' }}>
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-slate-900">가맹점 거래/정산 현황</p>
+              <p className="text-sm font-semibold text-slate-900">가맹점 거래 현황</p>
               <p className="text-xs text-slate-500">
                 마지막 갱신 {lastUpdatedAt ? formatDateTime(lastUpdatedAt) : '-'} · {polling ? '자동 동기화 중' : '대기 중'}
               </p>
@@ -1471,9 +1463,7 @@ export default function StoreManagementPage() {
                     <th className="w-[110px] px-4 py-3">에이전트</th>
                     <th className="w-[100px] px-4 py-3 text-right">결제확정</th>
                     <th className="px-4 py-3 text-right">거래금액</th>
-                    <th className="px-4 py-3 text-right">정산금액</th>
-                    <th className="px-4 py-3 text-right">수수료율</th>
-                    <th className="w-[150px] px-4 py-3 text-right">적용 환율</th>
+                    <th className="w-[220px] px-4 py-3 text-right">적용 환율</th>
                     <th className="px-4 py-3">관리자</th>
                     <th className="px-4 py-3">지갑상태</th>
                     <th className="w-[180px] px-4 py-3 text-right whitespace-nowrap">작업</th>
@@ -1566,15 +1556,6 @@ export default function StoreManagementPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div className="flex flex-col items-end">
-                            <span className="font-semibold text-slate-900">{formatKrw(store.totalSettlementAmountKRW)}원</span>
-                            <span className="text-xs text-slate-500">{store.totalSettlementCount.toLocaleString()}건</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span className="font-semibold text-slate-900">{store.settlementFeePercent.toFixed(2)}%</span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
                           <div className="flex flex-col items-end gap-1">
                             <span className="font-semibold text-slate-900">
                               {store.usdtToKrwRate > 0 ? `1 USDT = ${formatRate(store.usdtToKrwRate)} KRW` : '-'}
@@ -1641,18 +1622,6 @@ export default function StoreManagementPage() {
                                   className="inline-flex shrink-0 items-center rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
                                 >
                                   판매자 설정
-                                </Link>
-                                <Link
-                                  href={`/${lang}/administration/store/${store.storecode}`}
-                                  className="inline-flex shrink-0 items-center rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-                                >
-                                  상세
-                                </Link>
-                                <Link
-                                  href={`/${lang}/administration/store/${store.storecode}/settings`}
-                                  className="inline-flex shrink-0 items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
-                                >
-                                  설정
                                 </Link>
                               </>
                             ) : (

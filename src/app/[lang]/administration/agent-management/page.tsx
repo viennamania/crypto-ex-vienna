@@ -174,43 +174,51 @@ export default function AgentManagementPage() {
     tone: 'amber' | 'emerald' | 'indigo';
   }) => {
     const toneMap = {
-      amber: 'from-amber-400/80 to-orange-500/80 shadow-orange-200/70 text-white',
-      emerald: 'from-emerald-400/80 to-emerald-600/80 shadow-emerald-200/70 text-white',
-      indigo: 'from-indigo-400/80 to-indigo-600/80 shadow-indigo-200/70 text-white',
+      amber: 'text-slate-900',
+      emerald: 'text-slate-900',
+      indigo: 'text-slate-900',
     } as const;
     return (
-      <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-slate-900 text-white shadow-[0_25px_70px_-40px_rgba(15,23,42,0.8)]">
-        <div className={`absolute inset-0 bg-gradient-to-br ${toneMap[tone]} opacity-90`} />
-        <div className="relative p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-white/80">{label}</p>
-          <p className="mt-3 text-3xl font-bold leading-tight">{value}</p>
-          <p className="mt-2 text-sm text-white/80">{hint}</p>
-        </div>
+      <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</p>
+        <p className={`mt-2 text-2xl font-bold leading-tight ${toneMap[tone]}`}>{value}</p>
+        <p className="mt-1 text-xs text-slate-500">{hint}</p>
       </div>
     );
   };
 
   return (
     <>
-      <div className="min-h-screen bg-[radial-gradient(circle_at_20%_20%,rgba(14,165,233,0.08),transparent_30%),radial-gradient(circle_at_80%_0%,rgba(251,146,60,0.08),transparent_32%),linear-gradient(180deg,#f8fafc,#fff)] px-4 pb-14 pt-10 sm:px-6 lg:px-12">
-        <div className="mx-auto max-w-6xl space-y-8">
-          <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
-                Administration
-              </p>
-              <h1 className="mt-1 text-3xl font-bold text-slate-900 sm:text-4xl">Agent Management</h1>
-              <p className="mt-2 text-sm text-slate-600">
-                에이전트 온보딩과 수정을 한 곳에서 관리합니다.
-              </p>
+      <main className="p-4 pb-10 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+        <div className="py-0 w-full">
+          <div className="w-full flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm mb-4">
+            <div className="flex items-center gap-3">
+              <Image
+                src="/icon-agent.png"
+                alt="Agent"
+                width={35}
+                height={35}
+                className="w-6 h-6"
+              />
+              <div className="text-lg font-semibold text-slate-900">
+                에이전트관리
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => window.history.back()}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
-              >
-                ← 뒤로가기
-              </button>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Total
+              </span>
+              <span className="text-2xl font-semibold text-slate-900 tabular-nums">
+                {agents.length || 0}
+              </span>
+            </div>
+          </div>
+
+          <header className="w-full flex flex-col gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm mb-4 xl:flex-row xl:items-center xl:justify-between">
+            <p className="text-sm text-slate-600">
+              에이전트 온보딩과 수정을 한 곳에서 관리합니다.
+            </p>
+            <div className="flex w-full flex-wrap items-center justify-start gap-2 xl:w-auto xl:justify-end">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -227,32 +235,32 @@ export default function AgentManagementPage() {
             </div>
           </header>
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <AccentCard
-            label="전체 에이전트"
-            value={`${stats.total.toLocaleString()} 개`}
-            hint="등록된 모든 에이전트"
-            tone="indigo"
-          />
-          <AccentCard
-            label="신규 (24h)"
-            value={`${stats.latest24h.toLocaleString()} 개`}
-            hint="최근 24시간 신규"
-            tone="emerald"
-          />
-          <AccentCard
-            label="작업 상태"
-            value={saving ? '저장 중...' : loading ? '불러오는 중' : '정상'}
-            hint={error ? error : 'API 연결 상태'}
-            tone="amber"
-          />
-        </section>
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <AccentCard
+              label="전체 에이전트"
+              value={`${stats.total.toLocaleString()} 개`}
+              hint="등록된 모든 에이전트"
+              tone="indigo"
+            />
+            <AccentCard
+              label="신규 (24h)"
+              value={`${stats.latest24h.toLocaleString()} 개`}
+              hint="최근 24시간 신규"
+              tone="emerald"
+            />
+            <AccentCard
+              label="작업 상태"
+              value={saving ? '저장 중...' : loading ? '불러오는 중' : '정상'}
+              hint={error ? error : 'API 연결 상태'}
+              tone="amber"
+            />
+          </section>
 
-        <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-          <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-[0_20px_60px_-45px_rgba(15,23,42,0.55)] backdrop-blur">
+          <section className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(360px,1fr)]">
+            <div className="rounded-2xl border border-slate-200/70 bg-white/95 p-4 shadow-sm">
             <div className="flex items-center justify-between px-2 pb-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                   Agents
                 </p>
                 <h2 className="text-xl font-bold text-slate-900">에이전트 목록</h2>
@@ -362,10 +370,10 @@ export default function AgentManagementPage() {
             </div>
           </div>
 
-          <div className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-5 shadow-[0_20px_60px_-45px_rgba(15,23,42,0.55)] backdrop-blur">
+            <div className="space-y-4 rounded-2xl border border-slate-200/70 bg-white/95 p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                   Editor
                 </p>
                 <h3 className="text-lg font-bold text-slate-900">
@@ -534,10 +542,10 @@ export default function AgentManagementPage() {
             <p className="text-[11px] text-slate-500">
               이름은 중복될 수 없으며, 등록 후에도 언제든 세부 정보를 수정할 수 있습니다.
             </p>
-          </div>
-        </section>
-      </div>
-    </div>
+            </div>
+          </section>
+        </div>
+      </main>
 
     {showAdminModal && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
@@ -606,7 +614,7 @@ export default function AgentManagementPage() {
                     </p>
                   </div>
                   {form.adminWalletAddress === user.walletAddress && (
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                    <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-white">
                       선택됨
                     </span>
                   )}
