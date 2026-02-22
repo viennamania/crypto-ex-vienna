@@ -1894,6 +1894,41 @@ export default function BuyUsdtPage({
     setCancelConfirmOpen(true);
   };
 
+  const resolvePublicIpAddress = useCallback(async () => {
+    try {
+      let resolvedIpAddress = '';
+
+      try {
+        const response = await fetch('/api/server/getServerInfo', {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.ok) {
+          resolvedIpAddress = String((payload as { ipAddress?: string })?.ipAddress || '').trim();
+        }
+      } catch (serverIpError) {
+        console.error('Failed to fetch server side ip address', serverIpError);
+      }
+
+      if (!resolvedIpAddress) {
+        const ipifyResponse = await fetch('https://api64.ipify.org?format=json', {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        const ipifyPayload = await ipifyResponse.json().catch(() => ({}));
+        if (ipifyResponse.ok) {
+          resolvedIpAddress = String((ipifyPayload as { ip?: string })?.ip || '').trim();
+        }
+      }
+
+      return resolvedIpAddress;
+    } catch (fetchPublicIpError) {
+      console.error('Failed to resolve public ip address', fetchPublicIpError);
+      return '';
+    }
+  }, []);
+
   const cancelActiveTradeOrder = async () => {
     if (!activeAccount?.address || !activePrivateTradeOrder?.orderId || !selectedSeller?.walletAddress) {
       toast.error('취소할 거래 정보를 찾지 못했습니다.');
@@ -1907,6 +1942,10 @@ export default function BuyUsdtPage({
 
     setCancelingTrade(true);
     try {
+      const cancelledByIpAddress = await resolvePublicIpAddress();
+      const cancelledByUserAgent =
+        typeof window !== 'undefined' ? String(window.navigator.userAgent || '').trim() : '';
+
       const response = await fetch('/api/order/cancelPrivateBuyOrderByBuyer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1914,6 +1953,8 @@ export default function BuyUsdtPage({
           orderId: activePrivateTradeOrder.orderId,
           buyerWalletAddress: activeAccount.address,
           sellerWalletAddress: selectedSeller.walletAddress,
+          cancelledByIpAddress,
+          cancelledByUserAgent,
         }),
       });
       const data = await response.json().catch(() => ({}));

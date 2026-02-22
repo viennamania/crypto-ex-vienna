@@ -3685,10 +3685,14 @@ export async function cancelPrivateBuyOrderByBuyer(
     orderId,
     buyerWalletAddress,
     sellerWalletAddress,
+    cancelledByIpAddress = '',
+    cancelledByUserAgent = '',
   }: {
     orderId: string;
     buyerWalletAddress: string;
     sellerWalletAddress?: string;
+    cancelledByIpAddress?: string;
+    cancelledByUserAgent?: string;
   }
 ): Promise<boolean> {
   if (!ObjectId.isValid(orderId)) {
@@ -3842,6 +3846,8 @@ export async function cancelPrivateBuyOrderByBuyer(
   const cancelledByRole = 'buyer';
   const cancelledByWalletAddress = String(orderBuyerWalletAddress || buyerWalletAddress || '').trim();
   const cancelledByNickname = String(order?.buyer?.nickname || '').trim();
+  const normalizedCancelledByIpAddress = String(cancelledByIpAddress || '').trim();
+  const normalizedCancelledByUserAgent = String(cancelledByUserAgent || '').trim();
   const buyerWalletCandidates = Array.from(
     new Set([
       String(buyerWalletAddress).trim(),
@@ -3868,6 +3874,8 @@ export async function cancelPrivateBuyOrderByBuyer(
         cancelledByRole,
         cancelledByWalletAddress,
         cancelledByNickname,
+        cancelledByIpAddress: normalizedCancelledByIpAddress,
+        cancelledByUserAgent: normalizedCancelledByUserAgent,
         rollbackUsdtAmount,
         'buyer.rollbackTransactionHash': rollbackTransactionHash,
         'seller.rollbackTransactionHash': rollbackTransactionHash,
@@ -3904,6 +3912,8 @@ export async function cancelPrivateBuyOrderByBuyer(
           'seller.buyOrder.cancelledByRole': cancelledByRole,
           'seller.buyOrder.cancelledByWalletAddress': cancelledByWalletAddress,
           'seller.buyOrder.cancelledByNickname': cancelledByNickname,
+          'seller.buyOrder.cancelledByIpAddress': normalizedCancelledByIpAddress,
+          'seller.buyOrder.cancelledByUserAgent': normalizedCancelledByUserAgent,
           'seller.buyOrder.rollbackUsdtAmount': rollbackUsdtAmount,
           'seller.buyOrder.buyer.rollbackTransactionHash': rollbackTransactionHash,
           'seller.buyOrder.seller.rollbackTransactionHash': rollbackTransactionHash,
@@ -3988,6 +3998,8 @@ export async function cancelPrivateBuyOrderByBuyer(
       canceller: cancelledByRole,
       cancelledByWalletAddress,
       cancelledByNickname,
+      cancelledByIpAddress: normalizedCancelledByIpAddress,
+      cancelledByUserAgent: normalizedCancelledByUserAgent,
       statusBeforeCancel: 'paymentRequested',
       statusAfterCancel: 'cancelled',
       penaltyPoints,
