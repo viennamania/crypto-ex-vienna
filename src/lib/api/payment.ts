@@ -450,11 +450,13 @@ export async function getAllWalletUsdtPayments(
     limit = 20,
     page = 1,
     searchTerm = '',
+    storecode = '',
     status = 'confirmed',
 }: {
     limit?: number;
     page?: number;
     searchTerm?: string;
+    storecode?: string;
     status?: 'prepared' | 'confirmed' | 'all';
 }): Promise<{
   totalCount: number;
@@ -468,6 +470,7 @@ export async function getAllWalletUsdtPayments(
 
   const normalizedStatus = String(status || 'confirmed').trim().toLowerCase();
   const normalizedSearchTerm = String(searchTerm || '').trim();
+  const normalizedStorecode = String(storecode || '').trim();
   const searchRegex = normalizedSearchTerm
     ? { $regex: escapeRegex(normalizedSearchTerm), $options: 'i' }
     : null;
@@ -478,6 +481,12 @@ export async function getAllWalletUsdtPayments(
   const matchQuery: any = {};
   if (normalizedStatus === 'prepared' || normalizedStatus === 'confirmed') {
     matchQuery.status = normalizedStatus;
+  }
+  if (normalizedStorecode) {
+    matchQuery.storecode = {
+      $regex: `^${escapeRegex(normalizedStorecode)}$`,
+      $options: 'i',
+    };
   }
 
   const basePipeline: any[] = [];
@@ -515,8 +524,6 @@ export async function getAllWalletUsdtPayments(
       $match: {
         $or: [
           { paymentId: searchRegex },
-          { storecode: searchRegex },
-          { 'store.storeName': searchRegex },
           { 'member.nickname': searchRegex },
           { fromWalletAddress: searchRegex },
           { toWalletAddress: searchRegex },

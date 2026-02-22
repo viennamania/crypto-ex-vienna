@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
     limit,
     page,
     searchTerm,
+    storecode,
     status = 'confirmed',
   } = body;
 
@@ -18,6 +19,7 @@ export async function POST(request: NextRequest) {
     limit,
     page,
     searchTerm,
+    storecode,
     status,
   });
 

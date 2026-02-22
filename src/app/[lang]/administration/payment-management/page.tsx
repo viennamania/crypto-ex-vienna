@@ -30,8 +30,15 @@ type WalletPaymentItem = {
   paymentConfirmedAt: string;
 };
 
+type StoreFilterItem = {
+  storecode: string;
+  storeName: string;
+  storeLogo: string;
+};
+
 const PAGE_SIZE = 20;
 const PAYMENT_LIST_POLLING_MS = 10000;
+const ALL_STORE_FILTER = '__ALL__';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -62,6 +69,9 @@ const formatKrw = (value: number) =>
 const formatUsdt = (value: number) =>
   `${new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 6 }).format(toNumber(value))} USDT`;
 
+const formatUsdtQuantity = (value: number) =>
+  `${new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(toNumber(value))} USDT`;
+
 const isOrderProcessingCompleted = (value: string | undefined) =>
   String(value || '').trim().toUpperCase() === 'COMPLETED';
 
@@ -77,6 +87,20 @@ const resolveTransactionExplorerUrl = (transactionValue: string) => {
   }
 
   return `https://polygonscan.com/search?query=${encodeURIComponent(normalized)}`;
+};
+
+const normalizeStoreFilterItem = (value: unknown): StoreFilterItem | null => {
+  const source = isRecord(value) ? value : {};
+  const storecode = toText(source.storecode);
+  if (!storecode || storecode === 'admin' || storecode === 'agent') {
+    return null;
+  }
+
+  return {
+    storecode,
+    storeName: toText(source.storeName) || storecode,
+    storeLogo: toText(source.storeLogo),
+  };
 };
 
 const normalizeWalletPayment = (value: unknown): WalletPaymentItem => {
@@ -130,6 +154,10 @@ export default function AdministrationPaymentManagementPage() {
   const [polling, setPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [keyword, setKeyword] = useState('');
+  const [storeFilters, setStoreFilters] = useState<StoreFilterItem[]>([]);
+  const [loadingStoreFilters, setLoadingStoreFilters] = useState(false);
+  const [storeFilterError, setStoreFilterError] = useState<string | null>(null);
+  const [selectedStorecode, setSelectedStorecode] = useState<string>(ALL_STORE_FILTER);
   const [payments, setPayments] = useState<WalletPaymentItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [totalKrwAmount, setTotalKrwAmount] = useState(0);
@@ -140,6 +168,53 @@ export default function AdministrationPaymentManagementPage() {
   const [updatingOrderProcessing, setUpdatingOrderProcessing] = useState(false);
   const [orderProcessingError, setOrderProcessingError] = useState<string | null>(null);
   const [orderProcessingActorNickname, setOrderProcessingActorNickname] = useState('');
+
+  const loadStoreFilters = useCallback(async () => {
+    setLoadingStoreFilters(true);
+    setStoreFilterError(null);
+
+    try {
+      const response = await fetch('/api/store/getAllStores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          limit: 1000,
+          page: 1,
+          searchStore: '',
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const source = isRecord(payload) ? payload : {};
+        throw new Error(toText(source.error) || '가맹점 목록을 불러오지 못했습니다.');
+      }
+
+      const source = isRecord(payload) ? payload : {};
+      const result = isRecord(source.result) ? source.result : {};
+      const storesRaw = Array.isArray(result.stores) ? result.stores : [];
+
+      const dedupedStoreMap = new Map<string, StoreFilterItem>();
+      storesRaw.forEach((store) => {
+        const normalizedStore = normalizeStoreFilterItem(store);
+        if (!normalizedStore) return;
+        if (dedupedStoreMap.has(normalizedStore.storecode)) return;
+        dedupedStoreMap.set(normalizedStore.storecode, normalizedStore);
+      });
+
+      const nextStores = [...dedupedStoreMap.values()].sort((a, b) =>
+        a.storeName.localeCompare(b.storeName, 'ko-KR'),
+      );
+      setStoreFilters(nextStores);
+    } catch (loadStoreError) {
+      setStoreFilterError(
+        loadStoreError instanceof Error ? loadStoreError.message : '가맹점 목록을 불러오지 못했습니다.',
+      );
+      setStoreFilters([]);
+    } finally {
+      setLoadingStoreFilters(false);
+    }
+  }, []);
 
   const loadData = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent === true;
@@ -159,6 +234,7 @@ export default function AdministrationPaymentManagementPage() {
           limit: PAGE_SIZE,
           page: currentPage,
           searchTerm: keyword.trim(),
+          storecode: selectedStorecode === ALL_STORE_FILTER ? '' : selectedStorecode,
           status: 'confirmed',
         }),
       });
@@ -196,11 +272,15 @@ export default function AdministrationPaymentManagementPage() {
         setPolling(false);
       }
     }
-  }, [currentPage, keyword]);
+  }, [currentPage, keyword, selectedStorecode]);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    void loadStoreFilters();
+  }, [loadStoreFilters]);
 
   useEffect(() => {
     let isActive = true;
@@ -275,6 +355,14 @@ export default function AdministrationPaymentManagementPage() {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    if (selectedStorecode === ALL_STORE_FILTER) return;
+    const hasStore = storeFilters.some((store) => store.storecode === selectedStorecode);
+    if (!hasStore) {
+      setSelectedStorecode(ALL_STORE_FILTER);
+    }
+  }, [selectedStorecode, storeFilters]);
 
   const visiblePageNumbers = useMemo(() => {
     const windowSize = 5;
@@ -421,21 +509,78 @@ export default function AdministrationPaymentManagementPage() {
         </section>
 
         <section className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.42)]">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-sm font-semibold text-slate-900">결제 목록 ({totalCount.toLocaleString()}건)</p>
-              <p className="text-xs text-slate-500">마지막 갱신 {toDateTime(lastUpdatedAt)}</p>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">결제 목록 ({totalCount.toLocaleString()}건)</p>
+                <p className="text-xs text-slate-500">마지막 갱신 {toDateTime(lastUpdatedAt)}</p>
+              </div>
+              <input
+                type="text"
+                value={keyword}
+                onChange={(event) => {
+                  setKeyword(event.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="결제번호(PID)/트랜잭션/회원/지갑 검색"
+                className="h-9 w-full max-w-xs rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
+              />
             </div>
-            <input
-              type="text"
-              value={keyword}
-              onChange={(event) => {
-                setKeyword(event.target.value);
-                setCurrentPage(1);
-              }}
-              placeholder="결제번호(PID)/트랜잭션/가맹점/회원/지갑 검색"
-              className="h-9 w-full max-w-xs rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
-            />
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedStorecode(ALL_STORE_FILTER);
+                  setCurrentPage(1);
+                }}
+                className={`inline-flex h-8 items-center justify-center rounded-full border px-3 text-xs font-semibold transition ${
+                  selectedStorecode === ALL_STORE_FILTER
+                    ? 'border-cyan-300 bg-cyan-50 text-cyan-800'
+                    : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'
+                }`}
+              >
+                전체
+              </button>
+              {storeFilters.map((store) => {
+                const selected = selectedStorecode === store.storecode;
+                return (
+                  <button
+                    key={store.storecode}
+                    type="button"
+                    onClick={() => {
+                      setSelectedStorecode(store.storecode);
+                      setCurrentPage(1);
+                    }}
+                    className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold transition ${
+                      selected
+                        ? 'border-cyan-300 bg-cyan-50 text-cyan-800'
+                        : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'
+                    }`}
+                    title={store.storeName}
+                  >
+                    <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white text-[9px] font-bold text-slate-500">
+                      {store.storeLogo ? (
+                        <span
+                          className="h-full w-full bg-cover bg-center"
+                          style={{ backgroundImage: `url(${encodeURI(store.storeLogo)})` }}
+                          aria-label={store.storeName}
+                        />
+                      ) : (
+                        store.storeName.slice(0, 1)
+                      )}
+                    </span>
+                    <span className="max-w-[110px] truncate">{store.storeName}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {(loadingStoreFilters || storeFilterError) && (
+              <p className="text-xs text-slate-500">
+                {loadingStoreFilters ? '가맹점 목록을 불러오는 중...' : storeFilterError}
+              </p>
+            )}
           </div>
         </section>
 
@@ -526,7 +671,7 @@ export default function AdministrationPaymentManagementPage() {
                           <p className="mt-1 text-xs text-slate-500">이름 {payment.buyerAccountHolder || '-'}</p>
                         </td>
                         <td className="px-4 py-3 text-right text-sm font-extrabold tabular-nums text-slate-900 sm:text-base">
-                          {formatUsdt(payment.usdtAmount)}
+                          {formatUsdtQuantity(payment.usdtAmount)}
                         </td>
                         <td className="px-4 py-3 text-right text-sm font-extrabold tabular-nums text-slate-900 sm:text-base">
                           {formatKrw(payment.krwAmount)}
@@ -653,7 +798,7 @@ export default function AdministrationPaymentManagementPage() {
                 <p className="text-xs font-semibold text-slate-500">결제지갑</p>
                 <p className="break-all text-slate-700">{selectedPayment.sellerWalletAddress || '-'}</p>
                 <p className="text-xs font-semibold text-slate-500">수량 / 금액</p>
-                <p className="text-slate-700">{formatUsdt(selectedPayment.usdtAmount)} / {formatKrw(selectedPayment.krwAmount)}</p>
+                <p className="text-slate-700">{formatUsdtQuantity(selectedPayment.usdtAmount)} / {formatKrw(selectedPayment.krwAmount)}</p>
                 <p className="text-xs font-semibold text-slate-500">결제시각</p>
                 <p className="text-slate-700">{toDateTime(selectedPayment.paymentConfirmedAt || selectedPayment.createdAt)}</p>
                 <p className="text-xs font-semibold text-slate-500">결제처리 상태</p>
