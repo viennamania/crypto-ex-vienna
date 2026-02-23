@@ -131,6 +131,12 @@ const formatUsdt = (value: number) =>
     maximumFractionDigits: 6,
   }).format(Number(value || 0));
 
+const formatFeeUsdt = (value: number) =>
+  new Intl.NumberFormat('ko-KR', {
+    minimumFractionDigits: 6,
+    maximumFractionDigits: 6,
+  }).format(roundDownUsdtAmount(Number(value || 0)));
+
 const formatKrw = (value: number) =>
   new Intl.NumberFormat('ko-KR', {
     minimumFractionDigits: 0,
@@ -597,12 +603,12 @@ export default function PlatformFeeCollectionPage() {
           </div>
           <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">미수납 예상 수수료</p>
-            <p className="mt-2 text-2xl font-bold leading-tight text-amber-700">{formatUsdt(summary.totalUncollectedExpectedFeeAmount)} USDT</p>
+            <p className="mt-2 text-2xl font-bold leading-tight text-amber-700">{formatFeeUsdt(summary.totalUncollectedExpectedFeeAmount)} USDT</p>
             <p className="mt-1 text-xs text-slate-500">AG 수수료 기준</p>
           </div>
           <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">선택 수납 수량</p>
-            <p className="mt-2 text-2xl font-bold leading-tight text-cyan-700">{formatUsdt(selectedTotalFeeAmount)} USDT</p>
+            <p className="mt-2 text-2xl font-bold leading-tight text-cyan-700">{formatFeeUsdt(selectedTotalFeeAmount)} USDT</p>
             <p className="mt-1 text-xs text-slate-500">선택 {selectedItems.length.toLocaleString()}건</p>
           </div>
         </section>
@@ -716,7 +722,7 @@ export default function PlatformFeeCollectionPage() {
                           {formatPercent(item.agentPlatformFeePercentage)}
                         </td>
                         <td className="px-2 py-3 text-right">
-                          <span className="font-extrabold text-cyan-700">{formatUsdt(item.expectedAgentFeeAmount)} USDT</span>
+                          <span className="font-extrabold text-cyan-700">{formatFeeUsdt(item.expectedAgentFeeAmount)} USDT</span>
                         </td>
                         <td className="px-2 py-3">
                           {isWalletAddress(item.agentPlatformFeeFromAddress) ? (
@@ -787,7 +793,7 @@ export default function PlatformFeeCollectionPage() {
 
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 px-4 py-3">
             <p className="text-xs text-slate-500">
-              선택 {selectedItems.length.toLocaleString()}건 · 선택 수량 {formatUsdt(selectedTotalFeeAmount)} USDT
+              선택 {selectedItems.length.toLocaleString()}건 · 선택 수량 {formatFeeUsdt(selectedTotalFeeAmount)} USDT
             </p>
             <div className="flex items-center gap-1.5">
               <button
@@ -875,7 +881,7 @@ export default function PlatformFeeCollectionPage() {
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">합산 수량</p>
-                <p className="mt-1 text-base font-bold text-cyan-700">{formatUsdt(selectedTotalFeeAmount)} USDT</p>
+                <p className="mt-1 text-base font-bold text-cyan-700">{formatFeeUsdt(selectedTotalFeeAmount)} USDT</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">송신 지갑 수</p>
@@ -904,7 +910,7 @@ export default function PlatformFeeCollectionPage() {
                     <tr key={`modal-${item._id}`}>
                       <td className="px-3 py-2 font-semibold text-slate-900">{item.tradeId || '-'}</td>
                       <td className="px-3 py-2 text-right font-extrabold text-cyan-700">
-                        {formatUsdt(item.expectedAgentFeeAmount)} USDT
+                        {formatFeeUsdt(item.expectedAgentFeeAmount)} USDT
                       </td>
                       <td className="px-3 py-2 text-slate-600">{shortWallet(item.agentPlatformFeeFromAddress)}</td>
                       <td className="px-3 py-2 text-slate-600">{shortWallet(item.agentPlatformFeeToAddress)}</td>

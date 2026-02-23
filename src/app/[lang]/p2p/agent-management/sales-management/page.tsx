@@ -62,6 +62,7 @@ type AgentSalesOrderItem = {
   agentSmartAccountAddress: string;
   agentCreditWalletSmartAccountAddress: string;
   agentPlatformFeePercentage: number;
+  agentPlatformFeeAmount: number;
   agentPlatformFeeFromAddress: string;
   agentPlatformFeeToAddress: string;
   agentPlatformFeeTransactionHash: string;
@@ -161,6 +162,24 @@ const normalizeSalesOrder = (value: unknown): AgentSalesOrderItem => {
         ? Number(((usdtAmount * resolvedPlatformFeeRate) / 100).toFixed(6))
         : 0;
 
+  const storedAgentPlatformFeeAmount =
+    [
+      agentPlatformFee.amountUsdt,
+      agentPlatformFee.expectedAmountUsdt,
+      agentPlatformFee.amount,
+    ]
+      .map((candidate) => toNonNegativeNumber(candidate))
+      .find((candidate) => candidate !== null)
+    || 0;
+
+  const agentPlatformFeePercent = toNumber(agentPlatformFee.percentage);
+  const resolvedAgentPlatformFeeAmount =
+    storedAgentPlatformFeeAmount > 0
+      ? storedAgentPlatformFeeAmount
+      : agentPlatformFeePercent > 0 && usdtAmount > 0
+        ? Math.floor(((usdtAmount * agentPlatformFeePercent) / 100) * 1_000_000) / 1_000_000
+        : 0;
+
   return {
     id: toText(source._id) || toText(source.id),
     tradeId: toText(source.tradeId),
@@ -207,7 +226,8 @@ const normalizeSalesOrder = (value: unknown): AgentSalesOrderItem => {
     agentLogo: toText(source.agentLogo) || toText(agentInfo.agentLogo),
     agentSmartAccountAddress: toText(agentInfo.smartAccountAddress),
     agentCreditWalletSmartAccountAddress: toText(agentCreditWallet.smartAccountAddress),
-    agentPlatformFeePercentage: toNumber(agentPlatformFee.percentage),
+    agentPlatformFeePercentage: agentPlatformFeePercent,
+    agentPlatformFeeAmount: resolvedAgentPlatformFeeAmount,
     agentPlatformFeeFromAddress: toText(agentPlatformFee.fromAddress),
     agentPlatformFeeToAddress: toText(agentPlatformFee.toAddress),
     agentPlatformFeeTransactionHash: toText(
@@ -349,6 +369,18 @@ const formatPercent = (value: number) => {
   if (!Number.isFinite(numeric) || numeric <= 0) return '0';
   return (Math.round(numeric * 100) / 100).toFixed(2).replace(/\.?0+$/, '');
 };
+
+const roundDownUsdtSix = (value: number) => {
+  const numeric = Number(value || 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) return 0;
+  return Math.floor((numeric + Number.EPSILON) * 1_000_000) / 1_000_000;
+};
+
+const formatUsdtSix = (value: number) =>
+  new Intl.NumberFormat('ko-KR', {
+    minimumFractionDigits: 6,
+    maximumFractionDigits: 6,
+  }).format(roundDownUsdtSix(value));
 
 const formatRate = (value?: number) => {
   const numeric = Number(value);
@@ -1119,6 +1151,7 @@ export default function P2PAgentSalesManagementPage() {
                       const platformFeeAmount = Number(order.platformFeeAmount || 0) || 0;
                       const platformFeeWalletAddress = String(order.platformFeeWalletAddress || '').trim();
                       const agentPlatformFeeRate = Number(order.agentPlatformFeePercentage || 0) || 0;
+                      const agentPlatformFeeAmount = Number(order.agentPlatformFeeAmount || 0) || 0;
                       const agentPlatformFeeFromAddress = String(order.agentPlatformFeeFromAddress || '').trim();
                       const agentPlatformFeeToAddress = String(order.agentPlatformFeeToAddress || '').trim();
                       const agentPlatformFeeTransactionHash = String(order.agentPlatformFeeTransactionHash || '').trim();
@@ -1130,6 +1163,7 @@ export default function P2PAgentSalesManagementPage() {
                         && !agentPlatformFeeTransactionHash;
                       const hasAgentPlatformFeeInfo =
                         agentPlatformFeeRate > 0
+                        || agentPlatformFeeAmount > 0
                         || Boolean(agentPlatformFeeFromAddress)
                         || Boolean(agentPlatformFeeToAddress);
                       const hasPlatformFeeInfo =
@@ -1607,8 +1641,11 @@ export default function P2PAgentSalesManagementPage() {
                                       : ''
                                   }`}
                                 >
-                                  <span className="inline-flex w-fit rounded-md bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700">
-                                    AG {formatPercent(agentPlatformFeeRate)}%
+                                  <span className="inline-flex w-fit items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700">
+                                    <span>AG {formatPercent(agentPlatformFeeRate)}%</span>
+                                    <span className="text-[10px] font-bold text-amber-800">
+                                      {formatUsdtSix(agentPlatformFeeAmount)} USDT
+                                    </span>
                                   </span>
                                   {isAgentPlatformFeeUncollected && (
                                     <span className="inline-flex w-fit rounded-md bg-rose-50 px-2 py-0.5 text-[10px] font-extrabold text-rose-700">

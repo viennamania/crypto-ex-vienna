@@ -104,6 +104,9 @@ type BuyOrderItem = {
     percentage?: number;
     fromAddress?: string;
     toAddress?: string;
+    amount?: number | string;
+    amountUsdt?: number | string;
+    expectedAmountUsdt?: number | string;
     transactionHash?: string;
     txHash?: string;
   };
@@ -209,6 +212,17 @@ const formatPercent = (value?: number) => {
   return (Math.round(numeric * 100) / 100).toFixed(2).replace(/\.?0+$/, '');
 };
 
+const roundDownUsdtSix = (value: number) => {
+  const numeric = toFiniteNumber(value);
+  if (numeric <= 0) return 0;
+  return Math.floor((numeric + Number.EPSILON) * 1_000_000) / 1_000_000;
+};
+
+const formatUsdtSix = (value?: number) =>
+  new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(
+    roundDownUsdtSix(Number(value || 0)),
+  );
+
 const getOrderPlatformFeeRate = (order: BuyOrderItem) => {
   const candidates = [
     order?.platformFeeRate,
@@ -257,6 +271,24 @@ const getOrderAgentPlatformFeeRate = (order: BuyOrderItem) => {
     if (numeric > 0) return numeric;
   }
   return 0;
+};
+
+const getOrderAgentPlatformFeeAmount = (order: BuyOrderItem) => {
+  const directCandidates = [
+    order?.agentPlatformFee?.amountUsdt,
+    order?.agentPlatformFee?.expectedAmountUsdt,
+    order?.agentPlatformFee?.amount,
+  ];
+  for (const candidate of directCandidates) {
+    const numeric = roundDownUsdtSix(Number(candidate || 0));
+    if (numeric > 0) return numeric;
+  }
+
+  const usdtAmount = roundDownUsdtSix(toFiniteNumber(order?.usdtAmount));
+  const feePercent = getOrderAgentPlatformFeeRate(order);
+  if (usdtAmount <= 0 || feePercent <= 0) return 0;
+
+  return roundDownUsdtSix((usdtAmount * feePercent) / 100);
 };
 
 const getOrderAgentPlatformFeeFromAddress = (order: BuyOrderItem) =>
@@ -1496,6 +1528,7 @@ export default function BuyOrderManagementPage() {
                     const platformFeeAmount = getOrderPlatformFeeAmount(order);
                     const platformFeeWalletAddress = getOrderPlatformFeeWalletAddress(order);
                     const agentPlatformFeeRate = getOrderAgentPlatformFeeRate(order);
+                    const agentPlatformFeeAmount = getOrderAgentPlatformFeeAmount(order);
                     const agentPlatformFeeFromAddress = getOrderAgentPlatformFeeFromAddress(order);
                     const agentPlatformFeeToAddress = getOrderAgentPlatformFeeToAddress(order);
                     const agentPlatformFeeTransactionHash = getOrderAgentPlatformFeeTransactionHash(order);
@@ -1507,6 +1540,7 @@ export default function BuyOrderManagementPage() {
                       && !agentPlatformFeeTransactionHash;
                     const hasAgentPlatformFeeInfo =
                       agentPlatformFeeRate > 0
+                      || agentPlatformFeeAmount > 0
                       || Boolean(agentPlatformFeeFromAddress)
                       || Boolean(agentPlatformFeeToAddress);
                     const hasPlatformFeeInfo =
@@ -1988,8 +2022,11 @@ export default function BuyOrderManagementPage() {
                                     : ''
                                 }`}
                               >
-                                <span className="inline-flex w-fit rounded-md bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700">
-                                  AG {formatPercent(agentPlatformFeeRate)}%
+                                <span className="inline-flex w-fit items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700">
+                                  <span>AG {formatPercent(agentPlatformFeeRate)}%</span>
+                                  <span className="text-[10px] font-bold text-amber-800">
+                                    {formatUsdtSix(agentPlatformFeeAmount)} USDT
+                                  </span>
                                 </span>
                                 {isAgentPlatformFeeUncollected && (
                                   <span className="inline-flex w-fit rounded-md bg-rose-50 px-2 py-0.5 text-[10px] font-extrabold text-rose-700">

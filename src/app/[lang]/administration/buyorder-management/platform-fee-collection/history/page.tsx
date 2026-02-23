@@ -94,11 +94,16 @@ const formatDateTime = (value: string) => {
   });
 };
 
+const roundDownUsdtAmount = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.floor((value + Number.EPSILON) * 1_000_000) / 1_000_000;
+};
+
 const formatUsdt = (value: number) =>
   new Intl.NumberFormat('ko-KR', {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 6,
     maximumFractionDigits: 6,
-  }).format(Number(value || 0));
+  }).format(roundDownUsdtAmount(Number(value || 0)));
 
 const formatPercent = (value: number) => {
   const normalized = Number(value || 0);
@@ -197,7 +202,7 @@ export default function PlatformFeeCollectionHistoryPage() {
           toAddress: String(source.toAddress || ''),
           usdtAmount: Number(source.usdtAmount || 0),
           feePercent: Number(source.feePercent || 0),
-          feeAmountUsdt: Number(source.feeAmountUsdt || 0),
+          feeAmountUsdt: roundDownUsdtAmount(Number(source.feeAmountUsdt || 0)),
           transactionId: String(source.transactionId || ''),
           transactionHash: String(source.transactionHash || ''),
           onchainStatus: String(source.onchainStatus || ''),
@@ -228,7 +233,7 @@ export default function PlatformFeeCollectionHistoryPage() {
           ? (result.summary as Record<string, unknown>)
           : {};
       const nextSummary: AttemptSummary = {
-        totalFeeAmountUsdt: Number(summarySource.totalFeeAmountUsdt || 0),
+        totalFeeAmountUsdt: roundDownUsdtAmount(Number(summarySource.totalFeeAmountUsdt || 0)),
         confirmedCount: Math.max(0, Number(summarySource.confirmedCount || 0) || 0),
         failedCount: Math.max(0, Number(summarySource.failedCount || 0) || 0),
         pendingCount: Math.max(0, Number(summarySource.pendingCount || 0) || 0),
@@ -601,4 +606,3 @@ export default function PlatformFeeCollectionHistoryPage() {
     </main>
   );
 }
-
