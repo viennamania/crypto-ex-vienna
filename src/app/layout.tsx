@@ -41,6 +41,7 @@ import StabilityConsole from '@/components/StabilityConsole';
 import SellerSendbirdWidgetGlobal from '@/components/SellerSendbirdWidgetGlobal';
 import BuyerSupportChatWidgetGlobal from '@/components/BuyerSupportChatWidgetGlobal';
 import { ClientSettingsProvider } from '@/components/ClientSettingsProvider';
+import ClientBrandBrowserMetaSync from '@/components/ClientBrandBrowserMetaSync';
 
 
 
@@ -415,6 +416,8 @@ export default function RootLayout({
           {/* Provides client settings context to the app */}
           
           <ClientSettingsProvider>
+
+            <ClientBrandBrowserMetaSync />
           
 
             <Toaster />
