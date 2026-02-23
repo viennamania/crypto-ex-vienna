@@ -571,7 +571,7 @@ export default function BuyOrderManagementPage() {
   const [cancelingOrder, setCancelingOrder] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [copiedTradeId, setCopiedTradeId] = useState('');
-  const [copiedEscrowWalletAddress, setCopiedEscrowWalletAddress] = useState('');
+  const [copiedWalletAddress, setCopiedWalletAddress] = useState('');
   const [escrowWalletBalanceByAddress, setEscrowWalletBalanceByAddress] = useState<
     Record<string, EscrowWalletBalanceState>
   >({});
@@ -965,18 +965,18 @@ export default function BuyOrderManagementPage() {
     }
   }, []);
 
-  const copyEscrowWalletAddress = useCallback(async (walletAddress: string) => {
+  const copyWalletAddress = useCallback(async (walletAddress: string) => {
     const normalizedWalletAddress = String(walletAddress || '').trim();
     if (!normalizedWalletAddress) return;
 
     try {
       await navigator.clipboard.writeText(normalizedWalletAddress);
-      setCopiedEscrowWalletAddress(normalizedWalletAddress);
+      setCopiedWalletAddress(normalizedWalletAddress);
       window.setTimeout(() => {
-        setCopiedEscrowWalletAddress((prev) => (prev === normalizedWalletAddress ? '' : prev));
+        setCopiedWalletAddress((prev) => (prev === normalizedWalletAddress ? '' : prev));
       }, 1500);
     } catch (error) {
-      console.error('Failed to copy escrow wallet address', error);
+      console.error('Failed to copy wallet address', error);
     }
   }, []);
 
@@ -1449,6 +1449,26 @@ export default function BuyOrderManagementPage() {
                         (escrowWalletCooldownRemainingMs / BALANCE_CHECK_COOLDOWN_MS) * 100,
                       ),
                     );
+                    const sellerWalletAddress = String(order?.seller?.walletAddress || '').trim();
+                    const buyerWalletAddress = String(order?.buyer?.walletAddress || order?.walletAddress || '').trim();
+                    const sellerWalletKey = sellerWalletAddress ? normalizeWalletKey(sellerWalletAddress) : '';
+                    const sellerWalletBalanceState = sellerWalletKey
+                      ? escrowWalletBalanceByAddress[sellerWalletKey]
+                      : undefined;
+                    const sellerWalletCooldownRemainingMs = Math.max(
+                      0,
+                      Number(sellerWalletBalanceState?.cooldownUntilMs || 0) - escrowWalletBalanceTickMs,
+                    );
+                    const sellerWalletCooldownRemainingSeconds = sellerWalletCooldownRemainingMs > 0
+                      ? Math.ceil(sellerWalletCooldownRemainingMs / 1000)
+                      : 0;
+                    const sellerWalletCooldownProgressPercent = Math.max(
+                      0,
+                      Math.min(
+                        100,
+                        (sellerWalletCooldownRemainingMs / BALANCE_CHECK_COOLDOWN_MS) * 100,
+                      ),
+                    );
 
                     return (
                     <tr key={`${order?._id || order?.tradeId || 'order'}-${index}`} className="bg-white text-sm text-slate-700">
@@ -1524,12 +1544,12 @@ export default function BuyOrderManagementPage() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    void copyEscrowWalletAddress(escrowWalletAddress);
+                                    void copyWalletAddress(escrowWalletAddress);
                                   }}
                                   className="inline-flex w-fit items-center gap-1 truncate text-xs font-semibold text-slate-900 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
                                 >
                                   {shortWallet(escrowWalletAddress)}
-                                  {copiedEscrowWalletAddress === escrowWalletAddress && (
+                                  {copiedWalletAddress === escrowWalletAddress && (
                                     <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
                                   )}
                                 </button>
@@ -1588,9 +1608,22 @@ export default function BuyOrderManagementPage() {
                           <span className="truncate font-medium text-slate-900">
                             {order?.buyer?.nickname || order?.nickname || '-'}
                           </span>
-                          <span className="truncate text-xs text-slate-500">
-                            {shortWallet(order?.buyer?.walletAddress || order?.walletAddress)}
-                          </span>
+                          {buyerWalletAddress ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void copyWalletAddress(buyerWalletAddress);
+                              }}
+                              className="inline-flex w-fit items-center gap-1 truncate text-xs text-slate-500 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                            >
+                              {shortWallet(buyerWalletAddress)}
+                              {copiedWalletAddress === buyerWalletAddress && (
+                                <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                              )}
+                            </button>
+                          ) : (
+                            <span className="truncate text-xs text-slate-500">-</span>
+                          )}
                           <span className="break-all text-[11px] leading-tight text-slate-500">
                             IP {getBuyerIp(order)}
                           </span>
@@ -1600,7 +1633,66 @@ export default function BuyOrderManagementPage() {
                         <div className="flex flex-col gap-2">
                           <div className="flex flex-col">
                             <span className="truncate text-base font-extrabold leading-tight text-slate-900">{order?.seller?.nickname || '-'}</span>
-                            <span className="truncate text-xs text-slate-500">{shortWallet(order?.seller?.walletAddress)}</span>
+                            {sellerWalletAddress ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void copyWalletAddress(sellerWalletAddress);
+                                }}
+                                className="inline-flex w-fit items-center gap-1 truncate text-xs text-slate-500 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                              >
+                                {shortWallet(sellerWalletAddress)}
+                                {copiedWalletAddress === sellerWalletAddress && (
+                                  <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                                )}
+                              </button>
+                            ) : (
+                              <span className="truncate text-xs text-slate-500">-</span>
+                            )}
+                            {sellerWalletAddress ? (
+                              <div className="mt-1 flex flex-col gap-1">
+                                {sellerWalletCooldownRemainingMs <= 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      void handleCheckEscrowWalletBalance(sellerWalletAddress);
+                                    }}
+                                    disabled={Boolean(sellerWalletBalanceState?.loading)}
+                                    className={`inline-flex w-fit items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold transition ${
+                                      sellerWalletBalanceState?.loading
+                                        ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                                        : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100'
+                                    }`}
+                                  >
+                                    {sellerWalletBalanceState?.loading ? '조회중...' : '잔고확인'}
+                                  </button>
+                                ) : (
+                                  <div className="w-full max-w-[130px] rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1">
+                                    <div className="flex items-center justify-between text-[10px] font-semibold text-indigo-700">
+                                      <span>재조회 대기</span>
+                                      <span>{sellerWalletCooldownRemainingSeconds}s</span>
+                                    </div>
+                                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/90">
+                                      <div
+                                        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-500 transition-[width] duration-200 ease-linear"
+                                        style={{ width: `${sellerWalletCooldownProgressPercent.toFixed(2)}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                                <span
+                                  className={`text-[10px] font-semibold ${
+                                    sellerWalletBalanceState?.error ? 'text-rose-600' : 'text-slate-600'
+                                  }`}
+                                >
+                                  {sellerWalletBalanceState?.error
+                                    ? '조회실패'
+                                    : sellerWalletBalanceState?.displayValue
+                                    ? `${sellerWalletBalanceState.displayValue} USDT`
+                                    : '잔고 미조회'}
+                                </span>
+                              </div>
+                            ) : null}
                           </div>
                           <div className="flex flex-col gap-1 border-t border-slate-100 pt-2">
                             <span className="inline-flex w-fit whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">

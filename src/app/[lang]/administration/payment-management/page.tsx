@@ -193,6 +193,7 @@ export default function AdministrationPaymentManagementPage() {
   const [updatingOrderProcessing, setUpdatingOrderProcessing] = useState(false);
   const [orderProcessingError, setOrderProcessingError] = useState<string | null>(null);
   const [orderProcessingActorNickname, setOrderProcessingActorNickname] = useState('');
+  const [copiedWalletAddress, setCopiedWalletAddress] = useState('');
 
   const loadStoreFilters = useCallback(async () => {
     setLoadingStoreFilters(true);
@@ -428,6 +429,21 @@ export default function AdministrationPaymentManagementPage() {
     setDraftFilters(defaults);
     setAppliedFilters(defaults);
     setCurrentPage(1);
+  }, []);
+
+  const handleCopyWalletAddress = useCallback(async (walletAddress: string) => {
+    const normalizedWalletAddress = toText(walletAddress);
+    if (!normalizedWalletAddress) return;
+
+    try {
+      await navigator.clipboard.writeText(normalizedWalletAddress);
+      setCopiedWalletAddress(normalizedWalletAddress);
+      window.setTimeout(() => {
+        setCopiedWalletAddress((prev) => (prev === normalizedWalletAddress ? '' : prev));
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to copy wallet address', error);
+    }
   }, []);
 
   const handleOrderProcessingComplete = useCallback(async () => {
@@ -746,7 +762,26 @@ export default function AdministrationPaymentManagementPage() {
                           <p className="break-all text-base font-extrabold leading-tight text-slate-900 sm:text-lg">
                             {payment.buyerNickname || '-'}
                           </p>
-                          <p className="mt-1 text-xs text-slate-500">결제지갑 {shortAddress(payment.sellerWalletAddress || '')}</p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            결제지갑{' '}
+                            {toText(payment.sellerWalletAddress) ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void handleCopyWalletAddress(payment.sellerWalletAddress);
+                                }}
+                                className="inline-flex items-center gap-1 font-semibold text-slate-600 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                                title={toText(payment.sellerWalletAddress)}
+                              >
+                                {shortAddress(payment.sellerWalletAddress || '')}
+                                {copiedWalletAddress === toText(payment.sellerWalletAddress) && (
+                                  <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                                )}
+                              </button>
+                            ) : (
+                              '-'
+                            )}
+                          </p>
                           <p className="mt-1 text-xs text-slate-500">이름 {payment.buyerAccountHolder || '-'}</p>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-slate-900">
