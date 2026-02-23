@@ -278,6 +278,47 @@ const resolveBuyerEscrowWalletAddress = (orderLike: any): string => {
   return '';
 };
 
+const resolvePrivateOrderEscrowWalletSignerAndSmartAddress = (orderLike: any): {
+  signerAddress: string;
+  smartAccountAddress: string;
+} => {
+  const signerAddressCandidates = [
+    orderLike?.escrowWallet?.signerAddress,
+    orderLike?.escrowWallet?.buyer?.signerAddress,
+  ];
+  const smartAccountAddressCandidates = [
+    orderLike?.escrowWallet?.smartAccountAddress,
+    orderLike?.escrowWallet?.buyer?.smartAccountAddress,
+    orderLike?.buyer?.escrowWalletAddress,
+    orderLike?.escrowWallet?.address,
+  ];
+
+  let signerAddress = '';
+  for (const candidate of signerAddressCandidates) {
+    if (typeof candidate !== 'string') continue;
+    const normalized = candidate.trim();
+    if (isWalletAddress(normalized)) {
+      signerAddress = normalized;
+      break;
+    }
+  }
+
+  let smartAccountAddress = '';
+  for (const candidate of smartAccountAddressCandidates) {
+    if (typeof candidate !== 'string') continue;
+    const normalized = candidate.trim();
+    if (isWalletAddress(normalized)) {
+      smartAccountAddress = normalized;
+      break;
+    }
+  }
+
+  return {
+    signerAddress,
+    smartAccountAddress,
+  };
+};
+
 const waitMs = async (ms: number) =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -3984,6 +4025,7 @@ export async function cancelPrivateBuyOrderByBuyer(
         walletAddress: 1,
         buyer: 1,
         seller: 1,
+        escrowWallet: 1,
         usdtAmount: 1,
         escrowLockUsdtAmount: 1,
         platformFee: 1,
@@ -4012,11 +4054,18 @@ export async function cancelPrivateBuyOrderByBuyer(
     return false;
   }
 
-  const buyerEscrowWalletAddress = resolveBuyerEscrowWalletAddress(order);
+  const buyerEscrowWalletExecution = resolvePrivateOrderEscrowWalletSignerAndSmartAddress(order);
+  const buyerEscrowSignerAddress = buyerEscrowWalletExecution.signerAddress;
+  const buyerEscrowWalletAddress = buyerEscrowWalletExecution.smartAccountAddress;
   const sellerEscrowWalletAddress = resolveSellerEscrowWalletAddress(order);
 
-  if (!buyerEscrowWalletAddress || !sellerEscrowWalletAddress) {
+  if (
+    !isWalletAddress(buyerEscrowSignerAddress)
+    || !isWalletAddress(buyerEscrowWalletAddress)
+    || !isWalletAddress(sellerEscrowWalletAddress)
+  ) {
     console.error('cancelPrivateBuyOrderByBuyer: escrow wallet address missing', {
+      buyerEscrowSignerAddress,
       buyerEscrowWalletAddress,
       sellerEscrowWalletAddress,
     });
@@ -4053,10 +4102,15 @@ export async function cancelPrivateBuyOrderByBuyer(
       address: transferConfig.contractAddress,
     });
 
-    const buyerEscrowWallet = await createEngineServerWallet({
+    const buyerEscrowWallet = Engine.serverWallet({
       client: thirdwebClient,
-      walletAddress: buyerEscrowWalletAddress,
+      address: buyerEscrowSignerAddress,
       chain: transferConfig.chain,
+      executionOptions: {
+        type: 'ERC4337',
+        signerAddress: buyerEscrowSignerAddress,
+        smartAccountAddress: buyerEscrowWalletAddress,
+      },
     });
 
     const rawBuyerEscrowUsdtBalance = await balanceOf({
@@ -4338,6 +4392,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
       projection: {
         privateSale: 1,
         status: 1,
+        escrowWallet: 1,
         usdtAmount: 1,
         escrowLockUsdtAmount: 1,
         platformFee: 1,
@@ -4358,14 +4413,22 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
     return { success: false, error: 'INVALID_ORDER_STATUS' };
   }
 
-  const buyerEscrowWalletAddress = resolveBuyerEscrowWalletAddress(order);
+  const buyerEscrowWalletExecution = resolvePrivateOrderEscrowWalletSignerAndSmartAddress(order);
+  const buyerEscrowSignerAddress = buyerEscrowWalletExecution.signerAddress;
+  const buyerEscrowWalletAddress = buyerEscrowWalletExecution.smartAccountAddress;
   const sellerEscrowWalletAddress = resolveSellerEscrowWalletAddress(order);
   const orderBuyerWalletAddress =
     (typeof order?.buyer?.walletAddress === 'string' && order.buyer.walletAddress.trim())
     || (typeof order?.walletAddress === 'string' ? order.walletAddress.trim() : '');
 
-  if (!buyerEscrowWalletAddress || !sellerEscrowWalletAddress || !orderBuyerWalletAddress) {
+  if (
+    !isWalletAddress(buyerEscrowSignerAddress)
+    || !isWalletAddress(buyerEscrowWalletAddress)
+    || !isWalletAddress(sellerEscrowWalletAddress)
+    || !orderBuyerWalletAddress
+  ) {
     console.error('cancelPrivateBuyOrderByAdminToBuyer: wallet address missing', {
+      buyerEscrowSignerAddress,
       buyerEscrowWalletAddress,
       sellerEscrowWalletAddress,
       orderBuyerWalletAddress,
@@ -4403,10 +4466,15 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
       address: transferConfig.contractAddress,
     });
 
-    const buyerEscrowWallet = await createEngineServerWallet({
+    const buyerEscrowWallet = Engine.serverWallet({
       client: thirdwebClient,
-      walletAddress: buyerEscrowWalletAddress,
+      address: buyerEscrowSignerAddress,
       chain: transferConfig.chain,
+      executionOptions: {
+        type: 'ERC4337',
+        signerAddress: buyerEscrowSignerAddress,
+        smartAccountAddress: buyerEscrowWalletAddress,
+      },
     });
 
     const rawBuyerEscrowUsdtBalance = await balanceOf({
@@ -4620,6 +4688,7 @@ export async function completePrivateBuyOrderBySeller(
       projection: {
         privateSale: 1,
         status: 1,
+        escrowWallet: 1,
         usdtAmount: 1,
         escrowLockUsdtAmount: 1,
         walletAddress: 1,
@@ -4683,14 +4752,21 @@ export async function completePrivateBuyOrderBySeller(
   const normalizedRequesterIpAddress = String(requesterIpAddress || '').trim();
   const normalizedRequesterUserAgent = String(requesterUserAgent || '').trim();
 
-  const buyerEscrowWalletAddress = resolveBuyerEscrowWalletAddress(order);
+  const buyerEscrowWalletExecution = resolvePrivateOrderEscrowWalletSignerAndSmartAddress(order);
+  const buyerEscrowSignerAddress = buyerEscrowWalletExecution.signerAddress;
+  const buyerEscrowWalletAddress = buyerEscrowWalletExecution.smartAccountAddress;
   const sellerEscrowWalletAddress = resolveSellerEscrowWalletAddress(order);
   const orderBuyerWalletAddress =
     (typeof order?.buyer?.walletAddress === 'string' && order.buyer.walletAddress.trim())
     || (typeof order?.walletAddress === 'string' ? order.walletAddress.trim() : '');
 
-  if (!buyerEscrowWalletAddress || !orderBuyerWalletAddress) {
+  if (
+    !isWalletAddress(buyerEscrowSignerAddress)
+    || !isWalletAddress(buyerEscrowWalletAddress)
+    || !orderBuyerWalletAddress
+  ) {
     console.error('completePrivateBuyOrderBySeller: wallet address missing', {
+      buyerEscrowSignerAddress,
       buyerEscrowWalletAddress,
       orderBuyerWalletAddress,
     });
@@ -4755,10 +4831,15 @@ export async function completePrivateBuyOrderBySeller(
       address: transferConfig.contractAddress,
     });
 
-    const buyerEscrowWallet = await createEngineServerWallet({
+    const buyerEscrowWallet = Engine.serverWallet({
       client: thirdwebClient,
-      walletAddress: buyerEscrowWalletAddress,
+      address: buyerEscrowSignerAddress,
       chain: transferConfig.chain,
+      executionOptions: {
+        type: 'ERC4337',
+        signerAddress: buyerEscrowSignerAddress,
+        smartAccountAddress: buyerEscrowWalletAddress,
+      },
     });
 
     const waitForConfirmedTransactionHash = async (
