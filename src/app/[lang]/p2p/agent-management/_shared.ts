@@ -201,7 +201,7 @@ const normalizeWalletUsdtPayment = (value: unknown): AgentBuyOrderItem => {
     sellerNickname: toText(source.toWalletAddress),
     usdtAmount: toNumber(source.usdtAmount),
     krwAmount: toNumber(source.krwAmount),
-    rate: toNumber(source.exchangeRate),
+    rate: toNumber(source.exchangeRate ?? source.rate),
     platformFeeRate: toNumber(source.platformFeeRate),
     platformFeeAmount: toNumber(source.platformFeeAmount),
     platformFeeWalletAddress: toText(source.platformFeeWalletAddress),

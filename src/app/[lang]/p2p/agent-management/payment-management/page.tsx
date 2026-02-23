@@ -25,6 +25,17 @@ const resolveOrderProcessingLabel = (value: string | undefined) =>
   isOrderProcessingCompleted(value) ? '결제처리완료' : '결제처리중';
 
 const PAYMENT_LIST_POLLING_MS = 10000;
+const toNumber = (value: unknown) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+const formatUsdtQuantity = (value: number) =>
+  `${new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(toNumber(value))} USDT`;
+const formatRate = (value: number) => {
+  const numeric = toNumber(value);
+  if (numeric <= 0) return '-';
+  return `${new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(numeric)}원`;
+};
 
 export default function P2PAgentPaymentManagementPage() {
   const PAGE_SIZE = 20;
@@ -373,8 +384,7 @@ export default function P2PAgentPaymentManagementPage() {
                     <th className="px-4 py-3">트랜잭션</th>
                     <th className="px-4 py-3">가맹점</th>
                     <th className="px-4 py-3">회원/결제지갑</th>
-                    <th className="px-4 py-3 text-right">수량</th>
-                    <th className="px-4 py-3 text-right">금액</th>
+                    <th className="px-4 py-3 text-right">수량/금액/환율</th>
                     <th className="px-4 py-3">결제시각</th>
                     <th className="px-4 py-3 text-center">결제처리</th>
                   </tr>
@@ -382,7 +392,7 @@ export default function P2PAgentPaymentManagementPage() {
                 <tbody className="divide-y divide-slate-100">
                   {payments.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-500">
+                      <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
                         표시할 결제가 없습니다.
                       </td>
                     </tr>
@@ -428,8 +438,11 @@ export default function P2PAgentPaymentManagementPage() {
                             </p>
                             <p className="mt-1 text-xs text-slate-500">결제지갑 {shortAddress(payment.sellerNickname || '')}</p>
                           </td>
-                          <td className="px-4 py-3 text-right text-sm font-extrabold tabular-nums text-slate-900 sm:text-base">{formatUsdt(payment.usdtAmount)}</td>
-                          <td className="px-4 py-3 text-right text-sm font-extrabold tabular-nums text-slate-900 sm:text-base">{formatKrw(payment.krwAmount)}</td>
+                          <td className="px-4 py-3 text-right tabular-nums text-slate-900">
+                            <p className="text-sm font-extrabold sm:text-base">{formatUsdtQuantity(payment.usdtAmount)}</p>
+                            <p className="mt-0.5 text-sm font-extrabold sm:text-base">{formatKrw(payment.krwAmount)}</p>
+                            <p className="mt-0.5 text-xs font-semibold text-slate-500">환율 {formatRate(payment.rate)}</p>
+                          </td>
                           <td className="px-4 py-3 text-xs text-slate-600">{toDateTime(payment.paymentConfirmedAt || payment.createdAt)}</td>
                           <td className="px-4 py-3 text-center">
                             <p
@@ -537,8 +550,12 @@ export default function P2PAgentPaymentManagementPage() {
                     <p className="break-all text-slate-700">{selectedPayment.buyerNickname || '-'}</p>
                     <p className="text-xs font-semibold text-slate-500">결제지갑</p>
                     <p className="break-all text-slate-700">{selectedPayment.sellerNickname || '-'}</p>
-                    <p className="text-xs font-semibold text-slate-500">수량 / 금액</p>
-                    <p className="text-slate-700">{formatUsdt(selectedPayment.usdtAmount)} / {formatKrw(selectedPayment.krwAmount)}</p>
+                    <p className="text-xs font-semibold text-slate-500">수량 / 금액 / 환율</p>
+                    <div className="space-y-0.5 text-slate-700">
+                      <p>수량 {formatUsdtQuantity(selectedPayment.usdtAmount)}</p>
+                      <p>금액 {formatKrw(selectedPayment.krwAmount)}</p>
+                      <p>환율 {formatRate(selectedPayment.rate)}</p>
+                    </div>
                     <p className="text-xs font-semibold text-slate-500">확정시각</p>
                     <p className="text-slate-700">{toDateTime(selectedPayment.paymentConfirmedAt || selectedPayment.createdAt)}</p>
                     <p className="text-xs font-semibold text-slate-500">결제처리 상태</p>

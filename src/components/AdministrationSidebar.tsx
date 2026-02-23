@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -51,6 +52,8 @@ const buildMenuItems = (lang: string): MenuItem[] => {
 };
 
 const ACTIVE_BUY_ORDER_POLLING_MS = 15000;
+const DEFAULT_BRAND_NAME = 'Administration';
+const DEFAULT_BRAND_LOGO = '/logo.png';
 
 const isActiveRoute = (pathname: string, href: string) => {
   if (href.endsWith('/administration')) {
@@ -65,6 +68,9 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
   const buyOrderManagementHref = `/${lang}/administration/buyorder-management`;
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [activeBuyOrderCount, setActiveBuyOrderCount] = useState(0);
+  const [brandName, setBrandName] = useState(DEFAULT_BRAND_NAME);
+  const [brandLogo, setBrandLogo] = useState(DEFAULT_BRAND_LOGO);
+  const [brandLogoLoadFailed, setBrandLogoLoadFailed] = useState(false);
   const wasMobileViewportRef = useRef<boolean | null>(null);
 
   const loadActiveBuyOrderCount = useCallback(async () => {
@@ -90,6 +96,41 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
       console.error('failed to load active buy order count', error);
     }
   }, []);
+
+  const loadBranding = useCallback(async () => {
+    try {
+      const response = await fetch('/api/client/getClientInfo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String((payload as Record<string, unknown>)?.error || '센터 브랜딩 정보를 조회하지 못했습니다.'));
+      }
+
+      const source = (typeof payload === 'object' && payload !== null ? payload : {}) as Record<string, unknown>;
+      const result = (typeof source.result === 'object' && source.result !== null
+        ? source.result
+        : {}) as Record<string, unknown>;
+      const clientInfo = (typeof result.clientInfo === 'object' && result.clientInfo !== null
+        ? result.clientInfo
+        : {}) as Record<string, unknown>;
+
+      const nextBrandName = String(clientInfo.name || '').trim() || DEFAULT_BRAND_NAME;
+      const nextBrandLogo = String(clientInfo.logo || '').trim() || DEFAULT_BRAND_LOGO;
+
+      setBrandName(nextBrandName);
+      setBrandLogo(nextBrandLogo);
+    } catch (error) {
+      console.error('failed to load administration branding', error);
+      setBrandName(DEFAULT_BRAND_NAME);
+      setBrandLogo(DEFAULT_BRAND_LOGO);
+    }
+  }, []);
+
+  useEffect(() => {
+    setBrandLogoLoadFailed(false);
+  }, [brandLogo]);
 
   useEffect(() => {
     const updateViewport = () => {
@@ -159,14 +200,53 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
     };
   }, [loadActiveBuyOrderCount]);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const run = async () => {
+      if (!isActive) return;
+      await loadBranding();
+    };
+
+    const handleClientSettingsUpdated = () => {
+      void run();
+    };
+
+    void run();
+    window.addEventListener('client-settings-updated', handleClientSettingsUpdated);
+
+    return () => {
+      isActive = false;
+      window.removeEventListener('client-settings-updated', handleClientSettingsUpdated);
+    };
+  }, [loadBranding]);
+
   const menuContent = (
     <>
       <Link
         href={`/${lang}/administration`}
         className="group rounded-2xl border border-slate-200/70 bg-white px-4 py-3 shadow-[0_16px_36px_-28px_rgba(15,23,42,0.55)] transition hover:-translate-y-0.5"
       >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">Control Room</p>
-        <h2 className="mt-1 text-base font-bold text-slate-900">Administration</h2>
+        <div className="flex items-center gap-3">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+            <Image
+              src={brandLogoLoadFailed ? DEFAULT_BRAND_LOGO : brandLogo}
+              alt={`${brandName} logo`}
+              width={40}
+              height={40}
+              className="h-full w-full object-cover"
+              onError={() => setBrandLogoLoadFailed(true)}
+            />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+              Control Room
+            </span>
+            <span className="mt-0.5 block truncate text-base font-bold text-slate-900">
+              {brandName}
+            </span>
+          </span>
+        </div>
       </Link>
 
       <nav className="mt-5 flex-1 space-y-1 overflow-y-auto pr-1">

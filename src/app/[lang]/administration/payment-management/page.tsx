@@ -90,6 +90,12 @@ const formatUsdt = (value: number) =>
 const formatUsdtQuantity = (value: number) =>
   `${new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(toNumber(value))} USDT`;
 
+const formatRate = (value: number) => {
+  const numeric = toNumber(value);
+  if (numeric <= 0) return '-';
+  return `${new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(numeric)}원`;
+};
+
 const isOrderProcessingCompleted = (value: string | undefined) =>
   String(value || '').trim().toUpperCase() === 'COMPLETED';
 
@@ -159,7 +165,7 @@ const normalizeWalletPayment = (value: unknown): WalletPaymentItem => {
     sellerWalletAddress: toText(source.toWalletAddress),
     usdtAmount: toNumber(source.usdtAmount),
     krwAmount: toNumber(source.krwAmount),
-    rate: toNumber(source.exchangeRate),
+    rate: toNumber(source.exchangeRate ?? source.rate),
     createdAt: toText(source.createdAt),
     paymentConfirmedAt: toText(source.confirmedAt),
   };
@@ -677,7 +683,7 @@ export default function AdministrationPaymentManagementPage() {
                   <th className="px-4 py-3">트랜잭션</th>
                   <th className="px-4 py-3">가맹점</th>
                   <th className="px-4 py-3">회원/결제지갑/이름</th>
-                  <th className="px-4 py-3 text-right">수량/금액</th>
+                  <th className="px-4 py-3 text-right">수량/금액/환율</th>
                   <th className="px-4 py-3">결제시각</th>
                   <th className="px-4 py-3 text-center">결제처리</th>
                 </tr>
@@ -749,6 +755,9 @@ export default function AdministrationPaymentManagementPage() {
                           </p>
                           <p className="mt-0.5 text-sm font-extrabold sm:text-base">
                             {formatKrw(payment.krwAmount)}
+                          </p>
+                          <p className="mt-0.5 text-xs font-semibold text-slate-500">
+                            환율 {formatRate(payment.rate)}
                           </p>
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600">
@@ -872,8 +881,12 @@ export default function AdministrationPaymentManagementPage() {
                 <p className="break-all text-slate-700">{selectedPayment.buyerNickname || '-'}</p>
                 <p className="text-xs font-semibold text-slate-500">결제지갑</p>
                 <p className="break-all text-slate-700">{selectedPayment.sellerWalletAddress || '-'}</p>
-                <p className="text-xs font-semibold text-slate-500">수량 / 금액</p>
-                <p className="text-slate-700">{formatUsdtQuantity(selectedPayment.usdtAmount)} / {formatKrw(selectedPayment.krwAmount)}</p>
+                <p className="text-xs font-semibold text-slate-500">수량 / 금액 / 환율</p>
+                <div className="space-y-0.5 text-slate-700">
+                  <p>수량 {formatUsdtQuantity(selectedPayment.usdtAmount)}</p>
+                  <p>금액 {formatKrw(selectedPayment.krwAmount)}</p>
+                  <p>환율 {formatRate(selectedPayment.rate)}</p>
+                </div>
                 <p className="text-xs font-semibold text-slate-500">결제시각</p>
                 <p className="text-slate-700">{toDateTime(selectedPayment.paymentConfirmedAt || selectedPayment.createdAt)}</p>
                 <p className="text-xs font-semibold text-slate-500">결제처리 상태</p>
