@@ -1448,15 +1448,15 @@ export default function BuyOrderManagementPage() {
             <div className="px-4 py-12 text-center text-sm text-slate-500">검색된 주문 데이터가 없습니다.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-[1320px] w-full table-fixed">
+              <table className="min-w-[1220px] w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
                     <th className="w-[108px] px-3 py-3">상태</th>
-                    <th className="w-[168px] px-3 py-3">주문시각/거래번호(TID)</th>
-                    <th className="w-[104px] px-3 py-3">구매자</th>
+                    <th className="w-[152px] px-3 py-3">주문시각/거래번호(TID)</th>
+                    <th className="w-[96px] px-3 py-3">구매자</th>
                     <th className="w-[108px] px-3 py-3 text-right">주문금액</th>
                     <th className="w-[104px] px-3 py-3">판매자/결제방법</th>
-                    <th className="w-[140px] px-3 py-3">에이전트 정보</th>
+                    <th className="w-[124px] px-3 py-3">에이전트 정보</th>
                     <th className="w-[84px] px-3 py-3">플랫폼 수수료</th>
                     <th className="w-[76px] px-3 py-3">전송내역</th>
                     <th className="w-[72px] px-3 py-3 text-center">액션</th>
