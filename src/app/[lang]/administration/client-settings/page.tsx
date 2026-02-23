@@ -691,7 +691,9 @@ export default function SettingsPage({ params }: any) {
 
     const [clientName, setClientName] = useState("");
     const [clientDescription, setClientDescription] = useState("");
+    const [clientLogo, setClientLogo] = useState("");
     const [smartAccountEnabled, setSmartAccountEnabled] = useState(false);
+    const [uploadingCenterLogo, setUploadingCenterLogo] = useState(false);
 
     // exchange rate USDT to USD
     // exchange rate USDT to KRW
@@ -739,6 +741,7 @@ export default function SettingsPage({ params }: any) {
 
                 setClientName(data.result.clientInfo?.name || "");
                 setClientDescription(data.result.clientInfo?.description || "");
+                setClientLogo(data.result.clientInfo?.logo || "");
                 setSmartAccountEnabled(Boolean(data.result.clientInfo?.smartAccountEnabled));
 
                 setExchangeRateUSDT(data.result.clientInfo?.exchangeRateUSDT || {
@@ -765,7 +768,8 @@ export default function SettingsPage({ params }: any) {
     const [updatingSmartAccount, setUpdatingSmartAccount] = useState(false);
     const isCenterBasicInfoUnchanged =
         (clientName ?? "") === (clientInfo?.name ?? "") &&
-        (clientDescription ?? "") === (clientInfo?.description ?? "");
+        (clientDescription ?? "") === (clientInfo?.description ?? "") &&
+        (clientLogo ?? "") === (clientInfo?.logo ?? "");
 
     const notifySettingsUpdated = () => {
         if (typeof window !== "undefined") {
@@ -876,6 +880,7 @@ export default function SettingsPage({ params }: any) {
                     data: {
                         name: clientName,
                         description: clientDescription,
+                        logo: clientLogo,
                     },
                 }),
             });
@@ -890,6 +895,7 @@ export default function SettingsPage({ params }: any) {
                 ...(prev || {}),
                 name: clientName,
                 description: clientDescription,
+                logo: clientLogo,
             }));
             toast.success("센터 기본 정보가 저장되었습니다.");
             notifySettingsUpdated();
@@ -899,6 +905,51 @@ export default function SettingsPage({ params }: any) {
             toast.error(message);
         } finally {
             setSavingCenterBasicInfo(false);
+        }
+    };
+
+    const handleCenterLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) {
+            return;
+        }
+
+        if (!file.type.startsWith("image/")) {
+            toast.error("이미지 파일만 업로드할 수 있습니다.");
+            event.target.value = "";
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error("이미지 크기는 10MB 이하만 가능합니다.");
+            event.target.value = "";
+            return;
+        }
+
+        setUploadingCenterLogo(true);
+
+        try {
+            const response = await fetch("/api/upload", {
+                method: "POST",
+                headers: {
+                    "content-type": file.type || "application/octet-stream",
+                },
+                body: file,
+            });
+
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload?.url) {
+                throw new Error(payload?.error || "로고 업로드에 실패했습니다.");
+            }
+
+            setClientLogo(String(payload.url));
+            toast.success("센터 로고가 업로드되었습니다.");
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "로고 업로드에 실패했습니다.";
+            toast.error(message);
+        } finally {
+            setUploadingCenterLogo(false);
+            event.target.value = "";
         }
     };
 
@@ -1135,6 +1186,44 @@ export default function SettingsPage({ params }: any) {
                                     </span>
                                 </div>
                                 <div className="mt-4 flex flex-col gap-4">
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-xs font-semibold text-slate-500">
+                                            센터 로고
+                                        </label>
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            <div className="relative h-16 w-16 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                                                {clientLogo ? (
+                                                    <Image
+                                                        src={clientLogo}
+                                                        alt="센터 로고"
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-400">
+                                                        LOGO
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <label className={`inline-flex cursor-pointer items-center rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                                                uploadingCenterLogo
+                                                    ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                            }`}>
+                                                {uploadingCenterLogo ? '업로드 중...' : '로고 업로드'}
+                                                <input
+                                                    type="file"
+                                                    accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                                                    className="hidden"
+                                                    disabled={uploadingCenterLogo}
+                                                    onChange={handleCenterLogoUpload}
+                                                />
+                                            </label>
+                                            <span className="text-xs text-slate-400">
+                                                PNG/JPG/WEBP/GIF/SVG (최대 10MB)
+                                            </span>
+                                        </div>
+                                    </div>
                                     <div className="flex flex-col gap-2">
                                         <label className="text-xs font-semibold text-slate-500">
                                             센터 이름

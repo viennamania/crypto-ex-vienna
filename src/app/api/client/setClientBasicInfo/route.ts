@@ -18,6 +18,17 @@ const toTrimmedString = (value: unknown) => {
   return value.trim();
 };
 
+const toImageUrl = (value: unknown) => {
+  const url = toTrimmedString(value);
+  if (!url) {
+    return "";
+  }
+  if (!/^https?:\/\//i.test(url)) {
+    return "";
+  }
+  return url;
+};
+
 export async function POST(request: NextRequest) {
   try {
     if (!clientId) {
@@ -29,11 +40,16 @@ export async function POST(request: NextRequest) {
 
     const name = toTrimmedString(payload.name);
     const description = toTrimmedString(payload.description);
-
-    const result = await upsertOne(clientId, {
+    const nextData: Record<string, unknown> = {
       name,
       description,
-    });
+    };
+
+    if (Object.prototype.hasOwnProperty.call(payload, "logo")) {
+      nextData.logo = toImageUrl(payload.logo);
+    }
+
+    const result = await upsertOne(clientId, nextData);
 
     return NextResponse.json({ result });
   } catch (error) {
