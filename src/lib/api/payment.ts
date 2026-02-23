@@ -6,6 +6,13 @@ import { dbName } from '../mongodb';
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const pad2 = (value: number) => String(value).padStart(2, '0');
+const toDateBoundary = (value: unknown, isStart: boolean): Date | null => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return null;
+  const suffix = isStart ? 'T00:00:00+09:00' : 'T23:59:59+09:00';
+  const parsed = new Date(`${normalized}${suffix}`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
 
 // payments collection
 /*
@@ -451,12 +458,16 @@ export async function getAllWalletUsdtPayments(
     page = 1,
     searchTerm = '',
     storecode = '',
+    fromDate = '',
+    toDate = '',
     status = 'confirmed',
 }: {
     limit?: number;
     page?: number;
     searchTerm?: string;
     storecode?: string;
+    fromDate?: string;
+    toDate?: string;
     status?: 'prepared' | 'confirmed' | 'all';
 }): Promise<{
   totalCount: number;
@@ -471,6 +482,8 @@ export async function getAllWalletUsdtPayments(
   const normalizedStatus = String(status || 'confirmed').trim().toLowerCase();
   const normalizedSearchTerm = String(searchTerm || '').trim();
   const normalizedStorecode = String(storecode || '').trim();
+  const fromDateBoundary = toDateBoundary(fromDate, true);
+  const toDateBoundaryValue = toDateBoundary(toDate, false);
   const searchRegex = normalizedSearchTerm
     ? { $regex: escapeRegex(normalizedSearchTerm), $options: 'i' }
     : null;
@@ -518,6 +531,34 @@ export async function getAllWalletUsdtPayments(
       },
     },
   );
+
+  if (fromDateBoundary || toDateBoundaryValue) {
+    const eventAtRange: Record<string, Date> = {};
+    if (fromDateBoundary) {
+      eventAtRange.$gte = fromDateBoundary;
+    }
+    if (toDateBoundaryValue) {
+      eventAtRange.$lte = toDateBoundaryValue;
+    }
+
+    basePipeline.push(
+      {
+        $addFields: {
+          eventAt: {
+            $ifNull: [
+              { $convert: { input: '$confirmedAt', to: 'date', onError: null, onNull: null } },
+              { $convert: { input: '$createdAt', to: 'date', onError: null, onNull: null } },
+            ],
+          },
+        },
+      },
+      {
+        $match: {
+          eventAt: eventAtRange,
+        },
+      },
+    );
+  }
 
   if (searchRegex) {
     basePipeline.push({

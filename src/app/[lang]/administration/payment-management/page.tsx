@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useActiveAccount } from 'thirdweb/react';
 
 type WalletPaymentItem = {
@@ -36,9 +36,27 @@ type StoreFilterItem = {
   storeLogo: string;
 };
 
+type SearchFilters = {
+  date: string;
+  keyword: string;
+};
+
 const PAGE_SIZE = 20;
 const PAYMENT_LIST_POLLING_MS = 10000;
 const ALL_STORE_FILTER = '__ALL__';
+
+const getTodayDate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const createDefaultFilters = (): SearchFilters => ({
+  date: getTodayDate(),
+  keyword: '',
+});
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -153,7 +171,8 @@ export default function AdministrationPaymentManagementPage() {
   const [loading, setLoading] = useState(false);
   const [polling, setPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [keyword, setKeyword] = useState('');
+  const [draftFilters, setDraftFilters] = useState<SearchFilters>(() => createDefaultFilters());
+  const [appliedFilters, setAppliedFilters] = useState<SearchFilters>(() => createDefaultFilters());
   const [storeFilters, setStoreFilters] = useState<StoreFilterItem[]>([]);
   const [loadingStoreFilters, setLoadingStoreFilters] = useState(false);
   const [storeFilterError, setStoreFilterError] = useState<string | null>(null);
@@ -227,14 +246,17 @@ export default function AdministrationPaymentManagementPage() {
     }
 
     try {
+      const selectedDate = appliedFilters.date || getTodayDate();
       const response = await fetch('/api/payment/getAllWalletUsdtPayments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           limit: PAGE_SIZE,
           page: currentPage,
-          searchTerm: keyword.trim(),
+          searchTerm: appliedFilters.keyword.trim(),
           storecode: selectedStorecode === ALL_STORE_FILTER ? '' : selectedStorecode,
+          fromDate: selectedDate,
+          toDate: selectedDate,
           status: 'confirmed',
         }),
       });
@@ -272,7 +294,7 @@ export default function AdministrationPaymentManagementPage() {
         setPolling(false);
       }
     }
-  }, [currentPage, keyword, selectedStorecode]);
+  }, [appliedFilters, currentPage, selectedStorecode]);
 
   useEffect(() => {
     void loadData();
@@ -385,6 +407,22 @@ export default function AdministrationPaymentManagementPage() {
     setSelectedPayment(null);
     setOrderProcessingError(null);
   }, [updatingOrderProcessing]);
+
+  const handleSearchSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCurrentPage(1);
+    setAppliedFilters({
+      date: draftFilters.date || getTodayDate(),
+      keyword: draftFilters.keyword.trim(),
+    });
+  }, [draftFilters]);
+
+  const handleSearchReset = useCallback(() => {
+    const defaults = createDefaultFilters();
+    setDraftFilters(defaults);
+    setAppliedFilters(defaults);
+    setCurrentPage(1);
+  }, []);
 
   const handleOrderProcessingComplete = useCallback(async () => {
     if (!selectedPayment?.id) {
@@ -515,17 +553,53 @@ export default function AdministrationPaymentManagementPage() {
                 <p className="text-sm font-semibold text-slate-900">결제 목록 ({totalCount.toLocaleString()}건)</p>
                 <p className="text-xs text-slate-500">마지막 갱신 {toDateTime(lastUpdatedAt)}</p>
               </div>
-              <input
-                type="text"
-                value={keyword}
-                onChange={(event) => {
-                  setKeyword(event.target.value);
-                  setCurrentPage(1);
-                }}
-                placeholder="결제번호(PID)/트랜잭션/회원/지갑 검색"
-                className="h-9 w-full max-w-xs rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
-              />
             </div>
+
+            <form className="grid grid-cols-1 gap-2.5 md:grid-cols-12" onSubmit={handleSearchSubmit}>
+              <div className="md:col-span-3">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  조회 일자 (Daily)
+                </label>
+                <input
+                  type="date"
+                  value={draftFilters.date}
+                  onChange={(event) => setDraftFilters((prev) => ({ ...prev, date: event.target.value }))}
+                  className="h-9 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-cyan-500"
+                />
+              </div>
+              <div className="md:col-span-6">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  검색
+                </label>
+                <input
+                  type="text"
+                  value={draftFilters.keyword}
+                  onChange={(event) => setDraftFilters((prev) => ({ ...prev, keyword: event.target.value }))}
+                  placeholder="결제번호(PID)/트랜잭션/회원/지갑 검색"
+                  className="h-9 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
+                />
+              </div>
+              <div className="md:col-span-3">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-transparent">
+                  액션
+                </label>
+                <div className="flex items-center justify-end gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleSearchReset}
+                    className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                  >
+                    초기화
+                  </button>
+                  <button
+                    type="submit"
+                    className="inline-flex h-9 items-center justify-center rounded-xl border border-cyan-600 bg-cyan-600 px-3 text-xs font-semibold text-white transition hover:border-cyan-700 hover:bg-cyan-700"
+                  >
+                    검색
+                  </button>
+                </div>
+              </div>
+            </form>
 
             <div className="flex flex-wrap items-center gap-1.5">
               <button

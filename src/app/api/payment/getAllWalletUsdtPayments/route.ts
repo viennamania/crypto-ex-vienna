@@ -12,6 +12,8 @@ export async function POST(request: NextRequest) {
     page,
     searchTerm,
     storecode,
+    fromDate,
+    toDate,
     status = 'confirmed',
   } = body;
 
@@ -20,6 +22,8 @@ export async function POST(request: NextRequest) {
     page,
     searchTerm,
     storecode,
+    fromDate,
+    toDate,
     status,
   });
 

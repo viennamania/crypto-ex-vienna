@@ -763,6 +763,9 @@ export default function SettingsPage({ params }: any) {
     const [savingExchangeRateUSDT, setSavingExchangeRateUSDT] = useState(false);
     const [updatingNetwork, setUpdatingNetwork] = useState(false);
     const [updatingSmartAccount, setUpdatingSmartAccount] = useState(false);
+    const isCenterBasicInfoUnchanged =
+        (clientName ?? "") === (clientInfo?.name ?? "") &&
+        (clientDescription ?? "") === (clientInfo?.description ?? "");
 
     const notifySettingsUpdated = () => {
         if (typeof window !== "undefined") {
@@ -857,7 +860,7 @@ export default function SettingsPage({ params }: any) {
     };
 
     const updateCenterBasicInfo = async () => {
-        if (savingCenterBasicInfo) {
+        if (savingCenterBasicInfo || isCenterBasicInfoUnchanged) {
             return;
         }
 
@@ -1160,15 +1163,15 @@ export default function SettingsPage({ params }: any) {
                                 <div className="mt-4 flex justify-end">
                                     <button
                                         type="button"
-                                        disabled={savingCenterBasicInfo}
+                                        disabled={savingCenterBasicInfo || isCenterBasicInfoUnchanged}
                                         onClick={updateCenterBasicInfo}
                                         className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${
-                                            savingCenterBasicInfo
+                                            savingCenterBasicInfo || isCenterBasicInfoUnchanged
                                                 ? 'cursor-not-allowed bg-slate-300 text-slate-100'
                                                 : 'bg-emerald-600 hover:bg-emerald-500'
                                         }`}
                                     >
-                                        {savingCenterBasicInfo ? '저장 중...' : '저장하기'}
+                                        {savingCenterBasicInfo ? '저장 중...' : isCenterBasicInfoUnchanged ? '변경사항 없음' : '저장하기'}
                                     </button>
                                 </div>
                             </section>
