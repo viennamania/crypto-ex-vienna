@@ -1795,6 +1795,22 @@ export default function BuyUsdtPage({
     ) {
       return;
     }
+    const sellerRate = Number(selectedSeller.rate || 0);
+    const normalizedSubmitUsdtAmount =
+      lastEditedAmountType === 'krw'
+        ? Math.floor((krwAmount / sellerRate) * 1000) / 1000
+        : Math.floor(usdtAmount * 1000) / 1000;
+    const normalizedSubmitKrwAmount = Math.floor(normalizedSubmitUsdtAmount * sellerRate);
+    if (
+      !Number.isFinite(normalizedSubmitUsdtAmount) ||
+      normalizedSubmitUsdtAmount <= 0 ||
+      !Number.isFinite(normalizedSubmitKrwAmount) ||
+      normalizedSubmitKrwAmount <= 0
+    ) {
+      toast.error('구매 금액 계산에 실패했습니다. 수량/금액을 다시 입력해 주세요.');
+      return;
+    }
+
     setSubmittingBuy(true);
     try {
       const response = await fetch('/api/order/buyOrderPrivateSale', {
@@ -1803,8 +1819,8 @@ export default function BuyUsdtPage({
       body: JSON.stringify({
           buyerWalletAddress: activeAccount.address,
           sellerWalletAddress: selectedSeller.walletAddress,
-          usdtAmount,
-          krwAmount: estimatedKrwAmount > 0 ? estimatedKrwAmount : undefined,
+          usdtAmount: normalizedSubmitUsdtAmount,
+          krwAmount: normalizedSubmitKrwAmount,
         }),
       });
       const data = await response.json().catch(() => ({}));

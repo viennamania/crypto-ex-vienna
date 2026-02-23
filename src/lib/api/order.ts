@@ -10841,17 +10841,39 @@ export async function acceptBuyOrderPrivateSale(
     
     const tradeId = Math.floor(Math.random() * 900000000) + 100000000 + '';
 
-    // Keep the submitted order amounts as-is (normalized only for precision),
-    // so UI input values and persisted buyorder values stay identical.
-    const normalizedUsdtAmount = Math.floor(usdtAmount * 1000) / 1000;
-    const normalizedKrwAmount =
+    // Canonicalize order amounts on the server to prevent
+    // usdt/rate/krw mismatches from client-side timing or rounding issues.
+    const normalizedUsdtAmount = roundDownUsdtAmount(usdtAmount);
+    const normalizedKrwAmount = Math.floor(normalizedUsdtAmount * usdtToKrwRate);
+    const normalizedRequestedKrwAmount =
       typeof krwAmount === 'number' && Number.isFinite(krwAmount) && krwAmount > 0
         ? Math.floor(krwAmount)
-        : Math.round(normalizedUsdtAmount * usdtToKrwRate);
+        : 0;
 
     if (!Number.isFinite(normalizedUsdtAmount) || normalizedUsdtAmount <= 0) {
       console.error('acceptBuyOrderPrivateSale: invalid normalized usdt amount', normalizedUsdtAmount);
       return { success: false, error: 'INVALID_USDT_AMOUNT' };
+    }
+    if (!Number.isFinite(normalizedKrwAmount) || normalizedKrwAmount <= 0) {
+      console.error('acceptBuyOrderPrivateSale: invalid normalized krw amount', {
+        normalizedUsdtAmount,
+        usdtToKrwRate,
+        normalizedKrwAmount,
+      });
+      return { success: false, error: 'INVALID_USDT_AMOUNT' };
+    }
+    if (
+      normalizedRequestedKrwAmount > 0 &&
+      normalizedRequestedKrwAmount !== normalizedKrwAmount
+    ) {
+      console.warn('acceptBuyOrderPrivateSale: requested krw amount mismatch corrected', {
+        buyerWalletAddress: matchedBuyerWalletAddress,
+        sellerWalletAddress: matchedSellerWalletAddress,
+        requestedKrwAmount: normalizedRequestedKrwAmount,
+        normalizedKrwAmount,
+        normalizedUsdtAmount,
+        rate: usdtToKrwRate,
+      });
     }
 
     const resolvedPlatformFee = resolvePrivateOrderPlatformFee({
@@ -10996,6 +11018,7 @@ export async function acceptBuyOrderPrivateSale(
       escrowLockUsdtAmount,
       rate: usdtToKrwRate,
       krwAmount: normalizedKrwAmount,
+      requestedKrwAmount: normalizedRequestedKrwAmount || undefined,
       tradeFeeRate: resolvedPlatformFee.feeRatePercent,
       centerFeeRate: resolvedPlatformFee.feeRatePercent,
       platformFeeRate: resolvedPlatformFee.feeRatePercent,
