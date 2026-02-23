@@ -42,10 +42,12 @@ type AgentSalesOrderItem = {
   buyerNickname: string;
   buyerDepositName: string;
   buyerWalletAddress: string;
+  buyerEscrowWalletAddress: string;
   buyerReleaseTransactionHash: string;
   buyerRollbackTransactionHash: string;
   sellerNickname: string;
   sellerWalletAddress: string;
+  sellerEscrowWalletAddress: string;
   sellerAvatar: string;
   sellerBankName: string;
   sellerBankAccountNumber: string;
@@ -73,6 +75,14 @@ type SellerSalesSummaryItem = {
   totalUsdtAmount: number;
   orderCount: number;
   latestCreatedAt: string;
+};
+
+type EscrowWalletBalanceState = {
+  loading: boolean;
+  displayValue: string;
+  error: string;
+  lastCheckedAt: string;
+  cooldownUntilMs: number;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -166,10 +176,12 @@ const normalizeSalesOrder = (value: unknown): AgentSalesOrderItem => {
     buyerNickname: toText(source.nickname) || toText(buyer.nickname),
     buyerDepositName: toText(buyer.depositName) || toText(buyerBankInfo.accountHolder) || toText(buyerBankInfo.depositName),
     buyerWalletAddress: toText(buyer.walletAddress) || toText(source.walletAddress),
+    buyerEscrowWalletAddress: toText(buyer.escrowWalletAddress || source.buyerEscrowWalletAddress),
     buyerReleaseTransactionHash: toText(buyer.releaseTransactionHash),
     buyerRollbackTransactionHash: toText(buyer.rollbackTransactionHash),
     sellerNickname: toText(seller.nickname),
     sellerWalletAddress: toText(seller.walletAddress),
+    sellerEscrowWalletAddress: toText(seller.escrowWalletAddress || source.sellerEscrowWalletAddress),
     sellerAvatar: toText(seller.avatar),
     sellerBankName: toText(sellerBankInfo.bankName),
     sellerBankAccountNumber: toText(sellerBankInfo.accountNumber),
@@ -200,6 +212,35 @@ const shortWallet = (value: string) => {
   if (!source) return '-';
   if (source.length <= 12) return source;
   return `${source.slice(0, 6)}...${source.slice(-4)}`;
+};
+
+const normalizeWalletKey = (walletAddress: string) => String(walletAddress || '').trim().toLowerCase();
+
+const isWalletAddress = (value: unknown) => /^0x[a-fA-F0-9]{40}$/.test(String(value || '').trim());
+
+const resolveOrderEscrowWalletAddress = (order: AgentSalesOrderItem) => {
+  const candidates = [
+    order.buyerEscrowWalletAddress,
+    order.sellerEscrowWalletAddress,
+  ];
+
+  for (const candidate of candidates) {
+    const normalizedAddress = String(candidate || '').trim();
+    if (isWalletAddress(normalizedAddress)) {
+      return normalizedAddress;
+    }
+  }
+
+  return '';
+};
+
+const formatUsdtBalanceDisplayValue = (value: string) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return value;
+  return new Intl.NumberFormat('ko-KR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 6,
+  }).format(parsed);
 };
 
 const normalizeOrderStatus = (status?: string | null) => String(status || '').trim().toLowerCase();
@@ -304,6 +345,7 @@ const getOrderExchangeRate = (order: AgentSalesOrderItem) => {
 };
 const PAGE_SIZE = 20;
 const POLLING_INTERVAL_MS = 5000;
+const BALANCE_CHECK_COOLDOWN_MS = 10_000;
 const PAYMENT_REQUEST_COUNTDOWN_LIMIT_MS = 30 * 60 * 1000;
 
 const getPaymentRequestedRemainingMs = (order: AgentSalesOrderItem, nowMs: number) => {
@@ -462,6 +504,11 @@ export default function P2PAgentSalesManagementPage() {
   const [totalUsdtAmount, setTotalUsdtAmount] = useState(0);
   const [totalPlatformFeeAmount, setTotalPlatformFeeAmount] = useState(0);
   const [copiedTradeId, setCopiedTradeId] = useState('');
+  const [copiedWalletAddress, setCopiedWalletAddress] = useState('');
+  const [escrowWalletBalanceByAddress, setEscrowWalletBalanceByAddress] = useState<
+    Record<string, EscrowWalletBalanceState>
+  >({});
+  const [escrowWalletBalanceTickMs, setEscrowWalletBalanceTickMs] = useState(() => Date.now());
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [cancelTargetOrder, setCancelTargetOrder] = useState<AgentSalesOrderItem | null>(null);
   const [cancelingOrder, setCancelingOrder] = useState(false);
@@ -576,6 +623,25 @@ export default function P2PAgentSalesManagementPage() {
     };
   }, []);
 
+  const hasActiveEscrowWalletBalanceCooldown = useMemo(
+    () =>
+      Object.values(escrowWalletBalanceByAddress).some(
+        (item) => Number(item?.cooldownUntilMs || 0) > escrowWalletBalanceTickMs,
+      ),
+    [escrowWalletBalanceByAddress, escrowWalletBalanceTickMs],
+  );
+
+  useEffect(() => {
+    if (!hasActiveEscrowWalletBalanceCooldown) return;
+    const intervalId = window.setInterval(() => {
+      setEscrowWalletBalanceTickMs(Date.now());
+    }, 200);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [hasActiveEscrowWalletBalanceCooldown]);
+
   const filteredOrders = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
     if (!normalizedKeyword) {
@@ -681,6 +747,94 @@ export default function P2PAgentSalesManagementPage() {
       toast.error('거래번호 복사에 실패했습니다.');
     }
   }, []);
+
+  const copyWalletAddress = useCallback(async (walletAddress: string) => {
+    const normalizedWalletAddress = String(walletAddress || '').trim();
+    if (!normalizedWalletAddress) return;
+
+    try {
+      await navigator.clipboard.writeText(normalizedWalletAddress);
+      setCopiedWalletAddress(normalizedWalletAddress);
+      window.setTimeout(() => {
+        setCopiedWalletAddress((prev) => (prev === normalizedWalletAddress ? '' : prev));
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to copy wallet address', error);
+    }
+  }, []);
+
+  const handleCheckEscrowWalletBalance = useCallback(async (walletAddress: string) => {
+    const normalizedWalletAddress = String(walletAddress || '').trim();
+    if (!isWalletAddress(normalizedWalletAddress)) return;
+
+    const walletKey = normalizeWalletKey(normalizedWalletAddress);
+    const now = Date.now();
+    const currentState = escrowWalletBalanceByAddress[walletKey];
+    if (currentState?.loading) return;
+    if (Number(currentState?.cooldownUntilMs || 0) > now) return;
+
+    const nextCooldownUntil = now + BALANCE_CHECK_COOLDOWN_MS;
+    setEscrowWalletBalanceByAddress((prev) => {
+      const existing = prev[walletKey];
+      return {
+        ...prev,
+        [walletKey]: {
+          loading: true,
+          displayValue: existing?.displayValue || '',
+          error: '',
+          lastCheckedAt: existing?.lastCheckedAt || '',
+          cooldownUntilMs: nextCooldownUntil,
+        },
+      };
+    });
+
+    try {
+      const response = await fetch('/api/user/getUSDTBalanceByWalletAddress', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          walletAddress: normalizedWalletAddress,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      const rawDisplayValue = String(payload?.result?.displayValue || payload?.result?.balance || '0');
+      const displayValue = formatUsdtBalanceDisplayValue(rawDisplayValue);
+      const errorMessage = !response.ok
+        ? String(payload?.error || '잔고 조회에 실패했습니다.')
+        : String(payload?.error || '');
+
+      setEscrowWalletBalanceByAddress((prev) => {
+        const existing = prev[walletKey];
+        return {
+          ...prev,
+          [walletKey]: {
+            loading: false,
+            displayValue,
+            error: errorMessage,
+            lastCheckedAt: new Date().toISOString(),
+            cooldownUntilMs: existing?.cooldownUntilMs || nextCooldownUntil,
+          },
+        };
+      });
+    } catch (error) {
+      console.error('Failed to fetch escrow wallet balance', error);
+      setEscrowWalletBalanceByAddress((prev) => {
+        const existing = prev[walletKey];
+        return {
+          ...prev,
+          [walletKey]: {
+            loading: false,
+            displayValue: existing?.displayValue || '',
+            error: '잔고 조회 중 오류가 발생했습니다.',
+            lastCheckedAt: existing?.lastCheckedAt || '',
+            cooldownUntilMs: existing?.cooldownUntilMs || nextCooldownUntil,
+          },
+        };
+      });
+    }
+  }, [escrowWalletBalanceByAddress]);
 
   const closeCancelModal = () => {
     if (cancelingOrder) return;
@@ -940,6 +1094,65 @@ export default function P2PAgentSalesManagementPage() {
                       const platformFeeWalletAddress = String(order.platformFeeWalletAddress || '').trim();
                       const hasPlatformFeeInfo =
                         platformFeeRate > 0 || platformFeeAmount > 0 || Boolean(platformFeeWalletAddress);
+                      const escrowWalletAddress = resolveOrderEscrowWalletAddress(order);
+                      const escrowWalletKey = escrowWalletAddress ? normalizeWalletKey(escrowWalletAddress) : '';
+                      const escrowWalletBalanceState = escrowWalletKey
+                        ? escrowWalletBalanceByAddress[escrowWalletKey]
+                        : undefined;
+                      const escrowWalletCooldownRemainingMs = Math.max(
+                        0,
+                        Number(escrowWalletBalanceState?.cooldownUntilMs || 0) - escrowWalletBalanceTickMs,
+                      );
+                      const escrowWalletCooldownRemainingSeconds = escrowWalletCooldownRemainingMs > 0
+                        ? Math.ceil(escrowWalletCooldownRemainingMs / 1000)
+                        : 0;
+                      const escrowWalletCooldownProgressPercent = Math.max(
+                        0,
+                        Math.min(
+                          100,
+                          (escrowWalletCooldownRemainingMs / BALANCE_CHECK_COOLDOWN_MS) * 100,
+                        ),
+                      );
+                      const buyerWalletAddress = String(order.buyerWalletAddress || order.walletAddress || '').trim();
+                      const buyerWalletKey = buyerWalletAddress ? normalizeWalletKey(buyerWalletAddress) : '';
+                      const buyerWalletBalanceState = buyerWalletKey
+                        ? escrowWalletBalanceByAddress[buyerWalletKey]
+                        : undefined;
+                      const buyerWalletCooldownRemainingMs = Math.max(
+                        0,
+                        Number(buyerWalletBalanceState?.cooldownUntilMs || 0) - escrowWalletBalanceTickMs,
+                      );
+                      const buyerWalletCooldownRemainingSeconds = buyerWalletCooldownRemainingMs > 0
+                        ? Math.ceil(buyerWalletCooldownRemainingMs / 1000)
+                        : 0;
+                      const buyerWalletCooldownProgressPercent = Math.max(
+                        0,
+                        Math.min(
+                          100,
+                          (buyerWalletCooldownRemainingMs / BALANCE_CHECK_COOLDOWN_MS) * 100,
+                        ),
+                      );
+                      const sellerEscrowWalletAddress = String(order.sellerEscrowWalletAddress || '').trim();
+                      const sellerEscrowWalletKey = sellerEscrowWalletAddress
+                        ? normalizeWalletKey(sellerEscrowWalletAddress)
+                        : '';
+                      const sellerEscrowWalletBalanceState = sellerEscrowWalletKey
+                        ? escrowWalletBalanceByAddress[sellerEscrowWalletKey]
+                        : undefined;
+                      const sellerEscrowWalletCooldownRemainingMs = Math.max(
+                        0,
+                        Number(sellerEscrowWalletBalanceState?.cooldownUntilMs || 0) - escrowWalletBalanceTickMs,
+                      );
+                      const sellerEscrowWalletCooldownRemainingSeconds = sellerEscrowWalletCooldownRemainingMs > 0
+                        ? Math.ceil(sellerEscrowWalletCooldownRemainingMs / 1000)
+                        : 0;
+                      const sellerEscrowWalletCooldownProgressPercent = Math.max(
+                        0,
+                        Math.min(
+                          100,
+                          (sellerEscrowWalletCooldownRemainingMs / BALANCE_CHECK_COOLDOWN_MS) * 100,
+                        ),
+                      );
 
                       return (
                       <tr key={order.id || order.tradeId} className="bg-white text-sm text-slate-700">
@@ -1007,6 +1220,64 @@ export default function P2PAgentSalesManagementPage() {
                             ) : (
                               <span className="mt-0.5 truncate text-xs font-semibold text-slate-900">-</span>
                             )}
+
+                            {escrowWalletAddress ? (
+                              <div className="mt-2 flex flex-col gap-1 border-t border-slate-100 pt-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void copyWalletAddress(escrowWalletAddress);
+                                  }}
+                                  className="inline-flex w-fit items-center gap-1 truncate text-[11px] font-semibold text-slate-700 underline decoration-slate-300 underline-offset-2 hover:text-cyan-700 hover:decoration-cyan-300"
+                                  title={escrowWalletAddress}
+                                >
+                                  {shortWallet(escrowWalletAddress)}
+                                  {copiedWalletAddress === escrowWalletAddress && (
+                                    <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                                  )}
+                                </button>
+
+                                {escrowWalletCooldownRemainingMs <= 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      void handleCheckEscrowWalletBalance(escrowWalletAddress);
+                                    }}
+                                    disabled={Boolean(escrowWalletBalanceState?.loading)}
+                                    className={`inline-flex h-6 w-fit items-center justify-center rounded-md border px-2 text-[10px] font-semibold transition ${
+                                      escrowWalletBalanceState?.loading
+                                        ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                                        : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50'
+                                    }`}
+                                  >
+                                    {escrowWalletBalanceState?.loading ? '조회중...' : '잔고확인'}
+                                  </button>
+                                ) : (
+                                  <div className="flex w-[84px] flex-col gap-1">
+                                    <span className="text-[10px] font-semibold text-amber-700">
+                                      <span>{escrowWalletCooldownRemainingSeconds}s</span>
+                                    </span>
+                                    <span className="h-1.5 overflow-hidden rounded-full bg-amber-100">
+                                      <span
+                                        className="block h-full rounded-full bg-amber-500 transition-all duration-200"
+                                        style={{ width: `${escrowWalletCooldownProgressPercent.toFixed(2)}%` }}
+                                      />
+                                    </span>
+                                  </div>
+                                )}
+                                <span className={`text-[10px] ${
+                                  escrowWalletBalanceState?.error ? 'text-rose-600' : 'text-slate-600'
+                                }`}>
+                                  {escrowWalletBalanceState?.error
+                                    ? escrowWalletBalanceState.error
+                                    : escrowWalletBalanceState?.displayValue
+                                    ? `${escrowWalletBalanceState.displayValue} USDT`
+                                    : '잔고 미조회'}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="mt-1 text-[10px] text-slate-400">에스크로 지갑 미확인</span>
+                            )}
                           </div>
                         </td>
                         <td className="px-3 py-3">
@@ -1017,9 +1288,64 @@ export default function P2PAgentSalesManagementPage() {
                             <span className="truncate font-medium text-slate-900">
                               {order.buyerNickname || '-'}
                             </span>
-                            <span className="truncate text-xs text-slate-500">
-                              {shortWallet(order.buyerWalletAddress || order.walletAddress)}
-                            </span>
+                            {buyerWalletAddress ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void copyWalletAddress(buyerWalletAddress);
+                                }}
+                                className="mt-0.5 inline-flex w-fit items-center gap-1 truncate text-xs text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-cyan-700 hover:decoration-cyan-300"
+                                title={buyerWalletAddress}
+                              >
+                                {shortWallet(buyerWalletAddress)}
+                                {copiedWalletAddress === buyerWalletAddress && (
+                                  <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                                )}
+                              </button>
+                            ) : (
+                              <span className="truncate text-xs text-slate-500">-</span>
+                            )}
+                            {buyerWalletAddress ? (
+                              <div className="mt-1 flex flex-col gap-1">
+                                {buyerWalletCooldownRemainingMs <= 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      void handleCheckEscrowWalletBalance(buyerWalletAddress);
+                                    }}
+                                    disabled={Boolean(buyerWalletBalanceState?.loading)}
+                                    className={`inline-flex h-6 w-fit items-center justify-center rounded-md border px-2 text-[10px] font-semibold transition ${
+                                      buyerWalletBalanceState?.loading
+                                        ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                                        : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50'
+                                    }`}
+                                  >
+                                    {buyerWalletBalanceState?.loading ? '조회중...' : '잔고확인'}
+                                  </button>
+                                ) : (
+                                  <div className="flex w-[84px] flex-col gap-1">
+                                    <span className="text-[10px] font-semibold text-amber-700">
+                                      <span>{buyerWalletCooldownRemainingSeconds}s</span>
+                                    </span>
+                                    <span className="h-1.5 overflow-hidden rounded-full bg-amber-100">
+                                      <span
+                                        className="block h-full rounded-full bg-amber-500 transition-all duration-200"
+                                        style={{ width: `${buyerWalletCooldownProgressPercent.toFixed(2)}%` }}
+                                      />
+                                    </span>
+                                  </div>
+                                )}
+                                <span className={`text-[10px] ${
+                                  buyerWalletBalanceState?.error ? 'text-rose-600' : 'text-slate-600'
+                                }`}>
+                                  {buyerWalletBalanceState?.error
+                                    ? buyerWalletBalanceState.error
+                                    : buyerWalletBalanceState?.displayValue
+                                    ? `${buyerWalletBalanceState.displayValue} USDT`
+                                    : '잔고 미조회'}
+                                </span>
+                              </div>
+                            ) : null}
                             <span className="break-all text-[11px] leading-tight text-slate-500">
                               IP {getBuyerIp(order)}
                             </span>
@@ -1029,7 +1355,64 @@ export default function P2PAgentSalesManagementPage() {
                           <div className="flex flex-col gap-2">
                             <div className="flex flex-col">
                               <span className="truncate text-base font-extrabold leading-tight text-slate-900">{order.sellerNickname || '-'}</span>
-                              <span className="truncate text-xs text-slate-500">{shortWallet(order.sellerWalletAddress)}</span>
+                              {sellerEscrowWalletAddress ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void copyWalletAddress(sellerEscrowWalletAddress);
+                                  }}
+                                  className="mt-0.5 inline-flex w-fit items-center gap-1 truncate text-xs text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-cyan-700 hover:decoration-cyan-300"
+                                  title={sellerEscrowWalletAddress}
+                                >
+                                  {shortWallet(sellerEscrowWalletAddress)}
+                                  {copiedWalletAddress === sellerEscrowWalletAddress && (
+                                    <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                                  )}
+                                </button>
+                              ) : (
+                                <span className="truncate text-xs text-slate-400">에스크로 지갑 미확인</span>
+                              )}
+                              {sellerEscrowWalletAddress ? (
+                                <div className="mt-1 flex flex-col gap-1">
+                                  {sellerEscrowWalletCooldownRemainingMs <= 0 ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        void handleCheckEscrowWalletBalance(sellerEscrowWalletAddress);
+                                      }}
+                                      disabled={Boolean(sellerEscrowWalletBalanceState?.loading)}
+                                      className={`inline-flex h-6 w-fit items-center justify-center rounded-md border px-2 text-[10px] font-semibold transition ${
+                                        sellerEscrowWalletBalanceState?.loading
+                                          ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                                          : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50'
+                                      }`}
+                                    >
+                                      {sellerEscrowWalletBalanceState?.loading ? '조회중...' : '잔고확인'}
+                                    </button>
+                                  ) : (
+                                    <div className="flex w-[84px] flex-col gap-1">
+                                      <span className="text-[10px] font-semibold text-amber-700">
+                                        <span>{sellerEscrowWalletCooldownRemainingSeconds}s</span>
+                                      </span>
+                                      <span className="h-1.5 overflow-hidden rounded-full bg-amber-100">
+                                        <span
+                                          className="block h-full rounded-full bg-amber-500 transition-all duration-200"
+                                          style={{ width: `${sellerEscrowWalletCooldownProgressPercent.toFixed(2)}%` }}
+                                        />
+                                      </span>
+                                    </div>
+                                  )}
+                                  <span className={`text-[10px] ${
+                                    sellerEscrowWalletBalanceState?.error ? 'text-rose-600' : 'text-slate-600'
+                                  }`}>
+                                    {sellerEscrowWalletBalanceState?.error
+                                      ? sellerEscrowWalletBalanceState.error
+                                      : sellerEscrowWalletBalanceState?.displayValue
+                                      ? `${sellerEscrowWalletBalanceState.displayValue} USDT`
+                                      : '잔고 미조회'}
+                                  </span>
+                                </div>
+                              ) : null}
                             </div>
                             <div className="flex flex-col gap-1 border-t border-slate-100 pt-2">
                               <span className="inline-flex w-fit whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">

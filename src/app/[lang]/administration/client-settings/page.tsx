@@ -1,6 +1,6 @@
 // nickname settings
 'use client';
-import React, { use, useEffect, useState } from 'react';
+import React, { use, useCallback, useEffect, useState } from 'react';
 
 
 
@@ -94,6 +94,54 @@ const resolveChain = (value?: string): NetworkKey => {
         return value;
     }
     return "polygon";
+};
+
+type ClientCreditWallet = {
+    signerAddress: string;
+    smartAccountAddress: string;
+};
+
+const CLIENT_CREDIT_WALLET_BALANCE_POLLING_MS = 15000;
+
+const isWalletAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(String(value || "").trim());
+
+const normalizeClientCreditWallet = (value: any): ClientCreditWallet => {
+    const source = typeof value === "object" && value !== null ? value : {};
+    const creditWallet = typeof source.creditWallet === "object" && source.creditWallet !== null
+        ? source.creditWallet
+        : {};
+    const signerAddress = String(creditWallet.signerAddress || source.signerAddress || "").trim();
+    const smartAccountAddress = String(creditWallet.smartAccountAddress || source.smartAccountAddress || "").trim();
+
+    return {
+        signerAddress: isWalletAddress(signerAddress) ? signerAddress : "",
+        smartAccountAddress: isWalletAddress(smartAccountAddress) ? smartAccountAddress : "",
+    };
+};
+
+const resolveClientCreditWalletAddress = (wallet: ClientCreditWallet) => {
+    const smartAccountAddress = String(wallet.smartAccountAddress || "").trim();
+    if (isWalletAddress(smartAccountAddress)) {
+        return smartAccountAddress;
+    }
+
+    const signerAddress = String(wallet.signerAddress || "").trim();
+    if (isWalletAddress(signerAddress)) {
+        return signerAddress;
+    }
+
+    return "";
+};
+
+const formatUsdt = (value: string) => {
+    const numeric = Number(value || 0);
+    if (!Number.isFinite(numeric)) {
+        return "0";
+    }
+    return new Intl.NumberFormat("ko-KR", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 6,
+    }).format(numeric);
 };
 
 
@@ -693,6 +741,17 @@ export default function SettingsPage({ params }: any) {
     const [clientDescription, setClientDescription] = useState("");
     const [clientLogo, setClientLogo] = useState("");
     const [clientCopyright, setClientCopyright] = useState("");
+    const [clientCreditWallet, setClientCreditWallet] = useState<ClientCreditWallet>({
+        signerAddress: "",
+        smartAccountAddress: "",
+    });
+    const [clientCreditWalletRawBalance, setClientCreditWalletRawBalance] = useState("0");
+    const [clientCreditWalletBalance, setClientCreditWalletBalance] = useState("0");
+    const [loadingClientCreditWalletBalance, setLoadingClientCreditWalletBalance] = useState(false);
+    const [creatingClientCreditWallet, setCreatingClientCreditWallet] = useState(false);
+    const [recoveringClientCreditWallet, setRecoveringClientCreditWallet] = useState(false);
+    const [lastClientCreditWalletBalanceUpdatedAt, setLastClientCreditWalletBalanceUpdatedAt] = useState("");
+    const [copiedClientCreditWalletAddress, setCopiedClientCreditWalletAddress] = useState("");
     const [smartAccountEnabled, setSmartAccountEnabled] = useState(false);
     const [uploadingCenterLogo, setUploadingCenterLogo] = useState(false);
 
@@ -744,6 +803,7 @@ export default function SettingsPage({ params }: any) {
                 setClientDescription(data.result.clientInfo?.description || "");
                 setClientLogo(data.result.clientInfo?.logo || "");
                 setClientCopyright(data.result.clientInfo?.copyright || "");
+                setClientCreditWallet(normalizeClientCreditWallet(data.result.clientInfo));
                 setSmartAccountEnabled(Boolean(data.result.clientInfo?.smartAccountEnabled));
 
                 setExchangeRateUSDT(data.result.clientInfo?.exchangeRateUSDT || {
@@ -752,6 +812,12 @@ export default function SettingsPage({ params }: any) {
                     JPY: 0,
                     CNY: 0,
                     EUR: 0,
+                });
+            }
+            else {
+                setClientCreditWallet({
+                    signerAddress: "",
+                    smartAccountAddress: "",
                 });
             }
 
@@ -768,6 +834,11 @@ export default function SettingsPage({ params }: any) {
     const [savingExchangeRateUSDT, setSavingExchangeRateUSDT] = useState(false);
     const [updatingNetwork, setUpdatingNetwork] = useState(false);
     const [updatingSmartAccount, setUpdatingSmartAccount] = useState(false);
+    const resolvedClientCreditWalletAddress = resolveClientCreditWalletAddress(clientCreditWallet);
+    const hasClientCreditWallet = isWalletAddress(resolvedClientCreditWalletAddress);
+    const clientCreditWalletDisplayAddress = String(
+        clientCreditWallet.smartAccountAddress || resolvedClientCreditWalletAddress || ""
+    ).trim();
     const isCenterBasicInfoUnchanged =
         (clientName ?? "") === (clientInfo?.name ?? "") &&
         (clientDescription ?? "") === (clientInfo?.description ?? "") &&
@@ -998,6 +1069,219 @@ export default function SettingsPage({ params }: any) {
             setSavingExchangeRateUSDT(false);
         }
     };
+
+    const loadClientCreditWalletBalance = useCallback(async (walletAddressInput?: string, silent = false) => {
+        const fallbackWalletAddress = resolveClientCreditWalletAddress(clientCreditWallet);
+        const walletAddress = isWalletAddress(String(walletAddressInput || "").trim())
+            ? String(walletAddressInput || "").trim()
+            : fallbackWalletAddress;
+
+        if (!walletAddress) {
+            setClientCreditWalletRawBalance("0");
+            setClientCreditWalletBalance("0");
+            setLastClientCreditWalletBalanceUpdatedAt("");
+            return;
+        }
+
+        if (!silent) {
+            setLoadingClientCreditWalletBalance(true);
+        }
+
+        try {
+            const response = await fetch("/api/client/getCreditWalletBalance", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    walletAddress,
+                }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data?.result) {
+                throw new Error(String(data?.error || "센터 수수료 수납지갑 잔고를 불러오지 못했습니다."));
+            }
+
+            setClientCreditWalletRawBalance(String(data.result.rawValue || "0"));
+            setClientCreditWalletBalance(String(data.result.displayValue || "0"));
+            setLastClientCreditWalletBalanceUpdatedAt(String(data.result.updatedAt || new Date().toISOString()));
+        } catch (error) {
+            if (!silent) {
+                toast.error(error instanceof Error ? error.message : "센터 수수료 수납지갑 잔고를 불러오지 못했습니다.");
+            }
+        } finally {
+            if (!silent) {
+                setLoadingClientCreditWalletBalance(false);
+            }
+        }
+    }, [clientCreditWallet]);
+
+    const createClientCreditWallet = async () => {
+        if (creatingClientCreditWallet) {
+            return;
+        }
+
+        setCreatingClientCreditWallet(true);
+
+        try {
+            const response = await fetch("/api/client/createCreditWalletAddress", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data?.result?.creditWallet) {
+                throw new Error(String(data?.error || "센터 수수료 수납지갑 생성에 실패했습니다."));
+            }
+
+            const nextCreditWallet = normalizeClientCreditWallet({
+                creditWallet: data.result.creditWallet,
+            });
+            const nextWalletAddress = resolveClientCreditWalletAddress(nextCreditWallet);
+
+            setClientCreditWallet(nextCreditWallet);
+            setClientInfo((prev: any) => ({
+                ...(prev || {}),
+                creditWallet: nextCreditWallet,
+            }));
+            notifySettingsUpdated();
+
+            toast.success(data.result.created ? "센터 수수료 수납지갑이 생성되었습니다." : "센터 수수료 수납지갑이 이미 설정되어 있습니다.");
+            if (nextWalletAddress) {
+                await loadClientCreditWalletBalance(nextWalletAddress);
+            }
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "센터 수수료 수납지갑 생성에 실패했습니다.");
+        } finally {
+            setCreatingClientCreditWallet(false);
+        }
+    };
+
+    const recoverClientCreditWalletBalance = async () => {
+        if (recoveringClientCreditWallet) {
+            return;
+        }
+
+        const connectedWalletAddress = String(address || "").trim();
+        if (!isWalletAddress(connectedWalletAddress)) {
+            toast.error("전체 회수를 위해 지갑을 먼저 연결해 주세요.");
+            return;
+        }
+
+        const creditWalletAddress = resolveClientCreditWalletAddress(clientCreditWallet);
+        if (!isWalletAddress(creditWalletAddress)) {
+            toast.error("센터 수수료 수납지갑이 설정되지 않았습니다.");
+            return;
+        }
+
+        const currentBalance = Number(clientCreditWalletBalance || 0);
+        if (!Number.isFinite(currentBalance) || currentBalance <= 0) {
+            toast.error("회수할 수수료 수납지갑 잔고가 없습니다.");
+            return;
+        }
+
+        if (!window.confirm(`센터 수수료 수납지갑 잔고 ${formatUsdt(clientCreditWalletBalance)} USDT를 연결된 내 지갑으로 전체 회수할까요?`)) {
+            return;
+        }
+
+        setRecoveringClientCreditWallet(true);
+
+        try {
+            const response = await fetch("/api/client/clearCreditWalletBalance", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    requesterWalletAddress: connectedWalletAddress,
+                }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data?.result) {
+                throw new Error(String(data?.error || data?.detail || "전체 회수 요청에 실패했습니다."));
+            }
+
+            const transferredAmount = String(data.result.transferredAmount || "0");
+            const transactionId = String(data.result.transactionId || "").trim();
+            const status = String(data.result.status || "").trim();
+
+            toast.success(
+                transactionId
+                    ? `전체 회수 요청 완료: ${transferredAmount} USDT (txId: ${transactionId}${status ? ` · ${status}` : ""})`
+                    : `전체 회수 요청 완료: ${transferredAmount} USDT`
+            );
+
+            await loadClientCreditWalletBalance(creditWalletAddress);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "전체 회수 요청에 실패했습니다.");
+        } finally {
+            setRecoveringClientCreditWallet(false);
+        }
+    };
+
+    const copyClientCreditWalletAddress = async () => {
+        const walletAddress = String(clientCreditWalletDisplayAddress || "").trim();
+        if (!isWalletAddress(walletAddress)) {
+            return;
+        }
+
+        try {
+            if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(walletAddress);
+            } else if (typeof document !== "undefined") {
+                const textArea = document.createElement("textarea");
+                textArea.value = walletAddress;
+                textArea.style.position = "fixed";
+                textArea.style.opacity = "0";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand("copy");
+                document.body.removeChild(textArea);
+            }
+
+            setCopiedClientCreditWalletAddress(walletAddress);
+            window.setTimeout(() => {
+                setCopiedClientCreditWalletAddress((current) => (current === walletAddress ? "" : current));
+            }, 1600);
+        } catch {
+            toast.error("지갑주소 복사에 실패했습니다.");
+        }
+    };
+
+    useEffect(() => {
+        const walletAddress = resolveClientCreditWalletAddress(clientCreditWallet);
+
+        if (!walletAddress) {
+            setClientCreditWalletRawBalance("0");
+            setClientCreditWalletBalance("0");
+            setLastClientCreditWalletBalanceUpdatedAt("");
+            return;
+        }
+
+        let active = true;
+
+        const run = async () => {
+            if (!active) {
+                return;
+            }
+            await loadClientCreditWalletBalance(walletAddress, true);
+        };
+
+        void run();
+        const intervalId = window.setInterval(() => {
+            void run();
+        }, CLIENT_CREDIT_WALLET_BALANCE_POLLING_MS);
+
+        return () => {
+            active = false;
+            window.clearInterval(intervalId);
+        };
+    }, [clientCreditWallet, loadClientCreditWalletBalance]);
 
 
 
@@ -1282,6 +1566,106 @@ export default function SettingsPage({ params }: any) {
                                     >
                                         {savingCenterBasicInfo ? '저장 중...' : isCenterBasicInfoUnchanged ? '변경사항 없음' : '저장하기'}
                                     </button>
+                                </div>
+                            </section>
+
+                            <section className="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.5)]">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold text-slate-900">
+                                        센터 수수료 수납지갑
+                                    </h3>
+                                    <span className="text-xs font-semibold text-slate-400">
+                                        Credit Wallet
+                                    </span>
+                                </div>
+                                <p className="mt-2 text-xs text-slate-500">
+                                    P2P 거래에서 발생한 플랫폼 수수료를 수납하기 위한 센터 전용 지갑입니다. 생성 시 `creditWallet` 형태로 `signerAddress`, `smartAccountAddress`가 저장됩니다.
+                                </p>
+
+                                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                            지갑주소 (smartAccountAddress)
+                                        </span>
+                                        {hasClientCreditWallet ? (
+                                            <button
+                                                type="button"
+                                                onClick={copyClientCreditWalletAddress}
+                                                className="w-full truncate rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
+                                                title={clientCreditWalletDisplayAddress}
+                                            >
+                                                {clientCreditWalletDisplayAddress}
+                                            </button>
+                                        ) : (
+                                            <span className="rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm text-slate-500">
+                                                아직 생성되지 않았습니다.
+                                            </span>
+                                        )}
+                                        {copiedClientCreditWalletAddress && copiedClientCreditWalletAddress === clientCreditWalletDisplayAddress && (
+                                            <span className="text-xs font-semibold text-emerald-600">지갑주소가 복사되었습니다.</span>
+                                        )}
+                                    </div>
+
+                                    <div className="flex flex-wrap items-end justify-between gap-3">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                                USDT 잔고
+                                            </span>
+                                            <span className="text-xl font-bold text-emerald-700">
+                                                {formatUsdt(clientCreditWalletBalance)} USDT
+                                            </span>
+                                            <span className="text-[11px] text-slate-500">
+                                                Raw: {clientCreditWalletRawBalance || "0"}
+                                            </span>
+                                            <span className="text-[11px] text-slate-500">
+                                                마지막 갱신: {lastClientCreditWalletBalanceUpdatedAt ? new Date(lastClientCreditWalletBalanceUpdatedAt).toLocaleString("ko-KR") : "-"}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            {hasClientCreditWallet ? (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        disabled={loadingClientCreditWalletBalance}
+                                                        onClick={() => loadClientCreditWalletBalance(undefined, false)}
+                                                        className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                                                            loadingClientCreditWalletBalance
+                                                                ? "cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400"
+                                                                : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                                                        }`}
+                                                    >
+                                                        {loadingClientCreditWalletBalance ? "확인 중..." : "잔고 확인"}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        disabled={recoveringClientCreditWallet || !isWalletAddress(String(address || "").trim())}
+                                                        onClick={recoverClientCreditWalletBalance}
+                                                        className={`rounded-xl px-3 py-2 text-sm font-semibold text-white transition ${
+                                                            recoveringClientCreditWallet || !isWalletAddress(String(address || "").trim())
+                                                                ? "cursor-not-allowed bg-slate-300 text-slate-100"
+                                                                : "bg-rose-600 hover:bg-rose-500"
+                                                        }`}
+                                                    >
+                                                        {recoveringClientCreditWallet ? "회수 요청 중..." : "전체 회수하기"}
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    disabled={creatingClientCreditWallet}
+                                                    onClick={createClientCreditWallet}
+                                                    className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${
+                                                        creatingClientCreditWallet
+                                                            ? "cursor-not-allowed bg-slate-300 text-slate-100"
+                                                            : "bg-emerald-600 hover:bg-emerald-500"
+                                                    }`}
+                                                >
+                                                    {creatingClientCreditWallet ? "생성 중..." : "생성하기"}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </section>
 
