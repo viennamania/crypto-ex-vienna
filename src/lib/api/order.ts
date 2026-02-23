@@ -13,6 +13,11 @@ import {
   bscContractAddressUSDT,
 } from '@/app/config/contractAddresses';
 import { normalizeIpAddress } from '@/lib/ip-address';
+import {
+  AGENT_PLATFORM_FEE_TYPE,
+  AGENT_PLATFORM_FEE_VERSION,
+  buildAgentPlatformFeeReceivableFromOrder,
+} from '@/lib/agentPlatformFeeCollection';
 
 
 // object id
@@ -390,6 +395,48 @@ const resolveAgentPlatformFeeConfig = (
   fromAddress: resolveCreditWalletSmartAccountAddress(agent),
   toAddress: resolveCreditWalletSmartAccountAddress(clientInfo),
 });
+
+const upsertAgentPlatformFeeReceivableForOrder = async (
+  {
+    mongoClient,
+    orderId,
+    orderLike,
+  }: {
+    mongoClient: any;
+    orderId: string;
+    orderLike: Record<string, unknown>;
+  },
+) => {
+  const normalizedOrderId = String(orderId || '').trim();
+  if (!normalizedOrderId || !orderLike) return;
+
+  const nowIso = new Date().toISOString();
+  const { doc } = buildAgentPlatformFeeReceivableFromOrder({
+    order: orderLike,
+    orderId: normalizedOrderId,
+    nowIso,
+  });
+  if (!doc) return;
+
+  const collection = mongoClient.db(dbName).collection('platformFeeReceivables');
+  await collection.updateOne(
+    {
+      orderId: normalizedOrderId,
+      feeType: AGENT_PLATFORM_FEE_TYPE,
+      feeVersion: AGENT_PLATFORM_FEE_VERSION,
+    },
+    {
+      $set: {
+        ...doc,
+        updatedAt: nowIso,
+      },
+      $setOnInsert: {
+        createdAt: doc.createdAt || nowIso,
+      },
+    },
+    { upsert: true },
+  );
+};
 
 const getClientInfoByClientId = async (
   {
@@ -2410,11 +2457,20 @@ export async function insertBuyOrder(data: any) {
       } }
     );
 
-
-
-    const updated = await collection.findOne<UserProps>(
-      { _id: result.insertedId }
-    );
+    try {
+      const insertedOrder = await collection.findOne<Record<string, unknown>>(
+        { _id: result.insertedId },
+      );
+      if (insertedOrder) {
+        await upsertAgentPlatformFeeReceivableForOrder({
+          mongoClient: client,
+          orderId: String(result.insertedId),
+          orderLike: insertedOrder,
+        });
+      }
+    } catch (error) {
+      console.error('insertBuyOrder: failed to upsert agent platform fee receivable', error);
+    }
 
     return {
 
@@ -2621,11 +2677,20 @@ export async function insertBuyOrderForClearance(data: any) {
       { $set: { buyOrderStatus: 'ordered' } }
     );
 
-
-
-    const updated = await collection.findOne<UserProps>(
-      { _id: result.insertedId }
-    );
+    try {
+      const insertedOrder = await collection.findOne<Record<string, unknown>>(
+        { _id: result.insertedId },
+      );
+      if (insertedOrder) {
+        await upsertAgentPlatformFeeReceivableForOrder({
+          mongoClient: client,
+          orderId: String(result.insertedId),
+          orderLike: insertedOrder,
+        });
+      }
+    } catch (error) {
+      console.error('insertBuyOrderForClearance: failed to upsert agent platform fee receivable', error);
+    }
 
     return {
 
@@ -2814,6 +2879,21 @@ export async function insertBuyOrderForUser(data: any) {
 
 
   if (result) {
+
+    try {
+      const insertedOrder = await collection.findOne<Record<string, unknown>>(
+        { _id: result.insertedId },
+      );
+      if (insertedOrder) {
+        await upsertAgentPlatformFeeReceivableForOrder({
+          mongoClient: client,
+          orderId: String(result.insertedId),
+          orderLike: insertedOrder,
+        });
+      }
+    } catch (error) {
+      console.error('insertBuyOrderForUser: failed to upsert agent platform fee receivable', error);
+    }
 
 
     return {
@@ -11383,6 +11463,18 @@ export async function acceptBuyOrderPrivateSale(
       const buyOrder = await collection.findOne<any>(
         { _id: result.insertedId },
       );
+
+      try {
+        if (buyOrder) {
+          await upsertAgentPlatformFeeReceivableForOrder({
+            mongoClient: client,
+            orderId: String(result.insertedId),
+            orderLike: buyOrder,
+          });
+        }
+      } catch (error) {
+        console.error('acceptBuyOrderPrivateSale: failed to upsert agent platform fee receivable', error);
+      }
 
       // seller buyOrder update
       await usersCollection.updateOne(

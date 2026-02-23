@@ -1499,8 +1499,12 @@ export default function BuyOrderManagementPage() {
                     const agentPlatformFeeFromAddress = getOrderAgentPlatformFeeFromAddress(order);
                     const agentPlatformFeeToAddress = getOrderAgentPlatformFeeToAddress(order);
                     const agentPlatformFeeTransactionHash = getOrderAgentPlatformFeeTransactionHash(order);
+                    const isCompletedLikeOrderStatus =
+                      orderStatus === 'paymentConfirmed' || orderStatus === 'completed';
                     const isAgentPlatformFeeUncollected =
-                      agentPlatformFeeRate > 0 && !agentPlatformFeeTransactionHash;
+                      isCompletedLikeOrderStatus
+                      && agentPlatformFeeRate > 0
+                      && !agentPlatformFeeTransactionHash;
                     const hasAgentPlatformFeeInfo =
                       agentPlatformFeeRate > 0
                       || Boolean(agentPlatformFeeFromAddress)

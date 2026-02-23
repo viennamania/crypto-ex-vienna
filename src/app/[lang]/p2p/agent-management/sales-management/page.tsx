@@ -1122,8 +1122,12 @@ export default function P2PAgentSalesManagementPage() {
                       const agentPlatformFeeFromAddress = String(order.agentPlatformFeeFromAddress || '').trim();
                       const agentPlatformFeeToAddress = String(order.agentPlatformFeeToAddress || '').trim();
                       const agentPlatformFeeTransactionHash = String(order.agentPlatformFeeTransactionHash || '').trim();
+                      const isCompletedLikeOrderStatus =
+                        orderStatus === 'paymentconfirmed' || orderStatus === 'completed';
                       const isAgentPlatformFeeUncollected =
-                        agentPlatformFeeRate > 0 && !agentPlatformFeeTransactionHash;
+                        isCompletedLikeOrderStatus
+                        && agentPlatformFeeRate > 0
+                        && !agentPlatformFeeTransactionHash;
                       const hasAgentPlatformFeeInfo =
                         agentPlatformFeeRate > 0
                         || Boolean(agentPlatformFeeFromAddress)
