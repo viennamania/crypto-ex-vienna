@@ -6197,51 +6197,6 @@ const fetchBuyOrders = async () => {
         </div>
       )}
 
-      {!address && (
-        <div className="relative z-10 mx-auto mb-5 w-full max-w-5xl rounded-3xl border border-slate-200/90 bg-white/90 px-4 py-4 text-slate-800 shadow-[0_24px_64px_-42px_rgba(15,23,42,0.45)] backdrop-blur-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold tracking-[0.12em] text-white">
-                Web3
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-slate-900">웹3 지갑으로 로그인해 주세요</span>
-                <span className="text-xs text-slate-500/90">
-                  판매자 상세와 거래 기능을 사용하려면 지갑 연결이 필요합니다.
-                </span>
-              </div>
-            </div>
-            <div className="w-full sm:w-auto">
-              <ConnectButton
-                client={client}
-                wallets={wallets.length ? wallets : wallet ? [wallet] : []}
-                theme="light"
-                connectButton={{
-                  label: '웹3 로그인',
-                  style: {
-                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                    color: '#ffffff',
-                    border: '1px solid rgba(15,23,42,0.25)',
-                    width: '100%',
-                    minWidth: '160px',
-                    height: '44px',
-                    borderRadius: '9999px',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                    boxShadow: '0 14px 34px -20px rgba(15,23,42,0.8)',
-                  },
-                }}
-                connectModal={{
-                  size: 'wide',
-                  showThirdwebBranding: false,
-                }}
-                locale="ko_KR"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
       {showPromotionBanner && bannerAds.length > 0 && (
         <>
           <aside className="pointer-events-auto hidden xl:flex fixed left-6 top-28 z-20 flex-col gap-4">
@@ -6288,6 +6243,60 @@ const fetchBuyOrders = async () => {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">판매자 상세</h1>
           <p className="text-sm text-slate-500">판매자 정보와 에스크로 진행 상태를 확인합니다.</p>
         </header>
+
+        {!address && (
+          <section
+            id="seller-escrow-wallet-connect"
+            className="mb-7 flex min-h-[34vh] items-center justify-center"
+          >
+            <div className="w-full max-w-2xl rounded-[28px] border border-sky-200/80 bg-gradient-to-br from-white via-sky-50/80 to-blue-50/90 px-5 py-7 shadow-[0_30px_70px_-44px_rgba(2,132,199,0.55)] sm:px-8">
+              <div className="mx-auto flex max-w-xl flex-col items-center text-center">
+                <span className="inline-flex items-center rounded-full border border-sky-200 bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-sky-700">
+                  Secure Web3 Login
+                </span>
+                <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                  지갑 연결 후 거래를 시작하세요
+                </h2>
+                <p className="mt-2 text-sm text-slate-600 sm:text-base">
+                  판매자 상세 조회, 구매 신청, 실시간 주문 진행 상태 확인은 지갑 연결 후 사용할 수 있습니다.
+                </p>
+                <div className="mt-4 grid w-full grid-cols-3 gap-2 text-xs font-semibold text-slate-600">
+                  <span className="rounded-full border border-slate-200 bg-white px-2 py-1">이메일</span>
+                  <span className="rounded-full border border-slate-200 bg-white px-2 py-1">Google</span>
+                  <span className="rounded-full border border-slate-200 bg-white px-2 py-1">전화번호</span>
+                </div>
+                <div className="mt-6 w-full sm:w-auto">
+                  <ConnectButton
+                    client={client}
+                    wallets={wallets.length ? wallets : wallet ? [wallet] : []}
+                    theme="light"
+                    connectButton={{
+                      label: '지갑 연결하고 거래 시작',
+                      style: {
+                        background: 'linear-gradient(135deg, #0f172a 0%, #0369a1 55%, #0284c7 100%)',
+                        color: '#ffffff',
+                        border: '1px solid rgba(2,132,199,0.35)',
+                        width: '100%',
+                        minWidth: '280px',
+                        height: '52px',
+                        borderRadius: '9999px',
+                        fontWeight: 800,
+                        fontSize: '15px',
+                        letterSpacing: '0.01em',
+                        boxShadow: '0 20px 45px -24px rgba(2,132,199,0.7)',
+                      },
+                    }}
+                    connectModal={{
+                      size: 'wide',
+                      showThirdwebBranding: false,
+                    }}
+                    locale="ko_KR"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {address && (
           <section className="mb-6 rounded-2xl border border-sky-200/80 bg-sky-50/80 px-4 py-3 shadow-[0_18px_45px_-36px_rgba(14,116,144,0.65)]">
@@ -6423,7 +6432,7 @@ const fetchBuyOrders = async () => {
         <div className="mb-2 flex w-full items-center justify-between gap-2">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => router.push(`/${params.lang}/p2p`)}
             className="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200"
           >
             <svg
@@ -6441,7 +6450,7 @@ const fetchBuyOrders = async () => {
                 strokeLinejoin="round"
               />
             </svg>
-            돌아가기
+            홈으로 가기
           </button>
         </div>
 
@@ -9424,7 +9433,7 @@ const fetchBuyOrders = async () => {
                               {/* 로그인을 해야 구매할 수 있습니다. */}
                               {!address && (
                                 <div className="w-full flex flex-col items-center justify-center mt-4">
-                                  <div className="w-full max-w-md mx-auto p-6 text-center border border-sky-200 rounded-2xl bg-sky-50/75">
+                                  <div className="w-full max-w-md mx-auto p-5 text-center border border-sky-200 rounded-2xl bg-sky-50/75">
                                     <div className="flex flex-col items-center gap-3">
                                       <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
                                         OrangeX
@@ -9444,14 +9453,21 @@ const fetchBuyOrders = async () => {
                                       지갑 연결이 필요합니다
                                     </h2>
                                     <p className="mt-2 text-sm text-slate-600">
-                                      상단의 웹3 로그인 버튼에서 지갑을 연결해 주세요.
+                                      아래 버튼으로 이동해서 중앙 지갑 연결 CTA를 눌러주세요.
                                     </p>
                                     <button
                                       type="button"
                                       className="mt-5 inline-flex items-center justify-center rounded-full border border-sky-300 bg-white px-5 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100"
-                                      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                                      onClick={() => {
+                                        const connectSection = document.getElementById('seller-escrow-wallet-connect');
+                                        if (connectSection) {
+                                          connectSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                          return;
+                                        }
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                      }}
                                     >
-                                      상단 로그인 영역으로 이동
+                                      중앙 지갑 연결 영역으로 이동
                                     </button>
                                   </div>
                                 </div>
