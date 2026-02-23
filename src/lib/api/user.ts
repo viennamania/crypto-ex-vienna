@@ -137,6 +137,18 @@ const mergeSellerWithDefaultAgentcode = (
   };
 };
 
+const isWalletAddress = (value: unknown) => /^0x[a-fA-F0-9]{40}$/.test(String(value || '').trim());
+
+const pickWalletAddress = (...candidates: unknown[]) => {
+  for (const candidate of candidates) {
+    const normalized = String(candidate || '').trim();
+    if (isWalletAddress(normalized)) {
+      return normalized;
+    }
+  }
+  return '';
+};
+
 
 
 
@@ -3382,14 +3394,34 @@ export async function updateUserForSeller(
     storecode,
     walletAddress,
     escrowWalletAddress,
+    escrowWalletSignerAddress,
+    escrowWalletSmartAccountAddress,
   }: {
     storecode: string;
     walletAddress: string;
     escrowWalletAddress: string;
+    escrowWalletSignerAddress?: string;
+    escrowWalletSmartAccountAddress?: string;
   }
 ) {
 
-  console.log('updateUserForSeller storecode: ' + storecode + ' walletAddress: ' + walletAddress + ' escrowWalletAddress: ' + escrowWalletAddress);
+  const normalizedEscrowWalletAddressInput = String(escrowWalletAddress || '').trim();
+  const normalizedEscrowWalletSignerAddressInput = String(escrowWalletSignerAddress || '').trim();
+  const normalizedEscrowWalletSmartAccountAddressInput = String(escrowWalletSmartAccountAddress || '').trim();
+
+  console.log(
+    'updateUserForSeller storecode: '
+    + storecode
+    + ' walletAddress: '
+    + walletAddress
+    + ' escrowWalletAddress: '
+    + normalizedEscrowWalletAddressInput
+    + ' escrowWalletSignerAddress: '
+    + normalizedEscrowWalletSignerAddressInput
+    + ' escrowWalletSmartAccountAddress: '
+    + normalizedEscrowWalletSmartAccountAddressInput
+  );
+
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
   const existingUser = await collection.findOne(
@@ -3413,12 +3445,58 @@ export async function updateUserForSeller(
     (existingUser as any)?.store?.agentcode,
     (existingUser as any)?.storeInfo?.agentcode,
   );
+
+  const existingSeller =
+    (existingUser as any)?.seller && typeof (existingUser as any)?.seller === 'object'
+      ? (existingUser as any).seller
+      : {};
+  const existingEscrowWalletAddress = String(existingSeller?.escrowWalletAddress || '').trim();
+  const existingEscrowWalletSignerAddress = String(
+    existingSeller?.escrowWalletSignerAddress
+    || existingSeller?.escrowWallet?.signerAddress
+    || ''
+  ).trim();
+  const existingEscrowWalletSmartAccountAddress = String(
+    existingSeller?.escrowWallet?.smartAccountAddress
+    || existingEscrowWalletAddress
+    || ''
+  ).trim();
+
+  const resolvedEscrowWalletAddress = pickWalletAddress(
+    normalizedEscrowWalletAddressInput,
+    normalizedEscrowWalletSmartAccountAddressInput,
+    existingEscrowWalletAddress,
+    existingEscrowWalletSmartAccountAddress,
+  );
+  const resolvedEscrowWalletSignerAddress = pickWalletAddress(
+    normalizedEscrowWalletSignerAddressInput,
+    existingEscrowWalletSignerAddress,
+  );
+  const resolvedEscrowWalletSmartAccountAddress = pickWalletAddress(
+    normalizedEscrowWalletSmartAccountAddressInput,
+    normalizedEscrowWalletAddressInput,
+    existingEscrowWalletSmartAccountAddress,
+    existingEscrowWalletAddress,
+    resolvedEscrowWalletAddress,
+  );
+
   const seller = mergeSellerWithDefaultAgentcode(
     {
-      ...(existingUser as any)?.seller,
+      ...existingSeller,
       status: 'pending',
       enabled: false,
-      escrowWalletAddress: escrowWalletAddress,
+      escrowWalletAddress: resolvedEscrowWalletAddress || normalizedEscrowWalletAddressInput,
+      escrowWalletSignerAddress: resolvedEscrowWalletSignerAddress,
+      escrowWallet: {
+        ...(existingSeller?.escrowWallet && typeof existingSeller?.escrowWallet === 'object'
+          ? existingSeller.escrowWallet
+          : {}),
+        signerAddress: resolvedEscrowWalletSignerAddress,
+        smartAccountAddress:
+          resolvedEscrowWalletSmartAccountAddress
+          || resolvedEscrowWalletAddress
+          || normalizedEscrowWalletAddressInput,
+      },
     },
     sellerAgentcode,
   );

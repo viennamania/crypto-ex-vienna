@@ -30,6 +30,10 @@ export type AgentPlatformFeeReceivableDoc = {
   expectedFeeAmountUsdt: number;
   collectedFeeAmountUsdt: number;
   fromAddress: string;
+  fromWallet: {
+    signerAddress: string;
+    smartAccountAddress: string;
+  };
   toAddress: string;
   transactionId: string;
   transactionHash: string;
@@ -67,6 +71,10 @@ export type AgentPlatformFeeCollectionAttemptDoc = {
   status: AgentPlatformFeeReceivableStatus;
   previousStatus: AgentPlatformFeeReceivableStatus;
   fromAddress: string;
+  fromWallet?: {
+    signerAddress: string;
+    smartAccountAddress: string;
+  };
   toAddress: string;
   usdtAmount: number;
   feePercent: number;
@@ -259,7 +267,23 @@ export const buildAgentPlatformFeeReceivableFromOrder = (
   }
   const krwAmount = Number((order as any)?.krwAmount || 0);
 
-  const fromAddress = normalizeWalletAddress((order as any)?.agentPlatformFee?.fromAddress);
+  const fromWalletSignerAddress = normalizeWalletAddress(
+    (order as any)?.agentPlatformFee?.fromWallet?.signerAddress,
+  );
+  const fromWalletSmartAccountAddress = normalizeWalletAddress(
+    (order as any)?.agentPlatformFee?.fromWallet?.smartAccountAddress,
+  );
+  const normalizedFromWalletSignerAddress = isWalletAddress(fromWalletSignerAddress)
+    ? fromWalletSignerAddress
+    : '';
+  const normalizedFromWalletSmartAccountAddress = isWalletAddress(fromWalletSmartAccountAddress)
+    ? fromWalletSmartAccountAddress
+    : '';
+  const fromAddress = normalizeWalletAddress(
+    (order as any)?.agentPlatformFee?.fromAddress
+    || normalizedFromWalletSmartAccountAddress
+    || normalizedFromWalletSignerAddress,
+  );
   const toAddress = normalizeWalletAddress((order as any)?.agentPlatformFee?.toAddress);
   const transactionHash = toText((order as any)?.agentPlatformFee?.transactionHash || (order as any)?.agentPlatformFee?.txHash);
   const transactionId = toText((order as any)?.agentPlatformFee?.transactionId);
@@ -299,6 +323,10 @@ export const buildAgentPlatformFeeReceivableFromOrder = (
     expectedFeeAmountUsdt,
     collectedFeeAmountUsdt: collectedAmountUsdt,
     fromAddress,
+    fromWallet: {
+      signerAddress: normalizedFromWalletSignerAddress,
+      smartAccountAddress: normalizedFromWalletSmartAccountAddress || fromAddress,
+    },
     toAddress,
     transactionId,
     transactionHash,

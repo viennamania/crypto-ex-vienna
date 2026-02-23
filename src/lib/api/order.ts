@@ -404,8 +404,23 @@ const toFeeRateOrNull = (value: unknown) => {
 };
 
 const resolveCreditWalletSmartAccountAddress = (source: any): string => {
+  const resolved = resolveCreditWalletSignerAndSmartAccountAddress(source);
+  if (resolved.smartAccountAddress) {
+    return resolved.smartAccountAddress;
+  }
+
+  return '';
+};
+
+const resolveCreditWalletSignerAndSmartAccountAddress = (source: any): {
+  signerAddress: string;
+  smartAccountAddress: string;
+} => {
   if (!source || typeof source !== 'object') {
-    return '';
+    return {
+      signerAddress: '',
+      smartAccountAddress: '',
+    };
   }
 
   const creditWallet =
@@ -413,11 +428,20 @@ const resolveCreditWalletSmartAccountAddress = (source: any): string => {
       ? source.creditWallet
       : {};
 
+  const signerAddress = String(
+    creditWallet?.signerAddress || source?.signerAddress || '',
+  ).trim();
   const smartAccountAddress = String(
-    creditWallet?.smartAccountAddress || source?.smartAccountAddress || '',
+    creditWallet?.smartAccountAddress || source?.smartAccountAddress || signerAddress || '',
   ).trim();
 
-  return isWalletAddress(smartAccountAddress) ? smartAccountAddress : '';
+  const normalizedSignerAddress = isWalletAddress(signerAddress) ? signerAddress : '';
+  const normalizedSmartAccountAddress = isWalletAddress(smartAccountAddress) ? smartAccountAddress : '';
+
+  return {
+    signerAddress: normalizedSignerAddress,
+    smartAccountAddress: normalizedSmartAccountAddress,
+  };
 };
 
 const resolveAgentPlatformFeePercentage = (agentLike: any): number =>
@@ -431,11 +455,22 @@ const resolveAgentPlatformFeeConfig = (
     agent: any;
     clientInfo: any;
   },
-) => ({
-  percentage: resolveAgentPlatformFeePercentage(agent),
-  fromAddress: resolveCreditWalletSmartAccountAddress(agent),
-  toAddress: resolveCreditWalletSmartAccountAddress(clientInfo),
-});
+) => {
+  const percentage = resolveAgentPlatformFeePercentage(agent);
+  const fromWallet = resolveCreditWalletSignerAndSmartAccountAddress(agent);
+  const fromAddress = fromWallet.smartAccountAddress || fromWallet.signerAddress || '';
+  const toAddress = resolveCreditWalletSmartAccountAddress(clientInfo);
+
+  return {
+    percentage,
+    fromAddress,
+    toAddress,
+    fromWallet: {
+      signerAddress: fromWallet.signerAddress,
+      smartAccountAddress: fromWallet.smartAccountAddress || fromWallet.signerAddress || '',
+    },
+  };
+};
 
 const upsertAgentPlatformFeeReceivableForOrder = async (
   {
@@ -11186,9 +11221,31 @@ export async function acceptBuyOrderPrivateSale(
     }
 
     const usdtToKrwRate = seller.seller.usdtToKrwRate || 1;
-    const sellerEscrowWalletAddress = seller.seller.escrowWalletAddress || '';
+    const sellerEscrowWalletAddress = (() => {
+      const candidates = [
+        seller?.seller?.escrowWalletAddress,
+        seller?.seller?.escrowWallet?.smartAccountAddress,
+      ];
+      for (const candidate of candidates) {
+        const normalized = String(candidate || '').trim();
+        if (isWalletAddress(normalized)) {
+          return normalized;
+        }
+      }
+      return '';
+    })();
+    const sellerEscrowWalletSignerAddressFromSeller = String(
+      seller?.seller?.escrowWalletSignerAddress
+      || seller?.seller?.escrowWallet?.signerAddress
+      || ''
+    ).trim();
+    const sellerEscrowWalletSmartAccountAddressFromSeller = String(
+      seller?.seller?.escrowWallet?.smartAccountAddress
+      || sellerEscrowWalletAddress
+      || ''
+    ).trim();
 
-    if (!sellerEscrowWalletAddress) {
+    if (!isWalletAddress(sellerEscrowWalletAddress)) {
       console.log('acceptBuyOrderPrivateSale: seller escrow wallet is missing for walletAddress: ' + sellerWalletAddress);
       return { success: false, error: 'SELLER_ESCROW_WALLET_MISSING' };
     }
@@ -11373,15 +11430,78 @@ export async function acceptBuyOrderPrivateSale(
       }
     }
 
-    let sellerEscrowSignerAddress = '';
-    let sellerEscrowSmartAccountAddress = '';
-    if (isWalletAddress(sellerEscrowWalletAddress)) {
+    let sellerEscrowSignerAddress = isWalletAddress(sellerEscrowWalletSignerAddressFromSeller)
+      ? sellerEscrowWalletSignerAddressFromSeller
+      : '';
+    let sellerEscrowSmartAccountAddress = isWalletAddress(sellerEscrowWalletSmartAccountAddressFromSeller)
+      ? sellerEscrowWalletSmartAccountAddressFromSeller
+      : sellerEscrowWalletAddress;
+    let sellerEscrowResolutionMatchedServerWallet = false;
+    if (!isWalletAddress(sellerEscrowSignerAddress) || !isWalletAddress(sellerEscrowSmartAccountAddress)) {
       const sellerEscrowResolution = await resolveEngineWalletResolution({
         client: thirdwebClient,
         walletAddress: sellerEscrowWalletAddress,
       });
-      sellerEscrowSignerAddress = String(sellerEscrowResolution.signerAddress || '').trim();
-      sellerEscrowSmartAccountAddress = String(sellerEscrowResolution.smartAccountAddress || '').trim();
+      const resolvedSignerAddress = String(sellerEscrowResolution.signerAddress || '').trim();
+      const resolvedSmartAccountAddress = String(sellerEscrowResolution.smartAccountAddress || '').trim();
+      if (
+        isWalletAddress(resolvedSignerAddress)
+        && isWalletAddress(resolvedSmartAccountAddress)
+        && resolvedSignerAddress.toLowerCase() !== resolvedSmartAccountAddress.toLowerCase()
+      ) {
+        sellerEscrowResolutionMatchedServerWallet = true;
+      }
+      if (!isWalletAddress(sellerEscrowSignerAddress)) {
+        sellerEscrowSignerAddress = resolvedSignerAddress;
+      }
+      if (!isWalletAddress(sellerEscrowSmartAccountAddress)) {
+        sellerEscrowSmartAccountAddress = resolvedSmartAccountAddress;
+      }
+    }
+    if (!isWalletAddress(sellerEscrowSmartAccountAddress)) {
+      sellerEscrowSmartAccountAddress = sellerEscrowWalletAddress;
+    }
+
+    const hasTrustedSignerForBackfill =
+      isWalletAddress(sellerEscrowWalletSignerAddressFromSeller)
+      || sellerEscrowResolutionMatchedServerWallet;
+    if (
+      hasTrustedSignerForBackfill
+      && isWalletAddress(sellerEscrowSignerAddress)
+      && isWalletAddress(sellerEscrowSmartAccountAddress)
+    ) {
+      const normalizedStoredSigner = sellerEscrowWalletSignerAddressFromSeller.toLowerCase();
+      const normalizedStoredSmart = sellerEscrowWalletSmartAccountAddressFromSeller.toLowerCase();
+      const normalizedResolvedSigner = sellerEscrowSignerAddress.toLowerCase();
+      const normalizedResolvedSmart = sellerEscrowSmartAccountAddress.toLowerCase();
+      const normalizedStoredLegacyEscrow = sellerEscrowWalletAddress.toLowerCase();
+      const shouldBackfillSellerEscrowWallet =
+        normalizedStoredSigner !== normalizedResolvedSigner
+        || normalizedStoredSmart !== normalizedResolvedSmart
+        || normalizedStoredLegacyEscrow !== normalizedResolvedSmart;
+
+      if (shouldBackfillSellerEscrowWallet) {
+        const sellerUpdateFilter = seller?._id
+          ? { _id: seller._id }
+          : {
+              storecode: 'admin',
+              walletAddress: sellerWalletRegex,
+            };
+
+        await usersCollection.updateOne(
+          sellerUpdateFilter as any,
+          {
+            $set: {
+              'seller.escrowWalletAddress': sellerEscrowSmartAccountAddress,
+              'seller.escrowWalletSignerAddress': sellerEscrowSignerAddress,
+              'seller.escrowWallet': {
+                signerAddress: sellerEscrowSignerAddress,
+                smartAccountAddress: sellerEscrowSmartAccountAddress,
+              },
+            },
+          },
+        );
+      }
     }
 
     const orderEscrowWalletSignerAddress =

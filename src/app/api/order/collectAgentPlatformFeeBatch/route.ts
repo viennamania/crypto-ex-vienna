@@ -62,6 +62,10 @@ type CollectableOrder = {
   agentPlatformFee?: {
     percentage?: number | string;
     fromAddress?: string;
+    fromWallet?: {
+      signerAddress?: string;
+      smartAccountAddress?: string;
+    };
     toAddress?: string;
     transactionHash?: string;
     txHash?: string;
@@ -111,16 +115,43 @@ type CollectableEntry = {
   feePercent: number;
   feeAmountUsdt: number;
   fromAddress: string;
+  fromWallet: {
+    signerAddress: string;
+    smartAccountAddress: string;
+  };
   toAddress: string;
   rawAmount: bigint;
   amountText: string;
   previousStatus: AgentPlatformFeeReceivableStatus;
 };
 
+type AgentCreditWallet = {
+  signerAddress: string;
+  smartAccountAddress: string;
+};
+
 const REQUEST_SOURCE = 'administration-platform-fee-collection' as const;
 const SUPPORTED_COLLECT_STATUSES = new Set(['paymentconfirmed', 'completed']);
 
 const normalizeAddress = (value: string) => normalizeWalletAddress(value).toLowerCase();
+
+const resolveAgentCreditWallet = (agentLike: any): AgentCreditWallet => {
+  const creditWallet = agentLike?.creditWallet && typeof agentLike.creditWallet === 'object'
+    ? agentLike.creditWallet
+    : {};
+
+  const signerAddress = String(
+    creditWallet?.signerAddress || agentLike?.signerAddress || '',
+  ).trim();
+  const smartAccountAddress = String(
+    creditWallet?.smartAccountAddress || agentLike?.smartAccountAddress || signerAddress || '',
+  ).trim();
+
+  return {
+    signerAddress: isWalletAddress(signerAddress) ? signerAddress : '',
+    smartAccountAddress: isWalletAddress(smartAccountAddress) ? smartAccountAddress : '',
+  };
+};
 
 const normalizeQueueStatus = (value: unknown): GroupResultStatus => {
   const normalized = toCollectStatus(value);
@@ -250,6 +281,38 @@ export async function POST(request: NextRequest) {
     )
     .toArray();
 
+  const agentcodes = Array.from(new Set(
+    orders
+      .map((order) => String(order?.agentcode || order?.agent?.agentcode || '').trim())
+      .filter(Boolean),
+  ));
+  const agentcodeCandidates = Array.from(new Set(
+    agentcodes.flatMap((agentcode) => [agentcode, agentcode.toLowerCase(), agentcode.toUpperCase()]),
+  ));
+  const agentWalletByCode = new Map<string, AgentCreditWallet>();
+  if (agentcodeCandidates.length > 0) {
+    const agents = await db.collection('agents')
+      .find(
+        { agentcode: { $in: agentcodeCandidates } },
+        {
+          projection: {
+            _id: 0,
+            agentcode: 1,
+            creditWallet: 1,
+            signerAddress: 1,
+            smartAccountAddress: 1,
+          },
+        },
+      )
+      .toArray();
+    agents.forEach((agent) => {
+      const normalizedAgentcode = String((agent as any)?.agentcode || '').trim().toLowerCase();
+      if (!normalizedAgentcode) return;
+      const wallet = resolveAgentCreditWallet(agent);
+      agentWalletByCode.set(normalizedAgentcode, wallet);
+    });
+  }
+
   const byOrderId = new Map(orders.map((order) => [String(order._id), order]));
   const now = new Date().toISOString();
   const skipped: Array<{ orderId: string; tradeId: string; reason: string }> = [];
@@ -329,7 +392,23 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
-    if (!isWalletAddress(doc.fromAddress) || !isWalletAddress(doc.toAddress)) {
+    const normalizedOrderAgentcode = String(order?.agentcode || order?.agent?.agentcode || '').trim().toLowerCase();
+    const fallbackAgentWallet = normalizedOrderAgentcode
+      ? (agentWalletByCode.get(normalizedOrderAgentcode) || { signerAddress: '', smartAccountAddress: '' })
+      : { signerAddress: '', smartAccountAddress: '' };
+    const docFromWalletSignerAddress = String(doc?.fromWallet?.signerAddress || '').trim();
+    const docFromWalletSmartAccountAddress = String(doc?.fromWallet?.smartAccountAddress || '').trim();
+    const resolvedFromWalletSignerAddress = isWalletAddress(docFromWalletSignerAddress)
+      ? docFromWalletSignerAddress
+      : fallbackAgentWallet.signerAddress;
+    const resolvedFromWalletSmartAccountAddress = isWalletAddress(docFromWalletSmartAccountAddress)
+      ? docFromWalletSmartAccountAddress
+      : (isWalletAddress(doc.fromAddress) ? doc.fromAddress : fallbackAgentWallet.smartAccountAddress);
+    const resolvedFromAddress = isWalletAddress(resolvedFromWalletSmartAccountAddress)
+      ? resolvedFromWalletSmartAccountAddress
+      : doc.fromAddress;
+
+    if (!isWalletAddress(resolvedFromAddress) || !isWalletAddress(doc.toAddress)) {
       skipped.push({
         orderId,
         tradeId,
@@ -364,7 +443,11 @@ export async function POST(request: NextRequest) {
       usdtAmount: roundDownUsdtAmount(doc.usdtAmount),
       feePercent: doc.feePercent,
       feeAmountUsdt: roundDownUsdtAmount(doc.expectedFeeAmountUsdt),
-      fromAddress: doc.fromAddress,
+      fromAddress: resolvedFromAddress,
+      fromWallet: {
+        signerAddress: isWalletAddress(resolvedFromWalletSignerAddress) ? resolvedFromWalletSignerAddress : '',
+        smartAccountAddress: resolvedFromAddress,
+      },
       toAddress: doc.toAddress,
       rawAmount,
       amountText: formatRawUsdtAmount(rawAmount, decimals),
@@ -386,7 +469,11 @@ export async function POST(request: NextRequest) {
 
   const groups = new Map<string, CollectableEntry[]>();
   for (const entry of collectableEntries) {
-    const key = `${normalizeAddress(entry.fromAddress)}|${normalizeAddress(entry.toAddress)}`;
+    const key = [
+      normalizeAddress(entry.fromWallet.signerAddress || entry.fromAddress),
+      normalizeAddress(entry.fromWallet.smartAccountAddress || entry.fromAddress),
+      normalizeAddress(entry.toAddress),
+    ].join('|');
     const bucket = groups.get(key);
     if (bucket) {
       bucket.push(entry);
@@ -442,6 +529,10 @@ export async function POST(request: NextRequest) {
             expectedFeeAmountUsdt: entry.feeAmountUsdt,
             collectedFeeAmountUsdt: status === 'CONFIRMED' ? entry.feeAmountUsdt : 0,
             fromAddress: entry.fromAddress,
+            fromWallet: {
+              signerAddress: entry.fromWallet.signerAddress,
+              smartAccountAddress: entry.fromWallet.smartAccountAddress,
+            },
             toAddress: entry.toAddress,
             transactionId,
             transactionHash,
@@ -468,6 +559,11 @@ export async function POST(request: NextRequest) {
           $set: {
             'agentPlatformFee.amountUsdt': entry.feeAmountUsdt,
             'agentPlatformFee.expectedAmountUsdt': entry.feeAmountUsdt,
+            'agentPlatformFee.fromAddress': entry.fromAddress,
+            'agentPlatformFee.fromWallet': {
+              signerAddress: entry.fromWallet.signerAddress,
+              smartAccountAddress: entry.fromWallet.smartAccountAddress,
+            },
             'agentPlatformFee.transactionId': transactionId,
             'agentPlatformFee.transactionHash': transactionHash,
             'agentPlatformFee.collectionStatus': status,
@@ -495,6 +591,10 @@ export async function POST(request: NextRequest) {
       status,
       previousStatus: entry.previousStatus,
       fromAddress: entry.fromAddress,
+      fromWallet: {
+        signerAddress: entry.fromWallet.signerAddress,
+        smartAccountAddress: entry.fromWallet.smartAccountAddress,
+      },
       toAddress: entry.toAddress,
       usdtAmount: entry.usdtAmount,
       feePercent: entry.feePercent,
@@ -577,11 +677,22 @@ export async function POST(request: NextRequest) {
     let executionError = '';
 
     try {
-      const feeWallet = await createEngineServerWallet({
-        client: thirdwebClient,
-        walletAddress: first.fromAddress,
-        chain,
-      });
+      const feeWallet = isWalletAddress(first.fromWallet.signerAddress)
+        ? Engine.serverWallet({
+            client: thirdwebClient,
+            address: first.fromWallet.signerAddress,
+            chain,
+            executionOptions: {
+              type: 'ERC4337',
+              signerAddress: first.fromWallet.signerAddress,
+              smartAccountAddress: first.fromWallet.smartAccountAddress || first.fromAddress,
+            },
+          })
+        : await createEngineServerWallet({
+            client: thirdwebClient,
+            walletAddress: first.fromAddress,
+            chain,
+          });
 
       const transferTransactions = entries.map((entry) =>
         transfer({
@@ -719,4 +830,3 @@ export async function POST(request: NextRequest) {
     },
   });
 }
-
