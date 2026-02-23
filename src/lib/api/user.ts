@@ -109,6 +109,34 @@ const extractThirdwebProfileField = (
   return typeof value === 'string' ? value.trim() : '';
 };
 
+const DEFAULT_SELLER_AGENTCODE = 'head';
+
+const normalizeAgentcode = (value: unknown) => {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+};
+
+const resolveSellerAgentcode = (...candidates: unknown[]) => {
+  for (const candidate of candidates) {
+    const normalized = normalizeAgentcode(candidate);
+    if (normalized) {
+      return normalized;
+    }
+  }
+  return DEFAULT_SELLER_AGENTCODE;
+};
+
+const mergeSellerWithDefaultAgentcode = (
+  seller: any,
+  ...agentcodeCandidates: unknown[]
+) => {
+  const baseSeller = seller && typeof seller === 'object' ? seller : {};
+  return {
+    ...baseSeller,
+    agentcode: resolveSellerAgentcode(baseSeller?.agentcode, ...agentcodeCandidates),
+  };
+};
+
 
 
 
@@ -744,18 +772,6 @@ export async function updateSellerVaultWallet(data: any) {
     return null;
   }
 
-
-
-  const seller = {
-    status: data.sellerStatus,
-    bankInfo: {
-      bankName: data.bankName,
-      accountNumber: data.accountNumber,
-      accountHolder: data.accountHolder,
-    }
-  };
-  
-
   // upsert seller info
 
   /*
@@ -775,6 +791,24 @@ export async function updateSellerVaultWallet(data: any) {
       walletAddress: data.walletAddress,
     }
   );
+
+  const seller = mergeSellerWithDefaultAgentcode(
+    {
+      ...(existingUser as any)?.seller,
+      status: data.sellerStatus,
+      bankInfo: {
+        ...(existingUser as any)?.seller?.bankInfo,
+        bankName: data.bankName,
+        accountNumber: data.accountNumber,
+        accountHolder: data.accountHolder,
+      },
+    },
+    data?.agentcode,
+    (existingUser as any)?.agentcode,
+    (existingUser as any)?.store?.agentcode,
+    (existingUser as any)?.storeInfo?.agentcode,
+  );
+
   if (existingUser) {
     // update seller info
     const result = await collection.updateOne(
@@ -785,6 +819,7 @@ export async function updateSellerVaultWallet(data: any) {
       { $set: {
         nickname: data.nickname,
         seller: seller,
+        agentcode: seller.agentcode,
         vaultWallet: data.vaultWallet,
       } }
     );
@@ -809,6 +844,7 @@ export async function updateSellerVaultWallet(data: any) {
         storecode: data.storecode,
         walletAddress: data.walletAddress,
         nickname: data.nickname,
+        agentcode: seller.agentcode,
         seller: seller,
         vaultWallet: data.vaultWallet,
       }
@@ -879,6 +915,13 @@ export async function updateSellerStatus(data: any) {
     accountNumber: data.accountNumber,
     accountHolder: data.accountHolder,
   };
+  const sellerAgentcode = resolveSellerAgentcode(
+    data?.agentcode,
+    (existingUser as any)?.seller?.agentcode,
+    (existingUser as any)?.agentcode,
+    (existingUser as any)?.store?.agentcode,
+    (existingUser as any)?.storeInfo?.agentcode,
+  );
 
 
   // update seller info
@@ -890,6 +933,8 @@ export async function updateSellerStatus(data: any) {
     {
       $set: {
         'seller.bankInfo': sellerBankInfo,
+        'seller.agentcode': sellerAgentcode,
+        agentcode: sellerAgentcode,
       }
   }
   );
@@ -1196,11 +1241,48 @@ export async function updateSeller({
     primaryFilter.storecode = storecode;
   }
 
+  const fallbackFilter: Record<string, unknown> = {
+    walletAddress: walletRegex,
+  };
+  const existingUser =
+    (await collection.findOne(primaryFilter, {
+      projection: {
+        _id: 0,
+        agentcode: 1,
+        seller: 1,
+        store: 1,
+        storeInfo: 1,
+      },
+    })) ||
+    (storecode
+      ? await collection.findOne(fallbackFilter, {
+          projection: {
+            _id: 0,
+            agentcode: 1,
+            seller: 1,
+            store: 1,
+            storeInfo: 1,
+          },
+        })
+      : null);
+
+  const normalizedSeller = mergeSellerWithDefaultAgentcode(
+    {
+      ...(existingUser as any)?.seller,
+      ...(seller && typeof seller === 'object' ? seller : {}),
+    },
+    (seller as any)?.agentcode,
+    (existingUser as any)?.agentcode,
+    (existingUser as any)?.store?.agentcode,
+    (existingUser as any)?.storeInfo?.agentcode,
+  );
+
   let result = await collection.updateOne(
     primaryFilter,
     {
       $set: {
-        seller,
+        seller: normalizedSeller,
+        agentcode: normalizedSeller.agentcode,
       },
     },
   );
@@ -1208,10 +1290,11 @@ export async function updateSeller({
   // Fallback: if storecode-scoped match fails, retry with wallet-only scope.
   if (result.matchedCount === 0 && storecode) {
     result = await collection.updateOne(
-      { walletAddress: walletRegex },
+      fallbackFilter,
       {
         $set: {
-          seller,
+          seller: normalizedSeller,
+          agentcode: normalizedSeller.agentcode,
         },
       },
     );
@@ -3309,6 +3392,36 @@ export async function updateUserForSeller(
   console.log('updateUserForSeller storecode: ' + storecode + ' walletAddress: ' + walletAddress + ' escrowWalletAddress: ' + escrowWalletAddress);
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
+  const existingUser = await collection.findOne(
+    {
+      storecode: storecode,
+      walletAddress: walletAddress,
+    },
+    {
+      projection: {
+        _id: 0,
+        agentcode: 1,
+        seller: 1,
+        store: 1,
+        storeInfo: 1,
+      },
+    },
+  );
+  const sellerAgentcode = resolveSellerAgentcode(
+    (existingUser as any)?.seller?.agentcode,
+    (existingUser as any)?.agentcode,
+    (existingUser as any)?.store?.agentcode,
+    (existingUser as any)?.storeInfo?.agentcode,
+  );
+  const seller = mergeSellerWithDefaultAgentcode(
+    {
+      ...(existingUser as any)?.seller,
+      status: 'pending',
+      enabled: false,
+      escrowWalletAddress: escrowWalletAddress,
+    },
+    sellerAgentcode,
+  );
 
   return await collection.updateOne(
     {
@@ -3317,11 +3430,8 @@ export async function updateUserForSeller(
     },
     {
       $set: {
-        seller: {
-          status: 'pending',
-          enabled: false,
-          escrowWalletAddress: escrowWalletAddress,
-        }
+        seller: seller,
+        agentcode: seller.agentcode,
       }
     }
   );
