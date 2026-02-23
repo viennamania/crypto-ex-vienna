@@ -172,6 +172,7 @@ export default function P2PAgentManagementLayout({ children }: { children: React
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const hasConnectedWallet = Boolean(connectedWalletAddress);
 
   const menuItems = useMemo<MenuItem[]>(
@@ -276,6 +277,46 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       && !isAgentAccessVerified,
   );
   const showPinnedPendingAlert = isAgentAccessVerified && (pendingSummary.pendingCount > 0 || pendingAlertCards.length > 0);
+  const pendingAlertContainerClass = isMobileViewport
+    ? 'pointer-events-none sticky top-[calc(env(safe-area-inset-top)+0.45rem)] z-[120] px-2'
+    : `pointer-events-none fixed inset-x-0 top-12 z-[120] px-3 lg:top-3 ${desktopSidebarWidthClass}`;
+  const contentTopPaddingClass = showPinnedPendingAlert
+    ? (isMobileViewport ? (pendingAlertExpanded ? 'pt-4' : 'pt-3') : (pendingAlertExpanded ? 'pt-44 lg:pt-32' : 'pt-28 lg:pt-20'))
+    : 'pt-16 lg:pt-8';
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setIsMobileViewport(window.innerWidth < 1024);
+    };
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileViewport) return;
+    setMobileOpen(false);
+  }, [pathname, isMobileViewport]);
+
+  useEffect(() => {
+    if (!isMobileViewport) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
+
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+    };
+  }, [isMobileViewport, mobileOpen]);
 
   const getPendingAlertAudio = useCallback(() => {
     if (typeof window === 'undefined') return null;
@@ -790,7 +831,7 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       <button
         type="button"
         onClick={() => setMobileOpen((prev) => !prev)}
-        className="fixed left-3 top-3 z-[70] inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white/95 px-3 text-xs font-semibold text-slate-700 shadow-[0_16px_28px_-18px_rgba(15,23,42,0.55)] backdrop-blur transition hover:border-cyan-300 hover:text-slate-900 lg:hidden"
+        className="fixed left-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-[70] inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white/95 px-3 text-xs font-semibold text-slate-700 shadow-[0_16px_28px_-18px_rgba(15,23,42,0.55)] backdrop-blur transition hover:border-cyan-300 hover:text-slate-900 lg:hidden"
       >
         {mobileOpen ? '메뉴 닫기' : '메뉴 열기'}
       </button>
@@ -805,8 +846,8 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-[60] overflow-hidden border-r border-cyan-200/20 bg-[linear-gradient(170deg,#0b1224_0%,#0f1d3b_42%,#111a2f_100%)] shadow-[0_32px_90px_-36px_rgba(2,6,23,0.95)] transition-all duration-300 ${desktopSidebarClass} ${
-          mobileOpen ? 'w-[260px] translate-x-0' : 'w-[260px] -translate-x-full lg:translate-x-0'
+        className={`fixed inset-y-0 left-0 z-[60] w-[min(84vw,300px)] overflow-hidden border-r border-cyan-200/20 bg-[linear-gradient(170deg,#0b1224_0%,#0f1d3b_42%,#111a2f_100%)] shadow-[0_32px_90px_-36px_rgba(2,6,23,0.95)] transition-all duration-300 ${desktopSidebarClass} ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -815,7 +856,7 @@ export default function P2PAgentManagementLayout({ children }: { children: React
           <div className="absolute bottom-0 left-6 h-36 w-36 rounded-full bg-sky-300/10 blur-3xl" />
         </div>
 
-        <div className="flex h-full flex-col">
+        <div className="flex h-full flex-col pt-[calc(env(safe-area-inset-top)+0.2rem)] pb-[calc(env(safe-area-inset-bottom)+0.35rem)] lg:pt-0 lg:pb-0">
           <div className="relative border-b border-white/10 px-3 py-4">
             <div className="rounded-2xl border border-white/12 bg-white/5 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur">
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200/90">Payment Control</p>
@@ -828,7 +869,7 @@ export default function P2PAgentManagementLayout({ children }: { children: React
             </div>
           </div>
 
-          <div className="relative px-2 pt-3">
+          <div className="relative hidden px-2 pt-3 lg:block">
             <button
               type="button"
               onClick={() => setCollapsed((prev) => !prev)}
@@ -971,8 +1012,8 @@ export default function P2PAgentManagementLayout({ children }: { children: React
 
       <div className={`min-h-screen transition-all duration-300 ${desktopSidebarWidthClass}`}>
         {showPinnedPendingAlert && (
-          <div className={`pointer-events-none fixed inset-x-0 top-12 z-[120] px-3 lg:top-3 ${desktopSidebarWidthClass}`}>
-            <div className="mx-auto max-w-6xl">
+          <div className={pendingAlertContainerClass}>
+            <div className="mx-auto w-full max-w-6xl">
               <section className="pointer-events-auto rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
@@ -1075,7 +1116,8 @@ export default function P2PAgentManagementLayout({ children }: { children: React
           </div>
         )}
 
-        <div className={`space-y-4 px-4 pb-10 lg:px-8 ${showPinnedPendingAlert ? (pendingAlertExpanded ? 'pt-44 lg:pt-32' : 'pt-28 lg:pt-20') : 'pt-16 lg:pt-8'}`}>
+        <div className={`p2p-agent-shell-content px-2 pb-[calc(8rem+env(safe-area-inset-bottom))] sm:px-3 lg:px-8 ${contentTopPaddingClass}`}>
+          <div className="mx-auto w-full max-w-[1700px] space-y-4">
           {hasConnectedWallet && (
             <div className="flex justify-end">
               <button
@@ -1154,6 +1196,7 @@ export default function P2PAgentManagementLayout({ children }: { children: React
           )}
 
           {isAgentAccessVerified && children}
+          </div>
         </div>
       </div>
 
@@ -1248,6 +1291,11 @@ export default function P2PAgentManagementLayout({ children }: { children: React
 
         .buyorder-menu-alert-blink {
           animation: buyorderMenuAlertBlink 1s step-end infinite;
+        }
+
+        .p2p-agent-shell-content .overflow-x-auto {
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior-x: contain;
         }
       `}</style>
     </div>

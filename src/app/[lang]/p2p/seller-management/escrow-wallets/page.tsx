@@ -253,7 +253,7 @@ export default function AgentEscrowWalletManagementPage() {
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
       <AutoConnect client={client} wallets={[wallet]} />
 
-      <div className="mx-auto max-w-6xl px-4 pb-14 pt-8 sm:px-6 lg:px-10">
+      <div className="mx-auto max-w-6xl px-3 pb-14 pt-8 sm:px-5 lg:px-10">
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href={`/${lang}/p2p/seller-management${agentcode ? `?agentcode=${encodeURIComponent(agentcode)}` : ''}`}
@@ -281,7 +281,7 @@ export default function AgentEscrowWalletManagementPage() {
               </div>
             </div>
           )}
-          <span className="ml-auto rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+          <span className="ml-0 w-full rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm sm:ml-auto sm:w-auto">
             연결 상태: {isConnected ? '연결됨' : '미연결'}
           </span>
         </div>
@@ -376,7 +376,7 @@ export default function AgentEscrowWalletManagementPage() {
 
         {isConnected && agentcode && isAgentAdmin && (
           <>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
                 <p className="text-xs font-semibold text-slate-500">등록된 에스크로 지갑</p>
                 <p className="mt-2 text-2xl font-bold text-slate-900">{stats.total} 개</p>
@@ -441,8 +441,8 @@ export default function AgentEscrowWalletManagementPage() {
                 </div>
               )}
 
-              <div className="max-h-[65vh] overflow-y-auto">
-                <table className="min-w-full border-collapse">
+              <div className="max-h-[65vh] overflow-auto">
+                <table className="w-full min-w-[860px] border-collapse">
                   <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-600">
                     <tr>
                       <th className="px-4 py-2 text-left">라벨</th>

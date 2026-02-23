@@ -450,7 +450,7 @@ export default function SellerManagementByAgentPage() {
     <>
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
       <AutoConnect client={client} wallets={[wallet]} />
-      <div className="mx-auto max-w-6xl px-4 pb-14 pt-8 sm:px-6 lg:px-10">
+      <div className="mx-auto max-w-6xl px-3 pb-14 pt-8 sm:px-5 lg:px-10">
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href={`/${lang}/p2p`}
@@ -496,7 +496,7 @@ export default function SellerManagementByAgentPage() {
               </div>
             </div>
           )}
-          <div className="ml-auto flex items-center gap-3 text-xs text-slate-600">
+          <div className="ml-0 flex w-full items-center justify-start gap-3 text-xs text-slate-600 sm:ml-auto sm:w-auto sm:justify-end">
             {isConnected && (
               <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
                 <div className="relative h-8 w-8 overflow-hidden rounded-full bg-slate-100">
@@ -530,7 +530,7 @@ export default function SellerManagementByAgentPage() {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm sm:min-w-[260px]">
+          <div className="flex w-full items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm sm:w-auto sm:min-w-[260px]">
             <Image src="/icon-search.png" alt="Search" width={16} height={16} className="h-4 w-4 opacity-70" />
             <input
               value={searchTerm}
@@ -655,7 +655,7 @@ export default function SellerManagementByAgentPage() {
 
         {isConnected && agentcode && (
           <>
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
                 <p className="text-xs font-semibold text-slate-500">총 소속 판매자</p>
                 <p className="mt-2 text-2xl font-bold text-slate-900">{stats.total} 명</p>
@@ -680,8 +680,8 @@ export default function SellerManagementByAgentPage() {
               <div className="border-b border-slate-200 px-4 py-3">
                 <p className="text-sm font-semibold text-slate-800">판매자 목록</p>
               </div>
-              <div className="max-h-[70vh] overflow-y-auto">
-                <table className="min-w-full border-collapse">
+              <div className="max-h-[70vh] overflow-auto">
+                <table className="w-full min-w-[1180px] border-collapse">
                   <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-600">
                     <tr>
                       <th className="px-4 py-2 text-left">프로필</th>
