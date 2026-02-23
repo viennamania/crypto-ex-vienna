@@ -280,6 +280,49 @@ const waitMs = async (ms: number) =>
 
 const roundDownUsdtAmount = (value: number) => Math.floor(value * 1000) / 1000;
 
+const formatRawUsdtAmount = (rawAmount: bigint, decimals: number): string => {
+  if (rawAmount <= 0n) {
+    return '0';
+  }
+
+  if (decimals <= 0) {
+    return rawAmount.toString();
+  }
+
+  const base = 10n ** BigInt(decimals);
+  const whole = rawAmount / base;
+  const fraction = rawAmount % base;
+
+  if (fraction === 0n) {
+    return whole.toString();
+  }
+
+  const fractionText = fraction.toString().padStart(decimals, '0').replace(/0+$/, '');
+  return `${whole.toString()}.${fractionText}`;
+};
+
+const toRawUsdtAmountFromRoundedValue = (value: number, decimals: number): bigint => {
+  if (!Number.isFinite(value) || value <= 0) {
+    return 0n;
+  }
+
+  const normalized = roundDownUsdtAmount(value).toFixed(3);
+  const [integerPart, fractionPart = '000'] = normalized.split('.');
+  const milliUnits =
+    (BigInt(integerPart || '0') * 1000n)
+    + BigInt(`${fractionPart}000`.slice(0, 3));
+
+  if (decimals === 3) {
+    return milliUnits;
+  }
+
+  if (decimals > 3) {
+    return milliUnits * (10n ** BigInt(decimals - 3));
+  }
+
+  return milliUnits / (10n ** BigInt(3 - decimals));
+};
+
 const toUsdtAmountOrZero = (value: unknown) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric) || numeric <= 0) {
@@ -480,11 +523,15 @@ const resolveUsdtDecimals = () => {
 };
 
 const convertRawUsdtToDisplayAmount = (rawAmount: bigint, decimals: number) => {
-  const numeric = Number(rawAmount);
+  if (rawAmount <= 0n) {
+    return 0;
+  }
+
+  const numeric = Number(formatRawUsdtAmount(rawAmount, decimals));
   if (!Number.isFinite(numeric) || numeric <= 0) {
     return 0;
   }
-  return roundDownUsdtAmount(numeric / (10 ** decimals));
+  return roundDownUsdtAmount(numeric);
 };
 
 
@@ -3780,10 +3827,10 @@ export async function cancelPrivateBuyOrderByBuyer(
   }
 
   const transferPlan = resolveStoredPrivateOrderTransferPlan(order);
-  const rollbackUsdtAmount = transferPlan.totalTransferUsdtAmount;
-  if (!Number.isFinite(rollbackUsdtAmount) || rollbackUsdtAmount <= 0) {
+  const plannedRollbackUsdtAmount = transferPlan.totalTransferUsdtAmount;
+  if (!Number.isFinite(plannedRollbackUsdtAmount) || plannedRollbackUsdtAmount <= 0) {
     console.error('cancelPrivateBuyOrderByBuyer: invalid rollback usdt amount', {
-      rollbackUsdtAmount,
+      rollbackUsdtAmount: plannedRollbackUsdtAmount,
       usdtAmount: order?.usdtAmount,
       escrowLockUsdtAmount: order?.escrowLockUsdtAmount,
     });
@@ -3798,8 +3845,11 @@ export async function cancelPrivateBuyOrderByBuyer(
 
   const thirdwebClient = createThirdwebClient({ secretKey: thirdwebSecretKey });
   let rollbackTransactionHash = '';
+  let rollbackUsdtAmount = plannedRollbackUsdtAmount;
+  let rollbackRawAmount = '';
   try {
     const transferConfig = resolveUsdtTransferConfig();
+    const usdtDecimals = resolveUsdtDecimals();
     const usdtContract = getContract({
       client: thirdwebClient,
       chain: transferConfig.chain,
@@ -3812,10 +3862,22 @@ export async function cancelPrivateBuyOrderByBuyer(
       chain: transferConfig.chain,
     });
 
+    const rawBuyerEscrowUsdtBalance = await balanceOf({
+      contract: usdtContract,
+      address: buyerEscrowWalletAddress,
+    });
+    if (rawBuyerEscrowUsdtBalance <= 0n) {
+      throw new Error('buyer escrow wallet balance is empty');
+    }
+
+    rollbackRawAmount = rawBuyerEscrowUsdtBalance.toString();
+    rollbackUsdtAmount = convertRawUsdtToDisplayAmount(rawBuyerEscrowUsdtBalance, usdtDecimals);
+    const rollbackTransferAmount = formatRawUsdtAmount(rawBuyerEscrowUsdtBalance, usdtDecimals);
+
     const rollbackTransaction = transfer({
       contract: usdtContract,
       to: sellerEscrowWalletAddress,
-      amount: rollbackUsdtAmount,
+      amount: rollbackTransferAmount,
     });
 
     const { transactionId } = await buyerEscrowWallet.enqueueTransaction({
@@ -3890,6 +3952,7 @@ export async function cancelPrivateBuyOrderByBuyer(
         cancelledByIpAddress: normalizedCancelledByIpAddress,
         cancelledByUserAgent: normalizedCancelledByUserAgent,
         rollbackUsdtAmount,
+        rollbackRawAmount,
         'buyer.rollbackTransactionHash': rollbackTransactionHash,
         'seller.rollbackTransactionHash': rollbackTransactionHash,
       },
@@ -3931,6 +3994,7 @@ export async function cancelPrivateBuyOrderByBuyer(
         'seller.buyOrder.cancelledByIpAddress': normalizedCancelledByIpAddress,
         'seller.buyOrder.cancelledByUserAgent': normalizedCancelledByUserAgent,
         'seller.buyOrder.rollbackUsdtAmount': rollbackUsdtAmount,
+        'seller.buyOrder.rollbackRawAmount': rollbackRawAmount,
         'seller.buyOrder.buyer.rollbackTransactionHash': rollbackTransactionHash,
         'seller.buyOrder.seller.rollbackTransactionHash': rollbackTransactionHash,
       },
@@ -4113,10 +4177,10 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   }
 
   const transferPlan = resolveStoredPrivateOrderTransferPlan(order);
-  const rollbackUsdtAmount = transferPlan.totalTransferUsdtAmount;
-  if (!Number.isFinite(rollbackUsdtAmount) || rollbackUsdtAmount <= 0) {
+  const plannedRollbackUsdtAmount = transferPlan.totalTransferUsdtAmount;
+  if (!Number.isFinite(plannedRollbackUsdtAmount) || plannedRollbackUsdtAmount <= 0) {
     console.error('cancelPrivateBuyOrderByAdminToBuyer: invalid rollback usdt amount', {
-      rollbackUsdtAmount,
+      rollbackUsdtAmount: plannedRollbackUsdtAmount,
       usdtAmount: order?.usdtAmount,
       escrowLockUsdtAmount: order?.escrowLockUsdtAmount,
     });
@@ -4131,8 +4195,11 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
 
   const thirdwebClient = createThirdwebClient({ secretKey: thirdwebSecretKey });
   let releaseTransactionHash = '';
+  let rollbackUsdtAmount = plannedRollbackUsdtAmount;
+  let rollbackRawAmount = '';
   try {
     const transferConfig = resolveUsdtTransferConfig();
+    const usdtDecimals = resolveUsdtDecimals();
     const usdtContract = getContract({
       client: thirdwebClient,
       chain: transferConfig.chain,
@@ -4145,10 +4212,22 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
       chain: transferConfig.chain,
     });
 
+    const rawBuyerEscrowUsdtBalance = await balanceOf({
+      contract: usdtContract,
+      address: buyerEscrowWalletAddress,
+    });
+    if (rawBuyerEscrowUsdtBalance <= 0n) {
+      throw new Error('buyer escrow wallet balance is empty');
+    }
+
+    rollbackRawAmount = rawBuyerEscrowUsdtBalance.toString();
+    rollbackUsdtAmount = convertRawUsdtToDisplayAmount(rawBuyerEscrowUsdtBalance, usdtDecimals);
+    const rollbackTransferAmount = formatRawUsdtAmount(rawBuyerEscrowUsdtBalance, usdtDecimals);
+
     const releaseTransaction = transfer({
       contract: usdtContract,
       to: sellerEscrowWalletAddress,
-      amount: rollbackUsdtAmount,
+      amount: rollbackTransferAmount,
     });
 
     const { transactionId } = await buyerEscrowWallet.enqueueTransaction({
@@ -4232,6 +4311,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
         cancelledByIpAddress: normalizedCancelledByIpAddress,
         cancelledByUserAgent: normalizedCancelledByUserAgent,
         rollbackUsdtAmount,
+        rollbackRawAmount,
         cancelReleaseTransactionHash: releaseTransactionHash,
         'buyer.releaseTransactionHash': releaseTransactionHash,
         'seller.releaseTransactionHash': releaseTransactionHash,
@@ -4262,6 +4342,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
           'seller.buyOrder.cancelledByIpAddress': normalizedCancelledByIpAddress,
           'seller.buyOrder.cancelledByUserAgent': normalizedCancelledByUserAgent,
           'seller.buyOrder.rollbackUsdtAmount': rollbackUsdtAmount,
+          'seller.buyOrder.rollbackRawAmount': rollbackRawAmount,
           'seller.buyOrder.cancelReleaseTransactionHash': releaseTransactionHash,
           'seller.buyOrder.buyer.releaseTransactionHash': releaseTransactionHash,
           'seller.buyOrder.seller.releaseTransactionHash': releaseTransactionHash,
@@ -4406,6 +4487,7 @@ export async function completePrivateBuyOrderBySeller(
   const normalizedRequesterUserAgent = String(requesterUserAgent || '').trim();
 
   const buyerEscrowWalletAddress = resolveBuyerEscrowWalletAddress(order);
+  const sellerEscrowWalletAddress = resolveSellerEscrowWalletAddress(order);
   const orderBuyerWalletAddress =
     (typeof order?.buyer?.walletAddress === 'string' && order.buyer.walletAddress.trim())
     || (typeof order?.walletAddress === 'string' ? order.walletAddress.trim() : '');
@@ -4427,9 +4509,9 @@ export async function completePrivateBuyOrderBySeller(
   const transferPlan = resolveStoredPrivateOrderTransferPlan(order);
   const buyerTransferUsdtAmount = transferPlan.buyerTransferUsdtAmount;
   const platformFeeUsdtAmount = transferPlan.platformFeeUsdtAmount;
-  const totalTransferUsdtAmount = transferPlan.totalTransferUsdtAmount;
+  const plannedTotalTransferUsdtAmount = transferPlan.totalTransferUsdtAmount;
   const shouldTransferPlatformFee = transferPlan.shouldTransferPlatformFee;
-  const transferCount = transferPlan.transferCount;
+  const plannedTransferCount = transferPlan.transferCount;
   const resolvedPlatformFee = {
     feeRatePercent: transferPlan.feeRatePercent,
     feeWalletAddress: transferPlan.feeWalletAddress,
@@ -4440,7 +4522,7 @@ export async function completePrivateBuyOrderBySeller(
     return { success: false, error: 'INVALID_USDT_AMOUNT' };
   }
 
-  if (!Number.isFinite(totalTransferUsdtAmount) || totalTransferUsdtAmount <= 0) {
+  if (!Number.isFinite(plannedTotalTransferUsdtAmount) || plannedTotalTransferUsdtAmount <= 0) {
     return { success: false, error: 'INVALID_USDT_AMOUNT' };
   }
 
@@ -4461,6 +4543,12 @@ export async function completePrivateBuyOrderBySeller(
 
   const thirdwebClient = createThirdwebClient({ secretKey: thirdwebSecretKey });
   let releaseTransactionHash = '';
+  let actualTotalTransferUsdtAmount = plannedTotalTransferUsdtAmount;
+  let transferCount = plannedTransferCount;
+  let transferMode: 'single' | 'batch' = shouldTransferPlatformFee ? 'batch' : 'single';
+  let dustSweepUsdtAmount = 0;
+  let dustSweepRawAmount = '';
+  let dustSweepWalletAddress = '';
   try {
     const transferConfig = resolveUsdtTransferConfig();
     const usdtDecimals = resolveUsdtDecimals();
@@ -4529,46 +4617,101 @@ export async function completePrivateBuyOrderBySeller(
       contract: usdtContract,
       address: buyerEscrowWalletAddress,
     });
-    const buyerEscrowUsdtBalance = convertRawUsdtToDisplayAmount(rawBuyerEscrowUsdtBalance, usdtDecimals);
-    if (buyerEscrowUsdtBalance + 0.000001 < totalTransferUsdtAmount) {
-      console.error('completePrivateBuyOrderBySeller: buyer escrow balance is insufficient for total transfer', {
+
+    if (rawBuyerEscrowUsdtBalance <= 0n) {
+      console.error('completePrivateBuyOrderBySeller: buyer escrow balance is empty', {
         buyerEscrowWalletAddress,
-        buyerEscrowUsdtBalance,
-        buyerTransferUsdtAmount,
-        platformFeeUsdtAmount,
-        totalTransferUsdtAmount,
       });
       return { success: false, error: 'ESCROW_BALANCE_INSUFFICIENT' };
     }
 
-    const buyerReleaseTransaction = transfer({
-      contract: usdtContract,
-      to: orderBuyerWalletAddress,
-      amount: buyerTransferUsdtAmount,
-    });
+    const rawBuyerTransferUsdtAmount = toRawUsdtAmountFromRoundedValue(buyerTransferUsdtAmount, usdtDecimals);
+    const rawPlatformFeeUsdtAmount = shouldTransferPlatformFee
+      ? toRawUsdtAmountFromRoundedValue(platformFeeUsdtAmount, usdtDecimals)
+      : 0n;
+    const rawPlannedTotalTransferUsdtAmount = rawBuyerTransferUsdtAmount + rawPlatformFeeUsdtAmount;
 
-    const transactionId = shouldTransferPlatformFee
+    if (rawPlannedTotalTransferUsdtAmount <= 0n) {
+      console.error('completePrivateBuyOrderBySeller: planned raw transfer amount is invalid', {
+        buyerTransferUsdtAmount,
+        platformFeeUsdtAmount,
+        rawBuyerTransferUsdtAmount: rawBuyerTransferUsdtAmount.toString(),
+        rawPlatformFeeUsdtAmount: rawPlatformFeeUsdtAmount.toString(),
+      });
+      return { success: false, error: 'INVALID_USDT_AMOUNT' };
+    }
+
+    if (rawBuyerEscrowUsdtBalance < rawPlannedTotalTransferUsdtAmount) {
+      console.error('completePrivateBuyOrderBySeller: buyer escrow balance is insufficient for total transfer', {
+        buyerEscrowWalletAddress,
+        buyerEscrowUsdtBalance: convertRawUsdtToDisplayAmount(rawBuyerEscrowUsdtBalance, usdtDecimals),
+        buyerTransferUsdtAmount,
+        platformFeeUsdtAmount,
+        plannedTotalTransferUsdtAmount,
+        rawBuyerEscrowUsdtBalance: rawBuyerEscrowUsdtBalance.toString(),
+        rawPlannedTotalTransferUsdtAmount: rawPlannedTotalTransferUsdtAmount.toString(),
+      });
+      return { success: false, error: 'ESCROW_BALANCE_INSUFFICIENT' };
+    }
+
+    const rawDustSweepUsdtAmount = rawBuyerEscrowUsdtBalance - rawPlannedTotalTransferUsdtAmount;
+
+    const transferTransactions = [
+      transfer({
+        contract: usdtContract,
+        to: orderBuyerWalletAddress,
+        amount: formatRawUsdtAmount(rawBuyerTransferUsdtAmount, usdtDecimals),
+      }),
+    ];
+
+    if (shouldTransferPlatformFee && rawPlatformFeeUsdtAmount > 0n) {
+      transferTransactions.push(
+        transfer({
+          contract: usdtContract,
+          to: resolvedPlatformFee.feeWalletAddress,
+          amount: formatRawUsdtAmount(rawPlatformFeeUsdtAmount, usdtDecimals),
+        }),
+      );
+    }
+
+    if (rawDustSweepUsdtAmount > 0n) {
+      const fallbackDustSweepWalletAddress =
+        isWalletAddress(sellerEscrowWalletAddress) ? sellerEscrowWalletAddress : orderBuyerWalletAddress;
+      if (!isWalletAddress(fallbackDustSweepWalletAddress)) {
+        throw new Error('dust sweep wallet address is missing');
+      }
+      dustSweepWalletAddress = fallbackDustSweepWalletAddress;
+      dustSweepRawAmount = rawDustSweepUsdtAmount.toString();
+      dustSweepUsdtAmount = convertRawUsdtToDisplayAmount(rawDustSweepUsdtAmount, usdtDecimals);
+
+      transferTransactions.push(
+        transfer({
+          contract: usdtContract,
+          to: fallbackDustSweepWalletAddress,
+          amount: formatRawUsdtAmount(rawDustSweepUsdtAmount, usdtDecimals),
+        }),
+      );
+    }
+
+    const transactionId = transferTransactions.length > 1
       ? (
           await buyerEscrowWallet.enqueueBatchTransaction({
-            transactions: [
-              buyerReleaseTransaction,
-              transfer({
-                contract: usdtContract,
-                to: resolvedPlatformFee.feeWalletAddress,
-                amount: platformFeeUsdtAmount,
-              }),
-            ],
+            transactions: transferTransactions,
           })
         ).transactionId
       : (
           await buyerEscrowWallet.enqueueTransaction({
-            transaction: buyerReleaseTransaction,
+            transaction: transferTransactions[0],
           })
         ).transactionId;
     releaseTransactionHash = await waitForConfirmedTransactionHash(
       transactionId,
       'private buyorder release transfer',
     );
+
+    transferCount = transferTransactions.length;
+    transferMode = transferTransactions.length > 1 ? 'batch' : 'single';
+    actualTotalTransferUsdtAmount = convertRawUsdtToDisplayAmount(rawBuyerEscrowUsdtBalance, usdtDecimals);
   } catch (error) {
     console.error('completePrivateBuyOrderBySeller: release transfer failed', error);
     return { success: false, error: 'TRANSFER_FAILED' };
@@ -4587,9 +4730,13 @@ export async function completePrivateBuyOrderBySeller(
     transactionHash: releaseTransactionHash,
     buyerTransferUsdtAmount,
     platformFeeUsdtAmount,
-    totalTransferUsdtAmount,
+    totalTransferUsdtAmount: actualTotalTransferUsdtAmount,
+    plannedTotalTransferUsdtAmount,
+    dustSweepUsdtAmount,
+    dustSweepRawAmount,
+    dustSweepWalletAddress,
     transferCount,
-    transferMode: shouldTransferPlatformFee ? 'batch' : 'single',
+    transferMode,
     completedAt: now,
     source: resolvedPlatformFee.source,
   };
@@ -4668,7 +4815,7 @@ export async function completePrivateBuyOrderBySeller(
     platformFeeUsdtAmount,
     platformFeeWalletAddress: resolvedPlatformFee.feeWalletAddress,
     buyerTransferUsdtAmount,
-    totalTransferUsdtAmount,
+    totalTransferUsdtAmount: actualTotalTransferUsdtAmount,
     transferCount,
   };
 }

@@ -202,23 +202,25 @@ const shortWallet = (value: string) => {
   return `${source.slice(0, 6)}...${source.slice(-4)}`;
 };
 
+const normalizeOrderStatus = (status?: string | null) => String(status || '').trim().toLowerCase();
+
 const getStatusLabel = (status?: string | null) => {
-  const normalized = String(status || '').trim();
+  const normalized = normalizeOrderStatus(status);
   if (normalized === 'ordered') return '주문생성';
   if (normalized === 'accepted') return '주문접수';
-  if (normalized === 'paymentRequested') return '입금요청';
-  if (normalized === 'paymentConfirmed') return '입금확인';
+  if (normalized === 'paymentrequested') return '입금요청';
+  if (normalized === 'paymentconfirmed') return '입금확인';
   if (normalized === 'completed') return '거래완료';
   if (normalized === 'cancelled') return '주문취소';
-  return normalized || '-';
+  return String(status || '').trim() || '-';
 };
 
 const getStatusBadgeClassName = (status?: string | null) => {
-  const normalized = String(status || '').trim();
+  const normalized = normalizeOrderStatus(status);
   if (normalized === 'ordered') return 'border-slate-300 bg-slate-100 text-slate-700';
   if (normalized === 'accepted') return 'border-blue-300 bg-blue-100 text-blue-700';
-  if (normalized === 'paymentRequested') return 'border-amber-300 bg-amber-100 text-amber-700';
-  if (normalized === 'paymentConfirmed') return 'border-emerald-300 bg-emerald-100 text-emerald-700';
+  if (normalized === 'paymentrequested') return 'border-amber-300 bg-amber-100 text-amber-700';
+  if (normalized === 'paymentconfirmed') return 'border-emerald-300 bg-emerald-100 text-emerald-700';
   if (normalized === 'completed') return 'border-cyan-300 bg-cyan-100 text-cyan-700';
   if (normalized === 'cancelled') return 'border-rose-300 bg-rose-100 text-rose-700';
   return 'border-slate-200 bg-slate-100 text-slate-600';
@@ -905,9 +907,9 @@ export default function P2PAgentSalesManagementPage() {
                     </tr>
                   ) : (
                     paginatedOrders.map((order) => {
-                      const orderStatus = String(order.status || '').trim();
-                      const isPaymentRequested = orderStatus === 'paymentRequested';
-                      const isPaymentConfirmed = orderStatus === 'paymentConfirmed';
+                      const orderStatus = normalizeOrderStatus(order.status);
+                      const isPaymentRequested = orderStatus === 'paymentrequested';
+                      const isPaymentConfirmed = orderStatus === 'paymentconfirmed';
                       const isCancelled = orderStatus === 'cancelled';
                       const paymentRequestedRemainingMs = isPaymentRequested
                         ? getPaymentRequestedRemainingMs(order, nowMs)
@@ -931,7 +933,7 @@ export default function P2PAgentSalesManagementPage() {
                         && escrowTransferTxHash !== fallbackTransferTxHash;
                       const hasTransferDetails =
                         hasSellerLockTx || hasCancelReleaseTx || hasFallbackTransferTx || hasEscrowTransferTx;
-                      const canCancelOrderByStatus = order.privateSale === true && orderStatus === 'paymentRequested';
+                      const canCancelOrderByStatus = order.privateSale === true && orderStatus === 'paymentrequested';
                       const canCancelOrder = Boolean(activeAccount?.address || agent?.adminWalletAddress) && canCancelOrderByStatus;
                       const platformFeeRate = Number(order.platformFeeRate || 0) || 0;
                       const platformFeeAmount = Number(order.platformFeeAmount || 0) || 0;
