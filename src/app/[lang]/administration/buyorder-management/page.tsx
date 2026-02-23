@@ -56,6 +56,7 @@ type BuyOrderItem = {
   };
   buyer?: {
     walletAddress?: string;
+    escrowWalletAddress?: string;
     nickname?: string;
     depositName?: string;
     rollbackTransactionHash?: string;
@@ -67,6 +68,7 @@ type BuyOrderItem = {
   };
   seller?: {
     walletAddress?: string;
+    escrowWalletAddress?: string;
     nickname?: string;
     lockTransactionHash?: string;
     rollbackTransactionHash?: string;
@@ -101,9 +103,18 @@ type BuyOrderItem = {
   ipAddress?: string;
 };
 
+type EscrowWalletBalanceState = {
+  loading: boolean;
+  displayValue: string;
+  error: string;
+  lastCheckedAt: string;
+  cooldownUntilMs: number;
+};
+
 const POLLING_INTERVAL_MS = 5000;
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
+const BALANCE_CHECK_COOLDOWN_MS = 10_000;
 const walletAuthOptions = ['google', 'email', 'phone'];
 
 type SearchFilters = {
@@ -316,6 +327,33 @@ const shortWallet = (value?: string) => {
   if (!source) return '-';
   if (source.length <= 12) return source;
   return `${source.slice(0, 6)}...${source.slice(-4)}`;
+};
+
+const normalizeWalletKey = (walletAddress: string) => String(walletAddress || '').trim().toLowerCase();
+
+const isWalletAddress = (value: unknown) => /^0x[a-fA-F0-9]{40}$/.test(String(value || '').trim());
+
+const resolveOrderEscrowWalletAddress = (order: BuyOrderItem) => {
+  const candidates = [
+    order?.buyer?.escrowWalletAddress,
+    order?.seller?.escrowWalletAddress,
+  ];
+  for (const candidate of candidates) {
+    const normalized = String(candidate || '').trim();
+    if (isWalletAddress(normalized)) {
+      return normalized;
+    }
+  }
+  return '';
+};
+
+const formatUsdtBalanceDisplayValue = (value: string) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return value;
+  return new Intl.NumberFormat('ko-KR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 6,
+  }).format(parsed);
 };
 
 const getSellerDisplayName = (item: SellerSalesSummaryItem) =>
@@ -533,6 +571,11 @@ export default function BuyOrderManagementPage() {
   const [cancelingOrder, setCancelingOrder] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [copiedTradeId, setCopiedTradeId] = useState('');
+  const [copiedEscrowWalletAddress, setCopiedEscrowWalletAddress] = useState('');
+  const [escrowWalletBalanceByAddress, setEscrowWalletBalanceByAddress] = useState<
+    Record<string, EscrowWalletBalanceState>
+  >({});
+  const [escrowWalletBalanceTickMs, setEscrowWalletBalanceTickMs] = useState(() => Date.now());
   const [cancelActorInfo, setCancelActorInfo] = useState<CancelActorInfo>({
     role: 'admin',
     nickname: '관리자',
@@ -596,6 +639,25 @@ export default function BuyOrderManagementPage() {
       window.clearInterval(intervalId);
     };
   }, []);
+
+  const hasActiveEscrowWalletBalanceCooldown = useMemo(
+    () =>
+      Object.values(escrowWalletBalanceByAddress).some(
+        (item) => Number(item?.cooldownUntilMs || 0) > escrowWalletBalanceTickMs,
+      ),
+    [escrowWalletBalanceByAddress, escrowWalletBalanceTickMs],
+  );
+
+  useEffect(() => {
+    if (!hasActiveEscrowWalletBalanceCooldown) return;
+    const intervalId = window.setInterval(() => {
+      setEscrowWalletBalanceTickMs(Date.now());
+    }, 200);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [hasActiveEscrowWalletBalanceCooldown]);
 
   useEffect(() => {
     let isMounted = true;
@@ -902,6 +964,94 @@ export default function BuyOrderManagementPage() {
       console.error('Failed to copy trade id', error);
     }
   }, []);
+
+  const copyEscrowWalletAddress = useCallback(async (walletAddress: string) => {
+    const normalizedWalletAddress = String(walletAddress || '').trim();
+    if (!normalizedWalletAddress) return;
+
+    try {
+      await navigator.clipboard.writeText(normalizedWalletAddress);
+      setCopiedEscrowWalletAddress(normalizedWalletAddress);
+      window.setTimeout(() => {
+        setCopiedEscrowWalletAddress((prev) => (prev === normalizedWalletAddress ? '' : prev));
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to copy escrow wallet address', error);
+    }
+  }, []);
+
+  const handleCheckEscrowWalletBalance = useCallback(async (walletAddress: string) => {
+    const normalizedWalletAddress = String(walletAddress || '').trim();
+    if (!isWalletAddress(normalizedWalletAddress)) return;
+
+    const walletKey = normalizeWalletKey(normalizedWalletAddress);
+    const now = Date.now();
+    const currentState = escrowWalletBalanceByAddress[walletKey];
+    if (currentState?.loading) return;
+    if (Number(currentState?.cooldownUntilMs || 0) > now) return;
+
+    const nextCooldownUntil = now + BALANCE_CHECK_COOLDOWN_MS;
+    setEscrowWalletBalanceByAddress((prev) => {
+      const existing = prev[walletKey];
+      return {
+        ...prev,
+        [walletKey]: {
+          loading: true,
+          displayValue: existing?.displayValue || '',
+          error: '',
+          lastCheckedAt: existing?.lastCheckedAt || '',
+          cooldownUntilMs: nextCooldownUntil,
+        },
+      };
+    });
+
+    try {
+      const response = await fetch('/api/user/getUSDTBalanceByWalletAddress', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          walletAddress: normalizedWalletAddress,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      const rawDisplayValue = String(payload?.result?.displayValue || payload?.result?.balance || '0');
+      const displayValue = formatUsdtBalanceDisplayValue(rawDisplayValue);
+      const errorMessage = !response.ok
+        ? String(payload?.error || '잔고 조회에 실패했습니다.')
+        : String(payload?.error || '');
+
+      setEscrowWalletBalanceByAddress((prev) => {
+        const existing = prev[walletKey];
+        return {
+          ...prev,
+          [walletKey]: {
+            loading: false,
+            displayValue,
+            error: errorMessage,
+            lastCheckedAt: new Date().toISOString(),
+            cooldownUntilMs: existing?.cooldownUntilMs || nextCooldownUntil,
+          },
+        };
+      });
+    } catch (error) {
+      console.error('Failed to fetch escrow wallet balance', error);
+      setEscrowWalletBalanceByAddress((prev) => {
+        const existing = prev[walletKey];
+        return {
+          ...prev,
+          [walletKey]: {
+            loading: false,
+            displayValue: existing?.displayValue || '',
+            error: '잔고 조회 중 오류가 발생했습니다.',
+            lastCheckedAt: existing?.lastCheckedAt || '',
+            cooldownUntilMs: existing?.cooldownUntilMs || nextCooldownUntil,
+          },
+        };
+      });
+    }
+  }, [escrowWalletBalanceByAddress]);
 
   return (
     <main className="min-h-screen bg-transparent">
@@ -1232,11 +1382,11 @@ export default function BuyOrderManagementPage() {
             <div className="px-4 py-12 text-center text-sm text-slate-500">검색된 주문 데이터가 없습니다.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-[1120px] w-full table-fixed">
+              <table className="min-w-[1240px] w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
                     <th className="w-[108px] px-3 py-3">상태</th>
-                    <th className="w-[140px] px-3 py-3">주문시각/거래번호(TID)</th>
+                    <th className="w-[220px] px-3 py-3">주문시각/거래번호(TID)</th>
                     <th className="w-[104px] px-3 py-3">구매자</th>
                     <th className="w-[104px] px-3 py-3">판매자/결제방법</th>
                     <th className="w-[108px] px-3 py-3 text-right">주문금액</th>
@@ -1280,6 +1430,25 @@ export default function BuyOrderManagementPage() {
                     const platformFeeWalletAddress = getOrderPlatformFeeWalletAddress(order);
                     const hasPlatformFeeInfo =
                       platformFeeRate > 0 || platformFeeAmount > 0 || Boolean(platformFeeWalletAddress);
+                    const escrowWalletAddress = resolveOrderEscrowWalletAddress(order);
+                    const escrowWalletKey = escrowWalletAddress ? normalizeWalletKey(escrowWalletAddress) : '';
+                    const escrowWalletBalanceState = escrowWalletKey
+                      ? escrowWalletBalanceByAddress[escrowWalletKey]
+                      : undefined;
+                    const escrowWalletCooldownRemainingMs = Math.max(
+                      0,
+                      Number(escrowWalletBalanceState?.cooldownUntilMs || 0) - escrowWalletBalanceTickMs,
+                    );
+                    const escrowWalletCooldownRemainingSeconds = escrowWalletCooldownRemainingMs > 0
+                      ? Math.ceil(escrowWalletCooldownRemainingMs / 1000)
+                      : 0;
+                    const escrowWalletCooldownProgressPercent = Math.max(
+                      0,
+                      Math.min(
+                        100,
+                        (escrowWalletCooldownRemainingMs / BALANCE_CHECK_COOLDOWN_MS) * 100,
+                      ),
+                    );
 
                     return (
                     <tr key={`${order?._id || order?.tradeId || 'order'}-${index}`} className="bg-white text-sm text-slate-700">
@@ -1327,7 +1496,7 @@ export default function BuyOrderManagementPage() {
                         </div>
                       </td>
                       <td className="px-3 py-3 text-slate-600">
-                        <div className="flex flex-col leading-tight">
+                        <div className="flex flex-col gap-1 leading-tight">
                           <span className="whitespace-nowrap text-[13px] font-medium text-slate-700">
                             {formatDateTime(order?.createdAt)}
                           </span>
@@ -1347,6 +1516,68 @@ export default function BuyOrderManagementPage() {
                           ) : (
                             <span className="mt-0.5 truncate text-xs font-semibold text-slate-900">-</span>
                           )}
+
+                          <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5">
+                            <p className="text-[10px] font-semibold text-slate-500">에스크로 지갑</p>
+                            {escrowWalletAddress ? (
+                              <div className="mt-0.5 flex flex-col gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void copyEscrowWalletAddress(escrowWalletAddress);
+                                  }}
+                                  className="inline-flex w-fit items-center gap-1 truncate text-xs font-semibold text-slate-900 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                                >
+                                  {shortWallet(escrowWalletAddress)}
+                                  {copiedEscrowWalletAddress === escrowWalletAddress && (
+                                    <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                                  )}
+                                </button>
+                                {escrowWalletCooldownRemainingMs <= 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      void handleCheckEscrowWalletBalance(escrowWalletAddress);
+                                    }}
+                                    disabled={Boolean(escrowWalletBalanceState?.loading)}
+                                    className={`inline-flex w-fit items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold transition ${
+                                      escrowWalletBalanceState?.loading
+                                        ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                                        : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100'
+                                    }`}
+                                  >
+                                    {escrowWalletBalanceState?.loading ? '조회중...' : '잔고확인'}
+                                  </button>
+                                ) : (
+                                  <div className="w-full max-w-[150px] rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1">
+                                    <div className="flex items-center justify-between text-[10px] font-semibold text-indigo-700">
+                                      <span>재조회 대기</span>
+                                      <span>{escrowWalletCooldownRemainingSeconds}s</span>
+                                    </div>
+                                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/90">
+                                      <div
+                                        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-500 transition-[width] duration-200 ease-linear"
+                                        style={{ width: `${escrowWalletCooldownProgressPercent.toFixed(2)}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                                <span
+                                  className={`text-[10px] font-semibold ${
+                                    escrowWalletBalanceState?.error ? 'text-rose-600' : 'text-slate-600'
+                                  }`}
+                                >
+                                  {escrowWalletBalanceState?.error
+                                    ? '조회실패'
+                                    : escrowWalletBalanceState?.displayValue
+                                    ? `${escrowWalletBalanceState.displayValue} USDT`
+                                    : '잔고 미조회'}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="mt-0.5 text-[10px] text-slate-400">-</span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-3 py-3">

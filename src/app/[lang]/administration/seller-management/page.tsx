@@ -18,6 +18,16 @@ type SellerDashboardMetrics = {
   updatedAt: string;
 };
 
+type SellerWalletBalanceState = {
+  loading: boolean;
+  displayValue: string;
+  error: string;
+  lastCheckedAt: string;
+  cooldownUntilMs: number;
+};
+
+const BALANCE_CHECK_COOLDOWN_MS = 10_000;
+
 export default function SellerManagementPage() {
   const params = useParams<{ lang?: string }>();
   const router = useRouter();
@@ -59,6 +69,11 @@ export default function SellerManagementPage() {
   const [initializedFromParams, setInitializedFromParams] = useState(false);
   const [dashboard, setDashboard] = useState<SellerDashboardMetrics | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [walletBalanceByAddress, setWalletBalanceByAddress] = useState<
+    Record<string, SellerWalletBalanceState>
+  >({});
+  const [walletCopyFeedback, setWalletCopyFeedback] = useState('');
+  const [walletBalanceTickMs, setWalletBalanceTickMs] = useState(() => Date.now());
 
   const fetchSellers = async () => {
     setLoading(true);
@@ -350,6 +365,121 @@ export default function SellerManagementPage() {
       setSelectedEnabled(null);
     }
   }, [enabledModalOpen]);
+
+  const hasActiveWalletBalanceCooldown = useMemo(
+    () =>
+      Object.values(walletBalanceByAddress).some(
+        (item) => Number(item?.cooldownUntilMs || 0) > walletBalanceTickMs,
+      ),
+    [walletBalanceByAddress, walletBalanceTickMs],
+  );
+
+  useEffect(() => {
+    if (!hasActiveWalletBalanceCooldown) return;
+    const interval = window.setInterval(() => {
+      setWalletBalanceTickMs(Date.now());
+    }, 200);
+    return () => window.clearInterval(interval);
+  }, [hasActiveWalletBalanceCooldown]);
+
+  const normalizeWalletKey = (walletAddress: string) => walletAddress.trim().toLowerCase();
+
+  const formatUsdtDisplayValue = (value: string) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return value;
+    return new Intl.NumberFormat('ko-KR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 6,
+    }).format(parsed);
+  };
+
+  const handleCopyWalletAddress = async (walletAddress: string) => {
+    const normalizedWallet = String(walletAddress || '').trim();
+    if (!normalizedWallet) return;
+    const walletKey = normalizeWalletKey(normalizedWallet);
+    try {
+      await navigator.clipboard.writeText(normalizedWallet);
+      setWalletCopyFeedback(walletKey);
+      window.setTimeout(() => {
+        setWalletCopyFeedback((prev) => (prev === walletKey ? '' : prev));
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to copy wallet address', error);
+    }
+  };
+
+  const handleCheckSellerUsdtBalance = async (walletAddress: string) => {
+    const normalizedWallet = String(walletAddress || '').trim();
+    if (!normalizedWallet) return;
+
+    const walletKey = normalizeWalletKey(normalizedWallet);
+    const nowMs = Date.now();
+    const currentState = walletBalanceByAddress[walletKey];
+    if (currentState?.loading) return;
+    if (Number(currentState?.cooldownUntilMs || 0) > nowMs) return;
+
+    const nextCooldownUntil = nowMs + BALANCE_CHECK_COOLDOWN_MS;
+    setWalletBalanceByAddress((prev) => {
+      const existing = prev[walletKey];
+      return {
+        ...prev,
+        [walletKey]: {
+          loading: true,
+          displayValue: existing?.displayValue || '',
+          error: '',
+          lastCheckedAt: existing?.lastCheckedAt || '',
+          cooldownUntilMs: nextCooldownUntil,
+        },
+      };
+    });
+
+    try {
+      const response = await fetch('/api/user/getUSDTBalanceByWalletAddress', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          walletAddress: normalizedWallet,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      const rawDisplayValue = String(data?.result?.displayValue || data?.result?.balance || '0');
+      const displayValue = formatUsdtDisplayValue(rawDisplayValue);
+      const errorMessage = !response.ok
+        ? String(data?.error || '잔고 조회에 실패했습니다.')
+        : String(data?.error || '');
+
+      setWalletBalanceByAddress((prev) => {
+        const existing = prev[walletKey];
+        return {
+          ...prev,
+          [walletKey]: {
+            loading: false,
+            displayValue,
+            error: errorMessage,
+            lastCheckedAt: new Date().toISOString(),
+            cooldownUntilMs: existing?.cooldownUntilMs || nextCooldownUntil,
+          },
+        };
+      });
+    } catch (error) {
+      console.error('Failed to fetch seller USDT balance', error);
+      setWalletBalanceByAddress((prev) => {
+        const existing = prev[walletKey];
+        return {
+          ...prev,
+          [walletKey]: {
+            loading: false,
+            displayValue: existing?.displayValue || '',
+            error: '잔고 조회 중 오류가 발생했습니다.',
+            lastCheckedAt: existing?.lastCheckedAt || '',
+            cooldownUntilMs: existing?.cooldownUntilMs || nextCooldownUntil,
+          },
+        };
+      });
+    }
+  };
 
   const formatCount = (value: number) =>
     new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(Number(value) || 0);
@@ -668,6 +798,22 @@ export default function SellerManagementPage() {
                       .replace(/^0x/i, '')
                       .slice(0, 2)
                       .toUpperCase();
+                    const walletAddress = sellerUser?.walletAddress || '';
+                    const walletKey = walletAddress ? normalizeWalletKey(walletAddress) : '';
+                    const walletBalanceState = walletKey ? walletBalanceByAddress[walletKey] : undefined;
+                    const cooldownRemainingMs = Math.max(
+                      0,
+                      Number(walletBalanceState?.cooldownUntilMs || 0) - walletBalanceTickMs,
+                    );
+                    const cooldownRemainingSeconds =
+                      cooldownRemainingMs > 0 ? Math.ceil(cooldownRemainingMs / 1000) : 0;
+                    const cooldownProgressPercent = Math.max(
+                      0,
+                      Math.min(100, (cooldownRemainingMs / BALANCE_CHECK_COOLDOWN_MS) * 100),
+                    );
+                    const walletPreview = walletAddress
+                      ? `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`
+                      : '-';
                     return (
                       <tr key={index} className="border-b hover:bg-slate-50">
                         <td className="px-4 py-2">
@@ -733,9 +879,80 @@ export default function SellerManagementPage() {
                             변경하기
                           </button>
                         </td>
-                        <td className="px-4 py-2 text-slate-700 text-xs">
-                          {sellerUser?.walletAddress?.substring(0, 6)}...
-                          {sellerUser?.walletAddress?.substring(sellerUser?.walletAddress.length - 4)}
+                        <td className="px-4 py-2 text-xs text-slate-700">
+                          <div className="flex min-w-[220px] flex-col gap-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-xs text-slate-700">{walletPreview}</span>
+                              {walletAddress ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void handleCopyWalletAddress(walletAddress);
+                                  }}
+                                  className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                                >
+                                  복사
+                                </button>
+                              ) : null}
+                              {walletKey && walletCopyFeedback === walletKey && (
+                                <span className="text-[10px] font-semibold text-emerald-600">복사됨</span>
+                              )}
+                            </div>
+                            {walletAddress ? (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  {cooldownRemainingMs <= 0 ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        void handleCheckSellerUsdtBalance(walletAddress);
+                                      }}
+                                      disabled={Boolean(walletBalanceState?.loading)}
+                                      className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold transition ${
+                                        walletBalanceState?.loading
+                                          ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                                          : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100'
+                                      }`}
+                                    >
+                                      {walletBalanceState?.loading ? '조회중...' : '잔고확인'}
+                                    </button>
+                                  ) : (
+                                    <div className="w-[130px] rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-1">
+                                      <div className="flex items-center justify-between text-[10px] font-semibold text-indigo-700">
+                                        <span>재조회 대기</span>
+                                        <span>{cooldownRemainingSeconds}s</span>
+                                      </div>
+                                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/90">
+                                        <div
+                                          className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-500 transition-[width] duration-200 ease-linear"
+                                          style={{ width: `${cooldownProgressPercent.toFixed(2)}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+                                  <span
+                                    className={`text-[11px] font-semibold ${
+                                      walletBalanceState?.error ? 'text-rose-600' : 'text-slate-700'
+                                    }`}
+                                  >
+                                    {walletBalanceState?.error
+                                      ? '조회실패'
+                                      : walletBalanceState?.displayValue
+                                      ? `${walletBalanceState.displayValue} USDT`
+                                      : '잔고 미조회'}
+                                  </span>
+                                </div>
+                                {walletBalanceState?.lastCheckedAt && (
+                                  <span className="text-[10px] text-slate-500">
+                                    조회시각 {new Date(walletBalanceState.lastCheckedAt).toLocaleTimeString()}
+                                  </span>
+                                )}
+                                {walletBalanceState?.error && (
+                                  <span className="text-[10px] text-rose-500">{walletBalanceState.error}</span>
+                                )}
+                              </div>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="px-4 py-2 text-xs text-slate-600">
                           {createdAt ? new Date(createdAt).toLocaleString() : '-'}
