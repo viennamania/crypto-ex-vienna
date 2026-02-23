@@ -1342,27 +1342,36 @@ export default function BuyOrderManagementPage() {
         <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_38px_-32px_rgba(15,23,42,0.55)]">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">최신 주문 수</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{dashboardStats.totalCount.toLocaleString()}</p>
+            <p className="mt-2 text-right text-3xl font-bold tabular-nums text-slate-900">
+              {dashboardStats.totalCount.toLocaleString()}
+            </p>
             <p className="mt-1 text-xs text-slate-500">검색 조건 전체 건수</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_38px_-32px_rgba(15,23,42,0.55)]">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">진행중 주문</p>
-            <p className="mt-2 text-3xl font-bold text-amber-700">{dashboardStats.activeCount.toLocaleString()}</p>
-            <p className="mt-1 text-xs text-slate-500">ordered / accepted / paymentRequested</p>
+            <p className="mt-2 text-right text-3xl font-bold tabular-nums text-amber-700">
+              {dashboardStats.activeCount.toLocaleString()}
+            </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_38px_-32px_rgba(15,23,42,0.55)]">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">총 결제 금액</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{formatKrw(dashboardStats.totalKrwAmount)}</p>
+            <p className="mt-2 text-right text-3xl font-bold tabular-nums text-slate-900">
+              {formatKrw(dashboardStats.totalKrwAmount)}
+            </p>
             <p className="mt-1 text-xs text-slate-500">KRW</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_38px_-32px_rgba(15,23,42,0.55)]">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">총 주문 수량</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{formatUsdt(dashboardStats.totalUsdtAmount)}</p>
+            <p className="mt-2 text-right text-3xl font-bold tabular-nums text-slate-900">
+              {formatUsdt(dashboardStats.totalUsdtAmount)}
+            </p>
             <p className="mt-1 text-xs text-slate-500">USDT</p>
           </div>
           <div className="rounded-2xl border border-indigo-200 bg-indigo-50/55 p-4 shadow-[0_18px_38px_-32px_rgba(79,70,229,0.35)]">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700">총 수수료량</p>
-            <p className="mt-2 text-3xl font-bold text-indigo-900">{formatUsdt(dashboardStats.totalFeeAmount)}</p>
+            <p className="mt-2 text-right text-3xl font-bold tabular-nums text-indigo-900">
+              {formatUsdt(dashboardStats.totalFeeAmount)}
+            </p>
             <p className="mt-1 text-xs text-indigo-700/80">USDT</p>
           </div>
         </section>
