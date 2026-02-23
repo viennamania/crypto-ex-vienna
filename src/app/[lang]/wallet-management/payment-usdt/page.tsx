@@ -194,7 +194,7 @@ const formatUsdtInputFromBalance = (value: number) => {
   if (!Number.isFinite(value) || value <= 0) return '';
   const floored = Math.floor(value * 1_000_000) / 1_000_000;
   if (floored <= 0) return '';
-  return floored.toFixed(6).replace(/\.?0+$/, '');
+  return floored.toFixed(6);
 };
 
 const formatKrw = (value: number) => `${value.toLocaleString()}원`;
@@ -1595,8 +1595,9 @@ export default function PaymentUsdtPage({
                       disabled={shouldLockAmountInputs}
                       onClick={() => {
                         const nextAmount = clampUsdtInputToBalance(String(value));
-                        setAmountInput(nextAmount);
-                        setSelectedPreset(nextAmount === String(value) ? value : null);
+                        const nextAmountNumeric = toSafeUsdtAmount(nextAmount);
+                        setAmountInput(nextAmountNumeric > 0 ? nextAmountNumeric.toFixed(6) : '');
+                        setSelectedPreset(nextAmountNumeric === value ? value : null);
                       }}
                       className={`h-10 rounded-xl border text-sm font-semibold transition ${
                         selectedPreset === value
@@ -1646,7 +1647,11 @@ export default function PaymentUsdtPage({
                         setAmountInput(clampUsdtInputToBalance(event.target.value));
                         setSelectedPreset(null);
                       }}
-                      placeholder="0.00"
+                      onBlur={() => {
+                        const normalized = toSafeUsdtAmount(clampUsdtInputToBalance(amountInput));
+                        setAmountInput(normalized > 0 ? normalized.toFixed(6) : '');
+                      }}
+                      placeholder="0.000000"
                       className="w-full bg-transparent text-right text-5xl font-bold text-slate-900 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
                       inputMode="decimal"
                     />

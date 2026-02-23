@@ -393,6 +393,45 @@ const toNonNegativeUsdtAmountOrNull = (value: unknown): number | null => {
   return roundDownUsdtAmount(numeric);
 };
 
+const toKrwAmountOrZero = (value: unknown) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 0;
+  }
+  return Math.floor(numeric);
+};
+
+const toRateOrZero = (value: unknown) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 0;
+  }
+  return numeric;
+};
+
+const calculateUsdtAmountFromKrwAndRate = ({
+  krwAmount,
+  rate,
+}: {
+  krwAmount: unknown;
+  rate: unknown;
+}) => {
+  const normalizedKrwAmount = toKrwAmountOrZero(krwAmount);
+  const normalizedRate = toRateOrZero(rate);
+  if (normalizedKrwAmount <= 0 || normalizedRate <= 0) {
+    return {
+      krwAmount: 0,
+      rate: 0,
+      usdtAmount: 0,
+    };
+  }
+  return {
+    krwAmount: normalizedKrwAmount,
+    rate: normalizedRate,
+    usdtAmount: roundDownUsdtAmount(normalizedKrwAmount / normalizedRate),
+  };
+};
+
 const isWalletAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(String(value || '').trim());
 
 const toFeeRateOrNull = (value: unknown) => {
@@ -2285,17 +2324,38 @@ export async function sellOrderRollbackPayment(data: any) {
 export async function insertBuyOrder(data: any) {
 
 
-  if (!data.clientId || !data.storecode || !data.walletAddress || !data.usdtAmount || !data.krwAmount || !data.rate) {
+  if (!data.clientId || !data.storecode || !data.walletAddress || !data.krwAmount || !data.rate) {
     
     console.log('insertBuyOrder data is null: ' + JSON.stringify(data));
     
     return null;
   }
 
-  const normalizedUsdtAmount = toUsdtAmountOrZero(data.usdtAmount);
+  const amountFromKrwRate = calculateUsdtAmountFromKrwAndRate({
+    krwAmount: data.krwAmount,
+    rate: data.rate,
+  });
+  const normalizedKrwAmount = amountFromKrwRate.krwAmount;
+  const normalizedRate = amountFromKrwRate.rate;
+  const normalizedUsdtAmount = amountFromKrwRate.usdtAmount;
   if (normalizedUsdtAmount <= 0) {
-    console.log('insertBuyOrder normalized usdt amount is invalid: ' + data.usdtAmount);
+    console.log('insertBuyOrder normalized usdt amount is invalid from krw/rate', {
+      krwAmount: data.krwAmount,
+      rate: data.rate,
+      usdtAmount: data.usdtAmount,
+    });
     return null;
+  }
+
+  const requestedUsdtAmount = toUsdtAmountOrZero(data.usdtAmount);
+  if (requestedUsdtAmount > 0 && requestedUsdtAmount !== normalizedUsdtAmount) {
+    console.warn('insertBuyOrder usdt amount mismatch corrected by server', {
+      walletAddress: data.walletAddress,
+      requestedUsdtAmount,
+      normalizedUsdtAmount,
+      normalizedKrwAmount,
+      normalizedRate,
+    });
   }
 
   const nickname = data.nickname || '';
@@ -2365,8 +2425,8 @@ export async function insertBuyOrder(data: any) {
         storeName: store.storeName,
         storeLogo: store.storeLogo,
         usdtAmount: normalizedUsdtAmount,
-        krwAmount: data.krwAmount,
-        rate: data.rate,
+        krwAmount: normalizedKrwAmount,
+        rate: normalizedRate,
         createdAt: new Date().toISOString(),
       }
     });
@@ -2477,8 +2537,8 @@ export async function insertBuyOrder(data: any) {
       //seller: seller,
 
       usdtAmount: normalizedUsdtAmount,
-      krwAmount: data.krwAmount,
-      rate: data.rate,
+      krwAmount: normalizedKrwAmount,
+      rate: normalizedRate,
       createdAt: new Date().toISOString(),
       status: 'ordered',
       privateSale: data.privateSale,
@@ -2526,8 +2586,8 @@ export async function insertBuyOrder(data: any) {
           storeName: store.storeName,
           storeLogo: store.storeLogo,
           usdtAmount: normalizedUsdtAmount,
-          krwAmount: data.krwAmount,
-          rate: data.rate,
+          krwAmount: normalizedKrwAmount,
+          rate: normalizedRate,
           createdAt: new Date().toISOString(),
         }
       } }
@@ -2578,17 +2638,38 @@ export async function insertBuyOrder(data: any) {
 export async function insertBuyOrderForClearance(data: any) {
 
 
-  if (!data.storecode || !data.walletAddress || !data.usdtAmount || !data.krwAmount || !data.rate) {
+  if (!data.storecode || !data.walletAddress || !data.krwAmount || !data.rate) {
     
     console.log('insertBuyOrderForClearance data is null: ' + JSON.stringify(data));
     
     return null;
   }
 
-  const normalizedUsdtAmount = toUsdtAmountOrZero(data.usdtAmount);
+  const amountFromKrwRate = calculateUsdtAmountFromKrwAndRate({
+    krwAmount: data.krwAmount,
+    rate: data.rate,
+  });
+  const normalizedKrwAmount = amountFromKrwRate.krwAmount;
+  const normalizedRate = amountFromKrwRate.rate;
+  const normalizedUsdtAmount = amountFromKrwRate.usdtAmount;
   if (normalizedUsdtAmount <= 0) {
-    console.log('insertBuyOrderForClearance normalized usdt amount is invalid: ' + data.usdtAmount);
+    console.log('insertBuyOrderForClearance normalized usdt amount is invalid from krw/rate', {
+      krwAmount: data.krwAmount,
+      rate: data.rate,
+      usdtAmount: data.usdtAmount,
+    });
     return null;
+  }
+
+  const requestedUsdtAmount = toUsdtAmountOrZero(data.usdtAmount);
+  if (requestedUsdtAmount > 0 && requestedUsdtAmount !== normalizedUsdtAmount) {
+    console.warn('insertBuyOrderForClearance usdt amount mismatch corrected by server', {
+      walletAddress: data.walletAddress,
+      requestedUsdtAmount,
+      normalizedUsdtAmount,
+      normalizedKrwAmount,
+      normalizedRate,
+    });
   }
 
 
@@ -2721,8 +2802,8 @@ export async function insertBuyOrderForClearance(data: any) {
       //seller: seller,
 
       usdtAmount: normalizedUsdtAmount,
-      krwAmount: data.krwAmount,
-      rate: data.rate,
+      krwAmount: normalizedKrwAmount,
+      rate: normalizedRate,
       createdAt: new Date().toISOString(),
       status: 'ordered',
       privateSale: data.privateSale,
@@ -2804,7 +2885,7 @@ export async function insertBuyOrderForClearance(data: any) {
 export async function insertBuyOrderForUser(data: any) {
 
 
-  if (!data.storecode || !data.walletAddress || !data.usdtAmount || !data.krwAmount || !data.rate) {
+  if (!data.storecode || !data.walletAddress || !data.krwAmount || !data.rate) {
     
     console.log('insertBuyOrderForUser data is null: ' + JSON.stringify(data));
 
@@ -2822,10 +2903,31 @@ export async function insertBuyOrderForUser(data: any) {
     return null;
   }
 
-  const normalizedUsdtAmount = toUsdtAmountOrZero(data.usdtAmount);
+  const amountFromKrwRate = calculateUsdtAmountFromKrwAndRate({
+    krwAmount: data.krwAmount,
+    rate: data.rate,
+  });
+  const normalizedKrwAmount = amountFromKrwRate.krwAmount;
+  const normalizedRate = amountFromKrwRate.rate;
+  const normalizedUsdtAmount = amountFromKrwRate.usdtAmount;
   if (normalizedUsdtAmount <= 0) {
-    console.log('insertBuyOrderForUser normalized usdt amount is invalid: ' + data.usdtAmount);
+    console.log('insertBuyOrderForUser normalized usdt amount is invalid from krw/rate', {
+      krwAmount: data.krwAmount,
+      rate: data.rate,
+      usdtAmount: data.usdtAmount,
+    });
     return null;
+  }
+
+  const requestedUsdtAmount = toUsdtAmountOrZero(data.usdtAmount);
+  if (requestedUsdtAmount > 0 && requestedUsdtAmount !== normalizedUsdtAmount) {
+    console.warn('insertBuyOrderForUser usdt amount mismatch corrected by server', {
+      walletAddress: data.walletAddress,
+      requestedUsdtAmount,
+      normalizedUsdtAmount,
+      normalizedKrwAmount,
+      normalizedRate,
+    });
   }
 
 
@@ -2929,8 +3031,8 @@ export async function insertBuyOrderForUser(data: any) {
       //seller: seller,
 
       usdtAmount: normalizedUsdtAmount,
-      krwAmount: data.krwAmount,
-      rate: data.rate,
+      krwAmount: normalizedKrwAmount,
+      rate: normalizedRate,
       createdAt: new Date().toISOString(),
       
       //status: 'ordered',

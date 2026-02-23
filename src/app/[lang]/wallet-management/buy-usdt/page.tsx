@@ -323,7 +323,7 @@ const formatKrwInputWithComma = (value: string) => {
 
 const formatUsdtInputFromNumber = (value: number) => {
   if (!Number.isFinite(value) || value <= 0) return '';
-  return value.toFixed(6).replace(/\.?0+$/, '');
+  return value.toFixed(6);
 };
 
 const formatCountdownClock = (remainingMs: number) => {
@@ -1556,7 +1556,7 @@ export default function BuyUsdtPage({
 
   const onSelectQuickAmount = (value: number) => {
     setSelectedQuickAmount(value);
-    setAmountInput(String(value));
+    setAmountInput(value.toFixed(6));
     setLastEditedAmountType('usdt');
   };
 
@@ -2501,7 +2501,7 @@ export default function BuyUsdtPage({
                         type="button"
                         onClick={() => {
                           const max = selectedSeller.currentUsdtBalance;
-                          setAmountInput(max > 0 ? String(Number(max.toFixed(6))) : '');
+                          setAmountInput(max > 0 ? max.toFixed(6) : '');
                           setLastEditedAmountType('usdt');
                           setSelectedQuickAmount(null);
                         }}
@@ -2522,7 +2522,15 @@ export default function BuyUsdtPage({
                         setLastEditedAmountType('usdt');
                         setSelectedQuickAmount(null);
                       }}
-                      placeholder="0.00"
+                      onBlur={() => {
+                        const normalized = Number(normalizeUsdtInput(amountInput));
+                        if (!Number.isFinite(normalized) || normalized <= 0) {
+                          setAmountInput('');
+                          return;
+                        }
+                        setAmountInput(normalized.toFixed(6));
+                      }}
+                      placeholder="0.000000"
                       className="w-full bg-transparent text-right text-5xl font-semibold text-slate-900 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
                       inputMode="decimal"
                     />

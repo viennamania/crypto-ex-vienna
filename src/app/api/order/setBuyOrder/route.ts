@@ -57,6 +57,13 @@ import {
 
 
 const clientId = process.env.NEXT_PUBLIC_TEMPLATE_CLIENT_ID || "";
+const USDT_AMOUNT_PRECISION = 6;
+const USDT_AMOUNT_SCALE = 10 ** USDT_AMOUNT_PRECISION;
+
+const roundDownUsdtAmount = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.floor(value * USDT_AMOUNT_SCALE) / USDT_AMOUNT_SCALE;
+};
 
 export async function POST(request: NextRequest) {
 
@@ -73,6 +80,10 @@ export async function POST(request: NextRequest) {
     buyer,
     paymentMethod
   } = body;
+
+  const normalizedKrwAmount = Number.isFinite(Number(krwAmount)) ? Math.floor(Number(krwAmount)) : 0;
+  const normalizedRate = Number(rate);
+  const normalizedUsdtAmount = roundDownUsdtAmount(normalizedKrwAmount / normalizedRate);
 
   ////console.log("setBuyOrder =====  body", body);
 
@@ -206,14 +217,6 @@ export async function POST(request: NextRequest) {
   }
 
 
-  // check usdtAmount is valid
-  if (typeof usdtAmount !== "number" || usdtAmount <= 0) {
-    return NextResponse.json({
-      result: null,
-      error: "Invalid USDT amount",
-    }, { status: 400 });
-  }
-
   // check bankInfo is exists
   if (!bankInfo) {
     return NextResponse.json({
@@ -225,7 +228,7 @@ export async function POST(request: NextRequest) {
 
 
   // check krwAmount is valid
-  if (typeof krwAmount !== "number" || krwAmount <= 0) {
+  if (!Number.isFinite(normalizedKrwAmount) || normalizedKrwAmount <= 0) {
     return NextResponse.json({
       result: null,
       error: "Invalid KRW amount",
@@ -233,11 +236,31 @@ export async function POST(request: NextRequest) {
   }
 
   // check rate is valid
-  if (typeof rate !== "number" || rate <= 0) {
+  if (!Number.isFinite(normalizedRate) || normalizedRate <= 0) {
     return NextResponse.json({
       result: null,
       error: "Invalid rate",
     }, { status: 400 });
+  }
+
+  if (!Number.isFinite(normalizedUsdtAmount) || normalizedUsdtAmount <= 0) {
+    return NextResponse.json({
+      result: null,
+      error: "Invalid USDT amount calculated from KRW/rate",
+    }, { status: 400 });
+  }
+
+  const requestedUsdtAmount = Number(usdtAmount);
+  if (Number.isFinite(requestedUsdtAmount) && requestedUsdtAmount > 0) {
+    const requestedUsdtAmountRounded = roundDownUsdtAmount(requestedUsdtAmount);
+    if (requestedUsdtAmountRounded !== normalizedUsdtAmount) {
+      console.warn("setBuyOrder usdt mismatch corrected by server", {
+        requestedUsdtAmount: requestedUsdtAmountRounded,
+        normalizedUsdtAmount,
+        normalizedKrwAmount,
+        normalizedRate,
+      });
+    }
   }
 
 
@@ -321,9 +344,9 @@ NEXT_PUBLIC_PLATFORM_FEE_ADDRESS=0x77D98480b04404a3852ccaa31f2272CC94F35093
 
 
     nickname: nickname,
-    usdtAmount: usdtAmount,
-    krwAmount: krwAmount,
-    rate: rate,
+    usdtAmount: normalizedUsdtAmount,
+    krwAmount: normalizedKrwAmount,
+    rate: normalizedRate,
     privateSale: privateSale,
     buyer: buyer,
     paymentMethod: paymentMethod,
