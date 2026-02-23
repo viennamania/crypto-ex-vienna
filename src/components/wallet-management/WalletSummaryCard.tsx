@@ -95,7 +95,7 @@ export default function WalletSummaryCard({
       }
     } finally {
       clearWalletConnectionState();
-      window.dispatchEvent(new Event('orangex-wallet-disconnected'));
+      window.dispatchEvent(new Event('wallet-disconnected'));
       const fallbackPath = window.location.pathname + window.location.search;
       window.location.replace(disconnectRedirectPath || fallbackPath);
     }

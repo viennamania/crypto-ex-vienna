@@ -71,7 +71,7 @@ import { add } from "thirdweb/extensions/farcaster/keyGateway";
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 interface SellOrder {
   _id: string;

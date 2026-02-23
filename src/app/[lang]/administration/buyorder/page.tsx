@@ -104,7 +104,7 @@ import {
 } from "@/app/config/contractAddresses";
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 interface BuyOrder {
   _id: string;
@@ -3682,7 +3682,7 @@ const fetchBuyOrders = async () => {
 
             >
               <Image
-                src="/logo.png"
+                src="/api/client/logo"
                 alt="logo"
                 width={100}
                 height={100}

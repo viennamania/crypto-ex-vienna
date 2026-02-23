@@ -10,7 +10,7 @@ import { toast } from 'react-hot-toast';
 import { client } from '../../client';
 import { useClientWallets } from '@/lib/useClientWallets';
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 type NetworkKey = 'ethereum' | 'polygon' | 'arbitrum' | 'bsc';
 

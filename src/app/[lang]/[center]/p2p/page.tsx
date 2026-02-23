@@ -110,7 +110,7 @@ import { useAnimatedNumber } from "@/components/useAnimatedNumber";
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 interface BuyOrder {
   _id: string;
@@ -3721,7 +3721,7 @@ const fetchBuyOrders = async () => {
 
             >
               <Image
-                src="/logo.png"
+                src="/api/client/logo"
                 alt="logo"
                 width={100}
                 height={100}
@@ -3764,10 +3764,10 @@ const fetchBuyOrders = async () => {
               </button>
 
               {/* opnew new window for admin dashboard */}
-              {/* https://orangex.center/ko/administration/buyorder */}
+              {/* /<lang>/administration/buyorder */}
               <button
                 onClick={() => {
-                  //window.open('https://orangex.center/' + params.lang + '/administration/buyorder', '_blank');
+                  //window.open('window.location.origin + '/' + params.lang + '/administration/buyorder', '_blank');
                   router.push('/' + params.lang + '/administration');
                 }}
                 className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"

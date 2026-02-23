@@ -50,8 +50,8 @@ export default async function NoticePage({ params }: { params: { lang?: string }
               </div>
               <div className="flex items-center gap-3">
                 <Image
-                  src="/logo-orangex.png"
-                  alt="OrangeX"
+                  src="/api/client/logo"
+                  alt="Platform"
                   width={140}
                   height={44}
                   className="h-10 w-auto"
@@ -61,7 +61,7 @@ export default async function NoticePage({ params }: { params: { lang?: string }
                 </span>
               </div>
               <h1 className="font-[var(--font-display)] text-3xl text-[color:var(--ink)] sm:text-4xl">
-                OrangeX 공지사항
+                플랫폼 공지사항
               </h1>
               <p className="max-w-xl text-base text-slate-600">
                 서비스 업데이트, 정책 변경, 주요 안내 사항을 확인하세요.

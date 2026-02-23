@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useActiveAccount } from 'thirdweb/react';
 
-const SELLER_CACHE_KEY = 'orangex-seller-escrow-cache';
+const SELLER_CACHE_KEY = 'seller-escrow-cache';
 const SELLER_CACHE_TTL_MS = 5 * 60 * 1000;
 
 type SellerCache = {

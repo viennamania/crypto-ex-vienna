@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { Manrope, Playfair_Display } from 'next/font/google';
 import { getActiveGlobalAds, type GlobalAd } from '@/lib/api/globalAd';
+import ClientFooterCopyright from '@/components/ClientFooterCopyright';
 
 export const dynamic = 'force-dynamic';
 
@@ -165,8 +166,8 @@ export default async function BuyerGuidePage({ params }: { params: { lang?: stri
                             </div>
                             <div className="flex items-center gap-3">
                                 <Image
-                                    src="/logo-orangex.png"
-                                    alt="OrangeX"
+                                    src="/api/client/logo"
+                                    alt="Platform"
                                     width={140}
                                     height={44}
                                     className="h-10 w-auto"
@@ -463,8 +464,8 @@ export default async function BuyerGuidePage({ params }: { params: { lang?: stri
             <footer className="relative z-10 border-t border-white/10 bg-[#1f1f1f] px-6 py-14 text-center text-slate-200">
                 <div className="mx-auto flex max-w-3xl flex-col items-center gap-6">
                     <Image
-                        src="/logo-orangex.png"
-                        alt="OrangeX"
+                        src="/api/client/logo"
+                        alt="Platform"
                         width={180}
                         height={56}
                         className="h-10 w-auto"
@@ -487,10 +488,10 @@ export default async function BuyerGuidePage({ params }: { params: { lang?: stri
                         Please review fees, exchange rates, and settlement terms before payment.
                     </p>
                     <div className="text-sm text-slate-400">
-                        <p>Email: help@orangex.center</p>
+                        <p>Email: support@example.com</p>
                         <p>Address: 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
                     </div>
-                    <p className="text-sm text-slate-500">Copyright © OrangeX All Rights Reserved</p>
+                    <ClientFooterCopyright className="text-sm text-slate-500" />
                 </div>
             </footer>
         </div>

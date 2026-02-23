@@ -45,7 +45,7 @@ export async function insertStore(data: any) {
   */
   const storecode = String(data?.storecode || '').trim();
   const storeName = String(data?.storeName || '').trim();
-  const agentcode = String(data?.agentcode || '').trim();
+  const agentcode = String(data?.agentcode || data?.agetcode || '').trim() || 'head';
 
   if (!storecode || !storeName) {
     

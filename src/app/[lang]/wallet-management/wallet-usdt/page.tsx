@@ -53,6 +53,7 @@ import AppBarComponent from "@/components/Appbar/AppBar";
 import { getDictionary } from "../../../dictionaries";
 import { useClientWallets } from "@/lib/useClientWallets";
 import { useClientSettings } from "@/components/ClientSettingsProvider";
+import ClientFooterCopyright from "@/components/ClientFooterCopyright";
 import WalletManagementBottomNav from "@/components/wallet-management/WalletManagementBottomNav";
 import WalletConnectPrompt from "@/components/wallet-management/WalletConnectPrompt";
 import WalletSummaryCard from "@/components/wallet-management/WalletSummaryCard";
@@ -1477,8 +1478,8 @@ export default function SendUsdt({ params }: any) {
         <footer className="relative mt-10 border-t border-slate-200 bg-white/50 px-6 py-12 text-center text-slate-600 backdrop-blur">
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-6">
             <Image
-              src="/logo-orangex.png"
-              alt="OrangeX"
+              src="/api/client/logo"
+              alt="Platform"
               width={180}
               height={56}
               className="h-10 w-auto"
@@ -1501,10 +1502,10 @@ export default function SendUsdt({ params }: any) {
               결제 전에 수수료·환율·정산 조건을 확인해 주세요.
             </p>
             <div className="text-sm text-slate-500">
-              <p>이메일 : help@orangex.center</p>
+              <p>이메일 : support@example.com</p>
               <p>주소 : 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
             </div>
-            <p className="text-xs text-slate-400">Copyright © OrangeX All Rights Reserved</p>
+            <ClientFooterCopyright className="text-xs text-slate-400" />
           </div>
         </footer>
         <WalletManagementBottomNav lang={lang} active="wallet" />

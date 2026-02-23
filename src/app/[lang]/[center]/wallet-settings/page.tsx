@@ -24,7 +24,7 @@ import { inAppWallet } from "thirdweb/wallets";
 
 
 import { getUserPhoneNumber } from "thirdweb/wallets/in-app";
-import { ORANGEX_CONNECT_OPTIONS } from "@/lib/orangeXConnectModal";
+import { WALLET_CONNECT_OPTIONS } from "@/lib/walletConnectModal";
 
 
 import Image from 'next/image';
@@ -63,7 +63,7 @@ import { getDictionary } from "../../../dictionaries";
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 export default function SettingsPage({ params }: any) {
 
@@ -186,7 +186,7 @@ export default function SettingsPage({ params }: any) {
         chain: arbitrum,
         client,
         wallets,
-        ...ORANGEX_CONNECT_OPTIONS,
+        ...WALLET_CONNECT_OPTIONS,
       });
     };
 

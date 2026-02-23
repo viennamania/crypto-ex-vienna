@@ -53,8 +53,9 @@ import Image from 'next/image';
 import AppBarComponent from "@/components/Appbar/AppBar";
 import { getDictionary } from "../../../dictionaries";
 import { useClientWallets } from "@/lib/useClientWallets";
-import { ORANGEX_CONNECT_OPTIONS, ORANGEX_WELCOME_SCREEN } from "@/lib/orangeXConnectModal";
+import { WALLET_CONNECT_OPTIONS, WALLET_CONNECT_WELCOME_SCREEN } from "@/lib/walletConnectModal";
 import { useClientSettings } from "@/components/ClientSettingsProvider";
+import ClientFooterCopyright from "@/components/ClientFooterCopyright";
 
 
 
@@ -1303,12 +1304,10 @@ export default function SendUsdt({ params }: any) {
         <div className="mx-auto flex min-h-[70vh] max-w-screen-sm items-center justify-center">
         <div className="w-full max-w-md mx-auto p-6 text-center">
             <div className="flex flex-col items-center gap-3">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
-                OrangeX
-              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">플랫폼</span>
               <Image
-                src="/logo-orangex.png"
-                alt="OrangeX"
+                src="/api/client/logo"
+                alt="Platform"
                 width={160}
                 height={48}
                 className="h-10 w-auto"
@@ -1339,9 +1338,9 @@ export default function SendUsdt({ params }: any) {
                     client,
                     wallets: wallets.length ? wallets : [wallet],
                     chain: selectedNetworkConfig.chain,
-                    ...ORANGEX_CONNECT_OPTIONS,
+                    ...WALLET_CONNECT_OPTIONS,
                     welcomeScreen: {
-                      ...ORANGEX_WELCOME_SCREEN,
+                      ...WALLET_CONNECT_WELCOME_SCREEN,
                       subtitle: "간편하게 지갑을 연결하고 USDT 출금을 시작하세요.",
                     },
                   });
@@ -1360,8 +1359,8 @@ export default function SendUsdt({ params }: any) {
         <footer className="relative mt-10 border-t border-slate-200 bg-white px-6 py-12 text-center text-slate-600">
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-6">
             <Image
-              src="/logo-orangex.png"
-              alt="OrangeX"
+              src="/api/client/logo"
+              alt="Platform"
               width={180}
               height={56}
               className="h-10 w-auto"
@@ -1384,10 +1383,10 @@ export default function SendUsdt({ params }: any) {
               결제 전에 수수료·환율·정산 조건을 확인해 주세요.
             </p>
             <div className="text-sm text-slate-500">
-              <p>이메일 : help@orangex.center</p>
+              <p>이메일 : support@example.com</p>
               <p>주소 : 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
             </div>
-            <p className="text-xs text-slate-400">Copyright © OrangeX All Rights Reserved</p>
+            <ClientFooterCopyright className="text-xs text-slate-400" />
           </div>
         </footer>
       </main>

@@ -1029,6 +1029,7 @@ export default function StoreManagementPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          agentcode: 'head',
           storeName,
           storeType,
           storeUrl,

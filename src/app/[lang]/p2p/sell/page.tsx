@@ -110,7 +110,7 @@ import { useAnimatedNumber } from "@/components/useAnimatedNumber";
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 interface BuyOrder {
   _id: string;
@@ -4244,7 +4244,7 @@ const fetchBuyOrders = async () => {
 
   return (
 
-    <main className="orangex-sell-light p-4 pb-28 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-[linear-gradient(160deg,#fff4ea,#f0f9ff_45%,#fff1f2_85%)] text-slate-900">
+    <main className="p2p-sell-light p-4 pb-28 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-[linear-gradient(160deg,#fff4ea,#f0f9ff_45%,#fff1f2_85%)] text-slate-900">
 
       <AutoConnect
           client={client}
@@ -4371,7 +4371,7 @@ const fetchBuyOrders = async () => {
 
             >
               <Image
-                src="/logo-orangex.png"
+                src="/api/client/logo"
                 alt="logo"
                 width={100}
                 height={100}
@@ -4466,11 +4466,11 @@ const fetchBuyOrders = async () => {
 
 
               {/* opnew new window for admin dashboard */}
-              {/* https://orangex.center/ko/administration/buyorder */}
+              {/* /<lang>/administration/buyorder */}
               {isAdmin && (
                 <button
                   onClick={() => {
-                    window.open('https://orangex.center/' + params.lang + '/administration/buyorder', '_blank');
+                    window.open(window.location.origin + '/' + params.lang + '/administration/buyorder', '_blank');
                   }}
                   className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90
                   px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
@@ -11903,74 +11903,74 @@ const fetchBuyOrders = async () => {
         </ModalUser>
 
         <style jsx global>{`
-          .orangex-sell-light {
+          .p2p-sell-light {
             background: linear-gradient(160deg, #fff4ea, #f0f9ff 45%, #fff1f2 85%);
           }
 
-          .orangex-sell-light .bg-slate-950,
-          .orangex-sell-light .bg-slate-900,
-          .orangex-sell-light .bg-slate-800,
-          .orangex-sell-light .bg-slate-700,
-          .orangex-sell-light .bg-zinc-900,
-          .orangex-sell-light .bg-zinc-800 {
+          .p2p-sell-light .bg-slate-950,
+          .p2p-sell-light .bg-slate-900,
+          .p2p-sell-light .bg-slate-800,
+          .p2p-sell-light .bg-slate-700,
+          .p2p-sell-light .bg-zinc-900,
+          .p2p-sell-light .bg-zinc-800 {
             background-color: rgba(255, 255, 255, 0.88);
           }
 
-          .orangex-sell-light .bg-slate-900\\/80,
-          .orangex-sell-light .bg-slate-800\\/90,
-          .orangex-sell-light .bg-slate-800\\/70,
-          .orangex-sell-light .bg-slate-700\\/70,
-          .orangex-sell-light .bg-slate-700\\/50,
-          .orangex-sell-light .bg-slate-600,
-          .orangex-sell-light .bg-slate-500,
-          .orangex-sell-light .bg-gray-700,
-          .orangex-sell-light .bg-gray-600,
-          .orangex-sell-light .bg-gray-500,
-          .orangex-sell-light .bg-zinc-800,
-          .orangex-sell-light .bg-zinc-700,
-          .orangex-sell-light .bg-zinc-600,
-          .orangex-sell-light .bg-zinc-500 {
+          .p2p-sell-light .bg-slate-900\\/80,
+          .p2p-sell-light .bg-slate-800\\/90,
+          .p2p-sell-light .bg-slate-800\\/70,
+          .p2p-sell-light .bg-slate-700\\/70,
+          .p2p-sell-light .bg-slate-700\\/50,
+          .p2p-sell-light .bg-slate-600,
+          .p2p-sell-light .bg-slate-500,
+          .p2p-sell-light .bg-gray-700,
+          .p2p-sell-light .bg-gray-600,
+          .p2p-sell-light .bg-gray-500,
+          .p2p-sell-light .bg-zinc-800,
+          .p2p-sell-light .bg-zinc-700,
+          .p2p-sell-light .bg-zinc-600,
+          .p2p-sell-light .bg-zinc-500 {
             background-color: rgba(255, 255, 255, 0.8);
           }
 
-          .orangex-sell-light .hover\\:bg-slate-600:hover,
-          .orangex-sell-light .hover\\:bg-slate-700:hover,
-          .orangex-sell-light .hover\\:bg-gray-700:hover,
-          .orangex-sell-light .hover\\:bg-zinc-600:hover {
+          .p2p-sell-light .hover\\:bg-slate-600:hover,
+          .p2p-sell-light .hover\\:bg-slate-700:hover,
+          .p2p-sell-light .hover\\:bg-gray-700:hover,
+          .p2p-sell-light .hover\\:bg-zinc-600:hover {
             background-color: rgba(248, 250, 252, 0.95);
           }
 
-          .orangex-sell-light .border-slate-700,
-          .orangex-sell-light .border-slate-600 {
+          .p2p-sell-light .border-slate-700,
+          .p2p-sell-light .border-slate-600 {
             border-color: rgba(226, 232, 240, 0.9);
           }
 
-          .orangex-sell-light .text-slate-100,
-          .orangex-sell-light .text-slate-200,
-          .orangex-sell-light .text-slate-300,
-          .orangex-sell-light .text-slate-400,
-          .orangex-sell-light .text-zinc-200,
-          .orangex-sell-light .text-zinc-300,
-          .orangex-sell-light .text-zinc-400 {
+          .p2p-sell-light .text-slate-100,
+          .p2p-sell-light .text-slate-200,
+          .p2p-sell-light .text-slate-300,
+          .p2p-sell-light .text-slate-400,
+          .p2p-sell-light .text-zinc-200,
+          .p2p-sell-light .text-zinc-300,
+          .p2p-sell-light .text-zinc-400 {
             color: #475569;
           }
 
-          .orangex-sell-light .text-slate-500,
-          .orangex-sell-light .text-zinc-500 {
+          .p2p-sell-light .text-slate-500,
+          .p2p-sell-light .text-zinc-500 {
             color: #64748b;
           }
 
-          .orangex-sell-light .bg-slate-900.text-white,
-          .orangex-sell-light .bg-slate-800.text-white,
-          .orangex-sell-light .bg-slate-700.text-white,
-          .orangex-sell-light .bg-zinc-900.text-white,
-          .orangex-sell-light .bg-zinc-800.text-white,
-          .orangex-sell-light .bg-white.text-white,
-          .orangex-sell-light .bg-slate-900\\/80.text-white,
-          .orangex-sell-light .bg-slate-800\\/90.text-white,
-          .orangex-sell-light .bg-slate-800\\/70.text-white,
-          .orangex-sell-light .bg-slate-700\\/70.text-white,
-          .orangex-sell-light .bg-slate-700\\/50.text-white {
+          .p2p-sell-light .bg-slate-900.text-white,
+          .p2p-sell-light .bg-slate-800.text-white,
+          .p2p-sell-light .bg-slate-700.text-white,
+          .p2p-sell-light .bg-zinc-900.text-white,
+          .p2p-sell-light .bg-zinc-800.text-white,
+          .p2p-sell-light .bg-white.text-white,
+          .p2p-sell-light .bg-slate-900\\/80.text-white,
+          .p2p-sell-light .bg-slate-800\\/90.text-white,
+          .p2p-sell-light .bg-slate-800\\/70.text-white,
+          .p2p-sell-light .bg-slate-700\\/70.text-white,
+          .p2p-sell-light .bg-slate-700\\/50.text-white {
             color: #0f172a;
           }
         `}</style>

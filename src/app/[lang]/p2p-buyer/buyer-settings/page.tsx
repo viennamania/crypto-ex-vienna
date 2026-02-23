@@ -8,7 +8,8 @@ import { AutoConnect, useActiveAccount, useActiveWallet } from 'thirdweb/react';
 import { useClientWallets } from '@/lib/useClientWallets';
 import { client } from '@/app/client';
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
+import ClientFooterCopyright from '@/components/ClientFooterCopyright';
 
 const USER_STORECODE = 'admin';
 const DEFAULT_AVATAR = '/profile-default.png';
@@ -465,13 +466,11 @@ export default function BuyerSettingsPage() {
               </p>
 
               <div className="mt-4 space-y-1 text-[11px] text-[#b6beca]">
-                <p>Email: help@orangex.center</p>
+                <p>Email: support@example.com</p>
                 <p>Address: 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
               </div>
 
-              <p className="mt-4 text-[11px] text-[#6c7688]">
-                Copyright © OrangeX All Rights Reserved
-              </p>
+              <ClientFooterCopyright className="mt-4 text-[11px] text-[#6c7688]" />
               </div>
             </footer>
           </div>

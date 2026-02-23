@@ -113,7 +113,7 @@ import { useAnimatedNumber } from "@/components/useAnimatedNumber";
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 interface BuyOrder {
   _id: string;
@@ -9620,12 +9620,10 @@ const fetchBuyOrders = async () => {
                                 <div className="w-full flex flex-col items-center justify-center mt-4">
                                   <div className="w-full max-w-md mx-auto p-5 text-center border border-sky-200 rounded-2xl bg-sky-50/75">
                                     <div className="flex flex-col items-center gap-3">
-                                      <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
-                                        OrangeX
-                                      </span>
+                                      <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">플랫폼</span>
                                       <Image
-                                        src="/logo-orangex.png"
-                                        alt="OrangeX"
+                                        src="/api/client/logo"
+                                        alt="Platform"
                                         width={160}
                                         height={48}
                                         className="h-10 w-auto"

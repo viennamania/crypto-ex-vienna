@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
   /*
   try {
 
-    const stableUrl = 'https://api.orangex.center';
+    const stableUrl = 'https://api.example.com';
 
     const apiUrl = `${stableUrl}/api/order/setBuyOrder`;
     const response = await fetch(apiUrl, {

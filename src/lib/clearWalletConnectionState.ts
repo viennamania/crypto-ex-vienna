@@ -6,7 +6,7 @@ const LOCAL_STORAGE_EXACT_KEYS = [
   'tw.wc.lastUsedChainId',
   'tw.wc.requestedChains',
   'sellerOwnerWalletAddress',
-  'orangex-seller-escrow-cache',
+  'seller-escrow-cache',
   'WALLETCONNECT_DEEPLINK_CHOICE',
 ];
 

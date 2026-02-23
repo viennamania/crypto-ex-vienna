@@ -162,7 +162,7 @@ import {
 } from "../../../client";
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 export default function Index({ params }: any) {
 
@@ -1322,7 +1322,7 @@ export default function Index({ params }: any) {
 
              >
                <Image
-                 src="/logo.png"
+                 src="/api/client/logo"
                  alt="logo"
                  width={100}
                  height={100}

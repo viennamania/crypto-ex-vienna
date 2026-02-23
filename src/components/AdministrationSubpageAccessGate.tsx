@@ -12,7 +12,7 @@ import { arbitrum, bsc, ethereum, polygon } from 'thirdweb/chains';
 
 import { client } from '@/app/client';
 import AdministrationLayoutShell from '@/components/AdministrationLayoutShell';
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 import { clearWalletConnectionState } from '@/lib/clearWalletConnectionState';
 import { useClientWallets } from '@/lib/useClientWallets';
 
@@ -149,7 +149,7 @@ export default function AdministrationSubpageAccessGate({
       }
     } finally {
       clearWalletConnectionState();
-      window.dispatchEvent(new Event('orangex-wallet-disconnected'));
+      window.dispatchEvent(new Event('wallet-disconnected'));
       window.location.replace(window.location.pathname + window.location.search);
     }
   };

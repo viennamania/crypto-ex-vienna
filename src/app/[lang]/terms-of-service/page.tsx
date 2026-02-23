@@ -56,8 +56,8 @@ export default async function TermsOfServicePage({ params }: { params: { lang?: 
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <Image
-                  src="/logo-orangex.png"
-                  alt="OrangeX"
+                  src="/api/client/logo"
+                  alt="Platform"
                   width={140}
                   height={44}
                   className="h-10 w-auto"

@@ -92,7 +92,7 @@ import path from 'path';
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 export default function SendUsdt({ params }: any) {
 

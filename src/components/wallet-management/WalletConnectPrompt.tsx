@@ -7,7 +7,7 @@ import type { Chain } from 'thirdweb/chains';
 import { useConnectModal } from 'thirdweb/react';
 
 import { client } from '@/app/client';
-import { ORANGEX_CONNECT_OPTIONS, ORANGEX_WELCOME_SCREEN } from '@/lib/orangeXConnectModal';
+import { WALLET_CONNECT_OPTIONS, WALLET_CONNECT_WELCOME_SCREEN } from '@/lib/walletConnectModal';
 
 type WalletConnectPromptProps = {
   wallets: any[];
@@ -58,13 +58,13 @@ export default function WalletConnectPrompt({
         client,
         wallets,
         chain,
-        ...ORANGEX_CONNECT_OPTIONS,
+        ...WALLET_CONNECT_OPTIONS,
         locale: connectLocale,
         theme: 'light',
-        title: 'OrangeX 로그인',
+        title: '지갑 로그인',
         welcomeScreen: {
-          ...ORANGEX_WELCOME_SCREEN,
-          title: 'OrangeX 로그인',
+          ...WALLET_CONNECT_WELCOME_SCREEN,
+          title: '지갑 로그인',
           subtitle: '휴대폰 본인 인증으로 지갑을 빠르게 연결하고 바로 시작하세요.',
         },
       });
@@ -121,11 +121,11 @@ export default function WalletConnectPrompt({
                   ×
                 </button>
                 <span className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold tracking-[0.12em] text-cyan-700">
-                  ORANGEX 지갑 연결
+                  지갑 연결
                 </span>
                 <Image
-                  src="/logo-orangex.png"
-                  alt="OrangeX"
+                  src="/api/client/logo"
+                  alt="Platform"
                   width={220}
                   height={54}
                   className="mt-3 h-9 w-auto"

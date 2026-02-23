@@ -9,7 +9,8 @@ import { AutoConnect, useActiveAccount, useActiveWallet } from 'thirdweb/react';
 import { useClientWallets } from '@/lib/useClientWallets';
 import { client } from '@/app/client';
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
+import ClientFooterCopyright from '@/components/ClientFooterCopyright';
 
 const PRICE_POLL_MS = 8000;
 const BANNER_PLACEMENT = 'p2p-home';
@@ -20,12 +21,12 @@ const SELLER_SEARCH_BY =
   (process.env.NEXT_PUBLIC_P2P_BUYER_SELLER_SEARCH_BY as 'accountHolder' | 'nickname') ||
   'accountHolder';
 const DEFAULT_BANNERS = [
-  { id: 'default-1', title: 'orangex banner 1', image: '/ads/orangex-banner-01.svg' },
-  { id: 'default-2', title: 'orangex banner 2', image: '/ads/orangex-banner-02.svg' },
-  { id: 'default-3', title: 'orangex banner 3', image: '/ads/orangex-banner-03.svg' },
-  { id: 'default-4', title: 'orangex banner 4', image: '/ads/orangex-banner-04.svg' },
-  { id: 'default-5', title: 'orangex banner 5', image: '/ads/orangex-banner-05.svg' },
-  { id: 'default-6', title: 'orangex banner 6', image: '/ads/orangex-banner-06.svg' },
+  { id: 'default-1', title: 'partner banner 1', image: '/ads/partner-banner-01.svg' },
+  { id: 'default-2', title: 'partner banner 2', image: '/ads/partner-banner-02.svg' },
+  { id: 'default-3', title: 'partner banner 3', image: '/ads/partner-banner-03.svg' },
+  { id: 'default-4', title: 'partner banner 4', image: '/ads/partner-banner-04.svg' },
+  { id: 'default-5', title: 'partner banner 5', image: '/ads/partner-banner-05.svg' },
+  { id: 'default-6', title: 'partner banner 6', image: '/ads/partner-banner-06.svg' },
 ];
 
 type BannerAd = {
@@ -603,7 +604,7 @@ export default function P2PBuyerPage() {
               <Link
                 
                 //href={`/${lang}/p2p`}
-                // https://www.orangex.center/[lang]/p2p 로 이동하도록 수정 요청됨
+                // /<lang>/p2p 로 이동하도록 수정 요청됨
                 href={`/${lang}/p2p`}
 
                 className="flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-black shadow-sm transition hover:border-black/20 hover:text-black/80"
@@ -810,7 +811,7 @@ export default function P2PBuyerPage() {
                   </div>
                 </div>
                 <a
-                  href="https://www.orangex.center/ko/p2p"
+                  href="//p2p"
                   target="_blank"
                   rel="noreferrer"
                   className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-[#ff7a1a] px-4 text-xs font-semibold text-white shadow-[0_10px_24px_-16px_rgba(249,115,22,0.9)]"
@@ -867,13 +868,11 @@ export default function P2PBuyerPage() {
               </p>
 
               <div className="mt-4 space-y-1 text-[11px] text-[#b6beca]">
-                <p>Email: help@orangex.center</p>
+                <p>Email: support@example.com</p>
                 <p>Address: 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
               </div>
 
-              <p className="mt-4 text-[11px] text-[#6c7688]">
-                Copyright © OrangeX All Rights Reserved
-              </p>
+              <ClientFooterCopyright className="mt-4 text-[11px] text-[#6c7688]" />
               </div>
             </footer>
           </div>

@@ -50,7 +50,7 @@ import Uploader from '@/components/uploader';
 import { balanceOf, transfer } from "thirdweb/extensions/erc20";
  
 import { useClientWallets } from '@/lib/useClientWallets';
-import { ORANGEX_CONNECT_OPTIONS, ORANGEX_WELCOME_SCREEN } from "@/lib/orangeXConnectModal";
+import { WALLET_CONNECT_OPTIONS, WALLET_CONNECT_WELCOME_SCREEN } from "@/lib/walletConnectModal";
 
 
 import AppBarComponent from "@/components/Appbar/AppBar";
@@ -999,9 +999,9 @@ export default function SettingsPage({ params }: any) {
                                                 client,
                                                 wallets: [wallet],
                                                 chain: connectChain,
-                                                ...ORANGEX_CONNECT_OPTIONS,
+                                                ...WALLET_CONNECT_OPTIONS,
                                                 welcomeScreen: {
-                                                    ...ORANGEX_WELCOME_SCREEN,
+                                                    ...WALLET_CONNECT_WELCOME_SCREEN,
                                                     subtitle: "간편하게 지갑을 연결하고 프로필을 설정하세요.",
                                                 },
                                             });

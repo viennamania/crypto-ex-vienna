@@ -48,7 +48,7 @@ import { balanceOf, transfer } from "thirdweb/extensions/erc20";
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 interface SellOrder {
   _id: string;

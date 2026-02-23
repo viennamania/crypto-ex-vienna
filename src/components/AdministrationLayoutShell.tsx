@@ -44,6 +44,7 @@ const ORDER_PROCESSING_ALERT_SOUND_SRC = '/notification.mp3';
 const ORDER_PROCESSING_ALERT_SOUND_FALLBACK_SRC = '/notification.wav';
 const ORDER_PROCESSING_CARD_ENTER_MS = 1700;
 const ORDER_PROCESSING_CARD_EXIT_MS = 420;
+const DEFAULT_ADMIN_BRAND_TITLE = 'OTC Service';
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 const formatNumber = (value: number) =>
@@ -90,6 +91,7 @@ const resolvePendingCardKey = (payment: PendingOrderProcessingItem) =>
 export default function AdministrationLayoutShell({ lang, children }: AdministrationLayoutShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [brandTitle, setBrandTitle] = useState(DEFAULT_ADMIN_BRAND_TITLE);
   const [pendingSummary, setPendingSummary] = useState<PendingOrderProcessingSummary>({
     pendingCount: 0,
     oldestPendingAt: '',
@@ -105,6 +107,7 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
   const lastAlertSoundAtRef = useRef(0);
   const previousPendingCountRef = useRef(0);
   const pendingCardTimerIdsRef = useRef<number[]>([]);
+  const previousDocumentTitleRef = useRef('');
   const showPinnedPendingAlert = pendingSummary.pendingCount > 0 || pendingAlertCards.length > 0;
   const paymentManagementHref = `/${lang}/administration/payment-management`;
 
@@ -115,6 +118,28 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
     updateViewport();
     window.addEventListener('resize', updateViewport);
     return () => window.removeEventListener('resize', updateViewport);
+  }, []);
+
+  const loadBrandTitle = useCallback(async () => {
+    try {
+      const response = await fetch('/api/client/getClientInfo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String((payload as Record<string, unknown>)?.error || '센터 브랜딩 정보를 조회하지 못했습니다.'));
+      }
+
+      const source = isRecord(payload) ? payload : {};
+      const result = isRecord(source.result) ? source.result : {};
+      const clientInfo = isRecord(result.clientInfo) ? result.clientInfo : {};
+      const nextBrandTitle = String(clientInfo.name || '').trim() || DEFAULT_ADMIN_BRAND_TITLE;
+      setBrandTitle(nextBrandTitle);
+    } catch (error) {
+      console.error('failed to load administration title branding', error);
+      setBrandTitle(DEFAULT_ADMIN_BRAND_TITLE);
+    }
   }, []);
 
   const getPendingAlertAudio = useCallback(() => {
@@ -375,18 +400,49 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
   }, []);
 
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof window === 'undefined') return;
 
-    const originalTitle = document.title;
-    const pendingCount = Number(pendingSummary.pendingCount || 0);
-    if (pendingCount > 0) {
-      document.title = `[미처리 ${pendingCount}건] ${originalTitle}`;
-    }
+    let isActive = true;
+
+    const run = async () => {
+      if (!isActive) return;
+      await loadBrandTitle();
+    };
+
+    const handleClientSettingsUpdated = () => {
+      void run();
+    };
+
+    void run();
+    window.addEventListener('client-settings-updated', handleClientSettingsUpdated);
 
     return () => {
-      document.title = originalTitle;
+      isActive = false;
+      window.removeEventListener('client-settings-updated', handleClientSettingsUpdated);
     };
-  }, [pendingSummary.pendingCount]);
+  }, [loadBrandTitle]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    previousDocumentTitleRef.current = document.title;
+
+    return () => {
+      if (previousDocumentTitleRef.current) {
+        document.title = previousDocumentTitleRef.current;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const pendingCount = Number(pendingSummary.pendingCount || 0);
+    const normalizedBrandTitle = String(brandTitle || '').trim() || DEFAULT_ADMIN_BRAND_TITLE;
+    document.title = pendingCount > 0
+      ? `[미처리 ${pendingCount}건] ${normalizedBrandTitle}`
+      : normalizedBrandTitle;
+  }, [brandTitle, pendingSummary.pendingCount]);
 
   const togglePendingAlertSound = async () => {
     const nextValue = !pendingAlertSoundEnabled;

@@ -80,8 +80,8 @@ export default async function NoticeDetailPage({
             </div>
             <div className="flex items-center gap-3">
               <Image
-                src="/logo-orangex.png"
-                alt="OrangeX"
+                src="/api/client/logo"
+                alt="Platform"
                 width={140}
                 height={44}
                 className="h-10 w-auto"

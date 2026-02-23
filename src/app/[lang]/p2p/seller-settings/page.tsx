@@ -48,7 +48,7 @@ import { balanceOf, transfer, transferEvent } from "thirdweb/extensions/erc20";
 
 import AppBarComponent from "@/components/Appbar/AppBar";
 import { getDictionary } from "../../../dictionaries";
-import { ORANGEX_CONNECT_OPTIONS, ORANGEX_WELCOME_SCREEN } from "@/lib/orangeXConnectModal";
+import { WALLET_CONNECT_OPTIONS, WALLET_CONNECT_WELCOME_SCREEN } from "@/lib/walletConnectModal";
 
 
 import { useQRCode } from 'next-qrcode';
@@ -1608,9 +1608,9 @@ export default function SettingsPage({ params }: any) {
                                             client,
                                             wallets: [wallet],
                                             chain: connectChain,
-                                            ...ORANGEX_CONNECT_OPTIONS,
+                                            ...WALLET_CONNECT_OPTIONS,
                                             welcomeScreen: {
-                                                ...ORANGEX_WELCOME_SCREEN,
+                                                ...WALLET_CONNECT_WELCOME_SCREEN,
                                                 subtitle: "판매자 설정을 위해 지갑을 연결하세요.",
                                             },
                                         });

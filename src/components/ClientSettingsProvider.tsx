@@ -15,8 +15,8 @@ const defaultSmartAccountEnabled = process.env.NEXT_PUBLIC_SMART_ACCOUNT === 'ye
 const defaultChain = resolveNetwork(process.env.NEXT_PUBLIC_CHAIN) ?? 'polygon';
 
 const STORAGE_KEYS = {
-  chain: 'orangex-client-chain',
-  smart: 'orangex-client-smart-account-enabled',
+  chain: 'client-chain',
+  smart: 'client-smart-account-enabled',
 };
 
 type ClientSettingsContextValue = {

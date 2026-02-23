@@ -89,7 +89,7 @@ import {
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 interface BuyOrder {
   _id: string;

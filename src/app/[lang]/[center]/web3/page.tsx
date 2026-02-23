@@ -78,7 +78,7 @@ import {
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 export default function SettingsPage({ params }: any) {
 

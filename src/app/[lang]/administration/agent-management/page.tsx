@@ -676,7 +676,7 @@ export default function AgentManagementPage() {
                 </label>
                 <input
                   value={form.agentName}
-                  placeholder="예: 오렌지X 파트너"
+                  placeholder="예: 파트너 이름"
                   onChange={(e) => setForm((prev) => ({ ...prev, agentName: e.target.value }))}
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none text-slate-900 placeholder:text-slate-400"
                 />

@@ -156,6 +156,7 @@ export default function AgentFeeWalletManagementPage() {
   const [feeModalError, setFeeModalError] = useState<string | null>(null);
 
   const [balancesByAgentcode, setBalancesByAgentcode] = useState<Record<string, FeeWalletBalanceItem>>({});
+  const [balanceCheckingByAgentcode, setBalanceCheckingByAgentcode] = useState<Record<string, boolean>>({});
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
   const [lastBalanceUpdatedAt, setLastBalanceUpdatedAt] = useState('');
@@ -273,6 +274,91 @@ export default function AgentFeeWalletManagementPage() {
       setBalanceLoading(false);
     }
   }, []);
+
+  const handleCheckSingleBalance = useCallback(
+    async (agentcode: string, walletAddress: string) => {
+      const normalizedAgentcode = String(agentcode || '').trim();
+      const normalizedWalletAddress = String(walletAddress || '').trim();
+
+      if (!normalizedAgentcode || !isWalletAddress(normalizedWalletAddress)) {
+        return;
+      }
+
+      if (balanceCheckingByAgentcode[normalizedAgentcode]) {
+        return;
+      }
+
+      setBalanceCheckingByAgentcode((prev) => ({
+        ...prev,
+        [normalizedAgentcode]: true,
+      }));
+
+      try {
+        const response = await fetch('/api/agent/getFeeWalletBalances', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            items: [
+              {
+                agentcode: normalizedAgentcode,
+                walletAddress: normalizedWalletAddress,
+              },
+            ],
+          }),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(String((payload as Record<string, unknown>)?.error || '잔고 확인에 실패했습니다.'));
+        }
+
+        const source = typeof payload === 'object' && payload !== null ? (payload as Record<string, unknown>) : {};
+        const result =
+          typeof source.result === 'object' && source.result !== null
+            ? (source.result as Record<string, unknown>)
+            : {};
+        const firstItem =
+          Array.isArray(result.items) && result.items.length > 0 && typeof result.items[0] === 'object' && result.items[0] !== null
+            ? (result.items[0] as Record<string, unknown>)
+            : null;
+
+        const nextBalance: FeeWalletBalanceItem = {
+          agentcode: normalizedAgentcode,
+          walletAddress: String(firstItem?.walletAddress || normalizedWalletAddress),
+          rawValue: String(firstItem?.rawValue || '0'),
+          displayValue: String(firstItem?.displayValue || '0'),
+          error: firstItem?.error ? String(firstItem.error) : undefined,
+        };
+
+        setBalancesByAgentcode((prev) => ({
+          ...prev,
+          [normalizedAgentcode]: nextBalance,
+        }));
+        setLastBalanceUpdatedAt(String(result.updatedAt || new Date().toISOString()));
+      } catch (checkError) {
+        const message = checkError instanceof Error ? checkError.message : '잔고 확인에 실패했습니다.';
+        setBalancesByAgentcode((prev) => ({
+          ...prev,
+          [normalizedAgentcode]: {
+            agentcode: normalizedAgentcode,
+            walletAddress: normalizedWalletAddress,
+            rawValue: '0',
+            displayValue: '0',
+            error: message,
+          },
+        }));
+      } finally {
+        setBalanceCheckingByAgentcode((prev) => {
+          const next = { ...prev };
+          delete next[normalizedAgentcode];
+          return next;
+        });
+      }
+    },
+    [balanceCheckingByAgentcode]
+  );
 
   const loadFeeRateHistories = useCallback(async (searchText: string, pageNumber = 1) => {
     const normalizedSearch = String(searchText || '').trim();
@@ -560,13 +646,27 @@ export default function AgentFeeWalletManagementPage() {
     const total = agents.length;
     const connected = agents.filter((agent) => isWalletAddress(resolveSmartAccountAddress(agent))).length;
     const missing = Math.max(0, total - connected);
+    const totalUsdtBalance = agents.reduce((sum, agent) => {
+      const agentcode = String(agent.agentcode || '').trim();
+      if (!agentcode) return sum;
+
+      const smartAccountAddress = resolveSmartAccountAddress(agent);
+      if (!isWalletAddress(smartAccountAddress)) return sum;
+
+      const balance = balancesByAgentcode[agentcode];
+      const numericBalance = Number(balance?.displayValue || 0);
+      if (!Number.isFinite(numericBalance)) return sum;
+
+      return sum + numericBalance;
+    }, 0);
 
     return {
       total,
       connected,
       missing,
+      totalUsdtBalance,
     };
-  }, [agents]);
+  }, [agents, balancesByAgentcode]);
 
   const historyPageNumbers = useMemo(() => {
     const total = Math.max(1, historyTotalPages);
@@ -642,7 +742,7 @@ export default function AgentFeeWalletManagementPage() {
           </div>
         </header>
 
-        <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">전체 에이전트</p>
             <p className="mt-2 text-2xl font-bold leading-tight text-slate-900">{stats.total.toLocaleString()} 개</p>
@@ -657,6 +757,13 @@ export default function AgentFeeWalletManagementPage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">생성 필요</p>
             <p className="mt-2 text-2xl font-bold leading-tight text-rose-700">{stats.missing.toLocaleString()} 개</p>
             <p className="mt-1 text-xs text-slate-500">수수료지갑 미설정 에이전트</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">전체 USDT 잔고</p>
+            <p className="mt-2 text-2xl font-bold leading-tight text-cyan-700">{formatUsdt(String(stats.totalUsdtBalance))} USDT</p>
+            <p className="mt-1 text-xs text-slate-500">
+              연결된 수수료지갑 합계{balanceLoading ? ' · 갱신 중...' : ''}
+            </p>
           </div>
         </section>
 
@@ -708,6 +815,7 @@ export default function AgentFeeWalletManagementPage() {
                     const smartAccountAddress = resolveSmartAccountAddress(agent);
                     const hasSmartAccountAddress = isWalletAddress(smartAccountAddress);
                     const balance = agentcode ? balancesByAgentcode[agentcode] : undefined;
+                    const checkingBalance = agentcode ? Boolean(balanceCheckingByAgentcode[agentcode]) : false;
                     const creating = creatingAgentCode === agentcode;
 
                     return (
@@ -757,11 +865,21 @@ export default function AgentFeeWalletManagementPage() {
                         </td>
                         <td className="px-3 py-3 text-right">
                           {hasSmartAccountAddress ? (
-                            <div className="flex flex-col items-end leading-tight">
+                            <div className="flex flex-col items-end gap-1.5 leading-tight">
                               <span className="text-sm font-extrabold text-slate-900">
                                 {formatUsdt(balance?.displayValue)} USDT
                               </span>
                               {balance?.error && <span className="text-[10px] font-semibold text-rose-600">조회 오류</span>}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void handleCheckSingleBalance(agentcode, smartAccountAddress);
+                                }}
+                                disabled={checkingBalance}
+                                className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                              >
+                                {checkingBalance ? '확인 중...' : '잔고 확인'}
+                              </button>
                             </div>
                           ) : (
                             <span className="text-xs text-slate-400">-</span>

@@ -40,9 +40,11 @@ export async function POST(request: NextRequest) {
 
     const name = toTrimmedString(payload.name);
     const description = toTrimmedString(payload.description);
+    const copyright = toTrimmedString(payload.copyright);
     const nextData: Record<string, unknown> = {
       name,
       description,
+      copyright,
     };
 
     if (Object.prototype.hasOwnProperty.call(payload, "logo")) {

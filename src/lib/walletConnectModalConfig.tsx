@@ -2,12 +2,12 @@ import Image from 'next/image';
 import type { CSSProperties } from 'react';
 import type { ConnectButtonProps, UseConnectModalOptions } from 'thirdweb/react';
 
-type OrangeXConnectModalConfig = Pick<
+type WalletConnectModalConfig = Pick<
   UseConnectModalOptions,
   'size' | 'title' | 'titleIcon' | 'showThirdwebBranding' | 'welcomeScreen'
 >;
 
-type OrangeXWelcomeScreenData = Exclude<
+type WalletConnectWelcomeScreenData = Exclude<
   NonNullable<NonNullable<ConnectButtonProps['connectModal']>['welcomeScreen']>,
   (...args: never[]) => unknown
 >;
@@ -73,27 +73,27 @@ const chipStyle: CSSProperties = {
   color: '#0f172a',
 };
 
-export const ORANGEX_WELCOME_SCREEN: OrangeXWelcomeScreenData = {
-  title: 'OrangeX Sign In',
+export const WALLET_CONNECT_WELCOME_SCREEN: WalletConnectWelcomeScreenData = {
+  title: 'Wallet Sign In',
   subtitle: 'Quickly connect your wallet with phone verification and get started.',
   img: {
-    src: '/logo-orangex.png',
+    src: '/api/client/logo',
     width: 320,
     height: 78,
   },
 };
 
-export const OrangeXConnectWelcomeScreen = () => {
+export const WalletConnectWelcomeScreen = () => {
   return (
     <div style={panelStyle}>
       <div style={glowTopStyle} />
       <div style={glowBottomStyle} />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <span style={badgeStyle}>ORANGEX WALLET</span>
+        <span style={badgeStyle}>WEB3 WALLET</span>
         <Image
-          src="/logo-orangex.png"
-          alt="OrangeX"
+          src="/api/client/logo"
+          alt="Platform"
           width={320}
           height={78}
           style={{ marginTop: 14, width: 220, maxWidth: '100%', height: 'auto' }}
@@ -146,18 +146,18 @@ export const OrangeXConnectWelcomeScreen = () => {
   );
 };
 
-export const ORANGEX_CONNECT_MODAL: OrangeXConnectModalConfig &
+export const WALLET_CONNECT_MODAL: WalletConnectModalConfig &
   NonNullable<ConnectButtonProps['connectModal']> = {
   size: 'wide',
-  title: 'OrangeX Sign In',
-  titleIcon: '/logo-orangex-mark.svg',
+  title: 'Wallet Sign In',
+  titleIcon: '/logo.png',
   showThirdwebBranding: false,
-  welcomeScreen: () => <OrangeXConnectWelcomeScreen />,
+  welcomeScreen: () => <WalletConnectWelcomeScreen />,
 };
 
-export const ORANGEX_CONNECT_OPTIONS: OrangeXConnectModalConfig &
+export const WALLET_CONNECT_OPTIONS: WalletConnectModalConfig &
   Pick<UseConnectModalOptions, 'theme' | 'locale'> = {
   theme: 'light',
   locale: 'en_US',
-  ...ORANGEX_CONNECT_MODAL,
+  ...WALLET_CONNECT_MODAL,
 };

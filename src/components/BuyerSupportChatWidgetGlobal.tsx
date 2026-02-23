@@ -6,7 +6,7 @@ import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 
 const NEXT_PUBLIC_SENDBIRD_APP_ID = process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
-const SUPPORT_ADMIN_ID = process.env.NEXT_PUBLIC_SENDBIRD_MANAGER_ID || 'orangexManager';
+const SUPPORT_ADMIN_ID = process.env.NEXT_PUBLIC_SENDBIRD_MANAGER_ID || 'supportManager';
 const USER_STORECODE = 'admin';
 
 const BuyerSupportChatWidgetGlobal = () => {
@@ -245,7 +245,7 @@ const BuyerSupportChatWidgetGlobal = () => {
           <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-slate-900">고객 상담</p>
-              <p className="text-xs text-slate-500">orangexManager</p>
+              <p className="text-xs text-slate-500">supportManager</p>
             </div>
             <button
               type="button"

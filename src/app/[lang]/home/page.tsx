@@ -53,8 +53,8 @@ import {
 
 
 import { getUserPhoneNumber } from "thirdweb/wallets/in-app";
-import { ConnectButton } from "@/components/OrangeXConnectButton";
-import { ORANGEX_WELCOME_SCREEN } from "@/lib/orangeXConnectModal";
+import { ConnectButton } from "@/components/WalletConnectButton";
+import { WALLET_CONNECT_WELCOME_SCREEN } from "@/lib/walletConnectModal";
 
 
 import { balanceOf, transfer } from "thirdweb/extensions/erc20";
@@ -2678,7 +2678,7 @@ const fetchBuyOrders = async () => {
                 className="flex bg-zinc-100 text-sm text-[#3167b4] px-4 py-2 rounded-lg hover:bg-zinc-200"
               >
                 <Image
-                  src="/logo.png"
+                  src="/api/client/logo"
                   alt="logo"
                   width={100}
                   height={100}
@@ -2746,10 +2746,10 @@ const fetchBuyOrders = async () => {
                   </div>
                   <div className="flex flex-col gap-1">
                     <span className="text-lg font-semibold text-slate-900">
-                      {ORANGEX_WELCOME_SCREEN.title}
+                      {WALLET_CONNECT_WELCOME_SCREEN.title}
                     </span>
                     <span className="text-sm text-slate-600">
-                      {ORANGEX_WELCOME_SCREEN.subtitle}
+                      {WALLET_CONNECT_WELCOME_SCREEN.subtitle}
                     </span>
                   </div>
                 </div>

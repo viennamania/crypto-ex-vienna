@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { AutoConnect, useActiveAccount } from 'thirdweb/react';
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 

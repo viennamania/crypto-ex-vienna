@@ -80,7 +80,7 @@ import { version } from "../../../config/version";
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 /*
     {
@@ -1325,7 +1325,7 @@ const fetchBuyOrders = async () => {
 
             >
               <Image
-                src="/logo.png"
+                src="/api/client/logo"
                 alt="logo"
                 width={100}
                 height={100}

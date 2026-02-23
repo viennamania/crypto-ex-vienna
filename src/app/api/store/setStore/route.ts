@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
 
   const {
     walletAddress,
+    agetcode,
     agentcode,
     storeName,
     storeType,
@@ -44,6 +45,8 @@ export async function POST(request: NextRequest) {
     storeLogo,
     storeBanner,
   } = body;
+
+  const normalizedAgentcode = String(agentcode || agetcode || '').trim() || 'head';
 
 
 
@@ -63,7 +66,7 @@ export async function POST(request: NextRequest) {
     const generatedStoreCode = generateStoreCode();
     result = await insertStore({
       walletAddress,
-      agentcode,
+      agentcode: normalizedAgentcode,
       storecode: generatedStoreCode,
       storeName: normalizedStoreName,
       storeType,

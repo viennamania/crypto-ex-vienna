@@ -105,7 +105,7 @@ import { Connect } from "twilio/lib/twiml/VoiceResponse";
 import { useClientWallets } from "@/lib/useClientWallets";
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 const walletAuthOptions = ["google", "email", "phone"];
 

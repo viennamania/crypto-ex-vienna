@@ -5,7 +5,7 @@ import {
   type ConnectButtonProps,
 } from 'thirdweb/react';
 
-import { ORANGEX_CONNECT_MODAL } from '@/lib/orangeXConnectModal';
+import { WALLET_CONNECT_MODAL } from '@/lib/walletConnectModal';
 
 const DEFAULT_CONNECT_BUTTON_CLASS =
   'inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-400';
@@ -29,7 +29,7 @@ export function ConnectButton(props: ConnectButtonProps) {
 
   const mergedConnectModal = {
     ...(connectModal ?? {}),
-    ...ORANGEX_CONNECT_MODAL,
+    ...WALLET_CONNECT_MODAL,
   };
 
   return (

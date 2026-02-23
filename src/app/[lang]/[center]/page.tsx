@@ -57,7 +57,7 @@ import { balanceOf, transfer } from "thirdweb/extensions/erc20";
 
 
 import { getUserPhoneNumber } from "thirdweb/wallets/in-app";
-import { ORANGEX_CONNECT_OPTIONS } from "@/lib/orangeXConnectModal";
+import { WALLET_CONNECT_OPTIONS } from "@/lib/walletConnectModal";
 
 
 import { toast } from 'react-hot-toast';
@@ -130,7 +130,7 @@ export default function Index({ params }: any) {
       chain: arbitrum,
       client,
       wallets,
-      ...ORANGEX_CONNECT_OPTIONS,
+      ...WALLET_CONNECT_OPTIONS,
       
     });
   };

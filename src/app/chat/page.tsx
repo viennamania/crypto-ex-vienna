@@ -49,7 +49,7 @@ const DynamicAppWithNoSSR = dynamic(() => import("../../components/Chat"), {
 import React, { useEffect, useState, Suspense } from 'react';
 import { add } from 'thirdweb/extensions/farcaster/keyGateway';
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 // /chat?tradeId=
 // get parameter from url

@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 import { useActiveAccount } from 'thirdweb/react';
 
 import { client } from '@/app/client';
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 import { useClientWallets } from '@/lib/useClientWallets';
 
 type BuyOrderItem = {

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { hasMeaningfulPolicyContent, normalizePolicyContentToHtml } from '@/lib/policyContent';
+import ClientFooterCopyright from '@/components/ClientFooterCopyright';
 
 type PolicyResponse = {
   title?: string;
@@ -133,13 +134,11 @@ export default function P2PBuyerPolicyPage({ slug, title, description }: PolicyP
               </p>
 
               <div className="mt-4 space-y-1 text-[11px] text-[#b6beca]">
-                <p>Email: help@orangex.center</p>
+                <p>Email: support@example.com</p>
                 <p>Address: 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
               </div>
 
-              <p className="mt-4 text-[11px] text-[#6c7688]">
-                Copyright © OrangeX All Rights Reserved
-              </p>
+              <ClientFooterCopyright className="mt-4 text-[11px] text-[#6c7688]" />
               </div>
             </footer>
           </div>

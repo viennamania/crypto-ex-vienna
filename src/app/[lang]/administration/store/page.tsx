@@ -167,7 +167,7 @@ import {
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 export default function Index({ params }: any) {
 
@@ -1771,7 +1771,7 @@ export default function Index({ params }: any) {
                className="flex items-center justify-center gap-2 rounded-full border border-slate-200/70 bg-white/90 p-2 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
              >
                <Image
-                 src="/logo.png"
+                 src="/api/client/logo"
                  alt="logo"
                  width={100}
                  height={100}

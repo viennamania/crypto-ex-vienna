@@ -53,7 +53,7 @@ import { useRouter }from "next//navigation";
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 interface SellOrder {
   _id: string;

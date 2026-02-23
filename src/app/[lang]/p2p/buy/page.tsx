@@ -110,7 +110,7 @@ import { useAnimatedNumber } from "@/components/useAnimatedNumber";
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 interface BuyOrder {
   _id: string;
@@ -4465,13 +4465,13 @@ const fetchBuyOrders = async () => {
                   bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   <Image
-                    src="/logo-orangex.png"
+                    src="/api/client/logo"
                     alt="logo"
                     width={100}
                     height={100}
                     className="h-6 w-auto object-contain"
                   />
-                  <span className="text-sm font-semibold text-slate-700">OrangeX</span>
+                  <span className="text-sm font-semibold text-slate-700">플랫폼</span>
                 </button>
                 <div className="flex flex-col">
                   <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500">P2P BUY</span>
@@ -4728,12 +4728,10 @@ const fetchBuyOrders = async () => {
                     {!address && (
                       <div className="rounded-lg border border-slate-200 bg-white p-6 text-center">
                         <div className="flex flex-col items-center gap-3">
-                          <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
-                            OrangeX
-                          </span>
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">플랫폼</span>
                           <Image
-                            src="/logo-orangex.png"
-                            alt="OrangeX"
+                            src="/api/client/logo"
+                            alt="Platform"
                             width={160}
                             height={48}
                             className="h-10 w-auto"

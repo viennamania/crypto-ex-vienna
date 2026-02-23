@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import WalletActiveTradeNotice from '@/components/wallet-management/WalletActiveTradeNotice';
+import ClientBrandTitleSync from '@/components/ClientBrandTitleSync';
 
 export default function WalletManagementLayout({
   children,
@@ -9,6 +10,7 @@ export default function WalletManagementLayout({
 }) {
   return (
     <>
+      <ClientBrandTitleSync />
       <WalletActiveTradeNotice />
       {children}
     </>

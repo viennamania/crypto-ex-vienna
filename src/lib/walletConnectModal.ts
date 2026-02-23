@@ -1,6 +1,6 @@
 export {
-  ORANGEX_WELCOME_SCREEN,
-  OrangeXConnectWelcomeScreen,
-  ORANGEX_CONNECT_MODAL,
-  ORANGEX_CONNECT_OPTIONS,
-} from './orangeXConnectModalConfig';
+  WALLET_CONNECT_WELCOME_SCREEN,
+  WalletConnectWelcomeScreen,
+  WALLET_CONNECT_MODAL,
+  WALLET_CONNECT_OPTIONS,
+} from './walletConnectModalConfig';

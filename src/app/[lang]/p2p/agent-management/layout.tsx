@@ -12,7 +12,8 @@ import {
 } from 'thirdweb/react';
 
 import { client } from '@/app/client';
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import ClientBrandTitleSync from '@/components/ClientBrandTitleSync';
+import { ConnectButton } from '@/components/WalletConnectButton';
 import { useClientWallets, type SupportedSmsCountry } from '@/lib/useClientWallets';
 import { clearWalletConnectionState } from '@/lib/clearWalletConnectionState';
 
@@ -724,22 +725,6 @@ export default function P2PAgentManagementLayout({ children }: { children: React
     };
   }, [agentcode, normalizedConnectedWalletAddress]);
 
-  useEffect(() => {
-    if (!isAgentAccessVerified || typeof document === 'undefined') {
-      return;
-    }
-
-    const originalTitle = document.title;
-    const pendingCount = Number(pendingSummary.pendingCount || 0);
-    if (pendingCount > 0) {
-      document.title = `[미처리 ${pendingCount}건] ${originalTitle}`;
-    }
-
-    return () => {
-      document.title = originalTitle;
-    };
-  }, [isAgentAccessVerified, pendingSummary.pendingCount]);
-
   const togglePendingAlertSound = async () => {
     const nextValue = !pendingAlertSoundEnabled;
     setPendingAlertSoundEnabled(nextValue);
@@ -819,13 +804,14 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       }
     } finally {
       clearWalletConnectionState();
-      window.dispatchEvent(new Event('orangex-wallet-disconnected'));
+      window.dispatchEvent(new Event('wallet-disconnected'));
       window.location.replace(window.location.pathname + window.location.search);
     }
   };
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f2f7ff_0%,#edf4ff_45%,#f8fafc_100%)] text-slate-900">
+      <ClientBrandTitleSync enabled={isAgentAccessVerified} pendingCount={pendingSummary.pendingCount} />
       <AutoConnect client={client} wallets={[wallet]} />
 
       <button

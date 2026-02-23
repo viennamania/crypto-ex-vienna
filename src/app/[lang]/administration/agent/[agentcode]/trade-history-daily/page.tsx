@@ -81,7 +81,7 @@ import { version } from "../../../../../config/version";
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 interface BuyOrder {
 

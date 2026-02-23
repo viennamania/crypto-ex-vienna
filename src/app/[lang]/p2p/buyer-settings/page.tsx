@@ -45,7 +45,7 @@ import { balanceOf, transfer } from "thirdweb/extensions/erc20";
 
 import AppBarComponent from "@/components/Appbar/AppBar";
 import { getDictionary } from "../../../dictionaries";
-import { ORANGEX_CONNECT_OPTIONS, ORANGEX_WELCOME_SCREEN } from "@/lib/orangeXConnectModal";
+import { WALLET_CONNECT_OPTIONS, WALLET_CONNECT_WELCOME_SCREEN } from "@/lib/walletConnectModal";
 
 
 import { useQRCode } from 'next-qrcode';
@@ -1103,12 +1103,10 @@ export default function SettingsPage({ params }: any) {
                     <div className="w-full">
                         <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-6 text-center shadow-sm">
                             <div className="flex flex-col items-center gap-3">
-                                <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
-                                    OrangeX
-                                </span>
+                                <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">플랫폼</span>
                                 <Image
-                                    src="/logo-orangex.png"
-                                    alt="OrangeX"
+                                    src="/api/client/logo"
+                                    alt="Platform"
                                     width={160}
                                     height={48}
                                     className="h-10 w-auto"
@@ -1139,9 +1137,9 @@ export default function SettingsPage({ params }: any) {
                                             client,
                                             wallets: [wallet],
                                             chain: connectChain,
-                                            ...ORANGEX_CONNECT_OPTIONS,
+                                            ...WALLET_CONNECT_OPTIONS,
                                             welcomeScreen: {
-                                                ...ORANGEX_WELCOME_SCREEN,
+                                                ...WALLET_CONNECT_WELCOME_SCREEN,
                                                 subtitle: "간편하게 지갑을 연결하고 구매자 설정을 시작하세요.",
                                             },
                                         });

@@ -692,6 +692,7 @@ export default function SettingsPage({ params }: any) {
     const [clientName, setClientName] = useState("");
     const [clientDescription, setClientDescription] = useState("");
     const [clientLogo, setClientLogo] = useState("");
+    const [clientCopyright, setClientCopyright] = useState("");
     const [smartAccountEnabled, setSmartAccountEnabled] = useState(false);
     const [uploadingCenterLogo, setUploadingCenterLogo] = useState(false);
 
@@ -742,6 +743,7 @@ export default function SettingsPage({ params }: any) {
                 setClientName(data.result.clientInfo?.name || "");
                 setClientDescription(data.result.clientInfo?.description || "");
                 setClientLogo(data.result.clientInfo?.logo || "");
+                setClientCopyright(data.result.clientInfo?.copyright || "");
                 setSmartAccountEnabled(Boolean(data.result.clientInfo?.smartAccountEnabled));
 
                 setExchangeRateUSDT(data.result.clientInfo?.exchangeRateUSDT || {
@@ -769,7 +771,8 @@ export default function SettingsPage({ params }: any) {
     const isCenterBasicInfoUnchanged =
         (clientName ?? "") === (clientInfo?.name ?? "") &&
         (clientDescription ?? "") === (clientInfo?.description ?? "") &&
-        (clientLogo ?? "") === (clientInfo?.logo ?? "");
+        (clientLogo ?? "") === (clientInfo?.logo ?? "") &&
+        (clientCopyright ?? "") === (clientInfo?.copyright ?? "");
 
     const notifySettingsUpdated = () => {
         if (typeof window !== "undefined") {
@@ -881,6 +884,7 @@ export default function SettingsPage({ params }: any) {
                         name: clientName,
                         description: clientDescription,
                         logo: clientLogo,
+                        copyright: clientCopyright,
                     },
                 }),
             });
@@ -896,6 +900,7 @@ export default function SettingsPage({ params }: any) {
                 name: clientName,
                 description: clientDescription,
                 logo: clientLogo,
+                copyright: clientCopyright,
             }));
             toast.success("센터 기본 정보가 저장되었습니다.");
             notifySettingsUpdated();
@@ -1247,6 +1252,21 @@ export default function SettingsPage({ params }: any) {
                                             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
                                             placeholder="센터 소개"
                                         />
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-xs font-semibold text-slate-500">
+                                            카피라이트 문구
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={clientCopyright}
+                                            onChange={(e) => setClientCopyright(e.target.value)}
+                                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                            placeholder="Copyright © Your Center. All Rights Reserved"
+                                        />
+                                        <span className="text-xs text-slate-400">
+                                            페이지 하단 푸터에 표시됩니다.
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="mt-4 flex justify-end">

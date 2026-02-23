@@ -9,7 +9,8 @@ import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 import { AutoConnect, useActiveAccount } from 'thirdweb/react';
 import { arbitrum, bsc, ethereum, polygon } from 'thirdweb/chains';
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
+import ClientFooterCopyright from '@/components/ClientFooterCopyright';
 import { useClientWallets } from '@/lib/useClientWallets';
 import { client } from '@/app/client';
 
@@ -27,7 +28,7 @@ const bodyFont = Manrope({
 });
 
 const NEXT_PUBLIC_SENDBIRD_APP_ID = process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
-const SUPPORT_ADMIN_ID = 'orangexManager';
+const SUPPORT_ADMIN_ID = 'supportManager';
 const SUPPORT_REQUEST_TIMEOUT_MS = 12000;
 const walletAuthOptions = ['email', 'google', 'phone'];
 
@@ -315,7 +316,7 @@ const formatRelativeTime = (value?: string) => {
     return `${diffDays} days ago`;
 };
 
-export default function OrangeXPage() {
+export default function P2PPage() {
     const params = useParams<{ lang: string }>();
     const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang ?? 'ko';
     const searchParams = useSearchParams();
@@ -1672,8 +1673,8 @@ export default function OrangeXPage() {
                             </div>
                             <div className="flex items-center gap-4">
                                 <Image
-                                    src="/logo-orangex.png"
-                                    alt="OrangeX"
+                                    src="/api/client/logo"
+                                    alt="Platform"
                                     width={180}
                                     height={56}
                                     className="h-12 w-auto"
@@ -2250,7 +2251,7 @@ export default function OrangeXPage() {
                                 Trusted P2P with escrow from a locally VASP-registered provider
                             </h2>
                             <p className="text-sm text-slate-600 md:text-base">
-                                OrangeX P2P uses escrow services provided by a VASP registered in Korea.
+                                This P2P service uses escrow services provided by a VASP registered in Korea.
                                 Trade flow is transparently managed for a trusted transaction experience.
                             </p>
                         </div>
@@ -3276,8 +3277,8 @@ export default function OrangeXPage() {
             <footer className="relative z-10 border-t border-white/10 bg-[#1f1f1f] px-6 py-14 text-center text-slate-200">
                 <div className="mx-auto flex max-w-3xl flex-col items-center gap-6">
                     <Image
-                        src="/logo-orangex.png"
-                        alt="OrangeX"
+                        src="/api/client/logo"
+                        alt="Platform"
                         width={180}
                         height={56}
                         className="h-10 w-auto"
@@ -3300,10 +3301,10 @@ export default function OrangeXPage() {
                         Please review fees, exchange rates, and settlement terms before payment.
                     </p>
                     <div className="text-sm text-slate-400">
-                        <p>Email: help@orangex.center</p>
+                        <p>Email: support@example.com</p>
                         <p>Address: 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
                     </div>
-                    <p className="text-sm text-slate-500">Copyright © OrangeX All Rights Reserved</p>
+                    <ClientFooterCopyright className="text-sm text-slate-500" />
                 </div>
             </footer>
 

@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useParams, useSearchParams } from 'next/navigation';
 import { AutoConnect, useActiveAccount } from 'thirdweb/react';
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 import { useClientWallets } from '@/lib/useClientWallets';
 import { client } from '@/app/client';
 

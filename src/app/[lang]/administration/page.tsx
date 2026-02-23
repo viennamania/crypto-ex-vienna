@@ -104,7 +104,7 @@ import { version } from "../../config/version";
 
 
 
-import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { ConnectButton } from '@/components/WalletConnectButton';
 import { clearWalletConnectionState } from '@/lib/clearWalletConnectionState';
 
 const storecode = "admin";
@@ -634,7 +634,7 @@ export default function Index({ params }: any) {
       }
     } finally {
       clearWalletConnectionState();
-      window.dispatchEvent(new Event('orangex-wallet-disconnected'));
+      window.dispatchEvent(new Event('wallet-disconnected'));
       window.location.replace(window.location.pathname + window.location.search);
     }
   };
@@ -1068,7 +1068,7 @@ export default function Index({ params }: any) {
             
           <div className="w-full flex flex-row items-center justify-start gap-2">
             <Image
-              src="/logo.png"
+              src="/api/client/logo"
               alt="logo"
               width={100}
               height={100}
