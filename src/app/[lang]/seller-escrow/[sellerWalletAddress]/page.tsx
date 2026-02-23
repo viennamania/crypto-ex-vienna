@@ -455,6 +455,29 @@ const getOrderPlatformFeeWalletAddress = (orderLike: any): string => {
   return '';
 };
 
+const getOrderRateValue = (orderLike: any): number => {
+  const directRate = Number(orderLike?.rate || 0);
+  if (Number.isFinite(directRate) && directRate > 0) {
+    return directRate;
+  }
+
+  const krwAmount = Number(orderLike?.krwAmount || 0);
+  const usdtAmount = Number(orderLike?.usdtAmount || 0);
+  if (Number.isFinite(krwAmount) && Number.isFinite(usdtAmount) && usdtAmount > 0) {
+    return krwAmount / usdtAmount;
+  }
+
+  return 0;
+};
+
+const formatOrderRateLabel = (orderLike: any): string => {
+  const rateValue = getOrderRateValue(orderLike);
+  if (!Number.isFinite(rateValue) || rateValue <= 0) {
+    return '-';
+  }
+  return `${formatKrwValue(rateValue)} 원/USDT`;
+};
+
 const maskBuyerId = (value?: string | null) => {
   const name = (value ?? '').trim();
   if (!name) {
@@ -500,6 +523,48 @@ const formatTradeHistoryTime = (value?: string) => {
     hour: '2-digit',
     minute: '2-digit',
   });
+};
+
+const PAYMENT_REQUEST_TIME_LIMIT_MS = 30 * 60 * 1000;
+
+const getPaymentRequestBaseTimeMs = (orderLike: any): number => {
+  const rawBaseTime =
+    orderLike?.paymentRequestedAt
+    || orderLike?.acceptedAt
+    || orderLike?.createdAt
+    || null;
+  if (!rawBaseTime) {
+    return 0;
+  }
+  const baseTimeMs = new Date(rawBaseTime).getTime();
+  return Number.isFinite(baseTimeMs) ? baseTimeMs : 0;
+};
+
+const getPaymentRequestCountdown = (orderLike: any, nowMs: number) => {
+  const baseTimeMs = getPaymentRequestBaseTimeMs(orderLike);
+  if (!baseTimeMs || !Number.isFinite(nowMs)) {
+    return {
+      expired: true,
+      remainingMs: 0,
+      display: '00:00',
+      remainingRatio: 0,
+    };
+  }
+
+  const deadlineMs = baseTimeMs + PAYMENT_REQUEST_TIME_LIMIT_MS;
+  const remainingMs = Math.max(0, deadlineMs - nowMs);
+  const totalSeconds = Math.ceil(remainingMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  const remainingRatio = Math.max(0, Math.min(1, remainingMs / PAYMENT_REQUEST_TIME_LIMIT_MS));
+
+  return {
+    expired: remainingMs <= 0,
+    remainingMs,
+    display,
+    remainingRatio,
+  };
 };
 
 const formatShortWalletAddress = (value?: string | null) => {
@@ -1768,6 +1833,7 @@ export default function Index({ params }: any) {
   const [activePaymentRequestedOrders, setActivePaymentRequestedOrders] = useState<BuyOrder[]>([]);
   const [loadingActivePaymentRequestedOrders, setLoadingActivePaymentRequestedOrders] = useState(false);
   const [loadedActivePaymentRequestedOrders, setLoadedActivePaymentRequestedOrders] = useState(false);
+  const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
   const [myIpAddress, setMyIpAddress] = useState('-');
   const [loadingMyIpAddress, setLoadingMyIpAddress] = useState(true);
   const [sellersBalance, setSellersBalance] = useState([] as any[]);
@@ -1780,6 +1846,26 @@ export default function Index({ params }: any) {
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const [notificationAudioUnlocked, setNotificationAudioUnlocked] = useState(false);
   const [notificationAudioUnlockNeeded, setNotificationAudioUnlockNeeded] = useState(false);
+
+  useEffect(() => {
+    if (activePaymentRequestedOrders.length <= 0) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setCountdownNowMs(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [activePaymentRequestedOrders.length]);
+
+  useEffect(() => {
+    if (activePaymentRequestedOrders.length > 0) {
+      setCountdownNowMs(Date.now());
+    }
+  }, [activePaymentRequestedOrders]);
 
   const isSameWalletAddress = (walletA?: string, walletB?: string) =>
     Boolean(walletA && walletB && walletA.toLowerCase() === walletB.toLowerCase());
@@ -8962,48 +9048,95 @@ const fetchBuyOrders = async () => {
                                   </div>
                                 ) : activePaymentRequestedOrders.length > 0 ? (
                                   <div className="w-full flex flex-col items-start justify-center gap-2">
-                                    {activePaymentRequestedOrders.map((order) => (
-                                      <div
-                                        key={order._id}
-                                        className="w-full rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2"
-                                      >
-                                        <div className="w-full flex flex-row items-start justify-between gap-2">
-                                          <span className="text-sm font-semibold text-slate-900">
-                                            거래번호(TID) #{order.tradeId || '-'}
-                                          </span>
-                                          <div className="flex flex-col items-end gap-1">
-                                            <span className="text-xs text-slate-600">
-                                              {formatTradeHistoryTime(order.paymentRequestedAt || order.createdAt)}
+                                    {activePaymentRequestedOrders.map((order) => {
+                                      const paymentCountdown = getPaymentRequestCountdown(order, countdownNowMs);
+                                      const isCountdownUrgent =
+                                        !paymentCountdown.expired && paymentCountdown.remainingMs <= (5 * 60 * 1000);
+                                      const isCountdownDanger =
+                                        !paymentCountdown.expired && paymentCountdown.remainingMs <= (2 * 60 * 1000);
+                                      const countdownProgressWidth = Math.round(paymentCountdown.remainingRatio * 100);
+                                      const countdownHue = Math.max(0, Math.min(120, Math.round(paymentCountdown.remainingRatio * 120)));
+                                      const countdownBadgeClass = paymentCountdown.expired
+                                        ? 'border-rose-300 bg-rose-100 text-rose-700'
+                                        : isCountdownDanger
+                                          ? 'border-rose-300 bg-rose-100 text-rose-700 animate-pulse'
+                                          : isCountdownUrgent
+                                          ? 'border-amber-300 bg-amber-100 text-amber-700 animate-pulse'
+                                          : 'border-emerald-300 bg-emerald-100 text-emerald-700';
+                                      const countdownProgressStyle = paymentCountdown.expired
+                                        ? {
+                                          width: `${countdownProgressWidth}%`,
+                                          backgroundColor: '#fb7185',
+                                          boxShadow: '0 0 10px rgba(244,63,94,0.45)',
+                                        }
+                                        : {
+                                          width: `${countdownProgressWidth}%`,
+                                          backgroundColor: `hsl(${countdownHue} 88% 46%)`,
+                                          boxShadow: isCountdownDanger
+                                            ? '0 0 12px rgba(244,63,94,0.5)'
+                                            : `0 0 10px hsl(${countdownHue} 88% 42% / 0.35)`,
+                                        };
+
+                                      return (
+                                        <div
+                                          key={order._id}
+                                          className="w-full rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2"
+                                        >
+                                          <div className="w-full flex flex-row items-start justify-between gap-2">
+                                            <span className="text-sm font-semibold text-slate-900">
+                                              거래번호(TID) #{order.tradeId || '-'}
                                             </span>
-                                            {isOwnerSeller && (
-                                              <button
-                                                type="button"
-                                                className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                                                onClick={() => openActiveOrderCompleteModal(order)}
-                                              >
-                                                완료하기
-                                              </button>
-                                            )}
+                                            <div className="flex flex-col items-end gap-1">
+                                              <span className="text-xs text-slate-600">
+                                                {formatTradeHistoryTime(order.paymentRequestedAt || order.createdAt)}
+                                              </span>
+                                              <div className={`inline-flex w-[110px] items-center justify-between rounded-md border px-2 py-1 ${countdownBadgeClass}`}>
+                                                <span className="text-[10px] font-semibold tracking-[0.06em]">입금 제한</span>
+                                                <span className="text-xs font-extrabold tabular-nums">
+                                                  {paymentCountdown.display}
+                                                </span>
+                                              </div>
+                                              <div className="h-1.5 w-[110px] overflow-hidden rounded-full bg-slate-200/70">
+                                                <div
+                                                  className="h-full rounded-full transition-all duration-1000 ease-linear"
+                                                  style={countdownProgressStyle}
+                                                />
+                                              </div>
+                                              {isOwnerSeller && (
+                                                <button
+                                                  type="button"
+                                                  className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                                                  onClick={() => openActiveOrderCompleteModal(order)}
+                                                >
+                                                  완료하기
+                                                </button>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="mt-1 w-full flex flex-row items-center justify-between gap-2 text-sm">
+                                            <div className="flex min-w-0 flex-col items-start">
+                                              <span className="text-slate-700">
+                                                구매자 {getBuyerDisplayNameForTradeList(order, isOwnerSeller)}
+                                              </span>
+                                              <span className="text-xs text-slate-500">
+                                                입금자명 {getBuyerDepositNameForTradeList(order, isOwnerSeller)}
+                                              </span>
+                                              <span className="text-xs text-slate-500">
+                                                결제방법 {getPaymentMethodLabel(order?.paymentMethod, order?.seller?.bankInfo?.bankName)}
+                                              </span>
+                                            </div>
+                                            <div className="flex flex-col items-end text-right">
+                                              <span className="font-semibold text-amber-700" style={{ fontFamily: 'monospace' }}>
+                                                {formatKrwValue(order.krwAmount)}원 / {(Number(order.usdtAmount || 0)).toFixed(3)} USDT
+                                              </span>
+                                              <span className="text-xs text-amber-800/90" style={{ fontFamily: 'monospace' }}>
+                                                환율 {formatOrderRateLabel(order)}
+                                              </span>
+                                            </div>
                                           </div>
                                         </div>
-                                        <div className="mt-1 w-full flex flex-row items-center justify-between gap-2 text-sm">
-                                          <div className="flex min-w-0 flex-col items-start">
-                                            <span className="text-slate-700">
-                                              구매자 {getBuyerDisplayNameForTradeList(order, isOwnerSeller)}
-                                            </span>
-                                            <span className="text-xs text-slate-500">
-                                              입금자명 {getBuyerDepositNameForTradeList(order, isOwnerSeller)}
-                                            </span>
-                                            <span className="text-xs text-slate-500">
-                                              결제방법 {getPaymentMethodLabel(order?.paymentMethod, order?.seller?.bankInfo?.bankName)}
-                                            </span>
-                                          </div>
-                                          <span className="font-semibold text-amber-700" style={{ fontFamily: 'monospace' }}>
-                                            {formatKrwValue(order.krwAmount)}원 / {(Number(order.usdtAmount || 0)).toFixed(3)} USDT
-                                          </span>
-                                        </div>
-                                      </div>
-                                    ))}
+                                      );
+                                    })}
                                   </div>
                                 ) : (
                                   <div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
@@ -9050,6 +9183,9 @@ const fetchBuyOrders = async () => {
                                   </div>
                                   <div className="rounded-lg border border-slate-200 bg-white/80 px-2 py-1.5">
                                     주문 수량 {Number(currentTradeOrder.usdtAmount || 0).toFixed(3)} USDT
+                                  </div>
+                                  <div className="rounded-lg border border-slate-200 bg-white/80 px-2 py-1.5">
+                                    환율 {formatOrderRateLabel(currentTradeOrder)}
                                   </div>
                                   <div className="rounded-lg border border-slate-200 bg-white/80 px-2 py-1.5">
                                     결제방법 {getPaymentMethodLabel(currentTradeOrder.paymentMethod, currentTradeOrder.paymentBankName)}
@@ -10174,9 +10310,16 @@ const fetchBuyOrders = async () => {
                             : '-'}
                         </td>
                         <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                          {typeof item?.krwAmount === 'number'
-                            ? formatKrwValue(item.krwAmount)
-                            : '-'}
+                          <div className="flex flex-col items-end">
+                            <span>
+                              {typeof item?.krwAmount === 'number'
+                                ? formatKrwValue(item.krwAmount)
+                                : '-'}
+                            </span>
+                            <span className="text-[11px] font-medium text-slate-500">
+                              환율 {formatOrderRateLabel(item)}
+                            </span>
+                          </div>
                         </td>
                         {isOwnerSeller && (
                           <td className="px-4 py-3 text-slate-700">
