@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { useActiveAccount } from 'thirdweb/react';
@@ -17,25 +18,61 @@ import {
 type AgentSalesOrderItem = {
   id: string;
   tradeId: string;
+  chain: string;
+  transactionHash: string;
+  cancelReleaseTransactionHash: string;
+  escrowTransactionHash: string;
   status: string;
   privateSale: boolean;
+  paymentMethod: string;
   canceller: string;
   cancelledByRole: string;
   cancelledByWalletAddress: string;
   cancelledByNickname: string;
   cancelledByIpAddress: string;
+  paymentConfirmedByRole: string;
+  paymentConfirmedByWalletAddress: string;
+  paymentConfirmedByNickname: string;
+  paymentConfirmedByIpAddress: string;
   storecode: string;
   storeName: string;
+  walletAddress: string;
+  ipAddress: string;
+  buyerIpAddress: string;
   buyerNickname: string;
+  buyerDepositName: string;
   buyerWalletAddress: string;
+  buyerReleaseTransactionHash: string;
+  buyerRollbackTransactionHash: string;
   sellerNickname: string;
   sellerWalletAddress: string;
+  sellerAvatar: string;
+  sellerBankName: string;
+  sellerBankAccountNumber: string;
+  sellerBankAccountHolder: string;
+  sellerContactMemo: string;
+  sellerLockTransactionHash: string;
+  sellerRollbackTransactionHash: string;
+  sellerReleaseTransactionHash: string;
   usdtAmount: number;
   krwAmount: number;
+  rate: number;
   platformFeeRate: number;
   platformFeeAmount: number;
+  platformFeeWalletAddress: string;
   createdAt: string;
+  paymentRequestedAt: string;
   paymentConfirmedAt: string;
+};
+
+type SellerSalesSummaryItem = {
+  sellerWalletAddress: string;
+  sellerNickname: string;
+  sellerAvatar: string;
+  totalKrwAmount: number;
+  totalUsdtAmount: number;
+  orderCount: number;
+  latestCreatedAt: string;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -62,6 +99,9 @@ const normalizeSalesOrder = (value: unknown): AgentSalesOrderItem => {
   const store = isRecord(source.store) ? source.store : {};
   const buyer = isRecord(source.buyer) ? source.buyer : {};
   const seller = isRecord(source.seller) ? source.seller : {};
+  const buyerBankInfo = isRecord(buyer.bankInfo) ? buyer.bankInfo : {};
+  const sellerBankInfo = isRecord(seller.bankInfo) ? seller.bankInfo : {};
+  const paymentConfirmedBy = isRecord(source.paymentConfirmedBy) ? source.paymentConfirmedBy : {};
   const platformFee = isRecord(source.platformFee) ? source.platformFee : {};
   const settlement = isRecord(source.settlement) ? source.settlement : {};
   const usdtAmount = toNumber(source.usdtAmount);
@@ -102,34 +142,57 @@ const normalizeSalesOrder = (value: unknown): AgentSalesOrderItem => {
   return {
     id: toText(source._id) || toText(source.id),
     tradeId: toText(source.tradeId),
+    chain: toText(source.chain),
+    transactionHash: toText(source.transactionHash),
+    cancelReleaseTransactionHash: toText(source.cancelReleaseTransactionHash),
+    escrowTransactionHash: toText(source.escrowTransactionHash),
     status: toText(source.status),
     privateSale: source.privateSale === true,
+    paymentMethod: toText(source.paymentMethod),
     canceller: toText(source.canceller),
     cancelledByRole: toText(source.cancelledByRole),
     cancelledByWalletAddress: toText(source.cancelledByWalletAddress),
     cancelledByNickname: toText(source.cancelledByNickname),
     cancelledByIpAddress: toText(source.cancelledByIpAddress),
+    paymentConfirmedByRole: toText(source.paymentConfirmedByRole) || toText(paymentConfirmedBy.role),
+    paymentConfirmedByWalletAddress: toText(source.paymentConfirmedByWalletAddress) || toText(paymentConfirmedBy.walletAddress),
+    paymentConfirmedByNickname: toText(source.paymentConfirmedByNickname) || toText(paymentConfirmedBy.nickname),
+    paymentConfirmedByIpAddress: toText(source.paymentConfirmedByIpAddress) || toText(paymentConfirmedBy.ipAddress),
     storecode: toText(source.storecode),
     storeName: toText(store.storeName) || toText(source.storeName) || toText(source.storecode),
+    walletAddress: toText(source.walletAddress),
+    ipAddress: toText(source.ipAddress),
+    buyerIpAddress: toText(source.buyerIpAddress),
     buyerNickname: toText(source.nickname) || toText(buyer.nickname),
+    buyerDepositName: toText(buyer.depositName) || toText(buyerBankInfo.accountHolder) || toText(buyerBankInfo.depositName),
     buyerWalletAddress: toText(buyer.walletAddress) || toText(source.walletAddress),
+    buyerReleaseTransactionHash: toText(buyer.releaseTransactionHash),
+    buyerRollbackTransactionHash: toText(buyer.rollbackTransactionHash),
     sellerNickname: toText(seller.nickname),
     sellerWalletAddress: toText(seller.walletAddress),
+    sellerAvatar: toText(seller.avatar),
+    sellerBankName: toText(sellerBankInfo.bankName),
+    sellerBankAccountNumber: toText(sellerBankInfo.accountNumber),
+    sellerBankAccountHolder: toText(sellerBankInfo.accountHolder),
+    sellerContactMemo: toText(sellerBankInfo.contactMemo),
+    sellerLockTransactionHash: toText(seller.lockTransactionHash),
+    sellerRollbackTransactionHash: toText(seller.rollbackTransactionHash),
+    sellerReleaseTransactionHash: toText(seller.releaseTransactionHash),
     usdtAmount,
     krwAmount: toNumber(source.krwAmount),
+    rate: toNumber(source.rate),
     platformFeeRate: resolvedPlatformFeeRate,
     platformFeeAmount: resolvedPlatformFeeAmount,
+    platformFeeWalletAddress: toText(
+      source.platformFeeWalletAddress
+      || platformFee.walletAddress
+      || platformFee.address
+      || settlement.platformFeeWalletAddress,
+    ),
     createdAt: toText(source.createdAt),
+    paymentRequestedAt: toText(source.paymentRequestedAt),
     paymentConfirmedAt: toText(source.paymentConfirmedAt),
   };
-};
-
-const statusLabelMap: Record<string, string> = {
-  ordered: '주문대기',
-  accepted: '주문수락',
-  paymentRequested: '입금요청',
-  paymentConfirmed: '결제확정',
-  cancelled: '취소',
 };
 
 const shortWallet = (value: string) => {
@@ -138,12 +201,126 @@ const shortWallet = (value: string) => {
   if (source.length <= 12) return source;
   return `${source.slice(0, 6)}...${source.slice(-4)}`;
 };
+
+const getStatusLabel = (status?: string | null) => {
+  const normalized = String(status || '').trim();
+  if (normalized === 'ordered') return '주문생성';
+  if (normalized === 'accepted') return '주문접수';
+  if (normalized === 'paymentRequested') return '입금요청';
+  if (normalized === 'paymentConfirmed') return '입금확인';
+  if (normalized === 'completed') return '거래완료';
+  if (normalized === 'cancelled') return '주문취소';
+  return normalized || '-';
+};
+
+const getStatusBadgeClassName = (status?: string | null) => {
+  const normalized = String(status || '').trim();
+  if (normalized === 'ordered') return 'border-slate-300 bg-slate-100 text-slate-700';
+  if (normalized === 'accepted') return 'border-blue-300 bg-blue-100 text-blue-700';
+  if (normalized === 'paymentRequested') return 'border-amber-300 bg-amber-100 text-amber-700';
+  if (normalized === 'paymentConfirmed') return 'border-emerald-300 bg-emerald-100 text-emerald-700';
+  if (normalized === 'completed') return 'border-cyan-300 bg-cyan-100 text-cyan-700';
+  if (normalized === 'cancelled') return 'border-rose-300 bg-rose-100 text-rose-700';
+  return 'border-slate-200 bg-slate-100 text-slate-600';
+};
+
+const formatDateTime = (value?: string) => {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+};
+
+const TX_EXPLORER_BASE_BY_CHAIN: Record<string, string> = {
+  ethereum: 'https://etherscan.io/tx/',
+  polygon: 'https://polygonscan.com/tx/',
+  arbitrum: 'https://arbiscan.io/tx/',
+  bsc: 'https://bscscan.com/tx/',
+};
+
+const normalizeChainKey = (value?: string) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return '';
+  if (normalized === 'eth') return 'ethereum';
+  if (normalized === 'matic') return 'polygon';
+  if (normalized === 'arb') return 'arbitrum';
+  if (normalized === 'bnb') return 'bsc';
+  return normalized;
+};
+
+const resolveTransferChain = (order: AgentSalesOrderItem) => {
+  const chainFromOrder = normalizeChainKey(order.chain);
+  if (chainFromOrder) return chainFromOrder;
+  return normalizeChainKey(process.env.NEXT_PUBLIC_CHAIN) || 'polygon';
+};
+
+const getTransferExplorerUrlByHash = (order: AgentSalesOrderItem, txHash: string) => {
+  const normalizedTxHash = String(txHash || '').trim();
+  if (!normalizedTxHash) return '';
+  const chain = resolveTransferChain(order);
+  const explorerBaseUrl = TX_EXPLORER_BASE_BY_CHAIN[chain];
+  if (!explorerBaseUrl) return '';
+  return `${explorerBaseUrl}${normalizedTxHash}`;
+};
+const getSellerDisplayName = (item: SellerSalesSummaryItem) =>
+  String(item.sellerNickname || '').trim() || shortWallet(item.sellerWalletAddress) || '-';
+const getSellerAvatarFallback = (item: SellerSalesSummaryItem) => {
+  const name = getSellerDisplayName(item).replace(/\s+/g, '');
+  if (!name || name === '-') return 'S';
+  return name.slice(0, 1).toUpperCase();
+};
 const formatPercent = (value: number) => {
   const numeric = Number(value || 0);
   if (!Number.isFinite(numeric) || numeric <= 0) return '0';
   return (Math.round(numeric * 100) / 100).toFixed(2).replace(/\.?0+$/, '');
 };
+
+const formatRate = (value?: number) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return '-';
+  return new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(numeric);
+};
+
+const getOrderExchangeRate = (order: AgentSalesOrderItem) => {
+  const explicitRate = Number(order.rate || 0);
+  if (Number.isFinite(explicitRate) && explicitRate > 0) return explicitRate;
+
+  const krwAmount = Number(order.krwAmount || 0);
+  const usdtAmount = Number(order.usdtAmount || 0);
+  if (Number.isFinite(krwAmount) && Number.isFinite(usdtAmount) && krwAmount > 0 && usdtAmount > 0) {
+    return krwAmount / usdtAmount;
+  }
+
+  return 0;
+};
 const PAGE_SIZE = 20;
+const POLLING_INTERVAL_MS = 5000;
+const PAYMENT_REQUEST_COUNTDOWN_LIMIT_MS = 30 * 60 * 1000;
+
+const getPaymentRequestedRemainingMs = (order: AgentSalesOrderItem, nowMs: number) => {
+  const baseTimeSource = String(order.paymentRequestedAt || order.createdAt || '').trim();
+  if (!baseTimeSource) return null;
+
+  const baseTime = new Date(baseTimeSource).getTime();
+  if (Number.isNaN(baseTime)) return null;
+
+  return baseTime + PAYMENT_REQUEST_COUNTDOWN_LIMIT_MS - nowMs;
+};
+
+const formatCountdownLabel = (remainingMs: number | null) => {
+  if (remainingMs === null) return '남은 --:--';
+  const remainingSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+  const minutes = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
+  const seconds = String(remainingSeconds % 60).padStart(2, '0');
+  return `남은 ${minutes}:${seconds}`;
+};
 
 const resolveCancellerRole = (order: AgentSalesOrderItem): 'buyer' | 'seller' | 'admin' | 'agent' | 'unknown' => {
   const role = String(order.cancelledByRole || order.canceller || '').trim().toLowerCase();
@@ -178,12 +355,101 @@ const getCancellerLabel = (order: AgentSalesOrderItem) => {
   return '-';
 };
 
+const getBuyerDepositNameLabel = (order: AgentSalesOrderItem) =>
+  String(order.buyerDepositName || '').trim() || '-';
+
+const getBuyerIp = (order: AgentSalesOrderItem) => {
+  const candidates = [
+    order.buyerIpAddress,
+    order.ipAddress,
+    String(order.cancelledByRole || '').trim().toLowerCase() === 'buyer' ? order.cancelledByIpAddress : '',
+    String(order.paymentConfirmedByRole || '').trim().toLowerCase() === 'buyer' ? order.paymentConfirmedByIpAddress : '',
+  ];
+
+  for (const candidate of candidates) {
+    const normalizedIpAddress = String(candidate || '').trim();
+    if (normalizedIpAddress) return normalizedIpAddress;
+  }
+
+  return '-';
+};
+
+const getPaymentMethodLabel = (order: AgentSalesOrderItem) => {
+  const method = String(order.paymentMethod || '').trim().toLowerCase();
+  const bankName = String(order.sellerBankName || '').trim();
+
+  if ((!method || method === 'bank') && bankName === '연락처송금') return '연락처송금';
+  if (method === 'bank') return '은행송금';
+  if (method === 'card') return '카드';
+  if (method === 'pg') return 'PG';
+  if (method === 'cash') return '현금';
+  if (method === 'crypto') return '암호화폐';
+  if (method === 'giftcard') return '기프트카드';
+  if (method === 'mkrw') return 'MKRW';
+  if (bankName) return bankName;
+  return '기타';
+};
+
+const isContactTransferPayment = (order: AgentSalesOrderItem) => {
+  const method = String(order.paymentMethod || '').trim().toLowerCase();
+  const bankName = String(order.sellerBankName || '').trim();
+  return bankName === '연락처송금' || method === 'contact';
+};
+
+const getPaymentMethodDetail = (order: AgentSalesOrderItem) => {
+  if (isContactTransferPayment(order)) {
+    return String(order.sellerContactMemo || '').trim() || '-';
+  }
+
+  const method = String(order.paymentMethod || '').trim().toLowerCase();
+  const bankName = String(order.sellerBankName || '').trim();
+  const accountNumber = String(order.sellerBankAccountNumber || '').trim();
+  const accountHolder = String(order.sellerBankAccountHolder || '').trim();
+  const isBankInfoPayment = method === 'bank' || Boolean(bankName || accountNumber || accountHolder);
+  if (!isBankInfoPayment) return '-';
+
+  const bankInfoParts = [bankName, accountNumber, accountHolder].filter(Boolean);
+  return bankInfoParts.join(' ').trim() || '-';
+};
+
+const resolveTransferTransactionHash = (order: AgentSalesOrderItem) =>
+  String(order.transactionHash || order.buyerReleaseTransactionHash || order.sellerReleaseTransactionHash || '').trim();
+
+const resolveCancelRecoveryTransactionHash = (order: AgentSalesOrderItem) =>
+  String(order.cancelReleaseTransactionHash || order.buyerRollbackTransactionHash || order.sellerRollbackTransactionHash || '').trim();
+
+const resolvePaymentConfirmerRole = (order: AgentSalesOrderItem): 'buyer' | 'seller' | 'admin' | 'unknown' => {
+  const role = String(order.paymentConfirmedByRole || '').trim().toLowerCase();
+  if (role === 'buyer' || role.includes('구매')) return 'buyer';
+  if (role === 'seller' || role.includes('판매')) return 'seller';
+  if (role === 'admin' || role.includes('관리')) return 'admin';
+  return 'unknown';
+};
+
+const getPaymentConfirmerLabel = (order: AgentSalesOrderItem) => {
+  const nickname = String(order.paymentConfirmedByNickname || order.sellerNickname || '').trim();
+  const walletAddress = String(order.paymentConfirmedByWalletAddress || order.sellerWalletAddress || '').trim();
+  const role = resolvePaymentConfirmerRole(order);
+
+  if (nickname && walletAddress) return `${nickname} (${shortWallet(walletAddress)})`;
+  if (nickname) return nickname;
+  if (walletAddress) return shortWallet(walletAddress);
+  if (role === 'buyer') return '구매자';
+  if (role === 'seller') return '판매자';
+  if (role === 'admin') return '관리자';
+  return '-';
+};
+
+const getPaymentConfirmerIp = (order: AgentSalesOrderItem) =>
+  String(order.paymentConfirmedByIpAddress || '').trim() || '-';
+
 export default function P2PAgentSalesManagementPage() {
   const searchParams = useSearchParams();
   const activeAccount = useActiveAccount();
   const agentcode = String(searchParams?.get('agentcode') || '').trim();
 
   const [loading, setLoading] = useState(false);
+  const [polling, setPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [keyword, setKeyword] = useState('');
   const [agent, setAgent] = useState<AgentSummary | null>(null);
@@ -193,11 +459,14 @@ export default function P2PAgentSalesManagementPage() {
   const [totalKrwAmount, setTotalKrwAmount] = useState(0);
   const [totalUsdtAmount, setTotalUsdtAmount] = useState(0);
   const [totalPlatformFeeAmount, setTotalPlatformFeeAmount] = useState(0);
+  const [copiedTradeId, setCopiedTradeId] = useState('');
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const [cancelTargetOrder, setCancelTargetOrder] = useState<AgentSalesOrderItem | null>(null);
   const [cancelingOrder, setCancelingOrder] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const requestInFlightRef = useRef(false);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (mode: 'manual' | 'polling' = 'manual') => {
     if (!agentcode) {
       setAgent(null);
       setOrders([]);
@@ -205,12 +474,21 @@ export default function P2PAgentSalesManagementPage() {
       setTotalKrwAmount(0);
       setTotalUsdtAmount(0);
       setTotalPlatformFeeAmount(0);
+      setPolling(false);
       setError(null);
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    if (requestInFlightRef.current) return;
+    requestInFlightRef.current = true;
+
+    if (mode === 'polling') {
+      setPolling(true);
+    } else {
+      setLoading(true);
+      setError(null);
+    }
+
     try {
       const [agentData, response] = await Promise.all([
         fetchAgentSummary(agentcode),
@@ -255,21 +533,46 @@ export default function P2PAgentSalesManagementPage() {
       setTotalUsdtAmount(resolvedTotalUsdtAmount);
       setTotalPlatformFeeAmount(resolvedTotalPlatformFeeAmount);
     } catch (loadError) {
-      setAgent(null);
-      setOrders([]);
-      setTotalCount(0);
-      setTotalKrwAmount(0);
-      setTotalUsdtAmount(0);
-      setTotalPlatformFeeAmount(0);
-      setError(loadError instanceof Error ? loadError.message : '판매 거래내역을 불러오지 못했습니다.');
+      if (mode === 'polling') {
+        console.error('Failed to poll agent sales orders', loadError);
+      } else {
+        setAgent(null);
+        setOrders([]);
+        setTotalCount(0);
+        setTotalKrwAmount(0);
+        setTotalUsdtAmount(0);
+        setTotalPlatformFeeAmount(0);
+        setError(loadError instanceof Error ? loadError.message : '판매 거래내역을 불러오지 못했습니다.');
+      }
     } finally {
-      setLoading(false);
+      requestInFlightRef.current = false;
+      if (mode === 'polling') {
+        setPolling(false);
+      } else {
+        setLoading(false);
+      }
     }
   }, [agentcode]);
 
   useEffect(() => {
-    void loadData();
+    void loadData('manual');
+    const interval = setInterval(() => {
+      void loadData('polling');
+    }, POLLING_INTERVAL_MS);
+    return () => {
+      clearInterval(interval);
+    };
   }, [loadData]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   const filteredOrders = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -287,6 +590,52 @@ export default function P2PAgentSalesManagementPage() {
       );
     });
   }, [orders, keyword]);
+
+  const sellerSalesSummarySorted = useMemo(() => {
+    const summaryBySeller = new Map<string, SellerSalesSummaryItem>();
+
+    filteredOrders.forEach((order) => {
+      const walletAddress = String(order.sellerWalletAddress || '').trim();
+      const nickname = String(order.sellerNickname || '').trim();
+      const avatar = String(order.sellerAvatar || '').trim();
+      const key = walletAddress
+        ? walletAddress.toLowerCase()
+        : `nickname:${nickname.toLowerCase() || 'unknown'}`;
+
+      const current = summaryBySeller.get(key);
+      if (!current) {
+        summaryBySeller.set(key, {
+          sellerWalletAddress: walletAddress,
+          sellerNickname: nickname,
+          sellerAvatar: avatar,
+          totalKrwAmount: Number(order.krwAmount || 0) || 0,
+          totalUsdtAmount: Number(order.usdtAmount || 0) || 0,
+          orderCount: 1,
+          latestCreatedAt: String(order.createdAt || '').trim(),
+        });
+        return;
+      }
+
+      current.totalKrwAmount += Number(order.krwAmount || 0) || 0;
+      current.totalUsdtAmount += Number(order.usdtAmount || 0) || 0;
+      current.orderCount += 1;
+      if (!current.sellerAvatar && avatar) current.sellerAvatar = avatar;
+      if (!current.sellerNickname && nickname) current.sellerNickname = nickname;
+      if (!current.sellerWalletAddress && walletAddress) current.sellerWalletAddress = walletAddress;
+
+      const currentLatestTime = new Date(current.latestCreatedAt).getTime();
+      const nextLatestTime = new Date(String(order.createdAt || '').trim()).getTime();
+      if (Number.isFinite(nextLatestTime) && (!Number.isFinite(currentLatestTime) || nextLatestTime > currentLatestTime)) {
+        current.latestCreatedAt = String(order.createdAt || '').trim();
+      }
+    });
+
+    return Array.from(summaryBySeller.values()).sort((a, b) => (
+      (b.totalKrwAmount - a.totalKrwAmount)
+      || (b.totalUsdtAmount - a.totalUsdtAmount)
+      || (b.orderCount - a.orderCount)
+    ));
+  }, [filteredOrders]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE)),
@@ -314,6 +663,22 @@ export default function P2PAgentSalesManagementPage() {
 
   const isPreviousDisabled = currentPage <= 1 || loading;
   const isNextDisabled = currentPage >= totalPages || loading;
+
+  const copyTradeId = useCallback(async (tradeId: string) => {
+    const normalizedTradeId = String(tradeId || '').trim();
+    if (!normalizedTradeId) return;
+
+    try {
+      await navigator.clipboard.writeText(normalizedTradeId);
+      setCopiedTradeId(normalizedTradeId);
+      toast.success('거래번호를 복사했습니다.');
+      setTimeout(() => {
+        setCopiedTradeId((current) => (current === normalizedTradeId ? '' : current));
+      }, 1400);
+    } catch (clipboardError) {
+      toast.error('거래번호 복사에 실패했습니다.');
+    }
+  }, []);
 
   const closeCancelModal = () => {
     if (cancelingOrder) return;
@@ -386,10 +751,10 @@ export default function P2PAgentSalesManagementPage() {
               onClick={() => {
                 void loadData();
               }}
-              disabled={loading}
+              disabled={loading || polling}
               className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? '조회 중...' : '새로고침'}
+              {loading ? '조회 중...' : polling ? '동기화 중...' : '새로고침'}
             </button>
           </div>
 
@@ -434,6 +799,78 @@ export default function P2PAgentSalesManagementPage() {
             </div>
           </section>
 
+          {!loading && !error && (
+            <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.52)]">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+                <p className="text-sm font-semibold text-slate-900">판매자 판매량 합산 (검색 결과)</p>
+                <span className="text-xs font-semibold text-slate-500">
+                  총 {sellerSalesSummarySorted.length.toLocaleString()}명
+                </span>
+              </div>
+              {sellerSalesSummarySorted.length === 0 ? (
+                <div className="px-4 py-10 text-center text-sm text-slate-500">판매자 합산 데이터가 없습니다.</div>
+              ) : (
+                <div className="overflow-x-auto px-3 py-3">
+                  <div className="flex min-w-max gap-2">
+                    {sellerSalesSummarySorted.map((item, index) => (
+                      <article
+                        key={`${item.sellerWalletAddress || 'seller'}-${item.sellerNickname || 'unknown'}-${index}`}
+                        className="w-[220px] shrink-0 rounded-xl border border-slate-200 bg-white p-2 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.4)]"
+                      >
+                        <div className="flex items-start justify-between gap-1">
+                          <div className="min-w-0 flex items-center gap-1.5">
+                            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[10px] font-extrabold text-white">
+                              {index + 1}
+                            </span>
+                            <span className="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                              {item.sellerAvatar ? (
+                                <Image
+                                  src={item.sellerAvatar}
+                                  alt={getSellerDisplayName(item)}
+                                  width={32}
+                                  height={32}
+                                  className="h-8 w-8 object-cover"
+                                />
+                              ) : (
+                                <span className="text-[10px] font-extrabold text-slate-600">{getSellerAvatarFallback(item)}</span>
+                              )}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate text-[13px] font-extrabold leading-tight text-slate-900">
+                                {getSellerDisplayName(item)}
+                              </p>
+                              <p className="truncate text-[9px] text-slate-500">
+                                {shortWallet(item.sellerWalletAddress)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+                          <div className="grid grid-cols-[72px_1fr] items-center gap-y-1.5 text-[10px] leading-tight">
+                            <p className="font-semibold text-slate-500">합산 판매금액</p>
+                            <p className="justify-self-end text-[11px] font-extrabold text-slate-900">{formatKrw(item.totalKrwAmount)} KRW</p>
+                            <p className="font-semibold text-slate-500">합산 판매수량</p>
+                            <p className="justify-self-end text-[11px] font-extrabold text-slate-900">{formatUsdt(item.totalUsdtAmount)}</p>
+                            <p className="font-semibold text-slate-500">주문건수</p>
+                            <p className="justify-self-end text-[11px] font-extrabold text-slate-900">{item.orderCount.toLocaleString()}건</p>
+                            <p className="font-semibold text-slate-500">최근 주문시각</p>
+                            <p
+                              className="justify-self-end truncate text-[10px] font-semibold text-slate-700"
+                              title={toDateTime(item.latestCreatedAt)}
+                            >
+                              {toDateTime(item.latestCreatedAt)}
+                            </p>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
           {loading && (
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-500">
               판매 거래내역을 불러오는 중입니다...
@@ -446,17 +883,17 @@ export default function P2PAgentSalesManagementPage() {
 
           {!loading && !error && (
             <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-              <table className="min-w-[1190px] w-full text-sm">
-                <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3">거래</th>
-                    <th className="px-4 py-3">가맹점</th>
-                    <th className="px-4 py-3">구매자/판매자</th>
-                    <th className="px-4 py-3 text-right">수량</th>
-                    <th className="px-4 py-3 text-right">플랫폼 수수료</th>
-                    <th className="px-4 py-3 text-right">금액</th>
-                    <th className="px-4 py-3">생성/확정</th>
-                    <th className="px-4 py-3 text-center">액션</th>
+              <table className="min-w-[1120px] w-full table-fixed">
+                <thead className="bg-slate-50">
+                  <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
+                    <th className="w-[108px] px-3 py-3">상태</th>
+                    <th className="w-[140px] px-3 py-3">주문시각/거래번호(TID)</th>
+                    <th className="w-[104px] px-3 py-3">구매자</th>
+                    <th className="w-[104px] px-3 py-3">판매자/결제방법</th>
+                    <th className="w-[108px] px-3 py-3 text-right">주문금액</th>
+                    <th className="w-[84px] px-3 py-3">플랫폼 수수료</th>
+                    <th className="w-[76px] px-3 py-3">전송내역</th>
+                    <th className="w-[72px] px-3 py-3 text-center">액션</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -468,57 +905,264 @@ export default function P2PAgentSalesManagementPage() {
                     </tr>
                   ) : (
                     paginatedOrders.map((order) => {
-                      const canCancelOrder = order.privateSale === true && order.status === 'paymentRequested';
+                      const orderStatus = String(order.status || '').trim();
+                      const isPaymentRequested = orderStatus === 'paymentRequested';
+                      const isPaymentConfirmed = orderStatus === 'paymentConfirmed';
+                      const isCancelled = orderStatus === 'cancelled';
+                      const paymentRequestedRemainingMs = isPaymentRequested
+                        ? getPaymentRequestedRemainingMs(order, nowMs)
+                        : null;
+                      const transferTxHash = resolveTransferTransactionHash(order);
+                      const cancelReleaseTxHash = resolveCancelRecoveryTransactionHash(order);
+                      const cancelReleaseTxUrl = getTransferExplorerUrlByHash(order, cancelReleaseTxHash);
+                      const fallbackTransferTxHash = isCancelled ? '' : transferTxHash;
+                      const fallbackTransferTxUrl = getTransferExplorerUrlByHash(order, fallbackTransferTxHash);
+                      const sellerLockTxHash = String(order.sellerLockTransactionHash || '').trim();
+                      const sellerLockTxUrl = getTransferExplorerUrlByHash(order, sellerLockTxHash);
+                      const escrowTransferTxHash = String(order.escrowTransactionHash || '').trim();
+                      const escrowTransferTxUrl = getTransferExplorerUrlByHash(order, escrowTransferTxHash);
+                      const hasSellerLockTx = Boolean(sellerLockTxHash);
+                      const hasCancelReleaseTx = Boolean(cancelReleaseTxHash);
+                      const hasFallbackTransferTx = Boolean(fallbackTransferTxHash);
+                      const hasEscrowTransferTx =
+                        Boolean(escrowTransferTxHash)
+                        && escrowTransferTxHash !== sellerLockTxHash
+                        && escrowTransferTxHash !== cancelReleaseTxHash
+                        && escrowTransferTxHash !== fallbackTransferTxHash;
+                      const hasTransferDetails =
+                        hasSellerLockTx || hasCancelReleaseTx || hasFallbackTransferTx || hasEscrowTransferTx;
+                      const canCancelOrderByStatus = order.privateSale === true && orderStatus === 'paymentRequested';
+                      const canCancelOrder = Boolean(activeAccount?.address || agent?.adminWalletAddress) && canCancelOrderByStatus;
+                      const platformFeeRate = Number(order.platformFeeRate || 0) || 0;
+                      const platformFeeAmount = Number(order.platformFeeAmount || 0) || 0;
+                      const platformFeeWalletAddress = String(order.platformFeeWalletAddress || '').trim();
+                      const hasPlatformFeeInfo =
+                        platformFeeRate > 0 || platformFeeAmount > 0 || Boolean(platformFeeWalletAddress);
 
                       return (
-                      <tr key={order.id || order.tradeId} className="text-slate-700">
-                        <td className="px-4 py-3">
-                          <p className="font-semibold text-slate-900">#{order.tradeId || '-'}</p>
-                          <p className="text-xs text-slate-500">{statusLabelMap[order.status] || order.status || '-'}</p>
-                          {order.status === 'cancelled' && (
-                            <>
-                              <p className="mt-0.5 text-[11px] font-semibold text-slate-600">
-                                취소주체 {getCancellerRoleLabel(order)}
+                      <tr key={order.id || order.tradeId} className="bg-white text-sm text-slate-700">
+                        <td className="px-3 py-3">
+                          <div className="space-y-1">
+                            <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusBadgeClassName(order.status)}`}>
+                              {getStatusLabel(order.status)}
+                            </span>
+                            {isPaymentRequested && (
+                              <p
+                                className={`text-[11px] font-extrabold ${
+                                  paymentRequestedRemainingMs !== null && paymentRequestedRemainingMs > 0
+                                    ? 'animate-pulse text-amber-700'
+                                    : 'animate-pulse text-rose-700'
+                                }`}
+                              >
+                                {paymentRequestedRemainingMs !== null && paymentRequestedRemainingMs > 0
+                                  ? formatCountdownLabel(paymentRequestedRemainingMs)
+                                  : '입금시간 초과'}
                               </p>
-                              <p className="text-[11px] text-slate-500">
-                                취소자 {getCancellerLabel(order)}
-                              </p>
-                            </>
-                          )}
+                            )}
+                            {orderStatus === 'cancelled' && (
+                              <>
+                                <p className="truncate text-[11px] font-semibold text-slate-600">
+                                  취소주체 {getCancellerRoleLabel(order)}
+                                </p>
+                                <p className="truncate text-[11px] text-slate-500">
+                                  취소자 {getCancellerLabel(order)}
+                                </p>
+                                <p className="break-all text-[11px] leading-tight text-slate-500">
+                                  IP {order.cancelledByIpAddress || '-'}
+                                </p>
+                              </>
+                            )}
+                            {isPaymentConfirmed && (
+                              <>
+                                <p className="text-[11px] font-semibold text-emerald-700">
+                                  처리자 {getPaymentConfirmerLabel(order)}
+                                </p>
+                                <p className="break-all text-[11px] leading-tight text-slate-500">
+                                  IP {getPaymentConfirmerIp(order)}
+                                </p>
+                              </>
+                            )}
+                          </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <p className="text-xs font-semibold text-slate-700">{order.storeName || order.storecode || '-'}</p>
-                          <p className="text-xs text-slate-500">{order.storecode || '-'}</p>
+                        <td className="px-3 py-3 text-slate-600">
+                          <div className="flex flex-col leading-tight">
+                            <span className="whitespace-nowrap text-[13px] font-medium text-slate-700">
+                              {formatDateTime(order.createdAt)}
+                            </span>
+                            {order.tradeId ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void copyTradeId(order.tradeId || '');
+                                }}
+                                className="mt-0.5 inline-flex w-fit items-center gap-1 truncate text-xs font-semibold text-slate-900 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                              >
+                                {order.tradeId}
+                                {copiedTradeId === order.tradeId && (
+                                  <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                                )}
+                              </button>
+                            ) : (
+                              <span className="mt-0.5 truncate text-xs font-semibold text-slate-900">-</span>
+                            )}
+                          </div>
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-600">
-                          <p>구매자 {order.buyerNickname || '-'}</p>
-                          <p>판매자 {order.sellerNickname || '-'}</p>
+                        <td className="px-3 py-3">
+                          <div className="flex flex-col">
+                            <span className="break-all text-base font-extrabold leading-tight text-slate-900">
+                              {getBuyerDepositNameLabel(order)}
+                            </span>
+                            <span className="truncate font-medium text-slate-900">
+                              {order.buyerNickname || '-'}
+                            </span>
+                            <span className="truncate text-xs text-slate-500">
+                              {shortWallet(order.buyerWalletAddress || order.walletAddress)}
+                            </span>
+                            <span className="break-all text-[11px] leading-tight text-slate-500">
+                              IP {getBuyerIp(order)}
+                            </span>
+                          </div>
                         </td>
-                        <td className="px-4 py-3 text-right text-xs font-semibold text-slate-700">{formatUsdt(order.usdtAmount)}</td>
-                        <td className="px-4 py-3 text-right text-xs text-slate-600">
-                          {order.platformFeeRate > 0 || order.platformFeeAmount > 0 ? (
-                            <div className="space-y-0.5">
-                              <p className="font-semibold text-indigo-700">{formatPercent(order.platformFeeRate)}%</p>
-                              <p className="font-semibold text-indigo-800">{formatUsdt(order.platformFeeAmount)}</p>
+                        <td className="px-3 py-3">
+                          <div className="flex flex-col gap-2">
+                            <div className="flex flex-col">
+                              <span className="truncate text-base font-extrabold leading-tight text-slate-900">{order.sellerNickname || '-'}</span>
+                              <span className="truncate text-xs text-slate-500">{shortWallet(order.sellerWalletAddress)}</span>
+                            </div>
+                            <div className="flex flex-col gap-1 border-t border-slate-100 pt-2">
+                              <span className="inline-flex w-fit whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                                {getPaymentMethodLabel(order)}
+                              </span>
+                              <span className="truncate text-xs text-slate-500">
+                                {getPaymentMethodDetail(order)}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-right">
+                          <div className="flex flex-col items-end">
+                            <span className="text-base font-extrabold leading-tight text-slate-900">{formatKrw(order.krwAmount)} KRW</span>
+                            <span className="text-sm font-bold text-slate-600">{formatUsdt(order.usdtAmount)}</span>
+                            <span className="text-[11px] font-semibold text-slate-500">
+                              환율 {formatRate(getOrderExchangeRate(order))}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3">
+                          {hasPlatformFeeInfo ? (
+                            <div className="flex flex-col gap-1 leading-tight">
+                              <span className="inline-flex w-fit rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-extrabold text-indigo-700">
+                                {formatPercent(platformFeeRate)}%
+                              </span>
+                              <span className="text-xs font-semibold text-indigo-800">
+                                {formatUsdt(platformFeeAmount)}
+                              </span>
+                              <span className="truncate text-[11px] text-slate-500">
+                                {platformFeeWalletAddress ? shortWallet(platformFeeWalletAddress) : '-'}
+                              </span>
                             </div>
                           ) : (
-                            '-'
+                            <span className="text-xs text-slate-400">-</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right text-xs font-semibold text-slate-700">{formatKrw(order.krwAmount)}</td>
-                        <td className="px-4 py-3 text-xs text-slate-600">
-                          <p>생성 {toDateTime(order.createdAt)}</p>
-                          <p>확정 {toDateTime(order.paymentConfirmedAt)}</p>
+                        <td className="px-3 py-3">
+                          {(isPaymentRequested || isPaymentConfirmed || isCancelled) && hasTransferDetails ? (
+                            <div className="flex flex-col gap-1 leading-tight">
+                              {hasSellerLockTx && (
+                                <div className="flex flex-col">
+                                  <span className="inline-flex w-fit rounded-md bg-sky-50 px-2 py-0.5 text-xs font-extrabold text-sky-700">
+                                    에스크로
+                                  </span>
+                                  {sellerLockTxUrl ? (
+                                    <a
+                                      href={sellerLockTxUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="mt-0.5 inline-flex w-fit items-center truncate text-xs font-semibold text-sky-700 underline decoration-sky-300 underline-offset-2"
+                                    >
+                                      {shortWallet(sellerLockTxHash)}
+                                    </a>
+                                  ) : (
+                                    <span className="mt-0.5 truncate text-xs font-semibold text-sky-800">{shortWallet(sellerLockTxHash)}</span>
+                                  )}
+                                </div>
+                              )}
+
+                              {hasCancelReleaseTx && (
+                                <div className={`flex flex-col ${hasSellerLockTx ? 'border-t border-slate-200 pt-1' : ''}`}>
+                                  <span className="inline-flex w-fit rounded-md bg-rose-50 px-2 py-0.5 text-xs font-extrabold text-rose-700">
+                                    회수
+                                  </span>
+                                  {cancelReleaseTxUrl ? (
+                                    <a
+                                      href={cancelReleaseTxUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="mt-0.5 inline-flex w-fit items-center truncate text-xs font-semibold text-rose-700 underline decoration-rose-300 underline-offset-2"
+                                    >
+                                      {shortWallet(cancelReleaseTxHash)}
+                                    </a>
+                                  ) : (
+                                    <span className="mt-0.5 truncate text-xs font-semibold text-rose-800">{shortWallet(cancelReleaseTxHash)}</span>
+                                  )}
+                                </div>
+                              )}
+
+                              {hasFallbackTransferTx && (
+                                <div className={`flex flex-col ${hasSellerLockTx || hasCancelReleaseTx ? 'border-t border-slate-200 pt-1' : ''}`}>
+                                  <span className="inline-flex w-fit rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-extrabold text-emerald-700">
+                                    전송
+                                  </span>
+                                  {fallbackTransferTxUrl ? (
+                                    <a
+                                      href={fallbackTransferTxUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="mt-0.5 inline-flex w-fit items-center truncate text-xs font-semibold text-emerald-700 underline decoration-emerald-300 underline-offset-2"
+                                    >
+                                      {shortWallet(fallbackTransferTxHash)}
+                                    </a>
+                                  ) : (
+                                    <span className="mt-0.5 truncate text-xs font-semibold text-emerald-800">{shortWallet(fallbackTransferTxHash)}</span>
+                                  )}
+                                </div>
+                              )}
+
+                              {hasEscrowTransferTx && (
+                                <div className={`flex flex-col ${hasSellerLockTx || hasCancelReleaseTx || hasFallbackTransferTx ? 'border-t border-slate-200 pt-1' : ''}`}>
+                                  <span className="inline-flex w-fit rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                                    Escrow
+                                  </span>
+                                  {escrowTransferTxUrl ? (
+                                    <a
+                                      href={escrowTransferTxUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="mt-0.5 inline-flex w-fit items-center truncate text-xs font-semibold text-amber-700 underline decoration-amber-300 underline-offset-2"
+                                    >
+                                      {shortWallet(escrowTransferTxHash)}
+                                    </a>
+                                  ) : (
+                                    <span className="mt-0.5 truncate text-xs font-semibold text-amber-800">{shortWallet(escrowTransferTxHash)}</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">-</span>
+                          )}
                         </td>
-                        <td className="px-4 py-3 text-center">
-                          {canCancelOrder ? (
+                        <td className="px-3 py-3 text-center">
+                          {canCancelOrderByStatus ? (
                             <button
                               type="button"
                               onClick={() => {
+                                if (!canCancelOrder) return;
                                 setCancelTargetOrder(order);
                                 setCancelError(null);
                               }}
-                              className="inline-flex items-center justify-center rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 transition hover:border-rose-400 hover:bg-rose-100"
+                              disabled={!canCancelOrder}
+                              className="inline-flex items-center justify-center rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 transition hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-400"
                             >
                               취소
                             </button>
@@ -619,9 +1263,9 @@ export default function P2PAgentSalesManagementPage() {
                   {cancelTargetOrder.sellerNickname || '-'} ({shortWallet(cancelTargetOrder.sellerWalletAddress)})
                 </p>
                 <p className="text-sm font-semibold text-slate-500">반환 수량</p>
-                <p className="text-base font-bold text-slate-900">{formatUsdt(cancelTargetOrder.usdtAmount)} USDT</p>
+                <p className="text-base font-bold text-slate-900">{formatUsdt(cancelTargetOrder.usdtAmount)}</p>
                 <p className="text-sm font-semibold text-slate-500">현재 상태</p>
-                <p className="text-base font-medium text-slate-900">{statusLabelMap[cancelTargetOrder.status] || cancelTargetOrder.status || '-'}</p>
+                <p className="text-base font-medium text-slate-900">{getStatusLabel(cancelTargetOrder.status)}</p>
               </div>
 
               {cancelError && (

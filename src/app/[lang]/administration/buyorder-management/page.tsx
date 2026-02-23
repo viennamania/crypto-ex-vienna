@@ -119,7 +119,18 @@ type CancelActorInfo = {
   nickname: string;
 };
 
+type SellerSalesSummaryItem = {
+  sellerWalletAddress: string;
+  sellerNickname: string;
+  sellerAvatar: string;
+  totalKrwAmount: number;
+  totalUsdtAmount: number;
+  orderCount: number;
+  latestCreatedAt: string;
+};
+
 const ACTIVE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
+const PAYMENT_REQUEST_COUNTDOWN_LIMIT_MS = 30 * 60 * 1000;
 const isAdminCancelablePrivateOrder = (order: BuyOrderItem) =>
   order?.privateSale === true && String(order?.status || '').trim() === 'paymentRequested';
 
@@ -150,6 +161,12 @@ const formatKrw = (value?: number) =>
 
 const formatUsdt = (value?: number) =>
   new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(Number(value || 0));
+
+const formatRate = (value?: number) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return '-';
+  return new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(numeric);
+};
 
 const toFiniteNumber = (value: unknown) => {
   const numeric = Number(value);
@@ -200,6 +217,35 @@ const getOrderPlatformFeeWalletAddress = (order: BuyOrderItem) =>
     || order?.settlement?.platformFeeWalletAddress
     || '',
   ).trim();
+
+const getOrderExchangeRate = (order: BuyOrderItem) => {
+  const explicitRate = toFiniteNumber((order as any)?.rate);
+  if (explicitRate > 0) return explicitRate;
+
+  const krwAmount = toFiniteNumber(order?.krwAmount);
+  const usdtAmount = toFiniteNumber(order?.usdtAmount);
+  if (krwAmount > 0 && usdtAmount > 0) return krwAmount / usdtAmount;
+
+  return 0;
+};
+
+const getPaymentRequestedRemainingMs = (order: BuyOrderItem, nowMs: number) => {
+  const baseTimeSource = String(order?.paymentRequestedAt || order?.createdAt || '').trim();
+  if (!baseTimeSource) return null;
+
+  const baseTime = new Date(baseTimeSource).getTime();
+  if (Number.isNaN(baseTime)) return null;
+
+  return baseTime + PAYMENT_REQUEST_COUNTDOWN_LIMIT_MS - nowMs;
+};
+
+const formatCountdownLabel = (remainingMs: number | null) => {
+  if (remainingMs === null) return '남은 --:--';
+  const remainingSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+  const minutes = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
+  const seconds = String(remainingSeconds % 60).padStart(2, '0');
+  return `남은 ${minutes}:${seconds}`;
+};
 
 const TX_EXPLORER_BASE_BY_CHAIN: Record<string, string> = {
   ethereum: 'https://etherscan.io/tx/',
@@ -270,6 +316,15 @@ const shortWallet = (value?: string) => {
   if (!source) return '-';
   if (source.length <= 12) return source;
   return `${source.slice(0, 6)}...${source.slice(-4)}`;
+};
+
+const getSellerDisplayName = (item: SellerSalesSummaryItem) =>
+  String(item?.sellerNickname || '').trim() || shortWallet(item?.sellerWalletAddress) || '-';
+
+const getSellerAvatarFallback = (item: SellerSalesSummaryItem) => {
+  const name = getSellerDisplayName(item).replace(/\s+/g, '');
+  if (!name || name === '-') return 'S';
+  return name.slice(0, 1).toUpperCase();
 };
 
 const getPaymentMethodLabel = (order: BuyOrderItem) => {
@@ -471,6 +526,7 @@ export default function BuyOrderManagementPage() {
     totalUsdtAmount: 0,
     totalFeeAmount: 0,
   });
+  const [sellerSalesSummary, setSellerSalesSummary] = useState<SellerSalesSummaryItem[]>([]);
   const [draftFilters, setDraftFilters] = useState<SearchFilters>(() => createDefaultFilters());
   const [appliedFilters, setAppliedFilters] = useState<SearchFilters>(() => createDefaultFilters());
   const [cancelTargetOrder, setCancelTargetOrder] = useState<BuyOrderItem | null>(null);
@@ -483,6 +539,7 @@ export default function BuyOrderManagementPage() {
   });
   const [publicIpAddress, setPublicIpAddress] = useState('');
   const [loadingPublicIpAddress, setLoadingPublicIpAddress] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const mountedRef = useRef(true);
   const requestInFlightRef = useRef(false);
@@ -529,6 +586,16 @@ export default function BuyOrderManagementPage() {
   useEffect(() => {
     void fetchPublicIpAddress();
   }, [fetchPublicIpAddress]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -632,6 +699,20 @@ export default function BuyOrderManagementPage() {
         totalUsdtAmount: Number(payload?.result?.totalUsdtAmount || 0) || 0,
         totalFeeAmount: Number(payload?.result?.totalPlatformFeeAmount || 0) || 0,
       });
+      const nextSellerSalesSummary = Array.isArray(payload?.result?.sellerSalesSummary)
+        ? payload.result.sellerSalesSummary
+        : [];
+      setSellerSalesSummary(
+        nextSellerSalesSummary.map((item: any) => ({
+          sellerWalletAddress: String(item?.sellerWalletAddress || '').trim(),
+          sellerNickname: String(item?.sellerNickname || '').trim(),
+          sellerAvatar: String(item?.sellerAvatar || '').trim(),
+          totalKrwAmount: Number(item?.totalKrwAmount || 0) || 0,
+          totalUsdtAmount: Number(item?.totalUsdtAmount || 0) || 0,
+          orderCount: Number(item?.orderCount || 0) || 0,
+          latestCreatedAt: String(item?.latestCreatedAt || '').trim(),
+        })),
+      );
       setError(null);
       setLastUpdatedAt(new Date().toISOString());
     } catch (fetchError: any) {
@@ -699,6 +780,15 @@ export default function BuyOrderManagementPage() {
       statusItems,
     };
   }, [orders, summary.totalFeeAmount, summary.totalKrwAmount, summary.totalUsdtAmount, totalCount]);
+
+  const sellerSalesSummarySorted = useMemo(
+    () => [...sellerSalesSummary].sort((a, b) => (
+      (b.totalKrwAmount - a.totalKrwAmount)
+      || (b.totalUsdtAmount - a.totalUsdtAmount)
+      || (b.orderCount - a.orderCount)
+    )),
+    [sellerSalesSummary],
+  );
 
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1048,6 +1138,76 @@ export default function BuyOrderManagementPage() {
           </div>
         </section>
 
+        <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.52)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+            <p className="text-sm font-semibold text-slate-900">판매자 판매량 합산 (검색 결과)</p>
+            <span className="text-xs font-semibold text-slate-500">
+              총 {sellerSalesSummarySorted.length.toLocaleString()}명
+            </span>
+          </div>
+          {sellerSalesSummarySorted.length === 0 ? (
+            <div className="px-4 py-10 text-center text-sm text-slate-500">판매자 합산 데이터가 없습니다.</div>
+          ) : (
+            <div className="overflow-x-auto px-3 py-3">
+              <div className="flex min-w-max gap-2">
+                {sellerSalesSummarySorted.map((item, index) => (
+                  <article
+                    key={`${item.sellerWalletAddress || 'seller'}-${item.sellerNickname || 'unknown'}-${index}`}
+                    className="w-[220px] shrink-0 rounded-xl border border-slate-200 bg-white p-2 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.4)]"
+                  >
+                    <div className="flex items-start justify-between gap-1">
+                      <div className="min-w-0 flex items-center gap-1.5">
+                        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[10px] font-extrabold text-white">
+                          {index + 1}
+                        </span>
+                        <span className="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                          {item.sellerAvatar ? (
+                            <Image
+                              src={item.sellerAvatar}
+                              alt={getSellerDisplayName(item)}
+                              width={32}
+                              height={32}
+                              className="h-8 w-8 object-cover"
+                            />
+                          ) : (
+                            <span className="text-[10px] font-extrabold text-slate-600">{getSellerAvatarFallback(item)}</span>
+                          )}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-[13px] font-extrabold leading-tight text-slate-900">
+                            {getSellerDisplayName(item)}
+                          </p>
+                          <p className="truncate text-[9px] text-slate-500">
+                            {shortWallet(item.sellerWalletAddress)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+                      <div className="grid grid-cols-[72px_1fr] items-center gap-y-1.5 text-[10px] leading-tight">
+                        <p className="font-semibold text-slate-500">합산 판매금액</p>
+                        <p className="justify-self-end text-[11px] font-extrabold text-slate-900">{formatKrw(item.totalKrwAmount)} KRW</p>
+                        <p className="font-semibold text-slate-500">합산 판매수량</p>
+                        <p className="justify-self-end text-[11px] font-extrabold text-slate-900">{formatUsdt(item.totalUsdtAmount)} USDT</p>
+                        <p className="font-semibold text-slate-500">주문건수</p>
+                        <p className="justify-self-end text-[11px] font-extrabold text-slate-900">{item.orderCount.toLocaleString()}건</p>
+                        <p className="font-semibold text-slate-500">최근 주문시각</p>
+                        <p
+                          className="justify-self-end truncate text-[10px] font-semibold text-slate-700"
+                          title={formatDateTime(item.latestCreatedAt)}
+                        >
+                          {formatDateTime(item.latestCreatedAt)}
+                        </p>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
         <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_26px_56px_-46px_rgba(15,23,42,0.45)]">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <div>
@@ -1091,6 +1251,9 @@ export default function BuyOrderManagementPage() {
                     const isPaymentRequested = orderStatus === 'paymentRequested';
                     const isPaymentConfirmed = orderStatus === 'paymentConfirmed';
                     const isCancelled = orderStatus === 'cancelled';
+                    const paymentRequestedRemainingMs = isPaymentRequested
+                      ? getPaymentRequestedRemainingMs(order, nowMs)
+                      : null;
                     const transferTxHash = resolveTransferTransactionHash(order);
                     const cancelReleaseTxHash = resolveCancelRecoveryTransactionHash(order);
                     const cancelReleaseTxUrl = getTransferExplorerUrlByHash(order, cancelReleaseTxHash);
@@ -1125,6 +1288,19 @@ export default function BuyOrderManagementPage() {
                           <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusBadgeClassName(order?.status)}`}>
                             {getStatusLabel(order?.status)}
                           </span>
+                          {isPaymentRequested && (
+                            <p
+                              className={`text-[11px] font-extrabold ${
+                                paymentRequestedRemainingMs !== null && paymentRequestedRemainingMs > 0
+                                  ? 'animate-pulse text-amber-700'
+                                  : 'animate-pulse text-rose-700'
+                              }`}
+                            >
+                              {paymentRequestedRemainingMs !== null && paymentRequestedRemainingMs > 0
+                                ? formatCountdownLabel(paymentRequestedRemainingMs)
+                                : '입금시간 초과'}
+                            </p>
+                          )}
                           {String(order?.status || '').trim() === 'cancelled' && (
                             <>
                               <p className="truncate text-[11px] font-semibold text-slate-600">
@@ -1209,6 +1385,9 @@ export default function BuyOrderManagementPage() {
                         <div className="flex flex-col items-end">
                           <span className="text-base font-extrabold leading-tight text-slate-900">{formatKrw(order?.krwAmount)} KRW</span>
                           <span className="text-sm font-bold text-slate-600">{formatUsdt(order?.usdtAmount)} USDT</span>
+                          <span className="text-[11px] font-semibold text-slate-500">
+                            환율 {formatRate(getOrderExchangeRate(order))}
+                          </span>
                         </div>
                       </td>
                       <td className="px-3 py-3">

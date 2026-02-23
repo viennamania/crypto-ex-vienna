@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     const client = await clientPromise;
     const collection = client.db(dbName).collection('buyorders');
 
-    const [orders, totalCount, totalAmountRows] = await Promise.all([
+    const [orders, totalCount, totalAmountRows, sellerSalesRows] = await Promise.all([
       collection
         .find(filter)
         .sort({ createdAt: -1 })
@@ -113,9 +113,123 @@ export async function POST(request: NextRequest) {
           },
         ])
         .toArray(),
+      collection
+        .aggregate([
+          { $match: filter },
+          {
+            $addFields: {
+              normalizedSellerWalletAddress: {
+                $trim: {
+                  input: {
+                    $toString: { $ifNull: ['$seller.walletAddress', ''] },
+                  },
+                },
+              },
+              normalizedSellerNickname: {
+                $trim: {
+                  input: {
+                    $toString: {
+                      $ifNull: ['$seller.nickname', { $ifNull: ['$nickname', ''] }],
+                    },
+                  },
+                },
+              },
+              normalizedSellerAvatar: {
+                $trim: {
+                  input: {
+                    $toString: {
+                      $ifNull: ['$seller.avatar', ''],
+                    },
+                  },
+                },
+              },
+              normalizedKrwAmount: {
+                $convert: {
+                  input: { $ifNull: ['$krwAmount', 0] },
+                  to: 'double',
+                  onError: 0,
+                  onNull: 0,
+                },
+              },
+              normalizedUsdtAmount: {
+                $convert: {
+                  input: { $ifNull: ['$usdtAmount', 0] },
+                  to: 'double',
+                  onError: 0,
+                  onNull: 0,
+                },
+              },
+              sellerGroupKey: {
+                $let: {
+                  vars: {
+                    wallet: {
+                      $trim: {
+                        input: {
+                          $toString: { $ifNull: ['$seller.walletAddress', ''] },
+                        },
+                      },
+                    },
+                    nickname: {
+                      $trim: {
+                        input: {
+                          $toString: {
+                            $ifNull: ['$seller.nickname', { $ifNull: ['$nickname', ''] }],
+                          },
+                        },
+                      },
+                    },
+                  },
+                  in: {
+                    $cond: [
+                      { $ne: ['$$wallet', ''] },
+                      { $toLower: '$$wallet' },
+                      { $concat: ['nickname:', '$$nickname'] },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          { $sort: { createdAt: -1 } },
+          {
+            $group: {
+              _id: '$sellerGroupKey',
+              sellerWalletAddress: { $first: '$normalizedSellerWalletAddress' },
+              sellerNickname: { $first: '$normalizedSellerNickname' },
+              sellerAvatar: { $first: '$normalizedSellerAvatar' },
+              totalKrwAmount: { $sum: '$normalizedKrwAmount' },
+              totalUsdtAmount: { $sum: '$normalizedUsdtAmount' },
+              orderCount: { $sum: 1 },
+              latestCreatedAt: { $max: '$createdAt' },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              sellerWalletAddress: '$sellerWalletAddress',
+              sellerNickname: '$sellerNickname',
+              sellerAvatar: '$sellerAvatar',
+              totalKrwAmount: 1,
+              totalUsdtAmount: 1,
+              orderCount: 1,
+              latestCreatedAt: 1,
+            },
+          },
+          {
+            $match: {
+              $or: [
+                { sellerWalletAddress: { $ne: '' } },
+                { sellerNickname: { $ne: '' } },
+              ],
+            },
+          },
+          { $sort: { totalKrwAmount: -1, totalUsdtAmount: -1, orderCount: -1 } },
+        ])
+        .toArray(),
     ]);
 
     const totalAmount = totalAmountRows?.[0] || {};
+    const sellerSalesSummary = Array.isArray(sellerSalesRows) ? sellerSalesRows : [];
 
     return NextResponse.json({
       result: {
@@ -124,6 +238,15 @@ export async function POST(request: NextRequest) {
         totalKrwAmount: Number(totalAmount?.totalKrwAmount || 0),
         totalUsdtAmount: Number(totalAmount?.totalUsdtAmount || 0),
         totalPlatformFeeAmount: Number(totalAmount?.totalPlatformFeeAmount || 0),
+        sellerSalesSummary: sellerSalesSummary.map((item: any) => ({
+          sellerWalletAddress: String(item?.sellerWalletAddress || ''),
+          sellerNickname: String(item?.sellerNickname || ''),
+          sellerAvatar: String(item?.sellerAvatar || ''),
+          totalKrwAmount: Number(item?.totalKrwAmount || 0),
+          totalUsdtAmount: Number(item?.totalUsdtAmount || 0),
+          orderCount: Number(item?.orderCount || 0),
+          latestCreatedAt: String(item?.latestCreatedAt || ''),
+        })),
       },
     });
   } catch (error) {

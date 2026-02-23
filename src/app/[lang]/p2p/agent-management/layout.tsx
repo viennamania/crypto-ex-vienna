@@ -54,6 +54,7 @@ type PendingAlertCardItem = PendingOrderProcessingItem & {
 const WALLET_AUTH_OPTIONS = ['email', 'google', 'phone'];
 const WALLET_DEFAULT_SMS_COUNTRY_CODE: SupportedSmsCountry = 'KR';
 const WALLET_ALLOWED_SMS_COUNTRY_CODES: SupportedSmsCountry[] = ['KR'];
+const BUYORDER_BADGE_POLLING_MS = 15000;
 const ORDER_PROCESSING_ALERT_POLLING_MS = 15000;
 const ORDER_PROCESSING_ALERT_SOUND_INTERVAL_MS = 30000;
 const ORDER_PROCESSING_ALERT_SOUND_ENABLED_KEY = 'agent-order-processing-alert-sound-enabled';
@@ -157,6 +158,7 @@ export default function P2PAgentManagementLayout({ children }: { children: React
     oldestPendingAt: '',
     recentPayments: [],
   });
+  const [paymentRequestedBuyOrderCount, setPaymentRequestedBuyOrderCount] = useState(0);
   const [pendingAlertError, setPendingAlertError] = useState<string | null>(null);
   const [pendingAlertLastCheckedAt, setPendingAlertLastCheckedAt] = useState('');
   const [pendingAlertSoundEnabled, setPendingAlertSoundEnabled] = useState(true);
@@ -371,6 +373,37 @@ export default function P2PAgentManagementLayout({ children }: { children: React
     }
   }, [agentcode]);
 
+  const loadPaymentRequestedBuyOrderCount = useCallback(async () => {
+    if (!agentcode) {
+      setPaymentRequestedBuyOrderCount(0);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/agent/getPaymentRequestedBuyOrderCount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentcode,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String((payload as Record<string, unknown>)?.error || '입금요청 구매주문 건수를 조회하지 못했습니다.'));
+      }
+
+      const source = (typeof payload === 'object' && payload !== null ? payload : {}) as Record<string, unknown>;
+      const result = (typeof source.result === 'object' && source.result !== null
+        ? source.result
+        : {}) as Record<string, unknown>;
+      const nextCount = Number(result.count || 0);
+      setPaymentRequestedBuyOrderCount(Number.isFinite(nextCount) ? Math.max(0, Math.floor(nextCount)) : 0);
+    } catch (error) {
+      console.error('failed to load payment requested buy order count', error);
+    }
+  }, [agentcode]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -423,6 +456,31 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       window.clearInterval(intervalId);
     };
   }, [isAgentAccessVerified, loadPendingOrderProcessingSummary]);
+
+  useEffect(() => {
+    if (!isAgentAccessVerified || !agentcode) {
+      setPaymentRequestedBuyOrderCount(0);
+      return;
+    }
+
+    let isActive = true;
+    let loading = false;
+
+    const run = async () => {
+      if (loading || !isActive) return;
+      loading = true;
+      await loadPaymentRequestedBuyOrderCount();
+      loading = false;
+    };
+
+    run();
+    const intervalId = window.setInterval(run, BUYORDER_BADGE_POLLING_MS);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(intervalId);
+    };
+  }, [agentcode, isAgentAccessVerified, loadPaymentRequestedBuyOrderCount]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -832,6 +890,8 @@ export default function P2PAgentManagementLayout({ children }: { children: React
                       {item.subItems.map((subItem) => {
                         const subItemActive = isMenuItemActive(subItem);
                         const subHref = `${subItem.basePath}${agentQuery}`;
+                        const isBuyOrderManagementSubItem = subItem.key === 'sales-buyorder-management';
+                        const showBuyOrderAlert = isBuyOrderManagementSubItem && paymentRequestedBuyOrderCount > 0;
 
                         return (
                           <Link
@@ -839,7 +899,7 @@ export default function P2PAgentManagementLayout({ children }: { children: React
                             href={subHref}
                             onClick={() => setMobileOpen(false)}
                             title={collapsed ? subItem.label : undefined}
-                            className={`group flex min-h-9 items-center rounded-lg text-xs transition ${
+                            className={`group relative flex min-h-9 items-center rounded-lg text-xs transition ${
                               subItemActive
                                 ? 'bg-cyan-200 text-slate-900 shadow-[0_10px_24px_-18px_rgba(6,182,212,0.95)]'
                                 : 'text-slate-300 hover:bg-white/10 hover:text-white'
@@ -853,6 +913,17 @@ export default function P2PAgentManagementLayout({ children }: { children: React
                               />
                             )}
                             <span className="truncate font-semibold">{collapsed ? subItem.compactLabel : subItem.label}</span>
+                            {showBuyOrderAlert && (
+                              <span
+                                className={`buyorder-menu-alert-blink inline-flex h-5 min-w-5 items-center justify-center rounded-full border px-1.5 text-[10px] font-extrabold leading-none ${
+                                  subItemActive
+                                    ? 'border-rose-300 bg-rose-100 text-rose-700'
+                                    : 'border-rose-200 bg-rose-50 text-rose-700'
+                                } ${collapsed ? 'absolute -right-1 -top-1' : 'ml-auto'}`}
+                              >
+                                {paymentRequestedBuyOrderCount > 99 ? '99+' : paymentRequestedBuyOrderCount}
+                              </span>
+                            )}
                           </Link>
                         );
                       })}
@@ -1161,6 +1232,22 @@ export default function P2PAgentManagementLayout({ children }: { children: React
 
         .pending-order-flash {
           animation: pendingOrderFlash 0.85s ease-in-out 2;
+        }
+
+        @keyframes buyorderMenuAlertBlink {
+          0%,
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.32;
+            transform: scale(0.88);
+          }
+        }
+
+        .buyorder-menu-alert-blink {
+          animation: buyorderMenuAlertBlink 1s step-end infinite;
         }
       `}</style>
     </div>
