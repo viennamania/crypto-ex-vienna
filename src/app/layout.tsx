@@ -83,14 +83,17 @@ const WalletConsoleShell = () => {
   const walletManagementIndex = pathSegments.indexOf('wallet-management');
   const p2pIndex = pathSegments.indexOf('p2p');
   const administrationIndex = pathSegments.indexOf('administration');
+  const sellerEscrowIndex = pathSegments.indexOf('seller-escrow');
   const isAgentManagementRoute = p2pIndex >= 0 && pathSegments[p2pIndex + 1] === 'agent-management';
   const isStoreManagementRoute = p2pIndex >= 0 && pathSegments[p2pIndex + 1] === 'store-management';
   const isAdministrationRoute = administrationIndex >= 0;
+  const isSellerEscrowRoute = sellerEscrowIndex >= 0;
   const shouldHideWalletConsole =
     walletManagementIndex >= 0
     || isAgentManagementRoute
     || isStoreManagementRoute
-    || isAdministrationRoute;
+    || isAdministrationRoute
+    || isSellerEscrowRoute;
 
   useEffect(() => {
     const prevAddress = previousAddressRef.current;

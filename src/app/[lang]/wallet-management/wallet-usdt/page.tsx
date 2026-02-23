@@ -136,6 +136,14 @@ const NETWORK_OPTIONS: Array<{
 
 const TRANSFERS_PAGE_SIZE = 10;
 
+const resolveWalletUsdtFooterTab = (
+  value: string,
+): 'withdraw' | 'deposit' | 'history' => {
+  if (value === 'deposit') return 'deposit';
+  if (value === 'history') return 'history';
+  return 'withdraw';
+};
+
 type UsdtTransfer = {
   transaction_hash?: string;
   block_timestamp?: number | string;
@@ -240,6 +248,7 @@ export default function SendUsdt({ params }: any) {
 
   const searchParams = useSearchParams();
   const storecodeFromQuery = String(searchParams?.get('storecode') || '').trim();
+  const tabFromQuery = String(searchParams?.get('tab') || '').trim().toLowerCase();
   const disconnectRedirectPath = useMemo(() => {
     const query = new URLSearchParams();
     if (storecodeFromQuery) {
@@ -417,7 +426,9 @@ export default function SendUsdt({ params }: any) {
   const [memberLoading, setMemberLoading] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
   const [consentChecked, setConsentChecked] = useState(false);
-  const [footerTab, setFooterTab] = useState<'withdraw' | 'deposit' | 'history'>('withdraw');
+  const [footerTab, setFooterTab] = useState<'withdraw' | 'deposit' | 'history'>(
+    () => resolveWalletUsdtFooterTab(tabFromQuery),
+  );
   const footerTabLabel = useMemo(() => {
     if (footerTab === 'withdraw') return '출금하기';
     if (footerTab === 'deposit') return '입금하기';
@@ -462,6 +473,11 @@ export default function SendUsdt({ params }: any) {
     }
     return whole;
   };
+
+  useEffect(() => {
+    const nextTab = resolveWalletUsdtFooterTab(tabFromQuery);
+    setFooterTab((prev) => (prev === nextTab ? prev : nextTab));
+  }, [tabFromQuery]);
 
   const formatAmountInput = (value: number, decimals: number) => {
     if (!Number.isFinite(value)) {
