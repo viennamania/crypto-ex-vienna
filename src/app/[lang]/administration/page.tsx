@@ -28,6 +28,7 @@ import {
 
   useSetActiveWallet,
   useConnectedWallets,
+  useDisconnect,
 
   darkTheme,
 
@@ -104,6 +105,7 @@ import { version } from "../../config/version";
 
 
 import { ConnectButton } from '@/components/OrangeXConnectButton';
+import { clearWalletConnectionState } from '@/lib/clearWalletConnectionState';
 
 const storecode = "admin";
 
@@ -288,6 +290,9 @@ export default function Index({ params }: any) {
 
   // get the active wallet
   const activeWallet = useActiveWallet();
+  const connectedWallets = useConnectedWallets();
+  const { disconnect } = useDisconnect();
+  const [disconnectingWallet, setDisconnectingWallet] = useState(false);
 
 
 
@@ -324,6 +329,7 @@ export default function Index({ params }: any) {
   const activeAccount = useActiveAccount();
 
   const address = activeAccount?.address;
+  const hasConnectedWallet = Boolean(address) || Boolean(activeWallet) || connectedWallets.length > 0;
 
   //console.log('address', address);
 
@@ -601,9 +607,37 @@ export default function Index({ params }: any) {
 
   }, [address, storecode]);
 
+  const handleDisconnectWallet = async () => {
+    if (!hasConnectedWallet || disconnectingWallet) {
+      return;
+    }
 
-  
+    setDisconnectingWallet(true);
+    try {
+      for (const walletItem of connectedWallets) {
+        try {
+          await disconnect(walletItem);
+        } catch (error) {
+          console.warn('disconnect(connectedWallet) failed', error);
+        }
+      }
 
+      if (activeWallet) {
+        await disconnect(activeWallet);
+      }
+    } catch (error) {
+      console.warn('disconnect() failed, fallback to wallet.disconnect()', error);
+      try {
+        await activeWallet?.disconnect?.();
+      } catch (fallbackError) {
+        console.warn('activeWallet.disconnect() failed', fallbackError);
+      }
+    } finally {
+      clearWalletConnectionState();
+      window.dispatchEvent(new Event('orangex-wallet-disconnected'));
+      window.location.replace(window.location.pathname + window.location.search);
+    }
+  };
 
   const [countOfOpenOrders, setCountOfOpenOrders] = useState(0);
   useEffect(() => {
@@ -967,30 +1001,49 @@ export default function Index({ params }: any) {
 
   if (address && !loadingUser && !isAdmin) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 p-4">
+      <div className="flex min-h-[60vh] w-full items-center justify-center p-4">
+        <div className="w-full max-w-xl rounded-2xl border border-rose-200 bg-rose-50 p-6">
+          <h1 className="text-2xl font-bold text-rose-700">접근 권한이 없습니다.</h1>
+          <p className="mt-2 text-sm text-rose-700/90">관리자 권한이 있는 계정으로 다시 연결해 주세요.</p>
 
-        <h1 className="text-2xl font-bold">접근권한을 확인중입니다...</h1>
-        <p className="text-lg">이 페이지에 접근할 권한이 없습니다.</p>
-       
+          <div className="mt-4 rounded-xl border border-rose-200/80 bg-white/75 p-4 text-sm text-slate-700">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">내 지갑주소</p>
+            <p className="mt-1 break-all text-sm font-semibold text-slate-900">{address || '-'}</p>
+            <div className="mt-3 grid gap-1">
+              <p>
+                회원아이디: <span className="font-semibold text-slate-900">{user?.nickname || '-'}</span>
+              </p>
+              <p>
+                권한: <span className="font-semibold text-slate-900">{user?.role || '일반'}</span>
+              </p>
+              <p>
+                텔레그램 ID: <span className="font-semibold text-slate-900">{telegramId || '-'}</span>
+              </p>
+            </div>
+          </div>
 
-          {/* telegram id */}
-          <p className="text-sm">텔레그램 ID: {telegramId}</p>
-
-          {/* 회원가입한후 가맹점 관리자 등록신청을 하세요 */}
-          {/* 회원가입하러 가기 */}
-          <div className="flex flex-row items-center justify-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             <button
               onClick={() => {
                 router.push('/' + params.lang + '/administration/profile-settings?telegramId=' + telegramId);
               }}
-              className="flex bg-slate-900 text-sm text-white px-4 py-2 rounded-lg hover:bg-slate-800"
+              className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
               회원가입하러 가기
             </button>
+
+            {hasConnectedWallet && (
+              <button
+                type="button"
+                onClick={handleDisconnectWallet}
+                disabled={disconnectingWallet}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {disconnectingWallet ? '지갑 해제 중...' : '지갑 연결 해제'}
+              </button>
+            )}
+          </div>
         </div>
-
-
-
       </div>
     );
   }
@@ -1072,6 +1125,17 @@ export default function Index({ params }: any) {
                     height={20}
                     className="rounded-lg w-7 h-7 hover:opacity-70"
                   />
+                </button>
+              )}
+
+              {hasConnectedWallet && (
+                <button
+                  type="button"
+                  onClick={handleDisconnectWallet}
+                  disabled={disconnectingWallet}
+                  className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-rose-300 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {disconnectingWallet ? '해제 중...' : '지갑 연결 해제'}
                 </button>
               )}
 
