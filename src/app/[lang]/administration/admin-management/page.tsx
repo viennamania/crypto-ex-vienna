@@ -282,9 +282,9 @@ export default function AdminManagementPage() {
 
   return (
     <>
-      <main className="p-6 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+      <main className="p-3 sm:p-4 lg:p-6 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
         <div className="w-full">
-          <div className="mb-4 flex items-center gap-2">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
             <span className="text-2xl font-black tracking-tight text-slate-900">관리자 관리</span>
             <button
               type="button"
@@ -325,7 +325,7 @@ export default function AdminManagementPage() {
             </button>
           </div>
 
-          <div className="w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
+          <div className="w-full rounded-2xl border border-slate-200/80 bg-white/95 p-3 sm:p-4 lg:p-5 shadow-sm">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
                 <Image src="/icon-user.png" alt="Admin" width={24} height={24} className="h-6 w-6" />
@@ -388,7 +388,8 @@ export default function AdminManagementPage() {
               ) : admins.length === 0 ? (
                 <div className="text-sm text-slate-500">등록된 관리자가 없습니다.</div>
               ) : (
-                <table className="min-w-full border-collapse border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+                <div className="w-full overflow-x-auto rounded-lg border border-slate-200 shadow-sm">
+                  <table className="w-full min-w-[760px] border-collapse">
                   <thead className="bg-slate-50 text-slate-700 text-xs font-bold uppercase border-b">
                     <tr>
                       <th className="px-4 py-2 text-left">회원</th>
@@ -438,7 +439,7 @@ export default function AdminManagementPage() {
                             </div>
                           </td>
                           <td className="px-4 py-2 text-xs text-slate-700">
-                            <div className="flex min-w-[220px] flex-col gap-1.5">
+                            <div className="flex min-w-[180px] flex-col gap-1.5 sm:min-w-[220px]">
                               <div className="flex items-center gap-1.5">
                                 <span className="font-mono text-xs text-slate-700">{walletPreview}</span>
                                 {walletAddress ? (
@@ -528,7 +529,8 @@ export default function AdminManagementPage() {
                       );
                     })}
                   </tbody>
-                </table>
+                  </table>
+                </div>
               )}
             </div>
 

@@ -486,13 +486,13 @@ export default function BuyerManagementPage() {
   };
 
   return (
-    <main className="container mx-auto flex min-h-[100vh] max-w-screen-2xl items-start justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 p-6 text-slate-800">
+    <main className="container mx-auto flex min-h-[100vh] max-w-screen-2xl items-start justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 p-3 sm:p-4 lg:p-6 text-slate-800">
       <div className="w-full">
-        <div className="mb-4 flex items-center gap-2">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className="text-2xl font-black tracking-tight text-slate-900">구매자 관리</span>
         </div>
 
-        <section className="mb-4 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-5 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.55)]">
+        <section className="mb-4 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-3 sm:p-4 lg:p-5 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.55)]">
           <div className="relative">
             <div className="absolute -top-20 right-[-60px] h-56 w-56 rounded-full bg-sky-200/35 blur-3xl" />
             <div className="absolute -bottom-20 left-[-40px] h-56 w-56 rounded-full bg-emerald-200/30 blur-3xl" />
@@ -542,7 +542,7 @@ export default function BuyerManagementPage() {
           </div>
         </section>
 
-        <div className="w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
+        <div className="w-full rounded-2xl border border-slate-200/80 bg-white/95 p-3 sm:p-4 lg:p-5 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <Image src="/icon-buyer.png" alt="Buyer" width={24} height={24} className="h-6 w-6" />
@@ -655,7 +655,8 @@ export default function BuyerManagementPage() {
             ) : sortedFilteredBuyers.length === 0 ? (
               <div className="text-sm text-slate-500">구매자 정보가 있는 회원이 없습니다.</div>
             ) : (
-              <table className="min-w-full overflow-hidden rounded-lg border border-slate-200 border-collapse shadow-sm">
+              <div className="w-full overflow-x-auto rounded-lg border border-slate-200 shadow-sm">
+                <table className="w-full min-w-[1240px] border-collapse">
                 <thead className="border-b bg-slate-50 text-xs font-bold uppercase text-slate-700">
                   <tr>
                     <th className="px-4 py-2 text-left">프로필</th>
@@ -743,7 +744,7 @@ export default function BuyerManagementPage() {
                           </div>
                         </td>
                         <td className="px-4 py-2 text-xs text-slate-700">
-                          <div className="flex min-w-[220px] flex-col gap-1.5">
+                          <div className="flex min-w-[180px] flex-col gap-1.5 sm:min-w-[220px]">
                             <div className="flex items-center gap-1.5">
                               <span className="font-mono text-xs text-slate-700">{walletPreview}</span>
                               {walletAddress ? (
@@ -848,7 +849,7 @@ export default function BuyerManagementPage() {
                         </td>
                         <td className="px-4 py-2">
                           <span
-                            className={`inline-flex min-w-[160px] items-center justify-center rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm ${
+                            className={`inline-flex min-w-[120px] items-center justify-center rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm sm:min-w-[160px] ${
                               normalizedBuyerStatus === 'confirmed'
                                 ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
                                 : 'border-amber-200/80 bg-amber-50 text-amber-700'
@@ -934,7 +935,8 @@ export default function BuyerManagementPage() {
                     );
                   })}
                 </tbody>
-              </table>
+                </table>
+              </div>
             )}
           </div>
 

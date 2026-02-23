@@ -89,6 +89,7 @@ const resolvePendingCardKey = (payment: PendingOrderProcessingItem) =>
 
 export default function AdministrationLayoutShell({ lang, children }: AdministrationLayoutShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [pendingSummary, setPendingSummary] = useState<PendingOrderProcessingSummary>({
     pendingCount: 0,
     oldestPendingAt: '',
@@ -106,6 +107,15 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
   const pendingCardTimerIdsRef = useRef<number[]>([]);
   const showPinnedPendingAlert = pendingSummary.pendingCount > 0 || pendingAlertCards.length > 0;
   const paymentManagementHref = `/${lang}/administration/payment-management`;
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setIsMobileViewport(window.innerWidth < 1024);
+    };
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, []);
 
   const getPendingAlertAudio = useCallback(() => {
     if (typeof window === 'undefined') return null;
@@ -419,6 +429,12 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
   const shellStyle = {
     ['--admin-shell-half-offset' as string]: isSidebarOpen ? '140px' : '0px',
   } as CSSProperties;
+  const pendingAlertContainerClass = isMobileViewport
+    ? 'pointer-events-none sticky top-[calc(env(safe-area-inset-top)+0.45rem)] z-[70] px-2'
+    : `pointer-events-none fixed inset-x-0 top-12 z-[70] px-3 ${isSidebarOpen ? 'lg:pl-[280px]' : 'lg:pl-0'} lg:top-3`;
+  const contentTopPaddingClass = showPinnedPendingAlert
+    ? (isMobileViewport ? (pendingAlertExpanded ? 'pt-4' : 'pt-3') : (pendingAlertExpanded ? 'pt-32' : 'pt-20'))
+    : '';
 
   return (
     <div
@@ -431,8 +447,8 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
         onOpenChange={setIsSidebarOpen}
       />
       {showPinnedPendingAlert && (
-        <div className={`pointer-events-none fixed inset-x-0 top-12 z-[70] px-3 ${isSidebarOpen ? 'lg:pl-[280px]' : 'lg:pl-0'} lg:top-3`}>
-          <div className="mx-auto max-w-7xl">
+        <div className={pendingAlertContainerClass}>
+          <div className="mx-auto w-full max-w-7xl">
             <section className="pointer-events-auto rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -544,9 +560,11 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
         }`}
       >
         <div
-          className={`${showPinnedPendingAlert ? (pendingAlertExpanded ? 'pt-44 lg:pt-32' : 'pt-28 lg:pt-20') : ''} pb-[calc(11rem+env(safe-area-inset-bottom))] md:pb-[calc(9rem+env(safe-area-inset-bottom))]`}
+          className={`administration-shell-content px-2 sm:px-3 lg:px-0 ${contentTopPaddingClass} pb-[calc(11rem+env(safe-area-inset-bottom))] md:pb-[calc(9rem+env(safe-area-inset-bottom))]`}
         >
-          {children}
+          <div className="mx-auto w-full max-w-[1700px]">
+            {children}
+          </div>
         </div>
       </div>
       <AdminSupportChatWidget />
@@ -569,6 +587,11 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
 
         .pending-order-flash {
           animation: pendingOrderFlash 0.85s ease-in-out 2;
+        }
+
+        .administration-shell-content .overflow-x-auto {
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior-x: contain;
         }
       `}</style>
     </div>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type AdministrationSidebarProps = {
   lang: string;
@@ -65,6 +65,7 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
   const buyOrderManagementHref = `/${lang}/administration/buyorder-management`;
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [activeBuyOrderCount, setActiveBuyOrderCount] = useState(0);
+  const wasMobileViewportRef = useRef<boolean | null>(null);
 
   const loadActiveBuyOrderCount = useCallback(async () => {
     try {
@@ -100,10 +101,43 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
   }, []);
 
   useEffect(() => {
+    const wasMobileViewport = wasMobileViewportRef.current;
+    if (wasMobileViewport === null) {
+      wasMobileViewportRef.current = isMobileViewport;
+      return;
+    }
+
+    if (wasMobileViewport && !isMobileViewport) {
+      onOpenChange(true);
+    }
+    wasMobileViewportRef.current = isMobileViewport;
+  }, [isMobileViewport, onOpenChange]);
+
+  useEffect(() => {
     if (!isMobileViewport) return;
     // Mobile UX: close the drawer only when route/viewport changes.
     onOpenChange(false);
   }, [pathname, isMobileViewport, onOpenChange]);
+
+  useEffect(() => {
+    if (!isMobileViewport) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
+
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+    };
+  }, [isMobileViewport, isOpen]);
 
   useEffect(() => {
     let isActive = true;
@@ -216,7 +250,7 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
       <button
         type="button"
         onClick={() => onOpenChange(!isOpen)}
-        className="fixed left-3 top-3 z-[60] inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white/90 text-slate-800 shadow-[0_14px_24px_-18px_rgba(15,23,42,0.65)] backdrop-blur transition hover:bg-white lg:hidden"
+        className="fixed left-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-[60] inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white/90 text-slate-800 shadow-[0_14px_24px_-18px_rgba(15,23,42,0.65)] backdrop-blur transition hover:bg-white lg:hidden"
         aria-label="관리자 메뉴 열기"
       >
         {isOpen ? (
@@ -262,11 +296,11 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-[55] w-[280px] border-r border-slate-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.98)_100%)] backdrop-blur transition-transform duration-300 ease-out ${
+        className={`fixed inset-y-0 left-0 z-[55] w-[min(84vw,300px)] border-r border-slate-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.98)_100%)] backdrop-blur transition-transform duration-300 ease-out sm:w-[280px] ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex h-full w-full flex-col px-4 py-5">
+        <div className="flex h-full w-full flex-col px-3.5 py-[calc(0.95rem+env(safe-area-inset-top))] pb-[calc(0.95rem+env(safe-area-inset-bottom))]">
           {menuContent}
         </div>
       </aside>
