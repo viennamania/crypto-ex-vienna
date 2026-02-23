@@ -11251,14 +11251,18 @@ export async function acceptBuyOrderPrivateSale(
     const thirdwebClient = createThirdwebClient({ secretKey: thirdwebSecretKey });
 
     let buyerEscrowWalletAddress = '';
+    let buyerEscrowSignerAddress = '';
+    let buyerEscrowSmartAccountAddress = '';
     try {
       const createdServerWallet = await Engine.createServerWallet({
         client: thirdwebClient,
         label: `private-buy-${matchedBuyerWalletAddress.slice(0, 8)}-${Date.now()}`,
       });
+      buyerEscrowSignerAddress = String((createdServerWallet as any)?.address || '').trim();
+      buyerEscrowSmartAccountAddress = String((createdServerWallet as any)?.smartAccountAddress || '').trim();
       cacheEngineWalletResolution({
-        signerAddress: String((createdServerWallet as any)?.address || '').trim(),
-        smartAccountAddress: String((createdServerWallet as any)?.smartAccountAddress || '').trim(),
+        signerAddress: buyerEscrowSignerAddress,
+        smartAccountAddress: buyerEscrowSmartAccountAddress,
       });
       buyerEscrowWalletAddress = resolveEngineWalletAddress(createdServerWallet);
     } catch (error) {
@@ -11274,6 +11278,39 @@ export async function acceptBuyOrderPrivateSale(
       console.error('acceptBuyOrderPrivateSale: buyer escrow wallet address is empty');
       return { success: false, error: 'BUYER_ESCROW_WALLET_EMPTY' };
     }
+
+    if (!isWalletAddress(buyerEscrowSignerAddress) || !isWalletAddress(buyerEscrowSmartAccountAddress)) {
+      const buyerEscrowResolution = await resolveEngineWalletResolution({
+        client: thirdwebClient,
+        walletAddress: buyerEscrowWalletAddress,
+      });
+      if (!isWalletAddress(buyerEscrowSignerAddress)) {
+        buyerEscrowSignerAddress = String(buyerEscrowResolution.signerAddress || '').trim();
+      }
+      if (!isWalletAddress(buyerEscrowSmartAccountAddress)) {
+        buyerEscrowSmartAccountAddress = String(buyerEscrowResolution.smartAccountAddress || '').trim();
+      }
+    }
+
+    let sellerEscrowSignerAddress = '';
+    let sellerEscrowSmartAccountAddress = '';
+    if (isWalletAddress(sellerEscrowWalletAddress)) {
+      const sellerEscrowResolution = await resolveEngineWalletResolution({
+        client: thirdwebClient,
+        walletAddress: sellerEscrowWalletAddress,
+      });
+      sellerEscrowSignerAddress = String(sellerEscrowResolution.signerAddress || '').trim();
+      sellerEscrowSmartAccountAddress = String(sellerEscrowResolution.smartAccountAddress || '').trim();
+    }
+
+    const orderEscrowWalletSignerAddress =
+      (isWalletAddress(buyerEscrowSignerAddress)
+        ? buyerEscrowSignerAddress
+        : (isWalletAddress(buyerEscrowWalletAddress) ? buyerEscrowWalletAddress : ''));
+    const orderEscrowWalletSmartAccountAddress =
+      (isWalletAddress(buyerEscrowSmartAccountAddress)
+        ? buyerEscrowSmartAccountAddress
+        : (isWalletAddress(buyerEscrowWalletAddress) ? buyerEscrowWalletAddress : ''));
 
     let escrowTransferTransactionHash = '';
     try {
@@ -11408,6 +11445,19 @@ export async function acceptBuyOrderPrivateSale(
       storecode: 'admin',
       ...(privateSaleAgentcode ? { agentcode: privateSaleAgentcode } : {}),
       totalAmount: normalizedUsdtAmount,
+      escrowWallet: {
+        address: buyerEscrowWalletAddress,
+        signerAddress: orderEscrowWalletSignerAddress,
+        smartAccountAddress: orderEscrowWalletSmartAccountAddress,
+        buyer: {
+          signerAddress: isWalletAddress(buyerEscrowSignerAddress) ? buyerEscrowSignerAddress : '',
+          smartAccountAddress: isWalletAddress(buyerEscrowSmartAccountAddress) ? buyerEscrowSmartAccountAddress : '',
+        },
+        seller: {
+          signerAddress: isWalletAddress(sellerEscrowSignerAddress) ? sellerEscrowSignerAddress : '',
+          smartAccountAddress: isWalletAddress(sellerEscrowSmartAccountAddress) ? sellerEscrowSmartAccountAddress : '',
+        },
+      },
       settlement: {
         platformFeePercent: resolvedPlatformFee.feeRatePercent,
         platformFeeAmount: platformFeeUsdtAmount,
