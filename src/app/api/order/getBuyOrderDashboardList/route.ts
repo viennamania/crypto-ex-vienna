@@ -239,7 +239,15 @@ export async function POST(request: NextRequest) {
       ),
     );
 
-    const agentByCode = new Map<string, { agentcode: string; agentName: string; agentLogo: string }>();
+    const agentByCode = new Map<
+      string,
+      {
+        agentcode: string;
+        agentName: string;
+        agentLogo: string;
+        creditWalletSmartAccountAddress: string;
+      }
+    >();
     if (pageAgentcodeKeys.length > 0) {
       const agentsCollection = client.db(dbName).collection('agents');
       const agentRows = await agentsCollection
@@ -286,6 +294,18 @@ export async function POST(request: NextRequest) {
                   },
                 },
               },
+              creditWalletSmartAccountAddress: {
+                $trim: {
+                  input: {
+                    $toString: {
+                      $ifNull: [
+                        '$creditWallet.smartAccountAddress',
+                        { $ifNull: ['$smartAccountAddress', ''] },
+                      ],
+                    },
+                  },
+                },
+              },
               normalizedAgentcode: 1,
             },
           },
@@ -299,6 +319,7 @@ export async function POST(request: NextRequest) {
           agentcode: normalizeAgentcode(item?.agentcode),
           agentName: String(item?.agentName || '').trim(),
           agentLogo: String(item?.agentLogo || '').trim(),
+          creditWalletSmartAccountAddress: String(item?.creditWalletSmartAccountAddress || '').trim(),
         });
       });
     }
@@ -315,6 +336,10 @@ export async function POST(request: NextRequest) {
               agentcode: agentInfo.agentcode || agentcode,
               agentName: agentInfo.agentName || '',
               agentLogo: agentInfo.agentLogo || '',
+              creditWallet: {
+                smartAccountAddress: agentInfo.creditWalletSmartAccountAddress || '',
+              },
+              smartAccountAddress: agentInfo.creditWalletSmartAccountAddress || '',
             }
           : undefined,
         agentName: agentInfo?.agentName || '',

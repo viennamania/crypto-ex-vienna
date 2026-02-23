@@ -357,6 +357,68 @@ const toFeeRateOrNull = (value: unknown) => {
   return Math.round(numeric * 10000) / 10000;
 };
 
+const resolveCreditWalletSmartAccountAddress = (source: any): string => {
+  if (!source || typeof source !== 'object') {
+    return '';
+  }
+
+  const creditWallet =
+    source?.creditWallet && typeof source.creditWallet === 'object'
+      ? source.creditWallet
+      : {};
+
+  const smartAccountAddress = String(
+    creditWallet?.smartAccountAddress || source?.smartAccountAddress || '',
+  ).trim();
+
+  return isWalletAddress(smartAccountAddress) ? smartAccountAddress : '';
+};
+
+const resolveAgentPlatformFeePercentage = (agentLike: any): number =>
+  toFeeRateOrNull(agentLike?.agentFeePercent ?? agentLike?.platformFeePercent) ?? 0;
+
+const resolveAgentPlatformFeeConfig = (
+  {
+    agent,
+    clientInfo,
+  }: {
+    agent: any;
+    clientInfo: any;
+  },
+) => ({
+  percentage: resolveAgentPlatformFeePercentage(agent),
+  fromAddress: resolveCreditWalletSmartAccountAddress(agent),
+  toAddress: resolveCreditWalletSmartAccountAddress(clientInfo),
+});
+
+const getClientInfoByClientId = async (
+  {
+    mongoClient,
+    clientId,
+  }: {
+    mongoClient: any;
+    clientId: string;
+  },
+) => {
+  const normalizedClientId = String(clientId || '').trim();
+  if (!normalizedClientId) {
+    return null;
+  }
+
+  const clientsCollection = mongoClient.db(dbName).collection('clients');
+  return clientsCollection.findOne(
+    { clientId: normalizedClientId },
+    {
+      projection: {
+        _id: 0,
+        clientId: 1,
+        creditWallet: 1,
+        smartAccountAddress: 1,
+      },
+    },
+  );
+};
+
 const resolvePrivateOrderPlatformFee = (
   {
     order,
@@ -2224,6 +2286,15 @@ export async function insertBuyOrder(data: any) {
     return null;
   }
 
+  const clientInfo = await getClientInfoByClientId({
+    mongoClient: client,
+    clientId: String(data.clientId || '').trim(),
+  });
+  const agentPlatformFee = resolveAgentPlatformFeeConfig({
+    agent,
+    clientInfo,
+  });
+
 
 
   const mobile = user?.mobile;
@@ -2301,6 +2372,8 @@ export async function insertBuyOrder(data: any) {
 
 
       platformFee: data.platformFee,
+
+      agentPlatformFee,
 
 
     }
@@ -2469,6 +2542,15 @@ export async function insertBuyOrderForClearance(data: any) {
     return null;
   }
 
+  const clientInfo = await getClientInfoByClientId({
+    mongoClient: client,
+    clientId: String(data?.clientId || process.env.NEXT_PUBLIC_TEMPLATE_CLIENT_ID || '').trim(),
+  });
+  const agentPlatformFee = resolveAgentPlatformFeeConfig({
+    agent,
+    clientInfo,
+  });
+
 
 
   const mobile = user?.mobile;
@@ -2512,8 +2594,10 @@ export async function insertBuyOrderForClearance(data: any) {
       createdAt: new Date().toISOString(),
       status: 'ordered',
       privateSale: data.privateSale,
-      
+
       buyer: data.buyer,
+
+      agentPlatformFee,
 
       tradeId: tradeId,
     }
@@ -2666,6 +2750,15 @@ export async function insertBuyOrderForUser(data: any) {
     return null;
   }
 
+  const clientInfo = await getClientInfoByClientId({
+    mongoClient: client,
+    clientId: String(data?.clientId || process.env.NEXT_PUBLIC_TEMPLATE_CLIENT_ID || '').trim(),
+  });
+  const agentPlatformFee = resolveAgentPlatformFeeConfig({
+    agent,
+    clientInfo,
+  });
+
 
 
   const tradeId = Math.floor(Math.random() * 90000000) + 10000000 + '';
@@ -2708,6 +2801,8 @@ export async function insertBuyOrderForUser(data: any) {
       buyer: data.buyer,
 
       seller: data.seller,
+
+      agentPlatformFee,
 
       tradeId: tradeId,
     }
@@ -11173,6 +11268,29 @@ export async function acceptBuyOrderPrivateSale(
 
     const nowIso = new Date().toISOString();
     const privateSaleAgentcode = String(seller?.agentcode || '').trim();
+    const privateSaleAgent = privateSaleAgentcode
+      ? await client.db(dbName).collection('agents').findOne<any>(
+          { agentcode: privateSaleAgentcode },
+          {
+            projection: {
+              _id: 0,
+              agentcode: 1,
+              agentFeePercent: 1,
+              platformFeePercent: 1,
+              creditWallet: 1,
+              smartAccountAddress: 1,
+            },
+          },
+        )
+      : null;
+    const privateSaleClientInfo = await getClientInfoByClientId({
+      mongoClient: client,
+      clientId: String(process.env.NEXT_PUBLIC_TEMPLATE_CLIENT_ID || '').trim(),
+    });
+    const agentPlatformFee = resolveAgentPlatformFeeConfig({
+      agent: privateSaleAgent,
+      clientInfo: privateSaleClientInfo,
+    });
 
     const newBuyOrder = {
       tradeId: tradeId,
@@ -11204,6 +11322,7 @@ export async function acceptBuyOrderPrivateSale(
         totalEscrowAmount: escrowLockUsdtAmount,
         source: resolvedPlatformFee.source,
       },
+      agentPlatformFee,
       paymentMethod: normalizedPaymentMethod,
       paymentBankName: sellerBankName,
       storecode: 'admin',

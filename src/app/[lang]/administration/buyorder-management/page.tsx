@@ -95,6 +95,17 @@ type BuyOrderItem = {
     agentcode?: string;
     agentName?: string;
     agentLogo?: string;
+    smartAccountAddress?: string;
+    creditWallet?: {
+      smartAccountAddress?: string;
+    };
+  };
+  agentPlatformFee?: {
+    percentage?: number;
+    fromAddress?: string;
+    toAddress?: string;
+    transactionHash?: string;
+    txHash?: string;
   };
   store?: {
     storeName?: string;
@@ -237,6 +248,31 @@ const getOrderPlatformFeeWalletAddress = (order: BuyOrderItem) =>
     || '',
   ).trim();
 
+const getOrderAgentPlatformFeeRate = (order: BuyOrderItem) => {
+  const candidates = [
+    order?.agentPlatformFee?.percentage,
+  ];
+  for (const candidate of candidates) {
+    const numeric = toFiniteNumber(candidate);
+    if (numeric > 0) return numeric;
+  }
+  return 0;
+};
+
+const getOrderAgentPlatformFeeFromAddress = (order: BuyOrderItem) =>
+  String(order?.agentPlatformFee?.fromAddress || '').trim();
+
+const getOrderAgentPlatformFeeToAddress = (order: BuyOrderItem) =>
+  String(order?.agentPlatformFee?.toAddress || '').trim();
+
+const getOrderAgentPlatformFeeTransactionHash = (order: BuyOrderItem) =>
+  String(
+    order?.agentPlatformFee?.transactionHash
+    || order?.agentPlatformFee?.txHash
+    || (order as any)?.agentPlatformFeeTransactionHash
+    || '',
+  ).trim();
+
 const getOrderExchangeRate = (order: BuyOrderItem) => {
   const explicitRate = toFiniteNumber((order as any)?.rate);
   if (explicitRate > 0) return explicitRate;
@@ -261,6 +297,14 @@ const getOrderAgentName = (order: BuyOrderItem) => {
 
 const getOrderAgentLogo = (order: BuyOrderItem) =>
   String(order?.agent?.agentLogo || order?.agentLogo || '').trim();
+
+const getOrderAgentCreditWalletAddress = (order: BuyOrderItem) =>
+  String(
+    order?.agent?.creditWallet?.smartAccountAddress
+    || order?.agent?.smartAccountAddress
+    || (order as any)?.agentPlatformFee?.fromAddress
+    || '',
+  ).trim();
 
 const getPaymentRequestedRemainingMs = (order: BuyOrderItem, nowMs: number) => {
   const baseTimeSource = String(order?.paymentRequestedAt || order?.createdAt || '').trim();
@@ -1404,14 +1448,15 @@ export default function BuyOrderManagementPage() {
             <div className="px-4 py-12 text-center text-sm text-slate-500">검색된 주문 데이터가 없습니다.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-[1240px] w-full table-fixed">
+              <table className="min-w-[1320px] w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
                     <th className="w-[108px] px-3 py-3">상태</th>
-                    <th className="w-[220px] px-3 py-3">주문시각/거래번호(TID)</th>
+                    <th className="w-[168px] px-3 py-3">주문시각/거래번호(TID)</th>
                     <th className="w-[104px] px-3 py-3">구매자</th>
-                    <th className="w-[104px] px-3 py-3">판매자/결제방법</th>
                     <th className="w-[108px] px-3 py-3 text-right">주문금액</th>
+                    <th className="w-[104px] px-3 py-3">판매자/결제방법</th>
+                    <th className="w-[140px] px-3 py-3">에이전트 정보</th>
                     <th className="w-[84px] px-3 py-3">플랫폼 수수료</th>
                     <th className="w-[76px] px-3 py-3">전송내역</th>
                     <th className="w-[72px] px-3 py-3 text-center">액션</th>
@@ -1450,8 +1495,21 @@ export default function BuyOrderManagementPage() {
                     const platformFeeRate = getOrderPlatformFeeRate(order);
                     const platformFeeAmount = getOrderPlatformFeeAmount(order);
                     const platformFeeWalletAddress = getOrderPlatformFeeWalletAddress(order);
+                    const agentPlatformFeeRate = getOrderAgentPlatformFeeRate(order);
+                    const agentPlatformFeeFromAddress = getOrderAgentPlatformFeeFromAddress(order);
+                    const agentPlatformFeeToAddress = getOrderAgentPlatformFeeToAddress(order);
+                    const agentPlatformFeeTransactionHash = getOrderAgentPlatformFeeTransactionHash(order);
+                    const isAgentPlatformFeeUncollected =
+                      agentPlatformFeeRate > 0 && !agentPlatformFeeTransactionHash;
+                    const hasAgentPlatformFeeInfo =
+                      agentPlatformFeeRate > 0
+                      || Boolean(agentPlatformFeeFromAddress)
+                      || Boolean(agentPlatformFeeToAddress);
                     const hasPlatformFeeInfo =
-                      platformFeeRate > 0 || platformFeeAmount > 0 || Boolean(platformFeeWalletAddress);
+                      platformFeeRate > 0
+                      || platformFeeAmount > 0
+                      || Boolean(platformFeeWalletAddress)
+                      || hasAgentPlatformFeeInfo;
                     const escrowWalletAddress = resolveOrderEscrowWalletAddress(order);
                     const escrowWalletKey = escrowWalletAddress ? normalizeWalletKey(escrowWalletAddress) : '';
                     const escrowWalletBalanceState = escrowWalletKey
@@ -1475,6 +1533,7 @@ export default function BuyOrderManagementPage() {
                     const buyerWalletAddress = String(order?.buyer?.walletAddress || order?.walletAddress || '').trim();
                     const agentName = getOrderAgentName(order);
                     const agentLogo = getOrderAgentLogo(order);
+                    const agentCreditWalletAddress = getOrderAgentCreditWalletAddress(order);
                     const buyerWalletKey = buyerWalletAddress ? normalizeWalletKey(buyerWalletAddress) : '';
                     const buyerWalletBalanceState = buyerWalletKey
                       ? escrowWalletBalanceByAddress[buyerWalletKey]
@@ -1511,6 +1570,26 @@ export default function BuyOrderManagementPage() {
                       Math.min(
                         100,
                         (sellerEscrowWalletCooldownRemainingMs / BALANCE_CHECK_COOLDOWN_MS) * 100,
+                      ),
+                    );
+                    const agentCreditWalletKey = agentCreditWalletAddress
+                      ? normalizeWalletKey(agentCreditWalletAddress)
+                      : '';
+                    const agentCreditWalletBalanceState = agentCreditWalletKey
+                      ? escrowWalletBalanceByAddress[agentCreditWalletKey]
+                      : undefined;
+                    const agentCreditWalletCooldownRemainingMs = Math.max(
+                      0,
+                      Number(agentCreditWalletBalanceState?.cooldownUntilMs || 0) - escrowWalletBalanceTickMs,
+                    );
+                    const agentCreditWalletCooldownRemainingSeconds = agentCreditWalletCooldownRemainingMs > 0
+                      ? Math.ceil(agentCreditWalletCooldownRemainingMs / 1000)
+                      : 0;
+                    const agentCreditWalletCooldownProgressPercent = Math.max(
+                      0,
+                      Math.min(
+                        100,
+                        (agentCreditWalletCooldownRemainingMs / BALANCE_CHECK_COOLDOWN_MS) * 100,
                       ),
                     );
 
@@ -1717,25 +1796,18 @@ export default function BuyOrderManagementPage() {
                           </span>
                         </div>
                       </td>
+                      <td className="px-3 py-3 text-right">
+                        <div className="flex flex-col items-end">
+                          <span className="text-base font-extrabold leading-tight text-slate-900">{formatKrw(order?.krwAmount)} KRW</span>
+                          <span className="text-sm font-bold text-slate-600">{formatUsdt(order?.usdtAmount)} USDT</span>
+                          <span className="text-[11px] font-semibold text-slate-500">
+                            환율 {formatRate(getOrderExchangeRate(order))}
+                          </span>
+                        </div>
+                      </td>
                       <td className="px-3 py-3">
                         <div className="flex flex-col gap-2">
                           <div className="flex flex-col">
-                            <div className="mb-1 inline-flex max-w-full items-center gap-1.5">
-                              {agentLogo ? (
-                                <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white">
-                                  <span
-                                    className="h-full w-full bg-cover bg-center"
-                                    style={{ backgroundImage: `url(${encodeURI(agentLogo)})` }}
-                                    aria-label={agentName}
-                                  />
-                                </span>
-                              ) : (
-                                <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-[9px] font-bold text-slate-500">
-                                  A
-                                </span>
-                              )}
-                              <span className="truncate text-[11px] font-semibold text-slate-600">{agentName}</span>
-                            </div>
                             <span className="truncate text-base font-extrabold leading-tight text-slate-900">{order?.seller?.nickname || '-'}</span>
                             {sellerEscrowWalletAddress ? (
                               <button
@@ -1808,27 +1880,154 @@ export default function BuyOrderManagementPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-right">
-                        <div className="flex flex-col items-end">
-                          <span className="text-base font-extrabold leading-tight text-slate-900">{formatKrw(order?.krwAmount)} KRW</span>
-                          <span className="text-sm font-bold text-slate-600">{formatUsdt(order?.usdtAmount)} USDT</span>
-                          <span className="text-[11px] font-semibold text-slate-500">
-                            환율 {formatRate(getOrderExchangeRate(order))}
-                          </span>
+                      <td className="px-3 py-3">
+                        <div className="flex flex-col gap-1">
+                          <div className="inline-flex max-w-full items-center gap-1.5">
+                            {agentLogo ? (
+                              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white">
+                                <span
+                                  className="h-full w-full bg-cover bg-center"
+                                  style={{ backgroundImage: `url(${encodeURI(agentLogo)})` }}
+                                  aria-label={agentName}
+                                />
+                              </span>
+                            ) : (
+                              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-[10px] font-bold text-slate-500">
+                                A
+                              </span>
+                            )}
+                            <span className="truncate text-xs font-semibold text-slate-700">{agentName}</span>
+                          </div>
+                          {agentCreditWalletAddress ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void copyWalletAddress(agentCreditWalletAddress);
+                                }}
+                                className="inline-flex w-fit items-center gap-1 truncate text-xs text-slate-500 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                                title={agentCreditWalletAddress}
+                              >
+                                <span className="text-[10px] font-semibold text-slate-500">수수료 지급용</span>
+                                {shortWallet(agentCreditWalletAddress)}
+                                {copiedWalletAddress === agentCreditWalletAddress && (
+                                  <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                                )}
+                              </button>
+                              {agentCreditWalletCooldownRemainingMs <= 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void handleCheckEscrowWalletBalance(agentCreditWalletAddress);
+                                  }}
+                                  disabled={Boolean(agentCreditWalletBalanceState?.loading)}
+                                  className={`inline-flex w-fit items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold transition ${
+                                    agentCreditWalletBalanceState?.loading
+                                      ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                                      : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100'
+                                  }`}
+                                >
+                                  {agentCreditWalletBalanceState?.loading ? '조회중...' : '잔고확인'}
+                                </button>
+                              ) : (
+                                <div className="w-full max-w-[130px] rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1">
+                                  <div className="flex items-center justify-between text-[10px] font-semibold text-indigo-700">
+                                    <span>재조회 대기</span>
+                                    <span>{agentCreditWalletCooldownRemainingSeconds}s</span>
+                                  </div>
+                                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/90">
+                                    <div
+                                      className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-500 transition-[width] duration-200 ease-linear"
+                                      style={{ width: `${agentCreditWalletCooldownProgressPercent.toFixed(2)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                              <span
+                                className={`text-[10px] font-semibold ${
+                                  agentCreditWalletBalanceState?.error ? 'text-rose-600' : 'text-slate-600'
+                                }`}
+                              >
+                                {agentCreditWalletBalanceState?.error
+                                  ? '조회실패'
+                                  : agentCreditWalletBalanceState?.displayValue
+                                  ? `${agentCreditWalletBalanceState.displayValue} USDT`
+                                  : '잔고 미조회'}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-[10px] text-slate-400">지갑 미설정</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-3 py-3">
                         {hasPlatformFeeInfo ? (
                           <div className="flex flex-col gap-1 leading-tight">
-                            <span className="inline-flex w-fit rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-extrabold text-indigo-700">
-                              {formatPercent(platformFeeRate)}%
-                            </span>
-                            <span className="text-xs font-semibold text-indigo-800">
-                              {formatUsdt(platformFeeAmount)} USDT
-                            </span>
-                            <span className="truncate text-[11px] text-slate-500">
-                              {platformFeeWalletAddress ? shortWallet(platformFeeWalletAddress) : '-'}
-                            </span>
+                            {(platformFeeRate > 0 || platformFeeAmount > 0 || Boolean(platformFeeWalletAddress)) && (
+                              <div className="flex flex-col gap-1 leading-tight">
+                                <span className="inline-flex w-fit rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-extrabold text-indigo-700">
+                                  {formatPercent(platformFeeRate)}%
+                                </span>
+                                <span className="text-xs font-semibold text-indigo-800">
+                                  {formatUsdt(platformFeeAmount)} USDT
+                                </span>
+                                <span className="truncate text-[11px] text-slate-500">
+                                  {platformFeeWalletAddress ? shortWallet(platformFeeWalletAddress) : '-'}
+                                </span>
+                              </div>
+                            )}
+                            {hasAgentPlatformFeeInfo && (
+                              <div
+                                className={`flex flex-col gap-1 leading-tight ${
+                                  platformFeeRate > 0 || platformFeeAmount > 0 || Boolean(platformFeeWalletAddress)
+                                    ? 'border-t border-slate-200 pt-1'
+                                    : ''
+                                }`}
+                              >
+                                <span className="inline-flex w-fit rounded-md bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700">
+                                  AG {formatPercent(agentPlatformFeeRate)}%
+                                </span>
+                                {isAgentPlatformFeeUncollected && (
+                                  <span className="inline-flex w-fit rounded-md bg-rose-50 px-2 py-0.5 text-[10px] font-extrabold text-rose-700">
+                                    미수납 상태
+                                  </span>
+                                )}
+                                {agentPlatformFeeFromAddress ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      void copyWalletAddress(agentPlatformFeeFromAddress);
+                                    }}
+                                    className="inline-flex w-fit items-center gap-1 truncate text-[11px] text-slate-500 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                                    title={agentPlatformFeeFromAddress}
+                                  >
+                                    지급 {shortWallet(agentPlatformFeeFromAddress)}
+                                    {copiedWalletAddress === agentPlatformFeeFromAddress && (
+                                      <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                                    )}
+                                  </button>
+                                ) : (
+                                  <span className="truncate text-[11px] text-slate-500">지급 -</span>
+                                )}
+                                {agentPlatformFeeToAddress ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      void copyWalletAddress(agentPlatformFeeToAddress);
+                                    }}
+                                    className="inline-flex w-fit items-center gap-1 truncate text-[11px] text-slate-500 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                                    title={agentPlatformFeeToAddress}
+                                  >
+                                    수납 {shortWallet(agentPlatformFeeToAddress)}
+                                    {copiedWalletAddress === agentPlatformFeeToAddress && (
+                                      <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                                    )}
+                                  </button>
+                                ) : (
+                                  <span className="truncate text-[11px] text-slate-500">수납 -</span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="text-xs text-slate-400">-</span>

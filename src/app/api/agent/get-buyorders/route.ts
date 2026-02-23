@@ -9,6 +9,9 @@ const toNumber = (value: unknown) => {
   return Number.isFinite(numeric) ? numeric : 0;
 };
 
+const normalizeAgentcode = (value: unknown) => String(value || '').trim();
+const toAgentcodeKey = (value: unknown) => normalizeAgentcode(value).toLowerCase();
+
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as
     | {
@@ -156,8 +159,125 @@ export async function POST(request: Request) {
         .toArray(),
     ]);
 
+    const pageAgentcodeKeys = Array.from(
+      new Set(
+        items
+          .map((order: any) => toAgentcodeKey(order?.agentcode || order?.seller?.agentcode))
+          .filter(Boolean),
+      ),
+    );
+
+    const agentByCode = new Map<
+      string,
+      {
+        agentcode: string;
+        agentName: string;
+        agentLogo: string;
+        creditWalletSmartAccountAddress: string;
+      }
+    >();
+
+    if (pageAgentcodeKeys.length > 0) {
+      const agentsCollection = client.db(dbName).collection('agents');
+      const agentRows = await agentsCollection
+        .aggregate([
+          {
+            $addFields: {
+              normalizedAgentcode: {
+                $toLower: {
+                  $trim: {
+                    input: {
+                      $toString: { $ifNull: ['$agentcode', ''] },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          {
+            $match: {
+              normalizedAgentcode: { $in: pageAgentcodeKeys },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              agentcode: {
+                $trim: {
+                  input: {
+                    $toString: { $ifNull: ['$agentcode', ''] },
+                  },
+                },
+              },
+              agentName: {
+                $trim: {
+                  input: {
+                    $toString: { $ifNull: ['$agentName', ''] },
+                  },
+                },
+              },
+              agentLogo: {
+                $trim: {
+                  input: {
+                    $toString: { $ifNull: ['$agentLogo', ''] },
+                  },
+                },
+              },
+              creditWalletSmartAccountAddress: {
+                $trim: {
+                  input: {
+                    $toString: {
+                      $ifNull: [
+                        '$creditWallet.smartAccountAddress',
+                        { $ifNull: ['$smartAccountAddress', ''] },
+                      ],
+                    },
+                  },
+                },
+              },
+              normalizedAgentcode: 1,
+            },
+          },
+        ])
+        .toArray();
+
+      agentRows.forEach((item: any) => {
+        const key = toAgentcodeKey(item?.normalizedAgentcode || item?.agentcode);
+        if (!key) return;
+        agentByCode.set(key, {
+          agentcode: normalizeAgentcode(item?.agentcode),
+          agentName: String(item?.agentName || '').trim(),
+          agentLogo: String(item?.agentLogo || '').trim(),
+          creditWalletSmartAccountAddress: String(item?.creditWalletSmartAccountAddress || '').trim(),
+        });
+      });
+    }
+
+    const enrichedItems = items.map((order: any) => {
+      const resolvedAgentcode = normalizeAgentcode(order?.agentcode || order?.seller?.agentcode);
+      const agentInfo = agentByCode.get(toAgentcodeKey(resolvedAgentcode));
+
+      return {
+        ...order,
+        agentcode: resolvedAgentcode || agentInfo?.agentcode || '',
+        agent: agentInfo
+          ? {
+              agentcode: agentInfo.agentcode || resolvedAgentcode,
+              agentName: agentInfo.agentName || '',
+              agentLogo: agentInfo.agentLogo || '',
+              creditWallet: {
+                smartAccountAddress: agentInfo.creditWalletSmartAccountAddress || '',
+              },
+              smartAccountAddress: agentInfo.creditWalletSmartAccountAddress || '',
+            }
+          : order?.agent,
+        agentName: agentInfo?.agentName || String(order?.agentName || '').trim(),
+        agentLogo: agentInfo?.agentLogo || String(order?.agentLogo || '').trim(),
+      };
+    });
+
     return NextResponse.json({
-      items,
+      items: enrichedItems,
       totalCount: toNumber(totalCount),
       totalKrwAmount: toNumber(totals?.[0]?.totalKrwAmount),
       totalUsdtAmount: toNumber(totals?.[0]?.totalUsdtAmount),
