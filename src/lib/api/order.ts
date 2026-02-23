@@ -278,7 +278,10 @@ const waitMs = async (ms: number) =>
     setTimeout(resolve, ms);
   });
 
-const roundDownUsdtAmount = (value: number) => Math.floor(value * 1000) / 1000;
+const USDT_AMOUNT_PRECISION = 6;
+const USDT_AMOUNT_SCALE = 10 ** USDT_AMOUNT_PRECISION;
+
+const roundDownUsdtAmount = (value: number) => Math.floor(value * USDT_AMOUNT_SCALE) / USDT_AMOUNT_SCALE;
 
 const formatRawUsdtAmount = (rawAmount: bigint, decimals: number): string => {
   if (rawAmount <= 0n) {
@@ -306,21 +309,23 @@ const toRawUsdtAmountFromRoundedValue = (value: number, decimals: number): bigin
     return 0n;
   }
 
-  const normalized = roundDownUsdtAmount(value).toFixed(3);
-  const [integerPart, fractionPart = '000'] = normalized.split('.');
-  const milliUnits =
-    (BigInt(integerPart || '0') * 1000n)
-    + BigInt(`${fractionPart}000`.slice(0, 3));
+  const normalized = roundDownUsdtAmount(value).toFixed(USDT_AMOUNT_PRECISION);
+  const [integerPart, fractionPart = ''] = normalized.split('.');
+  const paddedFractionPart =
+    `${fractionPart}${'0'.repeat(USDT_AMOUNT_PRECISION)}`.slice(0, USDT_AMOUNT_PRECISION);
+  const normalizedUnits =
+    (BigInt(integerPart || '0') * (10n ** BigInt(USDT_AMOUNT_PRECISION)))
+    + BigInt(paddedFractionPart || '0');
 
-  if (decimals === 3) {
-    return milliUnits;
+  if (decimals === USDT_AMOUNT_PRECISION) {
+    return normalizedUnits;
   }
 
-  if (decimals > 3) {
-    return milliUnits * (10n ** BigInt(decimals - 3));
+  if (decimals > USDT_AMOUNT_PRECISION) {
+    return normalizedUnits * (10n ** BigInt(decimals - USDT_AMOUNT_PRECISION));
   }
 
-  return milliUnits / (10n ** BigInt(3 - decimals));
+  return normalizedUnits / (10n ** BigInt(USDT_AMOUNT_PRECISION - decimals));
 };
 
 const toUsdtAmountOrZero = (value: unknown) => {
@@ -2102,6 +2107,11 @@ export async function insertBuyOrder(data: any) {
     return null;
   }
 
+  const normalizedUsdtAmount = toUsdtAmountOrZero(data.usdtAmount);
+  if (normalizedUsdtAmount <= 0) {
+    console.log('insertBuyOrder normalized usdt amount is invalid: ' + data.usdtAmount);
+    return null;
+  }
 
   const nickname = data.nickname || '';
 
@@ -2169,7 +2179,7 @@ export async function insertBuyOrder(data: any) {
         storecode: data.storecode,
         storeName: store.storeName,
         storeLogo: store.storeLogo,
-        usdtAmount: data.usdtAmount,
+        usdtAmount: normalizedUsdtAmount,
         krwAmount: data.krwAmount,
         rate: data.rate,
         createdAt: new Date().toISOString(),
@@ -2272,7 +2282,7 @@ export async function insertBuyOrder(data: any) {
       
       //seller: seller,
 
-      usdtAmount: data.usdtAmount,
+      usdtAmount: normalizedUsdtAmount,
       krwAmount: data.krwAmount,
       rate: data.rate,
       createdAt: new Date().toISOString(),
@@ -2319,7 +2329,7 @@ export async function insertBuyOrder(data: any) {
           storecode: data.storecode,
           storeName: store.storeName,
           storeLogo: store.storeLogo,
-          usdtAmount: data.usdtAmount,
+          usdtAmount: normalizedUsdtAmount,
           krwAmount: data.krwAmount,
           rate: data.rate,
           createdAt: new Date().toISOString(),
@@ -2367,6 +2377,12 @@ export async function insertBuyOrderForClearance(data: any) {
     
     console.log('insertBuyOrderForClearance data is null: ' + JSON.stringify(data));
     
+    return null;
+  }
+
+  const normalizedUsdtAmount = toUsdtAmountOrZero(data.usdtAmount);
+  if (normalizedUsdtAmount <= 0) {
+    console.log('insertBuyOrderForClearance normalized usdt amount is invalid: ' + data.usdtAmount);
     return null;
   }
 
@@ -2490,7 +2506,7 @@ export async function insertBuyOrderForClearance(data: any) {
       
       //seller: seller,
 
-      usdtAmount: data.usdtAmount,
+      usdtAmount: normalizedUsdtAmount,
       krwAmount: data.krwAmount,
       rate: data.rate,
       createdAt: new Date().toISOString(),
@@ -2578,6 +2594,12 @@ export async function insertBuyOrderForUser(data: any) {
     }
     */
     
+    return null;
+  }
+
+  const normalizedUsdtAmount = toUsdtAmountOrZero(data.usdtAmount);
+  if (normalizedUsdtAmount <= 0) {
+    console.log('insertBuyOrderForUser normalized usdt amount is invalid: ' + data.usdtAmount);
     return null;
   }
 
@@ -2672,7 +2694,7 @@ export async function insertBuyOrderForUser(data: any) {
       
       //seller: seller,
 
-      usdtAmount: data.usdtAmount,
+      usdtAmount: normalizedUsdtAmount,
       krwAmount: data.krwAmount,
       rate: data.rate,
       createdAt: new Date().toISOString(),
@@ -4500,7 +4522,7 @@ export async function completePrivateBuyOrderBySeller(
     return { success: false, error: 'WALLET_ADDRESS_MISSING' };
   }
 
-  const normalizedUsdtAmount = Math.floor(Number(order?.usdtAmount || 0) * 1000) / 1000;
+  const normalizedUsdtAmount = roundDownUsdtAmount(Number(order?.usdtAmount || 0));
   if (!Number.isFinite(normalizedUsdtAmount) || normalizedUsdtAmount <= 0) {
     console.error('completePrivateBuyOrderBySeller: invalid usdt amount', order?.usdtAmount);
     return { success: false, error: 'INVALID_USDT_AMOUNT' };

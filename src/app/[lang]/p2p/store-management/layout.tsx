@@ -282,6 +282,7 @@ export default function P2PStoreManagementLayout({ children }: { children: React
       && !loadingStoreAccess
       && !canAccessStorePages,
   );
+  const desktopSidebarWidthClass = collapsed ? 'lg:pl-[98px]' : 'lg:pl-[292px]';
   const showPinnedPendingAlert = canAccessStorePages
     && Boolean(storecode)
     && (pendingSummary.pendingCount > 0 || pendingAlertCards.length > 0);
@@ -745,7 +746,6 @@ export default function P2PStoreManagementLayout({ children }: { children: React
     [lang],
   );
 
-  const desktopSidebarWidthClass = collapsed ? 'lg:pl-[98px]' : 'lg:pl-[292px]';
   const desktopSidebarClass = collapsed ? 'lg:w-[98px]' : 'lg:w-[292px]';
 
   return (

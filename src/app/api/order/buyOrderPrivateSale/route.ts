@@ -6,6 +6,9 @@ import {
   getPrivateTradeStatusByBuyerAndSeller,
 } from '@lib/api/order';
 
+const normalizeUsdtAmount = (value: number) =>
+  Math.floor(Number(value || 0) * 1_000_000) / 1_000_000;
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -13,7 +16,7 @@ export async function POST(request: NextRequest) {
       typeof body?.buyerWalletAddress === 'string' ? body.buyerWalletAddress.trim() : '';
     const sellerWalletAddress =
       typeof body?.sellerWalletAddress === 'string' ? body.sellerWalletAddress.trim() : '';
-    const usdtAmount = Number(body?.usdtAmount || 0);
+    const usdtAmount = normalizeUsdtAmount(Number(body?.usdtAmount || 0));
     const krwAmountRaw = Number(body?.krwAmount || 0);
     const krwAmount =
       Number.isFinite(krwAmountRaw) && krwAmountRaw > 0 ? Math.floor(krwAmountRaw) : undefined;

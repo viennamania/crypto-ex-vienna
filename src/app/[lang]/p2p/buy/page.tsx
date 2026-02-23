@@ -4051,8 +4051,15 @@ const fetchBuyOrders = async () => {
       return;
     }
 
+    const normalizedBuyUsdtAmount =
+      Math.floor(Number(buyAmountInputs[index] || 0) * 1_000_000) / 1_000_000;
+    if (!Number.isFinite(normalizedBuyUsdtAmount) || normalizedBuyUsdtAmount <= 0) {
+      toast.error('유효한 구매 수량을 입력해주세요.');
+      return;
+    }
+
     // if buyAmountInputs[index] is more than currentUsdtBalanceArray[index], show error
-    if (buyAmountInputs[index] > currentUsdtBalanceArray[index]) {
+    if (normalizedBuyUsdtAmount > currentUsdtBalanceArray[index]) {
       toast.error('구매 금액이 판매자의 잔여 USDT 잔고를 초과합니다.');
       return;
     }
@@ -4071,7 +4078,7 @@ const fetchBuyOrders = async () => {
       body: JSON.stringify({
         buyerWalletAddress: address,
         sellerWalletAddress: sellerWalletAddress,
-        usdtAmount: buyAmountInputs[index],
+        usdtAmount: normalizedBuyUsdtAmount,
       }),
     })
 

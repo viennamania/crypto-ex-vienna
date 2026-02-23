@@ -1798,8 +1798,8 @@ export default function BuyUsdtPage({
     const sellerRate = Number(selectedSeller.rate || 0);
     const normalizedSubmitUsdtAmount =
       lastEditedAmountType === 'krw'
-        ? Math.floor((krwAmount / sellerRate) * 1000) / 1000
-        : Math.floor(usdtAmount * 1000) / 1000;
+        ? Math.floor((krwAmount / sellerRate) * 1_000_000) / 1_000_000
+        : Math.floor(usdtAmount * 1_000_000) / 1_000_000;
     const normalizedSubmitKrwAmount = Math.floor(normalizedSubmitUsdtAmount * sellerRate);
     if (
       !Number.isFinite(normalizedSubmitUsdtAmount) ||
