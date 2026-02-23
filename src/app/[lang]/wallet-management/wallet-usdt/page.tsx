@@ -141,8 +141,9 @@ const resolveWalletUsdtFooterTab = (
   value: string,
 ): 'withdraw' | 'deposit' | 'history' => {
   if (value === 'deposit') return 'deposit';
+  if (value === 'withdraw') return 'withdraw';
   if (value === 'history') return 'history';
-  return 'withdraw';
+  return 'deposit';
 };
 
 type UsdtTransfer = {
@@ -431,8 +432,8 @@ export default function SendUsdt({ params }: any) {
     () => resolveWalletUsdtFooterTab(tabFromQuery),
   );
   const footerTabLabel = useMemo(() => {
-    if (footerTab === 'withdraw') return '출금하기';
     if (footerTab === 'deposit') return '입금하기';
+    if (footerTab === 'withdraw') return '출금하기';
     return '전송내역';
   }, [footerTab]);
   const [recipient, setRecipient] = useState({
@@ -1552,22 +1553,22 @@ export default function SendUsdt({ params }: any) {
               <div className="mb-5 grid grid-cols-3 gap-2">
                 {[
                   {
-                    key: 'withdraw',
-                    label: '출금하기',
-                    icon: (
-                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                        <path d="M12 5v14m0 0 4-4m-4 4-4-4" strokeLinecap="round" strokeLinejoin="round" />
-                        <rect x="4" y="3" width="16" height="6" rx="2" />
-                      </svg>
-                    ),
-                  },
-                  {
                     key: 'deposit',
                     label: '입금하기',
                     icon: (
                       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
                         <path d="M12 19V5m0 0-4 4m4-4 4 4" strokeLinecap="round" strokeLinejoin="round" />
                         <rect x="4" y="15" width="16" height="4" rx="1.5" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    key: 'withdraw',
+                    label: '출금하기',
+                    icon: (
+                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path d="M12 5v14m0 0 4-4m-4 4-4-4" strokeLinecap="round" strokeLinejoin="round" />
+                        <rect x="4" y="3" width="16" height="6" rx="2" />
                       </svg>
                     ),
                   },
