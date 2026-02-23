@@ -88,6 +88,14 @@ type BuyOrderItem = {
     userAgent?: string;
     confirmedAt?: string;
   };
+  agentcode?: string;
+  agentName?: string;
+  agentLogo?: string;
+  agent?: {
+    agentcode?: string;
+    agentName?: string;
+    agentLogo?: string;
+  };
   store?: {
     storeName?: string;
     storeLogo?: string;
@@ -239,6 +247,20 @@ const getOrderExchangeRate = (order: BuyOrderItem) => {
 
   return 0;
 };
+
+const getOrderAgentCode = (order: BuyOrderItem) =>
+  String(order?.agent?.agentcode || order?.agentcode || (order as any)?.seller?.agentcode || '').trim();
+
+const getOrderAgentName = (order: BuyOrderItem) => {
+  const explicitName = String(order?.agent?.agentName || order?.agentName || '').trim();
+  if (explicitName) return explicitName;
+  const agentcode = getOrderAgentCode(order);
+  if (agentcode) return `에이전트 ${agentcode}`;
+  return '-';
+};
+
+const getOrderAgentLogo = (order: BuyOrderItem) =>
+  String(order?.agent?.agentLogo || order?.agentLogo || '').trim();
 
 const getPaymentRequestedRemainingMs = (order: BuyOrderItem, nowMs: number) => {
   const baseTimeSource = String(order?.paymentRequestedAt || order?.createdAt || '').trim();
@@ -1451,6 +1473,8 @@ export default function BuyOrderManagementPage() {
                     );
                     const sellerWalletAddress = String(order?.seller?.walletAddress || '').trim();
                     const buyerWalletAddress = String(order?.buyer?.walletAddress || order?.walletAddress || '').trim();
+                    const agentName = getOrderAgentName(order);
+                    const agentLogo = getOrderAgentLogo(order);
                     const sellerWalletKey = sellerWalletAddress ? normalizeWalletKey(sellerWalletAddress) : '';
                     const sellerWalletBalanceState = sellerWalletKey
                       ? escrowWalletBalanceByAddress[sellerWalletKey]
@@ -1632,6 +1656,22 @@ export default function BuyOrderManagementPage() {
                       <td className="px-3 py-3">
                         <div className="flex flex-col gap-2">
                           <div className="flex flex-col">
+                            <div className="mb-1 inline-flex max-w-full items-center gap-1.5">
+                              {agentLogo ? (
+                                <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white">
+                                  <span
+                                    className="h-full w-full bg-cover bg-center"
+                                    style={{ backgroundImage: `url(${encodeURI(agentLogo)})` }}
+                                    aria-label={agentName}
+                                  />
+                                </span>
+                              ) : (
+                                <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-[9px] font-bold text-slate-500">
+                                  A
+                                </span>
+                              )}
+                              <span className="truncate text-[11px] font-semibold text-slate-600">{agentName}</span>
+                            </div>
                             <span className="truncate text-base font-extrabold leading-tight text-slate-900">{order?.seller?.nickname || '-'}</span>
                             {sellerWalletAddress ? (
                               <button

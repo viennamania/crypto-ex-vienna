@@ -29,6 +29,7 @@ export default function P2PAgentStoreMemberManagementPage() {
   const [members, setMembers] = useState<AgentUserItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [copiedWalletAddress, setCopiedWalletAddress] = useState('');
 
   const loadData = useCallback(async () => {
     if (!agentcode) {
@@ -86,6 +87,21 @@ export default function P2PAgentStoreMemberManagementPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleCopyWalletAddress = useCallback(async (walletAddress: string) => {
+    const normalizedWalletAddress = String(walletAddress || '').trim();
+    if (!normalizedWalletAddress) return;
+
+    try {
+      await navigator.clipboard.writeText(normalizedWalletAddress);
+      setCopiedWalletAddress(normalizedWalletAddress);
+      window.setTimeout(() => {
+        setCopiedWalletAddress((prev) => (prev === normalizedWalletAddress ? '' : prev));
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to copy wallet address', error);
+    }
+  }, []);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalCount / PAGE_SIZE)),
@@ -255,13 +271,34 @@ export default function P2PAgentStoreMemberManagementPage() {
                       </td>
                     </tr>
                   ) : (
-                    members.map((member) => (
+                    members.map((member) => {
+                      const memberWalletAddress = String(member.walletAddress || '').trim();
+
+                      return (
                       <tr key={member.id || `${member.storecode}-${member.nickname}`} className="text-slate-700">
                         <td className="px-4 py-3">
                           <p className="font-semibold text-slate-900">{member.nickname || '-'}</p>
                           <p className="text-xs text-slate-500">입금자명 {member.buyerDepositName || '-'}</p>
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-600">{shortAddress(member.walletAddress)}</td>
+                        <td className="px-4 py-3 text-xs text-slate-600">
+                          {memberWalletAddress ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void handleCopyWalletAddress(memberWalletAddress);
+                              }}
+                              className="inline-flex items-center gap-1 font-semibold text-slate-600 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                              title={memberWalletAddress}
+                            >
+                              {shortAddress(memberWalletAddress)}
+                              {copiedWalletAddress === memberWalletAddress && (
+                                <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                              )}
+                            </button>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white text-[10px] font-bold text-slate-600">
@@ -291,7 +328,7 @@ export default function P2PAgentStoreMemberManagementPage() {
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600">{toDateTime(member.createdAt)}</td>
                       </tr>
-                    ))
+                    )})
                   )}
                 </tbody>
               </table>

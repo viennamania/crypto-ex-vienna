@@ -29,6 +29,7 @@ export type AgentUserItem = {
   avatar: string;
   nickname: string;
   walletAddress: string;
+  sellerEscrowWalletAddress: string;
   role: string;
   verified: boolean;
   createdAt: string;
@@ -224,6 +225,7 @@ const normalizeUser = (value: unknown): AgentUserItem => {
     avatar: toText(source.avatar) || toText(source.profileImage),
     nickname: toText(source.nickname),
     walletAddress: toText(source.walletAddress),
+    sellerEscrowWalletAddress: toText(seller.escrowWalletAddress) || toText(source.escrowWalletAddress),
     role: toText(source.role) || 'member',
     verified: source.verified === true,
     createdAt: toText(source.createdAt),

@@ -18,6 +18,9 @@ const toIsoDateBoundary = (value: unknown, isStart: boolean) => {
   return parsed.toISOString();
 };
 
+const normalizeAgentcode = (value: unknown) => String(value || '').trim();
+const toAgentcodeKey = (value: unknown) => normalizeAgentcode(value).toLowerCase();
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -228,12 +231,103 @@ export async function POST(request: NextRequest) {
         .toArray(),
     ]);
 
+    const pageAgentcodeKeys = Array.from(
+      new Set(
+        orders
+          .map((order: any) => toAgentcodeKey(order?.agentcode || order?.seller?.agentcode))
+          .filter(Boolean),
+      ),
+    );
+
+    const agentByCode = new Map<string, { agentcode: string; agentName: string; agentLogo: string }>();
+    if (pageAgentcodeKeys.length > 0) {
+      const agentsCollection = client.db(dbName).collection('agents');
+      const agentRows = await agentsCollection
+        .aggregate([
+          {
+            $addFields: {
+              normalizedAgentcode: {
+                $toLower: {
+                  $trim: {
+                    input: {
+                      $toString: { $ifNull: ['$agentcode', ''] },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          {
+            $match: {
+              normalizedAgentcode: { $in: pageAgentcodeKeys },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              agentcode: {
+                $trim: {
+                  input: {
+                    $toString: { $ifNull: ['$agentcode', ''] },
+                  },
+                },
+              },
+              agentName: {
+                $trim: {
+                  input: {
+                    $toString: { $ifNull: ['$agentName', ''] },
+                  },
+                },
+              },
+              agentLogo: {
+                $trim: {
+                  input: {
+                    $toString: { $ifNull: ['$agentLogo', ''] },
+                  },
+                },
+              },
+              normalizedAgentcode: 1,
+            },
+          },
+        ])
+        .toArray();
+
+      agentRows.forEach((item: any) => {
+        const key = toAgentcodeKey(item?.normalizedAgentcode || item?.agentcode);
+        if (!key) return;
+        agentByCode.set(key, {
+          agentcode: normalizeAgentcode(item?.agentcode),
+          agentName: String(item?.agentName || '').trim(),
+          agentLogo: String(item?.agentLogo || '').trim(),
+        });
+      });
+    }
+
+    const enrichedOrders = orders.map((order: any) => {
+      const agentcode = normalizeAgentcode(order?.agentcode || order?.seller?.agentcode);
+      const agentInfo = agentByCode.get(toAgentcodeKey(agentcode));
+
+      return {
+        ...order,
+        agentcode: agentcode || agentInfo?.agentcode || '',
+        agent: agentInfo
+          ? {
+              agentcode: agentInfo.agentcode || agentcode,
+              agentName: agentInfo.agentName || '',
+              agentLogo: agentInfo.agentLogo || '',
+            }
+          : undefined,
+        agentName: agentInfo?.agentName || '',
+        agentLogo: agentInfo?.agentLogo || '',
+      };
+    });
+
     const totalAmount = totalAmountRows?.[0] || {};
     const sellerSalesSummary = Array.isArray(sellerSalesRows) ? sellerSalesRows : [];
 
     return NextResponse.json({
       result: {
-        orders,
+        orders: enrichedOrders,
         totalCount,
         totalKrwAmount: Number(totalAmount?.totalKrwAmount || 0),
         totalUsdtAmount: Number(totalAmount?.totalUsdtAmount || 0),

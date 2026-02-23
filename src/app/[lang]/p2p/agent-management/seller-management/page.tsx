@@ -65,6 +65,7 @@ export default function P2PAgentSellerManagementPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [agent, setAgent] = useState<AgentSummary | null>(null);
   const [sellers, setSellers] = useState<AgentUserItem[]>([]);
+  const [copiedWalletAddress, setCopiedWalletAddress] = useState('');
 
   const loadData = useCallback(async () => {
     if (!agentcode) {
@@ -99,6 +100,21 @@ export default function P2PAgentSellerManagementPage() {
     }
   }, [agentcode]);
 
+  const handleCopyWalletAddress = useCallback(async (walletAddress: string) => {
+    const normalizedWalletAddress = String(walletAddress || '').trim();
+    if (!normalizedWalletAddress) return;
+
+    try {
+      await navigator.clipboard.writeText(normalizedWalletAddress);
+      setCopiedWalletAddress(normalizedWalletAddress);
+      window.setTimeout(() => {
+        setCopiedWalletAddress((prev) => (prev === normalizedWalletAddress ? '' : prev));
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to copy wallet address', error);
+    }
+  }, []);
+
   useEffect(() => {
     void loadData();
   }, [loadData]);
@@ -122,6 +138,7 @@ export default function P2PAgentSellerManagementPage() {
       return (
         seller.nickname.toLowerCase().includes(normalizedKeyword)
         || seller.walletAddress.toLowerCase().includes(normalizedKeyword)
+        || seller.sellerEscrowWalletAddress.toLowerCase().includes(normalizedKeyword)
         || seller.sellerStatus.toLowerCase().includes(normalizedKeyword)
       );
     });
@@ -281,7 +298,7 @@ export default function P2PAgentSellerManagementPage() {
                   setKeyword(event.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder="닉네임/지갑/상태 검색"
+                placeholder="닉네임/지갑/에스크로/상태 검색"
                 className="h-9 w-full max-w-xs rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
               />
             </div>
@@ -299,11 +316,12 @@ export default function P2PAgentSellerManagementPage() {
 
           {!loading && !error && (
             <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-              <table className="min-w-[980px] w-full text-sm">
+              <table className="min-w-[1120px] w-full text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                   <tr>
                     <th className="px-4 py-3">판매자</th>
                     <th className="px-4 py-3">지갑주소</th>
+                    <th className="px-4 py-3">에스크로 지갑주소</th>
                     <th className="px-4 py-3">판매 상태</th>
                     <th className="px-4 py-3">인증</th>
                     <th className="px-4 py-3 text-right">판매 환율</th>
@@ -313,12 +331,16 @@ export default function P2PAgentSellerManagementPage() {
                 <tbody className="divide-y divide-slate-100">
                   {filteredSellers.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">
+                      <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
                         표시할 판매자가 없습니다.
                       </td>
                     </tr>
                   ) : (
-                    paginatedSellers.map((seller) => (
+                    paginatedSellers.map((seller) => {
+                      const sellerWalletAddress = String(seller.walletAddress || '').trim();
+                      const sellerEscrowWalletAddress = String(seller.sellerEscrowWalletAddress || '').trim();
+
+                      return (
                       <tr key={seller.id || `${seller.storecode}-${seller.walletAddress}-${seller.nickname}`} className="text-slate-700">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
@@ -338,7 +360,44 @@ export default function P2PAgentSellerManagementPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-600">{shortAddress(seller.walletAddress)}</td>
+                        <td className="px-4 py-3 text-xs text-slate-600">
+                          {sellerWalletAddress ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void handleCopyWalletAddress(sellerWalletAddress);
+                              }}
+                              className="inline-flex items-center gap-1 font-semibold text-slate-600 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                              title={sellerWalletAddress}
+                            >
+                              {shortAddress(sellerWalletAddress)}
+                              {copiedWalletAddress === sellerWalletAddress && (
+                                <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                              )}
+                            </button>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-600">
+                          {sellerEscrowWalletAddress ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void handleCopyWalletAddress(sellerEscrowWalletAddress);
+                              }}
+                              className="inline-flex items-center gap-1 font-semibold text-slate-600 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                              title={sellerEscrowWalletAddress}
+                            >
+                              {shortAddress(sellerEscrowWalletAddress)}
+                              {copiedWalletAddress === sellerEscrowWalletAddress && (
+                                <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                              )}
+                            </button>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-xs">
                           <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${resolveSellerStatusBadgeClass(seller.sellerStatus)}`}>
                             {resolveSellerStatusLabel(seller.sellerStatus)}
@@ -359,7 +418,7 @@ export default function P2PAgentSellerManagementPage() {
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600">{toDateTime(seller.createdAt)}</td>
                       </tr>
-                    ))
+                    )})
                   )}
                 </tbody>
               </table>
