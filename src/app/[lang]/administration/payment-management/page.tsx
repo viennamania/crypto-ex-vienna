@@ -677,8 +677,7 @@ export default function AdministrationPaymentManagementPage() {
                   <th className="px-4 py-3">트랜잭션</th>
                   <th className="px-4 py-3">가맹점</th>
                   <th className="px-4 py-3">회원/결제지갑/이름</th>
-                  <th className="px-4 py-3 text-right">수량</th>
-                  <th className="px-4 py-3 text-right">금액</th>
+                  <th className="px-4 py-3 text-right">수량/금액</th>
                   <th className="px-4 py-3">결제시각</th>
                   <th className="px-4 py-3 text-center">결제처리</th>
                 </tr>
@@ -686,7 +685,7 @@ export default function AdministrationPaymentManagementPage() {
               <tbody className="divide-y divide-slate-100">
                 {payments.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
                       표시할 결제가 없습니다.
                     </td>
                   </tr>
@@ -744,11 +743,13 @@ export default function AdministrationPaymentManagementPage() {
                           <p className="mt-1 text-xs text-slate-500">결제지갑 {shortAddress(payment.sellerWalletAddress || '')}</p>
                           <p className="mt-1 text-xs text-slate-500">이름 {payment.buyerAccountHolder || '-'}</p>
                         </td>
-                        <td className="px-4 py-3 text-right text-sm font-extrabold tabular-nums text-slate-900 sm:text-base">
-                          {formatUsdtQuantity(payment.usdtAmount)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm font-extrabold tabular-nums text-slate-900 sm:text-base">
-                          {formatKrw(payment.krwAmount)}
+                        <td className="px-4 py-3 text-right tabular-nums text-slate-900">
+                          <p className="text-sm font-extrabold sm:text-base">
+                            {formatUsdtQuantity(payment.usdtAmount)}
+                          </p>
+                          <p className="mt-0.5 text-sm font-extrabold sm:text-base">
+                            {formatKrw(payment.krwAmount)}
+                          </p>
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600">
                           {toDateTime(payment.paymentConfirmedAt || payment.createdAt)}

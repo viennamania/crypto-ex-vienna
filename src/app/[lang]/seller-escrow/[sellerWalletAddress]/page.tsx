@@ -842,6 +842,17 @@ type DailyTradeApiItem = {
   totalKrwAmount?: number;
 };
 
+type BuyerTradeSummaryCardItem = {
+  key: string;
+  buyerDisplayName: string;
+  buyerAvatarUrl: string;
+  isMaskedBuyerInfo: boolean;
+  totalUsdtAmount: number;
+  totalKrwAmount: number;
+  orderCount: number;
+  latestCreatedAt: string;
+};
+
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const KOREAN_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -2014,6 +2025,77 @@ export default function Index({ params }: any) {
     () => myActiveTradingOrders.filter((item) => item?.audioOn !== false),
     [myActiveTradingOrders],
   );
+  const buyerTradeSummaryCards = useMemo(() => {
+    const summaryMap = new Map<string, BuyerTradeSummaryCardItem>();
+
+    buyOrders.forEach((item, index) => {
+      const isMaskedBuyerInfo = Boolean(
+        typeof item?.buyerInfoMasked === 'boolean'
+          ? item.buyerInfoMasked
+          : tradeHistoryBuyerMaskedByApi,
+      );
+      const rawBuyerName = String(
+        item?.buyer?.nickname
+        || item?.nickname
+        || item?.buyer?.depositName
+        || '구매자',
+      ).trim() || '구매자';
+      const buyerDisplayName = isMaskedBuyerInfo
+        ? ensureMaskedBuyerName(rawBuyerName)
+        : rawBuyerName;
+      const buyerWalletAddress = String(item?.buyer?.walletAddress || item?.walletAddress || '').trim();
+      const buyerAvatarUrl = isMaskedBuyerInfo
+        ? ''
+        : String(item?.buyer?.avatar || item?.avatar || '').trim();
+      const normalizedKeySource = isMaskedBuyerInfo
+        ? buyerDisplayName
+        : (buyerWalletAddress || buyerDisplayName);
+      const summaryKey = normalizedKeySource
+        ? normalizedKeySource.toLowerCase()
+        : `buyer-${index}`;
+      const usdtAmount = Number(item?.usdtAmount || 0);
+      const krwAmount = Number(item?.krwAmount || 0);
+      const createdAt = String(item?.createdAt || '').trim();
+
+      const existing = summaryMap.get(summaryKey);
+      if (existing) {
+        existing.totalUsdtAmount += Number.isFinite(usdtAmount) ? usdtAmount : 0;
+        existing.totalKrwAmount += Number.isFinite(krwAmount) ? krwAmount : 0;
+        existing.orderCount += 1;
+        if (!existing.buyerAvatarUrl && buyerAvatarUrl) {
+          existing.buyerAvatarUrl = buyerAvatarUrl;
+        }
+        if ((!existing.buyerDisplayName || existing.buyerDisplayName === '구매자') && buyerDisplayName) {
+          existing.buyerDisplayName = buyerDisplayName;
+        }
+        if (createdAt) {
+          const nextTime = new Date(createdAt).getTime();
+          const currentTime = new Date(existing.latestCreatedAt || '').getTime();
+          if (Number.isFinite(nextTime) && (!Number.isFinite(currentTime) || nextTime > currentTime)) {
+            existing.latestCreatedAt = createdAt;
+          }
+        }
+        return;
+      }
+
+      summaryMap.set(summaryKey, {
+        key: summaryKey,
+        buyerDisplayName,
+        buyerAvatarUrl,
+        isMaskedBuyerInfo,
+        totalUsdtAmount: Number.isFinite(usdtAmount) ? usdtAmount : 0,
+        totalKrwAmount: Number.isFinite(krwAmount) ? krwAmount : 0,
+        orderCount: 1,
+        latestCreatedAt: createdAt,
+      });
+    });
+
+    return Array.from(summaryMap.values()).sort((a, b) => (
+      (b.totalUsdtAmount - a.totalUsdtAmount)
+      || (b.totalKrwAmount - a.totalKrwAmount)
+      || (b.orderCount - a.orderCount)
+    ));
+  }, [buyOrders, tradeHistoryBuyerMaskedByApi]);
   const hasActiveTradingAudioEnabledOrders = activeTradingAudioEnabledOrders.length > 0;
   const activeOrderCompleteFeePreview = useMemo(() => {
     if (!selectedActivePaymentRequestedOrder) {
@@ -10076,6 +10158,68 @@ const fetchBuyOrders = async () => {
             */}
             
           </div>
+
+
+          {buyerTradeSummaryCards.length > 0 && (
+            <section className="mt-6 w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_18px_45px_-34px_rgba(15,23,42,0.45)]">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 bg-slate-50/90 px-4 py-2.5">
+                <p className="text-sm font-bold tracking-wide text-slate-900">구매자 합산 요약</p>
+                <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                  {buyerTradeSummaryCards.length.toLocaleString()}명
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-2.5 p-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                {buyerTradeSummaryCards.map((summaryItem, summaryIndex) => (
+                  <article
+                    key={`buyer-summary-${summaryItem.key}-${summaryIndex}`}
+                    className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-[0_14px_32px_-28px_rgba(15,23,42,0.55)]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-slate-600">
+                        {summaryItem.buyerAvatarUrl ? (
+                          <span
+                            className="h-full w-full bg-cover bg-center"
+                            style={{ backgroundImage: `url(${encodeURI(summaryItem.buyerAvatarUrl)})` }}
+                            aria-label={summaryItem.buyerDisplayName}
+                          />
+                        ) : (
+                          summaryItem.buyerDisplayName.slice(0, 1) || '?'
+                        )}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                          구매자 아이디
+                        </p>
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {summaryItem.buyerDisplayName}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 px-2 py-1.5">
+                        <p className="text-[10px] font-semibold text-slate-500">구매량</p>
+                        <p className="text-right text-sm font-bold text-emerald-700">
+                          {formatUsdtDisplay(summaryItem.totalUsdtAmount)} USDT
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 px-2 py-1.5">
+                        <p className="text-[10px] font-semibold text-slate-500">구매금액</p>
+                        <p className="text-right text-sm font-bold text-slate-900">
+                          {formatKrwValue(summaryItem.totalKrwAmount)}원
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-500">
+                      <span>거래 {summaryItem.orderCount.toLocaleString()}건</span>
+                      <span>{formatTradeHistoryTime(summaryItem.latestCreatedAt)}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
 
 
           <div className="mt-6 w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-[0_28px_70px_-44px_rgba(15,23,42,0.6)]">
