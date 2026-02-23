@@ -9179,9 +9179,7 @@ const fetchBuyOrders = async () => {
 
                       {(!isMySellerCard(seller.walletAddress) && seller.seller?.buyOrder?.status === 'paymentRequested') ? (
                         (() => {
-                          const currentTradeOrder =
-                            getPrivateTradeOrderForSeller(seller.walletAddress)
-                            || normalizePrivateTradeOrderSummary(seller.seller?.buyOrder);
+                          const currentTradeOrder = getPrivateTradeOrderForSeller(seller.walletAddress);
                           if (!currentTradeOrder) {
                             return null;
                           }
@@ -9501,7 +9499,7 @@ const fetchBuyOrders = async () => {
                           {/* if seller.walletAddress is equal to address, show this section */}
                           <div className={'w-full flex flex-col items-start justify-center gap-2'}>
 
-                            {seller.walletAddress && isSameWalletAddress(seller.walletAddress, sellerWalletAddressParam) && (
+                            {isOwnerSeller && seller.walletAddress && isSameWalletAddress(seller.walletAddress, sellerWalletAddressParam) && (
                               <div className="w-full flex flex-col items-start justify-center gap-2 rounded-xl border border-slate-200 bg-white/90 p-3">
                                 <div className="w-full rounded-lg border border-sky-200 bg-sky-50/80 px-3 py-2">
                                   <span className="text-[11px] font-bold tracking-[0.14em] text-sky-700">
@@ -10835,7 +10833,7 @@ const fetchBuyOrders = async () => {
                     />
                   </svg>
                 </span>
-                <span className="text-sm font-bold tracking-wide">거래내역(TID)</span>
+                <span className="text-sm font-bold tracking-wide">거래내역</span>
                 <span className="rounded-full border border-white/25 bg-white/10 px-2 py-0.5 text-[10px] font-semibold">
                   최신순
                 </span>
@@ -10886,7 +10884,7 @@ const fetchBuyOrders = async () => {
               <table className="min-w-[980px] w-full table-auto border-collapse text-sm text-slate-700">
                 <thead className="bg-slate-100/95 text-[11px] uppercase tracking-[0.16em] text-slate-500">
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold">거래번호</th>
+                    <th className="px-4 py-3 text-left font-semibold">거래번호(TID)</th>
                     <th className="px-4 py-3 text-left font-semibold">거래시간</th>
                     <th className="px-4 py-3 text-left font-semibold">구매자</th>
                     <th className="px-4 py-3 text-right font-semibold">USDT</th>

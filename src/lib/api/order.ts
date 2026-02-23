@@ -3722,6 +3722,16 @@ export async function cancelPrivateBuyOrderByBuyer(
   const usersCollection = client.db(dbName).collection('users');
   const buyerReputationLogsCollection = client.db(dbName).collection('buyer_reputation_logs');
   const objectId = new ObjectId(orderId);
+  const escapeRegex = (value: string) =>
+    value.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const toWalletRegex = (value: string) => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return null;
+    return {
+      $regex: `^${escapeRegex(trimmed)}$`,
+      $options: 'i',
+    };
+  };
 
   const order = await buyordersCollection.findOne<any>(
     { _id: objectId },
@@ -3862,22 +3872,11 @@ export async function cancelPrivateBuyOrderByBuyer(
   const cancelledByNickname = String(order?.buyer?.nickname || '').trim();
   const normalizedCancelledByIpAddress = String(cancelledByIpAddress || '').trim();
   const normalizedCancelledByUserAgent = String(cancelledByUserAgent || '').trim();
-  const buyerWalletCandidates = Array.from(
-    new Set([
-      String(buyerWalletAddress).trim(),
-      String(buyerWalletAddress).trim().toLowerCase(),
-      String(buyerWalletAddress).trim().toUpperCase(),
-    ]),
-  );
   const cancelResult = await buyordersCollection.updateOne(
     {
       _id: objectId,
       privateSale: true,
       status: 'paymentRequested',
-      $or: [
-        { walletAddress: { $in: buyerWalletCandidates } },
-        { 'buyer.walletAddress': { $in: buyerWalletCandidates } },
-      ],
     },
     {
       $set: {
@@ -3898,51 +3897,56 @@ export async function cancelPrivateBuyOrderByBuyer(
   );
 
   if (cancelResult.modifiedCount !== 1) {
-    return false;
-  }
-
-  const sellerWalletCandidates = Array.from(
-    new Set(
-      [
-        typeof sellerWalletAddress === 'string' ? sellerWalletAddress.trim() : '',
-        typeof order?.seller?.walletAddress === 'string' ? order.seller.walletAddress.trim() : '',
-      ].filter(Boolean),
-    ),
-  );
-
-  if (sellerWalletCandidates.length > 0) {
-    await usersCollection.updateOne(
-      {
-        walletAddress: { $in: sellerWalletCandidates },
-        storecode: 'admin',
-        'seller.buyOrder._id': objectId,
-      },
-      {
-        $set: {
-          'seller.buyOrder.status': 'cancelled',
-          'seller.buyOrder.cancelledAt': now,
-          'seller.buyOrder.cancelTradeReason': '구매자 요청 취소',
-          'seller.buyOrder.canceller': cancelledByRole,
-          'seller.buyOrder.cancelledByRole': cancelledByRole,
-          'seller.buyOrder.cancelledByWalletAddress': cancelledByWalletAddress,
-          'seller.buyOrder.cancelledByNickname': cancelledByNickname,
-          'seller.buyOrder.cancelledByIpAddress': normalizedCancelledByIpAddress,
-          'seller.buyOrder.cancelledByUserAgent': normalizedCancelledByUserAgent,
-          'seller.buyOrder.rollbackUsdtAmount': rollbackUsdtAmount,
-          'seller.buyOrder.buyer.rollbackTransactionHash': rollbackTransactionHash,
-          'seller.buyOrder.seller.rollbackTransactionHash': rollbackTransactionHash,
-        },
-      },
+    const latestOrder = await buyordersCollection.findOne<{ status?: string }>(
+      { _id: objectId },
+      { projection: { status: 1 } },
     );
+    if (latestOrder?.status === 'cancelled') {
+      return true;
+    }
+    console.error('cancelPrivateBuyOrderByBuyer: failed to update order status after rollback transfer', {
+      orderId,
+      tradeId: String(order?.tradeId || ''),
+      matchedCount: cancelResult.matchedCount,
+      modifiedCount: cancelResult.modifiedCount,
+      buyerWalletAddress: String(orderBuyerWalletAddress || buyerWalletAddress || ''),
+    });
+    return false;
   }
 
   await usersCollection.updateOne(
     {
-      walletAddress: orderBuyerWalletAddress,
       storecode: 'admin',
+      'seller.buyOrder._id': objectId,
     },
-    { $set: { 'buyer.buyOrderStatus': 'cancelled' } },
+    {
+      $set: {
+        'seller.buyOrder.status': 'cancelled',
+        'seller.buyOrder.cancelledAt': now,
+        'seller.buyOrder.cancelTradeReason': '구매자 요청 취소',
+        'seller.buyOrder.canceller': cancelledByRole,
+        'seller.buyOrder.cancelledByRole': cancelledByRole,
+        'seller.buyOrder.cancelledByWalletAddress': cancelledByWalletAddress,
+        'seller.buyOrder.cancelledByNickname': cancelledByNickname,
+        'seller.buyOrder.cancelledByIpAddress': normalizedCancelledByIpAddress,
+        'seller.buyOrder.cancelledByUserAgent': normalizedCancelledByUserAgent,
+        'seller.buyOrder.rollbackUsdtAmount': rollbackUsdtAmount,
+        'seller.buyOrder.buyer.rollbackTransactionHash': rollbackTransactionHash,
+        'seller.buyOrder.seller.rollbackTransactionHash': rollbackTransactionHash,
+      },
+    },
   );
+
+  const buyerWalletRegex = toWalletRegex(orderBuyerWalletAddress);
+  if (buyerWalletRegex) {
+    await usersCollection.updateOne(
+      {
+        walletAddress: buyerWalletRegex,
+        storecode: 'admin',
+      },
+      { $set: { 'buyer.buyOrderStatus': 'cancelled', buyOrderStatus: 'cancelled' } },
+    );
+  }
 
   // Buyer reputation update + dedicated history log collection.
   // Keep cancellation success independent from reputation logging failures.
