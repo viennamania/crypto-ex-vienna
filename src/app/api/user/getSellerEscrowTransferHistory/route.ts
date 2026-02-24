@@ -868,7 +868,7 @@ export async function POST(request: NextRequest) {
         chainConfig.usdtDecimals,
       );
     }
-    const transfersWithRunningBalance = transfersAsc;
+    const transfersWithRunningBalance = [...transfersAsc].reverse();
 
     const totalItems = transfersWithRunningBalance.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / limit));
