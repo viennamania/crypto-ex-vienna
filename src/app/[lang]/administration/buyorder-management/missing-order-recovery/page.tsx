@@ -1587,7 +1587,7 @@ export default function MissingOrderRecoveryPage() {
                   onChange={(event) => setShowCancelledExcludedSeparately(event.target.checked)}
                   className="h-3.5 w-3.5 rounded border-slate-300 text-slate-900"
                 />
-                cancelled 주문 별도 표시
+                취소처리한 주문 별도 표시
               </label>
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <input
