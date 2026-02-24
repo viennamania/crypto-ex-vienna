@@ -111,16 +111,24 @@ export async function POST(request: NextRequest) {
       .limit(limit)
       .toArray();
 
-    let excludedWithRollbackTxHashCount = 0;
-    let missingEscrowAddressCount = 0;
-    let missingExpectedRollbackAmountCount = 0;
+  let excludedWithRollbackTxHashCount = 0;
+  let excludedAlreadyRecoveredCount = 0;
+  let missingEscrowAddressCount = 0;
+  let missingExpectedRollbackAmountCount = 0;
 
-    const candidates = rows.flatMap((order) => {
-      const rollbackTxHash = resolveRollbackTxHash(order);
-      if (rollbackTxHash) {
-        excludedWithRollbackTxHashCount += 1;
-        return [];
-      }
+  const candidates = rows.flatMap((order) => {
+    const rollbackTxHash = resolveRollbackTxHash(order);
+    const rollbackTransferSkipped = order?.rollbackTransferSkipped === true;
+    const rollbackTransferSkipReason = String(order?.rollbackTransferSkipReason || '').trim();
+
+    if (rollbackTxHash) {
+      excludedWithRollbackTxHashCount += 1;
+      return [];
+    }
+    if (rollbackTransferSkipped && rollbackTransferSkipReason === 'ALREADY_RECOVERED') {
+      excludedAlreadyRecoveredCount += 1;
+      return [];
+    }
 
       const orderId = String(order?._id || '').trim();
       const tradeId = String(order?.tradeId || '').trim();
@@ -175,6 +183,7 @@ export async function POST(request: NextRequest) {
           scannedCancelledOrders: rows.length,
           missingRollbackTransferCount: candidates.length,
           excludedWithRollbackTxHashCount,
+          excludedAlreadyRecoveredCount,
           missingEscrowAddressCount,
           missingExpectedRollbackAmountCount,
           inspectedAt: new Date().toISOString(),

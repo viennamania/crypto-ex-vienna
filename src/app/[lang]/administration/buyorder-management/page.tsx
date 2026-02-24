@@ -316,6 +316,21 @@ const getOrderExchangeRate = (order: BuyOrderItem) => {
   return 0;
 };
 
+const getDisplayKrwAmount = (order: BuyOrderItem) => {
+  const storedKrwAmount = Math.floor(toFiniteNumber(order?.krwAmount));
+  if (storedKrwAmount <= 0) return 0;
+
+  const usdtAmount = roundDownUsdtSix(toFiniteNumber(order?.usdtAmount));
+  const rate = getOrderExchangeRate(order);
+  if (usdtAmount <= 0 || rate <= 0) return storedKrwAmount;
+
+  const recalculatedKrwAmount = Math.round(usdtAmount * rate);
+  if (Math.abs(recalculatedKrwAmount - storedKrwAmount) <= 1) {
+    return recalculatedKrwAmount;
+  }
+  return storedKrwAmount;
+};
+
 const getOrderAgentCode = (order: BuyOrderItem) =>
   String(order?.agent?.agentcode || order?.agentcode || (order as any)?.seller?.agentcode || '').trim();
 
@@ -1020,7 +1035,14 @@ export default function BuyOrderManagementPage() {
       }
 
       const txHash = String(payload?.result?.transactionHash || '').trim();
-      toast.success(txHash ? `주문 취소 완료 (TX: ${shortWallet(txHash)})` : '주문 취소 완료');
+      const transferSkipped = payload?.result?.transferSkipped === true;
+      const transferSkipReason = String(payload?.result?.transferSkipReason || '').trim();
+
+      if (transferSkipped && transferSkipReason === 'ALREADY_RECOVERED') {
+        toast.success('주문 취소 완료 (이미 회수됨, 전송 생략)');
+      } else {
+        toast.success(txHash ? `주문 취소 완료 (TX: ${shortWallet(txHash)})` : '주문 취소 완료');
+      }
 
       setCancelTargetOrder(null);
       await fetchLatestBuyOrders('query');
@@ -1845,8 +1867,8 @@ export default function BuyOrderManagementPage() {
                       </td>
                       <td className="px-3 py-3 text-right">
                         <div className="flex flex-col items-end">
-                          <span className="text-base font-extrabold leading-tight text-slate-900">{formatKrw(order?.krwAmount)} KRW</span>
-                          <span className="text-sm font-bold text-slate-600">{formatUsdt(order?.usdtAmount)} USDT</span>
+                          <span className="text-base font-extrabold leading-tight text-slate-900">{formatKrw(getDisplayKrwAmount(order))} KRW</span>
+                          <span className="text-sm font-bold text-slate-600">{formatUsdtSix(order?.usdtAmount)} USDT</span>
                           <span className="text-[11px] font-semibold text-slate-500">
                             환율 {formatRate(getOrderExchangeRate(order))}
                           </span>

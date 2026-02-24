@@ -409,6 +409,27 @@ const toRateOrZero = (value: unknown) => {
   return numeric;
 };
 
+const calculateKrwAmountFromUsdtAndRate = ({
+  usdtAmount,
+  rate,
+}: {
+  usdtAmount: unknown;
+  rate: unknown;
+}) => {
+  const normalizedUsdtAmount = toUsdtAmountOrZero(usdtAmount);
+  const normalizedRate = toRateOrZero(rate);
+  if (normalizedUsdtAmount <= 0 || normalizedRate <= 0) {
+    return 0;
+  }
+  const calculated = normalizedUsdtAmount * normalizedRate;
+  if (!Number.isFinite(calculated) || calculated <= 0) {
+    return 0;
+  }
+  return Math.round(calculated);
+};
+
+const PRIVATE_ORDER_KRW_INPUT_TOLERANCE_WON = 1;
+
 const calculateUsdtAmountFromKrwAndRate = ({
   krwAmount,
   rate,
@@ -4618,6 +4639,8 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   success: boolean;
   transactionHash?: string;
   cancelledAt?: string;
+  transferSkipped?: boolean;
+  transferSkipReason?: string;
   error?: string;
 }> {
   if (!ObjectId.isValid(orderId)) {
@@ -4706,6 +4729,8 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   let releaseTransactionHash = '';
   let rollbackUsdtAmount = plannedRollbackUsdtAmount;
   let rollbackRawAmount = '';
+  let transferSkipped = false;
+  let transferSkipReason = '';
   try {
     const transferConfig = resolveUsdtTransferConfig();
     const usdtDecimals = resolveUsdtDecimals();
@@ -4731,61 +4756,69 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
       address: buyerEscrowWalletAddress,
     });
     if (rawBuyerEscrowUsdtBalance <= 0n) {
-      throw new Error('buyer escrow wallet balance is empty');
-    }
+      transferSkipped = true;
+      transferSkipReason = 'ALREADY_RECOVERED';
+      rollbackUsdtAmount = plannedRollbackUsdtAmount;
+      rollbackRawAmount = '';
+      console.warn('cancelPrivateBuyOrderByAdminToBuyer: buyer escrow already empty, skip release transfer', {
+        orderId,
+        buyerEscrowWalletAddress,
+        sellerEscrowWalletAddress,
+      });
+    } else {
+      rollbackRawAmount = rawBuyerEscrowUsdtBalance.toString();
+      rollbackUsdtAmount = convertRawUsdtToDisplayAmount(rawBuyerEscrowUsdtBalance, usdtDecimals);
+      const rollbackTransferAmount = formatRawUsdtAmount(rawBuyerEscrowUsdtBalance, usdtDecimals);
 
-    rollbackRawAmount = rawBuyerEscrowUsdtBalance.toString();
-    rollbackUsdtAmount = convertRawUsdtToDisplayAmount(rawBuyerEscrowUsdtBalance, usdtDecimals);
-    const rollbackTransferAmount = formatRawUsdtAmount(rawBuyerEscrowUsdtBalance, usdtDecimals);
-
-    const releaseTransaction = transfer({
-      contract: usdtContract,
-      to: sellerEscrowWalletAddress,
-      amount: rollbackTransferAmount,
-    });
-
-    const { transactionId } = await buyerEscrowWallet.enqueueTransaction({
-      transaction: releaseTransaction,
-    });
-
-    const hashResult = await Engine.waitForTransactionHash({
-      client: thirdwebClient,
-      transactionId,
-      timeoutInSeconds: 90,
-    });
-    const txHash = typeof hashResult?.transactionHash === 'string' ? hashResult.transactionHash : '';
-    if (!txHash) {
-      throw new Error('empty release transaction hash');
-    }
-
-    let transferConfirmed = false;
-    for (let i = 0; i < 25; i += 1) {
-      const txStatus = await Engine.getTransactionStatus({
-        client: thirdwebClient,
-        transactionId,
+      const releaseTransaction = transfer({
+        contract: usdtContract,
+        to: sellerEscrowWalletAddress,
+        amount: rollbackTransferAmount,
       });
 
-      if (txStatus.status === 'FAILED') {
-        throw new Error(txStatus.error || 'release transfer failed');
+      const { transactionId } = await buyerEscrowWallet.enqueueTransaction({
+        transaction: releaseTransaction,
+      });
+
+      const hashResult = await Engine.waitForTransactionHash({
+        client: thirdwebClient,
+        transactionId,
+        timeoutInSeconds: 90,
+      });
+      const txHash = typeof hashResult?.transactionHash === 'string' ? hashResult.transactionHash : '';
+      if (!txHash) {
+        throw new Error('empty release transaction hash');
       }
 
-      if (txStatus.status === 'CONFIRMED') {
-        if (txStatus.onchainStatus !== 'SUCCESS') {
-          throw new Error(`release transfer reverted: ${txStatus.onchainStatus}`);
+      let transferConfirmed = false;
+      for (let i = 0; i < 25; i += 1) {
+        const txStatus = await Engine.getTransactionStatus({
+          client: thirdwebClient,
+          transactionId,
+        });
+
+        if (txStatus.status === 'FAILED') {
+          throw new Error(txStatus.error || 'release transfer failed');
         }
-        releaseTransactionHash =
-          typeof txStatus.transactionHash === 'string' && txStatus.transactionHash
-            ? txStatus.transactionHash
-            : txHash;
-        transferConfirmed = true;
-        break;
+
+        if (txStatus.status === 'CONFIRMED') {
+          if (txStatus.onchainStatus !== 'SUCCESS') {
+            throw new Error(`release transfer reverted: ${txStatus.onchainStatus}`);
+          }
+          releaseTransactionHash =
+            typeof txStatus.transactionHash === 'string' && txStatus.transactionHash
+              ? txStatus.transactionHash
+              : txHash;
+          transferConfirmed = true;
+          break;
+        }
+
+        await waitMs(1500);
       }
 
-      await waitMs(1500);
-    }
-
-    if (!transferConfirmed) {
-      throw new Error('release transfer confirmation timeout');
+      if (!transferConfirmed) {
+        throw new Error('release transfer confirmation timeout');
+      }
     }
   } catch (error) {
     console.error('cancelPrivateBuyOrderByAdminToBuyer: release transfer failed', error);
@@ -4806,6 +4839,26 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   const sellerWalletCandidates = toWalletCandidates(
     typeof order?.seller?.walletAddress === 'string' ? order.seller.walletAddress : '',
   );
+  const orderUpdateSet: Record<string, unknown> = {
+    status: 'cancelled',
+    cancelledAt: now,
+    cancelTradeReason,
+    canceller: normalizedCancelledByRole,
+    cancelledByRole: normalizedCancelledByRole,
+    cancelledByWalletAddress,
+    cancelledByNickname: normalizedCancelledByNickname,
+    cancelledByIpAddress: normalizedCancelledByIpAddress,
+    cancelledByUserAgent: normalizedCancelledByUserAgent,
+    rollbackUsdtAmount,
+    rollbackRawAmount,
+    rollbackTransferSkipped: transferSkipped,
+    rollbackTransferSkipReason: transferSkipReason,
+  };
+  if (releaseTransactionHash) {
+    orderUpdateSet.cancelReleaseTransactionHash = releaseTransactionHash;
+    orderUpdateSet['buyer.releaseTransactionHash'] = releaseTransactionHash;
+    orderUpdateSet['seller.releaseTransactionHash'] = releaseTransactionHash;
+  }
 
   const cancelResult = await buyordersCollection.updateOne(
     {
@@ -4814,22 +4867,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
       status: 'paymentRequested',
     },
     {
-      $set: {
-        status: 'cancelled',
-        cancelledAt: now,
-        cancelTradeReason,
-        canceller: normalizedCancelledByRole,
-        cancelledByRole: normalizedCancelledByRole,
-        cancelledByWalletAddress,
-        cancelledByNickname: normalizedCancelledByNickname,
-        cancelledByIpAddress: normalizedCancelledByIpAddress,
-        cancelledByUserAgent: normalizedCancelledByUserAgent,
-        rollbackUsdtAmount,
-        rollbackRawAmount,
-        cancelReleaseTransactionHash: releaseTransactionHash,
-        'buyer.releaseTransactionHash': releaseTransactionHash,
-        'seller.releaseTransactionHash': releaseTransactionHash,
-      },
+      $set: orderUpdateSet,
     },
   );
 
@@ -4838,6 +4876,27 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   }
 
   if (sellerWalletCandidates.length > 0) {
+    const sellerBuyOrderUpdateSet: Record<string, unknown> = {
+      'seller.buyOrder.status': 'cancelled',
+      'seller.buyOrder.cancelledAt': now,
+      'seller.buyOrder.cancelTradeReason': cancelTradeReason,
+      'seller.buyOrder.canceller': normalizedCancelledByRole,
+      'seller.buyOrder.cancelledByRole': normalizedCancelledByRole,
+      'seller.buyOrder.cancelledByWalletAddress': cancelledByWalletAddress,
+      'seller.buyOrder.cancelledByNickname': normalizedCancelledByNickname,
+      'seller.buyOrder.cancelledByIpAddress': normalizedCancelledByIpAddress,
+      'seller.buyOrder.cancelledByUserAgent': normalizedCancelledByUserAgent,
+      'seller.buyOrder.rollbackUsdtAmount': rollbackUsdtAmount,
+      'seller.buyOrder.rollbackRawAmount': rollbackRawAmount,
+      'seller.buyOrder.rollbackTransferSkipped': transferSkipped,
+      'seller.buyOrder.rollbackTransferSkipReason': transferSkipReason,
+    };
+    if (releaseTransactionHash) {
+      sellerBuyOrderUpdateSet['seller.buyOrder.cancelReleaseTransactionHash'] = releaseTransactionHash;
+      sellerBuyOrderUpdateSet['seller.buyOrder.buyer.releaseTransactionHash'] = releaseTransactionHash;
+      sellerBuyOrderUpdateSet['seller.buyOrder.seller.releaseTransactionHash'] = releaseTransactionHash;
+    }
+
     await usersCollection.updateOne(
       {
         walletAddress: { $in: sellerWalletCandidates },
@@ -4845,22 +4904,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
         'seller.buyOrder._id': objectId,
       },
       {
-        $set: {
-          'seller.buyOrder.status': 'cancelled',
-          'seller.buyOrder.cancelledAt': now,
-          'seller.buyOrder.cancelTradeReason': cancelTradeReason,
-          'seller.buyOrder.canceller': normalizedCancelledByRole,
-          'seller.buyOrder.cancelledByRole': normalizedCancelledByRole,
-          'seller.buyOrder.cancelledByWalletAddress': cancelledByWalletAddress,
-          'seller.buyOrder.cancelledByNickname': normalizedCancelledByNickname,
-          'seller.buyOrder.cancelledByIpAddress': normalizedCancelledByIpAddress,
-          'seller.buyOrder.cancelledByUserAgent': normalizedCancelledByUserAgent,
-          'seller.buyOrder.rollbackUsdtAmount': rollbackUsdtAmount,
-          'seller.buyOrder.rollbackRawAmount': rollbackRawAmount,
-          'seller.buyOrder.cancelReleaseTransactionHash': releaseTransactionHash,
-          'seller.buyOrder.buyer.releaseTransactionHash': releaseTransactionHash,
-          'seller.buyOrder.seller.releaseTransactionHash': releaseTransactionHash,
-        },
+        $set: sellerBuyOrderUpdateSet,
       },
     );
   }
@@ -4885,6 +4929,8 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
     success: true,
     transactionHash: releaseTransactionHash,
     cancelledAt: now,
+    transferSkipped,
+    transferSkipReason,
   };
 }
 
@@ -11540,11 +11586,19 @@ export async function acceptBuyOrderPrivateSale(
     // Canonicalize order amounts on the server to prevent
     // usdt/rate/krw mismatches from client-side timing or rounding issues.
     const normalizedUsdtAmount = roundDownUsdtAmount(usdtAmount);
-    const normalizedKrwAmount = Math.floor(normalizedUsdtAmount * usdtToKrwRate);
+    const calculatedKrwAmount = calculateKrwAmountFromUsdtAndRate({
+      usdtAmount: normalizedUsdtAmount,
+      rate: usdtToKrwRate,
+    });
     const normalizedRequestedKrwAmount =
       typeof krwAmount === 'number' && Number.isFinite(krwAmount) && krwAmount > 0
         ? Math.floor(krwAmount)
         : 0;
+    const normalizedKrwAmount =
+      normalizedRequestedKrwAmount > 0
+      && Math.abs(normalizedRequestedKrwAmount - calculatedKrwAmount) <= PRIVATE_ORDER_KRW_INPUT_TOLERANCE_WON
+        ? normalizedRequestedKrwAmount
+        : calculatedKrwAmount;
 
     if (!Number.isFinite(normalizedUsdtAmount) || normalizedUsdtAmount <= 0) {
       console.error('acceptBuyOrderPrivateSale: invalid normalized usdt amount', normalizedUsdtAmount);
@@ -11559,13 +11613,14 @@ export async function acceptBuyOrderPrivateSale(
       return { success: false, error: 'INVALID_USDT_AMOUNT' };
     }
     if (
-      normalizedRequestedKrwAmount > 0 &&
-      normalizedRequestedKrwAmount !== normalizedKrwAmount
+      normalizedRequestedKrwAmount > 0
+      && normalizedRequestedKrwAmount !== normalizedKrwAmount
     ) {
       console.warn('acceptBuyOrderPrivateSale: requested krw amount mismatch corrected', {
         buyerWalletAddress: matchedBuyerWalletAddress,
         sellerWalletAddress: matchedSellerWalletAddress,
         requestedKrwAmount: normalizedRequestedKrwAmount,
+        calculatedKrwAmount,
         normalizedKrwAmount,
         normalizedUsdtAmount,
         rate: usdtToKrwRate,
@@ -12283,7 +12338,10 @@ export async function recoverMissingPrivateBuyOrder(
     };
   }
 
-  const normalizedKrwAmount = Math.floor(normalizedUsdtAmount * usdtToKrwRate);
+  const normalizedKrwAmount = calculateKrwAmountFromUsdtAndRate({
+    usdtAmount: normalizedUsdtAmount,
+    rate: usdtToKrwRate,
+  });
   if (!Number.isFinite(normalizedKrwAmount) || normalizedKrwAmount <= 0) {
     return {
       success: false,

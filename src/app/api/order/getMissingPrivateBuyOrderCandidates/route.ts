@@ -40,6 +40,7 @@ const isWalletAddress = (value: unknown) => /^0x[a-fA-F0-9]{40}$/.test(String(va
 const isTransactionHash = (value: unknown) => /^0x[a-fA-F0-9]{64}$/.test(String(value || '').trim());
 const normalizeAddress = (value: unknown) => String(value || '').trim().toLowerCase();
 const normalizeHash = (value: unknown) => String(value || '').trim().toLowerCase();
+const normalizeOrderStatus = (value: unknown) => String(value || '').trim().toLowerCase();
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const roundDownUsdtSix = (value: number) =>
@@ -871,6 +872,7 @@ type MissingCandidatesMeta = {
   excludedByExistingTxHashCount?: number;
   excludedByExistingEscrowWalletCount?: number;
   excludedByBothCount?: number;
+  excludedCancelledOrderCount?: number;
   sellerCount: number;
   privateBuyWalletCount: number;
   privateBuyWalletDetectionMode: string;
@@ -1090,6 +1092,7 @@ const getMissingPrivateBuyOrderCandidates = async (
         excludedByExistingTxHashCount: 0,
         excludedByExistingEscrowWalletCount: 0,
         excludedByBothCount: 0,
+        excludedCancelledOrderCount: 0,
         sellerCount: sellerRows.length,
         privateBuyWalletCount: 0,
         privateBuyWalletDetectionMode: 'no-seller-sources',
@@ -1485,6 +1488,7 @@ const getMissingPrivateBuyOrderCandidates = async (
         excludedByExistingTxHashCount: 0,
         excludedByExistingEscrowWalletCount: 0,
         excludedByBothCount: 0,
+        excludedCancelledOrderCount: 0,
         sellerCount: sellerRows.length,
         privateBuyWalletCount: privateBuyWalletAddressSet.size,
         privateBuyWalletDetectionMode: strictPrivateBuyWalletFilter ? 'strict-private-buy' : 'fallback-any-recipient',
@@ -1535,8 +1539,8 @@ const getMissingPrivateBuyOrderCandidates = async (
 
   const existingLockTransactionHashes = new Set<string>();
   const existingEscrowWalletAddresses = new Set<string>();
-  const existingByLockTransactionHash = new Map<string, { orderId: string; tradeId: string }>();
-  const existingByWalletAddress = new Map<string, { orderId: string; tradeId: string }>();
+  const existingByLockTransactionHash = new Map<string, { orderId: string; tradeId: string; status: string }>();
+  const existingByWalletAddress = new Map<string, { orderId: string; tradeId: string; status: string }>();
 
   if (orderFindFilters.length > 0) {
     const orderFilterChunks = chunkArray(orderFindFilters, 120);
@@ -1561,6 +1565,7 @@ const getMissingPrivateBuyOrderCandidates = async (
             projection: {
               _id: 1,
               tradeId: 1,
+              status: 1,
               buyer: 1,
               seller: 1,
               escrowWallet: 1,
@@ -1572,6 +1577,7 @@ const getMissingPrivateBuyOrderCandidates = async (
       for (const order of existingOrders) {
         const orderId = String(order?._id || '').trim();
         const tradeId = String(order?.tradeId || '').trim();
+        const status = String(order?.status || '').trim();
         const buyerLockHash = normalizeHash(order?.buyer?.lockTransactionHash);
         const sellerLockHash = normalizeHash(order?.seller?.lockTransactionHash);
         const buyerEscrowAddress = normalizeAddress(order?.buyer?.escrowWalletAddress);
@@ -1580,22 +1586,22 @@ const getMissingPrivateBuyOrderCandidates = async (
         if (buyerLockHash) existingLockTransactionHashes.add(buyerLockHash);
         if (sellerLockHash) existingLockTransactionHashes.add(sellerLockHash);
         if (buyerLockHash && !existingByLockTransactionHash.has(buyerLockHash)) {
-          existingByLockTransactionHash.set(buyerLockHash, { orderId, tradeId });
+          existingByLockTransactionHash.set(buyerLockHash, { orderId, tradeId, status });
         }
         if (sellerLockHash && !existingByLockTransactionHash.has(sellerLockHash)) {
-          existingByLockTransactionHash.set(sellerLockHash, { orderId, tradeId });
+          existingByLockTransactionHash.set(sellerLockHash, { orderId, tradeId, status });
         }
 
         if (buyerEscrowAddress) {
           existingEscrowWalletAddresses.add(buyerEscrowAddress);
           if (!existingByWalletAddress.has(buyerEscrowAddress)) {
-            existingByWalletAddress.set(buyerEscrowAddress, { orderId, tradeId });
+            existingByWalletAddress.set(buyerEscrowAddress, { orderId, tradeId, status });
           }
         }
         if (orderEscrowAddress) {
           existingEscrowWalletAddresses.add(orderEscrowAddress);
           if (!existingByWalletAddress.has(orderEscrowAddress)) {
-            existingByWalletAddress.set(orderEscrowAddress, { orderId, tradeId });
+            existingByWalletAddress.set(orderEscrowAddress, { orderId, tradeId, status });
           }
         }
       }
@@ -1690,6 +1696,7 @@ const getMissingPrivateBuyOrderCandidates = async (
   let excludedByExistingTxHashCount = 0;
   let excludedByExistingEscrowWalletCount = 0;
   let excludedByBothCount = 0;
+  let excludedCancelledOrderCount = 0;
   const candidates: Array<Record<string, unknown>> = [];
   const excludedCandidates: Array<Record<string, unknown>> = [];
 
@@ -1706,17 +1713,27 @@ const getMissingPrivateBuyOrderCandidates = async (
       if (excludedByExistingEscrowWallet) excludedByExistingEscrowWalletCount += 1;
       if (excludedByExistingTxHash && excludedByExistingEscrowWallet) excludedByBothCount += 1;
 
-      if (excludedCandidates.length < maxExcludedCandidates) {
-        const prefix = String(item.buyerWalletHintPrefix || '').trim().toLowerCase();
-        const suggestion = prefix ? suggestionByPrefix.get(prefix) : undefined;
-        const existingByTx = existingByLockTransactionHash.get(txHashKey);
-        const existingByEscrow = existingByWalletAddress.get(escrowWalletKey);
-        const existingOrder = existingByTx || existingByEscrow;
-        const excludedReasonCodes = [
-          ...(excludedByExistingTxHash ? ['existing-tx-hash'] : []),
-          ...(excludedByExistingEscrowWallet ? ['existing-escrow-wallet'] : []),
-        ];
+      const prefix = String(item.buyerWalletHintPrefix || '').trim().toLowerCase();
+      const suggestion = prefix ? suggestionByPrefix.get(prefix) : undefined;
+      const existingByTx = existingByLockTransactionHash.get(txHashKey);
+      const existingByEscrow = existingByWalletAddress.get(escrowWalletKey);
+      const existingOrder = existingByTx || existingByEscrow;
+      const existingByTxStatus = normalizeOrderStatus(existingByTx?.status);
+      const existingByEscrowStatus = normalizeOrderStatus(existingByEscrow?.status);
+      const existingOrderStatus = normalizeOrderStatus(existingOrder?.status);
+      const existingOrderCancelled =
+        existingOrderStatus === 'cancelled'
+        || existingByTxStatus === 'cancelled'
+        || existingByEscrowStatus === 'cancelled';
+      if (existingOrderCancelled) {
+        excludedCancelledOrderCount += 1;
+      }
+      const excludedReasonCodes = [
+        ...(excludedByExistingTxHash ? ['existing-tx-hash'] : []),
+        ...(excludedByExistingEscrowWallet ? ['existing-escrow-wallet'] : []),
+      ];
 
+      if (excludedCandidates.length < maxExcludedCandidates) {
         excludedCandidates.push({
           candidateId: String(item.candidateId || ''),
           transactionId: String(item.transactionId || ''),
@@ -1743,10 +1760,14 @@ const getMissingPrivateBuyOrderCandidates = async (
           excludedReasonCodes,
           existingByTxOrderId: String(existingByTx?.orderId || ''),
           existingByTxTradeId: String(existingByTx?.tradeId || ''),
+          existingByTxOrderStatus: existingByTxStatus,
           existingByEscrowOrderId: String(existingByEscrow?.orderId || ''),
           existingByEscrowTradeId: String(existingByEscrow?.tradeId || ''),
+          existingByEscrowOrderStatus: existingByEscrowStatus,
           existingOrderId: String(existingOrder?.orderId || ''),
           existingTradeId: String(existingOrder?.tradeId || ''),
+          existingOrderStatus,
+          existingOrderCancelled,
         });
       }
       continue;
@@ -1795,6 +1816,7 @@ const getMissingPrivateBuyOrderCandidates = async (
       excludedByExistingTxHashCount,
       excludedByExistingEscrowWalletCount,
       excludedByBothCount,
+      excludedCancelledOrderCount,
       sellerCount: sellerRows.length,
       privateBuyWalletCount: privateBuyWalletAddressSet.size,
       privateBuyWalletDetectionMode: strictPrivateBuyWalletFilter ? 'strict-private-buy' : 'fallback-any-recipient',

@@ -40,8 +40,12 @@ type ExcludedCandidateItem = CandidateItem & {
   excludedReasonCodes?: string[];
   existingByTxOrderId?: string;
   existingByTxTradeId?: string;
+  existingByTxOrderStatus?: string;
   existingByEscrowOrderId?: string;
   existingByEscrowTradeId?: string;
+  existingByEscrowOrderStatus?: string;
+  existingOrderStatus?: string;
+  existingOrderCancelled?: boolean;
 };
 
 type CandidateResponse = {
@@ -57,6 +61,7 @@ type CandidateResponse = {
       excludedByExistingTxHashCount?: number;
       excludedByExistingEscrowWalletCount?: number;
       excludedByBothCount?: number;
+      excludedCancelledOrderCount?: number;
       sellerCount?: number;
       privateBuyWalletCount?: number;
       privateBuyWalletDetectionMode?: string;
@@ -167,6 +172,15 @@ const PROGRESS_STEPS = [
 const PROGRESS_STEP_KEY_SET = new Set<string>(PROGRESS_STEPS.map((item) => item.key));
 
 const isWalletAddress = (value: unknown) => /^0x[a-fA-F0-9]{40}$/.test(String(value || '').trim());
+const normalizeOrderStatus = (value: unknown) => String(value || '').trim().toLowerCase();
+const isCancelledOrderStatus = (value: unknown) => normalizeOrderStatus(value) === 'cancelled';
+
+const isCancelledMatchedExcludedCandidate = (item: ExcludedCandidateItem) => (
+  Boolean(item?.existingOrderCancelled)
+  || isCancelledOrderStatus(item?.existingOrderStatus)
+  || isCancelledOrderStatus(item?.existingByTxOrderStatus)
+  || isCancelledOrderStatus(item?.existingByEscrowOrderStatus)
+);
 
 const shortText = (value: string, head = 6, tail = 4) => {
   const normalized = String(value || '').trim();
@@ -215,6 +229,7 @@ export default function MissingOrderRecoveryPage() {
     excludedByExistingTxHashCount: number;
     excludedByExistingEscrowWalletCount: number;
     excludedByBothCount: number;
+    excludedCancelledOrderCount: number;
     sellerCount: number;
     privateBuyWalletCount: number;
     privateBuyWalletDetectionMode: string;
@@ -229,6 +244,7 @@ export default function MissingOrderRecoveryPage() {
     excludedByExistingTxHashCount: 0,
     excludedByExistingEscrowWalletCount: 0,
     excludedByBothCount: 0,
+    excludedCancelledOrderCount: 0,
     sellerCount: 0,
     privateBuyWalletCount: 0,
     privateBuyWalletDetectionMode: '',
@@ -240,6 +256,8 @@ export default function MissingOrderRecoveryPage() {
   const [buyerWalletDraftByCandidateId, setBuyerWalletDraftByCandidateId] = useState<Record<string, string>>({});
   const [processingCandidateId, setProcessingCandidateId] = useState('');
   const [excludedCandidatesPage, setExcludedCandidatesPage] = useState(1);
+  const [cancelledExcludedCandidatesPage, setCancelledExcludedCandidatesPage] = useState(1);
+  const [showCancelledExcludedSeparately, setShowCancelledExcludedSeparately] = useState(false);
   const [excludedSellerSearchText, setExcludedSellerSearchText] = useState('');
   const [unrecoveredCancelledCandidates, setUnrecoveredCancelledCandidates] = useState<UnrecoveredCancelledOrderItem[]>([]);
   const [unrecoveredCancelledMeta, setUnrecoveredCancelledMeta] = useState<{
@@ -355,6 +373,7 @@ export default function MissingOrderRecoveryPage() {
       setCandidates(nextCandidates);
       setExcludedCandidates(nextExcludedCandidates);
       setExcludedCandidatesPage(1);
+      setCancelledExcludedCandidatesPage(1);
       setMeta({
         scannedTransactions: Number(nextMeta?.scannedTransactions || 0) || 0,
         matchedTransfers: Number(nextMeta?.matchedTransfers || 0) || 0,
@@ -363,6 +382,7 @@ export default function MissingOrderRecoveryPage() {
         excludedByExistingTxHashCount: Number(nextMeta?.excludedByExistingTxHashCount || 0) || 0,
         excludedByExistingEscrowWalletCount: Number(nextMeta?.excludedByExistingEscrowWalletCount || 0) || 0,
         excludedByBothCount: Number(nextMeta?.excludedByBothCount || 0) || 0,
+        excludedCancelledOrderCount: Number(nextMeta?.excludedCancelledOrderCount || 0) || 0,
         sellerCount: Number(nextMeta?.sellerCount || 0) || 0,
         privateBuyWalletCount: Number(nextMeta?.privateBuyWalletCount || 0) || 0,
         privateBuyWalletDetectionMode: String(nextMeta?.privateBuyWalletDetectionMode || ''),
@@ -687,7 +707,19 @@ export default function MissingOrderRecoveryPage() {
       );
     });
   }, [availableExcludedCandidates, normalizedExcludedSellerSearchText]);
-  const excludedCandidatesTotalCount = filteredExcludedCandidates.length;
+  const cancelledMatchedExcludedCandidates = useMemo(
+    () => filteredExcludedCandidates.filter((item) => isCancelledMatchedExcludedCandidate(item)),
+    [filteredExcludedCandidates],
+  );
+  const nonCancelledExcludedCandidates = useMemo(
+    () => filteredExcludedCandidates.filter((item) => !isCancelledMatchedExcludedCandidate(item)),
+    [filteredExcludedCandidates],
+  );
+  const mainExcludedCandidates = useMemo(
+    () => (showCancelledExcludedSeparately ? nonCancelledExcludedCandidates : filteredExcludedCandidates),
+    [showCancelledExcludedSeparately, nonCancelledExcludedCandidates, filteredExcludedCandidates],
+  );
+  const excludedCandidatesTotalCount = mainExcludedCandidates.length;
   const excludedCandidatesTotalPages = Math.max(
     1,
     Math.ceil(excludedCandidatesTotalCount / EXCLUDED_CANDIDATES_PAGE_SIZE),
@@ -698,8 +730,8 @@ export default function MissingOrderRecoveryPage() {
   );
   const pagedExcludedCandidates = useMemo(() => {
     const startIndex = (currentExcludedCandidatesPage - 1) * EXCLUDED_CANDIDATES_PAGE_SIZE;
-    return filteredExcludedCandidates.slice(startIndex, startIndex + EXCLUDED_CANDIDATES_PAGE_SIZE);
-  }, [filteredExcludedCandidates, currentExcludedCandidatesPage]);
+    return mainExcludedCandidates.slice(startIndex, startIndex + EXCLUDED_CANDIDATES_PAGE_SIZE);
+  }, [mainExcludedCandidates, currentExcludedCandidatesPage]);
   const excludedPageStart = excludedCandidatesTotalCount
     ? (currentExcludedCandidatesPage - 1)
       * EXCLUDED_CANDIDATES_PAGE_SIZE
@@ -707,6 +739,31 @@ export default function MissingOrderRecoveryPage() {
     : 0;
   const excludedPageEnd = excludedCandidatesTotalCount
     ? Math.min(excludedPageStart + pagedExcludedCandidates.length - 1, excludedCandidatesTotalCount)
+    : 0;
+
+  const cancelledExcludedCandidatesTotalCount = cancelledMatchedExcludedCandidates.length;
+  const cancelledExcludedCandidatesTotalPages = Math.max(
+    1,
+    Math.ceil(cancelledExcludedCandidatesTotalCount / EXCLUDED_CANDIDATES_PAGE_SIZE),
+  );
+  const currentCancelledExcludedCandidatesPage = Math.min(
+    Math.max(cancelledExcludedCandidatesPage, 1),
+    cancelledExcludedCandidatesTotalPages,
+  );
+  const pagedCancelledExcludedCandidates = useMemo(() => {
+    const startIndex = (currentCancelledExcludedCandidatesPage - 1) * EXCLUDED_CANDIDATES_PAGE_SIZE;
+    return cancelledMatchedExcludedCandidates.slice(startIndex, startIndex + EXCLUDED_CANDIDATES_PAGE_SIZE);
+  }, [cancelledMatchedExcludedCandidates, currentCancelledExcludedCandidatesPage]);
+  const cancelledExcludedPageStart = cancelledExcludedCandidatesTotalCount
+    ? (currentCancelledExcludedCandidatesPage - 1)
+      * EXCLUDED_CANDIDATES_PAGE_SIZE
+      + 1
+    : 0;
+  const cancelledExcludedPageEnd = cancelledExcludedCandidatesTotalCount
+    ? Math.min(
+      cancelledExcludedPageStart + pagedCancelledExcludedCandidates.length - 1,
+      cancelledExcludedCandidatesTotalCount,
+    )
     : 0;
 
   useEffect(() => {
@@ -719,7 +776,16 @@ export default function MissingOrderRecoveryPage() {
 
   useEffect(() => {
     setExcludedCandidatesPage(1);
-  }, [normalizedExcludedSellerSearchText]);
+    setCancelledExcludedCandidatesPage(1);
+  }, [normalizedExcludedSellerSearchText, showCancelledExcludedSeparately]);
+
+  useEffect(() => {
+    setCancelledExcludedCandidatesPage((previous) => {
+      if (previous < 1) return 1;
+      if (previous > cancelledExcludedCandidatesTotalPages) return cancelledExcludedCandidatesTotalPages;
+      return previous;
+    });
+  }, [cancelledExcludedCandidatesTotalPages]);
 
   const availableUnrecoveredCancelledCandidates = useMemo(
     () => unrecoveredCancelledCandidates.filter((item) => item && item.candidateId),
@@ -798,6 +864,98 @@ export default function MissingOrderRecoveryPage() {
       toast.error('지갑주소 복사에 실패했습니다.');
     }
   }, []);
+
+  const renderExcludedCandidateRow = useCallback((candidate: ExcludedCandidateItem, rowKeyPrefix: string) => {
+    const txMatched = Boolean(candidate.excludedByExistingTxHash);
+    const escrowMatched = Boolean(candidate.excludedByExistingEscrowWallet);
+    const reasonText = txMatched && escrowMatched
+      ? '기존 tx hash + escrow'
+      : txMatched
+        ? '기존 tx hash'
+        : escrowMatched
+          ? '기존 escrow'
+          : '-';
+
+    const existingByTxTradeId = String(candidate.existingByTxTradeId || '').trim();
+    const existingByEscrowTradeId = String(candidate.existingByEscrowTradeId || '').trim();
+    const existingByTxOrderId = String(candidate.existingByTxOrderId || '').trim();
+    const existingByEscrowOrderId = String(candidate.existingByEscrowOrderId || '').trim();
+    const existingByTxStatusRaw = String(candidate.existingByTxOrderStatus || '').trim();
+    const existingByEscrowStatusRaw = String(candidate.existingByEscrowOrderStatus || '').trim();
+    const existingOrderStatusRaw = String(candidate.existingOrderStatus || '').trim();
+    const existingByTxStatus = normalizeOrderStatus(existingByTxStatusRaw);
+    const existingByEscrowStatus = normalizeOrderStatus(existingByEscrowStatusRaw);
+    const existingOrderStatus = normalizeOrderStatus(existingOrderStatusRaw)
+      || existingByTxStatus
+      || existingByEscrowStatus;
+    const existingOrderStatusDisplay = existingOrderStatusRaw
+      || existingByTxStatusRaw
+      || existingByEscrowStatusRaw;
+    const cancelledMatched = isCancelledMatchedExcludedCandidate(candidate);
+
+    return (
+      <tr key={`${rowKeyPrefix}-${candidate.candidateId}`} className="align-top text-slate-700">
+        <td className="border border-slate-200 px-2 py-2 leading-5 break-words">
+          <div>{formatDateTime(candidate.confirmedAt || candidate.createdAt)}</div>
+          <div className="text-[11px] text-slate-500">created: {formatDateTime(candidate.createdAt)}</div>
+        </td>
+        <td className="border border-slate-200 px-2 py-2 leading-5 break-all">
+          <div className="font-semibold text-slate-900">{shortText(candidate.transactionHash, 10, 8)}</div>
+          <div className="mt-0.5 text-[11px] text-slate-500">id: {shortText(candidate.transactionId, 8, 6)}</div>
+        </td>
+        <td className="border border-slate-200 px-2 py-2 leading-5 break-all">
+          <div className="font-semibold text-slate-900">
+            {candidate.sellerNickname || shortText(candidate.sellerWalletAddress)}
+          </div>
+          <div className="mt-0.5 text-[11px] text-slate-500">{shortText(candidate.sellerWalletAddress)}</div>
+        </td>
+        <td className="border border-slate-200 px-2 py-2 leading-5 break-all">
+          <div className="flex flex-wrap items-center gap-1 font-semibold text-slate-900">
+            <span>{shortText(candidate.buyerEscrowWalletAddress)}</span>
+            <button
+              type="button"
+              onClick={() => void handleCopyWalletAddress(candidate.buyerEscrowWalletAddress, '구매자 에스크로 지갑')}
+              className="inline-flex items-center rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 transition hover:bg-slate-100"
+            >
+              복사
+            </button>
+          </div>
+          <div className="mt-0.5 text-[11px] text-slate-500">{formatUsdt(candidate.usdtAmount)} USDT</div>
+        </td>
+        <td className="border border-slate-200 px-2 py-2 leading-5 break-words">
+          <div className="font-semibold text-amber-700">{reasonText}</div>
+        </td>
+        <td className="border border-slate-200 px-2 py-2 leading-5 break-all text-[11px] text-slate-600">
+          {existingByTxTradeId && (
+            <div>
+              tx: {existingByTxTradeId} ({shortText(existingByTxOrderId, 8, 6)})
+              {existingByTxStatusRaw ? ` [${existingByTxStatusRaw}]` : ''}
+            </div>
+          )}
+          {existingByEscrowTradeId && (
+            <div>
+              escrow: {existingByEscrowTradeId} ({shortText(existingByEscrowOrderId, 8, 6)})
+              {existingByEscrowStatusRaw ? ` [${existingByEscrowStatusRaw}]` : ''}
+            </div>
+          )}
+          {!existingByTxTradeId && !existingByEscrowTradeId && (
+            <div>-</div>
+          )}
+          {existingOrderStatus && (
+            <div
+              className={`mt-1 inline-flex rounded border px-1.5 py-0.5 text-[10px] font-semibold ${
+                cancelledMatched
+                  ? 'border-rose-200 bg-rose-50 text-rose-700'
+                  : 'border-slate-300 bg-slate-100 text-slate-700'
+              }`}
+            >
+              상태: {existingOrderStatusDisplay || existingOrderStatus}
+            </div>
+          )}
+        </td>
+      </tr>
+    );
+  }, [handleCopyWalletAddress]);
 
   return (
     <main className="min-h-screen bg-transparent">
@@ -1196,25 +1354,47 @@ export default function MissingOrderRecoveryPage() {
                 escrow 매칭: {meta.excludedByExistingEscrowWalletCount.toLocaleString('ko-KR')}
                 {' · '}
                 동시 매칭: {meta.excludedByBothCount.toLocaleString('ko-KR')}
+                {' · '}
+                cancelled 매칭: {meta.excludedCancelledOrderCount.toLocaleString('ko-KR')}
               </p>
             </div>
-            <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
-              <input
-                type="text"
-                value={excludedSellerSearchText}
-                onChange={(event) => setExcludedSellerSearchText(String(event.target.value || ''))}
-                placeholder="판매자 아이디 검색"
-                className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-slate-500 focus:outline-none sm:w-64"
-              />
-              <button
-                type="button"
-                onClick={() => setExcludedSellerSearchText('')}
-                disabled={!excludedSellerSearchText.trim()}
-                className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                초기화
-              </button>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={showCancelledExcludedSeparately}
+                  onChange={(event) => setShowCancelledExcludedSeparately(event.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-slate-300 text-slate-900"
+                />
+                cancelled 주문 별도 표시
+              </label>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <input
+                  type="text"
+                  value={excludedSellerSearchText}
+                  onChange={(event) => setExcludedSellerSearchText(String(event.target.value || ''))}
+                  placeholder="판매자 아이디 검색"
+                  className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-slate-500 focus:outline-none sm:w-64"
+                />
+                <button
+                  type="button"
+                  onClick={() => setExcludedSellerSearchText('')}
+                  disabled={!excludedSellerSearchText.trim()}
+                  className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  초기화
+                </button>
+              </div>
             </div>
+
+            {showCancelledExcludedSeparately && (
+              <div className="mb-2 rounded-lg border border-cyan-200 bg-cyan-50/70 px-3 py-2 text-xs text-cyan-800">
+                일반 제외(취소 아님): {nonCancelledExcludedCandidates.length.toLocaleString('ko-KR')}건
+                {' · '}
+                cancelled 매칭 제외: {cancelledMatchedExcludedCandidates.length.toLocaleString('ko-KR')}건
+              </div>
+            )}
+
             <div className="w-full overflow-hidden rounded-lg border border-slate-200 bg-white">
               <table className="w-full table-fixed border-separate border-spacing-0 text-xs">
                 <colgroup>
@@ -1239,70 +1419,20 @@ export default function MissingOrderRecoveryPage() {
                   {excludedCandidatesTotalCount === 0 && (
                     <tr>
                       <td colSpan={6} className="border border-slate-200 px-3 py-6 text-center text-slate-500">
-                        제외된 후보가 없습니다.
+                        {showCancelledExcludedSeparately
+                          ? '표시할 일반 제외 후보가 없습니다.'
+                          : '제외된 후보가 없습니다.'}
                       </td>
                     </tr>
                   )}
-                  {pagedExcludedCandidates.map((candidate) => {
-                    const txMatched = Boolean(candidate.excludedByExistingTxHash);
-                    const escrowMatched = Boolean(candidate.excludedByExistingEscrowWallet);
-                    const reasonText = txMatched && escrowMatched
-                      ? '기존 tx hash + escrow'
-                      : txMatched
-                        ? '기존 tx hash'
-                        : escrowMatched
-                          ? '기존 escrow'
-                          : '-';
-
-                    const existingByTxTradeId = String(candidate.existingByTxTradeId || '').trim();
-                    const existingByEscrowTradeId = String(candidate.existingByEscrowTradeId || '').trim();
-                    const existingByTxOrderId = String(candidate.existingByTxOrderId || '').trim();
-                    const existingByEscrowOrderId = String(candidate.existingByEscrowOrderId || '').trim();
-
-                    return (
-                      <tr key={`excluded-${candidate.candidateId}`} className="align-top text-slate-700">
-                        <td className="border border-slate-200 px-2 py-2 leading-5 break-words">
-                          <div>{formatDateTime(candidate.confirmedAt || candidate.createdAt)}</div>
-                          <div className="text-[11px] text-slate-500">created: {formatDateTime(candidate.createdAt)}</div>
-                        </td>
-                        <td className="border border-slate-200 px-2 py-2 leading-5 break-all">
-                          <div className="font-semibold text-slate-900">{shortText(candidate.transactionHash, 10, 8)}</div>
-                          <div className="mt-0.5 text-[11px] text-slate-500">id: {shortText(candidate.transactionId, 8, 6)}</div>
-                        </td>
-                        <td className="border border-slate-200 px-2 py-2 leading-5 break-all">
-                          <div className="font-semibold text-slate-900">
-                            {candidate.sellerNickname || shortText(candidate.sellerWalletAddress)}
-                          </div>
-                          <div className="mt-0.5 text-[11px] text-slate-500">{shortText(candidate.sellerWalletAddress)}</div>
-                        </td>
-                        <td className="border border-slate-200 px-2 py-2 leading-5 break-all">
-                          <div className="font-semibold text-slate-900">{shortText(candidate.buyerEscrowWalletAddress)}</div>
-                          <div className="mt-0.5 text-[11px] text-slate-500">{formatUsdt(candidate.usdtAmount)} USDT</div>
-                        </td>
-                        <td className="border border-slate-200 px-2 py-2 leading-5 break-words">
-                          <div className="font-semibold text-amber-700">{reasonText}</div>
-                        </td>
-                        <td className="border border-slate-200 px-2 py-2 leading-5 break-all text-[11px] text-slate-600">
-                          {existingByTxTradeId && (
-                            <div>tx: {existingByTxTradeId} ({shortText(existingByTxOrderId, 8, 6)})</div>
-                          )}
-                          {existingByEscrowTradeId && (
-                            <div>escrow: {existingByEscrowTradeId} ({shortText(existingByEscrowOrderId, 8, 6)})</div>
-                          )}
-                          {!existingByTxTradeId && !existingByEscrowTradeId && (
-                            <div>-</div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {pagedExcludedCandidates.map((candidate) => renderExcludedCandidateRow(candidate, 'excluded-main'))}
                 </tbody>
               </table>
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 px-1">
               <p className="text-xs text-slate-600">
                 {excludedCandidatesTotalCount > 0
-                  ? `검색 결과 ${excludedCandidatesTotalCount.toLocaleString('ko-KR')}건 중 ${excludedPageStart.toLocaleString('ko-KR')}-${excludedPageEnd.toLocaleString('ko-KR')}건 표시`
+                  ? `${showCancelledExcludedSeparately ? '일반 제외' : '검색 결과'} ${excludedCandidatesTotalCount.toLocaleString('ko-KR')}건 중 ${excludedPageStart.toLocaleString('ko-KR')}-${excludedPageEnd.toLocaleString('ko-KR')}건 표시`
                   : '총 0건'}
               </p>
               <div className="flex items-center gap-2">
@@ -1334,6 +1464,88 @@ export default function MissingOrderRecoveryPage() {
                 </button>
               </div>
             </div>
+
+            {showCancelledExcludedSeparately && (
+              <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50/60 p-2.5">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-rose-900">
+                    cancelled 주문 매칭 제외 목록 (기존 주문 존재)
+                  </p>
+                  <p className="text-[11px] text-rose-700">
+                    총 {cancelledExcludedCandidatesTotalCount.toLocaleString('ko-KR')}건
+                  </p>
+                </div>
+                <div className="w-full overflow-hidden rounded-lg border border-rose-200 bg-white">
+                  <table className="w-full table-fixed border-separate border-spacing-0 text-xs">
+                    <colgroup>
+                      <col className="w-[16%]" />
+                      <col className="w-[18%]" />
+                      <col className="w-[16%]" />
+                      <col className="w-[18%]" />
+                      <col className="w-[14%]" />
+                      <col className="w-[18%]" />
+                    </colgroup>
+                    <thead>
+                      <tr className="bg-rose-100 text-left font-semibold uppercase tracking-[0.12em] text-rose-700">
+                        <th className="border border-rose-200 px-2 py-2">시간</th>
+                        <th className="border border-rose-200 px-2 py-2">트랜잭션</th>
+                        <th className="border border-rose-200 px-2 py-2">판매자</th>
+                        <th className="border border-rose-200 px-2 py-2">구매자 에스크로</th>
+                        <th className="border border-rose-200 px-2 py-2">제외 사유</th>
+                        <th className="border border-rose-200 px-2 py-2">기존 주문</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cancelledExcludedCandidatesTotalCount === 0 && (
+                        <tr>
+                          <td colSpan={6} className="border border-rose-200 px-3 py-6 text-center text-rose-700/80">
+                            표시할 cancelled 매칭 제외 후보가 없습니다.
+                          </td>
+                        </tr>
+                      )}
+                      {pagedCancelledExcludedCandidates.map((candidate) =>
+                        renderExcludedCandidateRow(candidate, 'excluded-cancelled'))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 px-1">
+                  <p className="text-xs text-rose-700">
+                    {cancelledExcludedCandidatesTotalCount > 0
+                      ? `${cancelledExcludedCandidatesTotalCount.toLocaleString('ko-KR')}건 중 ${cancelledExcludedPageStart.toLocaleString('ko-KR')}-${cancelledExcludedPageEnd.toLocaleString('ko-KR')}건 표시`
+                      : '총 0건'}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCancelledExcludedCandidatesPage((previous) => Math.max(1, previous - 1))}
+                      disabled={cancelledExcludedCandidatesTotalCount === 0 || currentCancelledExcludedCandidatesPage <= 1}
+                      className="rounded-md border border-rose-300 bg-white px-2.5 py-1 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      이전
+                    </button>
+                    <span className="text-xs font-medium text-rose-700">
+                      {cancelledExcludedCandidatesTotalCount === 0
+                        ? '0 / 0'
+                        : `${currentCancelledExcludedCandidatesPage} / ${cancelledExcludedCandidatesTotalPages}`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCancelledExcludedCandidatesPage((previous) =>
+                          Math.min(cancelledExcludedCandidatesTotalPages, previous + 1))
+                      }
+                      disabled={
+                        cancelledExcludedCandidatesTotalCount === 0
+                        || currentCancelledExcludedCandidatesPage >= cancelledExcludedCandidatesTotalPages
+                      }
+                      className="rounded-md border border-rose-300 bg-white px-2.5 py-1 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      다음
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-4 rounded-xl border border-rose-200/80 bg-rose-50/60 p-3">
