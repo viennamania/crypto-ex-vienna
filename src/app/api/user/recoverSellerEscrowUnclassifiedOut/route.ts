@@ -4,6 +4,7 @@ import { createThirdwebClient, Engine, getContract } from 'thirdweb';
 import type { Chain } from 'thirdweb/chains';
 import { ethereum, polygon, arbitrum, bsc } from 'thirdweb/chains';
 import { balanceOf, transfer } from 'thirdweb/extensions/erc20';
+import { getRpcClient, eth_getTransactionReceipt } from 'thirdweb/rpc';
 
 import clientPromise, { dbName } from '@/lib/mongodb';
 import { createEngineServerWallet } from '@/lib/engineServerWallet';
@@ -82,6 +83,7 @@ type SellerEscrowUnclassifiedOutRecoveryHistoryDoc = {
 
 const COLLECTION_NAME = 'sellerEscrowUnclassifiedOutRecoveryHistories';
 const ENGINE_SERVER_WALLET_CACHE_TTL_MS = 5 * 60 * 1000;
+const ERC20_TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
 let ensureRecoveryHistoryIndexesPromise: Promise<void> | null = null;
 let insightClientIdCache = '';
@@ -97,6 +99,22 @@ const isTransactionHash = (value: string) => /^0x[a-fA-F0-9]{64}$/.test(String(v
 const normalizeAddress = (value: unknown) => String(value || '').trim().toLowerCase();
 const normalizeHash = (value: unknown) => String(value || '').trim().toLowerCase();
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const extractAddressFromTopic = (topic: unknown) => {
+  const normalized = String(topic || '').trim().toLowerCase();
+  if (!/^0x[a-f0-9]{64}$/.test(normalized)) return '';
+  return `0x${normalized.slice(-40)}`;
+};
+
+const parseHexAmountToRawString = (value: unknown) => {
+  const normalized = String(value || '').trim();
+  if (!/^0x[a-f0-9]+$/i.test(normalized)) return '0';
+  try {
+    return BigInt(normalized).toString();
+  } catch {
+    return '0';
+  }
+};
 
 const parseRawAmountToBigInt = (value: unknown): bigint => {
   const normalized = String(value || '').trim();
@@ -813,26 +831,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const insightClientId = await resolveInsightClientId(secretKey);
-  if (!insightClientId) {
-    return NextResponse.json({ error: 'thirdweb insight client id is not configured' }, { status: 500 });
-  }
-
-  const allTransfersResponse = await fetchAllSellerEscrowTransfers({
-    clientId: insightClientId,
-    chainId: chainConfig.chainId,
-    ownerAddress: sellerEscrowWalletAddressFromDb,
-    contractAddress: chainConfig.usdtContractAddress,
+  const verificationClient = createThirdwebClient({ secretKey });
+  const verificationRpc = getRpcClient({
+    client: verificationClient,
+    chain: chainConfig.chain,
   });
 
-  const matchedTransfer = allTransfersResponse.items.find((item) => {
-    const itemHash = normalizeHash(item.transaction_hash);
-    const itemFromAddress = normalizeAddress(item.from_address);
-    const itemToAddress = normalizeAddress(item.to_address);
-    const itemAmountRaw = String(item.amount || '').trim();
+  const sourceReceipt = await eth_getTransactionReceipt(verificationRpc, {
+    hash: sourceTransactionHash as `0x${string}`,
+  }).catch(() => null);
+
+  const matchedTransfer = sourceReceipt?.logs?.find((log) => {
+    const logContractAddress = normalizeAddress(log?.address);
+    if (logContractAddress !== normalizeAddress(chainConfig.usdtContractAddress)) return false;
+
+    const topics = Array.isArray(log?.topics) ? log.topics : [];
+    const topic0 = String(topics[0] || '').trim().toLowerCase();
+    if (topic0 !== ERC20_TRANSFER_TOPIC) return false;
+
+    const itemFromAddress = normalizeAddress(extractAddressFromTopic(topics[1]));
+    const itemToAddress = normalizeAddress(extractAddressFromTopic(topics[2]));
+    const itemAmountRaw = parseHexAmountToRawString(log?.data);
+
     return (
-      itemHash === sourceTransactionHash
-      && itemFromAddress === sellerEscrowWalletAddressLower
+      itemFromAddress === sellerEscrowWalletAddressLower
       && itemToAddress === sourceToAddress
       && itemAmountRaw === sourceAmountRaw
     );
@@ -927,7 +949,7 @@ export async function POST(request: NextRequest) {
     sourceDirection: 'OUT',
     sourceTransactionHash,
     sourceTransactionHashNormalized: sourceTransactionHash,
-    sourceBlockTimestamp: sourceBlockTimestamp || String(matchedTransfer?.block_timestamp || ''),
+    sourceBlockTimestamp: sourceBlockTimestamp || '',
     sourceFromAddress,
     sourceToAddress,
     sourceAmountRaw,

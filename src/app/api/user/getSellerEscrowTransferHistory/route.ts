@@ -1,5 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createThirdwebClient, Engine } from 'thirdweb';
+import type { Chain } from 'thirdweb/chains';
+import { ethereum, polygon, arbitrum, bsc } from 'thirdweb/chains';
+import { getRpcClient, eth_blockNumber, eth_getBlockByNumber, eth_getLogs } from 'thirdweb/rpc';
 
 import clientPromise, { dbName } from '@/lib/mongodb';
 
@@ -65,21 +68,11 @@ type InsightTransferItem = {
   block_number?: string;
   block_timestamp?: string;
   transaction_hash?: string;
+  log_index?: number;
   transfer_type?: string;
   chain_id?: number;
   token_type?: string;
   amount?: string;
-};
-
-type InsightTransferResponse = {
-  data?: InsightTransferItem[];
-  meta?: {
-    page?: number;
-    limit?: number;
-    total_items?: number;
-    total_pages?: number;
-  };
-  error?: string;
 };
 
 type UnclassifiedOutRecoveryStatus =
@@ -165,6 +158,10 @@ type SerializedUnclassifiedOutRecoveryHistory = {
 
 let insightClientIdCache = '';
 const ENGINE_SERVER_WALLET_CACHE_TTL_MS = 5 * 60 * 1000;
+const ERC20_TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+const RPC_LOG_BLOCK_CHUNK_SIZE = 900n;
+const START_BLOCK_SAFETY_LOOKBACK = 2000n;
+const START_BLOCK_FALLBACK_LOOKBACK = 400_000n;
 let engineServerWalletAddressCache:
   | {
       fetchedAt: number;
@@ -191,6 +188,43 @@ const normalizeHash = (value: unknown) => String(value || '').trim().toLowerCase
 const isWalletAddress = (value: string) => /^0x[a-f0-9]{40}$/i.test(String(value || '').trim());
 
 const isTransactionHash = (value: string) => /^0x[a-f0-9]{64}$/i.test(String(value || '').trim());
+
+const addressToTopic = (address: string) => {
+  const normalized = normalizeAddress(address).replace(/^0x/, '');
+  return `0x${normalized.padStart(64, '0')}`;
+};
+
+const extractAddressFromTopic = (topic: unknown) => {
+  const normalized = String(topic || '').trim().toLowerCase();
+  if (!/^0x[a-f0-9]{64}$/.test(normalized)) return '';
+  return `0x${normalized.slice(-40)}`;
+};
+
+const parseHexAmountToRawString = (value: unknown) => {
+  const normalized = String(value || '').trim();
+  if (!/^0x[a-f0-9]+$/i.test(normalized)) return '0';
+  try {
+    return BigInt(normalized).toString();
+  } catch {
+    return '0';
+  }
+};
+
+const parseIsoTimestampToUnixSeconds = (value: unknown): number | null => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return null;
+
+  if (/^\d+$/.test(normalized)) {
+    const numeric = Number(normalized);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return Math.floor(numeric);
+    }
+  }
+
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.floor(date.getTime() / 1000);
+};
 
 const normalizeSupportedChain = (
   value: unknown,
@@ -236,6 +270,13 @@ const resolveChainConfig = (): ChainConfig => {
     usdtContractAddress: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
     usdtDecimals: 6,
   };
+};
+
+const resolveThirdwebChainByName = (chain: ChainConfig['chain']): Chain => {
+  if (chain === 'ethereum') return ethereum;
+  if (chain === 'arbitrum') return arbitrum;
+  if (chain === 'bsc') return bsc;
+  return polygon;
 };
 
 const formatTokenAmountFromRaw = (rawAmount: string, decimals: number) => {
@@ -295,39 +336,6 @@ const normalizeErrorText = (value: unknown): string => {
   }
 
   return String(value).trim();
-};
-
-const extractInsightErrorMessage = (payload: InsightTransferResponse): string => {
-  const errorValue = payload?.error as unknown;
-
-  if (typeof errorValue === 'string' && errorValue.trim()) {
-    return errorValue.trim();
-  }
-
-  if (errorValue && typeof errorValue === 'object') {
-    const errorRecord = errorValue as Record<string, unknown>;
-    const message = typeof errorRecord.message === 'string' ? errorRecord.message.trim() : '';
-    const issues = Array.isArray(errorRecord.issues) ? errorRecord.issues : [];
-    const firstIssue = issues[0];
-
-    if (firstIssue && typeof firstIssue === 'object') {
-      const issueRecord = firstIssue as Record<string, unknown>;
-      const issueMessage = typeof issueRecord.message === 'string' ? issueRecord.message.trim() : '';
-      const path = Array.isArray(issueRecord.path)
-        ? issueRecord.path.map((item) => String(item || '').trim()).filter(Boolean).join('.')
-        : '';
-
-      if (issueMessage) {
-        return path ? `${issueMessage} (${path})` : issueMessage;
-      }
-    }
-
-    if (message) {
-      return message;
-    }
-  }
-
-  return normalizeErrorText(errorValue);
 };
 
 const normalizeRecoveryStatus = (value: unknown): UnclassifiedOutRecoveryStatus => {
@@ -800,6 +808,7 @@ const loadOrderContextBySeller = async ({
   const hashToRelatedTradesMap = new Map<string, RelatedTradeInfo[]>();
   const counterpartyToRelatedTradesMap = new Map<string, RelatedTradeInfo[]>();
   const tradeIdToOrderPreviewMap = new Map<string, OrderPreview>();
+  let earliestOrderCreatedAtUnixSeconds: number | null = null;
 
   const registerHash = (
     txHash: unknown,
@@ -822,6 +831,12 @@ const loadOrderContextBySeller = async ({
     const orderId = String(order?._id || '').trim();
     const tradeId = String(order?.tradeId || '').trim();
     const status = String(order?.status || '').trim();
+    const orderCreatedAtUnixSeconds = parseIsoTimestampToUnixSeconds(order?.createdAt);
+    if (orderCreatedAtUnixSeconds != null) {
+      if (earliestOrderCreatedAtUnixSeconds == null || orderCreatedAtUnixSeconds < earliestOrderCreatedAtUnixSeconds) {
+        earliestOrderCreatedAtUnixSeconds = orderCreatedAtUnixSeconds;
+      }
+    }
     const usdtAmount = String(order?.usdtAmount ?? '').trim();
     const krwAmount = String(order?.krwAmount ?? '').trim();
     const explicitRate = Number(order?.rate);
@@ -906,36 +921,38 @@ const loadOrderContextBySeller = async ({
     hashToRelatedTradesMap,
     counterpartyToRelatedTradesMap,
     tradeIdToOrderPreviewMap,
+    earliestOrderCreatedAtUnixSeconds,
   };
 };
 
-const fetchSellerEscrowTransfers = async ({
+type InsightBlockItem = {
+  block_number?: number | string;
+};
+
+type InsightBlocksResponse = {
+  data?: InsightBlockItem[];
+  error?: unknown;
+};
+
+const resolveStartBlockNumberFromInsight = async ({
   clientId,
   chainId,
-  ownerAddress,
-  contractAddress,
-  page,
-  limit,
+  timestampFromUnixSeconds,
 }: {
   clientId: string;
   chainId: number;
-  ownerAddress: string;
-  contractAddress: string;
-  page: number;
-  limit: number;
+  timestampFromUnixSeconds: number;
 }) => {
   const params = new URLSearchParams();
   params.append('chain_id', String(chainId));
-  params.append('limit', String(limit));
-  params.append('page', String(page));
-  params.append('block_timestamp_from', '1');
-  params.append('owner_address', ownerAddress);
-  params.append('contract_address', contractAddress);
-  params.append('token_types', 'erc20');
-  params.append('sort_order', 'desc');
+  params.append('filter_block_timestamp_gte', String(timestampFromUnixSeconds));
+  params.append('sort_by', 'block_number');
+  params.append('sort_order', 'asc');
+  params.append('limit', '1');
+  params.append('page', '0');
 
   const response = await fetch(
-    `https://insight.thirdweb.com/v1/tokens/transfers?${params.toString()}`,
+    `https://insight.thirdweb.com/v1/blocks?${params.toString()}`,
     {
       method: 'GET',
       headers: {
@@ -944,77 +961,225 @@ const fetchSellerEscrowTransfers = async ({
       cache: 'no-store',
     },
   );
-
-  const payload = (await response.json().catch(() => ({}))) as InsightTransferResponse;
+  const payload = (await response.json().catch(() => ({}))) as InsightBlocksResponse;
   if (!response.ok) {
-    const errorMessage = extractInsightErrorMessage(payload)
-      || 'Failed to fetch escrow transfers from thirdweb insight';
-    throw new Error(errorMessage);
+    throw new Error(
+      normalizeErrorText(payload?.error) || 'Failed to resolve start block from thirdweb insight',
+    );
   }
-  return payload;
+  const firstItem = Array.isArray(payload?.data) ? payload.data[0] : null;
+  if (!firstItem) return null;
+
+  const blockNumberValue = String(firstItem?.block_number ?? '').trim();
+  if (!/^\d+$/.test(blockNumberValue)) return null;
+  return BigInt(blockNumberValue);
 };
 
 const fetchAllSellerEscrowTransfers = async ({
-  clientId,
-  chainId,
+  chainConfig,
   ownerAddress,
   contractAddress,
+  startTimestampUnixSeconds,
 }: {
-  clientId: string;
-  chainId: number;
+  chainConfig: ChainConfig;
   ownerAddress: string;
   contractAddress: string;
+  startTimestampUnixSeconds: number | null;
 }) => {
-  const insightFetchLimit = 100;
-  const firstPage = await fetchSellerEscrowTransfers({
-    clientId,
-    chainId,
-    ownerAddress,
-    contractAddress,
-    page: 0,
-    limit: insightFetchLimit,
+  const secretKey = String(process.env.THIRDWEB_SECRET_KEY || '').trim();
+  if (!secretKey) {
+    throw new Error('THIRDWEB_SECRET_KEY is not configured');
+  }
+
+  const thirdwebClient = createThirdwebClient({ secretKey });
+  const rpcRequest = getRpcClient({
+    client: thirdwebClient,
+    chain: resolveThirdwebChainByName(chainConfig.chain),
   });
+  const latestBlock = await eth_blockNumber(rpcRequest);
 
-  const firstPageData = Array.isArray(firstPage?.data) ? firstPage.data : [];
-  const totalPagesFromMeta = Number(firstPage?.meta?.total_pages || 0);
-  const totalPages = Math.max(1, Number.isFinite(totalPagesFromMeta) ? totalPagesFromMeta : 1);
-  const pageDataMap = new Map<number, InsightTransferItem[]>();
-  pageDataMap.set(0, firstPageData);
+  let startBlock: bigint =
+    latestBlock > START_BLOCK_FALLBACK_LOOKBACK
+      ? latestBlock - START_BLOCK_FALLBACK_LOOKBACK
+      : 0n;
 
-  const pageNumbers = Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) => index + 1);
-  const batchSize = 5;
-  for (let index = 0; index < pageNumbers.length; index += batchSize) {
-    const batch = pageNumbers.slice(index, index + batchSize);
-    const responses = await Promise.all(
-      batch.map(async (pageNumber) => {
-        const pageResponse = await fetchSellerEscrowTransfers({
-          clientId,
-          chainId,
-          ownerAddress,
-          contractAddress,
-          page: pageNumber,
-          limit: insightFetchLimit,
-        });
-        return {
-          pageNumber,
-          data: Array.isArray(pageResponse?.data) ? pageResponse.data : [],
-        };
-      }),
-    );
-
-    for (const response of responses) {
-      pageDataMap.set(response.pageNumber, response.data);
+  const insightClientId = await resolveInsightClientId();
+  if (insightClientId && startTimestampUnixSeconds != null) {
+    try {
+      const startBlockFromInsight = await resolveStartBlockNumberFromInsight({
+        clientId: insightClientId,
+        chainId: chainConfig.chainId,
+        timestampFromUnixSeconds: startTimestampUnixSeconds,
+      });
+      if (startBlockFromInsight != null) {
+        startBlock = startBlockFromInsight;
+      }
+    } catch (error) {
+      console.error('getSellerEscrowTransferHistory: failed to resolve start block from insight', error);
     }
   }
 
-  const items: InsightTransferItem[] = [];
-  for (let pageNumber = 0; pageNumber < totalPages; pageNumber += 1) {
-    items.push(...(pageDataMap.get(pageNumber) || []));
+  if (startBlock > START_BLOCK_SAFETY_LOOKBACK) {
+    startBlock -= START_BLOCK_SAFETY_LOOKBACK;
+  } else {
+    startBlock = 0n;
   }
+  if (startBlock > latestBlock) {
+    startBlock = latestBlock;
+  }
+
+  const ownerAddressNormalized = normalizeAddress(ownerAddress);
+  const ownerAddressTopic = addressToTopic(ownerAddressNormalized) as `0x${string}`;
+  const transferTopic = ERC20_TRANSFER_TOPIC as `0x${string}`;
+  const transfersByLogKey = new Map<string, InsightTransferItem>();
+
+  const blockRanges: Array<{ fromBlock: bigint; toBlock: bigint }> = [];
+  for (let fromBlock = startBlock; fromBlock <= latestBlock; fromBlock += RPC_LOG_BLOCK_CHUNK_SIZE) {
+    const toBlockCandidate = fromBlock + RPC_LOG_BLOCK_CHUNK_SIZE - 1n;
+    blockRanges.push({
+      fromBlock,
+      toBlock: toBlockCandidate > latestBlock ? latestBlock : toBlockCandidate,
+    });
+  }
+
+  const logBatchSize = 30;
+  for (let index = 0; index < blockRanges.length; index += logBatchSize) {
+    const batch = blockRanges.slice(index, index + logBatchSize);
+    const batchLogs = await Promise.all(
+      batch.map(async ({ fromBlock, toBlock }) => {
+        const [outboundLogs, inboundLogs] = await Promise.all([
+          eth_getLogs(rpcRequest, {
+            address: contractAddress as `0x${string}`,
+            fromBlock,
+            toBlock,
+            topics: [transferTopic, ownerAddressTopic],
+          }),
+          eth_getLogs(rpcRequest, {
+            address: contractAddress as `0x${string}`,
+            fromBlock,
+            toBlock,
+            topics: [transferTopic, null, ownerAddressTopic],
+          }),
+        ]);
+        return [...outboundLogs, ...inboundLogs];
+      }),
+    );
+
+    for (const logs of batchLogs) {
+      for (const log of logs) {
+        const topics = Array.isArray(log?.topics) ? log.topics : [];
+        const topic0 = String(topics[0] || '').trim().toLowerCase();
+        if (topic0 !== ERC20_TRANSFER_TOPIC) continue;
+
+        const fromAddress = normalizeAddress(extractAddressFromTopic(topics[1]));
+        const toAddress = normalizeAddress(extractAddressFromTopic(topics[2]));
+        if (!isWalletAddress(fromAddress) || !isWalletAddress(toAddress)) continue;
+        if (fromAddress !== ownerAddressNormalized && toAddress !== ownerAddressNormalized) continue;
+
+        const txHash = normalizeHash(log?.transactionHash);
+        if (!isTransactionHash(txHash)) continue;
+
+        const blockNumber = typeof log?.blockNumber === 'bigint' ? log.blockNumber : null;
+        if (blockNumber == null || blockNumber < 0n) continue;
+
+        const amountRaw = parseHexAmountToRawString(log?.data);
+        const logIndex = Number(log?.logIndex || 0);
+        const dedupeKey = `${txHash}:${blockNumber.toString()}:${String(logIndex)}:${fromAddress}:${toAddress}:${amountRaw}`;
+        if (transfersByLogKey.has(dedupeKey)) continue;
+
+        transfersByLogKey.set(dedupeKey, {
+          from_address: fromAddress,
+          to_address: toAddress,
+          contract_address: normalizeAddress(contractAddress),
+          block_number: blockNumber.toString(),
+          block_timestamp: '',
+          transaction_hash: txHash,
+          log_index: logIndex,
+          transfer_type: 'transfer',
+          chain_id: chainConfig.chainId,
+          token_type: 'erc20',
+          amount: amountRaw,
+        });
+      }
+    }
+  }
+
+  const items = Array.from(transfersByLogKey.values())
+    .sort((a, b) => {
+      const aBlock = parseRawAmountToBigInt(a.block_number || '0');
+      const bBlock = parseRawAmountToBigInt(b.block_number || '0');
+      if (aBlock !== bBlock) {
+        return aBlock > bBlock ? -1 : 1;
+      }
+      const aLogIndex = Number(a.log_index || 0);
+      const bLogIndex = Number(b.log_index || 0);
+      if (aLogIndex !== bLogIndex) {
+        return bLogIndex - aLogIndex;
+      }
+      return String(b.transaction_hash || '').localeCompare(String(a.transaction_hash || ''));
+    });
 
   return {
     items,
   };
+};
+
+const populateTransferBlockTimestamps = async ({
+  chainConfig,
+  transfers,
+}: {
+  chainConfig: ChainConfig;
+  transfers: Array<{ blockNumber: string; blockTimestamp: string }>;
+}) => {
+  if (!Array.isArray(transfers) || transfers.length === 0) return;
+
+  const blockNumbers = Array.from(
+    new Set(
+      transfers
+        .map((item) => String(item?.blockNumber || '').trim())
+        .filter((item) => /^\d+$/.test(item)),
+    ),
+  );
+  if (blockNumbers.length === 0) return;
+
+  const secretKey = String(process.env.THIRDWEB_SECRET_KEY || '').trim();
+  if (!secretKey) return;
+
+  const thirdwebClient = createThirdwebClient({ secretKey });
+  const rpcRequest = getRpcClient({
+    client: thirdwebClient,
+    chain: resolveThirdwebChainByName(chainConfig.chain),
+  });
+  const blockTimestampMap = new Map<string, string>();
+
+  const timestampBatchSize = 20;
+  for (let index = 0; index < blockNumbers.length; index += timestampBatchSize) {
+    const batch = blockNumbers.slice(index, index + timestampBatchSize);
+    const entries = await Promise.all(
+      batch.map(async (blockNumberText) => {
+        const block = await eth_getBlockByNumber(rpcRequest, {
+          blockNumber: BigInt(blockNumberText),
+          includeTransactions: false,
+        });
+        const timestamp = typeof block?.timestamp === 'bigint' ? Number(block.timestamp) : 0;
+        const isoTimestamp = Number.isFinite(timestamp) && timestamp > 0
+          ? new Date(timestamp * 1000).toISOString()
+          : '';
+        return {
+          blockNumberText,
+          isoTimestamp,
+        };
+      }),
+    );
+    for (const entry of entries) {
+      blockTimestampMap.set(entry.blockNumberText, entry.isoTimestamp);
+    }
+  }
+
+  for (const transfer of transfers) {
+    const blockNumber = String(transfer?.blockNumber || '').trim();
+    transfer.blockTimestamp = blockTimestampMap.get(blockNumber) || transfer.blockTimestamp || '';
+  }
 };
 
 const serializeUnclassifiedOutRecoveryHistory = ({
@@ -1181,15 +1346,6 @@ export async function POST(request: NextRequest) {
     }
 
     const chainConfig = resolveChainConfig();
-    const insightClientId = await resolveInsightClientId();
-    if (!insightClientId) {
-      return NextResponse.json(
-        {
-          error: 'thirdweb insight client id is not configured',
-        },
-        { status: 500 },
-      );
-    }
 
     const {
       orderCount,
@@ -1197,6 +1353,7 @@ export async function POST(request: NextRequest) {
       hashToRelatedTradesMap,
       counterpartyToRelatedTradesMap,
       tradeIdToOrderPreviewMap,
+      earliestOrderCreatedAtUnixSeconds,
     } = await loadOrderContextBySeller({
       sellerWalletAddress,
       sellerEscrowWalletAddress,
@@ -1214,11 +1371,22 @@ export async function POST(request: NextRequest) {
       fallbackTokenDecimals: chainConfig.usdtDecimals,
     });
 
+    const startTimestampCandidates = [
+      parseIsoTimestampToUnixSeconds(sellerUser?.createdAt),
+      earliestOrderCreatedAtUnixSeconds,
+      ...unclassifiedOutRecoveryHistories
+        .map((historyItem) => parseIsoTimestampToUnixSeconds(historyItem.sourceBlockTimestamp))
+        .filter((value): value is number => value != null),
+    ].filter((value): value is number => value != null);
+    const startTimestampUnixSeconds = startTimestampCandidates.length > 0
+      ? Math.min(...startTimestampCandidates)
+      : null;
+
     const allTransfersResponse = await fetchAllSellerEscrowTransfers({
-      clientId: insightClientId,
-      chainId: chainConfig.chainId,
+      chainConfig,
       ownerAddress: sellerEscrowWalletAddress,
       contractAddress: chainConfig.usdtContractAddress,
+      startTimestampUnixSeconds,
     });
 
     const sellerEscrowWalletAddressLower = normalizeAddress(sellerEscrowWalletAddress);
@@ -1311,6 +1479,10 @@ export async function POST(request: NextRequest) {
     const startIndex = (currentPage - 1) * limit;
     const endIndex = startIndex + limit;
     const transfers = transfersWithRunningBalance.slice(startIndex, endIndex);
+    await populateTransferBlockTimestamps({
+      chainConfig,
+      transfers,
+    });
 
     const caseSummaryMap = new Map<TransferCaseType, number>();
     for (const transfer of transfersWithRunningBalance) {
