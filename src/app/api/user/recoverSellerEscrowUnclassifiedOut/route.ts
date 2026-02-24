@@ -405,6 +405,7 @@ const fetchSellerEscrowTransfers = async ({
   params.append('chain_id', String(chainId));
   params.append('limit', String(limit));
   params.append('page', String(page));
+  params.append('block_timestamp_from', '0');
   params.append('owner_address', ownerAddress);
   params.append('contract_address', contractAddress);
   params.append('token_types', 'erc20');
