@@ -50,7 +50,18 @@ const buildMenuItems = (lang: string): MenuItem[] => {
         { label: '회원 관리', hint: 'Member', href: `${root}/store-management/member-management` },
       ],
     },
-    { label: '판매자 관리', hint: 'Seller', href: `${root}/seller-management` },
+    {
+      label: '판매자 관리',
+      hint: 'Seller',
+      href: `${root}/seller-management`,
+      children: [
+        {
+          label: '에스크로 입출금 내역',
+          hint: 'Escrow Flow',
+          href: `${root}/seller-management/escrow-transfer-history`,
+        },
+      ],
+    },
     { label: '구매자 관리', hint: 'Buyer', href: `${root}/buyer-management` },
     { label: '관리자 관리', hint: 'Admin', href: `${root}/admin-management` },
     { label: '정책 관리', hint: 'Policy', href: `${root}/policy` },

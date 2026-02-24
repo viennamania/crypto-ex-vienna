@@ -528,11 +528,20 @@ export default function SellerManagementPage() {
           <button
             type="button"
             onClick={() => {
+              router.push(`/${lang}/administration/seller-management/escrow-transfer-history`);
+            }}
+            className="ml-auto inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-100 hover:shadow-md"
+          >
+            에스크로 입출금 내역
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               fetchSellers();
               fetchSellerDashboard();
             }}
             disabled={loading || dashboardLoading}
-            className={`ml-auto inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition ${
+            className={`inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition ${
               loading || dashboardLoading ? 'cursor-not-allowed opacity-60' : 'hover:-translate-y-0.5 hover:shadow-md'
             }`}
           >
