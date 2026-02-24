@@ -252,6 +252,26 @@ type PrivateTradeStatusState = {
   error: string | null;
 };
 
+type SellerEscrowCompleteFlowPhase = 'READY' | 'PROCESSING' | 'COMPLETED';
+
+type SellerEscrowCompleteFlowStepState = 'pending' | 'active' | 'completed';
+
+type SellerEscrowCompleteFlowStepItem = {
+  key: string;
+  title: string;
+  description: string;
+  state: SellerEscrowCompleteFlowStepState;
+};
+
+type ActiveOrderCompleteResult = {
+  paymentConfirmedAt: string;
+  transactionHash: string;
+  transferCount: number;
+  buyerTransferUsdt: number;
+  platformFeeUsdt: number;
+  totalTransferUsdt: number;
+};
+
 
 const walletAuthOptions = ["google", "email", "phone"];
 const ACTIVE_PRIVATE_TRADE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
@@ -511,6 +531,63 @@ const getTradeStatusBadgeClass = (status?: string) => {
   if (status === 'completed') return 'border-emerald-300 bg-emerald-100 text-emerald-700';
   if (status === 'cancelled') return 'border-rose-300 bg-rose-100 text-rose-700';
   return 'border-slate-300 bg-slate-100 text-slate-600';
+};
+
+const SELLER_ESCROW_COMPLETE_STEP_DEFINITIONS = [
+  {
+    key: 'payment-request-check',
+    title: '입금요청 확인',
+    description: '구매자 입금요청 상태 및 주문 정보를 검증합니다.',
+  },
+  {
+    key: 'escrow-balance-check',
+    title: '에스크로 검증',
+    description: '에스크로 잔액과 플랫폼 수수료 전송 가능 여부를 확인합니다.',
+  },
+  {
+    key: 'escrow-transfer',
+    title: '에스크로 전송',
+    description: '구매자 지갑과 플랫폼 수수료 지갑으로 전송을 실행합니다.',
+  },
+  {
+    key: 'complete-finish',
+    title: '완료 반영',
+    description: '결제완료 상태 및 거래 이력을 최종 반영합니다.',
+  },
+] as const;
+
+const getSellerEscrowCompleteStepStatusLabel = (state: SellerEscrowCompleteFlowStepState) => {
+  if (state === 'completed') return '완료';
+  if (state === 'active') return '진행중';
+  return '대기';
+};
+
+const getSellerEscrowCompleteStepStyle = (state: SellerEscrowCompleteFlowStepState) => {
+  if (state === 'completed') {
+    return {
+      container: 'border-emerald-200 bg-emerald-50',
+      badge: 'border-emerald-500 bg-emerald-500 text-white',
+      title: 'text-emerald-800',
+      description: 'text-emerald-700',
+      status: 'text-emerald-700',
+    };
+  }
+  if (state === 'active') {
+    return {
+      container: 'border-cyan-300 bg-cyan-50',
+      badge: 'border-cyan-500 bg-cyan-500 text-white',
+      title: 'text-cyan-800',
+      description: 'text-cyan-700',
+      status: 'text-cyan-700',
+    };
+  }
+  return {
+    container: 'border-slate-200 bg-slate-50',
+    badge: 'border-slate-300 bg-white text-slate-500',
+    title: 'text-slate-700',
+    description: 'text-slate-500',
+    status: 'text-slate-500',
+  };
 };
 
 const formatTradeHistoryTime = (value?: string) => {
@@ -1906,6 +1983,7 @@ export default function Index({ params }: any) {
     useState<Record<string, PrivateTradeStatusState>>({});
   const [isActiveOrderCompleteModalOpen, setIsActiveOrderCompleteModalOpen] = useState(false);
   const [selectedActivePaymentRequestedOrder, setSelectedActivePaymentRequestedOrder] = useState<BuyOrder | null>(null);
+  const [activeOrderCompleteResult, setActiveOrderCompleteResult] = useState<ActiveOrderCompleteResult | null>(null);
   const [completingActiveOrder, setCompletingActiveOrder] = useState(false);
   const [cancelingBuyerPrivateTrade, setCancelingBuyerPrivateTrade] = useState(false);
   const [updatingAudioByOrderId, setUpdatingAudioByOrderId] = useState<Record<string, boolean>>({});
@@ -2149,6 +2227,60 @@ export default function Index({ params }: any) {
       totalTransferUsdt,
     };
   }, [selectedActivePaymentRequestedOrder]);
+  const activeOrderCompleteFlowPhase = useMemo<SellerEscrowCompleteFlowPhase>(() => {
+    if (completingActiveOrder) {
+      return 'PROCESSING';
+    }
+
+    const normalizedStatus = String(selectedActivePaymentRequestedOrder?.status || '').trim();
+    if (
+      activeOrderCompleteResult
+      || normalizedStatus === 'paymentConfirmed'
+      || normalizedStatus === 'completed'
+    ) {
+      return 'COMPLETED';
+    }
+    return 'READY';
+  }, [completingActiveOrder, selectedActivePaymentRequestedOrder?.status, activeOrderCompleteResult]);
+
+  const activeOrderCompleteFlowStatusLabel = useMemo(() => {
+    if (activeOrderCompleteFlowPhase === 'PROCESSING') return '에스크로 전송 처리중';
+    if (activeOrderCompleteFlowPhase === 'COMPLETED') return '완료 반영 완료';
+    return '완료 처리 준비';
+  }, [activeOrderCompleteFlowPhase]);
+
+  const activeOrderCompleteFlowSummary = useMemo(() => {
+    if (activeOrderCompleteFlowPhase === 'PROCESSING') {
+      return '에스크로 지갑 전송과 완료 반영을 순차적으로 진행하고 있습니다.';
+    }
+    if (activeOrderCompleteFlowPhase === 'COMPLETED') {
+      const completedAt = activeOrderCompleteResult?.paymentConfirmedAt
+        ? formatTradeHistoryFullTime(activeOrderCompleteResult.paymentConfirmedAt)
+        : '';
+      if (completedAt && completedAt !== '-') {
+        return `완료 처리되었습니다. 완료 시각: ${completedAt}`;
+      }
+      return '완료 처리되었습니다. 아래 전송 정보를 확인해 주세요.';
+    }
+    return '완료하기를 누르면 에스크로 검증 후 지갑 전송과 완료 반영이 진행됩니다.';
+  }, [activeOrderCompleteFlowPhase, activeOrderCompleteResult?.paymentConfirmedAt]);
+
+  const activeOrderCompleteFlowSteps = useMemo<SellerEscrowCompleteFlowStepItem[]>(() => {
+    let stepStates: SellerEscrowCompleteFlowStepState[] = ['completed', 'active', 'pending', 'pending'];
+
+    if (activeOrderCompleteFlowPhase === 'PROCESSING') {
+      stepStates = ['completed', 'completed', 'active', 'pending'];
+    } else if (activeOrderCompleteFlowPhase === 'COMPLETED') {
+      stepStates = ['completed', 'completed', 'completed', 'completed'];
+    }
+
+    return SELLER_ESCROW_COMPLETE_STEP_DEFINITIONS.map((step, index) => ({
+      key: step.key,
+      title: step.title,
+      description: step.description,
+      state: stepStates[index] || 'pending',
+    }));
+  }, [activeOrderCompleteFlowPhase]);
 
   const startNotificationLoop = useCallback(async () => {
     const audio = notificationAudioRef.current;
@@ -5624,6 +5756,7 @@ const fetchBuyOrders = async () => {
     if (!isOwnerSeller) {
       return;
     }
+    setActiveOrderCompleteResult(null);
     setSelectedActivePaymentRequestedOrder(order);
     setIsActiveOrderCompleteModalOpen(true);
   };
@@ -5634,6 +5767,7 @@ const fetchBuyOrders = async () => {
     }
     setIsActiveOrderCompleteModalOpen(false);
     setSelectedActivePaymentRequestedOrder(null);
+    setActiveOrderCompleteResult(null);
   };
 
   useEffect(() => {
@@ -5642,6 +5776,7 @@ const fetchBuyOrders = async () => {
     }
     setIsActiveOrderCompleteModalOpen(false);
     setSelectedActivePaymentRequestedOrder(null);
+    setActiveOrderCompleteResult(null);
   }, [isOwnerSeller]);
 
   const completeSelectedActiveOrder = async () => {
@@ -5653,6 +5788,7 @@ const fetchBuyOrders = async () => {
       return;
     }
 
+    setActiveOrderCompleteResult(null);
     setCompletingActiveOrder(true);
     try {
       const response = await fetch('/api/order/completePrivateBuyOrderBySeller', {
@@ -5758,9 +5894,41 @@ const fetchBuyOrders = async () => {
         }),
       );
 
-      toast.success('주문 완료 처리되었습니다.');
-      setIsActiveOrderCompleteModalOpen(false);
-      setSelectedActivePaymentRequestedOrder(null);
+      setSelectedActivePaymentRequestedOrder((previousOrder) => {
+        if (!previousOrder) {
+          return previousOrder;
+        }
+        return {
+          ...previousOrder,
+          status: 'paymentConfirmed',
+          paymentConfirmedAt: confirmedAt,
+          transactionHash: releaseTxHash || previousOrder.transactionHash,
+          platformFee: {
+            ...(previousOrder.platformFee || {}),
+            percentage: platformFeeRatePercent,
+            rate: platformFeeRatePercent,
+            amount: platformFeeUsdtAmount,
+            amountUsdt: platformFeeUsdtAmount,
+            walletAddress: platformFeeWalletAddress,
+            address: platformFeeWalletAddress,
+            buyerTransferAmount: buyerTransferUsdtAmount,
+            totalTransferAmount: totalTransferUsdtAmount,
+            transferCount,
+            transferMode: transferCount > 1 ? 'batch' : 'single',
+          },
+        };
+      });
+
+      setActiveOrderCompleteResult({
+        paymentConfirmedAt: confirmedAt,
+        transactionHash: releaseTxHash,
+        transferCount,
+        buyerTransferUsdt: buyerTransferUsdtAmount,
+        platformFeeUsdt: platformFeeUsdtAmount,
+        totalTransferUsdt: totalTransferUsdtAmount,
+      });
+
+      toast.success('주문 완료 처리되었습니다. 단계에서 처리 결과를 확인해 주세요.');
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '주문 완료 처리에 실패했습니다.';
@@ -11889,7 +12057,7 @@ const fetchBuyOrders = async () => {
           isOpen={isActiveOrderCompleteModalOpen}
           onClose={closeActiveOrderCompleteModal}
         >
-          <div className="w-[min(94vw,480px)] rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
+          <div className="w-[min(94vw,480px)] lg:w-[min(90vw,1080px)] rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h3 className="text-base font-bold text-slate-900">주문 완료 처리</h3>
@@ -11907,141 +12075,246 @@ const fetchBuyOrders = async () => {
               </button>
             </div>
 
-            {selectedActivePaymentRequestedOrder && (
-              <>
-                <div className="mt-3 space-y-2">
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2">
-                      <span className="text-[11px] font-bold tracking-[0.12em] text-emerald-700">
-                        완료 처리자
-                      </span>
-                      <div className="mt-1 flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-extrabold text-emerald-900">
-                          {user?.nickname || '판매자'}
-                        </span>
-                        <span className="text-[11px] font-semibold text-emerald-800 tabular-nums">
-                          {address ? formatShortWalletAddress(address) : '-'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-sky-200 bg-sky-50/80 px-3 py-2">
-                      <span className="text-[11px] font-bold tracking-[0.12em] text-sky-700">
-                        접속 아이피주소
-                      </span>
-                      <div className="mt-1 break-all text-sm font-extrabold text-sky-900 tabular-nums">
-                        {loadingMyIpAddress ? '확인중...' : (myIpAddress || '-')}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 text-xs text-slate-700">
-                    <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5">
-                      <span className="text-[11px] text-slate-500">거래번호(TID)</span>
-                      <div className="mt-0.5 font-bold text-slate-900 tabular-nums">
-                        {selectedActivePaymentRequestedOrder.tradeId || '-'}
-                      </div>
-                    </div>
-                    <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5">
-                      <span className="text-[11px] text-slate-500">주문 상태</span>
-                      <div className="mt-0.5 font-bold text-amber-700">
-                        {getTradeStatusLabel(
-                          selectedActivePaymentRequestedOrder.status || 'paymentRequested',
-                        )}
-                      </div>
-                    </div>
-                    <div className="rounded-md border border-emerald-200 bg-emerald-50/60 px-2 py-1.5">
-                      <span className="text-[11px] text-slate-500">입금 금액</span>
-                      <div className="mt-1 text-xl font-extrabold leading-tight text-emerald-800 tabular-nums sm:text-2xl">
-                        {formatKrwValue(selectedActivePaymentRequestedOrder.krwAmount)} 원
-                      </div>
-                    </div>
-                    <div className="rounded-md border border-sky-200 bg-sky-50/60 px-2 py-1.5">
-                      <span className="text-[11px] text-slate-500">주문 수량</span>
-                      <div className="mt-1 text-xl font-extrabold leading-tight text-sky-800 tabular-nums sm:text-2xl">
-                        {(Number(selectedActivePaymentRequestedOrder.usdtAmount || 0)).toFixed(3)} USDT
-                      </div>
-                    </div>
-                    <div className="rounded-md border border-indigo-200 bg-indigo-50/60 px-2 py-1.5">
-                      <span className="text-[11px] text-slate-500">플랫폼 수수료(%)</span>
-                      <div className="mt-1 text-xl font-extrabold leading-tight text-indigo-800 tabular-nums sm:text-2xl">
-                        {formatPercentDisplay(activeOrderCompleteFeePreview?.feeRate || 0)}%
-                      </div>
-                      <div className="text-[11px] font-semibold text-indigo-700 tabular-nums">
-                        추가 전송: {formatUsdtDisplay(activeOrderCompleteFeePreview?.platformFeeUsdt || 0)} USDT
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
-                        <span className="text-slate-500">입금자명</span>
-                        <span className="truncate text-base font-extrabold leading-tight text-slate-900 sm:text-lg">
-                          {getBuyerDepositName(selectedActivePaymentRequestedOrder)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
-                        <span className="text-slate-500">입금요청 시간</span>
-                        <span className="font-semibold text-slate-900 tabular-nums">
-                          {formatTradeHistoryTime(
-                            selectedActivePaymentRequestedOrder.paymentRequestedAt
-                            || selectedActivePaymentRequestedOrder.createdAt,
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
-                        <span className="text-slate-500">구매자 지갑</span>
-                        <span className="font-semibold text-slate-800 tabular-nums">
-                          {formatShortWalletAddress(
-                            selectedActivePaymentRequestedOrder.buyer?.walletAddress
-                            || selectedActivePaymentRequestedOrder.walletAddress
-                            || '',
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
-                        <span className="text-slate-500">에스크로 지갑</span>
-                        <span className="font-semibold text-slate-800 tabular-nums">
-                          {formatShortWalletAddress(
-                            selectedActivePaymentRequestedOrder.buyer?.escrowWalletAddress || '',
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+            <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-4 lg:items-start">
+              <div
+                className={`rounded-xl border px-3 py-3 ${
+                  activeOrderCompleteFlowPhase === 'COMPLETED'
+                    ? 'border-emerald-300 bg-emerald-50/70'
+                    : activeOrderCompleteFlowPhase === 'PROCESSING'
+                      ? 'border-cyan-300 bg-cyan-50/70'
+                      : 'border-slate-200 bg-white/90'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">에스크로 완료 절차</p>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                      activeOrderCompleteFlowPhase === 'COMPLETED'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        : activeOrderCompleteFlowPhase === 'PROCESSING'
+                          ? 'border-cyan-200 bg-cyan-50 text-cyan-700'
+                          : 'border-slate-200 bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    {activeOrderCompleteFlowStatusLabel}
+                  </span>
                 </div>
+                <p className="mt-1 text-[11px] font-medium text-slate-600">
+                  {activeOrderCompleteFlowSummary}
+                </p>
 
-                <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50/80 p-2.5 text-amber-900">
-                  <div className="rounded-lg border border-orange-300 bg-white px-2.5 py-2">
-                    <div className="text-[11px] font-bold tracking-[0.08em] text-orange-700">
-                      플랫폼 수수료 추가 전송
-                    </div>
-                    <div className="mt-0.5 text-lg font-extrabold leading-tight text-orange-800 tabular-nums sm:text-xl">
-                      +{formatUsdtDisplay(activeOrderCompleteFeePreview?.platformFeeUsdt || 0)} USDT
-                    </div>
-                    <div className="mt-0.5 text-[11px] font-semibold text-orange-700">
-                      수수료율 {formatPercentDisplay(activeOrderCompleteFeePreview?.feeRate || 0)}% 기준으로
-                      {' '}플랫폼 수수료 지갑에 별도 전송됩니다.
-                    </div>
-                  </div>
-
-                  <div className="mt-2 grid grid-cols-2 gap-1.5 text-xs font-semibold">
-                    <div className="flex items-center justify-between gap-2 rounded-md bg-white/70 px-2 py-1.5">
-                      <span className="text-amber-700">구매자 지갑 전송</span>
-                      <span className="text-base font-extrabold text-amber-900 tabular-nums">
-                        {formatUsdtDisplay(activeOrderCompleteFeePreview?.buyerTransferUsdt || 0)} USDT
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 rounded-md bg-white/70 px-2 py-1.5">
-                      <span className="text-amber-700">총 전송 예정 수량</span>
-                      <span className="text-base font-extrabold text-amber-900 tabular-nums">
-                        {formatUsdtDisplay(activeOrderCompleteFeePreview?.totalTransferUsdt || 0)} USDT
-                      </span>
-                    </div>
-                  </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
+                  {activeOrderCompleteFlowSteps.map((step, index) => {
+                    const style = getSellerEscrowCompleteStepStyle(step.state);
+                    return (
+                      <div
+                        key={step.key}
+                        className={`rounded-lg border px-2.5 py-2 ${style.container}`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <span
+                            className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${style.badge}`}
+                          >
+                            {step.state === 'completed' ? '✓' : index + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className={`text-xs font-semibold ${style.title}`}>{step.title}</p>
+                              <span className={`text-[10px] font-semibold ${style.status}`}>
+                                {getSellerEscrowCompleteStepStatusLabel(step.state)}
+                              </span>
+                            </div>
+                            <p className={`mt-0.5 text-[11px] ${style.description}`}>
+                              {step.description}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </>
-            )}
+              </div>
+
+              {selectedActivePaymentRequestedOrder && (
+                <div className="space-y-2 lg:space-y-3">
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2">
+                        <span className="text-[11px] font-bold tracking-[0.12em] text-emerald-700">
+                          완료 처리자
+                        </span>
+                        <div className="mt-1 flex items-center justify-between gap-2">
+                          <span className="truncate text-sm font-extrabold text-emerald-900">
+                            {user?.nickname || '판매자'}
+                          </span>
+                          <span className="text-[11px] font-semibold text-emerald-800 tabular-nums">
+                            {address ? formatShortWalletAddress(address) : '-'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-sky-200 bg-sky-50/80 px-3 py-2">
+                        <span className="text-[11px] font-bold tracking-[0.12em] text-sky-700">
+                          접속 아이피주소
+                        </span>
+                        <div className="mt-1 break-all text-sm font-extrabold text-sky-900 tabular-nums">
+                          {loadingMyIpAddress ? '확인중...' : (myIpAddress || '-')}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 text-xs text-slate-700 lg:grid-cols-3">
+                      <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5">
+                        <span className="text-[11px] text-slate-500">거래번호(TID)</span>
+                        <div className="mt-0.5 font-bold text-slate-900 tabular-nums">
+                          {selectedActivePaymentRequestedOrder.tradeId || '-'}
+                        </div>
+                      </div>
+                      <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5">
+                        <span className="text-[11px] text-slate-500">주문 상태</span>
+                        <div className="mt-0.5 font-bold text-amber-700">
+                          {getTradeStatusLabel(
+                            selectedActivePaymentRequestedOrder.status || 'paymentRequested',
+                          )}
+                        </div>
+                      </div>
+                      <div className="rounded-md border border-emerald-200 bg-emerald-50/60 px-2 py-1.5">
+                        <span className="text-[11px] text-slate-500">입금 금액</span>
+                        <div className="mt-1 text-xl font-extrabold leading-tight text-emerald-800 tabular-nums sm:text-2xl">
+                          {formatKrwValue(selectedActivePaymentRequestedOrder.krwAmount)} 원
+                        </div>
+                      </div>
+                      <div className="rounded-md border border-sky-200 bg-sky-50/60 px-2 py-1.5">
+                        <span className="text-[11px] text-slate-500">주문 수량</span>
+                        <div className="mt-1 text-xl font-extrabold leading-tight text-sky-800 tabular-nums sm:text-2xl">
+                          {(Number(selectedActivePaymentRequestedOrder.usdtAmount || 0)).toFixed(3)} USDT
+                        </div>
+                      </div>
+                      <div className="rounded-md border border-indigo-200 bg-indigo-50/60 px-2 py-1.5">
+                        <span className="text-[11px] text-slate-500">플랫폼 수수료(%)</span>
+                        <div className="mt-1 text-xl font-extrabold leading-tight text-indigo-800 tabular-nums sm:text-2xl">
+                          {formatPercentDisplay(activeOrderCompleteFeePreview?.feeRate || 0)}%
+                        </div>
+                        <div className="text-[11px] font-semibold text-indigo-700 tabular-nums">
+                          추가 전송: {formatUsdtDisplay(activeOrderCompleteFeePreview?.platformFeeUsdt || 0)} USDT
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+                          <span className="text-slate-500">입금자명</span>
+                          <span className="truncate text-base font-extrabold leading-tight text-slate-900 sm:text-lg">
+                            {getBuyerDepositName(selectedActivePaymentRequestedOrder)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+                          <span className="text-slate-500">입금요청 시간</span>
+                          <span className="font-semibold text-slate-900 tabular-nums">
+                            {formatTradeHistoryTime(
+                              selectedActivePaymentRequestedOrder.paymentRequestedAt
+                              || selectedActivePaymentRequestedOrder.createdAt,
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+                          <span className="text-slate-500">구매자 지갑</span>
+                          <span className="font-semibold text-slate-800 tabular-nums">
+                            {formatShortWalletAddress(
+                              selectedActivePaymentRequestedOrder.buyer?.walletAddress
+                              || selectedActivePaymentRequestedOrder.walletAddress
+                              || '',
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+                          <span className="text-slate-500">에스크로 지갑</span>
+                          <span className="font-semibold text-slate-800 tabular-nums">
+                            {formatShortWalletAddress(
+                              selectedActivePaymentRequestedOrder.buyer?.escrowWalletAddress || '',
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-2.5 text-amber-900">
+                    <div className="rounded-lg border border-orange-300 bg-white px-2.5 py-2">
+                      <div className="text-[11px] font-bold tracking-[0.08em] text-orange-700">
+                        플랫폼 수수료 추가 전송
+                      </div>
+                      <div className="mt-0.5 text-lg font-extrabold leading-tight text-orange-800 tabular-nums sm:text-xl">
+                        +{formatUsdtDisplay(activeOrderCompleteFeePreview?.platformFeeUsdt || 0)} USDT
+                      </div>
+                      <div className="mt-0.5 text-[11px] font-semibold text-orange-700">
+                        수수료율 {formatPercentDisplay(activeOrderCompleteFeePreview?.feeRate || 0)}% 기준으로
+                        {' '}플랫폼 수수료 지갑에 별도 전송됩니다.
+                      </div>
+                    </div>
+
+                    <div className="mt-2 grid grid-cols-2 gap-1.5 text-xs font-semibold">
+                      <div className="flex items-center justify-between gap-2 rounded-md bg-white/70 px-2 py-1.5">
+                        <span className="text-amber-700">구매자 지갑 전송</span>
+                        <span className="text-base font-extrabold text-amber-900 tabular-nums">
+                          {formatUsdtDisplay(activeOrderCompleteFeePreview?.buyerTransferUsdt || 0)} USDT
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 rounded-md bg-white/70 px-2 py-1.5">
+                        <span className="text-amber-700">총 전송 예정 수량</span>
+                        <span className="text-base font-extrabold text-amber-900 tabular-nums">
+                          {formatUsdtDisplay(activeOrderCompleteFeePreview?.totalTransferUsdt || 0)} USDT
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {activeOrderCompleteResult && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-2.5 text-xs text-emerald-900">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold tracking-[0.08em]">완료 처리 결과</span>
+                        <span className="font-semibold tabular-nums">
+                          {formatTradeHistoryTime(activeOrderCompleteResult.paymentConfirmedAt)}
+                        </span>
+                      </div>
+                      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <div className="rounded-md border border-emerald-200 bg-white/80 px-2 py-1.5">
+                          <div className="text-[11px] text-emerald-700">구매자 전송</div>
+                          <div className="text-base font-extrabold tabular-nums">
+                            {formatUsdtDisplay(activeOrderCompleteResult.buyerTransferUsdt)} USDT
+                          </div>
+                        </div>
+                        <div className="rounded-md border border-emerald-200 bg-white/80 px-2 py-1.5">
+                          <div className="text-[11px] text-emerald-700">수수료 전송</div>
+                          <div className="text-base font-extrabold tabular-nums">
+                            {formatUsdtDisplay(activeOrderCompleteResult.platformFeeUsdt)} USDT
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-2 rounded-md border border-emerald-200 bg-white/80 px-2 py-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] text-emerald-700">전송 Tx Hash</span>
+                          <button
+                            type="button"
+                            className="rounded-md border border-emerald-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100"
+                            onClick={() => copyBuyerTradeField(activeOrderCompleteResult.transactionHash, '전송 Tx Hash')}
+                            disabled={!activeOrderCompleteResult.transactionHash}
+                          >
+                            복사
+                          </button>
+                        </div>
+                        <div className="mt-0.5 break-all font-semibold tabular-nums text-emerald-900">
+                          {activeOrderCompleteResult.transactionHash || '-'}
+                        </div>
+                        <div className="mt-1 text-[11px] font-semibold text-emerald-700">
+                          총 {formatUsdtDisplay(activeOrderCompleteResult.totalTransferUsdt)} USDT / 전송 {Math.max(1, Number(activeOrderCompleteResult.transferCount || 0))}건
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="mt-3 flex items-center justify-end gap-2">
               <button
@@ -12050,21 +12323,23 @@ const fetchBuyOrders = async () => {
                 disabled={completingActiveOrder}
                 className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
               >
-                취소
+                {activeOrderCompleteFlowPhase === 'COMPLETED' ? '닫기' : '취소'}
               </button>
-              <button
-                type="button"
-                onClick={completeSelectedActiveOrder}
-                disabled={!selectedActivePaymentRequestedOrder || completingActiveOrder}
-                className={`
-                  rounded-lg px-3 py-1.5 text-sm font-semibold text-white
-                  ${!selectedActivePaymentRequestedOrder || completingActiveOrder
-                    ? 'cursor-not-allowed bg-slate-300'
-                    : 'bg-emerald-600 hover:bg-emerald-500'}
-                `}
-              >
-                {completingActiveOrder ? '완료 처리중...' : '완료하기'}
-              </button>
+              {activeOrderCompleteFlowPhase !== 'COMPLETED' && (
+                <button
+                  type="button"
+                  onClick={completeSelectedActiveOrder}
+                  disabled={!selectedActivePaymentRequestedOrder || completingActiveOrder}
+                  className={`
+                    rounded-lg px-3 py-1.5 text-sm font-semibold text-white
+                    ${!selectedActivePaymentRequestedOrder || completingActiveOrder
+                      ? 'cursor-not-allowed bg-slate-300'
+                      : 'bg-emerald-600 hover:bg-emerald-500'}
+                  `}
+                >
+                  {completingActiveOrder ? '완료 처리중...' : '완료하기'}
+                </button>
+              )}
             </div>
           </div>
         </ModalUser>
