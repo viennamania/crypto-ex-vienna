@@ -120,6 +120,23 @@ type PurchaseCompleteJackpot = {
   usdtAmount: number;
 };
 
+type EscrowFlowPhase =
+  | 'IDLE'
+  | 'SUBMITTING'
+  | 'ORDERED'
+  | 'ACCEPTED'
+  | 'PAYMENT_REQUESTED'
+  | 'COMPLETED';
+
+type EscrowFlowStepState = 'pending' | 'active' | 'completed';
+
+type EscrowFlowStepItem = {
+  key: string;
+  title: string;
+  description: string;
+  state: EscrowFlowStepState;
+};
+
 const displayFont = Playfair_Display({
   subsets: ['latin'],
   weight: ['600', '700'],
@@ -151,10 +168,66 @@ const BUY_HISTORY_STATUS_LABEL: Record<string, string> = {
   paymentConfirmed: '구매완료',
   cancelled: '취소됨',
 };
+const ESCROW_FLOW_STEP_DEFINITIONS = [
+  {
+    key: 'submit',
+    title: '구매 신청 접수',
+    description: '구매 조건 확인 후 주문을 생성합니다.',
+  },
+  {
+    key: 'escrow-lock',
+    title: '에스크로 잠금 처리',
+    description: '판매자 에스크로에서 구매용 에스크로로 USDT를 잠급니다.',
+  },
+  {
+    key: 'deposit-check',
+    title: '입금 확인 대기',
+    description: '판매자 계좌 입금 후 확인이 진행됩니다.',
+  },
+  {
+    key: 'completed',
+    title: '구매 완료',
+    description: '입금 확인 후 USDT 정산이 완료됩니다.',
+  },
+] as const;
 const SENDBIRD_APP_ID =
   process.env.NEXT_PUBLIC_SENDBIRD_APP_ID ||
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID ||
   '';
+
+const getEscrowFlowStepStatusLabel = (state: EscrowFlowStepState) => {
+  if (state === 'completed') return '완료';
+  if (state === 'active') return '진행중';
+  return '대기';
+};
+
+const getEscrowFlowStepStyle = (state: EscrowFlowStepState) => {
+  if (state === 'completed') {
+    return {
+      container: 'border-emerald-200 bg-emerald-50',
+      badge: 'border-emerald-500 bg-emerald-500 text-white',
+      title: 'text-emerald-800',
+      description: 'text-emerald-700',
+      status: 'text-emerald-700',
+    };
+  }
+  if (state === 'active') {
+    return {
+      container: 'border-cyan-300 bg-cyan-50',
+      badge: 'border-cyan-500 bg-cyan-500 text-white',
+      title: 'text-cyan-800',
+      description: 'text-cyan-700',
+      status: 'text-cyan-700',
+    };
+  }
+  return {
+    container: 'border-slate-200 bg-slate-50',
+    badge: 'border-slate-300 bg-white text-slate-500',
+    title: 'text-slate-700',
+    description: 'text-slate-500',
+    status: 'text-slate-500',
+  };
+};
 
 const NETWORK_BY_KEY: Record<NetworkKey, NetworkOption> = {
   ethereum: {
@@ -548,6 +621,7 @@ export default function BuyUsdtPage({
   const [loadingLatestBuyHistory, setLoadingLatestBuyHistory] = useState(false);
   const [latestHistoryNowMs, setLatestHistoryNowMs] = useState<number>(() => Date.now());
   const [purchaseCompleteJackpot, setPurchaseCompleteJackpot] = useState<PurchaseCompleteJackpot | null>(null);
+  const [recentEscrowCompletedTradeId, setRecentEscrowCompletedTradeId] = useState('');
   const buyerProfileRequestIdRef = useRef(0);
   const paymentRequestedWatchRef = useRef<{ orderId: string; tradeId: string; usdtAmount: number } | null>(null);
   const jackpotShownOrderKeysRef = useRef<Set<string>>(new Set());
@@ -728,6 +802,7 @@ export default function BuyUsdtPage({
       isExpired: remainingMs <= 0,
     };
   }, [activePrivateTradeOrder, countdownNowMs]);
+  const paymentRequestStartedAtMs = paymentRequestCountdown?.startedAtMs ?? 0;
   const buyTabLabel = useMemo(
     () => (buyTab === 'buy' ? '구매하기' : '구매내역'),
     [buyTab],
@@ -791,6 +866,92 @@ export default function BuyUsdtPage({
     usdtAmount,
     hasEnoughSellerBalance,
   ]);
+
+  const escrowFlowPhase = useMemo<EscrowFlowPhase>(() => {
+    if (submittingBuy) {
+      return 'SUBMITTING';
+    }
+
+    const activeStatus = String(activePrivateTradeOrder?.status || '').trim();
+    if (activeStatus === 'ordered') {
+      return 'ORDERED';
+    }
+    if (activeStatus === 'accepted') {
+      return 'ACCEPTED';
+    }
+    if (activeStatus === 'paymentRequested') {
+      return 'PAYMENT_REQUESTED';
+    }
+
+    const latestTradeId = String(latestBuyHistoryItem?.tradeId || '').trim();
+    const latestStatus = String(latestBuyHistoryItem?.status || '').trim();
+    if (
+      recentEscrowCompletedTradeId
+      && latestStatus === 'paymentConfirmed'
+      && latestTradeId
+      && latestTradeId === recentEscrowCompletedTradeId
+    ) {
+      return 'COMPLETED';
+    }
+
+    return 'IDLE';
+  }, [
+    submittingBuy,
+    activePrivateTradeOrder?.status,
+    latestBuyHistoryItem?.status,
+    latestBuyHistoryItem?.tradeId,
+    recentEscrowCompletedTradeId,
+  ]);
+
+  const escrowFlowStatusLabel = useMemo(() => {
+    if (escrowFlowPhase === 'SUBMITTING') return '에스크로 처리 시작';
+    if (escrowFlowPhase === 'ORDERED' || escrowFlowPhase === 'ACCEPTED') return '에스크로 잠금 진행중';
+    if (escrowFlowPhase === 'PAYMENT_REQUESTED') return '입금 확인 대기';
+    if (escrowFlowPhase === 'COMPLETED') return '구매 완료';
+    return '구매 신청 전';
+  }, [escrowFlowPhase]);
+
+  const escrowFlowSummary = useMemo(() => {
+    if (escrowFlowPhase === 'SUBMITTING') {
+      return '구매 신청과 에스크로 잠금 요청을 처리 중입니다.';
+    }
+    if (escrowFlowPhase === 'ORDERED' || escrowFlowPhase === 'ACCEPTED') {
+      return '주문 생성 후 에스크로 잠금이 진행되고 있습니다.';
+    }
+    if (escrowFlowPhase === 'PAYMENT_REQUESTED') {
+      if (paymentRequestCountdown?.isExpired) {
+        return '입금 제한 시간이 만료되었습니다. 거래 취소 후 다시 신청해 주세요.';
+      }
+      return '입금 정보 확인 후 30분 내 입금을 완료해 주세요.';
+    }
+    if (escrowFlowPhase === 'COMPLETED') {
+      return '입금 확인이 완료되어 구매가 정상 종료되었습니다.';
+    }
+    return '구매 버튼을 누르면 에스크로 처리 단계가 실시간으로 표시됩니다.';
+  }, [escrowFlowPhase, paymentRequestCountdown?.isExpired]);
+
+  const escrowFlowSteps = useMemo<EscrowFlowStepItem[]>(() => {
+    let stepStates: EscrowFlowStepState[] = ['active', 'pending', 'pending', 'pending'];
+
+    if (escrowFlowPhase === 'SUBMITTING') {
+      stepStates = ['active', 'pending', 'pending', 'pending'];
+    } else if (escrowFlowPhase === 'ORDERED') {
+      stepStates = ['completed', 'active', 'pending', 'pending'];
+    } else if (escrowFlowPhase === 'ACCEPTED') {
+      stepStates = ['completed', 'completed', 'active', 'pending'];
+    } else if (escrowFlowPhase === 'PAYMENT_REQUESTED') {
+      stepStates = ['completed', 'completed', 'active', 'pending'];
+    } else if (escrowFlowPhase === 'COMPLETED') {
+      stepStates = ['completed', 'completed', 'completed', 'completed'];
+    }
+
+    return ESCROW_FLOW_STEP_DEFINITIONS.map((step, index) => ({
+      key: step.key,
+      title: step.title,
+      description: step.description,
+      state: stepStates[index] || 'pending',
+    }));
+  }, [escrowFlowPhase]);
 
   const loadBalance = useCallback(async () => {
     if (!activeAccount?.address) {
@@ -1493,6 +1654,16 @@ export default function BuyUsdtPage({
   }, [purchaseCompleteJackpot?.orderKey]);
 
   useEffect(() => {
+    const completedTradeId = String(purchaseCompleteJackpot?.tradeId || '').trim();
+    if (!completedTradeId) return;
+    setRecentEscrowCompletedTradeId(completedTradeId);
+  }, [purchaseCompleteJackpot?.tradeId]);
+
+  useEffect(() => {
+    setRecentEscrowCompletedTradeId('');
+  }, [selectedSellerWallet]);
+
+  useEffect(() => {
     if (!activePrivateTradeOrder?.orderId) return;
 
     const interval = setInterval(() => {
@@ -1545,14 +1716,14 @@ export default function BuyUsdtPage({
   }, [activePrivateTradeOrder?.orderId]);
 
   useEffect(() => {
-    if (!paymentRequestCountdown) return;
+    if (!paymentRequestStartedAtMs) return;
 
     const interval = setInterval(() => {
       setCountdownNowMs(Date.now());
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [paymentRequestCountdown?.startedAtMs]);
+  }, [paymentRequestStartedAtMs]);
 
   const onSelectQuickAmount = (value: number) => {
     setSelectedQuickAmount(value);
@@ -1811,6 +1982,8 @@ export default function BuyUsdtPage({
       return;
     }
 
+    setRecentEscrowCompletedTradeId('');
+    setConfirmOpen(false);
     setSubmittingBuy(true);
     try {
       const response = await fetch('/api/order/buyOrderPrivateSale', {
@@ -2272,6 +2445,67 @@ export default function BuyUsdtPage({
                       입금 계좌: {selectedSeller.bankInfo.bankName || '-'} {selectedSeller.bankInfo.accountNumber || ''}
                     </p>
                   )}
+
+                  <div
+                    className={`mt-3 rounded-xl border px-3 py-3 ${
+                      paymentRequestCountdown?.isExpired
+                        ? 'border-rose-300 bg-rose-50/70'
+                        : 'border-cyan-200 bg-white/90'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">에스크로 처리 절차</p>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                          escrowFlowPhase === 'COMPLETED'
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            : escrowFlowPhase === 'PAYMENT_REQUESTED'
+                              ? 'border-amber-200 bg-amber-50 text-amber-700'
+                              : 'border-cyan-200 bg-cyan-50 text-cyan-700'
+                        }`}
+                      >
+                        {escrowFlowStatusLabel}
+                      </span>
+                    </div>
+                    <p
+                      className={`mt-1 text-[11px] font-medium ${
+                        paymentRequestCountdown?.isExpired ? 'text-rose-700' : 'text-slate-600'
+                      }`}
+                    >
+                      {escrowFlowSummary}
+                    </p>
+
+                    <div className="mt-3 space-y-2">
+                      {escrowFlowSteps.map((step, index) => {
+                        const style = getEscrowFlowStepStyle(step.state);
+                        return (
+                          <div
+                            key={step.key}
+                            className={`rounded-lg border px-2.5 py-2 ${style.container}`}
+                          >
+                            <div className="flex items-start gap-2">
+                              <span
+                                className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${style.badge}`}
+                              >
+                                {step.state === 'completed' ? '✓' : index + 1}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className={`text-xs font-semibold ${style.title}`}>{step.title}</p>
+                                  <span className={`text-[10px] font-semibold ${style.status}`}>
+                                    {getEscrowFlowStepStatusLabel(step.state)}
+                                  </span>
+                                </div>
+                                <p className={`mt-0.5 text-[11px] ${style.description}`}>
+                                  {step.description}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
 
                   <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs">
                     <div className="flex items-center gap-2">
