@@ -4934,6 +4934,383 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   };
 }
 
+export async function recoverCancelledPrivateBuyOrderRollbackByAdmin({
+  orderId,
+  requesterWalletAddress = '',
+  recoveredByRole = 'admin',
+  recoveredByNickname = '',
+  recoveredByIpAddress = '',
+  recoveredByUserAgent = '',
+}: {
+  orderId: string;
+  requesterWalletAddress?: string;
+  recoveredByRole?: string;
+  recoveredByNickname?: string;
+  recoveredByIpAddress?: string;
+  recoveredByUserAgent?: string;
+}): Promise<{
+  success: boolean;
+  alreadyRecovered?: boolean;
+  transactionHash?: string;
+  recoveredAt?: string;
+  recoveredUsdtAmount?: number;
+  recoveredRawAmount?: string;
+  error?: string;
+  detail?: string;
+}> {
+  if (!ObjectId.isValid(orderId)) {
+    return { success: false, error: 'INVALID_ORDER_ID' };
+  }
+
+  const toWalletCandidates = (value: string) => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return [] as string[];
+    return Array.from(new Set([trimmed, trimmed.toLowerCase(), trimmed.toUpperCase()]));
+  };
+
+  const resolveExistingRollbackTxHash = (orderLike: any) => {
+    const candidates = [
+      orderLike?.cancelReleaseTransactionHash,
+      orderLike?.buyer?.releaseTransactionHash,
+      orderLike?.buyer?.rollbackTransactionHash,
+      orderLike?.seller?.releaseTransactionHash,
+      orderLike?.seller?.rollbackTransactionHash,
+    ];
+    for (const candidate of candidates) {
+      const normalized = String(candidate || '').trim();
+      if (normalized) return normalized;
+    }
+    return '';
+  };
+
+  const client = await clientPromise;
+  const buyordersCollection = client.db(dbName).collection('buyorders');
+  const usersCollection = client.db(dbName).collection('users');
+  const rollbackRecoveryLogsCollection = client.db(dbName).collection('buyorder_rollback_recovery_logs');
+  const objectId = new ObjectId(orderId);
+
+  const order = await buyordersCollection.findOne<any>(
+    { _id: objectId },
+    {
+      projection: {
+        privateSale: 1,
+        status: 1,
+        tradeId: 1,
+        escrowWallet: 1,
+        usdtAmount: 1,
+        escrowLockUsdtAmount: 1,
+        platformFee: 1,
+        platformFeeAmount: 1,
+        settlement: 1,
+        walletAddress: 1,
+        buyer: 1,
+        seller: 1,
+        rollbackUsdtAmount: 1,
+        rollbackRawAmount: 1,
+        rollbackRecoveredAt: 1,
+        cancelReleaseTransactionHash: 1,
+      },
+    },
+  );
+
+  if (!order || order.privateSale !== true) {
+    return { success: false, error: 'ORDER_NOT_FOUND' };
+  }
+
+  if (order.status !== 'cancelled') {
+    return { success: false, error: 'INVALID_ORDER_STATUS' };
+  }
+
+  const existingRollbackTxHash = resolveExistingRollbackTxHash(order);
+  if (existingRollbackTxHash) {
+    return {
+      success: true,
+      alreadyRecovered: true,
+      transactionHash: existingRollbackTxHash,
+      recoveredAt: String(order?.rollbackRecoveredAt || order?.cancelledAt || ''),
+      recoveredUsdtAmount: toUsdtAmountOrZero(order?.rollbackUsdtAmount),
+      recoveredRawAmount: String(order?.rollbackRawAmount || ''),
+    };
+  }
+
+  const buyerEscrowWalletExecution = resolvePrivateOrderEscrowWalletSignerAndSmartAddress(order);
+  const buyerEscrowSignerAddress = buyerEscrowWalletExecution.signerAddress;
+  const buyerEscrowWalletAddress = buyerEscrowWalletExecution.smartAccountAddress;
+  const sellerEscrowWalletAddress = resolveSellerEscrowWalletAddress(order);
+  const orderBuyerWalletAddress =
+    (typeof order?.buyer?.walletAddress === 'string' && order.buyer.walletAddress.trim())
+    || (typeof order?.walletAddress === 'string' ? order.walletAddress.trim() : '');
+
+  if (
+    !isWalletAddress(buyerEscrowSignerAddress)
+    || !isWalletAddress(buyerEscrowWalletAddress)
+    || !isWalletAddress(sellerEscrowWalletAddress)
+  ) {
+    console.error('recoverCancelledPrivateBuyOrderRollbackByAdmin: wallet address missing', {
+      buyerEscrowSignerAddress,
+      buyerEscrowWalletAddress,
+      sellerEscrowWalletAddress,
+    });
+    return { success: false, error: 'WALLET_ADDRESS_MISSING' };
+  }
+
+  const transferPlan = resolveStoredPrivateOrderTransferPlan(order);
+  const plannedRollbackUsdtAmount = transferPlan.totalTransferUsdtAmount;
+  if (!Number.isFinite(plannedRollbackUsdtAmount) || plannedRollbackUsdtAmount <= 0) {
+    console.error('recoverCancelledPrivateBuyOrderRollbackByAdmin: invalid rollback usdt amount', {
+      rollbackUsdtAmount: plannedRollbackUsdtAmount,
+      usdtAmount: order?.usdtAmount,
+      escrowLockUsdtAmount: order?.escrowLockUsdtAmount,
+    });
+    return { success: false, error: 'INVALID_USDT_AMOUNT' };
+  }
+
+  const thirdwebSecretKey = process.env.THIRDWEB_SECRET_KEY || '';
+  if (!thirdwebSecretKey) {
+    console.error('recoverCancelledPrivateBuyOrderRollbackByAdmin: THIRDWEB_SECRET_KEY is missing');
+    return { success: false, error: 'THIRDWEB_SECRET_KEY_MISSING' };
+  }
+
+  const thirdwebClient = createThirdwebClient({ secretKey: thirdwebSecretKey });
+  let recoveryTransactionHash = '';
+  let recoveredUsdtAmount = plannedRollbackUsdtAmount;
+  let recoveredRawAmount = '';
+  try {
+    const transferConfig = resolveUsdtTransferConfig();
+    const usdtDecimals = resolveUsdtDecimals();
+    const usdtContract = getContract({
+      client: thirdwebClient,
+      chain: transferConfig.chain,
+      address: transferConfig.contractAddress,
+    });
+
+    const buyerEscrowWallet = Engine.serverWallet({
+      client: thirdwebClient,
+      address: buyerEscrowSignerAddress,
+      chain: transferConfig.chain,
+      executionOptions: {
+        type: 'ERC4337',
+        signerAddress: buyerEscrowSignerAddress,
+        smartAccountAddress: buyerEscrowWalletAddress,
+      },
+    });
+
+    const rawBuyerEscrowUsdtBalance = await balanceOf({
+      contract: usdtContract,
+      address: buyerEscrowWalletAddress,
+    });
+    if (rawBuyerEscrowUsdtBalance <= 0n) {
+      return { success: false, error: 'BUYER_ESCROW_BALANCE_EMPTY' };
+    }
+
+    recoveredRawAmount = rawBuyerEscrowUsdtBalance.toString();
+    recoveredUsdtAmount = convertRawUsdtToDisplayAmount(rawBuyerEscrowUsdtBalance, usdtDecimals);
+    const recoveryTransferAmount = formatRawUsdtAmount(rawBuyerEscrowUsdtBalance, usdtDecimals);
+
+    const recoveryTransaction = transfer({
+      contract: usdtContract,
+      to: sellerEscrowWalletAddress,
+      amount: recoveryTransferAmount,
+    });
+
+    const { transactionId } = await buyerEscrowWallet.enqueueTransaction({
+      transaction: recoveryTransaction,
+    });
+
+    const hashResult = await Engine.waitForTransactionHash({
+      client: thirdwebClient,
+      transactionId,
+      timeoutInSeconds: 90,
+    });
+    const txHash = typeof hashResult?.transactionHash === 'string' ? hashResult.transactionHash : '';
+    if (!txHash) {
+      throw new Error('empty recovery transaction hash');
+    }
+
+    let transferConfirmed = false;
+    for (let i = 0; i < 25; i += 1) {
+      const txStatus = await Engine.getTransactionStatus({
+        client: thirdwebClient,
+        transactionId,
+      });
+
+      if (txStatus.status === 'FAILED') {
+        throw new Error(txStatus.error || 'recovery transfer failed');
+      }
+
+      if (txStatus.status === 'CONFIRMED') {
+        if (txStatus.onchainStatus !== 'SUCCESS') {
+          throw new Error(`recovery transfer reverted: ${txStatus.onchainStatus}`);
+        }
+        recoveryTransactionHash =
+          typeof txStatus.transactionHash === 'string' && txStatus.transactionHash
+            ? txStatus.transactionHash
+            : txHash;
+        transferConfirmed = true;
+        break;
+      }
+
+      await waitMs(1500);
+    }
+
+    if (!transferConfirmed) {
+      throw new Error('recovery transfer confirmation timeout');
+    }
+  } catch (error) {
+    const detail =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : '';
+    console.error('recoverCancelledPrivateBuyOrderRollbackByAdmin: recovery transfer failed', error);
+    return { success: false, error: 'TRANSFER_FAILED', detail };
+  }
+
+  const now = new Date().toISOString();
+  const normalizedRecoveredByRole = String(recoveredByRole || 'admin').trim().toLowerCase() || 'admin';
+  const normalizedRecoveredByWalletAddress = String(requesterWalletAddress || '').trim();
+  const normalizedRecoveredByNickname = String(recoveredByNickname || '').trim()
+    || (normalizedRecoveredByRole === 'agent' ? '에이전트' : '관리자');
+  const normalizedRecoveredByIpAddress = normalizeIpAddress(recoveredByIpAddress);
+  const normalizedRecoveredByUserAgent = String(recoveredByUserAgent || '').trim();
+  const sellerWalletCandidates = toWalletCandidates(
+    typeof order?.seller?.walletAddress === 'string' ? order.seller.walletAddress : '',
+  );
+
+  const rollbackRecoveryPayload = {
+    source: 'MANUAL_UNRECOVERED_CANCELLED_ROLLBACK',
+    recoveredAt: now,
+    recoveredByRole: normalizedRecoveredByRole,
+    recoveredByWalletAddress: normalizedRecoveredByWalletAddress,
+    recoveredByNickname: normalizedRecoveredByNickname,
+    recoveredByIpAddress: normalizedRecoveredByIpAddress,
+    recoveredByUserAgent: normalizedRecoveredByUserAgent,
+    transactionHash: recoveryTransactionHash,
+    recoveredUsdtAmount,
+    recoveredRawAmount,
+  };
+
+  const orderUpdateSet: Record<string, unknown> = {
+    rollbackUsdtAmount: recoveredUsdtAmount,
+    rollbackRawAmount: recoveredRawAmount,
+    cancelReleaseTransactionHash: recoveryTransactionHash,
+    'buyer.releaseTransactionHash': recoveryTransactionHash,
+    'seller.releaseTransactionHash': recoveryTransactionHash,
+    rollbackTransferSkipped: false,
+    rollbackTransferSkipReason: '',
+    rollbackRecoveredAt: now,
+    rollbackRecoveredByRole: normalizedRecoveredByRole,
+    rollbackRecoveredByWalletAddress: normalizedRecoveredByWalletAddress,
+    rollbackRecoveredByNickname: normalizedRecoveredByNickname,
+    rollbackRecoveredByIpAddress: normalizedRecoveredByIpAddress,
+    rollbackRecoveredByUserAgent: normalizedRecoveredByUserAgent,
+    rollbackRecovery: rollbackRecoveryPayload,
+  };
+
+  const recoverResult = await buyordersCollection.updateOne(
+    {
+      _id: objectId,
+      privateSale: true,
+      status: 'cancelled',
+    },
+    {
+      $set: orderUpdateSet,
+    },
+  );
+
+  if (recoverResult.modifiedCount !== 1) {
+    const latestOrder = await buyordersCollection.findOne<any>(
+      { _id: objectId },
+      {
+        projection: {
+          cancelReleaseTransactionHash: 1,
+          buyer: 1,
+          seller: 1,
+          rollbackRecoveredAt: 1,
+          rollbackUsdtAmount: 1,
+          rollbackRawAmount: 1,
+        },
+      },
+    );
+    const latestRollbackTxHash = resolveExistingRollbackTxHash(latestOrder);
+    if (latestRollbackTxHash) {
+      return {
+        success: true,
+        alreadyRecovered: true,
+        transactionHash: latestRollbackTxHash,
+        recoveredAt: String(latestOrder?.rollbackRecoveredAt || ''),
+        recoveredUsdtAmount: toUsdtAmountOrZero(latestOrder?.rollbackUsdtAmount),
+        recoveredRawAmount: String(latestOrder?.rollbackRawAmount || ''),
+      };
+    }
+    return { success: false, error: 'FAILED_TO_UPDATE_ORDER' };
+  }
+
+  if (sellerWalletCandidates.length > 0) {
+    const sellerBuyOrderUpdateSet: Record<string, unknown> = {
+      'seller.buyOrder.rollbackUsdtAmount': recoveredUsdtAmount,
+      'seller.buyOrder.rollbackRawAmount': recoveredRawAmount,
+      'seller.buyOrder.cancelReleaseTransactionHash': recoveryTransactionHash,
+      'seller.buyOrder.buyer.releaseTransactionHash': recoveryTransactionHash,
+      'seller.buyOrder.seller.releaseTransactionHash': recoveryTransactionHash,
+      'seller.buyOrder.rollbackTransferSkipped': false,
+      'seller.buyOrder.rollbackTransferSkipReason': '',
+      'seller.buyOrder.rollbackRecoveredAt': now,
+      'seller.buyOrder.rollbackRecoveredByRole': normalizedRecoveredByRole,
+      'seller.buyOrder.rollbackRecoveredByWalletAddress': normalizedRecoveredByWalletAddress,
+      'seller.buyOrder.rollbackRecoveredByNickname': normalizedRecoveredByNickname,
+      'seller.buyOrder.rollbackRecoveredByIpAddress': normalizedRecoveredByIpAddress,
+      'seller.buyOrder.rollbackRecoveredByUserAgent': normalizedRecoveredByUserAgent,
+      'seller.buyOrder.rollbackRecovery': rollbackRecoveryPayload,
+    };
+
+    await usersCollection.updateOne(
+      {
+        walletAddress: { $in: sellerWalletCandidates },
+        storecode: 'admin',
+        'seller.buyOrder._id': objectId,
+      },
+      {
+        $set: sellerBuyOrderUpdateSet,
+      },
+    );
+  }
+
+  try {
+    await rollbackRecoveryLogsCollection.insertOne({
+      type: 'CANCELLED_PRIVATE_BUYORDER_ROLLBACK_RECOVERY',
+      orderId,
+      tradeId: String(order?.tradeId || ''),
+      privateSale: true,
+      orderStatus: 'cancelled',
+      buyerWalletAddress: orderBuyerWalletAddress,
+      buyerEscrowWalletAddress,
+      sellerWalletAddress: String(order?.seller?.walletAddress || '').trim(),
+      sellerEscrowWalletAddress,
+      recoveredUsdtAmount,
+      recoveredRawAmount,
+      transactionHash: recoveryTransactionHash,
+      recoveredByRole: normalizedRecoveredByRole,
+      recoveredByWalletAddress: normalizedRecoveredByWalletAddress,
+      recoveredByNickname: normalizedRecoveredByNickname,
+      recoveredByIpAddress: normalizedRecoveredByIpAddress,
+      recoveredByUserAgent: normalizedRecoveredByUserAgent,
+      createdAt: now,
+    });
+  } catch (logError) {
+    console.error('recoverCancelledPrivateBuyOrderRollbackByAdmin: failed to write recovery log', logError);
+  }
+
+  return {
+    success: true,
+    transactionHash: recoveryTransactionHash,
+    recoveredAt: now,
+    recoveredUsdtAmount,
+    recoveredRawAmount,
+  };
+}
+
 export async function completePrivateBuyOrderBySeller(
   {
     orderId,

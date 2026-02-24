@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { useActiveAccount } from 'thirdweb/react';
 
@@ -144,12 +145,28 @@ type UnrecoveredCancelledResponse = {
       scannedCancelledOrders?: number;
       missingRollbackTransferCount?: number;
       excludedWithRollbackTxHashCount?: number;
+      excludedAlreadyRecoveredCount?: number;
       missingEscrowAddressCount?: number;
       missingExpectedRollbackAmountCount?: number;
       inspectedAt?: string;
     };
   };
   error?: string;
+  message?: string;
+};
+
+type RecoverCancelledRollbackResponse = {
+  result?: {
+    success?: boolean;
+    alreadyRecovered?: boolean;
+    transactionHash?: string;
+    recoveredAt?: string;
+    recoveredUsdtAmount?: number;
+    recoveredRawAmount?: string;
+  };
+  error?: string;
+  reason?: string;
+  detail?: string;
   message?: string;
 };
 
@@ -211,6 +228,8 @@ const formatUsdt = (value: number) =>
   }).format(Number(value || 0));
 
 export default function MissingOrderRecoveryPage() {
+  const pathname = usePathname();
+  const isAgentManagementContext = pathname.includes('/p2p/agent-management/');
   const activeAccount = useActiveAccount();
   const adminWalletAddress = String(activeAccount?.address || '').trim();
   const isWalletConnected = Boolean(adminWalletAddress);
@@ -264,6 +283,7 @@ export default function MissingOrderRecoveryPage() {
     scannedCancelledOrders: number;
     missingRollbackTransferCount: number;
     excludedWithRollbackTxHashCount: number;
+    excludedAlreadyRecoveredCount: number;
     missingEscrowAddressCount: number;
     missingExpectedRollbackAmountCount: number;
     inspectedAt: string;
@@ -271,6 +291,7 @@ export default function MissingOrderRecoveryPage() {
     scannedCancelledOrders: 0,
     missingRollbackTransferCount: 0,
     excludedWithRollbackTxHashCount: 0,
+    excludedAlreadyRecoveredCount: 0,
     missingEscrowAddressCount: 0,
     missingExpectedRollbackAmountCount: 0,
     inspectedAt: '',
@@ -278,6 +299,11 @@ export default function MissingOrderRecoveryPage() {
   const [unrecoveredCancelledLoading, setUnrecoveredCancelledLoading] = useState(false);
   const [unrecoveredCancelledError, setUnrecoveredCancelledError] = useState('');
   const [unrecoveredCancelledPage, setUnrecoveredCancelledPage] = useState(1);
+  const [processingUnrecoveredCandidateId, setProcessingUnrecoveredCandidateId] = useState('');
+  const [recoveryActorInfo, setRecoveryActorInfo] = useState<{ role: string; nickname: string }>({
+    role: isAgentManagementContext ? 'agent' : 'admin',
+    nickname: isAgentManagementContext ? '에이전트' : '관리자',
+  });
   const loadingRef = useRef(false);
   const [loadingProgress, setLoadingProgress] = useState<{
     percent: number;
@@ -302,6 +328,12 @@ export default function MissingOrderRecoveryPage() {
     liveTxCacheMisses: 0,
     liveTxCacheBypasses: 0,
   });
+
+  const recoveryActorRole = String(recoveryActorInfo.role || '').trim().toLowerCase()
+    || (isAgentManagementContext ? 'agent' : 'admin');
+  const recoveryActorNickname = String(recoveryActorInfo.nickname || '').trim()
+    || (recoveryActorRole === 'agent' ? '에이전트' : '관리자');
+  const recoveryActorRoleLabel = recoveryActorRole === 'agent' ? '에이전트' : '관리자';
 
   const loadUnrecoveredCancelledCandidates = useCallback(async () => {
     setUnrecoveredCancelledLoading(true);
@@ -333,6 +365,7 @@ export default function MissingOrderRecoveryPage() {
         scannedCancelledOrders: Number(nextMeta?.scannedCancelledOrders || 0) || 0,
         missingRollbackTransferCount: Number(nextMeta?.missingRollbackTransferCount || 0) || 0,
         excludedWithRollbackTxHashCount: Number(nextMeta?.excludedWithRollbackTxHashCount || 0) || 0,
+        excludedAlreadyRecoveredCount: Number(nextMeta?.excludedAlreadyRecoveredCount || 0) || 0,
         missingEscrowAddressCount: Number(nextMeta?.missingEscrowAddressCount || 0) || 0,
         missingExpectedRollbackAmountCount: Number(nextMeta?.missingExpectedRollbackAmountCount || 0) || 0,
         inspectedAt: String(nextMeta?.inspectedAt || ''),
@@ -608,6 +641,64 @@ export default function MissingOrderRecoveryPage() {
     void loadCandidates();
   }, [loadCandidates]);
 
+  useEffect(() => {
+    let isMounted = true;
+    const defaultRole = isAgentManagementContext ? 'agent' : 'admin';
+    const defaultNickname = isAgentManagementContext ? '에이전트' : '관리자';
+
+    const applyFallback = () => {
+      if (!isMounted) return;
+      setRecoveryActorInfo({
+        role: defaultRole,
+        nickname: defaultNickname,
+      });
+    };
+
+    if (!adminWalletAddress) {
+      applyFallback();
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const fetchRecoveryActorInfo = async () => {
+      try {
+        const response = await fetch('/api/user/getUser', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storecode: 'admin',
+            walletAddress: adminWalletAddress,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(String(payload?.error || 'FAILED_TO_FETCH_RECOVERY_ACTOR'));
+        }
+
+        const resolvedRole =
+          String(payload?.result?.role || defaultRole).trim().toLowerCase() || defaultRole;
+        const resolvedNickname =
+          String(payload?.result?.nickname || '').trim()
+          || (resolvedRole === 'agent' ? '에이전트' : '관리자');
+
+        if (!isMounted) return;
+        setRecoveryActorInfo({
+          role: resolvedRole,
+          nickname: resolvedNickname,
+        });
+      } catch (error) {
+        console.error('Failed to fetch recovery actor info', error);
+        applyFallback();
+      }
+    };
+
+    void fetchRecoveryActorInfo();
+    return () => {
+      isMounted = false;
+    };
+  }, [adminWalletAddress, isAgentManagementContext]);
+
   const handleRecoverCandidate = useCallback(async (candidate: CandidateItem) => {
     if (!isWalletConnected) {
       toast.error('지갑을 연결해주세요.');
@@ -685,6 +776,76 @@ export default function MissingOrderRecoveryPage() {
     buyerWalletDraftByCandidateId,
     isWalletConnected,
     processingCandidateId,
+  ]);
+
+  const handleRecoverUnrecoveredCancelledCandidate = useCallback(async (candidate: UnrecoveredCancelledOrderItem) => {
+    if (!isWalletConnected) {
+      toast.error('지갑을 연결해주세요.');
+      return;
+    }
+
+    const candidateId = String(candidate?.candidateId || '').trim();
+    const orderId = String(candidate?.orderId || '').trim();
+    if (!candidateId || !orderId) {
+      toast.error('회수 대상 주문 식별자가 비어 있습니다.');
+      return;
+    }
+
+    if (processingUnrecoveredCandidateId === candidateId) {
+      return;
+    }
+
+    setProcessingUnrecoveredCandidateId(candidateId);
+    try {
+      const response = await fetch('/api/order/recoverCancelledPrivateBuyOrderRollback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId,
+          requesterWalletAddress: adminWalletAddress,
+          recoveredByRole: recoveryActorRole,
+          recoveredByNickname: recoveryActorNickname,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as RecoverCancelledRollbackResponse;
+      if (!response.ok || !payload?.result?.success) {
+        throw new Error(
+          String(
+            payload?.message
+            || payload?.detail
+            || payload?.reason
+            || payload?.error
+            || '회수 처리에 실패했습니다.',
+          ),
+        );
+      }
+
+      const txHash = String(payload?.result?.transactionHash || '').trim();
+      const alreadyRecovered = payload?.result?.alreadyRecovered === true;
+
+      if (alreadyRecovered) {
+        toast.success(txHash ? `이미 회수 처리됨 (TX: ${shortText(txHash, 10, 8)})` : '이미 회수 처리된 주문입니다.');
+      } else {
+        toast.success(txHash ? `회수 처리 완료 (TX: ${shortText(txHash, 10, 8)})` : '회수 처리 완료');
+      }
+
+      await loadUnrecoveredCancelledCandidates();
+    } catch (recoverError) {
+      const message = recoverError instanceof Error ? recoverError.message : '회수 처리 중 오류가 발생했습니다.';
+      toast.error(message);
+    } finally {
+      setProcessingUnrecoveredCandidateId('');
+    }
+  }, [
+    adminWalletAddress,
+    isWalletConnected,
+    loadUnrecoveredCancelledCandidates,
+    processingUnrecoveredCandidateId,
+    recoveryActorNickname,
+    recoveryActorRole,
   ]);
 
   const availableCandidates = useMemo(
@@ -1556,7 +1717,7 @@ export default function MissingOrderRecoveryPage() {
               </p>
             </div>
 
-            <div className="mb-2 grid grid-cols-1 gap-2 text-xs text-slate-700 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="mb-2 grid grid-cols-1 gap-2 text-xs text-slate-700 sm:grid-cols-2 lg:grid-cols-6">
               <div className="rounded-md border border-rose-200/80 bg-white/80 px-2 py-1.5">
                 취소 주문 스캔: <span className="font-semibold">{unrecoveredCancelledMeta.scannedCancelledOrders.toLocaleString('ko-KR')}</span>
               </div>
@@ -1567,11 +1728,20 @@ export default function MissingOrderRecoveryPage() {
                 회수 tx 존재(제외): <span className="font-semibold">{unrecoveredCancelledMeta.excludedWithRollbackTxHashCount.toLocaleString('ko-KR')}</span>
               </div>
               <div className="rounded-md border border-rose-200/80 bg-white/80 px-2 py-1.5">
+                이미 회수처리(제외): <span className="font-semibold">{unrecoveredCancelledMeta.excludedAlreadyRecoveredCount.toLocaleString('ko-KR')}</span>
+              </div>
+              <div className="rounded-md border border-rose-200/80 bg-white/80 px-2 py-1.5">
                 에스크로 주소 누락: <span className="font-semibold">{unrecoveredCancelledMeta.missingEscrowAddressCount.toLocaleString('ko-KR')}</span>
               </div>
               <div className="rounded-md border border-rose-200/80 bg-white/80 px-2 py-1.5">
                 회수예상금액 누락: <span className="font-semibold">{unrecoveredCancelledMeta.missingExpectedRollbackAmountCount.toLocaleString('ko-KR')}</span>
               </div>
+            </div>
+
+            <div className="mb-2 rounded-md border border-rose-200/80 bg-white/80 px-2 py-1.5 text-xs text-slate-700">
+              회수 처리자: <span className="font-semibold">{recoveryActorNickname}</span>
+              {' '}({recoveryActorRoleLabel})
+              {adminWalletAddress ? ` · ${shortText(adminWalletAddress, 8, 6)}` : ''}
             </div>
 
             {unrecoveredCancelledLoading && (
@@ -1589,14 +1759,15 @@ export default function MissingOrderRecoveryPage() {
             <div className="w-full overflow-hidden rounded-lg border border-slate-200 bg-white">
               <table className="w-full table-fixed border-separate border-spacing-0 text-xs">
                 <colgroup>
-                  <col className="w-[14%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[14%]" />
-                  <col className="w-[14%]" />
-                  <col className="w-[14%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[11%]" />
                   <col className="w-[10%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[10%]" />
+                  <col className="w-[7%]" />
                 </colgroup>
                 <thead>
                   <tr className="bg-slate-100 text-left font-semibold uppercase tracking-[0.12em] text-slate-600">
@@ -1608,12 +1779,13 @@ export default function MissingOrderRecoveryPage() {
                     <th className="border border-slate-200 px-2 py-2">예상 회수</th>
                     <th className="border border-slate-200 px-2 py-2">취소 사유</th>
                     <th className="border border-slate-200 px-2 py-2">이슈</th>
+                    <th className="border border-slate-200 px-2 py-2">회수</th>
                   </tr>
                 </thead>
                 <tbody>
                   {unrecoveredCancelledTotalCount === 0 && (
                     <tr>
-                      <td colSpan={8} className="border border-slate-200 px-3 py-6 text-center text-slate-500">
+                      <td colSpan={9} className="border border-slate-200 px-3 py-6 text-center text-slate-500">
                         표시할 회수 누락 후보가 없습니다.
                       </td>
                     </tr>
@@ -1684,6 +1856,20 @@ export default function MissingOrderRecoveryPage() {
                         </td>
                         <td className="border border-slate-200 px-2 py-2 leading-5 break-words">
                           <div className="font-semibold text-rose-700">{issueText}</div>
+                        </td>
+                        <td className="border border-slate-200 px-2 py-2 leading-5 break-words">
+                          {issueCodes.includes('missing-escrow-wallet-address') ? (
+                            <span className="text-[11px] font-semibold text-slate-400">주소누락</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => void handleRecoverUnrecoveredCancelledCandidate(candidate)}
+                              disabled={!isWalletConnected || processingUnrecoveredCandidateId === candidate.candidateId}
+                              className="inline-flex w-full items-center justify-center rounded border border-cyan-300 bg-cyan-50 px-1.5 py-1 text-[11px] font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-400"
+                            >
+                              {processingUnrecoveredCandidateId === candidate.candidateId ? '회수중...' : '회수'}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
