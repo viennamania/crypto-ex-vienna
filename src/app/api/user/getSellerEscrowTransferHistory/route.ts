@@ -297,6 +297,39 @@ const normalizeErrorText = (value: unknown): string => {
   return String(value).trim();
 };
 
+const extractInsightErrorMessage = (payload: InsightTransferResponse): string => {
+  const errorValue = payload?.error as unknown;
+
+  if (typeof errorValue === 'string' && errorValue.trim()) {
+    return errorValue.trim();
+  }
+
+  if (errorValue && typeof errorValue === 'object') {
+    const errorRecord = errorValue as Record<string, unknown>;
+    const message = typeof errorRecord.message === 'string' ? errorRecord.message.trim() : '';
+    const issues = Array.isArray(errorRecord.issues) ? errorRecord.issues : [];
+    const firstIssue = issues[0];
+
+    if (firstIssue && typeof firstIssue === 'object') {
+      const issueRecord = firstIssue as Record<string, unknown>;
+      const issueMessage = typeof issueRecord.message === 'string' ? issueRecord.message.trim() : '';
+      const path = Array.isArray(issueRecord.path)
+        ? issueRecord.path.map((item) => String(item || '').trim()).filter(Boolean).join('.')
+        : '';
+
+      if (issueMessage) {
+        return path ? `${issueMessage} (${path})` : issueMessage;
+      }
+    }
+
+    if (message) {
+      return message;
+    }
+  }
+
+  return normalizeErrorText(errorValue);
+};
+
 const normalizeRecoveryStatus = (value: unknown): UnclassifiedOutRecoveryStatus => {
   const normalized = String(value || '').trim().toUpperCase();
   if (
@@ -895,7 +928,7 @@ const fetchSellerEscrowTransfers = async ({
   params.append('chain_id', String(chainId));
   params.append('limit', String(limit));
   params.append('page', String(page));
-  params.append('block_timestamp_from', '0');
+  params.append('block_timestamp_from', '1');
   params.append('owner_address', ownerAddress);
   params.append('contract_address', contractAddress);
   params.append('token_types', 'erc20');
@@ -914,7 +947,9 @@ const fetchSellerEscrowTransfers = async ({
 
   const payload = (await response.json().catch(() => ({}))) as InsightTransferResponse;
   if (!response.ok) {
-    throw new Error(String(payload?.error || 'Failed to fetch escrow transfers from thirdweb insight'));
+    const errorMessage = extractInsightErrorMessage(payload)
+      || 'Failed to fetch escrow transfers from thirdweb insight';
+    throw new Error(errorMessage);
   }
   return payload;
 };
