@@ -35,6 +35,44 @@ type RelatedTrade = {
   order?: RelatedTradeOrderPreview | null;
 };
 
+type UnclassifiedOutRecoveryStatus = 'REQUESTING' | 'QUEUED' | 'SUBMITTED' | 'CONFIRMED' | 'FAILED';
+
+type UnclassifiedOutRecoveryHistoryItem = {
+  id: string;
+  sellerId: number;
+  sellerNickname: string;
+  sellerWalletAddress: string;
+  sellerEscrowWalletAddress: string;
+  chain: 'ethereum' | 'polygon' | 'arbitrum' | 'bsc';
+  tokenSymbol: string;
+  tokenContractAddress: string;
+  tokenDecimals: number;
+  sourceCaseType: string;
+  sourceDirection: string;
+  sourceTransactionHash: string;
+  sourceBlockTimestamp: string;
+  sourceFromAddress: string;
+  sourceToAddress: string;
+  sourceAmountRaw: string;
+  sourceAmountFormatted: string;
+  toAddressIsThirdwebServerWallet: boolean;
+  recoveryFromWalletAddress: string;
+  recoveryToWalletAddress: string;
+  recoveryAmountRaw: string;
+  recoveryAmountFormatted: string;
+  status: UnclassifiedOutRecoveryStatus;
+  recoveryTransactionId: string;
+  recoveryTransactionHash: string;
+  onchainStatus: string;
+  error: string;
+  requestedByWalletAddress: string;
+  requestedByName: string;
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+  confirmedAt: string;
+};
+
 type WalletBalanceState = {
   loading: boolean;
   displayValue: string;
@@ -46,6 +84,15 @@ type WalletBalanceState = {
 type SelectedTradeModalState = {
   transfer: TransferItem;
   trade: RelatedTrade;
+};
+
+type SelectedRecoveryModalState = {
+  transfer: TransferItem;
+};
+
+type RecoveryFeedbackState = {
+  type: 'success' | 'error';
+  message: string;
 };
 
 type TransferItem = {
@@ -62,17 +109,24 @@ type TransferItem = {
   signedAmountFormatted: string;
   runningBalanceRaw: string;
   runningBalanceFormatted: string;
+  toAddressIsThirdwebServerWallet: boolean;
   transferType: string;
   tokenType: string;
   caseType: string;
   caseLabel: string;
   isExpectedFlow: boolean;
+  unclassifiedOutRecoveries: UnclassifiedOutRecoveryHistoryItem[];
   relatedTrades: RelatedTrade[];
 };
 
 type CaseSummaryItem = {
   caseType: string;
   caseLabel: string;
+  count: number;
+};
+
+type RecoverySummaryItem = {
+  status: UnclassifiedOutRecoveryStatus;
   count: number;
 };
 
@@ -101,6 +155,13 @@ type SellerEscrowTransferHistoryResult = {
     orderCount: number;
     expectedCounterpartyCount: number;
   };
+  thirdwebServerWalletCheck?: {
+    enabled: boolean;
+    source: string;
+    error?: string;
+    totalServerWalletAddressCount: number;
+    outToServerWalletCount: number;
+  };
   overall: {
     totalInRaw: string;
     totalInFormatted: string;
@@ -112,6 +173,8 @@ type SellerEscrowTransferHistoryResult = {
     runningBalanceFormatted: string;
   };
   caseSummary: CaseSummaryItem[];
+  unclassifiedOutRecoverySummary: RecoverySummaryItem[];
+  unclassifiedOutRecoveryHistories: UnclassifiedOutRecoveryHistoryItem[];
   transfers: TransferItem[];
 };
 
@@ -206,6 +269,28 @@ const getCaseBadgeClassName = (transfer: TransferItem) => {
   return 'border-rose-200 bg-rose-50 text-rose-700';
 };
 
+const getRecoveryStatusLabel = (status: UnclassifiedOutRecoveryStatus) => {
+  if (status === 'REQUESTING') return '회수요청';
+  if (status === 'QUEUED') return '대기중';
+  if (status === 'SUBMITTED') return '전송중';
+  if (status === 'CONFIRMED') return '회수완료';
+  if (status === 'FAILED') return '회수실패';
+  return status;
+};
+
+const getRecoveryStatusClassName = (status: UnclassifiedOutRecoveryStatus) => {
+  if (status === 'CONFIRMED') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  }
+  if (status === 'FAILED') {
+    return 'border-rose-200 bg-rose-50 text-rose-700';
+  }
+  if (status === 'SUBMITTED' || status === 'QUEUED' || status === 'REQUESTING') {
+    return 'border-amber-200 bg-amber-50 text-amber-700';
+  }
+  return 'border-slate-200 bg-slate-50 text-slate-700';
+};
+
 export default function SellerEscrowTransferHistoryPage() {
   const [sellerId, setSellerId] = useState('');
   const [submittedSellerId, setSubmittedSellerId] = useState('');
@@ -218,6 +303,9 @@ export default function SellerEscrowTransferHistoryPage() {
   const [walletBalanceByAddress, setWalletBalanceByAddress] = useState<Record<string, WalletBalanceState>>({});
   const [walletBalanceTickMs, setWalletBalanceTickMs] = useState(() => Date.now());
   const [selectedTradeModal, setSelectedTradeModal] = useState<SelectedTradeModalState | null>(null);
+  const [selectedRecoveryModal, setSelectedRecoveryModal] = useState<SelectedRecoveryModalState | null>(null);
+  const [recoverySubmittingSourceTxHash, setRecoverySubmittingSourceTxHash] = useState('');
+  const [recoveryFeedback, setRecoveryFeedback] = useState<RecoveryFeedbackState | null>(null);
 
   const currentPage = result?.pagination?.page || page;
   const totalPages = result?.pagination?.totalPages || 1;
@@ -227,6 +315,8 @@ export default function SellerEscrowTransferHistoryPage() {
   const hasResult = Boolean(result && result.transfers);
   const hasTransfers = Boolean(result && result.transfers.length > 0);
   const caseSummary = result?.caseSummary || [];
+  const recoverySummary = result?.unclassifiedOutRecoverySummary || [];
+  const unclassifiedOutRecoveryHistories = result?.unclassifiedOutRecoveryHistories || [];
   const transfers = result?.transfers || [];
   const selectedOrder = selectedTradeModal?.trade?.order || null;
   const overall = result?.overall;
@@ -346,7 +436,10 @@ export default function SellerEscrowTransferHistoryPage() {
     }
   };
 
-  const renderWalletCell = (walletAddress: string) => {
+  const renderWalletCell = (
+    walletAddress: string,
+    options?: { isThirdwebServerWallet?: boolean },
+  ) => {
     const normalizedWallet = String(walletAddress || '').trim();
     if (!normalizedWallet) {
       return <span className="font-mono text-[11px] text-slate-500">-</span>;
@@ -398,8 +491,90 @@ export default function SellerEscrowTransferHistoryPage() {
             ? `${walletBalanceState.displayValue} USDT`
             : '잔고 미조회'}
         </p>
+        {options?.isThirdwebServerWallet ? (
+          <span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
+            thirdweb 서버지갑
+          </span>
+        ) : null}
       </div>
     );
+  };
+
+  const openTransactionExplorer = (txHash: string) => {
+    const normalizedHash = String(txHash || '').trim();
+    if (!normalizedHash || !txExplorerBase) return;
+    window.open(`${txExplorerBase}${normalizedHash}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleSubmitUnclassifiedOutRecovery = async () => {
+    if (!result || !selectedRecoveryModal) return;
+
+    const transfer = selectedRecoveryModal.transfer;
+    const sourceTransactionHash = String(transfer.transactionHash || '').trim();
+    if (!sourceTransactionHash) {
+      setRecoveryFeedback({
+        type: 'error',
+        message: '원본 트랜잭션 해시가 없어 회수를 진행할 수 없습니다.',
+      });
+      return;
+    }
+
+    setRecoverySubmittingSourceTxHash(sourceTransactionHash);
+    setRecoveryFeedback(null);
+
+    try {
+      const response = await fetch('/api/user/recoverSellerEscrowUnclassifiedOut', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sellerWalletAddress: result.seller.walletAddress,
+          sellerEscrowWalletAddress: result.seller.escrowWalletAddress,
+          sourceCaseType: transfer.caseType,
+          sourceDirection: transfer.direction,
+          sourceTransactionHash: transfer.transactionHash,
+          sourceBlockTimestamp: transfer.blockTimestamp,
+          sourceFromAddress: transfer.fromAddress,
+          sourceToAddress: transfer.toAddress,
+          sourceAmountRaw: transfer.amountRaw,
+          sourceToAddressIsThirdwebServerWallet: transfer.toAddressIsThirdwebServerWallet,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const message = String(payload?.error || payload?.detail || '미분류 출금 회수 요청에 실패했습니다.');
+        throw new Error(message);
+      }
+
+      const recoveryTransactionHash = String(
+        payload?.result?.history?.recoveryTransactionHash
+        || payload?.result?.history?.transactionHash
+        || '',
+      ).trim();
+      const successMessage = recoveryTransactionHash
+        ? `회수 요청이 등록되었습니다. 회수 Tx ${shortenHash(recoveryTransactionHash)}`
+        : '회수 요청이 등록되었습니다.';
+
+      setRecoveryFeedback({
+        type: 'success',
+        message: successMessage,
+      });
+      setSelectedRecoveryModal(null);
+
+      const targetSellerId = submittedSellerId || sellerId || result.seller.nickname;
+      await fetchHistory({
+        nextSellerId: targetSellerId,
+        nextPage: currentPage,
+      });
+    } catch (recoverError) {
+      console.error('failed to recover unclassified out transfer', recoverError);
+      setRecoveryFeedback({
+        type: 'error',
+        message: recoverError instanceof Error ? recoverError.message : '회수 처리 중 오류가 발생했습니다.',
+      });
+    } finally {
+      setRecoverySubmittingSourceTxHash('');
+    }
   };
 
   const fetchHistory = async ({
@@ -419,6 +594,7 @@ export default function SellerEscrowTransferHistoryPage() {
     setError('');
     setCandidates([]);
     setSelectedTradeModal(null);
+    setSelectedRecoveryModal(null);
 
     try {
       const response = await fetch('/api/user/getSellerEscrowTransferHistory', {
@@ -624,6 +800,96 @@ export default function SellerEscrowTransferHistoryPage() {
                 ))}
               </div>
             ) : null}
+
+            {result?.thirdwebServerWalletCheck ? (
+              <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                {result.thirdwebServerWalletCheck.enabled
+                  ? `thirdweb 서버지갑 판정 활성화 (서버지갑 ${new Intl.NumberFormat('ko-KR').format(
+                      result.thirdwebServerWalletCheck.totalServerWalletAddressCount,
+                    )}개, 출금-서버지갑 ${new Intl.NumberFormat('ko-KR').format(
+                      result.thirdwebServerWalletCheck.outToServerWalletCount,
+                    )}건)`
+                  : `thirdweb 서버지갑 판정 비활성화 (${result.thirdwebServerWalletCheck.error || '설정 확인 필요'})`}
+              </div>
+            ) : null}
+
+            <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold text-slate-700">
+                  미분류 출금 회수 처리 이력
+                </p>
+                <span className="text-[11px] font-semibold text-slate-500">
+                  {new Intl.NumberFormat('ko-KR').format(unclassifiedOutRecoveryHistories.length)}건
+                </span>
+              </div>
+              {recoverySummary.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {recoverySummary.map((summaryItem) => (
+                    <span
+                      key={`recovery-summary-${summaryItem.status}`}
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getRecoveryStatusClassName(
+                        summaryItem.status,
+                      )}`}
+                    >
+                      <span>{getRecoveryStatusLabel(summaryItem.status)}</span>
+                      <span>{summaryItem.count}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              {unclassifiedOutRecoveryHistories.length === 0 ? (
+                <p className="mt-2 text-[11px] text-slate-500">회수 처리 이력이 없습니다.</p>
+              ) : (
+                <div className="mt-2 grid gap-2 lg:grid-cols-2">
+                  {unclassifiedOutRecoveryHistories.slice(0, 10).map((historyItem) => (
+                    <article
+                      key={`recovery-history-${historyItem.id || historyItem.sourceTransactionHash}`}
+                      className="rounded-xl border border-slate-200 bg-white px-2.5 py-2"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-1">
+                        <p className="text-[10px] text-slate-500">{formatDateTime(historyItem.createdAt)}</p>
+                        <span
+                          className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getRecoveryStatusClassName(
+                            historyItem.status,
+                          )}`}
+                        >
+                          {getRecoveryStatusLabel(historyItem.status)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] font-semibold text-slate-700">
+                        {formatAmountDisplay(historyItem.recoveryAmountFormatted || historyItem.sourceAmountFormatted)} USDT
+                      </p>
+                      <p className="mt-1 font-mono text-[10px] text-slate-500">
+                        {shortenAddress(historyItem.sourceToAddress)} → {shortenAddress(historyItem.recoveryToWalletAddress)}
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {historyItem.sourceTransactionHash ? (
+                          <button
+                            type="button"
+                            onClick={() => openTransactionExplorer(historyItem.sourceTransactionHash)}
+                            className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-700 hover:bg-slate-100"
+                          >
+                            원본 {shortenHash(historyItem.sourceTransactionHash)}
+                          </button>
+                        ) : null}
+                        {historyItem.recoveryTransactionHash ? (
+                          <button
+                            type="button"
+                            onClick={() => openTransactionExplorer(historyItem.recoveryTransactionHash)}
+                            className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-indigo-700 hover:bg-indigo-100"
+                          >
+                            회수 {shortenHash(historyItem.recoveryTransactionHash)}
+                          </button>
+                        ) : null}
+                      </div>
+                      {historyItem.error ? (
+                        <p className="mt-1 text-[10px] text-rose-600">{historyItem.error}</p>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
           </section>
         ) : null}
 
@@ -634,6 +900,18 @@ export default function SellerEscrowTransferHistoryPage() {
               {submittedSellerId ? `검색어: ${submittedSellerId}` : '검색 후 표시'}
             </span>
           </div>
+
+          {recoveryFeedback ? (
+            <div
+              className={`mt-3 rounded-2xl border px-3 py-2 text-xs font-semibold ${
+                recoveryFeedback.type === 'success'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'border-rose-200 bg-rose-50 text-rose-700'
+              }`}
+            >
+              {recoveryFeedback.message}
+            </div>
+          ) : null}
 
           {hasResult ? (
             <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -695,90 +973,133 @@ export default function SellerEscrowTransferHistoryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transfers.map((transfer) => (
-                    <tr
-                      key={`${transfer.transactionHash}-${transfer.blockNumber}-${transfer.fromAddress}-${transfer.toAddress}`}
-                      className={`border-t ${
-                        transfer.isExpectedFlow ? 'bg-white' : 'bg-rose-50/40'
-                      }`}
-                    >
-                      <td className="px-2 py-2 align-top text-slate-600">
-                        <div className="flex flex-col">
-                          <span>{formatDateTime(transfer.blockTimestamp)}</span>
-                          <span className="font-mono text-[11px] text-slate-400">#{transfer.blockNumber || '-'}</span>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 align-top">
-                        <span
-                          className={`inline-flex min-w-[52px] items-center justify-center rounded-full border px-2 py-1 text-[11px] font-semibold ${getDirectionBadgeClassName(
-                            transfer.direction,
-                          )}`}
-                        >
-                          {transfer.direction === 'IN' ? '입금' : '출금'}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 align-top">
-                        <span
-                          className={`inline-flex break-words rounded-full border px-2 py-1 text-[11px] font-semibold ${getCaseBadgeClassName(
-                            transfer,
-                          )}`}
-                        >
-                          {transfer.caseLabel}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 align-top font-semibold text-slate-800">
-                        <span className={transfer.direction === 'IN' ? 'text-emerald-700' : 'text-blue-700'}>
-                          {formatSignedUsdtDisplay(transfer.signedAmountFormatted)}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 align-top font-semibold text-slate-700">
-                        {formatSignedUsdtDisplay(transfer.runningBalanceFormatted)}
-                      </td>
-                      <td className="px-2 py-2 align-top">
-                        {renderWalletCell(transfer.fromAddress)}
-                      </td>
-                      <td className="px-2 py-2 align-top">
-                        {renderWalletCell(transfer.toAddress)}
-                      </td>
-                      <td className="px-2 py-2 align-top text-slate-600">
-                        {transfer.relatedTrades.length === 0 ? (
-                          <span>-</span>
-                        ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {transfer.relatedTrades.map((trade) => (
+                  {transfers.map((transfer) => {
+                    const transferRecoveries = Array.isArray(transfer.unclassifiedOutRecoveries)
+                      ? transfer.unclassifiedOutRecoveries
+                      : [];
+                    const latestRecovery = transferRecoveries.length > 0 ? transferRecoveries[0] : null;
+                    const canRecoverUnclassifiedOut = transfer.direction === 'OUT'
+                      && transfer.caseType === 'UNCLASSIFIED_OUT'
+                      && transfer.toAddressIsThirdwebServerWallet;
+                    const isRecoveryConfirmed = latestRecovery?.status === 'CONFIRMED';
+                    const isRecoveringThisTransfer = recoverySubmittingSourceTxHash
+                      && recoverySubmittingSourceTxHash === transfer.transactionHash;
+
+                    return (
+                      <tr
+                        key={`${transfer.transactionHash}-${transfer.blockNumber}-${transfer.fromAddress}-${transfer.toAddress}`}
+                        className={`border-t ${
+                          transfer.isExpectedFlow ? 'bg-white' : 'bg-rose-50/40'
+                        }`}
+                      >
+                        <td className="px-2 py-2 align-top text-slate-600">
+                          <div className="flex flex-col">
+                            <span>{formatDateTime(transfer.blockTimestamp)}</span>
+                            <span className="font-mono text-[11px] text-slate-400">#{transfer.blockNumber || '-'}</span>
+                          </div>
+                        </td>
+                        <td className="px-2 py-2 align-top">
+                          <span
+                            className={`inline-flex min-w-[52px] items-center justify-center rounded-full border px-2 py-1 text-[11px] font-semibold ${getDirectionBadgeClassName(
+                              transfer.direction,
+                            )}`}
+                          >
+                            {transfer.direction === 'IN' ? '입금' : '출금'}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2 align-top">
+                          <div className="space-y-1">
+                            <span
+                              className={`inline-flex break-words rounded-full border px-2 py-1 text-[11px] font-semibold ${getCaseBadgeClassName(
+                                transfer,
+                              )}`}
+                            >
+                              {transfer.caseLabel}
+                            </span>
+                            {latestRecovery ? (
+                              <span
+                                className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getRecoveryStatusClassName(
+                                  latestRecovery.status,
+                                )}`}
+                              >
+                                {getRecoveryStatusLabel(latestRecovery.status)}
+                              </span>
+                            ) : null}
+                            {canRecoverUnclassifiedOut && !isRecoveryConfirmed ? (
                               <button
-                                key={`${transfer.transactionHash}-${trade.tradeId}-${trade.reason}`}
                                 type="button"
                                 onClick={() => {
-                                  setSelectedTradeModal({ transfer, trade });
+                                  setSelectedTradeModal(null);
+                                  setSelectedRecoveryModal({ transfer });
                                 }}
-                                className="max-w-full truncate rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-100"
-                                title={`${trade.reason}${trade.status ? ` / ${trade.status}` : ''}`}
+                                disabled={Boolean(isRecoveringThisTransfer) || loading}
+                                className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                                  isRecoveringThisTransfer || loading
+                                    ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                                    : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                                }`}
                               >
-                                {trade.tradeId || '-'}
+                                {isRecoveringThisTransfer ? '처리중...' : '회수하기'}
                               </button>
-                            ))}
+                            ) : null}
                           </div>
-                        )}
-                      </td>
-                      <td className="px-2 py-2 align-top">
-                        {txExplorerBase && transfer.transactionHash ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              window.open(`${txExplorerBase}${transfer.transactionHash}`, '_blank', 'noopener,noreferrer');
-                            }}
-                            className="block w-full truncate text-left font-mono text-[11px] font-semibold text-indigo-600 hover:underline"
-                            title={transfer.transactionHash}
-                          >
-                            {shortenHash(transfer.transactionHash)}
-                          </button>
-                        ) : (
-                          <span className="block w-full truncate font-mono text-[11px] text-slate-600">{shortenHash(transfer.transactionHash)}</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-2 py-2 align-top font-semibold text-slate-800">
+                          <span className={transfer.direction === 'IN' ? 'text-emerald-700' : 'text-blue-700'}>
+                            {formatSignedUsdtDisplay(transfer.signedAmountFormatted)}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2 align-top font-semibold text-slate-700">
+                          {formatSignedUsdtDisplay(transfer.runningBalanceFormatted)}
+                        </td>
+                        <td className="px-2 py-2 align-top">
+                          {renderWalletCell(transfer.fromAddress)}
+                        </td>
+                        <td className="px-2 py-2 align-top">
+                          {renderWalletCell(transfer.toAddress, {
+                            isThirdwebServerWallet: transfer.toAddressIsThirdwebServerWallet,
+                          })}
+                        </td>
+                        <td className="px-2 py-2 align-top text-slate-600">
+                          {transfer.relatedTrades.length === 0 ? (
+                            <span>-</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1">
+                              {transfer.relatedTrades.map((trade) => (
+                                <button
+                                  key={`${transfer.transactionHash}-${trade.tradeId}-${trade.reason}`}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedTradeModal({ transfer, trade });
+                                  }}
+                                  className="max-w-full truncate rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-100"
+                                  title={`${trade.reason}${trade.status ? ` / ${trade.status}` : ''}`}
+                                >
+                                  {trade.tradeId || '-'}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-2 py-2 align-top">
+                          {txExplorerBase && transfer.transactionHash ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                openTransactionExplorer(transfer.transactionHash);
+                              }}
+                              className="block w-full truncate text-left font-mono text-[11px] font-semibold text-indigo-600 hover:underline"
+                              title={transfer.transactionHash}
+                            >
+                              {shortenHash(transfer.transactionHash)}
+                            </button>
+                          ) : (
+                            <span className="block w-full truncate font-mono text-[11px] text-slate-600">{shortenHash(transfer.transactionHash)}</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -832,6 +1153,131 @@ export default function SellerEscrowTransferHistoryPage() {
           ) : null}
         </section>
       </div>
+      {selectedRecoveryModal ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-3 py-4"
+          onClick={() => {
+            if (recoverySubmittingSourceTxHash) return;
+            setSelectedRecoveryModal(null);
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_28px_90px_-52px_rgba(15,23,42,0.75)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  Recovery
+                </p>
+                <h3 className="text-sm font-bold text-slate-900">미분류 출금 회수</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedRecoveryModal(null)}
+                disabled={Boolean(recoverySubmittingSourceTxHash)}
+                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
+                  recoverySubmittingSourceTxHash
+                    ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className="mt-2 space-y-1.5 text-[11px] text-slate-700">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2">
+                <p className="font-semibold text-slate-800">
+                  {formatAmountDisplay(selectedRecoveryModal.transfer.amountFormatted)} USDT
+                </p>
+                <p className="mt-0.5 font-mono text-[10px] text-slate-500">
+                  {shortenAddress(selectedRecoveryModal.transfer.toAddress)} → {shortenAddress(sellerEscrowWalletAddress)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white px-2.5 py-2">
+                <p className="text-[10px] font-semibold text-slate-500">원본 Tx</p>
+                <button
+                  type="button"
+                  onClick={() => openTransactionExplorer(selectedRecoveryModal.transfer.transactionHash)}
+                  className="mt-0.5 font-mono text-[10px] font-semibold text-indigo-700 hover:underline"
+                >
+                  {shortenHash(selectedRecoveryModal.transfer.transactionHash)}
+                </button>
+              </div>
+
+              {selectedRecoveryModal.transfer.unclassifiedOutRecoveries?.[0] ? (
+                <div className="rounded-xl border border-slate-200 bg-white px-2.5 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[10px] font-semibold text-slate-500">최근 회수 상태</p>
+                    <span
+                      className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getRecoveryStatusClassName(
+                        selectedRecoveryModal.transfer.unclassifiedOutRecoveries[0].status,
+                      )}`}
+                    >
+                      {getRecoveryStatusLabel(selectedRecoveryModal.transfer.unclassifiedOutRecoveries[0].status)}
+                    </span>
+                  </div>
+                  {selectedRecoveryModal.transfer.unclassifiedOutRecoveries[0].recoveryTransactionHash ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openTransactionExplorer(
+                          selectedRecoveryModal.transfer.unclassifiedOutRecoveries[0].recoveryTransactionHash,
+                        )}
+                      className="mt-0.5 font-mono text-[10px] font-semibold text-indigo-700 hover:underline"
+                    >
+                      {shortenHash(selectedRecoveryModal.transfer.unclassifiedOutRecoveries[0].recoveryTransactionHash)}
+                    </button>
+                  ) : null}
+                  {selectedRecoveryModal.transfer.unclassifiedOutRecoveries[0].error ? (
+                    <p className="mt-0.5 text-[10px] text-rose-600">
+                      {selectedRecoveryModal.transfer.unclassifiedOutRecoveries[0].error}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <p className="text-[10px] text-slate-500">
+                thirdweb 서버지갑에서 판매자 에스크로 지갑으로 동일 수량 USDT 회수를 요청합니다.
+              </p>
+            </div>
+
+            <div className="mt-3 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedRecoveryModal(null)}
+                disabled={Boolean(recoverySubmittingSourceTxHash)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                  recoverySubmittingSourceTxHash
+                    ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void handleSubmitUnclassifiedOutRecovery();
+                }}
+                disabled={
+                  Boolean(recoverySubmittingSourceTxHash)
+                  || selectedRecoveryModal.transfer.unclassifiedOutRecoveries?.[0]?.status === 'CONFIRMED'
+                }
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                  recoverySubmittingSourceTxHash
+                  || selectedRecoveryModal.transfer.unclassifiedOutRecoveries?.[0]?.status === 'CONFIRMED'
+                    ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                    : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                }`}
+              >
+                {recoverySubmittingSourceTxHash ? '요청중...' : '회수 실행'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {selectedTradeModal ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-2 py-4 md:py-3"

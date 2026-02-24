@@ -82,7 +82,95 @@ type InsightTransferResponse = {
   error?: string;
 };
 
+type UnclassifiedOutRecoveryStatus =
+  | 'REQUESTING'
+  | 'QUEUED'
+  | 'SUBMITTED'
+  | 'CONFIRMED'
+  | 'FAILED';
+
+type SellerEscrowUnclassifiedOutRecoveryHistoryDoc = {
+  _id?: unknown;
+  sellerId?: number;
+  sellerNickname?: string;
+  sellerWalletAddress?: string;
+  sellerEscrowWalletAddress?: string;
+  sellerEscrowWalletAddressNormalized?: string;
+  chain?: 'ethereum' | 'polygon' | 'arbitrum' | 'bsc';
+  tokenSymbol?: string;
+  tokenContractAddress?: string;
+  tokenDecimals?: number;
+  sourceCaseType?: string;
+  sourceDirection?: string;
+  sourceTransactionHash?: string;
+  sourceTransactionHashNormalized?: string;
+  sourceBlockTimestamp?: string;
+  sourceFromAddress?: string;
+  sourceToAddress?: string;
+  sourceAmountRaw?: string;
+  sourceAmountFormatted?: string;
+  toAddressIsThirdwebServerWallet?: boolean;
+  recoveryFromWalletAddress?: string;
+  recoveryToWalletAddress?: string;
+  recoveryAmountRaw?: string;
+  recoveryAmountFormatted?: string;
+  status?: UnclassifiedOutRecoveryStatus | string;
+  recoveryTransactionId?: string;
+  recoveryTransactionHash?: string;
+  onchainStatus?: string;
+  error?: string;
+  requestedByWalletAddress?: string;
+  requestedByName?: string;
+  source?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  confirmedAt?: string;
+};
+
+type SerializedUnclassifiedOutRecoveryHistory = {
+  id: string;
+  sellerId: number;
+  sellerNickname: string;
+  sellerWalletAddress: string;
+  sellerEscrowWalletAddress: string;
+  chain: 'ethereum' | 'polygon' | 'arbitrum' | 'bsc';
+  tokenSymbol: string;
+  tokenContractAddress: string;
+  tokenDecimals: number;
+  sourceCaseType: string;
+  sourceDirection: string;
+  sourceTransactionHash: string;
+  sourceBlockTimestamp: string;
+  sourceFromAddress: string;
+  sourceToAddress: string;
+  sourceAmountRaw: string;
+  sourceAmountFormatted: string;
+  toAddressIsThirdwebServerWallet: boolean;
+  recoveryFromWalletAddress: string;
+  recoveryToWalletAddress: string;
+  recoveryAmountRaw: string;
+  recoveryAmountFormatted: string;
+  status: UnclassifiedOutRecoveryStatus;
+  recoveryTransactionId: string;
+  recoveryTransactionHash: string;
+  onchainStatus: string;
+  error: string;
+  requestedByWalletAddress: string;
+  requestedByName: string;
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+  confirmedAt: string;
+};
+
 let insightClientIdCache = '';
+const ENGINE_SERVER_WALLET_CACHE_TTL_MS = 5 * 60 * 1000;
+let engineServerWalletAddressCache:
+  | {
+      fetchedAt: number;
+      addresses: Set<string>;
+    }
+  | null = null;
 
 const ESCROW_TRANSFER_CASE_LABELS: Record<TransferCaseType, string> = {
   SELLER_WALLET_TO_ESCROW: '판매자 지갑 -> 판매자 에스크로',
@@ -103,6 +191,18 @@ const normalizeHash = (value: unknown) => String(value || '').trim().toLowerCase
 const isWalletAddress = (value: string) => /^0x[a-f0-9]{40}$/i.test(String(value || '').trim());
 
 const isTransactionHash = (value: string) => /^0x[a-f0-9]{64}$/i.test(String(value || '').trim());
+
+const normalizeSupportedChain = (
+  value: unknown,
+  fallback: ChainConfig['chain'],
+): ChainConfig['chain'] => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'ethereum') return 'ethereum';
+  if (normalized === 'polygon') return 'polygon';
+  if (normalized === 'arbitrum') return 'arbitrum';
+  if (normalized === 'bsc') return 'bsc';
+  return fallback;
+};
 
 const resolveChainConfig = (): ChainConfig => {
   const normalizedChain = String(process.env.NEXT_PUBLIC_CHAIN || 'polygon').trim().toLowerCase();
@@ -160,6 +260,86 @@ const parseRawAmountToBigInt = (value: string) => {
   const normalized = String(value || '').trim();
   if (!/^-?\d+$/.test(normalized)) return 0n;
   return BigInt(normalized);
+};
+
+const normalizeErrorText = (value: unknown): string => {
+  if (value == null) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (value instanceof Error) {
+    return String(value.message || '').trim();
+  }
+
+  if (typeof value === 'object') {
+    const valueRecord = value as Record<string, unknown>;
+    const message = typeof valueRecord.message === 'string' ? valueRecord.message.trim() : '';
+    if (message) {
+      return message;
+    }
+
+    const error = typeof valueRecord.error === 'string' ? valueRecord.error.trim() : '';
+    if (error) {
+      return error;
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+
+  return String(value).trim();
+};
+
+const normalizeRecoveryStatus = (value: unknown): UnclassifiedOutRecoveryStatus => {
+  const normalized = String(value || '').trim().toUpperCase();
+  if (
+    normalized === 'REQUESTING'
+    || normalized === 'QUEUED'
+    || normalized === 'SUBMITTED'
+    || normalized === 'CONFIRMED'
+    || normalized === 'FAILED'
+  ) {
+    return normalized;
+  }
+
+  if (
+    normalized.includes('CONFIRM')
+    || normalized.includes('MINED')
+    || normalized.includes('COMPLETED')
+    || normalized.includes('SUCCESS')
+  ) {
+    return 'CONFIRMED';
+  }
+
+  if (
+    normalized.includes('FAIL')
+    || normalized.includes('ERROR')
+    || normalized.includes('REVERT')
+    || normalized.includes('CANCEL')
+  ) {
+    return 'FAILED';
+  }
+
+  if (
+    normalized.includes('SUBMIT')
+    || normalized.includes('SENT')
+    || normalized.includes('BROADCAST')
+  ) {
+    return 'SUBMITTED';
+  }
+
+  if (normalized.includes('REQUEST')) {
+    return 'REQUESTING';
+  }
+
+  return 'QUEUED';
 };
 
 const pushRelatedTradeInfo = (
@@ -327,6 +507,97 @@ const resolveInsightClientId = async () => {
   }
 
   return '';
+};
+
+const resolveThirdwebServerWalletAddressSet = async () => {
+  const now = Date.now();
+  if (
+    engineServerWalletAddressCache
+    && (now - engineServerWalletAddressCache.fetchedAt) < ENGINE_SERVER_WALLET_CACHE_TTL_MS
+  ) {
+    return {
+      enabled: true,
+      addresses: engineServerWalletAddressCache.addresses,
+      totalServerWalletAddressCount: engineServerWalletAddressCache.addresses.size,
+      source: 'cache',
+      error: '',
+    };
+  }
+
+  const secretKey = String(process.env.THIRDWEB_SECRET_KEY || '').trim();
+  if (!secretKey) {
+    return {
+      enabled: false,
+      addresses: new Set<string>(),
+      totalServerWalletAddressCount: 0,
+      source: 'unavailable',
+      error: 'THIRDWEB_SECRET_KEY is missing',
+    };
+  }
+
+  const client = createThirdwebClient({ secretKey });
+  const addresses = new Set<string>();
+  const pageLimit = 200;
+
+  try {
+    let page = 1;
+    while (page <= 100) {
+      const response = await Engine.getServerWallets({
+        client,
+        page,
+        limit: pageLimit,
+      });
+      const accounts = Array.isArray(response?.accounts) ? response.accounts : [];
+      for (const account of accounts) {
+        const signerAddress = normalizeAddress(account?.address);
+        const smartAccountAddress = normalizeAddress(account?.smartAccountAddress);
+        if (isWalletAddress(signerAddress)) {
+          addresses.add(signerAddress);
+        }
+        if (isWalletAddress(smartAccountAddress)) {
+          addresses.add(smartAccountAddress);
+        }
+      }
+
+      const totalCount = Number(response?.pagination?.totalCount || 0);
+      const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageLimit) : page;
+      if (page >= totalPages) {
+        break;
+      }
+      page += 1;
+    }
+  } catch (error) {
+    console.error('getSellerEscrowTransferHistory: failed to fetch thirdweb server wallets', error);
+    if (engineServerWalletAddressCache) {
+      return {
+        enabled: true,
+        addresses: engineServerWalletAddressCache.addresses,
+        totalServerWalletAddressCount: engineServerWalletAddressCache.addresses.size,
+        source: 'stale-cache',
+        error: 'failed to refresh server wallet cache',
+      };
+    }
+    return {
+      enabled: false,
+      addresses: new Set<string>(),
+      totalServerWalletAddressCount: 0,
+      source: 'error',
+      error: 'failed to fetch thirdweb server wallets',
+    };
+  }
+
+  engineServerWalletAddressCache = {
+    fetchedAt: now,
+    addresses,
+  };
+
+  return {
+    enabled: true,
+    addresses,
+    totalServerWalletAddressCount: addresses.size,
+    source: 'live',
+    error: '',
+  };
 };
 
 const findSellerById = async (sellerId: string) => {
@@ -710,6 +981,117 @@ const fetchAllSellerEscrowTransfers = async ({
   };
 };
 
+const serializeUnclassifiedOutRecoveryHistory = ({
+  item,
+  fallbackChain,
+  fallbackTokenContractAddress,
+  fallbackTokenDecimals,
+}: {
+  item: SellerEscrowUnclassifiedOutRecoveryHistoryDoc;
+  fallbackChain: ChainConfig['chain'];
+  fallbackTokenContractAddress: string;
+  fallbackTokenDecimals: number;
+}): SerializedUnclassifiedOutRecoveryHistory => ({
+  id: String(item?._id || ''),
+  sellerId: Number(item?.sellerId || 0),
+  sellerNickname: String(item?.sellerNickname || ''),
+  sellerWalletAddress: String(item?.sellerWalletAddress || ''),
+  sellerEscrowWalletAddress: String(item?.sellerEscrowWalletAddress || ''),
+  chain: normalizeSupportedChain(item?.chain, fallbackChain),
+  tokenSymbol: String(item?.tokenSymbol || 'USDT'),
+  tokenContractAddress: String(item?.tokenContractAddress || fallbackTokenContractAddress),
+  tokenDecimals: Number.isFinite(Number(item?.tokenDecimals))
+    ? Number(item?.tokenDecimals)
+    : fallbackTokenDecimals,
+  sourceCaseType: String(item?.sourceCaseType || ''),
+  sourceDirection: String(item?.sourceDirection || ''),
+  sourceTransactionHash: normalizeHash(item?.sourceTransactionHash),
+  sourceBlockTimestamp: String(item?.sourceBlockTimestamp || ''),
+  sourceFromAddress: normalizeAddress(item?.sourceFromAddress),
+  sourceToAddress: normalizeAddress(item?.sourceToAddress),
+  sourceAmountRaw: String(item?.sourceAmountRaw || '0'),
+  sourceAmountFormatted: String(item?.sourceAmountFormatted || '0'),
+  toAddressIsThirdwebServerWallet: Boolean(item?.toAddressIsThirdwebServerWallet),
+  recoveryFromWalletAddress: normalizeAddress(item?.recoveryFromWalletAddress),
+  recoveryToWalletAddress: normalizeAddress(item?.recoveryToWalletAddress),
+  recoveryAmountRaw: String(item?.recoveryAmountRaw || '0'),
+  recoveryAmountFormatted: String(item?.recoveryAmountFormatted || '0'),
+  status: normalizeRecoveryStatus(item?.status || 'QUEUED'),
+  recoveryTransactionId: String(item?.recoveryTransactionId || ''),
+  recoveryTransactionHash: normalizeHash(item?.recoveryTransactionHash),
+  onchainStatus: String(item?.onchainStatus || ''),
+  error: normalizeErrorText(item?.error),
+  requestedByWalletAddress: normalizeAddress(item?.requestedByWalletAddress),
+  requestedByName: String(item?.requestedByName || ''),
+  source: String(item?.source || ''),
+  createdAt: String(item?.createdAt || ''),
+  updatedAt: String(item?.updatedAt || ''),
+  confirmedAt: String(item?.confirmedAt || ''),
+});
+
+const loadUnclassifiedOutRecoveryHistories = async ({
+  sellerEscrowWalletAddress,
+  fallbackChain,
+  fallbackTokenContractAddress,
+  fallbackTokenDecimals,
+}: {
+  sellerEscrowWalletAddress: string;
+  fallbackChain: ChainConfig['chain'];
+  fallbackTokenContractAddress: string;
+  fallbackTokenDecimals: number;
+}) => {
+  const mongodbClient = await clientPromise;
+  const historyCollection = mongodbClient
+    .db(dbName)
+    .collection<SellerEscrowUnclassifiedOutRecoveryHistoryDoc>('sellerEscrowUnclassifiedOutRecoveryHistories');
+
+  const normalizedSellerEscrowWalletAddress = normalizeAddress(sellerEscrowWalletAddress);
+  const docs = await historyCollection
+    .find({
+      sellerEscrowWalletAddressNormalized: normalizedSellerEscrowWalletAddress,
+    })
+    .sort({ createdAt: -1 })
+    .limit(500)
+    .toArray();
+
+  const histories = docs.map((item) =>
+    serializeUnclassifiedOutRecoveryHistory({
+      item,
+      fallbackChain,
+      fallbackTokenContractAddress,
+      fallbackTokenDecimals,
+    }),
+  );
+
+  const historyBySourceTransactionHash = new Map<string, SerializedUnclassifiedOutRecoveryHistory[]>();
+  const summaryMap = new Map<UnclassifiedOutRecoveryStatus, number>();
+
+  for (const historyItem of histories) {
+    const sourceTransactionHash = normalizeHash(historyItem.sourceTransactionHash);
+    if (isTransactionHash(sourceTransactionHash)) {
+      const current = historyBySourceTransactionHash.get(sourceTransactionHash) || [];
+      current.push(historyItem);
+      historyBySourceTransactionHash.set(sourceTransactionHash, current);
+    }
+
+    const currentStatusCount = summaryMap.get(historyItem.status) || 0;
+    summaryMap.set(historyItem.status, currentStatusCount + 1);
+  }
+
+  const summary = Array.from(summaryMap.entries())
+    .map(([status, count]) => ({
+      status,
+      count,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    histories,
+    historyBySourceTransactionHash,
+    summary,
+  };
+};
+
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
 
@@ -783,6 +1165,18 @@ export async function POST(request: NextRequest) {
       sellerWalletAddress,
       sellerEscrowWalletAddress,
     });
+    const thirdwebServerWalletResolution = await resolveThirdwebServerWalletAddressSet();
+    const thirdwebServerWalletAddressSet = thirdwebServerWalletResolution.addresses;
+    const {
+      histories: unclassifiedOutRecoveryHistories,
+      historyBySourceTransactionHash,
+      summary: unclassifiedOutRecoverySummary,
+    } = await loadUnclassifiedOutRecoveryHistories({
+      sellerEscrowWalletAddress,
+      fallbackChain: chainConfig.chain,
+      fallbackTokenContractAddress: chainConfig.usdtContractAddress,
+      fallbackTokenDecimals: chainConfig.usdtDecimals,
+    });
 
     const allTransfersResponse = await fetchAllSellerEscrowTransfers({
       clientId: insightClientId,
@@ -825,6 +1219,9 @@ export async function POST(request: NextRequest) {
       const signedAmountRawBigInt = direction === 'IN' ? amountRawBigInt : amountRawBigInt * -1n;
       const signedAmountRaw = signedAmountRawBigInt.toString();
       const signedAmountFormatted = formatTokenAmountFromRaw(signedAmountRaw, chainConfig.usdtDecimals);
+      const toAddressIsThirdwebServerWallet
+        = direction === 'OUT' && thirdwebServerWalletAddressSet.has(toAddress);
+      const unclassifiedOutRecoveries = historyBySourceTransactionHash.get(txHash) || [];
 
       return {
         transactionHash: txHash,
@@ -840,11 +1237,13 @@ export async function POST(request: NextRequest) {
         signedAmountFormatted,
         runningBalanceRaw: '0',
         runningBalanceFormatted: '0',
+        toAddressIsThirdwebServerWallet,
         transferType: String(item.transfer_type || ''),
         tokenType: String(item.token_type || ''),
         caseType: caseDetail.type,
         caseLabel: caseDetail.label,
         isExpectedFlow: caseDetail.expectedFlow,
+        unclassifiedOutRecoveries,
         relatedTrades: relatedTradesWithOrder,
       };
     });
@@ -891,6 +1290,9 @@ export async function POST(request: NextRequest) {
       .sort((a, b) => b.count - a.count);
 
     const netChangeRaw = totalInRaw - totalOutRaw;
+    const outToThirdwebServerWalletCount = transfersWithRunningBalance.filter(
+      (item) => item.direction === 'OUT' && item.toAddressIsThirdwebServerWallet,
+    ).length;
 
     return NextResponse.json({
       result: {
@@ -918,6 +1320,13 @@ export async function POST(request: NextRequest) {
           orderCount,
           expectedCounterpartyCount: buyerEscrowAddressSet.size + 1, // seller wallet + buyer escrow wallets
         },
+        thirdwebServerWalletCheck: {
+          enabled: thirdwebServerWalletResolution.enabled,
+          source: thirdwebServerWalletResolution.source,
+          error: thirdwebServerWalletResolution.error,
+          totalServerWalletAddressCount: thirdwebServerWalletResolution.totalServerWalletAddressCount,
+          outToServerWalletCount: outToThirdwebServerWalletCount,
+        },
         overall: {
           totalInRaw: totalInRaw.toString(),
           totalInFormatted: formatTokenAmountFromRaw(totalInRaw.toString(), chainConfig.usdtDecimals),
@@ -929,6 +1338,8 @@ export async function POST(request: NextRequest) {
           runningBalanceFormatted: formatTokenAmountFromRaw(runningBalanceRaw.toString(), chainConfig.usdtDecimals),
         },
         caseSummary,
+        unclassifiedOutRecoverySummary,
+        unclassifiedOutRecoveryHistories,
         transfers,
       },
     });
