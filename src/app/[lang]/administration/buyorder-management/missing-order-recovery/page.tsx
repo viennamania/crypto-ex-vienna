@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { useActiveAccount } from 'thirdweb/react';
 
@@ -187,6 +187,7 @@ const PROGRESS_STEPS = [
   { key: 'finalize', label: '최종 후보 생성' },
 ] as const;
 const PROGRESS_STEP_KEY_SET = new Set<string>(PROGRESS_STEPS.map((item) => item.key));
+const MISSING_AGENTCODE_ERROR_MESSAGE = 'agentcode 파라미터가 없어 에이전트 범위 조회를 진행할 수 없습니다.';
 
 const isWalletAddress = (value: unknown) => /^0x[a-fA-F0-9]{40}$/.test(String(value || '').trim());
 const normalizeOrderStatus = (value: unknown) => String(value || '').trim().toLowerCase();
@@ -229,7 +230,9 @@ const formatUsdt = (value: number) =>
 
 export default function MissingOrderRecoveryPage() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isAgentManagementContext = pathname.includes('/p2p/agent-management/');
+  const agentcode = String(searchParams?.get('agentcode') || '').trim();
   const activeAccount = useActiveAccount();
   const adminWalletAddress = String(activeAccount?.address || '').trim();
   const isWalletConnected = Boolean(adminWalletAddress);
@@ -336,6 +339,21 @@ export default function MissingOrderRecoveryPage() {
   const recoveryActorRoleLabel = recoveryActorRole === 'agent' ? '에이전트' : '관리자';
 
   const loadUnrecoveredCancelledCandidates = useCallback(async () => {
+    if (isAgentManagementContext && !agentcode) {
+      setUnrecoveredCancelledCandidates([]);
+      setUnrecoveredCancelledError(MISSING_AGENTCODE_ERROR_MESSAGE);
+      setUnrecoveredCancelledMeta({
+        scannedCancelledOrders: 0,
+        missingRollbackTransferCount: 0,
+        excludedWithRollbackTxHashCount: 0,
+        excludedAlreadyRecoveredCount: 0,
+        missingEscrowAddressCount: 0,
+        missingExpectedRollbackAmountCount: 0,
+        inspectedAt: '',
+      });
+      return;
+    }
+
     setUnrecoveredCancelledLoading(true);
     setUnrecoveredCancelledError('');
     try {
@@ -347,6 +365,7 @@ export default function MissingOrderRecoveryPage() {
         body: JSON.stringify({
           lookbackDays,
           limit: 1000,
+          ...(isAgentManagementContext && agentcode ? { agentcode } : {}),
         }),
       });
 
@@ -377,9 +396,47 @@ export default function MissingOrderRecoveryPage() {
     } finally {
       setUnrecoveredCancelledLoading(false);
     }
-  }, [lookbackDays]);
+  }, [agentcode, isAgentManagementContext, lookbackDays]);
 
   const loadCandidates = useCallback(async () => {
+    if (isAgentManagementContext && !agentcode) {
+      setError(MISSING_AGENTCODE_ERROR_MESSAGE);
+      setCandidates([]);
+      setExcludedCandidates([]);
+      setLastUpdatedAt('');
+      setMeta({
+        scannedTransactions: 0,
+        matchedTransfers: 0,
+        missingCount: 0,
+        excludedCount: 0,
+        excludedByExistingTxHashCount: 0,
+        excludedByExistingEscrowWalletCount: 0,
+        excludedByBothCount: 0,
+        excludedCancelledOrderCount: 0,
+        sellerCount: 0,
+        privateBuyWalletCount: 0,
+        privateBuyWalletDetectionMode: '',
+        privateBuyWalletWarning: '',
+        engineServerWalletLookupFailed: false,
+        chain: '',
+      });
+      setLoading(false);
+      setLoadingProgress({
+        percent: 0,
+        elapsedSeconds: 0,
+        phaseLabel: '',
+        currentStep: '',
+        stepMessageByKey: {},
+        liveScannedTransactions: 0,
+        liveMatchedTransfers: 0,
+        liveTxCacheHits: 0,
+        liveTxCacheMisses: 0,
+        liveTxCacheBypasses: 0,
+      });
+      void loadUnrecoveredCancelledCandidates();
+      return;
+    }
+
     if (loadingRef.current) return;
     loadingRef.current = true;
 
@@ -450,6 +507,7 @@ export default function MissingOrderRecoveryPage() {
           lookbackDays,
           maxCandidates: 300,
           stream: true,
+          ...(isAgentManagementContext && agentcode ? { agentcode } : {}),
         }),
       });
 
@@ -462,6 +520,7 @@ export default function MissingOrderRecoveryPage() {
           throw new Error(String(payload?.message || payload?.error || '누락 후보 조회에 실패했습니다.'));
         }
         applyResult(payload?.result);
+        setUnrecoveredCancelledError('');
         await loadUnrecoveredCancelledCandidates();
         setLoadingProgress((previous) => ({
           ...previous,
@@ -595,6 +654,7 @@ export default function MissingOrderRecoveryPage() {
       }
 
       applyResult(finalResult);
+      setUnrecoveredCancelledError('');
       await loadUnrecoveredCancelledCandidates();
       setLoadingProgress((previous) => ({
         ...previous,
@@ -635,7 +695,7 @@ export default function MissingOrderRecoveryPage() {
         });
       }, 900);
     }
-  }, [lookbackDays, loadUnrecoveredCancelledCandidates]);
+  }, [agentcode, isAgentManagementContext, lookbackDays, loadUnrecoveredCancelledCandidates]);
 
   useEffect(() => {
     void loadCandidates();
