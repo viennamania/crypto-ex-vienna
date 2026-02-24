@@ -1,264 +1,87 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from 'next/server';
 
 import {
-  UserProps,
-	buyOrderRollbackPayment,
+  buyOrderRollbackPayment,
   buyOrderGetOrderById,
+  cancelPrivateBuyOrderByAdminToBuyer,
 } from '@lib/api/order';
 
-import {
-  getOneByWalletAddress
-} from '@lib/api/user';
-
-
-// Download the helper library from https://www.twilio.com/docs/node/install
-import twilio from "twilio";
-
-
-
-
-import {
-  createThirdwebClient,
-  eth_getTransactionByHash,
-  getContract,
-  sendAndConfirmTransaction,
-  sendTransaction,
-  sendBatchTransaction,
-
-} from "thirdweb";
-
-//import { polygonAmoy } from "thirdweb/chains";
-import {
-  polygon,
-  arbitrum,
- } from "thirdweb/chains";
-
-import {
-  privateKeyToAccount,
-  smartWallet,
-  getWalletBalance,
-  
- } from "thirdweb/wallets";
-
-
-import {
-  mintTo,
-  totalSupply,
-  transfer,
-  
-  getBalance,
-
-  balanceOf,
-
-} from "thirdweb/extensions/erc20";
-
-
-
-
-
-// USDT Token (USDT)
-const tokenContractAddressUSDT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
-
-const contractAddressArbitrum = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"; // USDT on Arbitrum
-
-
-
-
-
-
 export async function POST(request: NextRequest) {
-
-  const body = await request.json();
-
-  const { lang, storecode, orderId, paymentAmount, isSmartAccount } = body;
-
-  console.log("lang", lang);
-  console.log("storecode", storecode);
-
-  console.log("orderId", orderId);
-
-  console.log("paymentAmount", paymentAmount);
-
-
-
-
-
-
-  
   try {
+    const body = await request.json().catch(() => ({}));
+    const orderId = String(body?.orderId || '').trim();
+    const storecode = String(body?.storecode || 'admin').trim();
+    const lang = String(body?.lang || '').trim();
+    const paymentAmount = Number(body?.paymentAmount || 0) || 0;
+    const queueId = String(body?.queueId || '').trim();
+    const adminWalletAddress = String(body?.adminWalletAddress || body?.walletAddress || '').trim();
+    const transactionHash = String(body?.transactionHash || '').trim();
 
+    if (!orderId) {
+      return NextResponse.json(
+        { error: 'orderId is required.' },
+        { status: 400 },
+      );
+    }
 
-
-    // get buyer wallet address
-
-
-    const order = await buyOrderGetOrderById( orderId );
-
+    const order = await buyOrderGetOrderById(orderId);
     if (!order) {
-      return NextResponse.json({
-        result: null,
-      });
+      return NextResponse.json(
+        { error: 'ORDER_NOT_FOUND' },
+        { status: 404 },
+      );
     }
-    
 
-    const {
-      seller: seller,
-      walletAddress: walletAddress,
-      usdtAmount: usdtAmount,
-      buyer: buyer,
-    } = order as UserProps;
+    if ((order as any)?.privateSale === true && (order as any)?.status === 'paymentRequested') {
+      const privateCancelResult = await cancelPrivateBuyOrderByAdminToBuyer({
+        orderId,
+        adminWalletAddress,
+        cancelledByRole: 'admin',
+        cancelledByNickname: '관리자',
+      });
 
+      if (!privateCancelResult.success) {
+        return NextResponse.json(
+          { error: privateCancelResult.error || 'FAILED_TO_CANCEL_PRIVATE_BUY_ORDER' },
+          { status: 400 },
+        );
+      }
 
-    // send escrowed USDT to seller
-
-    const sellerWalletAddress = seller.walletAddress;
-
-   
-
-
-    const user = await getOneByWalletAddress(
-      storecode,
-      sellerWalletAddress
-    );
-
-
-
-    ///console.log("user", user);
-
-    if (!user) {
       return NextResponse.json({
-        result: null,
+        result: privateCancelResult,
       });
     }
 
-
-
-    const escrowWalletAddress = user.escrowWalletAddress;
-
-
-    const toAddressStore = sellerWalletAddress
-
-    console.log("toAddressStore", toAddressStore);
-
-    const sendAmountToStore = usdtAmount;
-
-    console.log("sendAmountToStore", sendAmountToStore);
-
-
-
-
-    let transactionHashResult = "";
-    let queueId = "";
+    if (!transactionHash) {
+      return NextResponse.json(
+        { error: 'transactionHash is required for legacy rollback.' },
+        { status: 400 },
+      );
+    }
 
     const result = await buyOrderRollbackPayment({
-      lang: lang,
-      storecode: storecode,
-      orderId: orderId,
-      paymentAmount: paymentAmount,
-      queueId: queueId,
-      transactionHash: transactionHashResult,
+      lang,
+      storecode,
+      orderId,
+      paymentAmount,
+      queueId,
+      transactionHash,
     });
-  
-  
-    //console.log("result", JSON.stringify(result));
-  
-    const {
-      nickname: nickname,
-      tradeId: tradeId,
-      krwAmount: krwAmount,
-      transactionHash: transactionHash,
-    } = result as UserProps;
-  
-  
-  
-    const amount = usdtAmount;
-  
-  
-      // send sms
 
-    /*
-      if (!buyer?.mobile) {
-        return NextResponse.json({
-          result,
-        });
-      }
+    if (!result) {
+      return NextResponse.json(
+        { error: 'FAILED_TO_ROLLBACK_BUY_ORDER' },
+        { status: 400 },
+      );
+    }
 
-
-      // check buyer.mobile is prefixed with +
-      if (!buyer?.mobile.startsWith("+")) {
-        return NextResponse.json({
-          result,
-        });
-      }
-
-
-  
-      const to = buyer.mobile;
-  
-  
-      const accountSid = process.env.TWILIO_ACCOUNT_SID;
-      const authToken = process.env.TWILIO_AUTH_TOKEN;
-      const client = twilio(accountSid, authToken);
-  
-  
-  
-      let message = null;
-
-
-      try {
-  
-  
-        const msgBody = `[GTETHER] TID[${tradeId}] You received ${amount} USDT from ${nickname}! https://gold.goodtether.com/${lang}/${chain}/sell-usdt/${orderId}`;
-    
-        message = await client.messages.create({
-          ///body: "This is the ship that made the Kessel Run in fourteen parsecs?",
-          body: msgBody,
-          from: "+17622254217",
-          to: to,
-        });
-    
-        console.log(message.sid);
-
-      } catch (error) {
-          
-        console.log("error", error);
-    
-      }
-  
-    */
-  
-  
-  
-    
     return NextResponse.json({
-  
       result,
-      
     });
-
-
-
-
-
-
-
-
   } catch (error) {
-      
-    console.log(" error=====>" + error);
-
-
-
+    return NextResponse.json(
+      { error: 'INTERNAL_SERVER_ERROR' },
+      { status: 500 },
+    );
   }
-
-  
-
-
- 
-  return NextResponse.json({
-
-    result: null,
-    
-  });
-  
 }

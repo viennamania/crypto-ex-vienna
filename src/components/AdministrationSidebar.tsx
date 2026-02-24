@@ -30,6 +30,7 @@ const buildMenuItems = (lang: string): MenuItem[] => {
       children: [
         { label: '플랫폼 수수료 수납', hint: 'AG Fee Collect', href: `${root}/buyorder-management/platform-fee-collection` },
         { label: '수납 이력', hint: 'Collection History', href: `${root}/buyorder-management/platform-fee-collection/history` },
+        { label: '누락 주문 보정', hint: 'Recovery', href: `${root}/buyorder-management/missing-order-recovery` },
       ],
     },
     { label: '가맹점 결제 관리', hint: 'Payments', href: `${root}/payment-management` },
