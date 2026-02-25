@@ -459,12 +459,16 @@ export async function fetchWalletUsdtPaymentsByAgent(
     limit = 20,
     page = 1,
     searchTerm = '',
+    fromDate = '',
+    toDate = '',
     status = 'confirmed',
   }: {
     storecode?: string;
     limit?: number;
     page?: number;
     searchTerm?: string;
+    fromDate?: string;
+    toDate?: string;
     status?: 'prepared' | 'confirmed' | 'all';
   } = {},
 ): Promise<AgentPaymentsResult> {
@@ -474,6 +478,8 @@ export async function fetchWalletUsdtPaymentsByAgent(
     limit,
     page,
     searchTerm,
+    fromDate,
+    toDate,
     status,
   });
 

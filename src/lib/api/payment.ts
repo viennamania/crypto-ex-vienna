@@ -249,6 +249,8 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
     limit = 20,
     page = 1,
     searchTerm = '',
+    fromDate = '',
+    toDate = '',
     status = 'confirmed',
 }: {
     agentcode: string;
@@ -256,6 +258,8 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
     limit?: number;
     page?: number;
     searchTerm?: string;
+    fromDate?: string;
+    toDate?: string;
     status?: 'prepared' | 'confirmed' | 'all';
 }): Promise<{
   totalCount: number;
@@ -280,6 +284,8 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
   const normalizedStatus = String(status || 'confirmed').trim().toLowerCase();
   const normalizedStorecode = String(storecode || '').trim();
   const normalizedSearchTerm = String(searchTerm || '').trim();
+  const fromDateBoundary = toDateBoundary(fromDate, true);
+  const toDateBoundaryValue = toDateBoundary(toDate, false);
   const searchRegex = normalizedSearchTerm
     ? { $regex: escapeRegex(normalizedSearchTerm), $options: 'i' }
     : null;
@@ -330,6 +336,34 @@ export async function getAllWalletUsdtPaymentsByAgentcode(
       },
     },
   ];
+
+  if (fromDateBoundary || toDateBoundaryValue) {
+    const eventAtRange: Record<string, Date> = {};
+    if (fromDateBoundary) {
+      eventAtRange.$gte = fromDateBoundary;
+    }
+    if (toDateBoundaryValue) {
+      eventAtRange.$lte = toDateBoundaryValue;
+    }
+
+    basePipeline.push(
+      {
+        $addFields: {
+          eventAt: {
+            $ifNull: [
+              { $convert: { input: '$confirmedAt', to: 'date', onError: null, onNull: null } },
+              { $convert: { input: '$createdAt', to: 'date', onError: null, onNull: null } },
+            ],
+          },
+        },
+      },
+      {
+        $match: {
+          eventAt: eventAtRange,
+        },
+      },
+    );
+  }
 
   if (searchRegex) {
     basePipeline.push({

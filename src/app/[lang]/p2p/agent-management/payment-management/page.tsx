@@ -25,6 +25,13 @@ const resolveOrderProcessingLabel = (value: string | undefined) =>
   isOrderProcessingCompleted(value) ? '결제처리완료' : '결제처리중';
 
 const PAYMENT_LIST_POLLING_MS = 10000;
+const getTodayDate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 const toNumber = (value: unknown) => {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : 0;
@@ -45,6 +52,7 @@ export default function P2PAgentPaymentManagementPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [keyword, setKeyword] = useState('');
+  const [searchDate, setSearchDate] = useState(() => getTodayDate());
   const [agent, setAgent] = useState<AgentSummary | null>(null);
   const [stores, setStores] = useState<AgentStoreItem[]>([]);
   const [selectedStorecode, setSelectedStorecode] = useState('');
@@ -84,6 +92,8 @@ export default function P2PAgentPaymentManagementPage() {
           limit: PAGE_SIZE,
           page: currentPage,
           searchTerm: keyword.trim(),
+          fromDate: searchDate,
+          toDate: searchDate,
           status: 'confirmed',
         });
 
@@ -102,6 +112,8 @@ export default function P2PAgentPaymentManagementPage() {
           limit: PAGE_SIZE,
           page: currentPage,
           searchTerm: keyword.trim(),
+          fromDate: searchDate,
+          toDate: searchDate,
           status: 'confirmed',
         }),
       ]);
@@ -138,7 +150,7 @@ export default function P2PAgentPaymentManagementPage() {
         setLoading(false);
       }
     }
-  }, [PAGE_SIZE, agentcode, currentPage, keyword, selectedStorecode]);
+  }, [PAGE_SIZE, agentcode, currentPage, keyword, searchDate, selectedStorecode]);
 
   useEffect(() => {
     loadData();
@@ -282,16 +294,30 @@ export default function P2PAgentPaymentManagementPage() {
           <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-900">결제 목록 ({totalCount.toLocaleString()}건)</p>
-              <input
-                type="text"
-                value={keyword}
-                onChange={(event) => {
-                  setKeyword(event.target.value);
-                  setCurrentPage(1);
-                }}
-                placeholder="결제번호(PID)/트랜잭션/가맹점/회원/지갑 검색"
-                className="h-9 w-full max-w-xs rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
-              />
+              <div className="flex w-full flex-wrap items-center justify-end gap-2">
+                <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+                  <span>조회일자</span>
+                  <input
+                    type="date"
+                    value={searchDate}
+                    onChange={(event) => {
+                      setSearchDate(event.target.value || getTodayDate());
+                      setCurrentPage(1);
+                    }}
+                    className="h-7 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-800 outline-none transition focus:border-cyan-500"
+                  />
+                </label>
+                <input
+                  type="text"
+                  value={keyword}
+                  onChange={(event) => {
+                    setKeyword(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="결제번호(PID)/트랜잭션/가맹점/회원/지갑 검색"
+                  className="h-9 w-full max-w-xs rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
+                />
+              </div>
             </div>
 
             <div className="mt-3 border-t border-slate-100 pt-3">

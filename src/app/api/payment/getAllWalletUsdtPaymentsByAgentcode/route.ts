@@ -13,6 +13,8 @@ export async function POST(request: NextRequest) {
     limit,
     page,
     searchTerm,
+    fromDate,
+    toDate,
     status = 'confirmed',
   } = body;
 
@@ -22,6 +24,8 @@ export async function POST(request: NextRequest) {
     limit,
     page,
     searchTerm,
+    fromDate,
+    toDate,
     status,
   });
 
