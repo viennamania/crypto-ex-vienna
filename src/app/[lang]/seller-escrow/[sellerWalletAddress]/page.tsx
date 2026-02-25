@@ -207,7 +207,7 @@ interface BuyOrder {
 
 type SellerChatItem = {
   channelUrl: string;
-  members: { userId: string; nickname?: string; profileUrl?: string }[];
+  members: { userId: string; nickname?: string; profileUrl?: string; buyerDepositName?: string }[];
   lastMessage?: string;
   updatedAt?: number;
   unreadMessageCount?: number;
@@ -2116,6 +2116,7 @@ export default function Index({ params }: any) {
         const otherMember = Array.isArray(item.members) ? item.members[0] : undefined;
         const rawDisplayName = String(otherMember?.nickname || otherMember?.userId || '').trim();
         const displayName = rawDisplayName || '구매자';
+        const buyerDepositName = String(otherMember?.buyerDepositName || '').trim();
         const profileUrl = String(otherMember?.profileUrl || '').trim();
         const preview = String(item.lastMessage || '').trim() || '새 메시지가 도착했습니다.';
         const updatedAt = Number(item.updatedAt || 0);
@@ -2124,6 +2125,7 @@ export default function Index({ params }: any) {
           channelUrl: String(item.channelUrl || '').trim(),
           unreadCount,
           displayName,
+          buyerDepositName,
           profileUrl,
           preview,
           updatedAt,
@@ -8402,6 +8404,11 @@ const fetchBuyOrders = async () => {
                         {formatSellerChatAlertTime(alertItem.updatedAt)}
                       </span>
                     </div>
+                    {alertItem.buyerDepositName && (
+                      <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-500">
+                        입금자명 {alertItem.buyerDepositName}
+                      </p>
+                    )}
                     <p className="mt-0.5 truncate text-[11px] text-slate-600">
                       {alertItem.preview}
                     </p>

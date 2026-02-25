@@ -1,9 +1,23 @@
 import { NextResponse } from 'next/server';
+import { getOneByWalletAddress } from '@lib/api/user';
 
 const APPLICATION_ID =
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
 const API_BASE = APPLICATION_ID ? `https://api-${APPLICATION_ID}.sendbird.com/v3` : '';
 const REQUEST_TIMEOUT_MS = Number(process.env.SENDBIRD_REQUEST_TIMEOUT_MS ?? 8000);
+const isWalletAddress = (value?: string) => /^0x[a-fA-F0-9]{40}$/.test(String(value || '').trim());
+
+const resolveBuyerDepositName = (user: any) => {
+    const fromBankInfo = String(user?.buyer?.bankInfo?.depositName || '').trim();
+    if (fromBankInfo) {
+        return fromBankInfo;
+    }
+    const fromBuyer = String(user?.buyer?.depositName || '').trim();
+    if (fromBuyer) {
+        return fromBuyer;
+    }
+    return '';
+};
 
 const logSendbird = (
     level: 'info' | 'warn' | 'error',
@@ -128,6 +142,28 @@ export async function POST(request: Request) {
             }[];
         };
 
+        const memberUserIds = Array.from(new Set(
+            (data.channels || [])
+                .flatMap((channel) => channel.members || [])
+                .map((member) => String(member?.user_id || '').trim())
+                .filter((userId) => userId && userId !== body.userId && isWalletAddress(userId)),
+        ));
+
+        const buyerDepositNameByWallet = new Map<string, string>();
+        await Promise.all(
+            memberUserIds.map(async (walletAddress) => {
+                try {
+                    const user = await getOneByWalletAddress(undefined, walletAddress);
+                    const buyerDepositName = resolveBuyerDepositName(user);
+                    if (buyerDepositName) {
+                        buyerDepositNameByWallet.set(walletAddress.toLowerCase(), buyerDepositName);
+                    }
+                } catch {
+                    // ignore per-member lookup failures
+                }
+            }),
+        );
+
         const items =
             data.channels?.map((channel) => {
                 const members =
@@ -138,6 +174,9 @@ export async function POST(request: Request) {
                         userId: member.user_id,
                         nickname: member.nickname,
                         profileUrl: member.profile_url,
+                        buyerDepositName: buyerDepositNameByWallet.get(
+                            String(member.user_id || '').trim().toLowerCase(),
+                        ) || '',
                     })),
                     lastMessage: channel.last_message?.message || '',
                     updatedAt: channel.last_message?.created_at || channel.created_at || 0,
