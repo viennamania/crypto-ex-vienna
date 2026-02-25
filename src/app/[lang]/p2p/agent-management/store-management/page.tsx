@@ -1,9 +1,11 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useActiveAccount } from 'thirdweb/react';
+import { toast } from 'react-hot-toast';
 
 import AgentInfoCard from '../_components/AgentInfoCard';
 import {
@@ -37,6 +39,22 @@ type StoreUsdtToKrwRateHistoryItem = {
   changedAt: string;
 };
 
+type StoreCreateForm = {
+  storeName: string;
+  storeDescription: string;
+  storeLogo: string;
+  storeBanner: string;
+};
+
+const createInitialStoreForm = (): StoreCreateForm => ({
+  storeName: '',
+  storeDescription: '',
+  storeLogo: '',
+  storeBanner: '',
+});
+
+const toText = (value: unknown) => (typeof value === 'string' ? value : '');
+
 export default function P2PAgentStoreManagementPage() {
   const params = useParams<{ lang: string }>();
   const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang || 'ko';
@@ -50,6 +68,7 @@ export default function P2PAgentStoreManagementPage() {
   const [agent, setAgent] = useState<AgentSummary | null>(null);
   const [stores, setStores] = useState<AgentStoreItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [storeNotice, setStoreNotice] = useState<string | null>(null);
   const [rateNotice, setRateNotice] = useState<string | null>(null);
   const [rateModalStore, setRateModalStore] = useState<AgentStoreItem | null>(null);
   const [rateInput, setRateInput] = useState('');
@@ -58,6 +77,12 @@ export default function P2PAgentStoreManagementPage() {
   const [rateHistory, setRateHistory] = useState<StoreUsdtToKrwRateHistoryItem[]>([]);
   const [loadingRateHistory, setLoadingRateHistory] = useState(false);
   const [rateHistoryError, setRateHistoryError] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createForm, setCreateForm] = useState<StoreCreateForm>(() => createInitialStoreForm());
+  const [createModalError, setCreateModalError] = useState<string | null>(null);
+  const [creatingStore, setCreatingStore] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!agentcode) {
@@ -186,6 +211,186 @@ export default function P2PAgentStoreManagementPage() {
     setRateHistoryError(null);
   }, [rateSubmitting]);
 
+  const openCreateModal = useCallback(() => {
+    if (!agentcode) {
+      return;
+    }
+    setCreateModalError(null);
+    setCreateForm(createInitialStoreForm());
+    setIsCreateModalOpen(true);
+  }, [agentcode]);
+
+  const closeCreateModal = useCallback(() => {
+    if (creatingStore || uploadingLogo || uploadingBanner) {
+      return;
+    }
+    setIsCreateModalOpen(false);
+    setCreateModalError(null);
+    setCreateForm(createInitialStoreForm());
+  }, [creatingStore, uploadingBanner, uploadingLogo]);
+
+  const uploadImageToBlob = useCallback(async (file: File, kind: 'logo' | 'banner') => {
+    if (!file.type.startsWith('image/')) {
+      setCreateModalError('이미지 파일만 업로드할 수 있습니다.');
+      return;
+    }
+
+    if (kind === 'logo') {
+      setUploadingLogo(true);
+    } else {
+      setUploadingBanner(true);
+    }
+    setCreateModalError(null);
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'content-type': file.type || 'application/octet-stream' },
+        body: file,
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || '이미지 업로드에 실패했습니다.');
+      }
+
+      const payload = await response.json().catch(() => ({}));
+      const uploadedUrl = toText(payload?.url).trim();
+      if (!uploadedUrl) {
+        throw new Error('업로드 URL을 받지 못했습니다.');
+      }
+
+      setCreateForm((prev) => (
+        kind === 'logo'
+          ? { ...prev, storeLogo: uploadedUrl }
+          : { ...prev, storeBanner: uploadedUrl }
+      ));
+      toast.success(kind === 'logo' ? '로고 업로드 완료' : '배너 업로드 완료');
+    } catch (uploadError) {
+      const message = uploadError instanceof Error ? uploadError.message : '이미지 업로드 중 오류가 발생했습니다.';
+      setCreateModalError(message);
+      toast.error(message);
+    } finally {
+      if (kind === 'logo') {
+        setUploadingLogo(false);
+      } else {
+        setUploadingBanner(false);
+      }
+    }
+  }, []);
+
+  const submitCreateStore = useCallback(async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (creatingStore || uploadingLogo || uploadingBanner) {
+      return;
+    }
+
+    const resolvedAgentcode = String(agent?.agentcode || agentcode || '').trim();
+    if (!resolvedAgentcode) {
+      setCreateModalError('에이전트 코드가 없어 가맹점을 생성할 수 없습니다.');
+      return;
+    }
+
+    const storeName = createForm.storeName.trim();
+    const storeDescription = createForm.storeDescription.trim();
+    const storeLogo = createForm.storeLogo.trim();
+    const storeBanner = createForm.storeBanner.trim();
+
+    if (storeName.length < 2) {
+      setCreateModalError('가맹점 이름은 2자 이상이어야 합니다.');
+      return;
+    }
+    if (storeName.length > 24) {
+      setCreateModalError('가맹점 이름은 24자 이하여야 합니다.');
+      return;
+    }
+    if (!storeLogo) {
+      setCreateModalError('가맹점 로고를 업로드해주세요.');
+      return;
+    }
+    if (!storeBanner) {
+      setCreateModalError('가맹점 배너를 업로드해주세요.');
+      return;
+    }
+
+    setCreatingStore(true);
+    setCreateModalError(null);
+    setStoreNotice(null);
+
+    try {
+      const response = await fetch('/api/store/setStore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentcode: resolvedAgentcode,
+          storeName,
+          storeType: 'store',
+          storeUrl: '',
+          storeDescription,
+          storeLogo,
+          storeBanner,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String(payload?.error || '가맹점 생성 요청에 실패했습니다.'));
+      }
+      if (!payload?.result) {
+        throw new Error('동일한 가맹점 코드 또는 이름이 이미 존재합니다.');
+      }
+
+      const createdStoreCode = toText(payload?.result?.storecode).trim();
+      const notice = createdStoreCode
+        ? `가맹점이 생성되었습니다 (${createdStoreCode}).`
+        : '가맹점이 생성되었습니다.';
+
+      setStoreNotice(notice);
+      toast.success(notice);
+      setIsCreateModalOpen(false);
+      setCreateForm(createInitialStoreForm());
+      await loadData();
+    } catch (createError) {
+      const message = createError instanceof Error ? createError.message : '가맹점 생성 중 오류가 발생했습니다.';
+      setCreateModalError(message);
+      toast.error(message);
+    } finally {
+      setCreatingStore(false);
+    }
+  }, [
+    agent?.agentcode,
+    agentcode,
+    createForm.storeBanner,
+    createForm.storeDescription,
+    createForm.storeLogo,
+    createForm.storeName,
+    creatingStore,
+    loadData,
+    uploadingBanner,
+    uploadingLogo,
+  ]);
+
+  useEffect(() => {
+    if (!isCreateModalOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeCreateModal();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [closeCreateModal, isCreateModalOpen]);
+
   const submitStoreRate = useCallback(async () => {
     if (!rateModalStore || rateSubmitting) {
       return;
@@ -273,7 +478,7 @@ export default function P2PAgentStoreManagementPage() {
 
       {agentcode && (
         <>
-          <div className="flex items-center justify-end">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <button
               type="button"
               onClick={loadData}
@@ -281,6 +486,13 @@ export default function P2PAgentStoreManagementPage() {
               className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? '조회 중...' : '새로고침'}
+            </button>
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="inline-flex h-9 items-center justify-center rounded-xl bg-cyan-600 px-3 text-xs font-semibold text-white transition hover:bg-cyan-500"
+            >
+              가맹점 추가
             </button>
           </div>
 
@@ -300,15 +512,23 @@ export default function P2PAgentStoreManagementPage() {
           <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-900">가맹점 목록</p>
-              <input
-                type="text"
-                value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
-                placeholder="가맹점명/코드/지갑 검색"
-                className="h-9 w-full max-w-xs rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
-              />
+              <div className="flex w-full max-w-md items-center gap-2">
+                <input
+                  type="text"
+                  value={keyword}
+                  onChange={(event) => setKeyword(event.target.value)}
+                  placeholder="가맹점명/코드/지갑 검색"
+                  className="h-9 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
+                />
+              </div>
             </div>
           </section>
+
+          {storeNotice && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+              {storeNotice}
+            </div>
+          )}
 
           {rateNotice && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
@@ -419,6 +639,185 @@ export default function P2PAgentStoreManagementPage() {
             </div>
           )}
         </>
+      )}
+
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-[131] flex items-center justify-center px-4 py-6">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
+            aria-label="가맹점 추가 모달 닫기"
+            onClick={closeCreateModal}
+          />
+
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="가맹점 추가"
+            className="relative z-[132] max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-cyan-100 bg-white shadow-[0_40px_90px_-42px_rgba(15,23,42,0.7)]"
+          >
+            <header className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-700">Merchant Onboarding</p>
+                <h2 className="mt-1 text-lg font-bold text-slate-900">가맹점 추가</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  생성된 가맹점은 에이전트 코드 {agent?.agentcode || agentcode || '-'} 에 자동 연결됩니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeCreateModal}
+                disabled={creatingStore || uploadingLogo || uploadingBanner}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="닫기"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18" />
+                  <path d="M6 6l12 12" />
+                </svg>
+              </button>
+            </header>
+
+            <form className="grid grid-cols-1 gap-3 px-5 py-4 sm:grid-cols-2" onSubmit={submitCreateStore}>
+              <div className="sm:col-span-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-900">
+                저장 Agent Code: {agent?.agentcode || agentcode || '-'}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  가맹점 이름 *
+                </label>
+                <input
+                  type="text"
+                  maxLength={24}
+                  value={createForm.storeName}
+                  disabled={creatingStore}
+                  onChange={(event) => setCreateForm((prev) => ({ ...prev, storeName: event.target.value }))}
+                  placeholder="예: 강남역점"
+                  className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  설명
+                </label>
+                <textarea
+                  rows={2}
+                  value={createForm.storeDescription}
+                  disabled={creatingStore}
+                  onChange={(event) => setCreateForm((prev) => ({ ...prev, storeDescription: event.target.value }))}
+                  placeholder="가맹점 소개"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  로고 *
+                </label>
+                <div className="space-y-2 rounded-xl border border-slate-300 bg-white p-2">
+                  <div className="relative h-24 w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                    {createForm.storeLogo ? (
+                      <Image
+                        src={createForm.storeLogo}
+                        alt="Store logo"
+                        fill
+                        unoptimized
+                        className="object-contain"
+                        sizes="300px"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs font-semibold text-slate-400">
+                        로고 미리보기
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={creatingStore || uploadingLogo || uploadingBanner}
+                    onChange={async (event) => {
+                      const input = event.currentTarget;
+                      const file = input.files?.[0];
+                      if (!file) return;
+                      await uploadImageToBlob(file, 'logo');
+                      input.value = '';
+                    }}
+                    className="w-full text-xs text-slate-700 file:mr-2 file:rounded-full file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-700"
+                  />
+                  <p className="text-[11px] text-slate-500">
+                    {uploadingLogo ? '로고 업로드 중...' : '이미지 선택 시 즉시 업로드됩니다.'}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  배너 *
+                </label>
+                <div className="space-y-2 rounded-xl border border-slate-300 bg-white p-2">
+                  <div className="relative h-24 w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                    {createForm.storeBanner ? (
+                      <Image
+                        src={createForm.storeBanner}
+                        alt="Store banner"
+                        fill
+                        unoptimized
+                        className="object-cover"
+                        sizes="300px"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs font-semibold text-slate-400">
+                        배너 미리보기
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={creatingStore || uploadingLogo || uploadingBanner}
+                    onChange={async (event) => {
+                      const input = event.currentTarget;
+                      const file = input.files?.[0];
+                      if (!file) return;
+                      await uploadImageToBlob(file, 'banner');
+                      input.value = '';
+                    }}
+                    className="w-full text-xs text-slate-700 file:mr-2 file:rounded-full file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-700"
+                  />
+                  <p className="text-[11px] text-slate-500">
+                    {uploadingBanner ? '배너 업로드 중...' : '이미지 선택 시 즉시 업로드됩니다.'}
+                  </p>
+                </div>
+              </div>
+
+              {createModalError && (
+                <p className="sm:col-span-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+                  {createModalError}
+                </p>
+              )}
+
+              <div className="sm:col-span-2 flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={closeCreateModal}
+                  disabled={creatingStore || uploadingLogo || uploadingBanner}
+                  className="inline-flex h-11 items-center rounded-full border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingStore || uploadingLogo || uploadingBanner}
+                  className="inline-flex h-11 items-center rounded-full bg-cyan-600 px-4 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {creatingStore ? '생성 중...' : uploadingLogo || uploadingBanner ? '업로드 중...' : '가맹점 생성'}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
       )}
 
       {rateModalStore && (

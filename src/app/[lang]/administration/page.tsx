@@ -1,5 +1,7 @@
 'use client';
 
+import ClientFooterCopyright from '@/components/ClientFooterCopyright';
+
 import { useState, useEffect, use } from "react";
 
 import Image from "next/image";
@@ -2505,9 +2507,7 @@ export default function Index({ params }: any) {
           bg-white/95 border border-slate-200/80 rounded-2xl p-6 shadow-sm
           ">
 
-          <div className="text-sm text-slate-500 mt-2">
-            © 2025 GoodTether. All rights reserved.
-          </div>
+          <ClientFooterCopyright className="text-sm text-slate-500 mt-2" />
 
         </div>
 

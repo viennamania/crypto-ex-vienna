@@ -1,5 +1,7 @@
 'use client';
 
+import ClientFooterCopyright from '@/components/ClientFooterCopyright';
+
 import type { GetStaticProps, InferGetStaticPropsType } from 'next';
 
 
@@ -3426,9 +3428,7 @@ export default function Index({ params }: any) {
               border border-gray-200
               ">
 
-              <div className="text-sm text-zinc-500 mt-2">
-                © 2025 GoodTether. All rights reserved.
-              </div>
+              <ClientFooterCopyright className="text-sm text-zinc-500 mt-2" />
 
             </div>
 
