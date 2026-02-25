@@ -951,8 +951,7 @@ export default function P2PStorePaymentManagementPage() {
                   <p className="mt-3 text-sm text-slate-500">결제 내역이 없습니다.</p>
                 ) : (
                   <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200">
-                    <div className="overflow-x-auto">
-                      <table className="min-w-[1160px] w-full table-auto">
+                    <table className="w-full table-fixed [&_th]:whitespace-normal [&_th]:break-words [&_td]:whitespace-normal [&_td]:break-words [&_td]:align-top">
                         <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                           <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                             <th className="px-3 py-2">일시</th>
@@ -992,7 +991,7 @@ export default function P2PStorePaymentManagementPage() {
                                     onClick={() => {
                                       void copyPaymentId(payment.paymentId);
                                     }}
-                                    className="inline-flex items-center gap-1 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                                    className="inline-flex max-w-full flex-wrap items-center gap-1 break-all text-left underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
                                   >
                                     {payment.paymentId}
                                     {copiedPaymentId === payment.paymentId && (
@@ -1074,8 +1073,7 @@ export default function P2PStorePaymentManagementPage() {
                             );
                           })}
                         </tbody>
-                      </table>
-                    </div>
+                    </table>
                   </div>
                 )}
               </section>
