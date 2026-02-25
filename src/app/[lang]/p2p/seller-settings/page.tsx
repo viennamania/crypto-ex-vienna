@@ -1480,7 +1480,7 @@ export default function SettingsPage({ params }: any) {
 
     return (
 
-        <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+        <main className="w-full max-w-screen-sm lg:max-w-6xl px-4 pb-28 pt-4 lg:pb-12 min-h-[100vh] flex items-start justify-center mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
 
             <AutoConnect client={client} wallets={[wallet]} />
 
@@ -1627,14 +1627,14 @@ export default function SettingsPage({ params }: any) {
                         </div>
                     </div>
                 ) : (
-                    <div className="w-full flex flex-col gap-6">
+                    <div className="w-full flex flex-col gap-4 lg:gap-5">
 
                         {loadingUserData && (
                             <div className="text-sm text-slate-500">Loading user data...</div>
                         )}
 
                         {!loadingUserData && !nickname && (
-                            <div className='w-full flex flex-col gap-2 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm'>
+                            <div className='w-full flex flex-col gap-2 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-6 lg:p-5 shadow-sm'>
 
                                 <span className="text-base font-semibold text-slate-800">
                                     회원이 아닙니다.
@@ -1653,7 +1653,7 @@ export default function SettingsPage({ params }: any) {
                         )}
 
                         {!loadingUserData && nickname && !seller && (
-                            <div className='w-full flex flex-col gap-3 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm'>
+                            <div className='w-full flex flex-col gap-3 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-6 lg:p-5 shadow-sm'>
 
                                 {/* nickname */}
                                 <div className='w-full flex flex-row gap-2 items-center justify-between'>
@@ -1691,8 +1691,8 @@ export default function SettingsPage({ params }: any) {
 
 
                         {!loadingUserData && seller && (
-                            <>
-                            <div className='w-full flex flex-col gap-4 items-center justify-between rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm'>
+                            <div className="w-full grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-4">
+                            <div className='w-full flex flex-col gap-4 lg:gap-3 items-center justify-between rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-4 shadow-sm lg:col-span-12'>
 
                                 {/* image and title */}
                                 <div className='w-full flex flex-row gap-2 items-center justify-start'>
@@ -1783,7 +1783,7 @@ export default function SettingsPage({ params }: any) {
                                 
 
 
-                                <div className='mt-4 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm'>
+                                <div className='mt-4 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-4 shadow-sm'>
                                     <div className="flex w-full flex-row items-center justify-between gap-3">
                                         <div className="flex items-center gap-3">
                                             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
@@ -1895,7 +1895,7 @@ export default function SettingsPage({ params }: any) {
 
                             </div>
 
-                            <div className='mt-4 w-full flex flex-col gap-4 items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4'>
+                            <div className='mt-4 lg:mt-0 w-full flex flex-col gap-4 lg:gap-3 items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 lg:col-span-7'>
                                 <div className='w-full flex flex-row gap-2 items-center justify-between'>
                                     <div className="flex flex-row items-center gap-2">
                                         <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
@@ -2086,7 +2086,7 @@ export default function SettingsPage({ params }: any) {
                                 </div>
                             </div>
 
-                            <div className="mt-4 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
+                            <div className="mt-4 lg:mt-0 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-4 shadow-sm lg:col-span-5">
                                 <div className="flex w-full flex-row items-center justify-between gap-3">
                                     <div className="flex items-center gap-3">
                                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
@@ -2133,7 +2133,7 @@ export default function SettingsPage({ params }: any) {
                                                     <img
                                                         src={kycPreview}
                                                         alt="KYC Preview"
-                                                        className="h-40 w-full object-cover"
+                                                        className="h-40 lg:h-32 w-full object-cover"
                                                     />
                                                 </div>
                                             )}
@@ -2152,7 +2152,7 @@ export default function SettingsPage({ params }: any) {
                                                     <img
                                                         src={kycPreview}
                                                         alt="KYC Preview"
-                                                        className="h-40 w-full object-cover"
+                                                        className="h-40 lg:h-32 w-full object-cover"
                                                     />
                                                 </div>
                                             )}
@@ -2181,7 +2181,7 @@ export default function SettingsPage({ params }: any) {
                                                     <img
                                                         src={kycPreview}
                                                         alt="KYC Preview"
-                                                        className="h-40 w-full object-cover"
+                                                        className="h-40 lg:h-32 w-full object-cover"
                                                     />
                                                 </div>
                                             )}
@@ -2207,13 +2207,13 @@ export default function SettingsPage({ params }: any) {
                                     )}
                                 </div>
                             </div>
-                            </>
+                            </div>
                         )}
 
 
                         {!loadingUserData && seller?.escrowWalletAddress && (
                             
-                            <div className='w-full flex flex-col gap-3 items-start justify-between mt-4 rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm'>
+                            <div className='w-full flex flex-col gap-3 items-start justify-between mt-4 rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-4 shadow-sm'>
 
                                 <div className='w-full flex flex-row gap-2 items-center justify-start mb-2'>
                                     <Image
@@ -2620,7 +2620,7 @@ export default function SettingsPage({ params }: any) {
                                         )}
                                     </div>
 
-                                    <div className="w-full mt-6 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 shadow-sm">
+                                    <div className="w-full mt-4 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 shadow-sm">
                                         <div className="flex items-center gap-2">
                                             <Image
                                                 src="/icon-info.png"
