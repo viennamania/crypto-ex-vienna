@@ -35,6 +35,23 @@ export default function P2PLayout({ children }: { children: ReactNode }) {
           max-width: 100%;
         }
 
+        @media (min-width: 1025px) {
+          .p2p-mobile-shell {
+            --p2p-web-max-width: 980px;
+          }
+
+          .p2p-mobile-shell .container,
+          .p2p-mobile-shell [class*='max-w-screen-2xl'],
+          .p2p-mobile-shell [class*='max-w-screen-xl'],
+          .p2p-mobile-shell [class*='max-w-screen-lg'],
+          .p2p-mobile-shell [class*='max-w-7xl'],
+          .p2p-mobile-shell [class*='max-w-6xl'],
+          .p2p-mobile-shell [class*='max-w-5xl'],
+          .p2p-mobile-shell [class*='max-w-[1700px]'] {
+            max-width: var(--p2p-web-max-width) !important;
+          }
+        }
+
         @media (max-width: 1024px) {
           .p2p-mobile-shell {
             background:

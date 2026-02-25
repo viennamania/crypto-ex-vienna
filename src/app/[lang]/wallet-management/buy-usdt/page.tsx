@@ -188,25 +188,6 @@ const bodyFont = Manrope({
 
 const WALLET_AUTH_OPTIONS = ['phone'];
 const QUICK_BUY_AMOUNTS = [10, 30, 50, 100, 300, 500];
-const BUY_ORDER_SELLER_GUIDE_MESSAGE = `네 안녕하세요
-
-본 거래를 진행하기전 숙지 부탁드립니다.
-
-*단 지정된 은행에서 연락처 송금으로만 가능합니다*
-(신한/우리/케이뱅크/카카오뱅크/국민은행)
-*은행별 개인 한도가 상이합니다*
-
-코인(USDT) 거래를 원칙으로 합니다.
-트레이더와 코인(USDT)거래는 불법자금은 받지 않습니다.
-거래를 이용하여 불법도박 재테크 마약 거래용으로 사용시 법적 책임이 따른다는 것에 동의하셔야합니다.
-
-판매자의 의무는 입금된 금원에 해당하는 가상화폐를 지급 및 전송하는 것 이외의 다른 의무는 없으며 본 가상화폐거래로 인해 발생되는 모든 민·형사상의 대한 책임은 구매자에 있으며 구매자는 이를 동의하셔야 합니다.
-
-이 모든 대화 내역은 증거자료로 남습니다.
-
-
-동의하지 않으시면 취소 하시면 됩니다.
-동의하시면  [[동의함]] 이라고 적어주십시요.`;
 const TRADABLE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
 const PRIVATE_TRADE_PAYMENT_WINDOW_MS = 30 * 60 * 1000;
 const BUYER_PROFILE_LOADING_MIN_MS = 5000;
@@ -1741,59 +1722,6 @@ export default function BuyUsdtPage({
     buyerProfile?.avatar,
   ]);
 
-  const sendSellerGuideMessageForBuyOrder = useCallback(
-    async ({
-      buyerWalletAddress,
-      sellerWalletAddress,
-    }: {
-      buyerWalletAddress: string;
-      sellerWalletAddress: string;
-    }) => {
-      const buyerId = String(buyerWalletAddress || '').trim();
-      const sellerId = String(sellerWalletAddress || '').trim();
-      if (!SENDBIRD_APP_ID || !buyerId || !sellerId) {
-        return;
-      }
-
-      try {
-        const channelResponse = await fetch('/api/sendbird/group-channel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            buyerId,
-            sellerId,
-          }),
-        });
-        const channelData = await channelResponse.json().catch(() => ({}));
-        if (!channelResponse.ok || !channelData?.channelUrl) {
-          throw new Error(channelData?.error || '판매자 채팅 채널 생성에 실패했습니다.');
-        }
-
-        const channelUrl = String(channelData.channelUrl || '').trim();
-        if (!channelUrl) {
-          throw new Error('판매자 채팅 채널 URL이 비어 있습니다.');
-        }
-
-        const messageResponse = await fetch('/api/sendbird/welcome-message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            channelUrl,
-            senderId: sellerId,
-            message: BUY_ORDER_SELLER_GUIDE_MESSAGE,
-          }),
-        });
-        if (!messageResponse.ok) {
-          const errorData = await messageResponse.json().catch(() => ({}));
-          throw new Error(errorData?.error || '판매자 안내 메시지를 전송하지 못했습니다.');
-        }
-      } catch (error) {
-        console.warn('Failed to send seller guide message for buy order', error);
-      }
-    },
-    [],
-  );
-
   useEffect(() => {
     loadSellers();
   }, [loadSellers]);
@@ -2279,12 +2207,6 @@ export default function BuyUsdtPage({
       }
 
       const createdNewOrder = data?.created === true;
-      if (createdNewOrder) {
-        void sendSellerGuideMessageForBuyOrder({
-          buyerWalletAddress: activeAccount.address,
-          sellerWalletAddress: selectedSeller.walletAddress,
-        });
-      }
       toast.success(
         createdNewOrder
           ? '구매 신청이 완료되었습니다.'
