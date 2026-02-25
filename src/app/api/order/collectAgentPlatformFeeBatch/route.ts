@@ -109,6 +109,7 @@ type UpdatedOrderResult = {
 
 type CollectableEntry = {
   orderId: string;
+  agentcode: string;
   tradeId: string;
   orderStatus: string;
   usdtAmount: number;
@@ -438,6 +439,7 @@ export async function POST(request: NextRequest) {
 
     collectableEntries.push({
       orderId,
+      agentcode: String(doc?.agent?.agentcode || order?.agentcode || order?.agent?.agentcode || '').trim(),
       tradeId,
       orderStatus,
       usdtAmount: roundDownUsdtAmount(doc.usdtAmount),
@@ -586,6 +588,7 @@ export async function POST(request: NextRequest) {
       orderId: entry.orderId,
       feeType: AGENT_PLATFORM_FEE_TYPE,
       feeVersion: AGENT_PLATFORM_FEE_VERSION,
+      agentcode: entry.agentcode,
       tradeId: entry.tradeId,
       chain: chainKey,
       status,

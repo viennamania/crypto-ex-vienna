@@ -186,6 +186,7 @@ export async function POST(request: NextRequest) {
       return {
         id: toText((source as any)?._id),
         orderId: toText(source.orderId),
+        agentcode: toText((source as any).agentcode),
         tradeId: toText(source.tradeId),
         status: toStatusText(source.status),
         previousStatus: toStatusText(source.previousStatus),
@@ -241,4 +242,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

@@ -66,6 +66,7 @@ export type AgentPlatformFeeCollectionAttemptDoc = {
   orderId: string;
   feeType: typeof AGENT_PLATFORM_FEE_TYPE;
   feeVersion: typeof AGENT_PLATFORM_FEE_VERSION;
+  agentcode: string;
   tradeId: string;
   chain: string;
   status: AgentPlatformFeeReceivableStatus;
@@ -224,6 +225,7 @@ export const ensureAgentPlatformFeeCollections = async (db: Db) => {
     receivablesCollection.createIndex({ fromAddress: 1, toAddress: 1, status: 1 }, { name: 'from_to_status' }),
     receivablesCollection.createIndex({ 'agent.agentcode': 1, createdAt: -1 }, { name: 'agentcode_createdAt' }),
     attemptsCollection.createIndex({ orderId: 1, requestedAt: -1 }, { name: 'orderId_requestedAt' }),
+    attemptsCollection.createIndex({ agentcode: 1, requestedAt: -1 }, { name: 'agentcode_requestedAt' }),
     attemptsCollection.createIndex({ status: 1, requestedAt: -1 }, { name: 'status_requestedAt' }),
     attemptsCollection.createIndex({ batchKey: 1, requestedAt: -1 }, { name: 'batchKey_requestedAt' }),
     attemptsCollection.createIndex({ transactionId: 1 }, { name: 'transactionId' }),
