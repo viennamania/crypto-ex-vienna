@@ -2071,7 +2071,7 @@ export default function Index({ params }: any) {
       const audio = notificationAudioRef.current;
       if (audio) {
         if (!(audio.loop && !audio.paused)) {
-          audio.loop = false;
+          audio.loop = true;
           audio.muted = false;
           audio.volume = 1;
           if (!audio.paused) {
@@ -3030,13 +3030,22 @@ export default function Index({ params }: any) {
   }, [notificationAudioUnlocked, unlockNotificationAudio]);
 
   useEffect(() => {
-    if (!hasActiveTradingAudioEnabledOrders) {
+    const hasOwnerSellerUnreadChat =
+      isOwnerSeller && sellerUnreadChatAlerts.length > 0;
+
+    if (!hasActiveTradingAudioEnabledOrders && !hasOwnerSellerUnreadChat) {
       stopNotificationLoop();
       return;
     }
 
     void startNotificationLoop();
-  }, [hasActiveTradingAudioEnabledOrders, startNotificationLoop, stopNotificationLoop]);
+  }, [
+    hasActiveTradingAudioEnabledOrders,
+    isOwnerSeller,
+    sellerUnreadChatAlerts.length,
+    startNotificationLoop,
+    stopNotificationLoop,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -8366,17 +8375,19 @@ const fetchBuyOrders = async () => {
                   onClick={() => openSellerChatWidgetChannel(alertItem.channelUrl)}
                   className="group flex w-full items-center gap-2 rounded-2xl border border-rose-200/90 bg-white/95 px-2.5 py-2 text-left shadow-[0_18px_45px_-34px_rgba(244,63,94,0.55)] backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-50/70"
                 >
-                  <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-slate-600">
-                    {alertItem.profileUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={alertItem.profileUrl}
-                        alt={alertItem.displayName}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      (alertItem.displayName.slice(0, 1) || '?').toUpperCase()
-                    )}
+                  <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center text-sm font-bold text-slate-600">
+                    <span className="inline-flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                      {alertItem.profileUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={alertItem.profileUrl}
+                          alt={alertItem.displayName}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        (alertItem.displayName.slice(0, 1) || '?').toUpperCase()
+                      )}
+                    </span>
                     <span className="absolute -right-1 -top-1 inline-flex min-w-[22px] items-center justify-center rounded-full border border-rose-700 bg-rose-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white">
                       {alertItem.unreadCount.toLocaleString()}
                     </span>
