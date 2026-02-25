@@ -83,6 +83,15 @@ const toDateTime = (value: string) => {
   if (Number.isNaN(parsed.getTime())) return '-';
   return parsed.toLocaleString('ko-KR');
 };
+const toDateTimeLines = (value: string) => {
+  if (!value) return { date: '-', time: '-' };
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return { date: '-', time: '-' };
+  return {
+    date: parsed.toLocaleDateString('ko-KR'),
+    time: parsed.toLocaleTimeString('ko-KR', { hour12: false }),
+  };
+};
 
 const formatKrw = (value: number) =>
   `${new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(Number(value) || 0)}원`;
@@ -954,21 +963,20 @@ export default function P2PStorePaymentManagementPage() {
                     <table className="w-full table-fixed [&_th]:whitespace-normal [&_th]:break-words [&_td]:whitespace-normal [&_td]:break-words [&_td]:align-top">
                         <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                           <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
-                            <th className="px-3 py-2">일시</th>
-                            <th className="px-3 py-2">결제번호(PID)</th>
-                            <th className="px-3 py-2">회원</th>
-                            <th className="px-3 py-2">송신 지갑</th>
-                            <th className="px-3 py-2">USDT</th>
-                            <th className="px-3 py-2">KRW</th>
+                            <th className="w-[96px] px-2 py-2">일시</th>
+                            <th className="w-[130px] px-2 py-2">결제번호(PID)</th>
+                            <th className="px-3 py-2">회원 / 송신 지갑</th>
+                            <th className="w-[140px] px-2 py-2 text-right">USDT / KRW</th>
                             <th className="px-3 py-2">환율</th>
                             <th className="px-3 py-2">TX</th>
                             <th className="px-3 py-2">메모</th>
-                            <th className="px-3 py-2">결제처리</th>
+                            <th className="w-[240px] px-3 py-2">결제처리</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
                           {recentPayments.map((payment) => {
                             const completed = isOrderProcessingCompleted(payment.orderProcessing);
+                            const confirmedDateTime = toDateTimeLines(payment.confirmedAt || payment.createdAt);
                             const isChanged = changedPaymentIds.includes(payment.id);
                             const rowClass = isChanged
                               ? 'bg-cyan-50/70 animate-pulse'
@@ -981,10 +989,11 @@ export default function P2PStorePaymentManagementPage() {
                                 key={payment.id}
                                 className={`transition ${rowClass}`}
                               >
-                              <td className="px-3 py-2.5 text-xs text-slate-500">
-                                {toDateTime(payment.confirmedAt || payment.createdAt)}
+                              <td className="px-2 py-2.5 text-[11px] leading-tight text-slate-500">
+                                <p className="font-semibold text-slate-700">{confirmedDateTime.date}</p>
+                                <p className="mt-0.5">{confirmedDateTime.time}</p>
                               </td>
-                              <td className="px-3 py-2.5 text-sm font-semibold text-slate-900">
+                              <td className="px-2 py-2.5 text-xs font-semibold text-slate-900">
                                 {payment.paymentId ? (
                                   <button
                                     type="button"
@@ -1003,21 +1012,23 @@ export default function P2PStorePaymentManagementPage() {
                                 )}
                               </td>
                               <td className="px-3 py-2.5">
-                                <p className="break-all text-lg font-extrabold leading-tight text-slate-900">
+                                <p className="break-all text-sm font-semibold leading-tight text-slate-900">
                                   {String(payment.member?.nickname || '').trim() || '-'}
                                 </p>
-                                <p className="mt-0.5 break-all text-base font-bold leading-tight text-slate-700">
+                                <p className="mt-0.5 break-all text-xs font-medium leading-tight text-slate-600">
                                   {String(payment.member?.depositName || '').trim() || '-'}
                                 </p>
+                                <p className="mt-1.5 break-all text-xs text-slate-500">
+                                  {shortAddress(payment.fromWalletAddress)}
+                                </p>
                               </td>
-                              <td className="px-3 py-2.5 text-xs text-slate-500">
-                                {shortAddress(payment.fromWalletAddress)}
-                              </td>
-                              <td className="px-3 py-2.5 font-semibold text-slate-900">
-                                {formatUsdt(payment.usdtAmount)}
-                              </td>
-                              <td className="px-3 py-2.5 font-semibold text-slate-700">
-                                {formatKrw(payment.krwAmount)}
+                              <td className="px-2 py-2.5 text-right">
+                                <p className="font-semibold text-slate-900">
+                                  {formatUsdt(payment.usdtAmount)}
+                                </p>
+                                <p className="mt-0.5 font-semibold text-slate-700">
+                                  {formatKrw(payment.krwAmount)}
+                                </p>
                               </td>
                               <td className="px-3 py-2.5 text-xs text-slate-600">
                                 1 USDT = {formatRate(payment.exchangeRate)}
