@@ -2602,9 +2602,9 @@ export default function Index({ params }: any) {
   }, [completingActiveOrder, selectedActivePaymentRequestedOrder?.status, activeOrderCompleteResult]);
 
   const activeOrderCompleteFlowStatusLabel = useMemo(() => {
-    if (activeOrderCompleteFlowPhase === 'PROCESSING') return '에스크로 전송 처리중';
-    if (activeOrderCompleteFlowPhase === 'COMPLETED') return '완료 반영 완료';
-    return '완료 처리 준비';
+    if (activeOrderCompleteFlowPhase === 'PROCESSING') return '정산 처리 진행중';
+    if (activeOrderCompleteFlowPhase === 'COMPLETED') return '정산 완료';
+    return '정산 실행 대기';
   }, [activeOrderCompleteFlowPhase]);
 
   const activeOrderCompleteFlowSummary = useMemo(() => {
@@ -2620,7 +2620,7 @@ export default function Index({ params }: any) {
       }
       return '완료 처리되었습니다. 아래 전송 정보를 확인해 주세요.';
     }
-    return '완료하기를 누르면 에스크로 검증 후 지갑 전송과 완료 반영이 진행됩니다.';
+    return '정산 확정하기를 누르면 에스크로 검증 후 지갑 전송과 완료 반영이 진행됩니다.';
   }, [activeOrderCompleteFlowPhase, activeOrderCompleteResult?.paymentConfirmedAt]);
 
   const activeOrderCompleteFlowSteps = useMemo<SellerEscrowCompleteFlowStepItem[]>(() => {
@@ -13573,30 +13573,46 @@ const fetchBuyOrders = async () => {
               )}
             </div>
 
-            <div className="mt-3 flex items-center justify-end gap-2">
+            <div className="mt-3">
               <button
                 type="button"
-                onClick={closeActiveOrderCompleteModal}
-                disabled={completingActiveOrder}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+                onClick={() => {
+                  if (activeOrderCompleteFlowPhase === 'COMPLETED') {
+                    closeActiveOrderCompleteModal();
+                    return;
+                  }
+                  completeSelectedActiveOrder();
+                }}
+                disabled={
+                  activeOrderCompleteFlowPhase === 'PROCESSING'
+                  || (
+                    !selectedActivePaymentRequestedOrder
+                    && activeOrderCompleteFlowPhase !== 'COMPLETED'
+                  )
+                  || completingActiveOrder
+                }
+                className={`
+                  inline-flex w-full items-center justify-center rounded-xl px-3 py-2.5 text-sm font-bold text-white transition
+                  ${activeOrderCompleteFlowPhase === 'PROCESSING'
+                    ? 'cursor-not-allowed border border-cyan-300 bg-cyan-400/90'
+                    : activeOrderCompleteFlowPhase === 'COMPLETED'
+                      ? 'border border-emerald-400 bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-[0_14px_35px_-18px_rgba(5,150,105,0.7)] hover:from-emerald-500 hover:to-emerald-400'
+                      : !selectedActivePaymentRequestedOrder || completingActiveOrder
+                        ? 'cursor-not-allowed border border-slate-300 bg-slate-300'
+                        : 'border border-emerald-400 bg-gradient-to-r from-emerald-600 to-teal-500 shadow-[0_14px_35px_-18px_rgba(5,150,105,0.75)] hover:from-emerald-500 hover:to-teal-400'}
+                `}
               >
-                {activeOrderCompleteFlowPhase === 'COMPLETED' ? '닫기' : '취소'}
+                <span className="inline-flex items-center gap-2">
+                  {activeOrderCompleteFlowPhase === 'PROCESSING' && (
+                    <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/70 border-t-transparent" />
+                  )}
+                  {activeOrderCompleteFlowPhase === 'COMPLETED'
+                    ? '정산 완료 내역 확인'
+                    : activeOrderCompleteFlowPhase === 'PROCESSING'
+                      ? '정산 처리 진행 중...'
+                      : '정산 확정하기'}
+                </span>
               </button>
-              {activeOrderCompleteFlowPhase !== 'COMPLETED' && (
-                <button
-                  type="button"
-                  onClick={completeSelectedActiveOrder}
-                  disabled={!selectedActivePaymentRequestedOrder || completingActiveOrder}
-                  className={`
-                    rounded-lg px-3 py-1.5 text-sm font-semibold text-white
-                    ${!selectedActivePaymentRequestedOrder || completingActiveOrder
-                      ? 'cursor-not-allowed bg-slate-300'
-                      : 'bg-emerald-600 hover:bg-emerald-500'}
-                  `}
-                >
-                  {completingActiveOrder ? '완료 처리중...' : '완료하기'}
-                </button>
-              )}
             </div>
           </div>
         </ModalUser>
