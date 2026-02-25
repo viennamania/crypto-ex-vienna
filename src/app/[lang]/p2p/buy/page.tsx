@@ -4278,7 +4278,7 @@ const fetchBuyOrders = async () => {
 
   if (address && loadingUser) {
     return (
-      <main className="p2p-buy-light p-4 pb-28 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-4xl bg-white">
+      <main className="p2p-buy-light p-4 pb-28 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-3xl bg-white">
         <div className="py-0 w-full flex flex-col items-center justify-center gap-4">
 
           <Image
@@ -4299,7 +4299,7 @@ const fetchBuyOrders = async () => {
 
   return (
 
-    <main className="p2p-buy-light p-4 pb-28 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-4xl bg-white text-slate-800 antialiased [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:rounded-md">
+    <main className="p2p-buy-light p-4 pb-28 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-3xl bg-white text-slate-800 antialiased [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:rounded-md">
 
       <AutoConnect
           client={client}
