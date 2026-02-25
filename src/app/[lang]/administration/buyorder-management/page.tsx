@@ -2740,12 +2740,12 @@ export default function BuyOrderManagementPage() {
 
       {cancelTargetOrder && (
         <div
-          className="fixed inset-0 z-[120] flex items-end justify-center bg-slate-900/45 p-4 backdrop-blur-[1px] sm:items-center"
+          className="fixed inset-0 z-[120] flex items-end justify-center overflow-y-auto bg-slate-900/45 p-3 backdrop-blur-[1px] sm:items-center sm:p-4"
           role="presentation"
           onClick={closeCancelOrderModal}
         >
           <div
-            className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-[0_42px_90px_-52px_rgba(15,23,42,0.9)]"
+            className="my-3 flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_42px_90px_-52px_rgba(15,23,42,0.9)] sm:my-6"
             role="dialog"
             aria-modal="true"
             aria-label="주문 취소 확인"
@@ -2760,7 +2760,7 @@ export default function BuyOrderManagementPage() {
               </p>
             </div>
 
-            <div className="space-y-4 px-5 py-5">
+            <div className="min-h-0 space-y-4 overflow-y-auto px-5 py-5">
               <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-700">
                   구매자 아이디

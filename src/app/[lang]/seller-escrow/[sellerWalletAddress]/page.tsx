@@ -1113,6 +1113,29 @@ const getBuyOrderSellerWalletAddress = (order: Partial<BuyOrder> | null | undefi
   return String(directSellerWalletAddress || nestedSellerWalletAddress || '').trim();
 };
 
+const getOrderEscrowLockUsdtAmount = (orderLike: any): number | null => {
+  const candidates = [
+    orderLike?.escrowLockUsdtAmount,
+    orderLike?.platformFee?.totalEscrowAmount,
+    orderLike?.platformFee?.escrowLockAmount,
+    orderLike?.platformFee?.totalTransferAmount,
+    orderLike?.settlement?.totalTransferAmount,
+    orderLike?.settlement?.transferTotalAmount,
+    orderLike?.buyer?.escrowLockedUsdtAmount,
+    orderLike?.seller?.escrowLockedUsdtAmount,
+    orderLike?.usdtAmount,
+  ];
+
+  for (const value of candidates) {
+    const numeric = toFiniteNumberOrNull(value);
+    if (numeric !== null && numeric > 0) {
+      return numeric;
+    }
+  }
+
+  return null;
+};
+
 const normalizePrivateTradeOrderSummary = (order: any): PrivateTradeOrderSummary | null => {
   if (!order || typeof order !== 'object') {
     return null;
@@ -2582,18 +2605,7 @@ export default function Index({ params }: any) {
     const storedAgentFeeAmount = getOrderAgentFeeAmount(selectedActivePaymentRequestedOrder);
 
     const buyerTransferUsdt = roundDownUsdt(Number(selectedActivePaymentRequestedOrder.usdtAmount || 0));
-    const totalTransferCandidate = [
-      (selectedActivePaymentRequestedOrder as any)?.escrowLockUsdtAmount,
-      (selectedActivePaymentRequestedOrder as any)?.platformFee?.totalEscrowAmount,
-      (selectedActivePaymentRequestedOrder as any)?.platformFee?.escrowLockAmount,
-      (selectedActivePaymentRequestedOrder as any)?.platformFee?.totalTransferAmount,
-      (selectedActivePaymentRequestedOrder as any)?.settlement?.totalTransferAmount,
-      (selectedActivePaymentRequestedOrder as any)?.settlement?.transferTotalAmount,
-      (selectedActivePaymentRequestedOrder as any)?.buyer?.escrowLockedUsdtAmount,
-      (selectedActivePaymentRequestedOrder as any)?.seller?.escrowLockedUsdtAmount,
-    ]
-      .map((value) => toFiniteNumberOrNull(value))
-      .find((value) => value !== null && value > 0);
+    const totalTransferCandidate = getOrderEscrowLockUsdtAmount(selectedActivePaymentRequestedOrder);
 
     let platformFeeUsdt =
       storedFeeAmount !== null && storedFeeAmount > 0
@@ -9991,6 +10003,112 @@ const fetchBuyOrders = async () => {
 
                                   }
                                 </div>
+                                {isOwnerSeller && isSameWalletAddress(seller.walletAddress, sellerWalletAddressParam) && (() => {
+                                  const sellerWallet = String(seller.walletAddress || '').trim();
+                                  const sellerEscrowWallet = String(seller.seller?.escrowWalletAddress || '').trim();
+                                  const matchedOrders = activePaymentRequestedOrders.filter((order) => {
+                                    const orderSellerWallet = getBuyOrderSellerWalletAddress(order);
+                                    const orderEscrowWallet = String(
+                                      (order as any)?.escrowWallet?.address
+                                      || (order as any)?.seller?.escrowWalletAddress
+                                      || '',
+                                    ).trim();
+                                    if (
+                                      sellerEscrowWallet
+                                      && orderEscrowWallet
+                                      && isSameWalletAddress(orderEscrowWallet, sellerEscrowWallet)
+                                    ) {
+                                      return true;
+                                    }
+                                    if (
+                                      sellerWallet
+                                      && orderSellerWallet
+                                      && isSameWalletAddress(orderSellerWallet, sellerWallet)
+                                    ) {
+                                      return true;
+                                    }
+                                    return false;
+                                  });
+                                  const escrowOrders =
+                                    matchedOrders.length > 0 ? matchedOrders : activePaymentRequestedOrders;
+                                  const escrowRows = escrowOrders.map((order, rowIndex) => {
+                                    const escrowUsdt = roundDownUsdt(
+                                      getOrderEscrowLockUsdtAmount(order) ?? Number(order?.usdtAmount || 0),
+                                    );
+                                    return {
+                                      key: String(order?._id || order?.tradeId || `escrow-row-${rowIndex}`),
+                                      buyerId: getBuyerDisplayNameForTradeList(order, true),
+                                      escrowUsdt,
+                                    };
+                                  });
+                                  const buyerEscrowTotalUsdt = roundDownUsdt(
+                                    escrowRows.reduce((sum, row) => sum + (Number.isFinite(row.escrowUsdt) ? row.escrowUsdt : 0), 0),
+                                  );
+                                  const sellerEscrowBalanceUsdt = Number.isFinite(Number(currentUsdtBalanceArray[index]))
+                                    ? Math.max(0, Number(currentUsdtBalanceArray[index]))
+                                    : 0;
+                                  const visibleCombinedEscrowUsdt = roundDownUsdt(
+                                    sellerEscrowBalanceUsdt + buyerEscrowTotalUsdt,
+                                  );
+
+                                  return (
+                                    <div className="mt-3 rounded-xl border border-emerald-200 bg-white/85 px-3 py-2.5">
+                                      <div className="w-full flex items-center justify-between gap-2">
+                                        <span className="text-[11px] font-bold tracking-[0.1em] text-emerald-700">
+                                          에스크로 구성
+                                        </span>
+                                        <span className="text-[11px] font-semibold text-slate-500">
+                                          입금요청 {escrowRows.length}건
+                                        </span>
+                                      </div>
+                                      <div className="mt-2 w-full grid grid-cols-1 gap-1.5 text-xs">
+                                        <div className="flex items-center justify-between gap-2 text-slate-600">
+                                          <span>판매자 에스크로 잔액</span>
+                                          <span className="font-semibold tabular-nums text-slate-800">
+                                            {formatUsdtDisplay(sellerEscrowBalanceUsdt)} USDT
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-2 text-slate-600">
+                                          <span>구매 에스크로 합계</span>
+                                          <span className="font-semibold tabular-nums text-amber-700">
+                                            {formatUsdtDisplay(buyerEscrowTotalUsdt)} USDT
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50/80 px-2 py-1 text-emerald-800">
+                                          <span className="font-semibold">합산 인지 수량</span>
+                                          <span className="font-bold tabular-nums">
+                                            {formatUsdtDisplay(visibleCombinedEscrowUsdt)} USDT
+                                          </span>
+                                        </div>
+                                      </div>
+                                      {!loadedActivePaymentRequestedOrders || loadingActivePaymentRequestedOrders ? (
+                                        <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-500">
+                                          구매 에스크로 내역을 불러오는 중입니다...
+                                        </div>
+                                      ) : escrowRows.length > 0 ? (
+                                        <div className="mt-2 max-h-32 space-y-1 overflow-y-auto pr-1">
+                                          {escrowRows.map((row) => (
+                                            <div
+                                              key={row.key}
+                                              className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-white/90 px-2 py-1 text-xs"
+                                            >
+                                              <span className="min-w-0 truncate text-slate-700">
+                                                구매자 {row.buyerId}
+                                              </span>
+                                              <span className="shrink-0 font-semibold tabular-nums text-emerald-700">
+                                                {formatUsdtDisplay(row.escrowUsdt)} USDT
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-500">
+                                          현재 입금요청 상태의 구매 에스크로 내역이 없습니다.
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                                 <div className="mt-3 flex justify-end">
                                   <a
                                     className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm hover:text-slate-800 hover:shadow-md"
