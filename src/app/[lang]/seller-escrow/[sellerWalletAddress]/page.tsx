@@ -14631,7 +14631,6 @@ const SendbirdChatEmbed = ({
   const [channelUrl, setChannelUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const lastPromotionKeyRef = useRef<string | null>(null);
   const buyerAutoReplyContext = useMemo<BuyerAutoReplyContext | null>(() => {
     if (!buyerWalletAddress || !sellerWalletAddress) {
       return null;
@@ -14740,51 +14739,6 @@ const SendbirdChatEmbed = ({
       setErrorMessage(null);
     }
   }, [selectedChannelUrl]);
-
-  useEffect(() => {
-    if (!channelUrl || !shouldShowChat) {
-      return;
-    }
-    const contextKey = promotionContext ? JSON.stringify(promotionContext) : '';
-    if (!contextKey) {
-      return;
-    }
-    const key = `${channelUrl}:${contextKey}:${shouldShowChat}`;
-    if (lastPromotionKeyRef.current === key) {
-      return;
-    }
-
-    const sendPromotion = async () => {
-      try {
-        const aiResponse = await fetch('/api/user/generateChatPromotion', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(promotionContext),
-        });
-        const aiData = await aiResponse.json().catch(() => ({}));
-        if (!aiResponse.ok || !aiData?.text) {
-          return;
-        }
-
-        const response = await fetch('/api/sendbird/welcome-message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            channelUrl,
-            senderId: sellerWalletAddress,
-            message: aiData.text,
-          }),
-        });
-        if (response.ok) {
-          lastPromotionKeyRef.current = key;
-        }
-      } catch {
-        // ignore promotion message errors
-      }
-    };
-
-    sendPromotion();
-  }, [channelUrl, promotionContext, sellerWalletAddress, shouldShowChat]);
 
   if (!shouldShowChat) {
     return (

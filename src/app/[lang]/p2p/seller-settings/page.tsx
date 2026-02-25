@@ -1480,7 +1480,7 @@ export default function SettingsPage({ params }: any) {
 
     return (
 
-        <main className="w-full max-w-screen-sm lg:max-w-6xl px-4 pb-28 pt-4 lg:pb-12 min-h-[100vh] flex items-start justify-center mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+        <main className="w-full max-w-screen-sm lg:max-w-7xl px-4 lg:px-5 pb-28 pt-4 lg:pb-10 min-h-[100vh] flex items-start justify-center mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
 
             <AutoConnect client={client} wallets={[wallet]} />
 
@@ -1627,7 +1627,7 @@ export default function SettingsPage({ params }: any) {
                         </div>
                     </div>
                 ) : (
-                    <div className="w-full flex flex-col gap-4 lg:gap-5">
+                    <div className="w-full flex flex-col gap-4 lg:gap-4">
 
                         {loadingUserData && (
                             <div className="text-sm text-slate-500">Loading user data...</div>
@@ -1691,8 +1691,8 @@ export default function SettingsPage({ params }: any) {
 
 
                         {!loadingUserData && seller && (
-                            <div className="w-full grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-4">
-                            <div className='w-full flex flex-col gap-4 lg:gap-3 items-center justify-between rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-4 shadow-sm lg:col-span-12'>
+                            <div className="w-full grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-3">
+                            <div className='w-full flex flex-col gap-4 lg:gap-2 items-center justify-between rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-3 shadow-sm lg:col-span-12'>
 
                                 {/* image and title */}
                                 <div className='w-full flex flex-row gap-2 items-center justify-start'>
@@ -1725,65 +1725,62 @@ export default function SettingsPage({ params }: any) {
 
                                 {/* seller?.status */}
                                 {/* status: pending, confirmed */}
-                                <div className='w-full flex flex-row gap-2 items-center justify-between
-                                    border-t border-slate-200/80 pt-4'>
-                                    <div className="flex flex-row items-center gap-2">
-                                        {/* dot */}
-                                        <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                        <span className="text-sm font-semibold text-slate-600">
-                                            판매자 상태
-                                        </span>
-                                    </div>
-                                    {seller?.status === 'confirmed' ? (
-                                        <span className="inline-flex min-w-[160px] items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-50 px-4 py-1.5 text-sm font-semibold text-emerald-700 shadow-sm">
-                                            판매가능상태
-                                        </span>
-                                    ) : (
-                                        <span className="inline-flex min-w-[160px] items-center justify-center rounded-full border border-amber-200/80 bg-amber-50 px-4 py-1.5 text-sm font-semibold text-amber-700 shadow-sm">
-                                            판매불가능상태
-                                        </span>
-                                    )}
-                                </div>
-
-
-                                {/* seller?.enabled */}
-                                {/* 판매시작 여부 */}
-                                {/* toggle seller enabled */}
-                                <div className='w-full flex flex-row gap-2 items-center justify-between
-                                    border-t border-slate-200/80 pt-4'>
-                                    <div className="flex flex-row items-center gap-2">
-                                        {/* dot */}
-                                        <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                        <span className="text-sm font-semibold text-slate-600">
-                                            판매자 활동 상태
-                                        </span>
-                                    </div>
-                                    {seller?.enabled ? (
-                                        <button
-                                            onClick={toggleSellerEnabled}
-                                            className="flex flex-row items-center gap-2
-                                                bg-emerald-600 text-white px-4 py-1.5 rounded-full shadow-sm transition hover:bg-emerald-500"
-                                        >
-                                            <span className="text-sm font-semibold">
-                                                판매중
+                                <div className="w-full grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-3">
+                                    <div className='w-full flex flex-row gap-2 items-center justify-between border-t border-slate-200/80 pt-4 lg:pt-3'>
+                                        <div className="flex flex-row items-center gap-2">
+                                            {/* dot */}
+                                            <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                            <span className="text-sm font-semibold text-slate-600">
+                                                판매자 상태
                                             </span>
-                                        </button>
-                                    ) : (
-                                        <button
-                                            onClick={toggleSellerEnabled}
-                                            className="flex flex-row items-center gap-2
-                                                bg-slate-200 text-slate-600 px-4 py-1.5 rounded-full shadow-sm transition hover:bg-slate-300"
-                                        >
-                                            <span className="text-sm font-semibold">
-                                                판매중지
+                                        </div>
+                                        {seller?.status === 'confirmed' ? (
+                                            <span className="inline-flex min-w-[150px] items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-50 px-4 py-1.5 text-sm font-semibold text-emerald-700 shadow-sm">
+                                                판매가능상태
                                             </span>
-                                        </button>
-                                    )}
+                                        ) : (
+                                            <span className="inline-flex min-w-[150px] items-center justify-center rounded-full border border-amber-200/80 bg-amber-50 px-4 py-1.5 text-sm font-semibold text-amber-700 shadow-sm">
+                                                판매불가능상태
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* seller?.enabled */}
+                                    {/* 판매시작 여부 */}
+                                    {/* toggle seller enabled */}
+                                    <div className='w-full flex flex-row gap-2 items-center justify-between border-t border-slate-200/80 pt-4 lg:pt-3'>
+                                        <div className="flex flex-row items-center gap-2">
+                                            {/* dot */}
+                                            <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                            <span className="text-sm font-semibold text-slate-600">
+                                                판매자 활동 상태
+                                            </span>
+                                        </div>
+                                        {seller?.enabled ? (
+                                            <button
+                                                onClick={toggleSellerEnabled}
+                                                className="flex flex-row items-center gap-2 bg-emerald-600 text-white px-4 py-1.5 rounded-full shadow-sm transition hover:bg-emerald-500"
+                                            >
+                                                <span className="text-sm font-semibold">
+                                                    판매중
+                                                </span>
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={toggleSellerEnabled}
+                                                className="flex flex-row items-center gap-2 bg-slate-200 text-slate-600 px-4 py-1.5 rounded-full shadow-sm transition hover:bg-slate-300"
+                                            >
+                                                <span className="text-sm font-semibold">
+                                                    판매중지
+                                                </span>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                 
 
 
-                                <div className='mt-4 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-4 shadow-sm'>
+                                <div className='mt-3 lg:mt-2 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-3 shadow-sm'>
                                     <div className="flex w-full flex-row items-center justify-between gap-3">
                                         <div className="flex items-center gap-3">
                                             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
@@ -1895,7 +1892,7 @@ export default function SettingsPage({ params }: any) {
 
                             </div>
 
-                            <div className='mt-4 lg:mt-0 w-full flex flex-col gap-4 lg:gap-3 items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 lg:col-span-7'>
+                            <div className='mt-3 lg:mt-0 w-full flex flex-col gap-4 lg:gap-2 items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 lg:p-3 lg:col-span-7'>
                                 <div className='w-full flex flex-row gap-2 items-center justify-between'>
                                     <div className="flex flex-row items-center gap-2">
                                         <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
@@ -2086,7 +2083,7 @@ export default function SettingsPage({ params }: any) {
                                 </div>
                             </div>
 
-                            <div className="mt-4 lg:mt-0 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-4 shadow-sm lg:col-span-5">
+                            <div className="mt-3 lg:mt-0 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-3 shadow-sm lg:col-span-5">
                                 <div className="flex w-full flex-row items-center justify-between gap-3">
                                     <div className="flex items-center gap-3">
                                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
@@ -2213,7 +2210,7 @@ export default function SettingsPage({ params }: any) {
 
                         {!loadingUserData && seller?.escrowWalletAddress && (
                             
-                            <div className='w-full flex flex-col gap-3 items-start justify-between mt-4 rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-4 shadow-sm'>
+                            <div className='w-full flex flex-col gap-3 lg:gap-2 items-start justify-between mt-4 lg:mt-3 rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-3 shadow-sm'>
 
                                 <div className='w-full flex flex-row gap-2 items-center justify-start mb-2'>
                                     <Image
@@ -2229,121 +2226,125 @@ export default function SettingsPage({ params }: any) {
                                 </div>
                                 {/* 설명 */}
                                 {/* 에스크로 지갑에 잔액이 있어야 구매주문을 자동으로 처리할 수 있습니다. */}
-                                <div className="text-sm text-slate-600 mb-4">
+                                <div className="text-sm text-slate-600 mb-3 lg:mb-2">
                                     에스크로 지갑에 잔액이 있어야 구매주문을 자동으로 처리할 수 있습니다.
                                 </div>
 
-                                <div className="flex flex-row items-center gap-2">
-                                    <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                    <span className="text-sm font-semibold text-slate-600">
-                                        에스크로 지갑 주소
-                                    </span>
-                                </div>
+                                <div className="w-full grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-3">
+                                    <div className="w-full flex flex-col gap-2 lg:col-span-7">
+                                        <div className="flex flex-row items-center gap-2">
+                                            <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                            <span className="text-sm font-semibold text-slate-600">
+                                                에스크로 지갑 주소
+                                            </span>
+                                        </div>
 
-                                <div className='w-full flex flex-row gap-2 items-center justify-between'>
-                                    <div className="flex flex-row items-center gap-2">
-                                        <Image
-                                            src="/icon-smart-wallet.png"
-                                            alt="Smart Wallet"
-                                            width={50}
-                                            height={50}
-                                            className='w-8 h-8'
-                                        />
-                                        <button
-                                            className="text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 transition hover:text-slate-900"
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(seller?.escrowWalletAddress || "");
-                                                toast.success("에스크로 지갑 주소가 복사되었습니다" );
-                                            } }
+                                        <div className='w-full flex flex-row gap-2 items-start lg:items-center justify-between'>
+                                            <div className="flex flex-row items-center gap-2">
+                                                <Image
+                                                    src="/icon-smart-wallet.png"
+                                                    alt="Smart Wallet"
+                                                    width={50}
+                                                    height={50}
+                                                    className='w-8 h-8'
+                                                />
+                                                <button
+                                                    className="text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 transition hover:text-slate-900"
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(seller?.escrowWalletAddress || "");
+                                                        toast.success("에스크로 지갑 주소가 복사되었습니다" );
+                                                    } }
+                                                >
+                                                    {seller?.escrowWalletAddress.slice(0, 6)}...{seller?.escrowWalletAddress.slice(-4)}
+                                                </button>
+                                            </div>
+                                            {/* QR code */}
+                                            <Canvas text={seller?.escrowWalletAddress || ""} />
+                                        </div>
+                                        <div className="w-full flex flex-row items-center justify-between">
+                                            <span className="text-xs text-slate-500">
+                                                입금·출금 기록을 확인하세요.
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full flex flex-col gap-2 lg:col-span-5">
+                                        <div className='w-full flex flex-row gap-2 items-center justify-between border-t border-slate-200/80 pt-4 lg:pt-3'>
+                                            <div className="flex flex-row items-center gap-2">
+                                                <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
+                                                <span className="text-sm font-semibold text-slate-600">
+                                                    에스크로 잔액
+                                                </span>
+                                            </div>
+                                            <div className='flex flex-row items-center gap-2'>
+                                                <span className="text-2xl xl:text-4xl font-semibold text-emerald-700 tabular-nums tracking-tight"
+                                                    style={{ fontFamily: 'monospace' }}
+                                                >
+                                                    {escrowBalance.toFixed(2)}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-700 flex flex-col gap-1">
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-semibold">거래중인 수량</span>
+                                                <span className="font-bold text-slate-900">
+                                                    {inTradeLoading
+                                                        ? '확인 중...'
+                                                        : inTradeAmount !== null
+                                                        ? `${inTradeAmount.toFixed(2)} USDT`
+                                                        : '거래중인 수량이 없습니다.'}
+                                                </span>
+                                            </div>
+                                            {inTradeError && (
+                                                <span className="text-[11px] font-semibold text-rose-500">
+                                                    {inTradeError}
+                                                </span>
+                                            )}
+                                            <div className="text-xs text-slate-500">
+                                                거래중인 수량을 제외한 금액만 회수 가능합니다.
+                                            </div>
+                                        </div>
+
+                                        {/* 설명 */}
+                                        {/* 에스크로 지갑 잔액을 모두 나의 지갑 (address) 으로 회수할 수 있습니다. */}
+                                        <div className="text-sm text-slate-600">
+                                            에스크로 지갑 잔액을 모두 나의 지갑 ({address?.slice(0,6)}...{address?.slice(-4)}) 으로 회수할 수 있습니다.
+                                        </div>
+                                        {/* 잔액 회수하기 버튼 */}
+                                        <div className='w-full flex flex-row flex-wrap gap-2 items-center justify-end'>
+                                            <button
+                                                onClick={openChargeModal}
+                                                className="px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                            >
+                                                충전하기
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setEscrowHistoryOpen(true)}
+                                                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
+                                            >
+                                                입출금내역 보기
+                                            </button>
+                                            {/* if escrowBalance is 0, disable the button */}
+                                            <button
+                                            onClick={() => setWithdrawModalOpen(true)}
+                                            className={`
+                                                ${clearingSellerEscrowWalletBalance ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-500'}
+                                                px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition
+                                            `}
+                                            disabled={clearingSellerEscrowWalletBalance || escrowBalance <= 0}
                                         >
-                                            {seller?.escrowWalletAddress.slice(0, 6)}...{seller?.escrowWalletAddress.slice(-4)}
+                                            {clearingSellerEscrowWalletBalance ? '회수중...' : '회수하기'}
                                         </button>
-                                    </div>
-                                    {/* QR code */}
-                                    <Canvas text={seller?.escrowWalletAddress || ""} />
-                                </div>
-                                <div className="w-full flex flex-row items-center justify-between">
-                                    <span className="text-xs text-slate-500">
-                                        입금·출금 기록을 확인하세요.
-                                    </span>
-                                </div>
 
-                                <div className='w-full flex flex-row gap-2 items-center justify-between mt-4
-                                border-t border-slate-200/80 pt-4'>
-                                    <div className="flex flex-row items-center gap-2">
-                                        <div className='w-2 h-2 bg-emerald-500 rounded-full'></div>
-                                        <span className="text-sm font-semibold text-slate-600">
-                                            에스크로 잔액
-                                        </span>
+                                        </div>
                                     </div>
-                                    <div className='flex flex-row items-center gap-2 mb-2'>
-                                        <span className="text-2xl xl:text-4xl font-semibold text-emerald-700 tabular-nums tracking-tight"
-                                            style={{ fontFamily: 'monospace' }}
-                                        >
-                                            {escrowBalance.toFixed(2)}
-                                        </span>
-                                    </div>
-
-                                </div>
-
-                                <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-700 flex flex-col gap-1">
-                                    <div className="flex items-center justify-between">
-                                        <span className="font-semibold">거래중인 수량</span>
-                                        <span className="font-bold text-slate-900">
-                                            {inTradeLoading
-                                                ? '확인 중...'
-                                                : inTradeAmount !== null
-                                                ? `${inTradeAmount.toFixed(2)} USDT`
-                                                : '거래중인 수량이 없습니다.'}
-                                        </span>
-                                    </div>
-                                    {inTradeError && (
-                                        <span className="text-[11px] font-semibold text-rose-500">
-                                            {inTradeError}
-                                        </span>
-                                    )}
-                                    <div className="text-xs text-slate-500">
-                                        거래중인 수량을 제외한 금액만 회수 가능합니다.
-                                    </div>
-                                </div>
-
-                                {/* 설명 */}
-                                {/* 에스크로 지갑 잔액을 모두 나의 지갑 (address) 으로 회수할 수 있습니다. */}
-                                <div className="text-sm text-slate-600 mb-2">
-                                    에스크로 지갑 잔액을 모두 나의 지갑 ({address?.slice(0,6)}...{address?.slice(-4)}) 으로 회수할 수 있습니다.
-                                </div>
-                                {/* 잔액 회수하기 버튼 */}
-                                    <div className='w-full flex flex-row flex-wrap gap-2 items-center justify-end'>
-                                        <button
-                                            onClick={openChargeModal}
-                                            className="px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                                        >
-                                            충전하기
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setEscrowHistoryOpen(true)}
-                                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
-                                        >
-                                            입출금내역 보기
-                                        </button>
-                                        {/* if escrowBalance is 0, disable the button */}
-                                        <button
-                                        onClick={() => setWithdrawModalOpen(true)}
-                                        className={`
-                                            ${clearingSellerEscrowWalletBalance ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-500'}
-                                            px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition
-                                        `}
-                                        disabled={clearingSellerEscrowWalletBalance || escrowBalance <= 0}
-                                    >
-                                        {clearingSellerEscrowWalletBalance ? '회수중...' : '회수하기'}
-                                    </button>
-
                                 </div>
 
 
                                 {/* 판매금액(원) 설정 */}
-                                <div className='w-full flex flex-col gap-2 items-start justify-between mt-4
+                                <div className='w-full flex flex-col gap-2 items-start justify-between mt-3 lg:mt-2
                                 border-t border-slate-200/80 pt-4'>
 
                                     <div className="flex flex-row items-center gap-2">

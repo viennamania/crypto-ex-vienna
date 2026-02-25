@@ -211,7 +211,6 @@ export default function SellerChatPage() {
   const [buyStatusMessage, setBuyStatusMessage] = useState('');
   const [marketPrice, setMarketPrice] = useState<number | null>(null);
   const [marketUpdatedAt, setMarketUpdatedAt] = useState<string | null>(null);
-  const promoSentRef = useRef(new Set<string>());
   const [showHistory, setShowHistory] = useState(false);
   const [historyOrders, setHistoryOrders] = useState<any[]>([]);
   const [historyPage, setHistoryPage] = useState(1);
@@ -1035,48 +1034,6 @@ export default function SellerChatPage() {
       active = false;
     };
   }, [address, buyerAvatar, buyerNickname]);
-
-  useEffect(() => {
-    let active = true;
-
-    const sendPromotionMessage = async () => {
-      const promotionText = sellerProfile?.seller?.promotionText?.trim?.() || '';
-      if (!channelUrl || !sellerId || !promotionText) {
-        return;
-      }
-      if (promoSentRef.current.has(channelUrl)) {
-        return;
-      }
-      try {
-        const response = await fetch('/api/sendbird/welcome-message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            channelUrl,
-            senderId: sellerId,
-            message: promotionText,
-          }),
-        });
-        if (!response.ok) {
-          const error = await response.json().catch(() => null);
-          throw new Error(error?.error || '프로모션 메시지를 전송하지 못했습니다.');
-        }
-        if (active) {
-          promoSentRef.current.add(channelUrl);
-        }
-      } catch (error) {
-        if (active) {
-          console.warn('Failed to send promotion message', error);
-        }
-      }
-    };
-
-    sendPromotionMessage();
-
-    return () => {
-      active = false;
-    };
-  }, [channelUrl, sellerId, sellerProfile?.seller?.promotionText]);
 
   useEffect(() => {
     let active = true;

@@ -1983,8 +1983,8 @@ export default function BuyOrderManagementPage() {
                     <th className="w-[11%] px-3 py-3">상태</th>
                     <th className="w-[16%] px-3 py-3">주문시각/거래번호(TID)</th>
                     <th className="w-[11%] px-3 py-3">구매자</th>
-                    <th className="w-[9%] px-3 py-3 text-right">주문금액</th>
-                    <th className="w-[15%] px-3 py-3">판매자/결제방법</th>
+                    <th className="w-[12%] px-3 py-3 text-right">주문금액</th>
+                    <th className="w-[12%] px-3 py-3">판매자/결제방법</th>
                     <th className="w-[14%] px-3 py-3">에이전트 정보</th>
                     <th className="w-[10%] px-3 py-3">플랫폼 수수료</th>
                     <th className="w-[7%] px-3 py-3">전송내역</th>
