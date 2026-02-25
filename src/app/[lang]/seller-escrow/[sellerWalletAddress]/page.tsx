@@ -222,6 +222,48 @@ type BuyOrderConfirmDraft = {
   rate: number;
 };
 
+type BuyOrderProgressStepState = 'pending' | 'active' | 'completed' | 'error';
+
+type BuyOrderProgressStepItem = {
+  key: string;
+  title: string;
+  description: string;
+  state: BuyOrderProgressStepState;
+  updatedAt: string;
+  detail?: string;
+};
+
+type BuyOrderProgressApiEvent =
+  | {
+      type: 'progress';
+      step?: string;
+      title?: string;
+      description?: string;
+      status?: 'processing' | 'completed' | 'error';
+      occurredAt?: string;
+      detail?: string;
+      data?: Record<string, unknown>;
+    }
+  | {
+      type: 'result';
+      payload?: {
+        result?: boolean;
+        created?: boolean;
+        reason?: string;
+        order?: Record<string, unknown>;
+      };
+    }
+  | {
+      type: 'error';
+      status?: number;
+      payload?: {
+        error?: string;
+        message?: string;
+        detail?: string;
+        reason?: string;
+      };
+    };
+
 type PrivateTradeOrderSummary = {
   orderId: string;
   tradeId: string;
@@ -276,6 +318,135 @@ type ActiveOrderCompleteResult = {
 const walletAuthOptions = ["google", "email", "phone"];
 const ACTIVE_PRIVATE_TRADE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
 const ACTIVE_TRADING_ORDER_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
+const BUY_ORDER_PROGRESS_STEP_DEFINITIONS: Array<{
+  key: string;
+  title: string;
+  description: string;
+}> = [
+  {
+    key: 'REQUEST_VALIDATED',
+    title: '요청 검증',
+    description: '구매 주문 파라미터를 확인합니다.',
+  },
+  {
+    key: 'ACTIVE_ORDER_CHECKING',
+    title: '기존 거래 확인',
+    description: '이미 진행중인 주문이 있는지 조회합니다.',
+  },
+  {
+    key: 'ACTIVE_ORDER_FOUND',
+    title: '기존 거래 재사용',
+    description: '기존 진행중 주문을 그대로 사용합니다.',
+  },
+  {
+    key: 'ORDER_CREATE_STARTED',
+    title: '주문 생성 시작',
+    description: '새 구매 주문 생성을 시작합니다.',
+  },
+  {
+    key: 'SELLER_VALIDATED',
+    title: '판매자 확인',
+    description: '판매자와 에스크로 지갑을 확인합니다.',
+  },
+  {
+    key: 'BUYER_VALIDATED',
+    title: '구매자 확인',
+    description: '구매자 지갑 및 입금자명 정보를 확인합니다.',
+  },
+  {
+    key: 'AMOUNT_VALIDATED',
+    title: '주문 금액 확정',
+    description: 'USDT/KRW 주문 금액을 확정합니다.',
+  },
+  {
+    key: 'PLATFORM_FEE_VALIDATED',
+    title: '수수료 확인',
+    description: '플랫폼 수수료 설정을 확인합니다.',
+  },
+  {
+    key: 'BUYER_ESCROW_WALLET_CREATED',
+    title: '구매 에스크로 생성',
+    description: '구매자 에스크로 지갑을 준비합니다.',
+  },
+  {
+    key: 'ESCROW_TRANSFER_SUBMITTED',
+    title: '에스크로 전송 요청',
+    description: '판매자 에스크로에서 구매 에스크로로 전송합니다.',
+  },
+  {
+    key: 'ESCROW_TRANSFER_CONFIRMED',
+    title: '에스크로 전송 확인',
+    description: '온체인 전송 완료를 확인합니다.',
+  },
+  {
+    key: 'ORDER_INSERTED',
+    title: '주문 저장',
+    description: '주문 데이터를 저장합니다.',
+  },
+  {
+    key: 'ORDER_STATUS_CHECKING',
+    title: '최종 상태 조회',
+    description: '주문이 입금요청 상태인지 확인합니다.',
+  },
+  {
+    key: 'ORDER_READY',
+    title: '주문 준비 완료',
+    description: '입금요청 상태로 주문이 준비되었습니다.',
+  },
+];
+
+const createInitialBuyOrderProgressSteps = (): BuyOrderProgressStepItem[] =>
+  BUY_ORDER_PROGRESS_STEP_DEFINITIONS.map((item) => ({
+    key: item.key,
+    title: item.title,
+    description: item.description,
+    state: item.key === 'REQUEST_VALIDATED' ? 'active' : 'pending',
+    updatedAt: '',
+  }));
+
+const getBuyOrderProgressStepStatusLabel = (state: BuyOrderProgressStepState) => {
+  if (state === 'completed') return '완료';
+  if (state === 'active') return '진행중';
+  if (state === 'error') return '실패';
+  return '대기';
+};
+
+const getBuyOrderProgressStepStyle = (state: BuyOrderProgressStepState) => {
+  if (state === 'completed') {
+    return {
+      container: 'border-emerald-200 bg-emerald-50/70',
+      badge: 'border-emerald-300 bg-emerald-100 text-emerald-700',
+      title: 'text-emerald-900',
+      description: 'text-emerald-700',
+      status: 'text-emerald-700',
+    };
+  }
+  if (state === 'active') {
+    return {
+      container: 'border-cyan-200 bg-cyan-50/70',
+      badge: 'border-cyan-300 bg-cyan-100 text-cyan-700',
+      title: 'text-cyan-900',
+      description: 'text-cyan-700',
+      status: 'text-cyan-700',
+    };
+  }
+  if (state === 'error') {
+    return {
+      container: 'border-rose-200 bg-rose-50/80',
+      badge: 'border-rose-300 bg-rose-100 text-rose-700',
+      title: 'text-rose-900',
+      description: 'text-rose-700',
+      status: 'text-rose-700',
+    };
+  }
+  return {
+    container: 'border-slate-200 bg-white/90',
+    badge: 'border-slate-300 bg-slate-100 text-slate-600',
+    title: 'text-slate-700',
+    description: 'text-slate-500',
+    status: 'text-slate-500',
+  };
+};
 
 const isActiveTradingOrderStatus = (status?: string) =>
   ACTIVE_TRADING_ORDER_STATUSES.has(String(status || '').trim());
@@ -6248,6 +6419,11 @@ const fetchBuyOrders = async () => {
   // buyAmountInputs
   const MAX_BUY_AMOUNT = 100000;
   const MAX_KRW_AMOUNT = 100000000;
+  const BUY_USDT_DECIMALS = 6;
+  const BUY_USDT_SCALE = 10 ** BUY_USDT_DECIMALS;
+
+  const roundDownBuyUsdt = (value: number) =>
+    Math.floor(value * BUY_USDT_SCALE) / BUY_USDT_SCALE;
 
   const formatNumberWithCommas = (value: string) => {
     if (!value) {
@@ -6264,7 +6440,7 @@ const fetchBuyOrders = async () => {
     if (!value || Number.isNaN(value)) {
       return '';
     }
-    const fixed = (Math.floor(value * 1000) / 1000).toFixed(3);
+    const fixed = roundDownBuyUsdt(value).toFixed(BUY_USDT_DECIMALS);
     const trimmed = fixed.replace(/\.?0+$/, '');
     return formatNumberWithCommas(trimmed);
   };
@@ -6277,7 +6453,7 @@ const fetchBuyOrders = async () => {
     const parts = cleaned.split('.');
     const integerPart = parts[0] ?? '';
     const decimalPart = parts.slice(1).join('');
-    const trimmedDecimal = decimalPart.slice(0, 3);
+    const trimmedDecimal = decimalPart.slice(0, BUY_USDT_DECIMALS);
     const normalizedInteger = integerPart.replace(/^0+(?=\d)/, '');
     if (cleaned.includes('.')) {
       return `${normalizedInteger || '0'}.${trimmedDecimal}`;
@@ -6312,6 +6488,173 @@ const fetchBuyOrders = async () => {
   const [isBuyOrderConfirmModalOpen, setIsBuyOrderConfirmModalOpen] = useState(false);
   const [buyOrderConfirmDraft, setBuyOrderConfirmDraft] = useState<BuyOrderConfirmDraft | null>(null);
   const [buyOrderConfirmError, setBuyOrderConfirmError] = useState<string | null>(null);
+  const [buyOrderProgressSteps, setBuyOrderProgressSteps] = useState<BuyOrderProgressStepItem[]>(
+    createInitialBuyOrderProgressSteps(),
+  );
+  const [buyOrderProgressSummary, setBuyOrderProgressSummary] = useState<string>(
+    '주문 생성 전입니다.',
+  );
+  const [buyOrderProgressPhase, setBuyOrderProgressPhase] = useState<
+    'idle' | 'processing' | 'completed' | 'error'
+  >('idle');
+
+  const resetBuyOrderProgressFlow = useCallback(() => {
+    setBuyOrderProgressSteps(createInitialBuyOrderProgressSteps());
+    setBuyOrderProgressSummary('주문 생성 전입니다.');
+    setBuyOrderProgressPhase('idle');
+  }, []);
+
+  const resolveBuyOrderProgressDetail = useCallback(
+    (event: Extract<BuyOrderProgressApiEvent, { type: 'progress' }>) => {
+      const detail = typeof event.detail === 'string' ? event.detail.trim() : '';
+      if (detail) {
+        return detail;
+      }
+
+      const data = event.data;
+      if (!data || typeof data !== 'object') {
+        return '';
+      }
+
+      const transactionHash =
+        typeof data.transactionHash === 'string' ? data.transactionHash.trim() : '';
+      const transactionId =
+        typeof data.transactionId === 'string' ? data.transactionId.trim() : '';
+      const tradeId = typeof data.tradeId === 'string' ? data.tradeId.trim() : '';
+      const orderId = typeof data.orderId === 'string' ? data.orderId.trim() : '';
+
+      if (transactionHash) {
+        return `Tx: ${transactionHash}`;
+      }
+      if (transactionId) {
+        return `Queue: ${transactionId}`;
+      }
+      if (tradeId) {
+        return `TID: ${tradeId}`;
+      }
+      if (orderId) {
+        return `OID: ${orderId}`;
+      }
+
+      return '';
+    },
+    [],
+  );
+
+  const applyBuyOrderProgressEvent = useCallback(
+    (event: Extract<BuyOrderProgressApiEvent, { type: 'progress' }>) => {
+      const stepKey = typeof event.step === 'string' ? event.step.trim() : '';
+      const incomingTitle = typeof event.title === 'string' ? event.title.trim() : '';
+      const incomingDescription =
+        typeof event.description === 'string' ? event.description.trim() : '';
+      const occurredAt =
+        typeof event.occurredAt === 'string' && event.occurredAt
+          ? event.occurredAt
+          : new Date().toISOString();
+      const status =
+        event.status === 'completed' || event.status === 'error' || event.status === 'processing'
+          ? event.status
+          : 'processing';
+      const nextState: BuyOrderProgressStepState =
+        status === 'completed' ? 'completed' : status === 'error' ? 'error' : 'active';
+      const detail = resolveBuyOrderProgressDetail(event);
+
+      setBuyOrderProgressSteps((prev) => {
+        const stepIndex = prev.findIndex((item) => item.key === stepKey);
+        const withSettledActive = prev.map((item, index) => {
+          if (
+            item.state === 'active'
+            && status !== 'error'
+            && (stepIndex < 0 || index !== stepIndex)
+          ) {
+            return {
+              ...item,
+              state: 'completed' as BuyOrderProgressStepState,
+              updatedAt: item.updatedAt || occurredAt,
+            };
+          }
+          return item;
+        });
+
+        if (!stepKey) {
+          return withSettledActive;
+        }
+
+        if (stepIndex >= 0) {
+          return withSettledActive.map((item, index) => {
+            if (index !== stepIndex) {
+              return item;
+            }
+            return {
+              ...item,
+              title: incomingTitle || item.title,
+              description: incomingDescription || item.description,
+              state: nextState,
+              updatedAt: occurredAt,
+              detail: detail || item.detail,
+            };
+          });
+        }
+
+        return [
+          ...withSettledActive,
+          {
+            key: stepKey,
+            title: incomingTitle || stepKey,
+            description: incomingDescription || '',
+            state: nextState,
+            updatedAt: occurredAt,
+            ...(detail ? { detail } : {}),
+          },
+        ];
+      });
+
+      const stepTitle = incomingTitle || stepKey || '주문 처리';
+
+      if (status === 'error') {
+        setBuyOrderProgressPhase('error');
+        setBuyOrderProgressSummary(`${stepTitle} 단계에서 오류가 발생했습니다.`);
+        return;
+      }
+
+      if (stepKey === 'ORDER_READY' && status === 'completed') {
+        setBuyOrderProgressPhase('completed');
+        setBuyOrderProgressSummary('주문이 입금요청 상태로 준비되었습니다.');
+        return;
+      }
+
+      setBuyOrderProgressPhase('processing');
+      setBuyOrderProgressSummary(
+        status === 'completed'
+          ? `${stepTitle} 단계를 완료했습니다.`
+          : `${stepTitle} 단계를 처리중입니다.`,
+      );
+    },
+    [resolveBuyOrderProgressDetail],
+  );
+
+  const markBuyOrderProgressAsError = useCallback((message: string) => {
+    const occurredAt = new Date().toISOString();
+    setBuyOrderProgressPhase('error');
+    setBuyOrderProgressSummary(message);
+    setBuyOrderProgressSteps((prev) => {
+      const activeIndex = prev.findIndex((item) => item.state === 'active');
+      if (activeIndex < 0) {
+        return prev;
+      }
+      return prev.map((item, index) => {
+        if (index !== activeIndex) {
+          return item;
+        }
+        return {
+          ...item,
+          state: 'error' as BuyOrderProgressStepState,
+          updatedAt: occurredAt,
+          detail: message,
+        };
+      });
+    });
+  }, []);
 
   const getBuyOrderRequestInfo = (index: number, sellerWalletAddress: string) => {
     const targetSeller = sellersBalance.find(
@@ -6328,9 +6671,9 @@ const fetchBuyOrders = async () => {
 
     const derivedUsdt =
       usdtInput > 0
-        ? Math.floor(usdtInput * 1000) / 1000
+        ? roundDownBuyUsdt(usdtInput)
         : rate > 0 && krwInput > 0
-          ? Math.floor((krwInput / rate) * 1000) / 1000
+          ? roundDownBuyUsdt(krwInput / rate)
           : 0;
     const derivedKrw =
       krwInput > 0
@@ -6379,6 +6722,7 @@ const fetchBuyOrders = async () => {
       krwAmount: requestInfo.derivedKrw,
       rate: requestInfo.rate,
     });
+    resetBuyOrderProgressFlow();
     setIsBuyOrderConfirmModalOpen(true);
   };
 
@@ -6392,6 +6736,7 @@ const fetchBuyOrders = async () => {
     setIsBuyOrderConfirmModalOpen(false);
     setBuyOrderConfirmDraft(null);
     setBuyOrderConfirmError(null);
+    resetBuyOrderProgressFlow();
   };
 
   const buyOrderPrivateSale = async (
@@ -6400,6 +6745,7 @@ const fetchBuyOrders = async () => {
   ): Promise<boolean> => {
     const failBuyOrder = (message: string) => {
       setBuyOrderConfirmError(message);
+      markBuyOrderProgressAsError(message);
       toast.error(message);
       return false;
     };
@@ -6438,6 +6784,32 @@ const fetchBuyOrders = async () => {
     });
 
     try {
+      setBuyOrderProgressSteps(createInitialBuyOrderProgressSteps());
+      setBuyOrderProgressPhase('processing');
+      setBuyOrderProgressSummary('요청 검증 단계를 처리중입니다.');
+
+      type BuyOrderApiResponsePayload = {
+        result?: boolean;
+        created?: boolean;
+        reason?: string;
+        order?: Record<string, unknown>;
+        message?: string;
+        detail?: string;
+        error?: string;
+      };
+
+      const resolveApiErrorMessage = (payload?: {
+        message?: string;
+        detail?: string;
+        reason?: string;
+        error?: string;
+      }) =>
+        payload?.message
+        || payload?.detail
+        || payload?.reason
+        || payload?.error
+        || '구매 주문 생성에 실패했습니다.';
+
       const response = await fetch('/api/order/buyOrderPrivateSale', {
         method: 'POST',
         headers: {
@@ -6448,18 +6820,83 @@ const fetchBuyOrders = async () => {
           sellerWalletAddress: sellerWalletAddress,
           usdtAmount: derivedUsdt,
           krwAmount: derivedKrw,
+          liveProgress: true,
         }),
       });
 
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data?.result) {
-        throw new Error(
-          data?.message
-          || data?.detail
-          || data?.reason
-          || data?.error
-          || '구매 주문 생성에 실패했습니다.',
-        );
+      let data: BuyOrderApiResponsePayload | null = null;
+      const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+
+      if (contentType.includes('application/x-ndjson')) {
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('실시간 주문 진행 상태를 읽을 수 없습니다.');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let streamResult: BuyOrderApiResponsePayload | null = null;
+        let streamErrorMessage = '';
+
+        const handleStreamLine = (line: string) => {
+          const trimmed = line.trim();
+          if (!trimmed) {
+            return;
+          }
+          try {
+            const parsed = JSON.parse(trimmed) as BuyOrderProgressApiEvent;
+            if (parsed.type === 'progress') {
+              applyBuyOrderProgressEvent(parsed);
+              return;
+            }
+            if (parsed.type === 'result') {
+              if (parsed.payload && typeof parsed.payload === 'object') {
+                streamResult = parsed.payload as BuyOrderApiResponsePayload;
+              }
+              return;
+            }
+            if (parsed.type === 'error') {
+              streamErrorMessage = resolveApiErrorMessage(parsed.payload);
+            }
+          } catch (parseError) {
+            console.warn('buyOrderPrivateSale progress line parse failed', parseError);
+          }
+        };
+
+        while (true) {
+          const { done, value } = await reader.read();
+          buffer += decoder.decode(value || new Uint8Array(0), { stream: !done });
+
+          let newlineIndex = buffer.indexOf('\n');
+          while (newlineIndex >= 0) {
+            const line = buffer.slice(0, newlineIndex);
+            buffer = buffer.slice(newlineIndex + 1);
+            handleStreamLine(line);
+            newlineIndex = buffer.indexOf('\n');
+          }
+
+          if (done) {
+            break;
+          }
+        }
+
+        if (buffer.trim()) {
+          handleStreamLine(buffer);
+        }
+
+        if (streamErrorMessage) {
+          throw new Error(streamErrorMessage);
+        }
+        const finalizedStreamResult = streamResult as BuyOrderApiResponsePayload | null;
+        if (!response.ok || !finalizedStreamResult || finalizedStreamResult.result !== true) {
+          throw new Error('구매 주문 생성에 실패했습니다.');
+        }
+        data = finalizedStreamResult;
+      } else {
+        data = (await response.json().catch(() => ({}))) as BuyOrderApiResponsePayload;
+        if (!response.ok || !data?.result) {
+          throw new Error(resolveApiErrorMessage(data));
+        }
       }
 
       const apiOrder = data?.order && typeof data.order === 'object' ? data.order : null;
@@ -6492,6 +6929,8 @@ const fetchBuyOrders = async () => {
       const isNewOrderCreated = data?.created !== false;
       if (isNewOrderCreated) {
         setBuyOrderConfirmError(null);
+        setBuyOrderProgressPhase('completed');
+        setBuyOrderProgressSummary('주문이 생성되어 입금요청 상태로 전환되었습니다.');
         toast.success('구매 주문이 생성되었습니다.');
 
         setBuyAmountInputs((prev) => {
@@ -6521,6 +6960,8 @@ const fetchBuyOrders = async () => {
         });
       } else {
         setBuyOrderConfirmError('이미 거래중인 주문이 있어 새 주문을 생성하지 않았습니다.');
+        setBuyOrderProgressPhase('completed');
+        setBuyOrderProgressSummary('이미 진행중인 주문을 확인해 기존 주문을 사용했습니다.');
         toast('이미 거래중인 주문이 있어 새 주문을 생성하지 않았습니다.');
       }
 
@@ -6582,7 +7023,65 @@ const fetchBuyOrders = async () => {
       && buyOrderingPrivateSaleArray[buyOrderConfirmDraft.index],
     );
 
+  const isBuyOrderConfirmActionCompleted = buyOrderProgressPhase === 'completed';
+  const isBuyOrderConfirmActionDisabled =
+    isBuyOrderConfirmProcessing
+    || (
+      !buyOrderConfirmDraft
+      && !isBuyOrderConfirmActionCompleted
+    );
+  const buyOrderConfirmActionLabel = (() => {
+    if (isBuyOrderConfirmProcessing) {
+      return '주문 생성 중...';
+    }
+    if (isBuyOrderConfirmActionCompleted) {
+      return '확인';
+    }
+    if (buyOrderProgressPhase === 'error') {
+      return '다시 시도';
+    }
+    return '주문 생성하기';
+  })();
+
+  const buyOrderProgressPhaseMeta = useMemo(() => {
+    if (buyOrderProgressPhase === 'processing') {
+      return {
+        container: 'border-cyan-200 bg-cyan-50/70',
+        badge: 'border-cyan-300 bg-cyan-100 text-cyan-700',
+        summary: 'text-cyan-800',
+        label: '처리중',
+      };
+    }
+    if (buyOrderProgressPhase === 'completed') {
+      return {
+        container: 'border-emerald-200 bg-emerald-50/70',
+        badge: 'border-emerald-300 bg-emerald-100 text-emerald-700',
+        summary: 'text-emerald-800',
+        label: '완료',
+      };
+    }
+    if (buyOrderProgressPhase === 'error') {
+      return {
+        container: 'border-rose-200 bg-rose-50/80',
+        badge: 'border-rose-300 bg-rose-100 text-rose-700',
+        summary: 'text-rose-800',
+        label: '실패',
+      };
+    }
+    return {
+      container: 'border-slate-200 bg-slate-50/60',
+      badge: 'border-slate-300 bg-slate-100 text-slate-600',
+      summary: 'text-slate-700',
+      label: '대기',
+    };
+  }, [buyOrderProgressPhase]);
+
   const confirmBuyOrderFromModal = async () => {
+    if (buyOrderProgressPhase === 'completed') {
+      closeBuyOrderConfirmModal();
+      return;
+    }
+
     if (!buyOrderConfirmDraft) {
       return;
     }
@@ -6590,11 +7089,7 @@ const fetchBuyOrders = async () => {
     setBuyOrderConfirmError(null);
     const targetIndex = buyOrderConfirmDraft.index;
     const targetSellerWalletAddress = buyOrderConfirmDraft.sellerWalletAddress;
-    const isSuccess = await buyOrderPrivateSale(targetIndex, targetSellerWalletAddress);
-    if (isSuccess) {
-      setIsBuyOrderConfirmModalOpen(false);
-      setBuyOrderConfirmDraft(null);
-    }
+    await buyOrderPrivateSale(targetIndex, targetSellerWalletAddress);
   };
 
 
@@ -9593,7 +10088,7 @@ const fetchBuyOrders = async () => {
                                           const rate = seller.seller?.usdtToKrwRate || 0;
                                           const isOverKrwLimit = numericValue > MAX_KRW_AMOUNT;
                                           let krwValue = Math.min(numericValue, MAX_KRW_AMOUNT);
-                                          let usdtValue = rate > 0 ? Math.floor((krwValue / rate) * 1000) / 1000 : 0;
+                                          let usdtValue = rate > 0 ? roundDownBuyUsdt(krwValue / rate) : 0;
                                           const isOverUsdtLimit = usdtValue > MAX_BUY_AMOUNT;
                                           if (isOverUsdtLimit) {
                                             usdtValue = MAX_BUY_AMOUNT;
@@ -9604,7 +10099,7 @@ const fetchBuyOrders = async () => {
                                               ? Math.max(0, currentUsdtBalanceArray[index])
                                               : null;
                                           if (escrowUsdtLimit !== null && usdtValue > escrowUsdtLimit) {
-                                            usdtValue = Math.floor(escrowUsdtLimit * 1000) / 1000;
+                                            usdtValue = roundDownBuyUsdt(escrowUsdtLimit);
                                             krwValue = rate > 0 ? Math.floor(usdtValue * rate) : krwValue;
                                           }
 
@@ -9659,7 +10154,7 @@ const fetchBuyOrders = async () => {
                                       <input
                                         type="text"
                                         inputMode="decimal"
-                                        pattern="^\\d*(\\.\\d{0,3})?$"
+                                        pattern="^\\d*(\\.\\d{0,6})?$"
                                         placeholder="구매할 USDT 수량"
                                         onChange={(e) => {
                                           const normalizedValue = normalizeUsdtInput(e.target.value);
@@ -9667,11 +10162,11 @@ const fetchBuyOrders = async () => {
                                           const rate = seller.seller?.usdtToKrwRate || 0;
                                           const isOverUsdtLimit = numericValue > MAX_BUY_AMOUNT;
                                           let usdtValue = Math.min(numericValue, MAX_BUY_AMOUNT);
-                                          usdtValue = Math.floor(usdtValue * 1000) / 1000;
+                                          usdtValue = roundDownBuyUsdt(usdtValue);
                                           const rawKrwValue = rate > 0 ? Math.floor(usdtValue * rate) : 0;
                                           const isOverKrwLimit = rawKrwValue > MAX_KRW_AMOUNT;
                                           if (isOverKrwLimit && rate > 0) {
-                                            usdtValue = Math.floor((MAX_KRW_AMOUNT / rate) * 1000) / 1000;
+                                            usdtValue = roundDownBuyUsdt(MAX_KRW_AMOUNT / rate);
                                           }
                                           const escrowUsdtLimit =
                                             Number.isFinite(currentUsdtBalanceArray[index])
@@ -9680,7 +10175,7 @@ const fetchBuyOrders = async () => {
                                           const isOverEscrowLimit =
                                             escrowUsdtLimit !== null && usdtValue > escrowUsdtLimit;
                                           if (isOverEscrowLimit) {
-                                            usdtValue = Math.floor(escrowUsdtLimit * 1000) / 1000;
+                                            usdtValue = roundDownBuyUsdt(escrowUsdtLimit);
                                           }
                                           const krwValue = rate > 0 ? Math.floor(usdtValue * rate) : 0;
                                           const newBuyAmountInputs = [...buyAmountInputs];
@@ -12003,7 +12498,7 @@ const fetchBuyOrders = async () => {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-slate-500">주문 수량</span>
                   <span className="font-semibold text-slate-900">
-                    {Number(buyOrderConfirmDraft.usdtAmount || 0).toFixed(3)} USDT
+                    {Number(buyOrderConfirmDraft.usdtAmount || 0).toFixed(6)} USDT
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
@@ -12021,33 +12516,86 @@ const fetchBuyOrders = async () => {
               주문 생성 후 입금요청 상태로 전환됩니다.
             </div>
 
+            <div className={`mt-3 rounded-xl border px-3 py-3 ${buyOrderProgressPhaseMeta.container}`}>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                  주문 진행 상태
+                </p>
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${buyOrderProgressPhaseMeta.badge}`}>
+                  {buyOrderProgressPhaseMeta.label}
+                </span>
+              </div>
+              <p className={`mt-1 text-[11px] font-semibold ${buyOrderProgressPhaseMeta.summary}`}>
+                {buyOrderProgressSummary}
+              </p>
+
+              <div className="mt-3 max-h-56 space-y-1.5 overflow-y-auto pr-1">
+                {buyOrderProgressSteps.map((step, index) => {
+                  const style = getBuyOrderProgressStepStyle(step.state);
+                  return (
+                    <div
+                      key={step.key}
+                      className={`rounded-lg border px-2.5 py-2 ${style.container}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span
+                          className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${style.badge}`}
+                        >
+                          {step.state === 'completed' ? '✓' : index + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className={`text-xs font-semibold ${style.title}`}>{step.title}</p>
+                            <span className={`text-[10px] font-semibold ${style.status}`}>
+                              {getBuyOrderProgressStepStatusLabel(step.state)}
+                            </span>
+                          </div>
+                          <p className={`mt-0.5 text-[11px] ${style.description}`}>
+                            {step.description}
+                          </p>
+                          {(step.updatedAt || step.detail) && (
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                              {step.updatedAt && (
+                                <span className="font-semibold tabular-nums">
+                                  {formatTradeHistoryTime(step.updatedAt)}
+                                </span>
+                              )}
+                              {step.detail && (
+                                <span className="truncate font-semibold">{step.detail}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {buyOrderConfirmError && (
               <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
                 {buyOrderConfirmError}
               </div>
             )}
 
-            <div className="mt-4 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeBuyOrderConfirmModal}
-                disabled={isBuyOrderConfirmProcessing}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
-              >
-                취소
-              </button>
+            <div className="mt-4">
               <button
                 type="button"
                 onClick={confirmBuyOrderFromModal}
-                disabled={!buyOrderConfirmDraft || isBuyOrderConfirmProcessing}
+                disabled={isBuyOrderConfirmActionDisabled}
                 className={`
-                  rounded-lg px-3 py-1.5 text-sm font-semibold text-white
-                  ${!buyOrderConfirmDraft || isBuyOrderConfirmProcessing
+                  inline-flex w-full items-center justify-center rounded-xl px-3 py-2.5 text-sm font-bold text-white transition
+                  ${isBuyOrderConfirmActionDisabled
                     ? 'cursor-not-allowed bg-slate-300'
-                    : 'bg-blue-600 hover:bg-blue-500'}
+                    : isBuyOrderConfirmActionCompleted
+                      ? 'bg-emerald-600 hover:bg-emerald-500'
+                      : buyOrderProgressPhase === 'error'
+                        ? 'bg-rose-600 hover:bg-rose-500'
+                        : 'bg-gradient-to-r from-blue-600 to-blue-500 shadow-[0_14px_35px_-18px_rgba(37,99,235,0.75)] hover:from-blue-500 hover:to-blue-400'}
                 `}
               >
-                {isBuyOrderConfirmProcessing ? '처리중...' : '완료 처리'}
+                {buyOrderConfirmActionLabel}
               </button>
             </div>
           </div>

@@ -274,6 +274,9 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
           const isActive = isActiveRoute(pathname, item.href);
           const isBuyOrderManagementItem = item.href === buyOrderManagementHref;
           const showBuyOrderAlert = isBuyOrderManagementItem && activeBuyOrderCount > 0;
+          const activeChildHref = item.children
+            ?.filter((child) => isActiveRoute(pathname, child.href))
+            .sort((a, b) => b.href.length - a.href.length)?.[0]?.href;
           return (
             <div key={item.href}>
               <Link
@@ -309,7 +312,9 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
               {item.children && item.children.length > 0 && (
                 <div className="ml-7 mt-1.5 space-y-1">
                   {item.children.map((child) => {
-                    const isChildActive = isActiveRoute(pathname, child.href);
+                    const isChildActive = activeChildHref
+                      ? activeChildHref === child.href
+                      : isActiveRoute(pathname, child.href);
                     return (
                       <Link
                         key={child.href}

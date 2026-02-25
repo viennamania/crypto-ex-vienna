@@ -4,122 +4,338 @@ import { pickFirstPublicIpAddress, normalizeIpAddress } from '@/lib/ip-address';
 import {
   acceptBuyOrderPrivateSale,
   getPrivateTradeStatusByBuyerAndSeller,
+  type AcceptBuyOrderPrivateSaleProgressEvent,
 } from '@lib/api/order';
 
 const normalizeUsdtAmount = (value: number) =>
   Math.floor(Number(value || 0) * 1_000_000) / 1_000_000;
 
+const FAILURE_MESSAGE_BY_REASON: Record<string, string> = {
+  SELLER_NOT_FOUND: '판매자 정보를 찾을 수 없습니다.',
+  SELLER_ESCROW_WALLET_MISSING: '판매자 에스크로 지갑이 설정되지 않았습니다.',
+  BUYER_NOT_FOUND: '구매자 정보를 찾을 수 없습니다.',
+  BUYER_ACCOUNT_HOLDER_MISSING: '구매자 입금자명 정보가 없습니다.',
+  INVALID_USDT_AMOUNT: '유효하지 않은 USDT 수량입니다.',
+  THIRDWEB_SECRET_KEY_MISSING: '서버 지갑 설정이 누락되었습니다.',
+  BUYER_ESCROW_WALLET_CREATE_FAILED: '구매자 에스크로 지갑 생성에 실패했습니다.',
+  BUYER_ESCROW_WALLET_EMPTY: '구매자 에스크로 지갑 주소가 비어 있습니다.',
+  PLATFORM_FEE_WALLET_NOT_CONFIGURED: '플랫폼 수수료 지갑이 설정되지 않았습니다.',
+  ESCROW_TRANSFER_FAILED: '에스크로 전송에 실패했습니다.',
+  BUYORDER_INSERT_FAILED: '구매 주문 저장에 실패했습니다.',
+};
+
+type RequestPayload = {
+  buyerWalletAddress: string;
+  sellerWalletAddress: string;
+  usdtAmount: number;
+  krwAmount?: number;
+  requesterIpAddress: string;
+  liveProgress: boolean;
+};
+
+type BuyOrderPrivateSaleSuccessResponse = {
+  result: true;
+  created: boolean;
+  reason: 'CREATED_NEW_ORDER' | 'ACTIVE_ORDER_EXISTS';
+  order: Record<string, unknown>;
+};
+
+type BuyOrderPrivateSaleProgressResponse = {
+  type: 'progress';
+} & AcceptBuyOrderPrivateSaleProgressEvent;
+
+type BuyOrderPrivateSaleResultResponse = {
+  type: 'result';
+  payload: BuyOrderPrivateSaleSuccessResponse;
+};
+
+type BuyOrderPrivateSaleErrorResponse = {
+  type: 'error';
+  status: number;
+  payload: Record<string, unknown>;
+};
+
+type BuyOrderPrivateSaleStreamEvent =
+  | BuyOrderPrivateSaleProgressResponse
+  | BuyOrderPrivateSaleResultResponse
+  | BuyOrderPrivateSaleErrorResponse;
+
+class RouteError extends Error {
+  status: number;
+  payload: Record<string, unknown>;
+
+  constructor(status: number, payload: Record<string, unknown>) {
+    super(String(payload?.error || payload?.message || 'ROUTE_ERROR'));
+    this.name = 'RouteError';
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
+const toErrorDetailMessage = (error: unknown) =>
+  error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : '';
+
+const toCreationFailurePayload = (
+  created: { success: false; error: string; detail?: string },
+) => ({
+  error: 'BUY_ORDER_CREATION_FAILED',
+  reason: created.error,
+  detail: created.detail || '',
+  message: created.detail
+    ? `${FAILURE_MESSAGE_BY_REASON[created.error] || `구매 주문 생성 실패 (${created.error})`}: ${created.detail}`
+    : (FAILURE_MESSAGE_BY_REASON[created.error] || `구매 주문 생성 실패 (${created.error})`),
+});
+
+const parseRequestPayload = (body: any, request: NextRequest): RequestPayload => {
+  const buyerWalletAddress =
+    typeof body?.buyerWalletAddress === 'string' ? body.buyerWalletAddress.trim() : '';
+  const sellerWalletAddress =
+    typeof body?.sellerWalletAddress === 'string' ? body.sellerWalletAddress.trim() : '';
+  const usdtAmount = normalizeUsdtAmount(Number(body?.usdtAmount || 0));
+  const krwAmountRaw = Number(body?.krwAmount || 0);
+  const krwAmount =
+    Number.isFinite(krwAmountRaw) && krwAmountRaw > 0 ? Math.floor(krwAmountRaw) : undefined;
+  const bodyPublicIpAddress =
+    typeof body?.publicIpAddress === 'string' ? body.publicIpAddress.trim() : '';
+  const bodyBuyerIpAddress =
+    typeof body?.buyerIpAddress === 'string' ? body.buyerIpAddress.trim() : '';
+  const requesterIpAddress = pickFirstPublicIpAddress([
+    bodyPublicIpAddress,
+    bodyBuyerIpAddress,
+    request.headers.get('x-forwarded-for'),
+    request.headers.get('x-vercel-forwarded-for'),
+    request.headers.get('x-real-ip'),
+    request.headers.get('cf-connecting-ip'),
+    request.headers.get('true-client-ip'),
+    request.headers.get('x-client-ip'),
+    request.headers.get('x-original-forwarded-for'),
+  ]) || normalizeIpAddress(bodyPublicIpAddress || bodyBuyerIpAddress);
+  const liveProgress = body?.liveProgress === true;
+
+  return {
+    buyerWalletAddress,
+    sellerWalletAddress,
+    usdtAmount,
+    krwAmount,
+    requesterIpAddress,
+    liveProgress,
+  };
+};
+
+const executeBuyOrderPrivateSale = async (
+  payload: RequestPayload,
+  onProgress?: (
+    event: AcceptBuyOrderPrivateSaleProgressEvent,
+  ) => void | Promise<void>,
+): Promise<BuyOrderPrivateSaleSuccessResponse> => {
+  const {
+    buyerWalletAddress,
+    sellerWalletAddress,
+    usdtAmount,
+    krwAmount,
+    requesterIpAddress,
+  } = payload;
+
+  if (!buyerWalletAddress || !sellerWalletAddress || !Number.isFinite(usdtAmount) || usdtAmount <= 0) {
+    throw new RouteError(400, {
+      error: 'buyerWalletAddress, sellerWalletAddress and valid usdtAmount are required.',
+    });
+  }
+
+  const emitProgress = async (
+    event: Omit<AcceptBuyOrderPrivateSaleProgressEvent, 'occurredAt'>,
+  ) => {
+    if (!onProgress) {
+      return;
+    }
+    await onProgress({
+      ...event,
+      occurredAt: new Date().toISOString(),
+    });
+  };
+
+  const tradableStatuses = new Set(['ordered', 'accepted', 'paymentRequested']);
+
+  await emitProgress({
+    step: 'REQUEST_VALIDATED',
+    title: '요청 검증',
+    description: '구매 주문 요청값을 확인했습니다.',
+    status: 'completed',
+  });
+
+  await emitProgress({
+    step: 'ACTIVE_ORDER_CHECKING',
+    title: '기존 거래 확인',
+    description: '구매자와 판매자 사이 진행중 주문을 확인 중입니다.',
+    status: 'processing',
+  });
+
+  const beforeTradeStatus = await getPrivateTradeStatusByBuyerAndSeller({
+    buyerWalletAddress,
+    sellerWalletAddress,
+  });
+  const hasActiveTradeBefore =
+    Boolean(beforeTradeStatus?.order?.status)
+    && tradableStatuses.has(String(beforeTradeStatus.order?.status));
+  let createdNewOrder = false;
+
+  if (hasActiveTradeBefore) {
+    await emitProgress({
+      step: 'ACTIVE_ORDER_FOUND',
+      title: '기존 거래 재사용',
+      description: '이미 진행중인 주문이 있어 기존 주문 상태를 사용합니다.',
+      status: 'completed',
+      data: {
+        status: String(beforeTradeStatus?.order?.status || ''),
+        tradeId: String(beforeTradeStatus?.order?.tradeId || ''),
+      },
+    });
+  } else {
+    await emitProgress({
+      step: 'ORDER_CREATE_STARTED',
+      title: '주문 생성 시작',
+      description: '새 구매 주문 생성을 시작합니다.',
+      status: 'processing',
+    });
+
+    const created = await acceptBuyOrderPrivateSale({
+      buyerWalletAddress,
+      sellerWalletAddress,
+      usdtAmount,
+      krwAmount,
+      requesterIpAddress,
+      onProgress,
+    });
+
+    if (!created.success) {
+      throw new RouteError(
+        400,
+        toCreationFailurePayload(created as { success: false; error: string; detail?: string }),
+      );
+    }
+    createdNewOrder = true;
+  }
+
+  await emitProgress({
+    step: 'ORDER_STATUS_CHECKING',
+    title: '주문 상태 조회',
+    description: '최종 주문 상태를 조회하고 있습니다.',
+    status: 'processing',
+  });
+
+  const tradeStatus = await getPrivateTradeStatusByBuyerAndSeller({
+    buyerWalletAddress,
+    sellerWalletAddress,
+  });
+
+  if (!tradeStatus?.order?.status || !tradableStatuses.has(String(tradeStatus.order.status))) {
+    throw new RouteError(409, {
+      error: 'Buy order was not created with a tradable status.',
+    });
+  }
+
+  await emitProgress({
+    step: 'ORDER_READY',
+    title: '주문 준비 완료',
+    description: '주문이 입금요청 상태로 준비되었습니다.',
+    status: 'completed',
+    data: {
+      status: String(tradeStatus.order.status || ''),
+      tradeId: String(tradeStatus.order.tradeId || ''),
+      orderId: String(tradeStatus.order.orderId || ''),
+    },
+  });
+
+  return {
+    result: true,
+    created: createdNewOrder,
+    reason: createdNewOrder ? 'CREATED_NEW_ORDER' : 'ACTIVE_ORDER_EXISTS',
+    order: tradeStatus.order as unknown as Record<string, unknown>,
+  };
+};
+
+const handleLiveProgressResponse = (
+  payload: RequestPayload,
+): Response => {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      const write = (event: BuyOrderPrivateSaleStreamEvent) => {
+        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+      };
+
+      void (async () => {
+        try {
+          const result = await executeBuyOrderPrivateSale(payload, async (event) => {
+            write({
+              type: 'progress',
+              ...event,
+            });
+          });
+
+          write({
+            type: 'result',
+            payload: result,
+          });
+        } catch (error) {
+          if (error instanceof RouteError) {
+            write({
+              type: 'error',
+              status: error.status,
+              payload: error.payload,
+            });
+          } else {
+            write({
+              type: 'error',
+              status: 500,
+              payload: {
+                error: 'INTERNAL_SERVER_ERROR',
+                message: '구매 주문 생성 중 서버 오류가 발생했습니다.',
+                detail: toErrorDetailMessage(error),
+              },
+            });
+          }
+        } finally {
+          controller.close();
+        }
+      })();
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/x-ndjson; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    },
+  });
+};
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const buyerWalletAddress =
-      typeof body?.buyerWalletAddress === 'string' ? body.buyerWalletAddress.trim() : '';
-    const sellerWalletAddress =
-      typeof body?.sellerWalletAddress === 'string' ? body.sellerWalletAddress.trim() : '';
-    const usdtAmount = normalizeUsdtAmount(Number(body?.usdtAmount || 0));
-    const krwAmountRaw = Number(body?.krwAmount || 0);
-    const krwAmount =
-      Number.isFinite(krwAmountRaw) && krwAmountRaw > 0 ? Math.floor(krwAmountRaw) : undefined;
-    const bodyPublicIpAddress =
-      typeof body?.publicIpAddress === 'string' ? body.publicIpAddress.trim() : '';
-    const bodyBuyerIpAddress =
-      typeof body?.buyerIpAddress === 'string' ? body.buyerIpAddress.trim() : '';
-    const requesterIpAddress = pickFirstPublicIpAddress([
-      bodyPublicIpAddress,
-      bodyBuyerIpAddress,
-      request.headers.get('x-forwarded-for'),
-      request.headers.get('x-vercel-forwarded-for'),
-      request.headers.get('x-real-ip'),
-      request.headers.get('cf-connecting-ip'),
-      request.headers.get('true-client-ip'),
-      request.headers.get('x-client-ip'),
-      request.headers.get('x-original-forwarded-for'),
-    ]) || normalizeIpAddress(bodyPublicIpAddress || bodyBuyerIpAddress);
+    const payload = parseRequestPayload(body, request);
 
-    if (!buyerWalletAddress || !sellerWalletAddress || !Number.isFinite(usdtAmount) || usdtAmount <= 0) {
-      return NextResponse.json(
-        { error: 'buyerWalletAddress, sellerWalletAddress and valid usdtAmount are required.' },
-        { status: 400 },
-      );
+    if (payload.liveProgress) {
+      return handleLiveProgressResponse(payload);
     }
 
-    const tradableStatuses = new Set(['ordered', 'accepted', 'paymentRequested']);
-    const beforeTradeStatus = await getPrivateTradeStatusByBuyerAndSeller({
-      buyerWalletAddress,
-      sellerWalletAddress,
-    });
-    const hasActiveTradeBefore =
-      Boolean(beforeTradeStatus?.order?.status)
-      && tradableStatuses.has(String(beforeTradeStatus.order?.status));
-    let createdNewOrder = false;
-
-    if (!hasActiveTradeBefore) {
-      const created = await acceptBuyOrderPrivateSale({
-        buyerWalletAddress,
-        sellerWalletAddress,
-        usdtAmount,
-        krwAmount,
-        requesterIpAddress,
-      });
-      if (!created.success) {
-        const failureMessageByReason: Record<string, string> = {
-          SELLER_NOT_FOUND: '판매자 정보를 찾을 수 없습니다.',
-          SELLER_ESCROW_WALLET_MISSING: '판매자 에스크로 지갑이 설정되지 않았습니다.',
-          BUYER_NOT_FOUND: '구매자 정보를 찾을 수 없습니다.',
-          BUYER_ACCOUNT_HOLDER_MISSING: '구매자 입금자명 정보가 없습니다.',
-          INVALID_USDT_AMOUNT: '유효하지 않은 USDT 수량입니다.',
-          THIRDWEB_SECRET_KEY_MISSING: '서버 지갑 설정이 누락되었습니다.',
-          BUYER_ESCROW_WALLET_CREATE_FAILED: '구매자 에스크로 지갑 생성에 실패했습니다.',
-          BUYER_ESCROW_WALLET_EMPTY: '구매자 에스크로 지갑 주소가 비어 있습니다.',
-          PLATFORM_FEE_WALLET_NOT_CONFIGURED: '플랫폼 수수료 지갑이 설정되지 않았습니다.',
-          ESCROW_TRANSFER_FAILED: '에스크로 전송에 실패했습니다.',
-          BUYORDER_INSERT_FAILED: '구매 주문 저장에 실패했습니다.',
-        };
-        return NextResponse.json(
-          {
-            error: 'BUY_ORDER_CREATION_FAILED',
-            reason: created.error,
-            detail: created.detail || '',
-            message: created.detail
-              ? `${failureMessageByReason[created.error] || `구매 주문 생성 실패 (${created.error})`}: ${created.detail}`
-              : (failureMessageByReason[created.error] || `구매 주문 생성 실패 (${created.error})`),
-          },
-          { status: 400 },
-        );
-      }
-      createdNewOrder = true;
-    }
-
-    const tradeStatus = await getPrivateTradeStatusByBuyerAndSeller({
-      buyerWalletAddress,
-      sellerWalletAddress,
-    });
-
-    if (!tradeStatus?.order?.status || !tradableStatuses.has(String(tradeStatus.order.status))) {
-      return NextResponse.json(
-        { error: 'Buy order was not created with a tradable status.' },
-        { status: 409 },
-      );
-    }
-
-    return NextResponse.json({
-      result: true,
-      created: createdNewOrder,
-      reason: createdNewOrder ? 'CREATED_NEW_ORDER' : 'ACTIVE_ORDER_EXISTS',
-      order: tradeStatus.order,
-    });
+    const result = await executeBuyOrderPrivateSale(payload);
+    return NextResponse.json(result);
   } catch (error) {
-    const detail =
-      error instanceof Error
-        ? error.message
-        : typeof error === 'string'
-          ? error
-          : '';
+    if (error instanceof RouteError) {
+      return NextResponse.json(error.payload, { status: error.status });
+    }
     return NextResponse.json(
       {
         error: 'INTERNAL_SERVER_ERROR',
         message: '구매 주문 생성 중 서버 오류가 발생했습니다.',
-        detail,
+        detail: toErrorDetailMessage(error),
       },
       { status: 500 },
     );

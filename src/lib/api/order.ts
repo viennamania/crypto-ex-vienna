@@ -428,8 +428,6 @@ const calculateKrwAmountFromUsdtAndRate = ({
   return Math.round(calculated);
 };
 
-const PRIVATE_ORDER_KRW_INPUT_TOLERANCE_WON = 1;
-
 const calculateUsdtAmountFromKrwAndRate = ({
   krwAmount,
   rate,
@@ -11779,6 +11777,21 @@ export async function buyOrderConfirmPaymentReverted(data: any) {
 
 // acceptBuyOrderPrivateSale
 // insertBuyOrder function 을 참조
+export type AcceptBuyOrderPrivateSaleProgressStatus =
+  | 'processing'
+  | 'completed'
+  | 'error';
+
+export type AcceptBuyOrderPrivateSaleProgressEvent = {
+  step: string;
+  title: string;
+  description: string;
+  status: AcceptBuyOrderPrivateSaleProgressStatus;
+  occurredAt: string;
+  detail?: string;
+  data?: Record<string, unknown>;
+};
+
 export type AcceptBuyOrderPrivateSaleResult =
   | { success: true }
   | {
@@ -11805,12 +11818,16 @@ export async function acceptBuyOrderPrivateSale(
     usdtAmount,
     krwAmount,
     requesterIpAddress = '',
+    onProgress,
   }: {
     buyerWalletAddress: string;
     sellerWalletAddress: string;
     usdtAmount: number;
     krwAmount?: number;
     requesterIpAddress?: string;
+    onProgress?: (
+      event: AcceptBuyOrderPrivateSaleProgressEvent,
+    ) => void | Promise<void>;
   }): Promise<AcceptBuyOrderPrivateSaleResult> {
 
     const toErrorMessage = (error: unknown) => {
@@ -11824,6 +11841,39 @@ export async function acceptBuyOrderPrivateSale(
         return JSON.stringify(error);
       } catch {
         return String(error);
+      }
+    };
+
+    const emitProgress = async ({
+      step,
+      title,
+      description,
+      status,
+      detail,
+      data,
+    }: {
+      step: string;
+      title: string;
+      description: string;
+      status: AcceptBuyOrderPrivateSaleProgressStatus;
+      detail?: string;
+      data?: Record<string, unknown>;
+    }) => {
+      if (!onProgress) {
+        return;
+      }
+      try {
+        await onProgress({
+          step,
+          title,
+          description,
+          status,
+          occurredAt: new Date().toISOString(),
+          ...(detail ? { detail } : {}),
+          ...(data ? { data } : {}),
+        });
+      } catch (progressError) {
+        console.warn('acceptBuyOrderPrivateSale progress callback failed', progressError);
       }
     };
 
@@ -11892,6 +11942,16 @@ export async function acceptBuyOrderPrivateSale(
         ? seller.walletAddress.trim()
         : normalizedSellerWalletAddress;
 
+    await emitProgress({
+      step: 'SELLER_VALIDATED',
+      title: '판매자 확인',
+      description: '판매자 정보와 에스크로 지갑을 확인했습니다.',
+      status: 'completed',
+      data: {
+        sellerWalletAddress: matchedSellerWalletAddress || normalizedSellerWalletAddress,
+      },
+    });
+
     const sellerBankInfo =
       seller?.seller?.bankInfo && typeof seller.seller.bankInfo === 'object'
         ? seller.seller.bankInfo
@@ -11942,6 +12002,16 @@ export async function acceptBuyOrderPrivateSale(
       typeof buyer.walletAddress === 'string' && buyer.walletAddress.trim()
         ? buyer.walletAddress.trim()
         : normalizedBuyerWalletAddress;
+
+    await emitProgress({
+      step: 'BUYER_VALIDATED',
+      title: '구매자 확인',
+      description: '구매자 지갑 및 입금자명 정보를 확인했습니다.',
+      status: 'completed',
+      data: {
+        buyerWalletAddress: matchedBuyerWalletAddress || normalizedBuyerWalletAddress,
+      },
+    });
     const matchedSellerWalletRegex = {
       $regex: `^${escapeRegex(matchedSellerWalletAddress)}$`,
       $options: 'i',
@@ -11960,8 +12030,8 @@ export async function acceptBuyOrderPrivateSale(
     
     const tradeId = Math.floor(Math.random() * 900000000) + 100000000 + '';
 
-    // Canonicalize order amounts on the server to prevent
-    // usdt/rate/krw mismatches from client-side timing or rounding issues.
+    // Keep requested KRW amount as-is when provided.
+    // Fall back to server-side calculation only when KRW is omitted.
     const normalizedUsdtAmount = roundDownUsdtAmount(usdtAmount);
     const calculatedKrwAmount = calculateKrwAmountFromUsdtAndRate({
       usdtAmount: normalizedUsdtAmount,
@@ -11973,7 +12043,6 @@ export async function acceptBuyOrderPrivateSale(
         : 0;
     const normalizedKrwAmount =
       normalizedRequestedKrwAmount > 0
-      && Math.abs(normalizedRequestedKrwAmount - calculatedKrwAmount) <= PRIVATE_ORDER_KRW_INPUT_TOLERANCE_WON
         ? normalizedRequestedKrwAmount
         : calculatedKrwAmount;
 
@@ -11991,9 +12060,9 @@ export async function acceptBuyOrderPrivateSale(
     }
     if (
       normalizedRequestedKrwAmount > 0
-      && normalizedRequestedKrwAmount !== normalizedKrwAmount
+      && normalizedRequestedKrwAmount !== calculatedKrwAmount
     ) {
-      console.warn('acceptBuyOrderPrivateSale: requested krw amount mismatch corrected', {
+      console.warn('acceptBuyOrderPrivateSale: requested krw amount mismatch preserved', {
         buyerWalletAddress: matchedBuyerWalletAddress,
         sellerWalletAddress: matchedSellerWalletAddress,
         requestedKrwAmount: normalizedRequestedKrwAmount,
@@ -12003,6 +12072,18 @@ export async function acceptBuyOrderPrivateSale(
         rate: usdtToKrwRate,
       });
     }
+
+    await emitProgress({
+      step: 'AMOUNT_VALIDATED',
+      title: '주문 금액 확정',
+      description: 'USDT/KRW 주문 금액과 환율 정보를 확정했습니다.',
+      status: 'completed',
+      data: {
+        usdtAmount: normalizedUsdtAmount,
+        krwAmount: normalizedKrwAmount,
+        rate: usdtToKrwRate,
+      },
+    });
 
     const resolvedPlatformFee = resolvePrivateOrderPlatformFee({
       order: null,
@@ -12022,6 +12103,18 @@ export async function acceptBuyOrderPrivateSale(
       });
       return { success: false, error: 'PLATFORM_FEE_WALLET_NOT_CONFIGURED' };
     }
+
+    await emitProgress({
+      step: 'PLATFORM_FEE_VALIDATED',
+      title: '수수료 설정 확인',
+      description: '플랫폼 수수료 설정과 락업 수량을 확인했습니다.',
+      status: 'completed',
+      data: {
+        platformFeeRatePercent: resolvedPlatformFee.feeRatePercent,
+        platformFeeUsdtAmount,
+        escrowLockUsdtAmount: roundDownUsdtAmount(normalizedUsdtAmount + platformFeeUsdtAmount),
+      },
+    });
 
     const escrowLockUsdtAmount = roundDownUsdtAmount(normalizedUsdtAmount + platformFeeUsdtAmount);
 
@@ -12062,6 +12155,16 @@ export async function acceptBuyOrderPrivateSale(
       console.error('acceptBuyOrderPrivateSale: buyer escrow wallet address is empty');
       return { success: false, error: 'BUYER_ESCROW_WALLET_EMPTY' };
     }
+
+    await emitProgress({
+      step: 'BUYER_ESCROW_WALLET_CREATED',
+      title: '구매 에스크로 지갑 생성',
+      description: '구매자 전용 에스크로 지갑 생성을 완료했습니다.',
+      status: 'completed',
+      data: {
+        buyerEscrowWalletAddress,
+      },
+    });
 
     if (!isWalletAddress(buyerEscrowSignerAddress) || !isWalletAddress(buyerEscrowSmartAccountAddress)) {
       const buyerEscrowResolution = await resolveEngineWalletResolution({
@@ -12185,6 +12288,17 @@ export async function acceptBuyOrderPrivateSale(
       });
       escrowTransferTransactionId = String(transactionId || '').trim();
 
+      await emitProgress({
+        step: 'ESCROW_TRANSFER_SUBMITTED',
+        title: '에스크로 전송 요청',
+        description: '판매자 에스크로에서 구매 에스크로로 전송을 요청했습니다.',
+        status: 'processing',
+        data: {
+          transactionId: escrowTransferTransactionId,
+          escrowLockUsdtAmount,
+        },
+      });
+
       const hashResult = await Engine.waitForTransactionHash({
         client: thirdwebClient,
         transactionId: escrowTransferTransactionId,
@@ -12239,6 +12353,17 @@ export async function acceptBuyOrderPrivateSale(
       if (!transferConfirmed) {
         throw new Error('engine transaction confirmation timeout');
       }
+
+      await emitProgress({
+        step: 'ESCROW_TRANSFER_CONFIRMED',
+        title: '에스크로 전송 확인',
+        description: '온체인 전송이 확인되었습니다.',
+        status: 'completed',
+        data: {
+          transactionId: escrowTransferTransactionId,
+          transactionHash: escrowTransferTransactionHash,
+        },
+      });
     } catch (error) {
       const reconciliation = await reconcileEscrowTransferOutcome({
         client: thirdwebClient,
@@ -12268,6 +12393,19 @@ export async function acceptBuyOrderPrivateSale(
         transactionHash: escrowTransferTransactionHash,
         reason: reconciliation.reason,
         detail: reconciliation.detail,
+      });
+
+      await emitProgress({
+        step: 'ESCROW_TRANSFER_CONFIRMED',
+        title: '에스크로 전송 확인',
+        description: '전송 상태를 조회해 최종 반영했습니다.',
+        status: 'completed',
+        detail: reconciliation.detail || '',
+        data: {
+          transactionId: escrowTransferTransactionId,
+          transactionHash: escrowTransferTransactionHash,
+          reconciliationReason: reconciliation.reason,
+        },
       });
     }
 
@@ -12438,6 +12576,18 @@ export async function acceptBuyOrderPrivateSale(
           },
         },
       );
+
+      await emitProgress({
+        step: 'ORDER_INSERTED',
+        title: '주문 생성 완료',
+        description: '주문이 저장되고 입금요청 상태로 전환되었습니다.',
+        status: 'completed',
+        data: {
+          orderId: String(result.insertedId),
+          tradeId,
+          status: 'paymentRequested',
+        },
+      });
 
 
       return { success: true };
