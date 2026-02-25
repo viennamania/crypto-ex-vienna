@@ -213,6 +213,8 @@ type SellerChatItem = {
   unreadMessageCount?: number;
 };
 
+const SELLER_OPEN_CHANNEL_EVENT = 'seller-sendbird-open-channel';
+
 type BuyOrderConfirmDraft = {
   index: number;
   sellerWalletAddress: string;
@@ -1866,6 +1868,7 @@ export default function Index({ params }: any) {
   const [visibleBannerAdsRight, setVisibleBannerAdsRight] = useState<BannerAd[]>([]);
   const chatUnreadTotalRef = useRef<number | null>(null);
   const chatInitializedRef = useRef(false);
+  const chatUnreadByChannelRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     let active = true;
@@ -1966,6 +1969,7 @@ export default function Index({ params }: any) {
     let intervalId: ReturnType<typeof setInterval> | null = null;
     chatInitializedRef.current = false;
     chatUnreadTotalRef.current = null;
+    chatUnreadByChannelRef.current = {};
 
     const fetchSellerChats = async () => {
       if (!ownerWalletAddress) {
@@ -2028,28 +2032,68 @@ export default function Index({ params }: any) {
     if (!ownerWalletAddress) {
       chatUnreadTotalRef.current = null;
       chatInitializedRef.current = false;
+      chatUnreadByChannelRef.current = {};
       return;
     }
     if (!chatInitializedRef.current) {
       return;
     }
-    if (!sellerChatItems.length) {
-      chatUnreadTotalRef.current = 0;
-      return;
-    }
-
     const unreadTotal = sellerChatItems.reduce(
-      (sum, item) => sum + (item.unreadMessageCount ?? 0),
+      (sum, item) => sum + Math.max(0, Number(item.unreadMessageCount || 0)),
       0
     );
-    const previousUnread = chatUnreadTotalRef.current;
 
-    if (previousUnread === null) {
+    const nextUnreadByChannel: Record<string, number> = {};
+    sellerChatItems.forEach((item) => {
+      if (!item.channelUrl) {
+        return;
+      }
+      nextUnreadByChannel[item.channelUrl] = Math.max(0, Number(item.unreadMessageCount || 0));
+    });
+
+    const previousUnread = chatUnreadTotalRef.current;
+    const previousUnreadByChannel = chatUnreadByChannelRef.current;
+    const hasPreviousUnreadSnapshot = previousUnread !== null;
+
+    if (!hasPreviousUnreadSnapshot) {
       chatUnreadTotalRef.current = unreadTotal;
+      chatUnreadByChannelRef.current = nextUnreadByChannel;
       return;
     }
 
-    if (unreadTotal > previousUnread && !isChatOpen) {
+    const hasNewUnreadMessage = sellerChatItems.some((item) => {
+      const currentUnread = Math.max(0, Number(item.unreadMessageCount || 0));
+      const previousChannelUnread = Math.max(0, Number(previousUnreadByChannel[item.channelUrl] || 0));
+      return currentUnread > previousChannelUnread;
+    });
+
+    if (hasNewUnreadMessage && isOwnerSeller) {
+      const audio = notificationAudioRef.current;
+      if (audio) {
+        if (!(audio.loop && !audio.paused)) {
+          audio.loop = false;
+          audio.muted = false;
+          audio.volume = 1;
+          if (!audio.paused) {
+            audio.pause();
+          }
+          audio.currentTime = 0;
+          audio.play()
+            .then(() => {
+              setNotificationAudioUnlocked(true);
+              setNotificationAudioUnlockNeeded(false);
+            })
+            .catch((error) => {
+              console.warn('seller chat notification audio play blocked', error);
+              setNotificationAudioUnlockNeeded(true);
+            });
+        }
+      } else {
+        setNotificationAudioUnlockNeeded(true);
+      }
+    }
+
+    if (hasNewUnreadMessage && !isOwnerSeller && !isChatOpen) {
       const nextChannel = sellerChatItems.find((item) => (item.unreadMessageCount ?? 0) > 0)?.channelUrl;
       if (nextChannel) {
         setSelectedChatChannelUrl(nextChannel);
@@ -2058,7 +2102,63 @@ export default function Index({ params }: any) {
     }
 
     chatUnreadTotalRef.current = unreadTotal;
-  }, [ownerWalletAddress, sellerChatItems, isChatOpen]);
+    chatUnreadByChannelRef.current = nextUnreadByChannel;
+  }, [ownerWalletAddress, sellerChatItems, isOwnerSeller, isChatOpen]);
+
+  const sellerUnreadChatAlerts = useMemo(() => {
+    if (!isOwnerSeller || sellerChatItems.length === 0) {
+      return [];
+    }
+
+    return sellerChatItems
+      .map((item) => {
+        const unreadCount = Math.max(0, Number(item.unreadMessageCount || 0));
+        const otherMember = Array.isArray(item.members) ? item.members[0] : undefined;
+        const rawDisplayName = String(otherMember?.nickname || otherMember?.userId || '').trim();
+        const displayName = rawDisplayName || '구매자';
+        const profileUrl = String(otherMember?.profileUrl || '').trim();
+        const preview = String(item.lastMessage || '').trim() || '새 메시지가 도착했습니다.';
+        const updatedAt = Number(item.updatedAt || 0);
+
+        return {
+          channelUrl: String(item.channelUrl || '').trim(),
+          unreadCount,
+          displayName,
+          profileUrl,
+          preview,
+          updatedAt,
+        };
+      })
+      .filter((item) => item.channelUrl && item.unreadCount > 0)
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  }, [isOwnerSeller, sellerChatItems]);
+
+  const formatSellerChatAlertTime = useCallback((value?: number) => {
+    if (!value) {
+      return '';
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return '';
+    }
+    return parsed.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  }, []);
+
+  const openSellerChatWidgetChannel = useCallback((channelUrl: string) => {
+    const normalizedChannelUrl = String(channelUrl || '').trim();
+    if (!normalizedChannelUrl) {
+      return;
+    }
+
+    setSelectedChatChannelUrl(normalizedChannelUrl);
+    setIsChatOpen(true);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(SELLER_OPEN_CHANNEL_EVENT, {
+        detail: { channelUrl: normalizedChannelUrl },
+      }));
+    }
+  }, []);
 
 
 
@@ -8244,103 +8344,62 @@ const fetchBuyOrders = async () => {
             </div>
           </section>
         )}
+        {isOwnerSeller && sellerUnreadChatAlerts.length > 0 && (
+          <aside className="fixed right-2 top-1/2 z-[92] flex w-[min(92vw,320px)] -translate-y-1/2 flex-col gap-2 sm:right-4 sm:w-[300px]">
+            {notificationAudioUnlockNeeded && (
+              <button
+                type="button"
+                onClick={() => {
+                  void unlockNotificationAudio();
+                }}
+                className="inline-flex items-center justify-center rounded-xl border border-amber-300 bg-amber-50/95 px-3 py-2 text-[11px] font-bold text-amber-900 shadow-[0_14px_32px_-24px_rgba(180,83,9,0.7)] backdrop-blur-sm transition hover:bg-amber-100"
+              >
+                채팅 알림 소리 켜기
+              </button>
+            )}
 
-
-
-
-      {/* fixed position right and vertically center */}
-      {/*
-      <div className="
-        flex
-        fixed right-4 top-1/2 transform -translate-y-1/2
-        z-40
-        ">
-
-          <div className="w-full flex flex-col items-end justify-center gap-4">
-
-            <div className="
-              h-20
-              flex flex-row items-center justify-center gap-2
-              bg-white/80
-              p-2 rounded-lg shadow-md
-              backdrop-blur-md
-            ">
-              {loadingTotalNumberOfBuyOrders ? (
-                <Image
-                  src="/loading.png"
-                  alt="Loading"
-                  width={20}
-                  height={20}
-                  className="w-6 h-6 animate-spin"
-                />
-              ) : (
-                <Image
-                  src="/icon-buyorder.png"
-                  alt="Buy Order"
-                  width={35}
-                  height={35}
-                  className="w-6 h-6"
-                />
-              )}
-
-              {processingBuyOrders.length > 0 && (
-              <div className="flex flex-row items-center justify-center gap-1">
-                {processingBuyOrders.slice(0, 3).map((order: BuyOrder, index: number) => (
-
-                  <div className="flex flex-col items-center justify-center
-                  bg-white p-1 rounded-lg shadow-md
-                  "
-                  key={index}>
-                    <Image
-                      src={order?.store?.storeLogo || '/logo.png'}
-                      alt={order?.store?.storeName || 'Store'}
-                      width={20}
-                      height={20}
-                      className="w-5 h-5 rounded-lg object-cover"
-                    />
-                    <span className="text-xs text-gray-500">
-                      {order?.store?.storeName || 'Store'}
+            <div className="max-h-[64vh] space-y-2 overflow-y-auto pr-1">
+              {sellerUnreadChatAlerts.map((alertItem, alertIndex) => (
+                <button
+                  key={`seller-chat-alert-${alertItem.channelUrl}-${alertIndex}`}
+                  type="button"
+                  onClick={() => openSellerChatWidgetChannel(alertItem.channelUrl)}
+                  className="group flex w-full items-center gap-2 rounded-2xl border border-rose-200/90 bg-white/95 px-2.5 py-2 text-left shadow-[0_18px_45px_-34px_rgba(244,63,94,0.55)] backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-50/70"
+                >
+                  <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-slate-600">
+                    {alertItem.profileUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={alertItem.profileUrl}
+                        alt={alertItem.displayName}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      (alertItem.displayName.slice(0, 1) || '?').toUpperCase()
+                    )}
+                    <span className="absolute -right-1 -top-1 inline-flex min-w-[22px] items-center justify-center rounded-full border border-rose-700 bg-rose-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white">
+                      {alertItem.unreadCount.toLocaleString()}
                     </span>
-                    <span className="text-sm text-gray-800 font-semibold">
-                      {order?.buyer.depositName || 'Buyer'}
-                    </span>
-                  </div>
-
-                ))}
-
-                {processingBuyOrders.length > 3 && (
-                  <span className="text-sm text-gray-500">
-                    +{processingBuyOrders.length - 3}
                   </span>
-                )}
-              </div>
-              )}
 
-              <p className="text-lg text-red-500 font-semibold">
-                {
-                totalNumberOfBuyOrders
-                }
-              </p>
-
-              {totalNumberOfBuyOrders > 0 && (
-                <div className="flex flex-row items-center justify-center gap-2">
-                  <Image
-                    src="/icon-notification.gif"
-                    alt="Notification"
-                    width={50}
-                    height={50}
-                    className="w-15 h-15 object-cover"
-                    
-                  />
-                </div>
-              )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-xs font-bold text-slate-900">
+                        {alertItem.displayName}
+                      </p>
+                      <span className="text-[10px] font-semibold text-slate-500">
+                        {formatSellerChatAlertTime(alertItem.updatedAt)}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-[11px] text-slate-600">
+                      {alertItem.preview}
+                    </p>
+                  </div>
+                </button>
+              ))}
             </div>
-
-        
-          </div>
-
-        </div>
-        */}
+          </aside>
+        )}
 
 
       <div className="w-full space-y-5">

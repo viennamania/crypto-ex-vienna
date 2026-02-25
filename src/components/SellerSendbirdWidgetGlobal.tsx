@@ -14,6 +14,7 @@ const NEXT_PUBLIC_SENDBIRD_APP_ID = process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '
 const OWNER_WALLET_STORAGE_KEY = 'sellerOwnerWalletAddress';
 const OWNER_WALLET_EVENT = 'seller-owner-wallet-address';
 const USER_STORECODE = 'admin';
+const SELLER_OPEN_CHANNEL_EVENT = 'seller-sendbird-open-channel';
 
 const readOwnerWalletAddress = () => {
   if (typeof window === 'undefined') {
@@ -194,6 +195,29 @@ const SellerSendbirdWidgetGlobal = () => {
   }, [isMounted]);
 
   const canShow = Boolean(address) && !isAdmin && !isCheckingRole && !isCheckingSeller && isSellerActive;
+
+  useEffect(() => {
+    if (!isMounted) {
+      return;
+    }
+
+    const handleOpenChannelEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{ channelUrl?: string }>;
+      const nextChannelUrl = String(customEvent?.detail?.channelUrl || '').trim();
+
+      if (nextChannelUrl) {
+        setSelectedChannelUrl(nextChannelUrl);
+        setView('chat');
+      }
+      setIsOpen(true);
+    };
+
+    window.addEventListener(SELLER_OPEN_CHANNEL_EVENT, handleOpenChannelEvent as EventListener);
+
+    return () => {
+      window.removeEventListener(SELLER_OPEN_CHANNEL_EVENT, handleOpenChannelEvent as EventListener);
+    };
+  }, [isMounted]);
 
   useEffect(() => {
     if (!address) {
