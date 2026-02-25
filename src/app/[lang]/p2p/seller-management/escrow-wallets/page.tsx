@@ -396,7 +396,7 @@ export default function AgentEscrowWalletManagementPage() {
                   <input
                     value={createLabel}
                     onChange={(e) => setCreateLabel(e.target.value)}
-                    placeholder="예) 에스크로지갑-1"
+                    placeholder="예) 에스크로 지갑-1"
                     className="mt-2 w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-inner focus:outline-none focus:ring-2 focus:ring-emerald-300"
                   />
                 </div>

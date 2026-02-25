@@ -1380,14 +1380,14 @@ export default function BuyOrderManagementPage() {
             <p className="mt-2 text-right text-3xl font-bold tabular-nums text-slate-900">
               {formatKrw(dashboardStats.totalKrwAmount)}
             </p>
-            <p className="mt-1 text-xs text-slate-500">KRW</p>
+            <p className="mt-1 text-xs text-slate-500">입금확인 기준 KRW</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_38px_-32px_rgba(15,23,42,0.55)]">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">총 주문 수량</p>
             <p className="mt-2 text-right text-3xl font-bold tabular-nums text-slate-900">
               {formatUsdt(dashboardStats.totalUsdtAmount)}
             </p>
-            <p className="mt-1 text-xs text-slate-500">USDT</p>
+            <p className="mt-1 text-xs text-slate-500">입금확인 기준 USDT</p>
           </div>
           <div className="rounded-2xl border border-indigo-200 bg-indigo-50/55 p-4 shadow-[0_18px_38px_-32px_rgba(79,70,229,0.35)]">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700">총 수수료량</p>

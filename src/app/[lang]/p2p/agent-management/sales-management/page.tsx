@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { useActiveAccount } from 'thirdweb/react';
@@ -83,7 +83,7 @@ type SellerSalesSummaryItem = {
   sellerAvatar: string;
   totalKrwAmount: number;
   totalUsdtAmount: number;
-  orderCount: number;
+  paymentConfirmedCount: number;
   latestCreatedAt: string;
 };
 
@@ -93,6 +93,14 @@ type EscrowWalletBalanceState = {
   error: string;
   lastCheckedAt: string;
   cooldownUntilMs: number;
+};
+
+type SearchFilters = {
+  date: string;
+  searchTradeId: string;
+  searchBuyer: string;
+  searchDepositName: string;
+  searchStoreName: string;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -544,6 +552,25 @@ const getPaymentConfirmerLabel = (order: AgentSalesOrderItem) => {
 const getPaymentConfirmerIp = (order: AgentSalesOrderItem) =>
   String(order.paymentConfirmedByIpAddress || '').trim() || '-';
 
+const getTodayDate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const createDefaultFilters = (): SearchFilters => {
+  const today = getTodayDate();
+  return {
+    date: today,
+    searchTradeId: '',
+    searchBuyer: '',
+    searchDepositName: '',
+    searchStoreName: '',
+  };
+};
+
 export default function P2PAgentSalesManagementPage() {
   const searchParams = useSearchParams();
   const activeAccount = useActiveAccount();
@@ -552,13 +579,12 @@ export default function P2PAgentSalesManagementPage() {
   const [loading, setLoading] = useState(false);
   const [polling, setPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [keyword, setKeyword] = useState('');
+  const [draftFilters, setDraftFilters] = useState<SearchFilters>(() => createDefaultFilters());
+  const [appliedFilters, setAppliedFilters] = useState<SearchFilters>(() => createDefaultFilters());
   const [agent, setAgent] = useState<AgentSummary | null>(null);
   const [orders, setOrders] = useState<AgentSalesOrderItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [totalKrwAmount, setTotalKrwAmount] = useState(0);
-  const [totalUsdtAmount, setTotalUsdtAmount] = useState(0);
   const [totalPlatformFeeAmount, setTotalPlatformFeeAmount] = useState(0);
   const [copiedTradeId, setCopiedTradeId] = useState('');
   const [copiedWalletAddress, setCopiedWalletAddress] = useState('');
@@ -577,8 +603,6 @@ export default function P2PAgentSalesManagementPage() {
       setAgent(null);
       setOrders([]);
       setTotalCount(0);
-      setTotalKrwAmount(0);
-      setTotalUsdtAmount(0);
       setTotalPlatformFeeAmount(0);
       setPolling(false);
       setError(null);
@@ -596,6 +620,7 @@ export default function P2PAgentSalesManagementPage() {
     }
 
     try {
+      const selectedDate = appliedFilters.date || getTodayDate();
       const [agentData, response] = await Promise.all([
         fetchAgentSummary(agentcode),
         fetch('/api/agent/get-buyorders', {
@@ -608,6 +633,8 @@ export default function P2PAgentSalesManagementPage() {
             searchTerm: '',
             status: 'all',
             hasBankInfo: 'all',
+            startDate: selectedDate,
+            endDate: selectedDate,
           }),
         }),
       ]);
@@ -626,8 +653,6 @@ export default function P2PAgentSalesManagementPage() {
         : [];
       const normalizedOrders = items.map((item) => normalizeSalesOrder(item));
       const resolvedTotalCount = toNumber(payloadRecord.totalCount || payloadResult.totalCount || normalizedOrders.length);
-      const resolvedTotalKrwAmount = toNumber(payloadRecord.totalKrwAmount || payloadResult.totalKrwAmount);
-      const resolvedTotalUsdtAmount = toNumber(payloadRecord.totalUsdtAmount || payloadResult.totalUsdtAmount);
       const resolvedTotalPlatformFeeAmount = toNumber(
         payloadRecord.totalPlatformFeeAmount || payloadResult.totalPlatformFeeAmount,
       );
@@ -635,8 +660,6 @@ export default function P2PAgentSalesManagementPage() {
       setAgent(agentData);
       setOrders(normalizedOrders);
       setTotalCount(resolvedTotalCount);
-      setTotalKrwAmount(resolvedTotalKrwAmount);
-      setTotalUsdtAmount(resolvedTotalUsdtAmount);
       setTotalPlatformFeeAmount(resolvedTotalPlatformFeeAmount);
     } catch (loadError) {
       if (mode === 'polling') {
@@ -645,8 +668,6 @@ export default function P2PAgentSalesManagementPage() {
         setAgent(null);
         setOrders([]);
         setTotalCount(0);
-        setTotalKrwAmount(0);
-        setTotalUsdtAmount(0);
         setTotalPlatformFeeAmount(0);
         setError(loadError instanceof Error ? loadError.message : '판매 거래내역을 불러오지 못했습니다.');
       }
@@ -658,7 +679,7 @@ export default function P2PAgentSalesManagementPage() {
         setLoading(false);
       }
     }
-  }, [agentcode]);
+  }, [agentcode, appliedFilters.date]);
 
   useEffect(() => {
     void loadData('manual');
@@ -700,26 +721,73 @@ export default function P2PAgentSalesManagementPage() {
   }, [hasActiveEscrowWalletBalanceCooldown]);
 
   const filteredOrders = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLowerCase();
-    if (!normalizedKeyword) {
-      return orders;
-    }
+    const normalizedTradeId = appliedFilters.searchTradeId.trim().toLowerCase();
+    const normalizedBuyer = appliedFilters.searchBuyer.trim().toLowerCase();
+    const normalizedDepositName = appliedFilters.searchDepositName.trim().toLowerCase();
+    const normalizedStoreName = appliedFilters.searchStoreName.trim().toLowerCase();
+
     return orders.filter((order) => {
-      return (
-        order.tradeId.toLowerCase().includes(normalizedKeyword)
-        || order.status.toLowerCase().includes(normalizedKeyword)
-        || order.storecode.toLowerCase().includes(normalizedKeyword)
-        || order.storeName.toLowerCase().includes(normalizedKeyword)
-        || order.buyerNickname.toLowerCase().includes(normalizedKeyword)
-        || order.sellerNickname.toLowerCase().includes(normalizedKeyword)
-      );
+      const orderTradeId = String(order.tradeId || '').toLowerCase();
+      const orderBuyerNickname = String(order.buyerNickname || '').toLowerCase();
+      const orderDepositName = String(order.buyerDepositName || '').toLowerCase();
+      const orderStoreName = String(order.storeName || '').toLowerCase();
+      const orderStorecode = String(order.storecode || '').toLowerCase();
+
+      if (normalizedTradeId && !orderTradeId.includes(normalizedTradeId)) return false;
+      if (normalizedBuyer && !orderBuyerNickname.includes(normalizedBuyer)) return false;
+      if (normalizedDepositName && !orderDepositName.includes(normalizedDepositName)) return false;
+      if (normalizedStoreName && !orderStoreName.includes(normalizedStoreName) && !orderStorecode.includes(normalizedStoreName)) {
+        return false;
+      }
+
+      return true;
     });
-  }, [orders, keyword]);
+  }, [
+    appliedFilters.searchBuyer,
+    appliedFilters.searchDepositName,
+    appliedFilters.searchStoreName,
+    appliedFilters.searchTradeId,
+    orders,
+  ]);
+
+  const dashboardStats = useMemo(() => {
+    let paymentRequestedCount = 0;
+    let paymentConfirmedCount = 0;
+    let cancelledCount = 0;
+    let paymentConfirmedKrwAmount = 0;
+    let paymentConfirmedUsdtAmount = 0;
+
+    filteredOrders.forEach((order) => {
+      const status = normalizeOrderStatus(order.status);
+      if (status === 'paymentrequested') {
+        paymentRequestedCount += 1;
+      }
+      if (status === 'paymentconfirmed') {
+        paymentConfirmedCount += 1;
+        paymentConfirmedKrwAmount += Number(order.krwAmount || 0) || 0;
+        paymentConfirmedUsdtAmount += Number(order.usdtAmount || 0) || 0;
+      }
+      if (status === 'cancelled') {
+        cancelledCount += 1;
+      }
+    });
+
+    return {
+      paymentRequestedCount,
+      paymentConfirmedCount,
+      cancelledCount,
+      paymentConfirmedKrwAmount,
+      paymentConfirmedUsdtAmount,
+    };
+  }, [filteredOrders]);
 
   const sellerSalesSummarySorted = useMemo(() => {
     const summaryBySeller = new Map<string, SellerSalesSummaryItem>();
 
     filteredOrders.forEach((order) => {
+      const orderStatus = normalizeOrderStatus(order.status);
+      if (orderStatus !== 'paymentconfirmed') return;
+
       const walletAddress = String(order.sellerWalletAddress || '').trim();
       const nickname = String(order.sellerNickname || '').trim();
       const avatar = String(order.sellerAvatar || '').trim();
@@ -735,7 +803,7 @@ export default function P2PAgentSalesManagementPage() {
           sellerAvatar: avatar,
           totalKrwAmount: Number(order.krwAmount || 0) || 0,
           totalUsdtAmount: Number(order.usdtAmount || 0) || 0,
-          orderCount: 1,
+          paymentConfirmedCount: 1,
           latestCreatedAt: String(order.createdAt || '').trim(),
         });
         return;
@@ -743,7 +811,7 @@ export default function P2PAgentSalesManagementPage() {
 
       current.totalKrwAmount += Number(order.krwAmount || 0) || 0;
       current.totalUsdtAmount += Number(order.usdtAmount || 0) || 0;
-      current.orderCount += 1;
+      current.paymentConfirmedCount += 1;
       if (!current.sellerAvatar && avatar) current.sellerAvatar = avatar;
       if (!current.sellerNickname && nickname) current.sellerNickname = nickname;
       if (!current.sellerWalletAddress && walletAddress) current.sellerWalletAddress = walletAddress;
@@ -758,7 +826,7 @@ export default function P2PAgentSalesManagementPage() {
     return Array.from(summaryBySeller.values()).sort((a, b) => (
       (b.totalKrwAmount - a.totalKrwAmount)
       || (b.totalUsdtAmount - a.totalUsdtAmount)
-      || (b.orderCount - a.orderCount)
+      || (b.paymentConfirmedCount - a.paymentConfirmedCount)
     ));
   }, [filteredOrders]);
 
@@ -788,6 +856,26 @@ export default function P2PAgentSalesManagementPage() {
 
   const isPreviousDisabled = currentPage <= 1 || loading;
   const isNextDisabled = currentPage >= totalPages || loading;
+
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalizedFilters: SearchFilters = {
+      date: draftFilters.date || getTodayDate(),
+      searchTradeId: draftFilters.searchTradeId.trim(),
+      searchBuyer: draftFilters.searchBuyer.trim(),
+      searchDepositName: draftFilters.searchDepositName.trim(),
+      searchStoreName: draftFilters.searchStoreName.trim(),
+    };
+    setCurrentPage(1);
+    setAppliedFilters(normalizedFilters);
+  };
+
+  const handleSearchReset = () => {
+    const defaults = createDefaultFilters();
+    setDraftFilters(defaults);
+    setAppliedFilters(defaults);
+    setCurrentPage(1);
+  };
 
   const copyTradeId = useCallback(async (tradeId: string) => {
     const normalizedTradeId = String(tradeId || '').trim();
@@ -973,42 +1061,119 @@ export default function P2PAgentSalesManagementPage() {
 
           <AgentInfoCard agent={agent} fallbackAgentcode={agentcode} />
 
-          <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+            <form className="grid grid-cols-1 gap-3 lg:grid-cols-12" onSubmit={handleSearchSubmit}>
+              <div className="lg:col-span-2">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  조회 일자
+                </label>
+                <input
+                  type="date"
+                  value={draftFilters.date}
+                  onChange={(event) => setDraftFilters((prev) => ({ ...prev, date: event.target.value }))}
+                  className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-cyan-500"
+                />
+              </div>
+              <div className="lg:col-span-2">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  거래번호
+                </label>
+                <input
+                  type="text"
+                  value={draftFilters.searchTradeId}
+                  onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchTradeId: event.target.value }))}
+                  placeholder="거래번호 검색"
+                  className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
+                />
+              </div>
+              <div className="lg:col-span-2">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  구매자 닉네임
+                </label>
+                <input
+                  type="text"
+                  value={draftFilters.searchBuyer}
+                  onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchBuyer: event.target.value }))}
+                  placeholder="구매자 검색"
+                  className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
+                />
+              </div>
+              <div className="lg:col-span-2">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  입금자명
+                </label>
+                <input
+                  type="text"
+                  value={draftFilters.searchDepositName}
+                  onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchDepositName: event.target.value }))}
+                  placeholder="입금자명 검색"
+                  className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
+                />
+              </div>
+              <div className="lg:col-span-2">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  가맹점명
+                </label>
+                <input
+                  type="text"
+                  value={draftFilters.searchStoreName}
+                  onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchStoreName: event.target.value }))}
+                  placeholder="가맹점명 검색"
+                  className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
+                />
+              </div>
+              <div className="lg:col-span-2 flex items-end justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleSearchReset}
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  초기화
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex h-10 items-center justify-center rounded-full bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
+                  검색
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-8">
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
               <p className="text-xs font-semibold text-slate-500">전체 거래</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">{totalCount.toLocaleString()}건</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <p className="text-xs font-semibold text-slate-500">총 KRW</p>
-              <p className="mt-1 text-xl font-bold text-slate-900">{formatKrw(totalKrwAmount)}</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <p className="text-xs font-semibold text-slate-500">총 USDT</p>
-              <p className="mt-1 text-xl font-bold text-cyan-700">{formatUsdt(totalUsdtAmount)}</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
               <p className="text-xs font-semibold text-slate-500">표시중</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">{filteredOrders.length.toLocaleString()}건</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 px-4 py-3">
+              <p className="text-xs font-semibold text-emerald-700">입금확인</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-800">{dashboardStats.paymentConfirmedCount.toLocaleString()}건</p>
+            </div>
+            <div className="rounded-2xl border border-rose-200 bg-rose-50/50 px-4 py-3">
+              <p className="text-xs font-semibold text-rose-700">주문취소</p>
+              <p className="mt-1 text-2xl font-bold text-rose-800">{dashboardStats.cancelledCount.toLocaleString()}건</p>
+            </div>
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/50 px-4 py-3">
+              <p className="text-xs font-semibold text-amber-700">입금요청</p>
+              <p className="mt-1 text-2xl font-bold text-amber-800">{dashboardStats.paymentRequestedCount.toLocaleString()}건</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+              <p className="text-xs font-semibold text-slate-500">총 결제 금액</p>
+              <p className="mt-1 text-xl font-bold text-slate-900">
+                {String(formatKrw(dashboardStats.paymentConfirmedKrwAmount)).replace(/원$/, '').trim()} KRW
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+              <p className="text-xs font-semibold text-slate-500">총 주문 수량</p>
+              <p className="mt-1 text-xl font-bold text-cyan-700">{formatUsdt(dashboardStats.paymentConfirmedUsdtAmount)}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
               <p className="text-xs font-semibold text-slate-500">플랫폼 수수료</p>
               <p className="mt-1 text-xl font-bold text-indigo-700">{formatUsdt(totalPlatformFeeAmount)}</p>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-slate-900">P2P 거래내역</p>
-              <input
-                type="text"
-                value={keyword}
-                onChange={(event) => {
-                  setKeyword(event.target.value);
-                  setCurrentPage(1);
-                }}
-                placeholder="거래ID/상태/가맹점/구매자/판매자 검색"
-                className="h-9 w-full max-w-xs rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
-              />
             </div>
           </section>
 
@@ -1062,11 +1227,18 @@ export default function P2PAgentSalesManagementPage() {
                         <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
                           <div className="grid grid-cols-[72px_1fr] items-center gap-y-1.5 text-[10px] leading-tight">
                             <p className="font-semibold text-slate-500">합산 판매금액</p>
-                            <p className="justify-self-end text-[11px] font-extrabold text-slate-900">{formatKrw(item.totalKrwAmount)} KRW</p>
+                            <p className="justify-self-end text-[11px] font-extrabold text-slate-900">
+                              {String(formatKrw(item.totalKrwAmount)).replace(/원$/, '').trim()} KRW
+                            </p>
                             <p className="font-semibold text-slate-500">합산 판매수량</p>
-                            <p className="justify-self-end text-[11px] font-extrabold text-slate-900">{formatUsdt(item.totalUsdtAmount)}</p>
-                            <p className="font-semibold text-slate-500">주문건수</p>
-                            <p className="justify-self-end text-[11px] font-extrabold text-slate-900">{item.orderCount.toLocaleString()}건</p>
+                            <p className="justify-self-end text-[11px] font-extrabold text-slate-900">
+                              {new Intl.NumberFormat('ko-KR', {
+                                minimumFractionDigits: 3,
+                                maximumFractionDigits: 3,
+                              }).format(Number(item.totalUsdtAmount || 0))} USDT
+                            </p>
+                            <p className="font-semibold text-slate-500">입금확인건수</p>
+                            <p className="justify-self-end text-[11px] font-extrabold text-slate-900">{item.paymentConfirmedCount.toLocaleString()}건</p>
                             <p className="font-semibold text-slate-500">최근 주문시각</p>
                             <p
                               className="justify-self-end truncate text-[10px] font-semibold text-slate-700"
@@ -1095,19 +1267,19 @@ export default function P2PAgentSalesManagementPage() {
           )}
 
           {!loading && !error && (
-            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-              <table className="min-w-[1320px] w-full table-fixed">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <table className="w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
-                    <th className="w-[108px] px-3 py-3">상태</th>
-                    <th className="w-[120px] px-3 py-3">주문시각/거래번호(TID)</th>
-                    <th className="w-[104px] px-3 py-3">구매자</th>
-                    <th className="w-[108px] px-3 py-3 text-right">주문금액</th>
-                    <th className="w-[104px] px-3 py-3">판매자/결제방법</th>
-                    <th className="w-[140px] px-3 py-3">에이전트 정보</th>
-                    <th className="w-[84px] px-3 py-3">플랫폼 수수료</th>
-                    <th className="w-[76px] px-3 py-3">전송내역</th>
-                    <th className="w-[72px] px-3 py-3 text-center">액션</th>
+                    <th className="w-[11%] px-3 py-3">상태</th>
+                    <th className="w-[16%] px-3 py-3">주문시각/거래번호(TID)</th>
+                    <th className="w-[11%] px-3 py-3">구매자</th>
+                    <th className="w-[9%] px-3 py-3 text-right">주문금액</th>
+                    <th className="w-[15%] px-3 py-3">판매자/결제방법</th>
+                    <th className="w-[14%] px-3 py-3">에이전트 정보</th>
+                    <th className="w-[10%] px-3 py-3">플랫폼 수수료</th>
+                    <th className="w-[7%] px-3 py-3">전송내역</th>
+                    <th className="w-[7%] px-3 py-3 text-center">액션</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1460,8 +1632,15 @@ export default function P2PAgentSalesManagementPage() {
                         </td>
                         <td className="px-3 py-3 text-right">
                           <div className="flex flex-col items-end">
-                            <span className="text-base font-extrabold leading-tight text-slate-900">{formatKrw(order.krwAmount)} KRW</span>
-                            <span className="text-sm font-bold text-slate-600">{formatUsdt(order.usdtAmount)}</span>
+                            <span className="text-base font-extrabold leading-tight text-slate-900">
+                              {String(formatKrw(order.krwAmount)).replace(/원$/, '').trim()} KRW
+                            </span>
+                            <span className="text-sm font-bold text-slate-600">
+                              {new Intl.NumberFormat('ko-KR', {
+                                minimumFractionDigits: 3,
+                                maximumFractionDigits: 3,
+                              }).format(Number(order.usdtAmount || 0))} USDT
+                            </span>
                             <span className="text-[11px] font-semibold text-slate-500">
                               환율 {formatRate(getOrderExchangeRate(order))}
                             </span>
@@ -1698,7 +1877,7 @@ export default function P2PAgentSalesManagementPage() {
                             <div className="flex flex-col gap-1 leading-tight">
                               {hasSellerLockTx && (
                                 <div className="flex flex-col">
-                                  <span className="inline-flex w-fit rounded-md bg-sky-50 px-2 py-0.5 text-xs font-extrabold text-sky-700">
+                                  <span className="inline-flex w-fit whitespace-nowrap rounded-md bg-sky-50 px-2 py-0.5 text-xs font-extrabold text-sky-700">
                                     에스크로
                                   </span>
                                   {sellerLockTxUrl ? (
@@ -1718,7 +1897,7 @@ export default function P2PAgentSalesManagementPage() {
 
                               {hasCancelReleaseTx && (
                                 <div className={`flex flex-col ${hasSellerLockTx ? 'border-t border-slate-200 pt-1' : ''}`}>
-                                  <span className="inline-flex w-fit rounded-md bg-rose-50 px-2 py-0.5 text-xs font-extrabold text-rose-700">
+                                  <span className="inline-flex w-fit whitespace-nowrap rounded-md bg-rose-50 px-2 py-0.5 text-xs font-extrabold text-rose-700">
                                     회수
                                   </span>
                                   {cancelReleaseTxUrl ? (
@@ -1738,7 +1917,7 @@ export default function P2PAgentSalesManagementPage() {
 
                               {hasFallbackTransferTx && (
                                 <div className={`flex flex-col ${hasSellerLockTx || hasCancelReleaseTx ? 'border-t border-slate-200 pt-1' : ''}`}>
-                                  <span className="inline-flex w-fit rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-extrabold text-emerald-700">
+                                  <span className="inline-flex w-fit whitespace-nowrap rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-extrabold text-emerald-700">
                                     전송
                                   </span>
                                   {fallbackTransferTxUrl ? (
@@ -1758,7 +1937,7 @@ export default function P2PAgentSalesManagementPage() {
 
                               {hasEscrowTransferTx && (
                                 <div className={`flex flex-col ${hasSellerLockTx || hasCancelReleaseTx || hasFallbackTransferTx ? 'border-t border-slate-200 pt-1' : ''}`}>
-                                  <span className="inline-flex w-fit rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                                  <span className="inline-flex w-fit whitespace-nowrap rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
                                     Escrow
                                   </span>
                                   {escrowTransferTxUrl ? (

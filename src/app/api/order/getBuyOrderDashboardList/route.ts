@@ -81,6 +81,31 @@ export async function POST(request: NextRequest) {
           { $match: filter },
           {
             $addFields: {
+              normalizedStatus: {
+                $toLower: {
+                  $trim: {
+                    input: {
+                      $toString: { $ifNull: ['$status', ''] },
+                    },
+                  },
+                },
+              },
+              normalizedKrwAmount: {
+                $convert: {
+                  input: { $ifNull: ['$krwAmount', 0] },
+                  to: 'double',
+                  onError: 0,
+                  onNull: 0,
+                },
+              },
+              normalizedUsdtAmount: {
+                $convert: {
+                  input: { $ifNull: ['$usdtAmount', 0] },
+                  to: 'double',
+                  onError: 0,
+                  onNull: 0,
+                },
+              },
               normalizedPlatformFeeAmount: {
                 $convert: {
                   input: {
@@ -109,8 +134,16 @@ export async function POST(request: NextRequest) {
           {
             $group: {
               _id: null,
-              totalKrwAmount: { $sum: { $ifNull: ['$krwAmount', 0] } },
-              totalUsdtAmount: { $sum: { $ifNull: ['$usdtAmount', 0] } },
+              totalKrwAmount: {
+                $sum: {
+                  $cond: [{ $eq: ['$normalizedStatus', 'paymentconfirmed'] }, '$normalizedKrwAmount', 0],
+                },
+              },
+              totalUsdtAmount: {
+                $sum: {
+                  $cond: [{ $eq: ['$normalizedStatus', 'paymentconfirmed'] }, '$normalizedUsdtAmount', 0],
+                },
+              },
               totalPlatformFeeAmount: { $sum: '$normalizedPlatformFeeAmount' },
             },
           },
