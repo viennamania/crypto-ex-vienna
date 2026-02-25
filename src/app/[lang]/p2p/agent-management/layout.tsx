@@ -1290,6 +1290,19 @@ export default function P2PAgentManagementLayout({ children }: { children: React
           -webkit-overflow-scrolling: touch;
           overscroll-behavior-x: contain;
         }
+
+        @media (max-width: 1024px) {
+          .p2p-mobile-shell .p2p-agent-shell-content .overflow-x-auto {
+            overflow-x: auto !important;
+          }
+
+          .p2p-mobile-shell .p2p-agent-shell-content .overflow-x-auto > table,
+          .p2p-mobile-shell .p2p-agent-shell-content .overflow-x-auto table {
+            width: max-content !important;
+            min-width: max(100%, 960px) !important;
+            table-layout: auto !important;
+          }
+        }
       `}</style>
     </div>
   );

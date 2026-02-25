@@ -960,7 +960,8 @@ export default function P2PStorePaymentManagementPage() {
                   <p className="mt-3 text-sm text-slate-500">결제 내역이 없습니다.</p>
                 ) : (
                   <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200">
-                    <table className="w-full table-fixed [&_th]:whitespace-normal [&_th]:break-words [&_td]:whitespace-normal [&_td]:break-words [&_td]:align-top">
+                    <div className="store-payment-table-scroll overflow-x-auto">
+                    <table className="store-payment-table w-full table-fixed [&_th]:whitespace-normal [&_th]:break-words [&_td]:whitespace-normal [&_td]:break-words [&_td]:align-top">
                         <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                           <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                             <th className="w-[96px] px-2 py-2">일시</th>
@@ -1085,6 +1086,7 @@ export default function P2PStorePaymentManagementPage() {
                           })}
                         </tbody>
                     </table>
+                    </div>
                   </div>
                 )}
               </section>
@@ -1231,6 +1233,21 @@ export default function P2PStorePaymentManagementPage() {
           </div>
         </div>
       )}
+      <style jsx global>{`
+        @media (max-width: 1024px) {
+          .p2p-mobile-shell .store-payment-table-scroll {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+          }
+
+          .p2p-mobile-shell .store-payment-table {
+            width: max-content !important;
+            min-width: 1080px !important;
+            table-layout: auto !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

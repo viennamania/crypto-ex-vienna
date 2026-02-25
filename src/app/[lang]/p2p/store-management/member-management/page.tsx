@@ -614,8 +614,8 @@ export default function P2PStoreMemberManagementPage() {
               <p className="mt-4 text-sm text-slate-500">조건에 맞는 회원이 없습니다.</p>
             ) : (
               <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
-                <div className="max-h-[560px] overflow-auto">
-                  <table className="min-w-[820px] w-full table-auto">
+                <div className="store-member-table-scroll max-h-[560px] overflow-auto">
+                  <table className="store-member-table min-w-[820px] w-full table-auto">
                     <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                       <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                         <th className="px-3 py-2">회원 아이디</th>
@@ -1002,6 +1002,21 @@ export default function P2PStoreMemberManagementPage() {
           </div>
         </div>
       )}
+      <style jsx global>{`
+        @media (max-width: 1024px) {
+          .p2p-mobile-shell .store-member-table-scroll {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+          }
+
+          .p2p-mobile-shell .store-member-table {
+            width: max-content !important;
+            min-width: 820px !important;
+            table-layout: auto !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
