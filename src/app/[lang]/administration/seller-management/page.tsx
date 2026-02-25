@@ -231,9 +231,14 @@ export default function SellerManagementPage() {
   const sortedFilteredSellers = useMemo(
     () =>
       [...filteredSellers].sort((a, b) => {
-        const aTime = new Date(a?.createdAt || 0).getTime();
-        const bTime = new Date(b?.createdAt || 0).getTime();
-        return bTime - aTime;
+        const aTime = Date.parse(String(a?.createdAt || a?.seller?.createdAt || 0));
+        const bTime = Date.parse(String(b?.createdAt || b?.seller?.createdAt || 0));
+        const normalizedATime = Number.isFinite(aTime) ? aTime : 0;
+        const normalizedBTime = Number.isFinite(bTime) ? bTime : 0;
+        if (normalizedBTime !== normalizedATime) {
+          return normalizedBTime - normalizedATime;
+        }
+        return String(b?.walletAddress || '').localeCompare(String(a?.walletAddress || ''));
       }),
     [filteredSellers],
   );
@@ -479,6 +484,141 @@ export default function SellerManagementPage() {
         };
       });
     }
+  };
+
+  const renderWalletInfoCell = (walletAddress?: string) => {
+    const normalizedWallet = String(walletAddress || '').trim();
+    if (!normalizedWallet) {
+      return <span className="text-xs text-slate-500">-</span>;
+    }
+
+    const walletKey = normalizeWalletKey(normalizedWallet);
+    const walletBalanceState = walletBalanceByAddress[walletKey];
+    const cooldownRemainingMs = Math.max(
+      0,
+      Number(walletBalanceState?.cooldownUntilMs || 0) - walletBalanceTickMs,
+    );
+    const cooldownRemainingSeconds =
+      cooldownRemainingMs > 0 ? Math.ceil(cooldownRemainingMs / 1000) : 0;
+    const cooldownProgressPercent = Math.max(
+      0,
+      Math.min(100, (cooldownRemainingMs / BALANCE_CHECK_COOLDOWN_MS) * 100),
+    );
+    const walletPreview = `${normalizedWallet.substring(0, 6)}...${normalizedWallet.substring(normalizedWallet.length - 4)}`;
+
+    return (
+      <div className="flex w-full min-w-0 max-w-full flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="font-mono text-[11px] leading-tight text-slate-700">{walletPreview}</span>
+          <button
+            type="button"
+            onClick={() => {
+              void handleCopyWalletAddress(normalizedWallet);
+            }}
+            className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+          >
+            복사
+          </button>
+          {walletCopyFeedback === walletKey && (
+            <span className="text-[10px] font-semibold text-emerald-600">복사됨</span>
+          )}
+        </div>
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {cooldownRemainingMs <= 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  void handleCheckSellerUsdtBalance(normalizedWallet);
+                }}
+                disabled={Boolean(walletBalanceState?.loading)}
+                className={`whitespace-nowrap rounded-md border px-1.5 py-0.5 text-[10px] font-semibold transition ${
+                  walletBalanceState?.loading
+                    ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                    : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100'
+                }`}
+              >
+                {walletBalanceState?.loading ? '조회중...' : '잔고확인'}
+              </button>
+            ) : (
+              <div className="w-[96px] rounded-lg border border-indigo-200 bg-indigo-50 px-1.5 py-1">
+                <div className="flex items-center justify-between text-[10px] font-semibold text-indigo-700">
+                  <span>재조회 대기</span>
+                  <span>{cooldownRemainingSeconds}s</span>
+                </div>
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/90">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-500 transition-[width] duration-200 ease-linear"
+                    style={{ width: `${cooldownProgressPercent.toFixed(2)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            <span
+              className={`text-[10px] font-semibold ${
+                walletBalanceState?.error ? 'text-rose-600' : 'text-slate-700'
+              }`}
+            >
+              {walletBalanceState?.error
+                ? '조회실패'
+                : walletBalanceState?.displayValue
+                ? `${walletBalanceState.displayValue} USDT`
+                : '잔고 미조회'}
+            </span>
+          </div>
+          {walletBalanceState?.lastCheckedAt && (
+            <span className="text-[10px] text-slate-500">
+              조회시각 {new Date(walletBalanceState.lastCheckedAt).toLocaleTimeString()}
+            </span>
+          )}
+          {walletBalanceState?.error && (
+            <span className="text-[10px] text-rose-500">{walletBalanceState.error}</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderMergedWalletInfoCell = (walletAddress?: string, escrowWalletAddress?: string) => {
+    const normalizedWallet = String(walletAddress || '').trim();
+    const normalizedEscrowWallet = String(escrowWalletAddress || '').trim();
+    if (!normalizedWallet && !normalizedEscrowWallet) {
+      return <span className="text-xs text-slate-500">-</span>;
+    }
+
+    return (
+      <div className="flex w-full min-w-0 max-w-full flex-col gap-2">
+        <div className="rounded-md border border-slate-200 bg-slate-50/80 px-1.5 py-1">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">지갑</p>
+          {renderWalletInfoCell(normalizedWallet)}
+        </div>
+        <div className="rounded-md border border-indigo-200 bg-indigo-50/50 px-1.5 py-1">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-indigo-600">에스크로</p>
+          {renderWalletInfoCell(normalizedEscrowWallet)}
+        </div>
+      </div>
+    );
+  };
+
+  const formatDateTimeTwoLines = (value?: string) => {
+    if (!value) {
+      return { date: '-', time: '-' };
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return { date: '-', time: '-' };
+    }
+    return {
+      date: parsed.toLocaleDateString('ko-KR', {
+        year: '2-digit',
+        month: '2-digit',
+        day: '2-digit',
+      }),
+      time: parsed.toLocaleTimeString('ko-KR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    };
   };
 
   const formatCount = (value: number) =>
@@ -751,19 +891,16 @@ export default function SellerManagementPage() {
             ) : sellers.length === 0 ? (
               <div className="text-sm text-slate-500">판매자 정보가 있는 회원이 없습니다.</div>
             ) : (
-              <div className="w-full overflow-x-auto rounded-lg border border-slate-200 shadow-sm">
-                <table className="w-full min-w-[1320px] border-collapse">
+              <div className="w-full overflow-hidden rounded-lg border border-slate-200 shadow-sm">
+                <table className="w-full table-fixed border-collapse">
                 <thead className="bg-slate-50 text-slate-700 text-xs font-bold uppercase border-b">
                   <tr>
-                    <th className="px-4 py-2 text-left">프로필</th>
-                    <th className="px-4 py-2 text-left">에이전트</th>
-                    <th className="px-4 py-2 text-left">지갑주소</th>
-                    <th className="px-4 py-2 text-left">등록시간</th>
-                    <th className="px-4 py-2 text-left">사용여부</th>
-                    <th className="px-4 py-2 text-left">상태</th>
-                    <th className="px-4 py-2 text-left">계좌정보</th>
-                    <th className="px-4 py-2 text-left">KYC</th>
-                    <th className="px-4 py-2 text-left">상세</th>
+                    <th className="w-[17%] px-3 py-2 text-left">프로필/등록시간</th>
+                    <th className="w-[16%] px-3 py-2 text-left">에이전트</th>
+                    <th className="w-[21%] px-3 py-2 text-left">지갑/에스크로 지갑</th>
+                    <th className="w-[14%] px-3 py-2 text-left">사용여부/판매상태</th>
+                    <th className="w-[22%] px-3 py-2 text-left">계좌정보/KYC</th>
+                    <th className="w-[10%] px-3 py-2 text-left">상세</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -801,7 +938,17 @@ export default function SellerManagementPage() {
                       : '-';
                     const bankInfoSubmittedAt = bankInfo?.submittedAt;
                     const kycSubmittedAt = sellerUser?.seller?.kyc?.submittedAt;
+                    const bankInfoSubmittedAtLabel = formatDateTimeTwoLines(bankInfoSubmittedAt);
+                    const kycSubmittedAtLabel = formatDateTimeTwoLines(kycSubmittedAt);
                     const createdAt = sellerUser?.createdAt;
+                    const createdAtLabel = createdAt
+                      ? new Date(createdAt).toLocaleString('ko-KR', {
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : '-';
                     const enabled = sellerUser?.seller?.enabled;
                     const avatar = sellerUser?.avatar || '/profile-default.png';
                     const initials = (sellerUser?.nickname || sellerUser?.walletAddress || 'NA')
@@ -809,25 +956,15 @@ export default function SellerManagementPage() {
                       .slice(0, 2)
                       .toUpperCase();
                     const walletAddress = sellerUser?.walletAddress || '';
-                    const walletKey = walletAddress ? normalizeWalletKey(walletAddress) : '';
-                    const walletBalanceState = walletKey ? walletBalanceByAddress[walletKey] : undefined;
-                    const cooldownRemainingMs = Math.max(
-                      0,
-                      Number(walletBalanceState?.cooldownUntilMs || 0) - walletBalanceTickMs,
-                    );
-                    const cooldownRemainingSeconds =
-                      cooldownRemainingMs > 0 ? Math.ceil(cooldownRemainingMs / 1000) : 0;
-                    const cooldownProgressPercent = Math.max(
-                      0,
-                      Math.min(100, (cooldownRemainingMs / BALANCE_CHECK_COOLDOWN_MS) * 100),
-                    );
-                    const walletPreview = walletAddress
-                      ? `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`
-                      : '-';
+                    const escrowWalletAddress =
+                      sellerUser?.seller?.escrowWalletAddress ||
+                      sellerUser?.seller?.escrowWallet?.address ||
+                      sellerUser?.escrowWalletAddress ||
+                      '';
                     return (
                       <tr key={index} className="border-b hover:bg-slate-50">
-                        <td className="px-4 py-2">
-                          <div className="flex items-center gap-3">
+                        <td className="px-3 py-2 align-top">
+                          <div className="flex w-full min-w-0 max-w-[160px] flex-col items-center gap-2">
                             <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-slate-200 bg-slate-900 text-white">
                               {sellerUser?.avatar ? (
                                 <Image
@@ -843,15 +980,15 @@ export default function SellerManagementPage() {
                                 </span>
                               )}
                             </div>
-                            <div className="flex flex-col">
-                              <span className="text-sm font-semibold text-slate-900">{sellerUser?.nickname || '-'}</span>
-                              <span className="text-[11px] text-slate-500">{initials}</span>
+                            <div className="flex w-full flex-col items-center text-center">
+                              <span className="w-full truncate text-sm font-semibold text-slate-900">{sellerUser?.nickname || '-'}</span>
+                              <span className="text-[11px] text-slate-500">등록 {createdAtLabel}</span>
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-2">
+                        <td className="px-3 py-2 align-top">
                           {agentInfo ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex min-w-0 items-center gap-2">
                               <div className="relative h-8 w-8 overflow-hidden rounded-full border border-slate-200 bg-slate-50">
                                 {agentInfo.agentLogo ? (
                                   <Image
@@ -884,179 +1021,118 @@ export default function SellerManagementPage() {
                               setAgentModalOpen(true);
                               fetchAgentHistory(sellerUser.walletAddress);
                             }}
-                            className="mt-1 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
+                            className="mt-1 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
                           >
                             변경하기
                           </button>
                         </td>
-                        <td className="px-4 py-2 text-xs text-slate-700">
-                          <div className="flex min-w-[180px] flex-col gap-1.5 sm:min-w-[220px]">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-mono text-xs text-slate-700">{walletPreview}</span>
-                              {walletAddress ? (
+                        <td className="px-3 py-2 align-top text-xs text-slate-700">
+                          {renderMergedWalletInfoCell(walletAddress, escrowWalletAddress)}
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          <div className="flex w-full min-w-0 max-w-full flex-col gap-2">
+                            <div className="rounded-md border border-slate-200 bg-slate-50/70 px-1.5 py-1.5">
+                              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">사용여부</p>
+                              <div className="flex flex-col items-start gap-1">
+                                <span
+                                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold border ${
+                                    enabled
+                                      ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                                      : 'border-slate-200/80 bg-slate-50 text-slate-600'
+                                  }`}
+                                >
+                                  {enabled ? '사용중' : '미사용'}
+                                </span>
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    void handleCopyWalletAddress(walletAddress);
+                                    setEnabledModalTarget({ wallet: sellerUser.walletAddress, enabled });
+                                    setEnabledModalOpen(true);
+                                    setSelectedEnabled(enabled ?? false);
+                                    fetchEnabledHistory(sellerUser.walletAddress, 1, false);
                                   }}
-                                  className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
                                 >
-                                  복사
+                                  변경하기
                                 </button>
-                              ) : null}
-                              {walletKey && walletCopyFeedback === walletKey && (
-                                <span className="text-[10px] font-semibold text-emerald-600">복사됨</span>
-                              )}
-                            </div>
-                            {walletAddress ? (
-                              <div className="flex flex-col gap-1">
-                                <div className="flex items-center gap-2">
-                                  {cooldownRemainingMs <= 0 ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        void handleCheckSellerUsdtBalance(walletAddress);
-                                      }}
-                                      disabled={Boolean(walletBalanceState?.loading)}
-                                      className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold transition ${
-                                        walletBalanceState?.loading
-                                          ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
-                                          : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100'
-                                      }`}
-                                    >
-                                      {walletBalanceState?.loading ? '조회중...' : '잔고확인'}
-                                    </button>
-                                  ) : (
-                                    <div className="w-[130px] rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-1">
-                                      <div className="flex items-center justify-between text-[10px] font-semibold text-indigo-700">
-                                        <span>재조회 대기</span>
-                                        <span>{cooldownRemainingSeconds}s</span>
-                                      </div>
-                                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/90">
-                                        <div
-                                          className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-500 transition-[width] duration-200 ease-linear"
-                                          style={{ width: `${cooldownProgressPercent.toFixed(2)}%` }}
-                                        />
-                                      </div>
-                                    </div>
-                                  )}
-                                  <span
-                                    className={`text-[11px] font-semibold ${
-                                      walletBalanceState?.error ? 'text-rose-600' : 'text-slate-700'
-                                    }`}
-                                  >
-                                    {walletBalanceState?.error
-                                      ? '조회실패'
-                                      : walletBalanceState?.displayValue
-                                      ? `${walletBalanceState.displayValue} USDT`
-                                      : '잔고 미조회'}
-                                  </span>
-                                </div>
-                                {walletBalanceState?.lastCheckedAt && (
-                                  <span className="text-[10px] text-slate-500">
-                                    조회시각 {new Date(walletBalanceState.lastCheckedAt).toLocaleTimeString()}
-                                  </span>
-                                )}
-                                {walletBalanceState?.error && (
-                                  <span className="text-[10px] text-rose-500">{walletBalanceState.error}</span>
-                                )}
                               </div>
-                            ) : null}
+                            </div>
+                            <div className="rounded-md border border-slate-200 bg-slate-50/70 px-1.5 py-1.5">
+                              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">판매상태</p>
+                              <span
+                                className={`inline-flex w-full items-center justify-center whitespace-normal break-keep rounded-full border px-2 py-1 text-center text-[11px] font-semibold leading-tight shadow-sm ${
+                                  normalizedSellerStatus === 'confirmed'
+                                    ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                                    : 'border-amber-200/80 bg-amber-50 text-amber-700'
+                                }`}
+                              >
+                                {normalizedSellerStatus === 'confirmed' ? '판매가능상태' : '판매불가능상태'}
+                              </span>
+                            </div>
                           </div>
                         </td>
-                        <td className="px-4 py-2 text-xs text-slate-600">
-                          {createdAt ? new Date(createdAt).toLocaleString() : '-'}
-                        </td>
-                        <td className="px-4 py-2">
-                          <div className="flex flex-col items-start gap-1">
-                            <span
-                              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold border ${
-                                enabled
-                                  ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
-                                  : 'border-slate-200/80 bg-slate-50 text-slate-600'
-                              }`}
-                            >
-                              {enabled ? '사용중' : '미사용'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEnabledModalTarget({ wallet: sellerUser.walletAddress, enabled });
-                                setEnabledModalOpen(true);
-                                setSelectedEnabled(enabled ?? false);
-                                fetchEnabledHistory(sellerUser.walletAddress, 1, false);
-                              }}
-                              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
-                            >
-                              변경하기
-                            </button>
+                        <td className="px-3 py-2 align-top">
+                          <div className="grid w-full min-w-0 max-w-full grid-cols-2 gap-1.5">
+                            <div className="min-w-0 rounded-md border border-slate-200 bg-slate-50/70 px-1.5 py-1.5">
+                              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">계좌</p>
+                              <div className="flex flex-col gap-1">
+                                <span
+                                  className={`inline-flex w-full items-center justify-center whitespace-normal break-keep rounded-full border px-1.5 py-1 text-center text-[10px] font-semibold leading-tight ${
+                                    bankInfoStatus === 'approved'
+                                      ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                                      : bankInfoStatus === 'rejected'
+                                      ? 'border-rose-200/80 bg-rose-50 text-rose-700'
+                                      : bankInfoStatus === 'pending'
+                                      ? 'border-amber-200/80 bg-amber-50 text-amber-700'
+                                      : 'border-slate-200/80 bg-slate-50 text-slate-600'
+                                  }`}
+                                >
+                                  {bankInfoLabel}
+                                </span>
+                                <span className="break-all text-xs leading-tight text-slate-600">{bankName}</span>
+                                <span className="break-all text-xs leading-tight text-slate-500">{maskedAccount}</span>
+                                <div className="flex flex-col leading-tight text-[11px] text-slate-500">
+                                  <span>{bankInfoSubmittedAtLabel.date}</span>
+                                  <span>{bankInfoSubmittedAtLabel.time}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="min-w-0 rounded-md border border-slate-200 bg-slate-50/70 px-1.5 py-1.5">
+                              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">KYC</p>
+                              <div className="flex flex-col gap-1">
+                                <span
+                                  className={`inline-flex w-full items-center justify-center whitespace-normal break-keep rounded-full border px-1.5 py-1 text-center text-[10px] font-semibold leading-tight ${
+                                    kycStatus === 'approved'
+                                      ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
+                                      : kycStatus === 'rejected'
+                                      ? 'border-rose-200/80 bg-rose-50 text-rose-700'
+                                      : kycStatus === 'pending'
+                                      ? 'border-amber-200/80 bg-amber-50 text-amber-700'
+                                      : 'border-slate-200/80 bg-slate-50 text-slate-600'
+                                  }`}
+                                >
+                                  {kycStatus === 'approved'
+                                    ? '승인완료'
+                                    : kycStatus === 'rejected'
+                                    ? '거절'
+                                    : kycStatus === 'pending'
+                                    ? '심사중'
+                                    : '미제출'}
+                                </span>
+                                <div className="flex flex-col leading-tight text-[11px] text-slate-500">
+                                  <span>{kycSubmittedAtLabel.date}</span>
+                                  <span>{kycSubmittedAtLabel.time}</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </td>
-                        <td className="px-4 py-2">
-                          <span
-                            className={`inline-flex min-w-[120px] items-center justify-center rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm sm:min-w-[160px] ${
-                              normalizedSellerStatus === 'confirmed'
-                                ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
-                                : 'border-amber-200/80 bg-amber-50 text-amber-700'
-                            }`}
-                          >
-                            {normalizedSellerStatus === 'confirmed' ? '판매가능상태' : '판매불가능상태'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2">
-                          <div className="flex flex-col gap-1">
-                            <span
-                              className={`inline-flex w-fit items-center rounded-full border px-2 py-1 text-xs font-semibold ${
-                                bankInfoStatus === 'approved'
-                                  ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
-                                  : bankInfoStatus === 'rejected'
-                                  ? 'border-rose-200/80 bg-rose-50 text-rose-700'
-                                  : bankInfoStatus === 'pending'
-                                  ? 'border-amber-200/80 bg-amber-50 text-amber-700'
-                                  : 'border-slate-200/80 bg-slate-50 text-slate-600'
-                              }`}
-                            >
-                              {bankInfoLabel}
-                            </span>
-                            <span className="text-xs text-slate-600">{bankName}</span>
-                            <span className="text-xs text-slate-500">{maskedAccount}</span>
-                            <span className="text-[11px] text-slate-500">
-                              {bankInfoSubmittedAt ? new Date(bankInfoSubmittedAt).toLocaleString() : '-'}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2">
-                          <div className="flex flex-col gap-1">
-                            <span
-                              className={`inline-flex w-fit items-center rounded-full border px-2 py-1 text-xs font-semibold ${
-                                kycStatus === 'approved'
-                                  ? 'border-emerald-200/80 bg-emerald-50 text-emerald-700'
-                                  : kycStatus === 'rejected'
-                                  ? 'border-rose-200/80 bg-rose-50 text-rose-700'
-                                  : kycStatus === 'pending'
-                                  ? 'border-amber-200/80 bg-amber-50 text-amber-700'
-                                  : 'border-slate-200/80 bg-slate-50 text-slate-600'
-                              }`}
-                            >
-                              {kycStatus === 'approved'
-                                ? '승인완료'
-                                : kycStatus === 'rejected'
-                                ? '거절'
-                                : kycStatus === 'pending'
-                                ? '심사중'
-                                : '미제출'}
-                            </span>
-                            <span className="text-xs text-slate-600">
-                              {kycSubmittedAt ? new Date(kycSubmittedAt).toLocaleString() : '-'}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2">
+                        <td className="px-3 py-2 align-top">
                           <button
                             onClick={() => {
                               router.push(`/${lang}/administration/seller/${sellerUser.walletAddress}?storecode=${sellerUser.storecode || ''}`);
                             }}
-                            className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                            className="w-full whitespace-nowrap rounded-full bg-slate-900 px-2 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-slate-800"
                           >
                             상세보기
                           </button>
