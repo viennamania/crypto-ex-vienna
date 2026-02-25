@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
       ALLOWED_STATUS.has(requestedStatus as AgentPlatformFeeReceivableStatus) ? requestedStatus : 'ALL'
     );
     const batchKeyKeyword = toText(body?.batchKey);
+    const agentcodeKeyword = toText(body?.agentcode);
 
     const client = await clientPromise;
     const db = client.db(dbName);
@@ -132,6 +133,9 @@ export async function POST(request: NextRequest) {
       ...(normalizedStatus !== 'ALL' ? { status: normalizedStatus } : {}),
       ...(batchKeyKeyword
         ? { batchKey: { $regex: escapeRegex(batchKeyKeyword), $options: 'i' } }
+        : {}),
+      ...(agentcodeKeyword
+        ? { agentcode: { $regex: `^${escapeRegex(agentcodeKeyword)}$`, $options: 'i' } }
         : {}),
     };
 
@@ -229,6 +233,7 @@ export async function POST(request: NextRequest) {
           periodDays: normalizedPeriodDays,
           status: normalizedStatus,
           batchKey: batchKeyKeyword,
+          agentcode: agentcodeKeyword,
           fromDateIso,
           toDateIso,
         },

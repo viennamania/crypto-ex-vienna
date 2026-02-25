@@ -9,6 +9,7 @@ import { useActiveAccount } from 'thirdweb/react';
 type AttemptItem = {
   id: string;
   orderId: string;
+  agentcode: string;
   tradeId: string;
   status: string;
   previousStatus: string;
@@ -51,6 +52,13 @@ type SearchFilters = {
   batchKey: string;
 };
 
+type AgentCollectionItem = {
+  key: string;
+  agentcode: string;
+  agentName: string;
+  agentLogo: string;
+};
+
 const DEFAULT_LIMIT = 30;
 const PERIOD_OPTIONS: Array<{ value: 1 | 7 | 30; label: string }> = [
   { value: 1, label: '오늘' },
@@ -72,6 +80,42 @@ const createDefaultFilters = (): SearchFilters => ({
   status: 'ALL',
   batchKey: '',
 });
+
+const getAgentCellKey = (item: { agentcode?: string; agentName?: string }) => {
+  const agentcode = String(item.agentcode || '').trim();
+  if (agentcode) return `code:${agentcode.toLowerCase()}`;
+  const agentName = String(item.agentName || '').trim();
+  if (agentName) return `name:${agentName.toLowerCase()}`;
+  return 'unknown';
+};
+
+const getAgentDisplayName = (item: Pick<AgentCollectionItem, 'agentName' | 'agentcode'>) => {
+  const name = String(item.agentName || '').trim();
+  if (name) return name;
+  const code = String(item.agentcode || '').trim();
+  if (code) return code;
+  return '미지정 에이전트';
+};
+
+const getAgentAvatarFallback = (name: string) => {
+  const normalizedName = String(name || '').replace(/\s+/g, '').trim();
+  if (!normalizedName) return 'AG';
+  return normalizedName.slice(0, 2).toUpperCase();
+};
+
+const normalizeAgentCollectionItem = (value: unknown): AgentCollectionItem | null => {
+  const source = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+  if (!source) return null;
+  const agentcode = String(source.agentcode || '').trim();
+  const agentName = String(source.agentName || '').trim();
+  if (!agentcode && !agentName) return null;
+  return {
+    key: getAgentCellKey({ agentcode, agentName }),
+    agentcode,
+    agentName,
+    agentLogo: String(source.agentLogo || '').trim(),
+  };
+};
 
 const shortWallet = (value?: string) => {
   const normalized = String(value || '').trim();
@@ -152,8 +196,81 @@ export default function PlatformFeeCollectionHistoryPage() {
   });
   const [draftFilters, setDraftFilters] = useState<SearchFilters>(() => createDefaultFilters());
   const [appliedFilters, setAppliedFilters] = useState<SearchFilters>(() => createDefaultFilters());
+  const [agentCatalog, setAgentCatalog] = useState<AgentCollectionItem[]>([]);
+  const [loadingAgentCatalog, setLoadingAgentCatalog] = useState(false);
+  const [agentCatalogError, setAgentCatalogError] = useState<string | null>(null);
+  const [selectedAgentKey, setSelectedAgentKey] = useState('');
   const [copiedValue, setCopiedValue] = useState('');
   const [lastUpdatedAt, setLastUpdatedAt] = useState('');
+
+  const selectedAgentInfo = useMemo(
+    () => agentCatalog.find((agent) => agent.key === selectedAgentKey) || null,
+    [agentCatalog, selectedAgentKey],
+  );
+  const selectedAgentcodeFilter = String(selectedAgentInfo?.agentcode || '').trim();
+
+  const loadAgentCatalog = useCallback(async () => {
+    setLoadingAgentCatalog(true);
+    setAgentCatalogError(null);
+    try {
+      const limit = 100;
+      let skip = 0;
+      let total = 0;
+      const allAgents: AgentCollectionItem[] = [];
+
+      while (skip < total || skip === 0) {
+        const params = new URLSearchParams({
+          limit: String(limit),
+          skip: String(skip),
+        });
+        const response = await fetch(`/api/agents?${params.toString()}`, { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(
+            typeof (payload as Record<string, unknown>)?.error === 'string'
+              ? String((payload as Record<string, unknown>).error)
+              : '에이전트 목록 조회에 실패했습니다.',
+          );
+        }
+
+        const rawItems = Array.isArray((payload as Record<string, unknown>)?.items)
+          ? ((payload as Record<string, unknown>).items as unknown[])
+          : [];
+        const normalizedItems = rawItems
+          .map((item) => normalizeAgentCollectionItem(item))
+          .filter((item: AgentCollectionItem | null): item is AgentCollectionItem => item !== null);
+        allAgents.push(...normalizedItems);
+
+        total = Math.max(0, Number((payload as Record<string, unknown>)?.total || 0) || 0);
+        if (rawItems.length < limit) break;
+        skip += limit;
+      }
+
+      const uniqueAgents = new Map<string, AgentCollectionItem>();
+      allAgents.forEach((agent) => {
+        if (uniqueAgents.has(agent.key)) return;
+        uniqueAgents.set(agent.key, agent);
+      });
+      setAgentCatalog(Array.from(uniqueAgents.values()));
+    } catch (agentError) {
+      setAgentCatalog([]);
+      setAgentCatalogError(agentError instanceof Error ? agentError.message : '에이전트 목록 조회에 실패했습니다.');
+    } finally {
+      setLoadingAgentCatalog(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAgentCatalog();
+  }, [loadAgentCatalog]);
+
+  useEffect(() => {
+    if (agentCatalog.length === 0) {
+      setSelectedAgentKey('');
+      return;
+    }
+    setSelectedAgentKey((prev) => (agentCatalog.some((agent) => agent.key === prev) ? prev : agentCatalog[0].key));
+  }, [agentCatalog]);
 
   const loadList = useCallback(async () => {
     if (!requesterWalletAddress) {
@@ -175,6 +292,7 @@ export default function PlatformFeeCollectionHistoryPage() {
           periodDays: appliedFilters.periodDays,
           status: appliedFilters.status,
           batchKey: appliedFilters.batchKey.trim(),
+          agentcode: selectedAgentcodeFilter,
         }),
       });
 
@@ -194,6 +312,7 @@ export default function PlatformFeeCollectionHistoryPage() {
         return {
           id: String(source.id || ''),
           orderId: String(source.orderId || ''),
+          agentcode: String(source.agentcode || ''),
           tradeId: String(source.tradeId || ''),
           status: String(source.status || ''),
           previousStatus: String(source.previousStatus || ''),
@@ -249,7 +368,7 @@ export default function PlatformFeeCollectionHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [appliedFilters, pagination.limit, pagination.page, requesterWalletAddress]);
+  }, [appliedFilters, pagination.limit, pagination.page, requesterWalletAddress, selectedAgentcodeFilter]);
 
   useEffect(() => {
     void loadList();
@@ -321,6 +440,71 @@ export default function PlatformFeeCollectionHistoryPage() {
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_26px_56px_-46px_rgba(15,23,42,0.45)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+            <p className="text-sm font-semibold text-slate-900">에이전트 목록</p>
+            <p className="text-xs text-slate-500">
+              선택 에이전트: {selectedAgentInfo ? getAgentDisplayName(selectedAgentInfo) : '-'} · 전체 {agentCatalog.length.toLocaleString()}명
+            </p>
+          </div>
+
+          {agentCatalogError && (
+            <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+              {agentCatalogError}
+            </div>
+          )}
+
+          {loadingAgentCatalog && agentCatalog.length === 0 ? (
+            <div className="px-4 py-3 text-xs text-slate-500">
+              에이전트 목록을 불러오는 중입니다...
+            </div>
+          ) : agentCatalog.length === 0 ? (
+            <div className="px-4 py-3 text-xs text-slate-500">
+              표시할 에이전트가 없습니다.
+            </div>
+          ) : (
+            <div className="px-4 py-3">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                {agentCatalog.map((agent) => {
+                  const displayName = getAgentDisplayName(agent);
+                  const isSelected = selectedAgentKey === agent.key;
+                  return (
+                    <button
+                      key={agent.key}
+                      type="button"
+                      onClick={() => {
+                        setSelectedAgentKey(agent.key);
+                        setPagination((prev) => ({ ...prev, page: 1 }));
+                      }}
+                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition ${
+                        isSelected
+                          ? 'border-cyan-300 bg-cyan-50 shadow-[0_10px_24px_-18px_rgba(8,145,178,0.7)]'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                        {agent.agentLogo ? (
+                          <span
+                            className="h-full w-full bg-cover bg-center"
+                            style={{ backgroundImage: `url(${encodeURI(agent.agentLogo)})` }}
+                            aria-label={displayName}
+                          />
+                        ) : (
+                          <span className="text-[10px] font-extrabold text-slate-600">{getAgentAvatarFallback(displayName)}</span>
+                        )}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-slate-900">{displayName}</span>
+                        <span className="block truncate text-[11px] text-slate-500">{agent.agentcode || '-'}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.42)]">
@@ -430,6 +614,7 @@ export default function PlatformFeeCollectionHistoryPage() {
             <button
               type="button"
               onClick={() => {
+                void loadAgentCatalog();
                 void loadList();
               }}
               className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"

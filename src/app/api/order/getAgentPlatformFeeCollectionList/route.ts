@@ -36,14 +36,6 @@ const toIsoDateBoundary = (value: unknown, isStart: boolean) => {
   return parsed.toISOString();
 };
 
-const getTodayDateInKst = () =>
-  new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-
 const normalizeCount = (value: unknown) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) return 0;
@@ -69,9 +61,10 @@ export async function POST(request: NextRequest) {
       ? Math.min(MAX_LIMIT, Math.floor(limitRaw))
       : DEFAULT_LIMIT;
 
-    const selectedDate = String(body?.date || '').trim() || getTodayDateInKst();
-    const fromDateIso = toIsoDateBoundary(selectedDate, true) || '1970-01-01T00:00:00.000Z';
-    const toDateIso = toIsoDateBoundary(selectedDate, false) || new Date().toISOString();
+    const selectedDate = String(body?.date || '').trim();
+    const fromDateIso = selectedDate ? toIsoDateBoundary(selectedDate, true) : null;
+    const toDateIso = selectedDate ? toIsoDateBoundary(selectedDate, false) : null;
+    const hasDateFilter = Boolean(selectedDate && fromDateIso && toDateIso);
 
     const tradeIdRegex = toRegexFilter(body?.searchTradeId);
     const sellerRegex = toRegexFilter(body?.searchSeller);
@@ -84,13 +77,17 @@ export async function POST(request: NextRequest) {
     const { receivablesCollection } = await ensureAgentPlatformFeeCollections(db);
 
     // Backfill legacy orders into receivables for stable list/read model.
+    const backfillQuery: Record<string, unknown> = {
+      storecode: { $regex: '^admin$', $options: 'i' },
+      status: { $regex: '^(completed|paymentconfirmed)$', $options: 'i' },
+    };
+    if (hasDateFilter) {
+      backfillQuery.createdAt = { $gte: fromDateIso!, $lte: toDateIso! };
+    }
+
     const backfillOrders = await buyordersCollection
       .find(
-        {
-          storecode: { $regex: '^admin$', $options: 'i' },
-          createdAt: { $gte: fromDateIso, $lte: toDateIso },
-          status: { $regex: '^(completed|paymentconfirmed)$', $options: 'i' },
-        },
+        backfillQuery,
         {
           projection: {
             _id: 1,
@@ -299,9 +296,11 @@ export async function POST(request: NextRequest) {
       feeType: AGENT_PLATFORM_FEE_TYPE,
       feeVersion: AGENT_PLATFORM_FEE_VERSION,
       storecode: { $regex: '^admin$', $options: 'i' },
-      createdAt: { $gte: fromDateIso, $lte: toDateIso },
       orderStatus: { $regex: COMPLETED_ORDER_STATUS_REGEX },
     };
+    if (hasDateFilter) {
+      baseQuery.createdAt = { $gte: fromDateIso!, $lte: toDateIso! };
+    }
 
     const andFilters: Record<string, unknown>[] = [];
     if (tradeIdRegex) {
