@@ -4278,7 +4278,7 @@ const fetchBuyOrders = async () => {
 
   if (address && loadingUser) {
     return (
-      <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-4xl bg-white">
+      <main className="p2p-buy-light p-4 pb-28 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-4xl bg-white">
         <div className="py-0 w-full flex flex-col items-center justify-center gap-4">
 
           <Image
@@ -4299,7 +4299,7 @@ const fetchBuyOrders = async () => {
 
   return (
 
-    <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-4xl bg-white text-slate-800 antialiased [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:rounded-md">
+    <main className="p2p-buy-light p-4 pb-28 min-h-[100vh] flex items-start justify-center mx-auto w-full max-w-4xl bg-white text-slate-800 antialiased [&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs [&_button]:rounded-md">
 
       <AutoConnect
           client={client}
@@ -10076,6 +10076,31 @@ const fetchBuyOrders = async () => {
         </ModalUser>
 
         <style jsx global>{`
+          .p2p-buy-light {
+            background:
+              radial-gradient(circle at 12% -8%, rgba(56, 189, 248, 0.12), transparent 46%),
+              radial-gradient(circle at 90% 10%, rgba(249, 115, 22, 0.1), transparent 40%),
+              #f8fafc;
+          }
+
+          .p2p-buy-light .bg-zinc-900,
+          .p2p-buy-light .bg-zinc-800,
+          .p2p-buy-light .bg-zinc-700,
+          .p2p-buy-light .bg-slate-900,
+          .p2p-buy-light .bg-slate-800,
+          .p2p-buy-light .bg-slate-700 {
+            background-color: rgba(255, 255, 255, 0.9);
+          }
+
+          .p2p-buy-light .text-zinc-100,
+          .p2p-buy-light .text-zinc-200,
+          .p2p-buy-light .text-zinc-300,
+          .p2p-buy-light .text-slate-100,
+          .p2p-buy-light .text-slate-200,
+          .p2p-buy-light .text-slate-300 {
+            color: #475569;
+          }
+
           @keyframes seller-shimmer {
             0% {
               transform: translateX(-120%);
@@ -10096,6 +10121,57 @@ const fetchBuyOrders = async () => {
             50% {
               opacity: 0.9;
               transform: scale(1.04);
+            }
+          }
+
+          @media (max-width: 1024px) {
+            .p2p-buy-light {
+              padding-top: calc(env(safe-area-inset-top) + 0.5rem) !important;
+            }
+
+            .p2p-buy-light .overflow-x-auto {
+              overflow-x: hidden !important;
+            }
+
+            .p2p-buy-light table {
+              width: 100% !important;
+              min-width: 100% !important;
+              table-layout: fixed !important;
+            }
+
+            .p2p-buy-light th,
+            .p2p-buy-light td {
+              white-space: normal !important;
+              word-break: break-word;
+              overflow-wrap: anywhere;
+              font-size: 11px;
+              padding: 0.45rem 0.3rem !important;
+              line-height: 1.35;
+            }
+
+            .p2p-buy-light [class*='w-96'],
+            .p2p-buy-light [class*='min-w-[140px]'],
+            .p2p-buy-light [class*='min-w-[200px]'] {
+              width: 100% !important;
+              min-width: 0 !important;
+            }
+
+            .p2p-buy-light [class*='text-4xl'] {
+              font-size: 1.7rem !important;
+              line-height: 2rem !important;
+            }
+
+            .p2p-buy-light [class*='text-3xl'] {
+              font-size: 1.4rem !important;
+              line-height: 1.8rem !important;
+            }
+          }
+
+          @media (max-width: 900px) {
+            .p2p-buy-light [class*='grid-cols-2'],
+            .p2p-buy-light [class*='sm:grid-cols-2'],
+            .p2p-buy-light [class*='md:grid-cols-2'] {
+              grid-template-columns: minmax(0, 1fr) !important;
             }
           }
         `}</style>

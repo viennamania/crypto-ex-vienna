@@ -1579,7 +1579,7 @@ export default function P2PPage() {
     return (
         <div
             ref={pageRef}
-            className={`${bodyFont.variable} ${displayFont.variable} relative min-h-screen overflow-hidden bg-[linear-gradient(160deg,var(--paper),#f0f9ff_45%,#fff1f2_85%)] text-[color:var(--ink)] font-[var(--font-body)]`}
+            className={`p2p-home-shell ${bodyFont.variable} ${displayFont.variable} relative min-h-screen overflow-hidden bg-[linear-gradient(160deg,var(--paper),#f0f9ff_45%,#fff1f2_85%)] text-[color:var(--ink)] font-[var(--font-body)]`}
             style={{
                 '--paper': '#fff4ea',
                 '--ink': '#1c1917',
@@ -3731,21 +3731,72 @@ export default function P2PPage() {
                     }
                 }
 
+                @media (max-width: 1024px) {
+                    .p2p-home-shell main {
+                        padding-left: 0.75rem !important;
+                        padding-right: 0.75rem !important;
+                        padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+                    }
+
+                    .p2p-home-shell .hero-fade {
+                        margin-top: 0.75rem;
+                        margin-bottom: 1rem;
+                        border-radius: 20px;
+                    }
+
+                    .p2p-home-shell .glam-card {
+                        border-radius: 18px;
+                        padding: 1rem !important;
+                    }
+
+                    .p2p-home-shell h1 {
+                        font-size: clamp(1.45rem, 5.2vw, 2rem) !important;
+                        line-height: 1.2 !important;
+                        white-space: normal !important;
+                    }
+
+                    .p2p-home-shell h2 {
+                        font-size: clamp(1.2rem, 4.4vw, 1.75rem) !important;
+                        line-height: 1.25 !important;
+                    }
+
+                    .p2p-home-shell .seller-card {
+                        flex: 0 0 250px;
+                        width: 250px;
+                        max-width: 250px;
+                    }
+
+                    .p2p-home-shell .news-card {
+                        flex: 0 0 230px;
+                        width: 230px;
+                        max-width: 230px;
+                    }
+                }
+
                 @media (max-width: 640px) {
+                    .p2p-home-shell .hero-fade .grid {
+                        gap: 1rem;
+                        padding: 1rem !important;
+                    }
+
+                    .p2p-home-shell .glam-card {
+                        padding: 0.9rem !important;
+                    }
+
                     .ticker {
                         height: 280px;
                     }
 
-                    .seller-card {
-                        flex: 0 0 260px;
-                        width: 260px;
-                        max-width: 260px;
+                    .p2p-home-shell .seller-card {
+                        flex: 0 0 240px;
+                        width: 240px;
+                        max-width: 240px;
                     }
 
-                    .news-card {
-                        flex: 0 0 220px;
-                        width: 220px;
-                        max-width: 220px;
+                    .p2p-home-shell .news-card {
+                        flex: 0 0 210px;
+                        width: 210px;
+                        max-width: 210px;
                     }
                 }
 

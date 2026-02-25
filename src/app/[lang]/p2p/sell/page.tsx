@@ -4222,7 +4222,7 @@ const fetchBuyOrders = async () => {
 
   if (address && loadingUser) {
     return (
-      <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-[linear-gradient(160deg,#fff4ea,#f0f9ff_45%,#fff1f2_85%)] text-slate-700">
+      <main className="p2p-sell-light p-4 pb-28 min-h-[100vh] flex items-start justify-center container max-w-screen-2xl mx-auto bg-[linear-gradient(160deg,#fff4ea,#f0f9ff_45%,#fff1f2_85%)] text-slate-700">
         <div className="py-0 w-full flex flex-col items-center justify-center gap-4">
 
           <Image
@@ -11972,6 +11972,76 @@ const fetchBuyOrders = async () => {
           .p2p-sell-light .bg-slate-700\\/70.text-white,
           .p2p-sell-light .bg-slate-700\\/50.text-white {
             color: #0f172a;
+          }
+
+          @media (max-width: 1024px) {
+            .p2p-sell-light {
+              padding-top: calc(env(safe-area-inset-top) + 0.5rem) !important;
+            }
+
+            .p2p-sell-light .overflow-x-auto {
+              overflow-x: hidden !important;
+            }
+
+            .p2p-sell-light table {
+              width: 100% !important;
+              min-width: 100% !important;
+              table-layout: fixed !important;
+            }
+
+            .p2p-sell-light th,
+            .p2p-sell-light td {
+              white-space: normal !important;
+              word-break: break-word;
+              overflow-wrap: anywhere;
+              font-size: 11px;
+              padding: 0.45rem 0.3rem !important;
+              line-height: 1.35;
+            }
+
+            .p2p-sell-light [class*='w-64'],
+            .p2p-sell-light [class*='w-52'],
+            .p2p-sell-light [class*='w-28'],
+            .p2p-sell-light [class*='min-w-['] {
+              width: 100% !important;
+              max-width: 100% !important;
+              min-width: 0 !important;
+            }
+
+            .p2p-sell-light [class*='text-4xl'] {
+              font-size: 1.7rem !important;
+              line-height: 2rem !important;
+            }
+
+            .p2p-sell-light [class*='text-3xl'] {
+              font-size: 1.45rem !important;
+              line-height: 1.85rem !important;
+            }
+          }
+
+          @media (max-width: 900px) {
+            .p2p-sell-light [class*='grid-cols-3'],
+            .p2p-sell-light [class*='md:grid-cols-3'] {
+              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+
+            .p2p-sell-light [class*='xl:flex-row'] {
+              flex-direction: column !important;
+              align-items: stretch !important;
+            }
+          }
+
+          @media (max-width: 640px) {
+            .p2p-sell-light [class*='grid-cols-3'],
+            .p2p-sell-light [class*='md:grid-cols-3'] {
+              grid-template-columns: minmax(0, 1fr) !important;
+            }
+
+            .p2p-sell-light .fixed.left-0.right-0.bottom-4 {
+              left: 0.5rem;
+              right: 0.5rem;
+              bottom: calc(0.4rem + env(safe-area-inset-bottom));
+            }
           }
         `}</style>
 
