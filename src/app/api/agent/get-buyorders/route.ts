@@ -8,6 +8,28 @@ const toNumber = (value: unknown) => {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : 0;
 };
+const toIsoDateBoundary = (value: unknown, isStart: boolean) => {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  if (!normalized) return null;
+
+  const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;
+  if (dateOnlyPattern.test(normalized)) {
+    const time = isStart ? 'T00:00:00+09:00' : 'T23:59:59+09:00';
+    const parsedKst = new Date(`${normalized}${time}`);
+    if (!Number.isNaN(parsedKst.getTime())) {
+      return parsedKst.toISOString();
+    }
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) return null;
+  if (isStart) {
+    parsed.setHours(0, 0, 0, 0);
+  } else {
+    parsed.setHours(23, 59, 59, 999);
+  }
+  return parsed.toISOString();
+};
 
 const normalizeAgentcode = (value: unknown) => String(value || '').trim();
 const toAgentcodeKey = (value: unknown) => normalizeAgentcode(value).toLowerCase();
@@ -81,18 +103,13 @@ export async function POST(request: Request) {
 
     if (startDate || endDate) {
       const createdAtRange: Record<string, string> = {};
-      if (startDate) {
-        const parsedStart = new Date(startDate);
-        if (!Number.isNaN(parsedStart.getTime())) {
-          createdAtRange.$gte = parsedStart.toISOString();
-        }
+      const startDateIso = toIsoDateBoundary(startDate, true);
+      const endDateIso = toIsoDateBoundary(endDate, false);
+      if (startDateIso) {
+        createdAtRange.$gte = startDateIso;
       }
-      if (endDate) {
-        const parsedEnd = new Date(endDate);
-        if (!Number.isNaN(parsedEnd.getTime())) {
-          parsedEnd.setHours(23, 59, 59, 999);
-          createdAtRange.$lte = parsedEnd.toISOString();
-        }
+      if (endDateIso) {
+        createdAtRange.$lte = endDateIso;
       }
       if (Object.keys(createdAtRange).length > 0) {
         match.createdAt = createdAtRange;
