@@ -4238,13 +4238,20 @@ export async function deleteBuyOrder(
 
 
 }
+export type CancelPrivateBuyOrderByBuyerProgressStatus =
+  | 'processing'
+  | 'completed'
+  | 'error';
 
-
-
-
-
-
-
+export type CancelPrivateBuyOrderByBuyerProgressEvent = {
+  step: string;
+  title: string;
+  description: string;
+  status: CancelPrivateBuyOrderByBuyerProgressStatus;
+  occurredAt: string;
+  detail?: string;
+  data?: Record<string, unknown>;
+};
 
 // cancel private sale buy order by buyer
 export async function cancelPrivateBuyOrderByBuyer(
@@ -4254,21 +4261,80 @@ export async function cancelPrivateBuyOrderByBuyer(
     sellerWalletAddress,
     cancelledByIpAddress = '',
     cancelledByUserAgent = '',
+    onProgress,
   }: {
     orderId: string;
     buyerWalletAddress: string;
     sellerWalletAddress?: string;
     cancelledByIpAddress?: string;
     cancelledByUserAgent?: string;
+    onProgress?: (
+      event: CancelPrivateBuyOrderByBuyerProgressEvent,
+    ) => void | Promise<void>;
   }
 ): Promise<boolean> {
+  const emitProgress = async ({
+    step,
+    title,
+    description,
+    status,
+    detail,
+    data,
+  }: {
+    step: string;
+    title: string;
+    description: string;
+    status: CancelPrivateBuyOrderByBuyerProgressStatus;
+    detail?: string;
+    data?: Record<string, unknown>;
+  }) => {
+    if (!onProgress) {
+      return;
+    }
+    try {
+      await onProgress({
+        step,
+        title,
+        description,
+        status,
+        occurredAt: new Date().toISOString(),
+        ...(detail ? { detail } : {}),
+        ...(data ? { data } : {}),
+      });
+    } catch (progressError) {
+      console.warn('cancelPrivateBuyOrderByBuyer progress callback failed', progressError);
+    }
+  };
+
   if (!ObjectId.isValid(orderId)) {
+    await emitProgress({
+      step: 'REQUEST_VALIDATED',
+      title: '요청 검증',
+      description: '주문 번호 형식이 올바르지 않습니다.',
+      status: 'error',
+    });
     return false;
   }
 
   if (!buyerWalletAddress) {
+    await emitProgress({
+      step: 'REQUEST_VALIDATED',
+      title: '요청 검증',
+      description: '구매자 지갑 정보가 누락되었습니다.',
+      status: 'error',
+    });
     return false;
   }
+
+  await emitProgress({
+    step: 'REQUEST_VALIDATED',
+    title: '요청 검증',
+    description: '거래 취소 요청 정보를 확인했습니다.',
+    status: 'completed',
+    data: {
+      orderId,
+    },
+  });
 
   const client = await clientPromise;
   const buyordersCollection = client.db(dbName).collection('buyorders');
@@ -4307,6 +4373,12 @@ export async function cancelPrivateBuyOrderByBuyer(
   );
 
   if (!order || order.privateSale !== true) {
+    await emitProgress({
+      step: 'ORDER_VALIDATED',
+      title: '주문 확인',
+      description: '취소할 비공개 거래 주문을 찾지 못했습니다.',
+      status: 'error',
+    });
     return false;
   }
 
@@ -4315,12 +4387,38 @@ export async function cancelPrivateBuyOrderByBuyer(
     !orderBuyerWalletAddress
     || String(orderBuyerWalletAddress).toLowerCase() !== String(buyerWalletAddress).toLowerCase()
   ) {
+    await emitProgress({
+      step: 'ORDER_VALIDATED',
+      title: '주문 확인',
+      description: '주문의 구매자 지갑 정보가 요청값과 일치하지 않습니다.',
+      status: 'error',
+    });
     return false;
   }
 
   if (order.status !== 'paymentRequested') {
+    await emitProgress({
+      step: 'ORDER_VALIDATED',
+      title: '주문 확인',
+      description: '입금요청 상태 주문만 취소할 수 있습니다.',
+      status: 'error',
+      data: {
+        status: String(order.status || ''),
+      },
+    });
     return false;
   }
+
+  await emitProgress({
+    step: 'ORDER_VALIDATED',
+    title: '주문 확인',
+    description: '취소 가능한 주문 상태를 확인했습니다.',
+    status: 'completed',
+    data: {
+      tradeId: String(order?.tradeId || ''),
+      status: String(order?.status || ''),
+    },
+  });
 
   const buyerEscrowWalletExecution = resolvePrivateOrderEscrowWalletSignerAndSmartAddress(order);
   const buyerEscrowSignerAddress = buyerEscrowWalletExecution.signerAddress;
@@ -4337,8 +4435,25 @@ export async function cancelPrivateBuyOrderByBuyer(
       buyerEscrowWalletAddress,
       sellerEscrowWalletAddress,
     });
+    await emitProgress({
+      step: 'ESCROW_WALLET_VALIDATED',
+      title: '에스크로 지갑 확인',
+      description: '에스크로 지갑 정보를 확인하지 못했습니다.',
+      status: 'error',
+    });
     return false;
   }
+
+  await emitProgress({
+    step: 'ESCROW_WALLET_VALIDATED',
+    title: '에스크로 지갑 확인',
+    description: '에스크로 지갑 주소를 확인했습니다.',
+    status: 'completed',
+    data: {
+      buyerEscrowWalletAddress,
+      sellerEscrowWalletAddress,
+    },
+  });
 
   const transferPlan = resolveStoredPrivateOrderTransferPlan(order);
   const plannedRollbackUsdtAmount = transferPlan.totalTransferUsdtAmount;
@@ -4348,14 +4463,43 @@ export async function cancelPrivateBuyOrderByBuyer(
       usdtAmount: order?.usdtAmount,
       escrowLockUsdtAmount: order?.escrowLockUsdtAmount,
     });
+    await emitProgress({
+      step: 'ROLLBACK_AMOUNT_VALIDATED',
+      title: '회수 수량 확인',
+      description: '회수할 에스크로 수량이 올바르지 않습니다.',
+      status: 'error',
+    });
     return false;
   }
+
+  await emitProgress({
+    step: 'ROLLBACK_AMOUNT_VALIDATED',
+    title: '회수 수량 확인',
+    description: '에스크로 회수 수량을 확인했습니다.',
+    status: 'completed',
+    data: {
+      rollbackUsdtAmount: plannedRollbackUsdtAmount,
+    },
+  });
 
   const thirdwebSecretKey = process.env.THIRDWEB_SECRET_KEY || '';
   if (!thirdwebSecretKey) {
     console.error('cancelPrivateBuyOrderByBuyer: THIRDWEB_SECRET_KEY is missing');
+    await emitProgress({
+      step: 'ENGINE_READY',
+      title: '서버 지갑 준비',
+      description: '서버 지갑 설정이 누락되었습니다.',
+      status: 'error',
+    });
     return false;
   }
+
+  await emitProgress({
+    step: 'ENGINE_READY',
+    title: '서버 지갑 준비',
+    description: '서버 지갑 연결을 확인했습니다.',
+    status: 'completed',
+  });
 
   const thirdwebClient = createThirdwebClient({ secretKey: thirdwebSecretKey });
   let rollbackTransactionHash = '';
@@ -4403,6 +4547,16 @@ export async function cancelPrivateBuyOrderByBuyer(
       transaction: rollbackTransaction,
     });
 
+    await emitProgress({
+      step: 'ROLLBACK_TRANSFER_SUBMITTED',
+      title: '에스크로 회수 요청',
+      description: '구매 에스크로에서 판매자 에스크로로 전송을 요청했습니다.',
+      status: 'processing',
+      data: {
+        transactionId: String(transactionId || ''),
+      },
+    });
+
     const hashResult = await Engine.waitForTransactionHash({
       client: thirdwebClient,
       transactionId,
@@ -4442,8 +4596,25 @@ export async function cancelPrivateBuyOrderByBuyer(
     if (!transferConfirmed) {
       throw new Error('rollback transfer confirmation timeout');
     }
+
+    await emitProgress({
+      step: 'ROLLBACK_TRANSFER_CONFIRMED',
+      title: '에스크로 회수 확인',
+      description: '온체인 회수 전송이 완료되었습니다.',
+      status: 'completed',
+      data: {
+        transactionHash: rollbackTransactionHash,
+      },
+    });
   } catch (error) {
     console.error('cancelPrivateBuyOrderByBuyer: rollback transfer failed', error);
+    await emitProgress({
+      step: 'ROLLBACK_TRANSFER_CONFIRMED',
+      title: '에스크로 회수 확인',
+      description: '에스크로 회수 전송에 실패했습니다.',
+      status: 'error',
+      detail: error instanceof Error ? error.message : String(error),
+    });
     return false;
   }
 
@@ -4484,6 +4655,12 @@ export async function cancelPrivateBuyOrderByBuyer(
       { projection: { status: 1 } },
     );
     if (latestOrder?.status === 'cancelled') {
+      await emitProgress({
+        step: 'ORDER_CANCELLED',
+        title: '주문 상태 반영',
+        description: '주문 취소 상태가 이미 반영되어 있습니다.',
+        status: 'completed',
+      });
       return true;
     }
     console.error('cancelPrivateBuyOrderByBuyer: failed to update order status after rollback transfer', {
@@ -4493,8 +4670,25 @@ export async function cancelPrivateBuyOrderByBuyer(
       modifiedCount: cancelResult.modifiedCount,
       buyerWalletAddress: String(orderBuyerWalletAddress || buyerWalletAddress || ''),
     });
+    await emitProgress({
+      step: 'ORDER_CANCELLED',
+      title: '주문 상태 반영',
+      description: '주문 취소 상태 저장에 실패했습니다.',
+      status: 'error',
+    });
     return false;
   }
+
+  await emitProgress({
+    step: 'ORDER_CANCELLED',
+    title: '주문 상태 반영',
+    description: '주문 상태를 취소로 변경했습니다.',
+    status: 'completed',
+    data: {
+      rollbackTransactionHash: rollbackTransactionHash || '',
+      rollbackUsdtAmount,
+    },
+  });
 
   await usersCollection.updateOne(
     {
@@ -4520,6 +4714,13 @@ export async function cancelPrivateBuyOrderByBuyer(
     },
   );
 
+  await emitProgress({
+    step: 'SELLER_SNAPSHOT_UPDATED',
+    title: '판매자 주문 동기화',
+    description: '판매자 주문 스냅샷 상태를 취소로 동기화했습니다.',
+    status: 'completed',
+  });
+
   const buyerWalletRegex = toWalletRegex(orderBuyerWalletAddress);
   if (buyerWalletRegex) {
     await usersCollection.updateOne(
@@ -4530,6 +4731,13 @@ export async function cancelPrivateBuyOrderByBuyer(
       { $set: { 'buyer.buyOrderStatus': 'cancelled', buyOrderStatus: 'cancelled' } },
     );
   }
+
+  await emitProgress({
+    step: 'BUYER_STATUS_UPDATED',
+    title: '구매자 상태 동기화',
+    description: '구매자 주문 상태를 취소로 동기화했습니다.',
+    status: 'completed',
+  });
 
   // Buyer reputation update + dedicated history log collection.
   // Keep cancellation success independent from reputation logging failures.
@@ -4612,12 +4820,51 @@ export async function cancelPrivateBuyOrderByBuyer(
       rollbackTransactionHash: rollbackTransactionHash || '',
       createdAt: now,
     });
+    await emitProgress({
+      step: 'BUYER_REPUTATION_UPDATED',
+      title: '구매자 이력 반영',
+      description: '구매자 취소 이력과 신뢰도 정보를 반영했습니다.',
+      status: 'completed',
+    });
   } catch (reputationError) {
     console.error('cancelPrivateBuyOrderByBuyer: failed to update buyer reputation history', reputationError);
+    await emitProgress({
+      step: 'BUYER_REPUTATION_UPDATED',
+      title: '구매자 이력 반영',
+      description: '구매자 이력 반영 중 일부가 실패했지만 거래 취소는 완료되었습니다.',
+      status: 'completed',
+      detail: reputationError instanceof Error ? reputationError.message : String(reputationError),
+    });
   }
+
+  await emitProgress({
+    step: 'CANCEL_COMPLETED',
+    title: '취소 처리 완료',
+    description: '거래 취소가 최종 완료되었습니다.',
+    status: 'completed',
+    data: {
+      orderId,
+      tradeId: String(order?.tradeId || ''),
+    },
+  });
 
   return true;
 }
+
+export type CancelPrivateBuyOrderByAdminToBuyerProgressStatus =
+  | 'processing'
+  | 'completed'
+  | 'error';
+
+export type CancelPrivateBuyOrderByAdminToBuyerProgressEvent = {
+  step: string;
+  title: string;
+  description: string;
+  status: CancelPrivateBuyOrderByAdminToBuyerProgressStatus;
+  occurredAt: string;
+  detail?: string;
+  data?: Record<string, unknown>;
+};
 
 export async function cancelPrivateBuyOrderByAdminToBuyer({
   orderId,
@@ -4626,6 +4873,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   cancelledByNickname = '',
   cancelledByIpAddress = '',
   cancelledByUserAgent = '',
+  onProgress,
 }: {
   orderId: string;
   adminWalletAddress?: string;
@@ -4633,6 +4881,9 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   cancelledByNickname?: string;
   cancelledByIpAddress?: string;
   cancelledByUserAgent?: string;
+  onProgress?: (
+    event: CancelPrivateBuyOrderByAdminToBuyerProgressEvent,
+  ) => void | Promise<void>;
 }): Promise<{
   success: boolean;
   transactionHash?: string;
@@ -4641,9 +4892,59 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   transferSkipReason?: string;
   error?: string;
 }> {
+  const emitProgress = async ({
+    step,
+    title,
+    description,
+    status,
+    detail,
+    data,
+  }: {
+    step: string;
+    title: string;
+    description: string;
+    status: CancelPrivateBuyOrderByAdminToBuyerProgressStatus;
+    detail?: string;
+    data?: Record<string, unknown>;
+  }) => {
+    if (!onProgress) {
+      return;
+    }
+    try {
+      await onProgress({
+        step,
+        title,
+        description,
+        status,
+        occurredAt: new Date().toISOString(),
+        ...(detail ? { detail } : {}),
+        ...(data ? { data } : {}),
+      });
+    } catch (progressError) {
+      console.warn('cancelPrivateBuyOrderByAdminToBuyer progress callback failed', progressError);
+    }
+  };
+
   if (!ObjectId.isValid(orderId)) {
+    await emitProgress({
+      step: 'REQUEST_VALIDATED',
+      title: '요청 검증',
+      description: '주문 번호 형식이 올바르지 않습니다.',
+      status: 'error',
+    });
     return { success: false, error: 'INVALID_ORDER_ID' };
   }
+
+  await emitProgress({
+    step: 'REQUEST_VALIDATED',
+    title: '요청 검증',
+    description: '관리자 취소 요청 정보를 확인했습니다.',
+    status: 'completed',
+    data: {
+      orderId,
+      cancelledByRole: String(cancelledByRole || '').trim() || 'admin',
+    },
+  });
 
   const toWalletCandidates = (value: string) => {
     const trimmed = String(value || '').trim();
@@ -4662,6 +4963,7 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
       projection: {
         privateSale: 1,
         status: 1,
+        tradeId: 1,
         escrowWallet: 1,
         usdtAmount: 1,
         escrowLockUsdtAmount: 1,
@@ -4676,12 +4978,38 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   );
 
   if (!order || order.privateSale !== true) {
+    await emitProgress({
+      step: 'ORDER_VALIDATED',
+      title: '주문 확인',
+      description: '취소할 비공개 거래 주문을 찾지 못했습니다.',
+      status: 'error',
+    });
     return { success: false, error: 'ORDER_NOT_FOUND' };
   }
 
   if (order.status !== 'paymentRequested') {
+    await emitProgress({
+      step: 'ORDER_VALIDATED',
+      title: '주문 확인',
+      description: '입금요청 상태 주문만 취소할 수 있습니다.',
+      status: 'error',
+      data: {
+        status: String(order.status || ''),
+      },
+    });
     return { success: false, error: 'INVALID_ORDER_STATUS' };
   }
+
+  await emitProgress({
+    step: 'ORDER_VALIDATED',
+    title: '주문 확인',
+    description: '취소 가능한 주문 상태를 확인했습니다.',
+    status: 'completed',
+    data: {
+      tradeId: String(order?.tradeId || ''),
+      status: String(order?.status || ''),
+    },
+  });
 
   const buyerEscrowWalletExecution = resolvePrivateOrderEscrowWalletSignerAndSmartAddress(order);
   const buyerEscrowSignerAddress = buyerEscrowWalletExecution.signerAddress;
@@ -4703,8 +5031,25 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
       sellerEscrowWalletAddress,
       orderBuyerWalletAddress,
     });
+    await emitProgress({
+      step: 'ESCROW_WALLET_VALIDATED',
+      title: '에스크로 지갑 확인',
+      description: '에스크로 지갑 정보를 확인하지 못했습니다.',
+      status: 'error',
+    });
     return { success: false, error: 'WALLET_ADDRESS_MISSING' };
   }
+
+  await emitProgress({
+    step: 'ESCROW_WALLET_VALIDATED',
+    title: '에스크로 지갑 확인',
+    description: '에스크로 지갑 주소를 확인했습니다.',
+    status: 'completed',
+    data: {
+      buyerEscrowWalletAddress,
+      sellerEscrowWalletAddress,
+    },
+  });
 
   const transferPlan = resolveStoredPrivateOrderTransferPlan(order);
   const plannedRollbackUsdtAmount = transferPlan.totalTransferUsdtAmount;
@@ -4714,14 +5059,43 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
       usdtAmount: order?.usdtAmount,
       escrowLockUsdtAmount: order?.escrowLockUsdtAmount,
     });
+    await emitProgress({
+      step: 'ROLLBACK_AMOUNT_VALIDATED',
+      title: '회수 수량 확인',
+      description: '회수할 에스크로 수량이 올바르지 않습니다.',
+      status: 'error',
+    });
     return { success: false, error: 'INVALID_USDT_AMOUNT' };
   }
+
+  await emitProgress({
+    step: 'ROLLBACK_AMOUNT_VALIDATED',
+    title: '회수 수량 확인',
+    description: '에스크로 회수 수량을 확인했습니다.',
+    status: 'completed',
+    data: {
+      rollbackUsdtAmount: plannedRollbackUsdtAmount,
+    },
+  });
 
   const thirdwebSecretKey = process.env.THIRDWEB_SECRET_KEY || '';
   if (!thirdwebSecretKey) {
     console.error('cancelPrivateBuyOrderByAdminToBuyer: THIRDWEB_SECRET_KEY is missing');
+    await emitProgress({
+      step: 'ENGINE_READY',
+      title: '서버 지갑 준비',
+      description: '서버 지갑 설정이 누락되었습니다.',
+      status: 'error',
+    });
     return { success: false, error: 'THIRDWEB_SECRET_KEY_MISSING' };
   }
+
+  await emitProgress({
+    step: 'ENGINE_READY',
+    title: '서버 지갑 준비',
+    description: '서버 지갑 연결을 확인했습니다.',
+    status: 'completed',
+  });
 
   const thirdwebClient = createThirdwebClient({ secretKey: thirdwebSecretKey });
   let releaseTransactionHash = '';
@@ -4763,6 +5137,28 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
         buyerEscrowWalletAddress,
         sellerEscrowWalletAddress,
       });
+
+      await emitProgress({
+        step: 'ROLLBACK_TRANSFER_SUBMITTED',
+        title: '에스크로 회수 요청',
+        description: '이미 회수된 주문으로 온체인 전송을 생략했습니다.',
+        status: 'completed',
+        data: {
+          transferSkipped: true,
+          transferSkipReason,
+        },
+      });
+
+      await emitProgress({
+        step: 'ROLLBACK_TRANSFER_CONFIRMED',
+        title: '에스크로 회수 확인',
+        description: '온체인 전송 생략 후 취소 반영을 계속 진행합니다.',
+        status: 'completed',
+        data: {
+          transferSkipped: true,
+          transferSkipReason,
+        },
+      });
     } else {
       rollbackRawAmount = rawBuyerEscrowUsdtBalance.toString();
       rollbackUsdtAmount = convertRawUsdtToDisplayAmount(rawBuyerEscrowUsdtBalance, usdtDecimals);
@@ -4776,6 +5172,16 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
 
       const { transactionId } = await buyerEscrowWallet.enqueueTransaction({
         transaction: releaseTransaction,
+      });
+
+      await emitProgress({
+        step: 'ROLLBACK_TRANSFER_SUBMITTED',
+        title: '에스크로 회수 요청',
+        description: '구매 에스크로에서 판매자 에스크로로 전송을 요청했습니다.',
+        status: 'processing',
+        data: {
+          transactionId: String(transactionId || ''),
+        },
       });
 
       const hashResult = await Engine.waitForTransactionHash({
@@ -4817,9 +5223,26 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
       if (!transferConfirmed) {
         throw new Error('release transfer confirmation timeout');
       }
+
+      await emitProgress({
+        step: 'ROLLBACK_TRANSFER_CONFIRMED',
+        title: '에스크로 회수 확인',
+        description: '온체인 회수 전송이 완료되었습니다.',
+        status: 'completed',
+        data: {
+          transactionHash: releaseTransactionHash,
+        },
+      });
     }
   } catch (error) {
     console.error('cancelPrivateBuyOrderByAdminToBuyer: release transfer failed', error);
+    await emitProgress({
+      step: 'ROLLBACK_TRANSFER_CONFIRMED',
+      title: '에스크로 회수 확인',
+      description: '에스크로 회수 전송에 실패했습니다.',
+      status: 'error',
+      detail: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, error: 'TRANSFER_FAILED' };
   }
 
@@ -4870,8 +5293,29 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
   );
 
   if (cancelResult.modifiedCount !== 1) {
+    await emitProgress({
+      step: 'ORDER_CANCELLED',
+      title: '주문 취소 반영',
+      description: '주문 취소 상태 저장에 실패했습니다.',
+      status: 'error',
+    });
     return { success: false, error: 'FAILED_TO_UPDATE_ORDER' };
   }
+
+  await emitProgress({
+    step: 'ORDER_CANCELLED',
+    title: '주문 취소 반영',
+    description: '주문 상태를 취소로 변경했습니다.',
+    status: 'completed',
+    data: {
+      orderId,
+      tradeId: String(order?.tradeId || ''),
+      rollbackUsdtAmount,
+      rollbackTransactionHash: releaseTransactionHash || '',
+      transferSkipped,
+      transferSkipReason,
+    },
+  });
 
   if (sellerWalletCandidates.length > 0) {
     const sellerBuyOrderUpdateSet: Record<string, unknown> = {
@@ -4907,6 +5351,13 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
     );
   }
 
+  await emitProgress({
+    step: 'SELLER_SNAPSHOT_UPDATED',
+    title: '판매자 상태 동기화',
+    description: '판매자 측 주문 스냅샷을 갱신했습니다.',
+    status: 'completed',
+  });
+
   const buyerWalletCandidates = toWalletCandidates(orderBuyerWalletAddress);
   if (buyerWalletCandidates.length > 0) {
     await usersCollection.updateOne(
@@ -4922,6 +5373,24 @@ export async function cancelPrivateBuyOrderByAdminToBuyer({
       },
     );
   }
+
+  await emitProgress({
+    step: 'BUYER_STATUS_UPDATED',
+    title: '구매자 상태 동기화',
+    description: '구매자 주문 상태를 취소로 동기화했습니다.',
+    status: 'completed',
+  });
+
+  await emitProgress({
+    step: 'CANCEL_COMPLETED',
+    title: '취소 처리 완료',
+    description: '거래 취소가 최종 완료되었습니다.',
+    status: 'completed',
+    data: {
+      orderId,
+      tradeId: String(order?.tradeId || ''),
+    },
+  });
 
   return {
     success: true,

@@ -152,6 +152,51 @@ type CancelActorInfo = {
   nickname: string;
 };
 
+type CancelOrderProgressStepState = 'pending' | 'active' | 'completed' | 'error';
+
+type CancelOrderProgressStepItem = {
+  key: string;
+  title: string;
+  description: string;
+  state: CancelOrderProgressStepState;
+  updatedAt: string;
+  detail?: string;
+};
+
+type CancelOrderProgressApiEvent =
+  | {
+      type: 'progress';
+      step?: string;
+      title?: string;
+      description?: string;
+      status?: 'processing' | 'completed' | 'error';
+      occurredAt?: string;
+      detail?: string;
+      data?: Record<string, unknown>;
+    }
+  | {
+      type: 'result';
+      payload?: {
+        result?: {
+          success?: boolean;
+          transactionHash?: string;
+          cancelledAt?: string;
+          transferSkipped?: boolean;
+          transferSkipReason?: string;
+          error?: string;
+        };
+      };
+    }
+  | {
+      type: 'error';
+      status?: number;
+      payload?: {
+        error?: string;
+        message?: string;
+        detail?: string;
+      };
+    };
+
 type SellerSalesSummaryItem = {
   sellerWalletAddress: string;
   sellerNickname: string;
@@ -164,6 +209,121 @@ type SellerSalesSummaryItem = {
 
 const ACTIVE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
 const PAYMENT_REQUEST_COUNTDOWN_LIMIT_MS = 30 * 60 * 1000;
+const CANCEL_ORDER_PROGRESS_STEP_DEFINITIONS: Array<{
+  key: string;
+  title: string;
+  description: string;
+}> = [
+  {
+    key: 'REQUEST_VALIDATED',
+    title: '요청 검증',
+    description: '취소 요청 정보를 확인합니다.',
+  },
+  {
+    key: 'ORDER_VALIDATED',
+    title: '주문 확인',
+    description: '취소 가능한 주문 상태를 확인합니다.',
+  },
+  {
+    key: 'ESCROW_WALLET_VALIDATED',
+    title: '에스크로 지갑 확인',
+    description: '회수 대상 지갑 주소를 확인합니다.',
+  },
+  {
+    key: 'ROLLBACK_AMOUNT_VALIDATED',
+    title: '회수 수량 확인',
+    description: '반환할 USDT 수량을 검증합니다.',
+  },
+  {
+    key: 'ENGINE_READY',
+    title: '서버 지갑 준비',
+    description: '전송 실행 환경을 준비합니다.',
+  },
+  {
+    key: 'ROLLBACK_TRANSFER_SUBMITTED',
+    title: '에스크로 반환 요청',
+    description: '구매 에스크로에서 판매자 에스크로로 반환을 요청합니다.',
+  },
+  {
+    key: 'ROLLBACK_TRANSFER_CONFIRMED',
+    title: '에스크로 반환 확인',
+    description: '온체인 반환 완료를 확인합니다.',
+  },
+  {
+    key: 'ORDER_CANCELLED',
+    title: '주문 취소 반영',
+    description: '주문 상태를 취소로 반영합니다.',
+  },
+  {
+    key: 'SELLER_SNAPSHOT_UPDATED',
+    title: '판매자 동기화',
+    description: '판매자 주문 스냅샷을 갱신합니다.',
+  },
+  {
+    key: 'BUYER_STATUS_UPDATED',
+    title: '구매자 동기화',
+    description: '구매자 주문 상태를 갱신합니다.',
+  },
+  {
+    key: 'CANCEL_COMPLETED',
+    title: '취소 처리 완료',
+    description: '취소 처리가 최종 완료되었습니다.',
+  },
+];
+
+const createInitialCancelOrderProgressSteps = (): CancelOrderProgressStepItem[] =>
+  CANCEL_ORDER_PROGRESS_STEP_DEFINITIONS.map((item) => ({
+    key: item.key,
+    title: item.title,
+    description: item.description,
+    state: item.key === 'REQUEST_VALIDATED' ? 'active' : 'pending',
+    updatedAt: '',
+  }));
+
+const getCancelOrderProgressStatusLabel = (state: CancelOrderProgressStepState) => {
+  if (state === 'completed') return '완료';
+  if (state === 'active') return '진행중';
+  if (state === 'error') return '실패';
+  return '대기';
+};
+
+const getCancelOrderProgressStyle = (state: CancelOrderProgressStepState) => {
+  if (state === 'completed') {
+    return {
+      container: 'border-emerald-200 bg-emerald-50/70',
+      badge: 'border-emerald-300 bg-emerald-100 text-emerald-700',
+      title: 'text-emerald-900',
+      description: 'text-emerald-700',
+      status: 'text-emerald-700',
+    };
+  }
+  if (state === 'active') {
+    return {
+      container: 'border-cyan-200 bg-cyan-50/70',
+      badge: 'border-cyan-300 bg-cyan-100 text-cyan-700',
+      title: 'text-cyan-900',
+      description: 'text-cyan-700',
+      status: 'text-cyan-700',
+    };
+  }
+  if (state === 'error') {
+    return {
+      container: 'border-rose-200 bg-rose-50/80',
+      badge: 'border-rose-300 bg-rose-100 text-rose-700',
+      title: 'text-rose-900',
+      description: 'text-rose-700',
+      status: 'text-rose-700',
+    };
+  }
+  return {
+    container: 'border-slate-200 bg-white/90',
+    badge: 'border-slate-300 bg-slate-100 text-slate-600',
+    title: 'text-slate-700',
+    description: 'text-slate-500',
+    status: 'text-slate-500',
+  };
+};
+
 const isAdminCancelablePrivateOrder = (order: BuyOrderItem) =>
   order?.privateSale === true && String(order?.status || '').trim() === 'paymentRequested';
 
@@ -683,6 +843,10 @@ export default function BuyOrderManagementPage() {
   const [cancelTargetOrder, setCancelTargetOrder] = useState<BuyOrderItem | null>(null);
   const [cancelingOrder, setCancelingOrder] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelProgressSteps, setCancelProgressSteps] =
+    useState<CancelOrderProgressStepItem[]>(createInitialCancelOrderProgressSteps());
+  const [cancelProgressSummary, setCancelProgressSummary] = useState('취소 요청 전입니다.');
+  const [cancelProgressPhase, setCancelProgressPhase] = useState<'idle' | 'processing' | 'completed' | 'error'>('idle');
   const [copiedTradeId, setCopiedTradeId] = useState('');
   const [copiedWalletAddress, setCopiedWalletAddress] = useState('');
   const [escrowWalletBalanceByAddress, setEscrowWalletBalanceByAddress] = useState<
@@ -993,29 +1157,207 @@ export default function BuyOrderManagementPage() {
     setPageNumber(1);
   };
 
+  const resetCancelOrderProgressFlow = useCallback(() => {
+    setCancelProgressSteps(createInitialCancelOrderProgressSteps());
+    setCancelProgressSummary('취소 요청 전입니다.');
+    setCancelProgressPhase('idle');
+  }, []);
+
+  const resolveCancelProgressDetail = useCallback(
+    (event: Extract<CancelOrderProgressApiEvent, { type: 'progress' }>) => {
+      const detail = typeof event.detail === 'string' ? event.detail.trim() : '';
+      if (detail) {
+        return detail;
+      }
+
+      const data = event.data;
+      if (!data || typeof data !== 'object') {
+        return '';
+      }
+
+      const transactionHash =
+        typeof data.transactionHash === 'string' ? data.transactionHash.trim() : '';
+      const transactionId =
+        typeof data.transactionId === 'string' ? data.transactionId.trim() : '';
+      const tradeId = typeof data.tradeId === 'string' ? data.tradeId.trim() : '';
+
+      if (transactionHash) return `Tx: ${transactionHash}`;
+      if (transactionId) return `Queue: ${transactionId}`;
+      if (tradeId) return `TID: ${tradeId}`;
+      return '';
+    },
+    [],
+  );
+
+  const applyCancelProgressEvent = useCallback(
+    (event: Extract<CancelOrderProgressApiEvent, { type: 'progress' }>) => {
+      const stepKey = typeof event.step === 'string' ? event.step.trim() : '';
+      const incomingTitle = typeof event.title === 'string' ? event.title.trim() : '';
+      const incomingDescription =
+        typeof event.description === 'string' ? event.description.trim() : '';
+      const occurredAt =
+        typeof event.occurredAt === 'string' && event.occurredAt
+          ? event.occurredAt
+          : new Date().toISOString();
+      const status =
+        event.status === 'completed' || event.status === 'error' || event.status === 'processing'
+          ? event.status
+          : 'processing';
+      const nextState: CancelOrderProgressStepState =
+        status === 'completed' ? 'completed' : status === 'error' ? 'error' : 'active';
+      const detail = resolveCancelProgressDetail(event);
+
+      setCancelProgressSteps((prev) => {
+        const stepIndex = prev.findIndex((item) => item.key === stepKey);
+        const withSettledActive = prev.map((item, index) => {
+          if (
+            item.state === 'active'
+            && status !== 'error'
+            && (stepIndex < 0 || index !== stepIndex)
+          ) {
+            return {
+              ...item,
+              state: 'completed' as CancelOrderProgressStepState,
+              updatedAt: item.updatedAt || occurredAt,
+            };
+          }
+          return item;
+        });
+
+        if (!stepKey) {
+          return withSettledActive;
+        }
+
+        if (stepIndex >= 0) {
+          return withSettledActive.map((item, index) => {
+            if (index !== stepIndex) {
+              return item;
+            }
+            return {
+              ...item,
+              title: incomingTitle || item.title,
+              description: incomingDescription || item.description,
+              state: nextState,
+              updatedAt: occurredAt,
+              detail: detail || item.detail,
+            };
+          });
+        }
+
+        return [
+          ...withSettledActive,
+          {
+            key: stepKey,
+            title: incomingTitle || stepKey,
+            description: incomingDescription || '',
+            state: nextState,
+            updatedAt: occurredAt,
+            ...(detail ? { detail } : {}),
+          },
+        ];
+      });
+
+      const stepTitle = incomingTitle || stepKey || '취소 처리';
+      if (status === 'error') {
+        setCancelProgressPhase('error');
+        setCancelProgressSummary(`${stepTitle} 단계에서 오류가 발생했습니다.`);
+        return;
+      }
+
+      if ((stepKey === 'CANCEL_COMPLETED' || stepKey === 'CANCEL_RESULT_READY') && status === 'completed') {
+        setCancelProgressPhase('completed');
+        setCancelProgressSummary('주문 취소가 완료되었습니다.');
+        return;
+      }
+
+      setCancelProgressPhase('processing');
+      setCancelProgressSummary(
+        status === 'completed'
+          ? `${stepTitle} 단계를 완료했습니다.`
+          : `${stepTitle} 단계를 처리중입니다.`,
+      );
+    },
+    [resolveCancelProgressDetail],
+  );
+
+  const markCancelProgressAsError = useCallback((message: string) => {
+    const occurredAt = new Date().toISOString();
+    setCancelProgressPhase('error');
+    setCancelProgressSummary(message);
+    setCancelProgressSteps((prev) => {
+      const activeIndex = prev.findIndex((item) => item.state === 'active');
+      if (activeIndex < 0) {
+        return prev;
+      }
+      return prev.map((item, index) => {
+        if (index !== activeIndex) {
+          return item;
+        }
+        return {
+          ...item,
+          state: 'error' as CancelOrderProgressStepState,
+          updatedAt: occurredAt,
+          detail: message,
+        };
+      });
+    });
+  }, []);
+
   const closeCancelOrderModal = () => {
     if (cancelingOrder) return;
     setCancelTargetOrder(null);
     setCancelError(null);
+    resetCancelOrderProgressFlow();
   };
 
   const cancelPrivateOrderByAdmin = useCallback(async () => {
-    if (!isWalletConnected) {
-      const message = '지갑을 연결해주세요.';
+    const failCancel = (message: string) => {
       setCancelError(message);
+      markCancelProgressAsError(message);
       toast.error(message);
-      return;
+      return false;
+    };
+
+    if (!isWalletConnected) {
+      return failCancel('지갑을 연결해주세요.');
     }
     const targetOrderId = String(cancelTargetOrder?._id || '').trim();
     if (!targetOrderId) {
-      setCancelError('취소할 주문 식별자를 찾을 수 없습니다.');
-      return;
+      return failCancel('취소할 주문 식별자를 찾을 수 없습니다.');
     }
-    if (cancelingOrder) return;
+    if (cancelingOrder) return false;
 
     setCancelingOrder(true);
     setCancelError(null);
+    setCancelProgressSteps(createInitialCancelOrderProgressSteps());
+    setCancelProgressPhase('processing');
+    setCancelProgressSummary('요청 검증 단계를 처리중입니다.');
+
     try {
+      type CancelApiPayload = {
+        result?: {
+          success?: boolean;
+          transactionHash?: string;
+          cancelledAt?: string;
+          transferSkipped?: boolean;
+          transferSkipReason?: string;
+          error?: string;
+        };
+        message?: string;
+        detail?: string;
+        error?: string;
+      };
+
+      const resolveApiErrorMessage = (payload?: {
+        message?: string;
+        detail?: string;
+        error?: string;
+      }) =>
+        payload?.message
+        || payload?.detail
+        || payload?.error
+        || '주문 취소 처리에 실패했습니다.';
+
       const response = await fetch('/api/order/cancelPrivateBuyOrderByAdminToBuyer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1026,12 +1368,83 @@ export default function BuyOrderManagementPage() {
           cancelledByNickname: cancelActorNickname,
           cancelledByIpAddress: String(publicIpAddress || '').trim(),
           cancelledByUserAgent: typeof window !== 'undefined' ? window.navigator.userAgent : '',
+          liveProgress: true,
         }),
       });
 
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.result?.success) {
-        throw new Error(String(payload?.error || '주문 취소 처리에 실패했습니다.'));
+      let payload: CancelApiPayload | null = null;
+      const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+      if (contentType.includes('application/x-ndjson')) {
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('실시간 취소 진행 상태를 읽을 수 없습니다.');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let streamResult: CancelApiPayload | null = null;
+        let streamErrorMessage = '';
+
+        const handleStreamLine = (line: string) => {
+          const trimmed = line.trim();
+          if (!trimmed) {
+            return;
+          }
+          try {
+            const parsed = JSON.parse(trimmed) as CancelOrderProgressApiEvent;
+            if (parsed.type === 'progress') {
+              applyCancelProgressEvent(parsed);
+              return;
+            }
+            if (parsed.type === 'result') {
+              if (parsed.payload && typeof parsed.payload === 'object') {
+                streamResult = parsed.payload as CancelApiPayload;
+              }
+              return;
+            }
+            if (parsed.type === 'error') {
+              streamErrorMessage = resolveApiErrorMessage(parsed.payload);
+            }
+          } catch (parseError) {
+            console.warn('cancelPrivateOrderByAdmin progress line parse failed', parseError);
+          }
+        };
+
+        while (true) {
+          const { done, value } = await reader.read();
+          buffer += decoder.decode(value || new Uint8Array(0), { stream: !done });
+
+          let newlineIndex = buffer.indexOf('\n');
+          while (newlineIndex >= 0) {
+            const line = buffer.slice(0, newlineIndex);
+            buffer = buffer.slice(newlineIndex + 1);
+            handleStreamLine(line);
+            newlineIndex = buffer.indexOf('\n');
+          }
+
+          if (done) {
+            break;
+          }
+        }
+
+        if (buffer.trim()) {
+          handleStreamLine(buffer);
+        }
+
+        if (streamErrorMessage) {
+          throw new Error(streamErrorMessage);
+        }
+        const finalizedStreamResult = streamResult as CancelApiPayload | null;
+        const streamSucceeded = finalizedStreamResult?.result?.success === true;
+        if (!response.ok || !streamSucceeded) {
+          throw new Error(resolveApiErrorMessage(finalizedStreamResult || undefined));
+        }
+        payload = finalizedStreamResult;
+      } else {
+        payload = (await response.json().catch(() => ({}))) as CancelApiPayload;
+        if (!response.ok || !payload?.result?.success) {
+          throw new Error(resolveApiErrorMessage(payload));
+        }
       }
 
       const txHash = String(payload?.result?.transactionHash || '').trim();
@@ -1044,31 +1457,84 @@ export default function BuyOrderManagementPage() {
         toast.success(txHash ? `주문 취소 완료 (TX: ${shortWallet(txHash)})` : '주문 취소 완료');
       }
 
-      setCancelTargetOrder(null);
+      setCancelProgressPhase('completed');
+      setCancelProgressSummary('주문 취소가 완료되었습니다.');
       await fetchLatestBuyOrders('query');
+      return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : '주문 취소 처리 중 오류가 발생했습니다.';
-      setCancelError(message);
-      toast.error(message);
+      return failCancel(message);
     } finally {
       setCancelingOrder(false);
     }
   }, [
     adminWalletAddress,
+    applyCancelProgressEvent,
     cancelActorNickname,
     cancelActorRole,
     cancelTargetOrder?._id,
     cancelingOrder,
     fetchLatestBuyOrders,
     isWalletConnected,
+    markCancelProgressAsError,
     publicIpAddress,
   ]);
+
+  const cancelProgressPhaseMeta = useMemo(() => {
+    if (cancelProgressPhase === 'processing') {
+      return {
+        container: 'border-cyan-200 bg-cyan-50/70',
+        badge: 'border-cyan-300 bg-cyan-100 text-cyan-700',
+        summary: 'text-cyan-800',
+        label: '처리중',
+      };
+    }
+    if (cancelProgressPhase === 'completed') {
+      return {
+        container: 'border-emerald-200 bg-emerald-50/70',
+        badge: 'border-emerald-300 bg-emerald-100 text-emerald-700',
+        summary: 'text-emerald-800',
+        label: '완료',
+      };
+    }
+    if (cancelProgressPhase === 'error') {
+      return {
+        container: 'border-rose-200 bg-rose-50/80',
+        badge: 'border-rose-300 bg-rose-100 text-rose-700',
+        summary: 'text-rose-800',
+        label: '실패',
+      };
+    }
+    return {
+      container: 'border-slate-200 bg-slate-50/60',
+      badge: 'border-slate-300 bg-slate-100 text-slate-600',
+      summary: 'text-slate-700',
+      label: '대기',
+    };
+  }, [cancelProgressPhase]);
+
+  const isCancelOrderActionCompleted = cancelProgressPhase === 'completed';
+  const cancelOrderActionLabel = (() => {
+    if (cancelingOrder) return '취소 처리 중...';
+    if (isCancelOrderActionCompleted) return '확인';
+    if (cancelProgressPhase === 'error') return '다시 시도';
+    return 'USDT 반환 후 주문 취소';
+  })();
+
+  const confirmCancelOrderFromModal = async () => {
+    if (isCancelOrderActionCompleted) {
+      closeCancelOrderModal();
+      return;
+    }
+    await cancelPrivateOrderByAdmin();
+  };
 
   useEffect(() => {
     if (isWalletConnected) return;
     setCancelTargetOrder(null);
     setCancelError(null);
-  }, [isWalletConnected]);
+    resetCancelOrderProgressFlow();
+  }, [isWalletConnected, resetCancelOrderProgressFlow]);
 
   const copyTradeId = useCallback(async (tradeId: string) => {
     const normalizedTradeId = String(tradeId || '').trim();
@@ -2203,6 +2669,7 @@ export default function BuyOrderManagementPage() {
                               if (!isWalletConnected) return;
                               setCancelTargetOrder(order);
                               setCancelError(null);
+                              resetCancelOrderProgressFlow();
                               void fetchPublicIpAddress();
                             }}
                             disabled={!isWalletConnected}
@@ -2339,6 +2806,66 @@ export default function BuyOrderManagementPage() {
                 <p className="text-base font-medium text-slate-900">{getStatusLabel(cancelTargetOrder.status)}</p>
               </div>
 
+              <div className={`rounded-xl border px-3 py-3 ${cancelProgressPhaseMeta.container}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                    취소 진행 상태
+                  </p>
+                  <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${cancelProgressPhaseMeta.badge}`}>
+                    {cancelProgressPhaseMeta.label}
+                  </span>
+                </div>
+                <p className="mt-1 text-[10px] font-semibold text-slate-500">
+                  취소 API 단계를 실시간으로 표시합니다.
+                </p>
+                <p className={`mt-1 text-[11px] font-semibold ${cancelProgressPhaseMeta.summary}`}>
+                  {cancelProgressSummary}
+                </p>
+
+                <div className="mt-3 max-h-56 space-y-1.5 overflow-y-auto pr-1">
+                  {cancelProgressSteps.map((step, index) => {
+                    const style = getCancelOrderProgressStyle(step.state);
+                    return (
+                      <div
+                        key={step.key}
+                        className={`rounded-lg border px-2.5 py-2 ${style.container}`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <span
+                            className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${style.badge}`}
+                          >
+                            {step.state === 'completed' ? '✓' : index + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className={`text-xs font-semibold ${style.title}`}>{step.title}</p>
+                              <span className={`text-[10px] font-semibold ${style.status}`}>
+                                {getCancelOrderProgressStatusLabel(step.state)}
+                              </span>
+                            </div>
+                            <p className={`mt-0.5 text-[11px] ${style.description}`}>
+                              {step.description}
+                            </p>
+                            {(step.updatedAt || step.detail) && (
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                                {step.updatedAt && (
+                                  <span className="font-semibold tabular-nums">
+                                    {formatDateTime(step.updatedAt)}
+                                  </span>
+                                )}
+                                {step.detail && (
+                                  <span className="truncate font-semibold">{step.detail}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               {cancelError && (
                 <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
                   {cancelError}
@@ -2357,11 +2884,17 @@ export default function BuyOrderManagementPage() {
               </button>
               <button
                 type="button"
-                onClick={cancelPrivateOrderByAdmin}
-                disabled={cancelingOrder || !isWalletConnected || !isAdminCancelablePrivateOrder(cancelTargetOrder)}
+                onClick={() => {
+                  void confirmCancelOrderFromModal();
+                }}
+                disabled={
+                  cancelingOrder
+                  || !isWalletConnected
+                  || (!isCancelOrderActionCompleted && !isAdminCancelablePrivateOrder(cancelTargetOrder))
+                }
                 className="inline-flex h-11 items-center justify-center rounded-lg border border-rose-600 bg-rose-600 px-4 text-sm font-semibold text-white transition hover:border-rose-700 hover:bg-rose-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-500"
               >
-                {cancelingOrder ? '취소 처리 중...' : 'USDT 반환 후 주문 취소'}
+                {cancelOrderActionLabel}
               </button>
             </div>
           </div>

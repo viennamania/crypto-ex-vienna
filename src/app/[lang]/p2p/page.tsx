@@ -1295,6 +1295,8 @@ export default function P2PPage() {
                         searchMyOrders: false,
                         searchOrderStatusCancelled: false,
                         searchOrderStatusCompleted: true,
+                        privateSale: true,
+                        privateSaleMode: 'private',
                         searchStoreName: '',
                         fromDate: '',
                         toDate: '',
