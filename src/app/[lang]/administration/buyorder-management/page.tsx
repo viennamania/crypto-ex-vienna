@@ -158,7 +158,7 @@ type SellerSalesSummaryItem = {
   sellerAvatar: string;
   totalKrwAmount: number;
   totalUsdtAmount: number;
-  orderCount: number;
+  paymentConfirmedCount: number;
   latestCreatedAt: string;
 };
 
@@ -884,7 +884,7 @@ export default function BuyOrderManagementPage() {
           sellerAvatar: String(item?.sellerAvatar || '').trim(),
           totalKrwAmount: Number(item?.totalKrwAmount || 0) || 0,
           totalUsdtAmount: Number(item?.totalUsdtAmount || 0) || 0,
-          orderCount: Number(item?.orderCount || 0) || 0,
+          paymentConfirmedCount: Number(item?.paymentConfirmedCount || item?.orderCount || 0) || 0,
           latestCreatedAt: String(item?.latestCreatedAt || '').trim(),
         })),
       );
@@ -960,7 +960,7 @@ export default function BuyOrderManagementPage() {
     () => [...sellerSalesSummary].sort((a, b) => (
       (b.totalKrwAmount - a.totalKrwAmount)
       || (b.totalUsdtAmount - a.totalUsdtAmount)
-      || (b.orderCount - a.orderCount)
+      || (b.paymentConfirmedCount - a.paymentConfirmedCount)
     )),
     [sellerSalesSummary],
   );
@@ -1469,8 +1469,8 @@ export default function BuyOrderManagementPage() {
                         <p className="justify-self-end text-[11px] font-extrabold text-slate-900">{formatKrw(item.totalKrwAmount)} KRW</p>
                         <p className="font-semibold text-slate-500">합산 판매수량</p>
                         <p className="justify-self-end text-[11px] font-extrabold text-slate-900">{formatUsdt(item.totalUsdtAmount)} USDT</p>
-                        <p className="font-semibold text-slate-500">주문건수</p>
-                        <p className="justify-self-end text-[11px] font-extrabold text-slate-900">{item.orderCount.toLocaleString()}건</p>
+                        <p className="font-semibold text-slate-500">입금확인건수</p>
+                        <p className="justify-self-end text-[11px] font-extrabold text-slate-900">{item.paymentConfirmedCount.toLocaleString()}건</p>
                         <p className="font-semibold text-slate-500">최근 주문시각</p>
                         <p
                           className="justify-self-end truncate text-[10px] font-semibold text-slate-700"
@@ -1510,19 +1510,19 @@ export default function BuyOrderManagementPage() {
           ) : orders.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-slate-500">검색된 주문 데이터가 없습니다.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-[1220px] w-full table-fixed">
+            <div className="overflow-hidden">
+              <table className="w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
-                    <th className="w-[108px] px-3 py-3">상태</th>
-                    <th className="w-[152px] px-3 py-3">주문시각/거래번호(TID)</th>
-                    <th className="w-[96px] px-3 py-3">구매자</th>
-                    <th className="w-[108px] px-3 py-3 text-right">주문금액</th>
-                    <th className="w-[104px] px-3 py-3">판매자/결제방법</th>
-                    <th className="w-[124px] px-3 py-3">에이전트 정보</th>
-                    <th className="w-[84px] px-3 py-3">플랫폼 수수료</th>
-                    <th className="w-[76px] px-3 py-3">전송내역</th>
-                    <th className="w-[72px] px-3 py-3 text-center">액션</th>
+                    <th className="w-[11%] px-3 py-3">상태</th>
+                    <th className="w-[16%] px-3 py-3">주문시각/거래번호(TID)</th>
+                    <th className="w-[11%] px-3 py-3">구매자</th>
+                    <th className="w-[9%] px-3 py-3 text-right">주문금액</th>
+                    <th className="w-[15%] px-3 py-3">판매자/결제방법</th>
+                    <th className="w-[14%] px-3 py-3">에이전트 정보</th>
+                    <th className="w-[10%] px-3 py-3">플랫폼 수수료</th>
+                    <th className="w-[7%] px-3 py-3">전송내역</th>
+                    <th className="w-[7%] px-3 py-3 text-center">액션</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1663,7 +1663,10 @@ export default function BuyOrderManagementPage() {
                     );
 
                     return (
-                    <tr key={`${order?._id || order?.tradeId || 'order'}-${index}`} className="bg-white text-sm text-slate-700">
+                    <tr
+                      key={`${order?._id || order?.tradeId || 'order'}-${index}`}
+                      className={isPaymentRequested ? 'bg-amber-50/60 text-sm text-slate-700' : 'bg-white text-sm text-slate-700'}
+                    >
                       <td className="px-3 py-3">
                         <div className="space-y-1">
                           <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusBadgeClassName(order?.status)}`}>

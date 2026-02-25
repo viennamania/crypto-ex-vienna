@@ -149,6 +149,156 @@ const pickWalletAddress = (...candidates: unknown[]) => {
   return '';
 };
 
+const normalizeWalletAddressForLookup = (value: unknown) =>
+  String(value || '').trim().toLowerCase();
+
+const escapeRegexForMongoExact = (value: string) =>
+  value.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+
+const ADMIN_CANCELLER_ROLES = [
+  'admin',
+  'agent',
+  'agentadmin',
+  'agent_admin',
+  'agent-manager',
+  'agentmanager',
+];
+
+type SellerDisputeAggregateRow = {
+  _id: string;
+  totalDisputeResolvedCount?: number;
+  totalDisputeResolvedUsdtAmount?: number;
+  totalDisputeResolvedKrwAmount?: number;
+};
+
+export async function applySellerDisputeResolvedStats(users: Array<any>) {
+  if (!Array.isArray(users) || users.length === 0) {
+    return;
+  }
+
+  const sellerWalletAddresses = Array.from(
+    new Set(
+      users
+        .map((user) => String(user?.seller?.walletAddress || user?.walletAddress || '').trim())
+        .filter((walletAddress) => isWalletAddress(walletAddress)),
+    ),
+  );
+
+  const fillZeroDisputeStats = () => {
+    for (const user of users) {
+      const sellerValue =
+        user?.seller && typeof user.seller === 'object' ? user.seller : {};
+      user.seller = {
+        ...sellerValue,
+        totalDisputeResolvedCount: 0,
+        totalDisputeResolvedUsdtAmount: 0,
+        totalDisputeResolvedKrwAmount: 0,
+      };
+    }
+  };
+
+  if (sellerWalletAddresses.length === 0) {
+    fillZeroDisputeStats();
+    return;
+  }
+
+  try {
+    const client = await clientPromise;
+    const buyordersCollection = client.db(dbName).collection('buyorders');
+
+    const sellerWalletQuery = sellerWalletAddresses.map((walletAddress) => ({
+      'seller.walletAddress': {
+        $regex: `^${escapeRegexForMongoExact(walletAddress)}$`,
+        $options: 'i',
+      },
+    }));
+
+    const disputeRows = await buyordersCollection
+      .aggregate<SellerDisputeAggregateRow>([
+        {
+          $match: {
+            status: 'cancelled',
+            $or: sellerWalletQuery,
+          },
+        },
+        {
+          $project: {
+            sellerWalletLower: { $toLower: { $ifNull: ['$seller.walletAddress', ''] } },
+            cancelledByRoleLower: { $toLower: { $ifNull: ['$cancelledByRole', ''] } },
+            cancellerLower: { $toLower: { $ifNull: ['$canceller', ''] } },
+            cancelTradeReason: { $ifNull: ['$cancelTradeReason', ''] },
+            usdtAmountValue: {
+              $convert: { input: '$usdtAmount', to: 'double', onError: 0, onNull: 0 },
+            },
+            krwAmountValue: {
+              $convert: { input: '$krwAmount', to: 'double', onError: 0, onNull: 0 },
+            },
+          },
+        },
+        {
+          $addFields: {
+            isBuyerCancelled: {
+              $or: [
+                { $eq: ['$cancelledByRoleLower', 'buyer'] },
+                { $eq: ['$cancellerLower', 'buyer'] },
+              ],
+            },
+            isAdminOrAgentCancelled: {
+              $or: [
+                { $in: ['$cancelledByRoleLower', ADMIN_CANCELLER_ROLES] },
+                { $in: ['$cancellerLower', ADMIN_CANCELLER_ROLES] },
+                {
+                  $regexMatch: {
+                    input: '$cancelTradeReason',
+                    regex: '(관리자|에이전트|admin|agent)',
+                    options: 'i',
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          $match: {
+            isBuyerCancelled: false,
+            isAdminOrAgentCancelled: true,
+          },
+        },
+        {
+          $group: {
+            _id: '$sellerWalletLower',
+            totalDisputeResolvedCount: { $sum: 1 },
+            totalDisputeResolvedUsdtAmount: { $sum: '$usdtAmountValue' },
+            totalDisputeResolvedKrwAmount: { $sum: '$krwAmountValue' },
+          },
+        },
+      ])
+      .toArray();
+
+    const disputeMap = new Map<string, SellerDisputeAggregateRow>(
+      disputeRows.map((item) => [normalizeWalletAddressForLookup(item?._id), item]),
+    );
+
+    for (const user of users) {
+      const sellerValue =
+        user?.seller && typeof user.seller === 'object' ? user.seller : {};
+      const walletLower = normalizeWalletAddressForLookup(
+        user?.seller?.walletAddress || user?.walletAddress,
+      );
+      const stats = disputeMap.get(walletLower);
+      user.seller = {
+        ...sellerValue,
+        totalDisputeResolvedCount: Number(stats?.totalDisputeResolvedCount || 0),
+        totalDisputeResolvedUsdtAmount: Number(stats?.totalDisputeResolvedUsdtAmount || 0),
+        totalDisputeResolvedKrwAmount: Number(stats?.totalDisputeResolvedKrwAmount || 0),
+      };
+    }
+  } catch (error) {
+    console.error('applySellerDisputeResolvedStats failed', error);
+    fillZeroDisputeStats();
+  }
+}
+
 
 
 
@@ -2238,6 +2388,8 @@ export async function searchSellersByBankAccountHolder(
     .sort({ nickname: 1 })
     .toArray();
 
+  await applySellerDisputeResolvedStats(users as any[]);
+
   const totalCount = await collection.countDocuments(query);
 
   return {
@@ -3301,6 +3453,8 @@ export async function getAllSellersForBalanceInquiry(
     .limit(limit)
     .skip((page - 1) * limit)
     .toArray();
+
+  await applySellerDisputeResolvedStats(users as any[]);
 
   const totalCount = await collection.countDocuments(matchQuery);
 

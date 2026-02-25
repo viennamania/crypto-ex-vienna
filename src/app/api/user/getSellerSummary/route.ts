@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { getOneByWalletAddress } from '@lib/api/user';
+import { applySellerDisputeResolvedStats, getOneByWalletAddress } from '@lib/api/user';
 
 import { createThirdwebClient, getContract } from 'thirdweb';
 import { balanceOf } from 'thirdweb/extensions/erc20';
@@ -47,6 +47,8 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: 'Seller not found.' }, { status: 404 });
   }
+
+  await applySellerDisputeResolvedStats([user as any]);
 
 
   //console.log('Fetched user:', JSON.stringify(user));

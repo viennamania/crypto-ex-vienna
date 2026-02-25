@@ -195,6 +195,15 @@ export async function POST(request: NextRequest) {
                   onNull: 0,
                 },
               },
+              normalizedStatus: {
+                $toLower: {
+                  $trim: {
+                    input: {
+                      $toString: { $ifNull: ['$status', ''] },
+                    },
+                  },
+                },
+              },
               sellerGroupKey: {
                 $let: {
                   vars: {
@@ -226,6 +235,11 @@ export async function POST(request: NextRequest) {
               },
             },
           },
+          {
+            $match: {
+              normalizedStatus: 'paymentconfirmed',
+            },
+          },
           { $sort: { createdAt: -1 } },
           {
             $group: {
@@ -235,7 +249,7 @@ export async function POST(request: NextRequest) {
               sellerAvatar: { $first: '$normalizedSellerAvatar' },
               totalKrwAmount: { $sum: '$normalizedKrwAmount' },
               totalUsdtAmount: { $sum: '$normalizedUsdtAmount' },
-              orderCount: { $sum: 1 },
+              paymentConfirmedCount: { $sum: 1 },
               latestCreatedAt: { $max: '$createdAt' },
             },
           },
@@ -247,7 +261,7 @@ export async function POST(request: NextRequest) {
               sellerAvatar: '$sellerAvatar',
               totalKrwAmount: 1,
               totalUsdtAmount: 1,
-              orderCount: 1,
+              paymentConfirmedCount: 1,
               latestCreatedAt: 1,
             },
           },
@@ -259,7 +273,7 @@ export async function POST(request: NextRequest) {
               ],
             },
           },
-          { $sort: { totalKrwAmount: -1, totalUsdtAmount: -1, orderCount: -1 } },
+          { $sort: { totalKrwAmount: -1, totalUsdtAmount: -1, paymentConfirmedCount: -1 } },
         ])
         .toArray(),
     ]);
@@ -396,7 +410,7 @@ export async function POST(request: NextRequest) {
           sellerAvatar: String(item?.sellerAvatar || ''),
           totalKrwAmount: Number(item?.totalKrwAmount || 0),
           totalUsdtAmount: Number(item?.totalUsdtAmount || 0),
-          orderCount: Number(item?.orderCount || 0),
+          paymentConfirmedCount: Number(item?.paymentConfirmedCount || item?.orderCount || 0),
           latestCreatedAt: String(item?.latestCreatedAt || ''),
         })),
       },
