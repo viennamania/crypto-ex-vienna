@@ -368,6 +368,8 @@ const walletAuthOptions = ["google", "email", "phone"];
 const ACTIVE_PRIVATE_TRADE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
 const ACTIVE_TRADING_ORDER_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
 const BUYER_CANCEL_REPUTATION_PENALTY_POINTS = 1;
+const SELLER_ESCROW_BALANCE_POLLING_MS = 5000;
+const SELLER_ESCROW_ORDER_POLLING_MS = 5000;
 const BUY_ORDER_PROGRESS_STEP_DEFINITIONS: Array<{
   key: string;
   title: string;
@@ -838,6 +840,25 @@ const getOrderAgentFeeAmount = (orderLike: any): number | null => {
   for (const value of candidates) {
     const numeric = toFiniteNumberOrNull(value);
     if (numeric !== null) {
+      return numeric;
+    }
+  }
+
+  return null;
+};
+
+const getAgentPlatformFeeRatePercent = (agentLike: any): number | null => {
+  const candidates = [
+    agentLike?.agentFeePercent,
+    agentLike?.platformFeePercent,
+    agentLike?.agentPlatformFeePercent,
+    agentLike?.agentFeeRate,
+    agentLike?.platformFeeRate,
+  ];
+
+  for (const value of candidates) {
+    const numeric = toFiniteNumberOrNull(value);
+    if (numeric !== null && numeric >= 0) {
       return numeric;
     }
   }
@@ -2391,6 +2412,7 @@ export default function Index({ params }: any) {
   const [selectedActivePaymentRequestedOrder, setSelectedActivePaymentRequestedOrder] = useState<BuyOrder | null>(null);
   const [activeOrderCompleteResult, setActiveOrderCompleteResult] = useState<ActiveOrderCompleteResult | null>(null);
   const [completingActiveOrder, setCompletingActiveOrder] = useState(false);
+  const [sellerAgentPlatformFeeRatePercent, setSellerAgentPlatformFeeRatePercent] = useState<number | null>(null);
   const [cancelingBuyerPrivateTrade, setCancelingBuyerPrivateTrade] = useState(false);
   const [isBuyerTradeCancelModalOpen, setIsBuyerTradeCancelModalOpen] = useState(false);
   const [buyerTradeCancelDraft, setBuyerTradeCancelDraft] = useState<BuyerTradeCancelDraft | null>(null);
@@ -2440,6 +2462,69 @@ export default function Index({ params }: any) {
   const isSameWalletAddress = (walletA?: string, walletB?: string) =>
     Boolean(walletA && walletB && walletA.toLowerCase() === walletB.toLowerCase());
   const isMySellerCard = (walletAddress?: string) => isSameWalletAddress(walletAddress, address);
+  const sellerAgentcodeForFeePreview = useMemo(() => {
+    const matchedSeller = sellersBalance.find((seller: any) =>
+      isSameWalletAddress(seller?.walletAddress, sellerWalletAddressParam),
+    );
+    const candidates = [
+      matchedSeller?.seller?.agentcode,
+      matchedSeller?.agentcode,
+      selectedActivePaymentRequestedOrder?.seller?.agentcode,
+      (selectedActivePaymentRequestedOrder as any)?.agent?.agentcode,
+      (selectedActivePaymentRequestedOrder as any)?.agentcode,
+    ];
+
+    for (const candidate of candidates) {
+      if (typeof candidate === 'string' && candidate.trim()) {
+        return candidate.trim();
+      }
+    }
+    return '';
+  }, [sellersBalance, sellerWalletAddressParam, selectedActivePaymentRequestedOrder]);
+
+  useEffect(() => {
+    if (!sellerAgentcodeForFeePreview) {
+      setSellerAgentPlatformFeeRatePercent(null);
+      return;
+    }
+
+    let mounted = true;
+
+    const fetchSellerAgentPlatformFeeRate = async () => {
+      try {
+        const response = await fetch('/api/agent/getOneAgent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            agentcode: sellerAgentcodeForFeePreview,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch agent summary');
+        }
+
+        const data = await response.json().catch(() => ({}));
+        const resolvedRate = getAgentPlatformFeeRatePercent(data?.result);
+        if (mounted) {
+          setSellerAgentPlatformFeeRatePercent(resolvedRate);
+        }
+      } catch (error) {
+        console.error('Error fetching seller agent platform fee rate', error);
+        if (mounted) {
+          setSellerAgentPlatformFeeRatePercent(null);
+        }
+      }
+    };
+
+    fetchSellerAgentPlatformFeeRate();
+
+    return () => {
+      mounted = false;
+    };
+  }, [sellerAgentcodeForFeePreview]);
 
   useEffect(() => {
     if (!isSellerWalletPanelOpen) {
@@ -2601,7 +2686,11 @@ export default function Index({ params }: any) {
     const feeRate = Number(getOrderPlatformFeeRate(selectedActivePaymentRequestedOrder) || 0);
     const feeWalletAddress = getOrderPlatformFeeWalletAddress(selectedActivePaymentRequestedOrder);
     const storedFeeAmount = getOrderPlatformFeeAmount(selectedActivePaymentRequestedOrder);
-    const agentFeeRate = Number(getOrderAgentFeeRate(selectedActivePaymentRequestedOrder) || 0);
+    const orderAgentFeeRate = Number(getOrderAgentFeeRate(selectedActivePaymentRequestedOrder) || 0);
+    const agentFeeRate =
+      sellerAgentPlatformFeeRatePercent !== null
+        ? Math.max(0, Number(sellerAgentPlatformFeeRatePercent))
+        : orderAgentFeeRate;
     const storedAgentFeeAmount = getOrderAgentFeeAmount(selectedActivePaymentRequestedOrder);
 
     const buyerTransferUsdt = roundDownUsdt(Number(selectedActivePaymentRequestedOrder.usdtAmount || 0));
@@ -2645,7 +2734,7 @@ export default function Index({ params }: any) {
       agentFeeUsdt,
       totalTransferUsdt,
     };
-  }, [selectedActivePaymentRequestedOrder]);
+  }, [selectedActivePaymentRequestedOrder, sellerAgentPlatformFeeRatePercent]);
   const activeOrderCompleteFlowPhase = useMemo<SellerEscrowCompleteFlowPhase>(() => {
     if (completingActiveOrder) {
       return 'PROCESSING';
@@ -5596,6 +5685,7 @@ const fetchBuyOrders = async () => {
     try {
       const response = await fetch('/api/user/getAllSellersForBalance', {
         method: 'POST',
+        cache: 'no-store',
         headers: {
             'Content-Type': 'application/json',
         },
@@ -5700,10 +5790,10 @@ const fetchBuyOrders = async () => {
     */
 
     fetchSellersBalance();
-    // interval to fetch every 10 seconds
+    // interval to refresh seller escrow balance periodically
     const interval = setInterval(() => {
       fetchSellersBalance();
-    }, 10000);
+    }, SELLER_ESCROW_BALANCE_POLLING_MS);
     return () => clearInterval(interval);
   }, [address, sellerWalletAddressParam]);
 
@@ -5732,6 +5822,7 @@ const fetchBuyOrders = async () => {
       try {
         const response = await fetch('/api/order/getAllBuyOrdersBySellerEscrowWallet', {
           method: 'POST',
+          cache: 'no-store',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -5779,7 +5870,7 @@ const fetchBuyOrders = async () => {
     fetchActivePaymentRequestedOrders(true);
     const interval = setInterval(() => {
       fetchActivePaymentRequestedOrders(false);
-    }, 10000);
+    }, SELLER_ESCROW_ORDER_POLLING_MS);
 
     return () => {
       mounted = false;
