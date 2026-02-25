@@ -5797,6 +5797,8 @@ export async function completePrivateBuyOrderBySeller(
   platformFeeRatePercent?: number;
   platformFeeUsdtAmount?: number;
   platformFeeWalletAddress?: string;
+  agentFeeRatePercent?: number;
+  agentFeeUsdtAmount?: number;
   buyerTransferUsdtAmount?: number;
   totalTransferUsdtAmount?: number;
   transferCount?: number;
@@ -5929,6 +5931,57 @@ export async function completePrivateBuyOrderBySeller(
     feeWalletAddress: transferPlan.feeWalletAddress,
     source: transferPlan.source,
   };
+  const resolveAgentFeeRatePercent = () => {
+    const candidates = [
+      order?.agentFeeRate,
+      order?.agentFeePercent,
+      order?.settlement?.agentFeePercent,
+      order?.store?.agentFeePercent,
+      order?.agent?.agentFeePercent,
+    ];
+
+    for (const value of candidates) {
+      const numeric = Number(value);
+      if (Number.isFinite(numeric) && numeric > 0) {
+        return numeric;
+      }
+    }
+    return 0;
+  };
+  const resolveAgentFeeUsdtAmount = (
+    {
+      agentFeeRatePercent,
+      buyerTransferUsdtAmount,
+    }: {
+      agentFeeRatePercent: number;
+      buyerTransferUsdtAmount: number;
+    },
+  ) => {
+    const candidates = [
+      order?.agentFeeAmount,
+      order?.agentFeeUsdtAmount,
+      order?.settlement?.agentFeeAmount,
+      order?.settlement?.agentFeeAmountUSDT,
+    ];
+
+    for (const value of candidates) {
+      const numeric = Number(value);
+      if (Number.isFinite(numeric) && numeric > 0) {
+        return roundDownUsdtAmount(numeric);
+      }
+    }
+
+    if (agentFeeRatePercent > 0 && buyerTransferUsdtAmount > 0) {
+      return roundDownUsdtAmount((buyerTransferUsdtAmount * agentFeeRatePercent) / 100);
+    }
+
+    return 0;
+  };
+  const resolvedAgentFeeRatePercent = resolveAgentFeeRatePercent();
+  const resolvedAgentFeeUsdtAmount = resolveAgentFeeUsdtAmount({
+    agentFeeRatePercent: resolvedAgentFeeRatePercent,
+    buyerTransferUsdtAmount,
+  });
 
   if (!Number.isFinite(buyerTransferUsdtAmount) || buyerTransferUsdtAmount <= 0) {
     return { success: false, error: 'INVALID_USDT_AMOUNT' };
@@ -6147,6 +6200,8 @@ export async function completePrivateBuyOrderBySeller(
     transactionHash: releaseTransactionHash,
     buyerTransferUsdtAmount,
     platformFeeUsdtAmount,
+    agentFeeRatePercent: resolvedAgentFeeRatePercent,
+    agentFeeUsdtAmount: resolvedAgentFeeUsdtAmount,
     totalTransferUsdtAmount: actualTotalTransferUsdtAmount,
     plannedTotalTransferUsdtAmount,
     dustSweepUsdtAmount,
@@ -6231,6 +6286,8 @@ export async function completePrivateBuyOrderBySeller(
     platformFeeRatePercent: resolvedPlatformFee.feeRatePercent,
     platformFeeUsdtAmount,
     platformFeeWalletAddress: resolvedPlatformFee.feeWalletAddress,
+    agentFeeRatePercent: resolvedAgentFeeRatePercent,
+    agentFeeUsdtAmount: resolvedAgentFeeUsdtAmount,
     buyerTransferUsdtAmount,
     totalTransferUsdtAmount: actualTotalTransferUsdtAmount,
     transferCount,

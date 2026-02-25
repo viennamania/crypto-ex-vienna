@@ -55,6 +55,8 @@ export async function POST(request: NextRequest) {
       platformFeeRatePercent: Number(result.platformFeeRatePercent || 0),
       platformFeeUsdtAmount: Number(result.platformFeeUsdtAmount || 0),
       platformFeeWalletAddress: String(result.platformFeeWalletAddress || ''),
+      agentFeeRatePercent: Number(result.agentFeeRatePercent || 0),
+      agentFeeUsdtAmount: Number(result.agentFeeUsdtAmount || 0),
       buyerTransferUsdtAmount: Number(result.buyerTransferUsdtAmount || 0),
       totalTransferUsdtAmount: Number(result.totalTransferUsdtAmount || 0),
       transferCount: Number(result.transferCount || 0),

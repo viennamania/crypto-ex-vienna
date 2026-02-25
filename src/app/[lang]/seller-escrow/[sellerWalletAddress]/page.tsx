@@ -808,6 +808,43 @@ const getOrderPlatformFeeAmount = (orderLike: any): number | null => {
   return null;
 };
 
+const getOrderAgentFeeRate = (orderLike: any): number | null => {
+  const candidates = [
+    orderLike?.agentFeeRate,
+    orderLike?.agentFeePercent,
+    orderLike?.settlement?.agentFeePercent,
+    orderLike?.store?.agentFeePercent,
+    orderLike?.agent?.agentFeePercent,
+  ];
+
+  for (const value of candidates) {
+    const numeric = toFiniteNumberOrNull(value);
+    if (numeric !== null) {
+      return numeric;
+    }
+  }
+
+  return null;
+};
+
+const getOrderAgentFeeAmount = (orderLike: any): number | null => {
+  const candidates = [
+    orderLike?.agentFeeAmount,
+    orderLike?.agentFeeUsdtAmount,
+    orderLike?.settlement?.agentFeeAmount,
+    orderLike?.settlement?.agentFeeAmountUSDT,
+  ];
+
+  for (const value of candidates) {
+    const numeric = toFiniteNumberOrNull(value);
+    if (numeric !== null) {
+      return numeric;
+    }
+  }
+
+  return null;
+};
+
 const getOrderPlatformFeeWalletAddress = (orderLike: any): string => {
   const candidates = [
     orderLike?.platformFeeWalletAddress,
@@ -2541,6 +2578,8 @@ export default function Index({ params }: any) {
     const feeRate = Number(getOrderPlatformFeeRate(selectedActivePaymentRequestedOrder) || 0);
     const feeWalletAddress = getOrderPlatformFeeWalletAddress(selectedActivePaymentRequestedOrder);
     const storedFeeAmount = getOrderPlatformFeeAmount(selectedActivePaymentRequestedOrder);
+    const agentFeeRate = Number(getOrderAgentFeeRate(selectedActivePaymentRequestedOrder) || 0);
+    const storedAgentFeeAmount = getOrderAgentFeeAmount(selectedActivePaymentRequestedOrder);
 
     const buyerTransferUsdt = roundDownUsdt(Number(selectedActivePaymentRequestedOrder.usdtAmount || 0));
     const totalTransferCandidate = [
@@ -2569,6 +2608,14 @@ export default function Index({ params }: any) {
       platformFeeUsdt = roundDownUsdt((buyerTransferUsdt * feeRate) / 100);
     }
 
+    let agentFeeUsdt =
+      storedAgentFeeAmount !== null && storedAgentFeeAmount > 0
+        ? roundDownUsdt(storedAgentFeeAmount)
+        : 0;
+    if (agentFeeUsdt <= 0 && agentFeeRate > 0 && buyerTransferUsdt > 0) {
+      agentFeeUsdt = roundDownUsdt((buyerTransferUsdt * agentFeeRate) / 100);
+    }
+
     let totalTransferUsdt = totalTransferCandidate
       ? roundDownUsdt(totalTransferCandidate)
       : roundDownUsdt(buyerTransferUsdt + platformFeeUsdt);
@@ -2582,6 +2629,8 @@ export default function Index({ params }: any) {
       feeWalletAddress,
       buyerTransferUsdt,
       platformFeeUsdt,
+      agentFeeRate,
+      agentFeeUsdt,
       totalTransferUsdt,
     };
   }, [selectedActivePaymentRequestedOrder]);
@@ -6544,6 +6593,8 @@ const fetchBuyOrders = async () => {
       const platformFeeRatePercent = Number(data?.platformFeeRatePercent || 0);
       const platformFeeUsdtAmount = Number(data?.platformFeeUsdtAmount || 0);
       const platformFeeWalletAddress = String(data?.platformFeeWalletAddress || '').trim();
+      const agentFeeRatePercent = Number(data?.agentFeeRatePercent || 0);
+      const agentFeeUsdtAmount = Number(data?.agentFeeUsdtAmount || 0);
       const buyerTransferUsdtAmount = Number(data?.buyerTransferUsdtAmount || 0);
       const totalTransferUsdtAmount = Number(data?.totalTransferUsdtAmount || 0);
       const transferCount = Number(data?.transferCount || 0);
@@ -6589,6 +6640,8 @@ const fetchBuyOrders = async () => {
                   platformFeePercent: platformFeeRatePercent,
                   platformFeeAmount: platformFeeUsdtAmount,
                   platformFeeWalletAddress,
+                  agentFeePercent: agentFeeRatePercent,
+                  agentFeeAmount: agentFeeUsdtAmount,
                   buyerTransferAmount: buyerTransferUsdtAmount,
                   totalTransferAmount: totalTransferUsdtAmount,
                   platformFeeTransferCount: transferCount,
@@ -6616,6 +6669,7 @@ const fetchBuyOrders = async () => {
         }
         return {
           ...previousOrder,
+          agentFeeRate: agentFeeRatePercent,
           status: 'paymentConfirmed',
           paymentConfirmedAt: confirmedAt,
           transactionHash: releaseTxHash || previousOrder.transactionHash,
@@ -6631,6 +6685,18 @@ const fetchBuyOrders = async () => {
             totalTransferAmount: totalTransferUsdtAmount,
             transferCount,
             transferMode: transferCount > 1 ? 'batch' : 'single',
+          },
+          settlement: {
+            ...(previousOrder.settlement || {}),
+            platformFeePercent: platformFeeRatePercent,
+            platformFeeAmount: platformFeeUsdtAmount,
+            platformFeeWalletAddress,
+            agentFeePercent: agentFeeRatePercent,
+            agentFeeAmount: agentFeeUsdtAmount,
+            buyerTransferAmount: buyerTransferUsdtAmount,
+            totalTransferAmount: totalTransferUsdtAmount,
+            platformFeeTransferCount: transferCount,
+            platformFeeTransferMode: transferCount > 1 ? 'batch' : 'single',
           },
         };
       });
@@ -13455,6 +13521,15 @@ const fetchBuyOrders = async () => {
                           추가 전송: {formatUsdtDisplay(activeOrderCompleteFeePreview?.platformFeeUsdt || 0)} USDT
                         </div>
                       </div>
+                      <div className="rounded-md border border-fuchsia-200 bg-fuchsia-50/60 px-2 py-1.5">
+                        <span className="text-[11px] text-slate-500">AG 수수료(%)</span>
+                        <div className="mt-1 text-xl font-extrabold leading-tight text-fuchsia-800 tabular-nums sm:text-2xl">
+                          {formatPercentDisplay(activeOrderCompleteFeePreview?.agentFeeRate || 0)}%
+                        </div>
+                        <div className="text-[11px] font-semibold text-fuchsia-700 tabular-nums">
+                          예상 수수료: {formatUsdtDisplay(activeOrderCompleteFeePreview?.agentFeeUsdt || 0)} USDT
+                        </div>
+                      </div>
                     </div>
 
                     <div className="rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700">
@@ -13521,6 +13596,14 @@ const fetchBuyOrders = async () => {
                         <span className="text-amber-700">총 전송 예정 수량</span>
                         <span className="text-base font-extrabold text-amber-900 tabular-nums">
                           {formatUsdtDisplay(activeOrderCompleteFeePreview?.totalTransferUsdt || 0)} USDT
+                        </span>
+                      </div>
+                      <div className="col-span-2 flex items-center justify-between gap-2 rounded-md bg-white/70 px-2 py-1.5">
+                        <span className="text-amber-700">AG 수수료(참고)</span>
+                        <span className="text-base font-extrabold text-amber-900 tabular-nums">
+                          {formatPercentDisplay(activeOrderCompleteFeePreview?.agentFeeRate || 0)}%
+                          {' / '}
+                          {formatUsdtDisplay(activeOrderCompleteFeePreview?.agentFeeUsdt || 0)} USDT
                         </span>
                       </div>
                     </div>
