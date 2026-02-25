@@ -74,8 +74,23 @@ type SearchFilters = {
   date: string;
   searchTradeId: string;
   searchSeller: string;
-  searchAgent: string;
   onlyUncollected: boolean;
+};
+
+type AgentCellItem = {
+  key: string;
+  agentcode: string;
+  agentName: string;
+  agentLogo: string;
+  orderCount: number;
+  collectableCount: number;
+};
+
+type AgentCollectionItem = {
+  key: string;
+  agentcode: string;
+  agentName: string;
+  agentLogo: string;
 };
 
 const DEFAULT_LIMIT = 30;
@@ -93,7 +108,6 @@ const createDefaultFilters = (): SearchFilters => ({
   date: getTodayDate(),
   searchTradeId: '',
   searchSeller: '',
-  searchAgent: '',
   onlyUncollected: true,
 });
 
@@ -180,6 +194,42 @@ const isCollectableItem = (item: FeeCollectionItem) => {
   return Number(item.expectedAgentFeeAmount || 0) > 0;
 };
 
+const getAgentCellKey = (item: { agentcode?: string; agentName?: string }) => {
+  const agentcode = String(item.agentcode || '').trim();
+  if (agentcode) return `code:${agentcode.toLowerCase()}`;
+  const agentName = String(item.agentName || '').trim();
+  if (agentName) return `name:${agentName.toLowerCase()}`;
+  return 'unknown';
+};
+
+const getAgentDisplayName = (item: Pick<AgentCellItem, 'agentName' | 'agentcode'>) => {
+  const agentName = String(item.agentName || '').trim();
+  if (agentName) return agentName;
+  const agentcode = String(item.agentcode || '').trim();
+  if (agentcode) return agentcode;
+  return '미지정 에이전트';
+};
+
+const getAgentAvatarFallback = (name: string) => {
+  const normalizedName = String(name || '').replace(/\s+/g, '').trim();
+  if (!normalizedName) return 'AG';
+  return normalizedName.slice(0, 2).toUpperCase();
+};
+
+const normalizeAgentCollectionItem = (value: unknown): AgentCollectionItem | null => {
+  const source = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+  if (!source) return null;
+  const agentcode = String(source.agentcode || '').trim();
+  const agentName = String(source.agentName || '').trim();
+  if (!agentcode && !agentName) return null;
+  return {
+    key: getAgentCellKey({ agentcode, agentName }),
+    agentcode,
+    agentName,
+    agentLogo: String(source.agentLogo || '').trim(),
+  };
+};
+
 export default function PlatformFeeCollectionPage() {
   const activeAccount = useActiveAccount();
   const requesterWalletAddress = String(activeAccount?.address || '').trim();
@@ -201,6 +251,10 @@ export default function PlatformFeeCollectionPage() {
   });
   const [draftFilters, setDraftFilters] = useState<SearchFilters>(() => createDefaultFilters());
   const [appliedFilters, setAppliedFilters] = useState<SearchFilters>(() => createDefaultFilters());
+  const [agentCatalog, setAgentCatalog] = useState<AgentCollectionItem[]>([]);
+  const [loadingAgentCatalog, setLoadingAgentCatalog] = useState(false);
+  const [agentCatalogError, setAgentCatalogError] = useState<string | null>(null);
+  const [selectedAgentKey, setSelectedAgentKey] = useState('');
 
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [copiedAddress, setCopiedAddress] = useState('');
@@ -222,7 +276,6 @@ export default function PlatformFeeCollectionPage() {
           date: appliedFilters.date,
           searchTradeId: appliedFilters.searchTradeId.trim(),
           searchSeller: appliedFilters.searchSeller.trim(),
-          searchAgent: appliedFilters.searchAgent.trim(),
           onlyUncollected: appliedFilters.onlyUncollected,
         }),
       });
@@ -305,15 +358,140 @@ export default function PlatformFeeCollectionPage() {
     void loadList();
   }, [loadList]);
 
+  const loadAgentCatalog = useCallback(async () => {
+    setLoadingAgentCatalog(true);
+    setAgentCatalogError(null);
+    try {
+      const limit = 100;
+      let skip = 0;
+      let total = 0;
+      const allAgents: AgentCollectionItem[] = [];
+
+      while (skip < total || skip === 0) {
+        const params = new URLSearchParams({
+          limit: String(limit),
+          skip: String(skip),
+        });
+        const response = await fetch(`/api/agents?${params.toString()}`, { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(
+            typeof (payload as Record<string, unknown>)?.error === 'string'
+              ? String((payload as Record<string, unknown>).error)
+              : '에이전트 목록 조회에 실패했습니다.',
+          );
+        }
+
+        const rawItems = Array.isArray((payload as Record<string, unknown>)?.items)
+          ? ((payload as Record<string, unknown>).items as unknown[])
+          : [];
+        const normalizedItems = rawItems
+          .map((item) => normalizeAgentCollectionItem(item))
+          .filter((item: AgentCollectionItem | null): item is AgentCollectionItem => item !== null);
+        allAgents.push(...normalizedItems);
+
+        total = Math.max(0, Number((payload as Record<string, unknown>)?.total || 0) || 0);
+        if (rawItems.length < limit) break;
+        skip += limit;
+      }
+
+      const uniqueAgents = new Map<string, AgentCollectionItem>();
+      allAgents.forEach((agent) => {
+        if (uniqueAgents.has(agent.key)) return;
+        uniqueAgents.set(agent.key, agent);
+      });
+      setAgentCatalog(Array.from(uniqueAgents.values()));
+    } catch (agentError) {
+      setAgentCatalog([]);
+      setAgentCatalogError(agentError instanceof Error ? agentError.message : '에이전트 목록 조회에 실패했습니다.');
+    } finally {
+      setLoadingAgentCatalog(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAgentCatalog();
+  }, [loadAgentCatalog]);
+
+  const agentCells = useMemo(() => {
+    const statsByKey = new Map<string, { orderCount: number; collectableCount: number }>();
+
+    items.forEach((item) => {
+      const key = getAgentCellKey(item);
+      const existing = statsByKey.get(key);
+      const nextCollectableCount = isCollectableItem(item) ? 1 : 0;
+      if (existing) {
+        existing.orderCount += 1;
+        existing.collectableCount += nextCollectableCount;
+      } else {
+        statsByKey.set(key, {
+          orderCount: 1,
+          collectableCount: nextCollectableCount,
+        });
+      }
+    });
+
+    return agentCatalog.map((agent) => {
+      const stats = statsByKey.get(agent.key);
+      return {
+        key: agent.key,
+        agentcode: agent.agentcode,
+        agentName: agent.agentName,
+        agentLogo: agent.agentLogo,
+        orderCount: stats?.orderCount || 0,
+        collectableCount: stats?.collectableCount || 0,
+      } satisfies AgentCellItem;
+    });
+  }, [agentCatalog, items]);
+
+  useEffect(() => {
+    if (agentCells.length === 0) {
+      setSelectedAgentKey('');
+      return;
+    }
+    setSelectedAgentKey((prev) => (agentCells.some((cell) => cell.key === prev) ? prev : agentCells[0].key));
+  }, [agentCells]);
+
+  const effectiveSelectedAgentKey = selectedAgentKey || agentCells[0]?.key || '';
+
+  const selectedAgentInfo = useMemo(
+    () => agentCells.find((cell) => cell.key === effectiveSelectedAgentKey) || null,
+    [agentCells, effectiveSelectedAgentKey],
+  );
+
+  const visibleItems = useMemo(
+    () => (
+      effectiveSelectedAgentKey
+        ? items.filter((item) => getAgentCellKey(item) === effectiveSelectedAgentKey)
+        : []
+    ),
+    [items, effectiveSelectedAgentKey],
+  );
+
+  useEffect(() => {
+    setSelectedOrderIds((prev) => prev.filter((orderId) => visibleItems.some((item) => item._id === orderId)));
+  }, [visibleItems]);
+
   const collectableItems = useMemo(
-    () => items.filter((item) => isCollectableItem(item)),
-    [items],
+    () => visibleItems.filter((item) => isCollectableItem(item)),
+    [visibleItems],
   );
 
   const selectedItems = useMemo(
-    () => items.filter((item) => selectedOrderIds.includes(item._id) && isCollectableItem(item)),
-    [items, selectedOrderIds],
+    () => visibleItems.filter((item) => selectedOrderIds.includes(item._id) && isCollectableItem(item)),
+    [visibleItems, selectedOrderIds],
   );
+
+  const selectedAgentSummary = useMemo(() => {
+    const uncollectedItems = visibleItems.filter((item) => item.isUncollected);
+    return {
+      totalCount: visibleItems.length,
+      uncollectedCount: uncollectedItems.length,
+      totalUncollectedExpectedFeeAmount: roundDownUsdtAmount(
+        uncollectedItems.reduce((sum, item) => sum + Number(item.expectedAgentFeeAmount || 0), 0),
+      ),
+    };
+  }, [visibleItems]);
 
   const selectedTotalFeeAmount = useMemo(
     () => roundDownUsdtAmount(selectedItems.reduce((sum, item) => sum + Number(item.expectedAgentFeeAmount || 0), 0)),
@@ -374,11 +552,11 @@ export default function PlatformFeeCollectionPage() {
   const handleSubmitSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setPagination((prev) => ({ ...prev, page: 1 }));
+    setSelectedAgentKey('');
     setAppliedFilters({
       date: draftFilters.date || getTodayDate(),
       searchTradeId: draftFilters.searchTradeId.trim(),
       searchSeller: draftFilters.searchSeller.trim(),
-      searchAgent: draftFilters.searchAgent.trim(),
       onlyUncollected: draftFilters.onlyUncollected,
     });
   };
@@ -387,6 +565,7 @@ export default function PlatformFeeCollectionPage() {
     const defaults = createDefaultFilters();
     setDraftFilters(defaults);
     setAppliedFilters(defaults);
+    setSelectedAgentKey('');
     setPagination((prev) => ({ ...prev, page: 1 }));
     setSelectedOrderIds([]);
   };
@@ -513,6 +692,74 @@ export default function PlatformFeeCollectionPage() {
           </div>
         </section>
 
+        <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_26px_56px_-46px_rgba(15,23,42,0.45)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+            <p className="text-sm font-semibold text-slate-900">에이전트 목록</p>
+            <p className="text-xs text-slate-500">
+              선택 에이전트: {selectedAgentInfo ? getAgentDisplayName(selectedAgentInfo) : '-'} · 전체 {agentCells.length.toLocaleString()}명
+            </p>
+          </div>
+
+          {agentCatalogError && (
+            <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+              {agentCatalogError}
+            </div>
+          )}
+
+          {loadingAgentCatalog && agentCells.length === 0 ? (
+            <div className="px-4 py-3 text-xs text-slate-500">
+              에이전트 목록을 불러오는 중입니다...
+            </div>
+          ) : agentCells.length === 0 ? (
+            <div className="px-4 py-3 text-xs text-slate-500">
+              표시할 에이전트가 없습니다.
+            </div>
+          ) : (
+            <div className="px-4 py-3">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                {agentCells.map((cell) => {
+                  const displayName = getAgentDisplayName(cell);
+                  const isSelected = cell.key === effectiveSelectedAgentKey;
+                  return (
+                    <button
+                      key={cell.key}
+                      type="button"
+                      onClick={() => setSelectedAgentKey(cell.key)}
+                      className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left transition ${
+                        isSelected
+                          ? 'border-cyan-300 bg-cyan-50 shadow-[0_10px_24px_-18px_rgba(8,145,178,0.7)]'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                          {cell.agentLogo ? (
+                            <span
+                              className="h-full w-full bg-cover bg-center"
+                              style={{ backgroundImage: `url(${encodeURI(cell.agentLogo)})` }}
+                              aria-label={displayName}
+                            />
+                          ) : (
+                            <span className="text-[10px] font-extrabold text-slate-600">{getAgentAvatarFallback(displayName)}</span>
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-slate-900">{displayName}</span>
+                          <span className="block truncate text-[11px] text-slate-500">{cell.agentcode || '-'}</span>
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-right">
+                        <span className="block text-xs font-bold text-slate-700">{cell.orderCount.toLocaleString()}건</span>
+                        <span className="block text-[10px] text-cyan-700">수납가능 {cell.collectableCount.toLocaleString()}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </section>
+
         <section className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.42)]">
           <form className="grid grid-cols-1 gap-3 lg:grid-cols-12" onSubmit={handleSubmitSearch}>
             <div className="lg:col-span-2">
@@ -544,17 +791,7 @@ export default function PlatformFeeCollectionPage() {
                 className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500"
               />
             </div>
-            <div className="lg:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">에이전트</label>
-              <input
-                type="text"
-                value={draftFilters.searchAgent}
-                onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchAgent: event.target.value }))}
-                placeholder="에이전트 검색"
-                className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500"
-              />
-            </div>
-            <div className="lg:col-span-4">
+            <div className="lg:col-span-6">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">옵션</label>
               <label className="inline-flex h-10 w-full items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700">
                 <input
@@ -593,18 +830,18 @@ export default function PlatformFeeCollectionPage() {
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">AG 대상 주문</p>
-            <p className="mt-2 text-2xl font-bold leading-tight text-slate-900">{pagination.totalCount.toLocaleString()} 건</p>
-            <p className="mt-1 text-xs text-slate-500">선택 조건 기준</p>
+            <p className="mt-2 text-2xl font-bold leading-tight text-slate-900">{selectedAgentSummary.totalCount.toLocaleString()} 건</p>
+            <p className="mt-1 text-xs text-slate-500">선택 에이전트 기준</p>
           </div>
           <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">미수납 주문</p>
-            <p className="mt-2 text-2xl font-bold leading-tight text-rose-700">{summary.uncollectedCount.toLocaleString()} 건</p>
-            <p className="mt-1 text-xs text-slate-500">transactionHash 미기록</p>
+            <p className="mt-2 text-2xl font-bold leading-tight text-rose-700">{selectedAgentSummary.uncollectedCount.toLocaleString()} 건</p>
+            <p className="mt-1 text-xs text-slate-500">선택 에이전트 · transactionHash 미기록</p>
           </div>
           <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">미수납 예상 수수료</p>
-            <p className="mt-2 text-2xl font-bold leading-tight text-amber-700">{formatFeeUsdt(summary.totalUncollectedExpectedFeeAmount)} USDT</p>
-            <p className="mt-1 text-xs text-slate-500">AG 수수료 기준</p>
+            <p className="mt-2 text-2xl font-bold leading-tight text-amber-700">{formatFeeUsdt(selectedAgentSummary.totalUncollectedExpectedFeeAmount)} USDT</p>
+            <p className="mt-1 text-xs text-slate-500">선택 에이전트 · AG 수수료 기준</p>
           </div>
           <div className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">선택 수납 수량</p>
@@ -625,6 +862,7 @@ export default function PlatformFeeCollectionPage() {
               <button
                 type="button"
                 onClick={() => {
+                  void loadAgentCatalog();
                   void loadList();
                 }}
                 className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
@@ -678,14 +916,14 @@ export default function PlatformFeeCollectionPage() {
                       수납 대상 주문을 불러오는 중입니다...
                     </td>
                   </tr>
-                ) : items.length === 0 ? (
+                ) : visibleItems.length === 0 ? (
                   <tr>
                     <td className="px-4 py-10 text-center text-slate-500" colSpan={10}>
                       표시할 수납 대상 주문이 없습니다.
                     </td>
                   </tr>
                 ) : (
-                  items.map((item) => {
+                  visibleItems.map((item) => {
                     const collectable = isCollectableItem(item);
                     return (
                       <tr key={item._id} className="hover:bg-slate-50/60">
