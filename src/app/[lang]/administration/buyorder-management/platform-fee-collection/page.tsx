@@ -71,7 +71,6 @@ type CollectApiResult = {
 };
 
 type SearchFilters = {
-  date: string;
   searchTradeId: string;
   searchSeller: string;
   onlyUncollected: boolean;
@@ -96,16 +95,7 @@ type AgentCollectionItem = {
 const DEFAULT_LIMIT = 30;
 const COLLECTABLE_STATUSES = new Set(['paymentconfirmed', 'completed']);
 
-const getTodayDate = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
 const createDefaultFilters = (): SearchFilters => ({
-  date: getTodayDate(),
   searchTradeId: '',
   searchSeller: '',
   onlyUncollected: true,
@@ -273,7 +263,6 @@ export default function PlatformFeeCollectionPage() {
         body: JSON.stringify({
           page: pagination.page,
           limit: pagination.limit,
-          date: appliedFilters.date,
           searchTradeId: appliedFilters.searchTradeId.trim(),
           searchSeller: appliedFilters.searchSeller.trim(),
           onlyUncollected: appliedFilters.onlyUncollected,
@@ -554,7 +543,6 @@ export default function PlatformFeeCollectionPage() {
     setPagination((prev) => ({ ...prev, page: 1 }));
     setSelectedAgentKey('');
     setAppliedFilters({
-      date: draftFilters.date || getTodayDate(),
       searchTradeId: draftFilters.searchTradeId.trim(),
       searchSeller: draftFilters.searchSeller.trim(),
       onlyUncollected: draftFilters.onlyUncollected,
@@ -763,15 +751,6 @@ export default function PlatformFeeCollectionPage() {
         <section className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.42)]">
           <form className="grid grid-cols-1 gap-3 lg:grid-cols-12" onSubmit={handleSubmitSearch}>
             <div className="lg:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">조회 일자</label>
-              <input
-                type="date"
-                value={draftFilters.date}
-                onChange={(event) => setDraftFilters((prev) => ({ ...prev, date: event.target.value }))}
-                className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-slate-500"
-              />
-            </div>
-            <div className="lg:col-span-2">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">거래번호</label>
               <input
                 type="text"
@@ -791,7 +770,7 @@ export default function PlatformFeeCollectionPage() {
                 className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500"
               />
             </div>
-            <div className="lg:col-span-6">
+            <div className="lg:col-span-8">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">옵션</label>
               <label className="inline-flex h-10 w-full items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700">
                 <input
