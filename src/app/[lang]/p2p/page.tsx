@@ -291,6 +291,22 @@ const maskName = (value: string) => {
     return `${visible}***`;
 };
 
+const maskBuyerDepositName = (value: string) => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) {
+        return '-';
+    }
+    const compact = trimmed.replace(/\s+/g, '');
+    if (/^[가-힣]+$/u.test(compact)) {
+        const chars = Array.from(compact);
+        if (chars.length <= 1) {
+            return chars[0] || '-';
+        }
+        return `${chars[0]}${'*'.repeat(chars.length - 1)}`;
+    }
+    return maskName(trimmed);
+};
+
 const formatRelativeTime = (value?: string) => {
     if (!value) {
         return '--';
@@ -1317,14 +1333,10 @@ export default function P2PPage() {
                             : status === 'cancelled'
                             ? 'sell'
                             : 'pending';
-                    const displayName = maskName(
-                        order?.nickname ||
-                            order?.buyer?.nickname ||
-                            order?.buyer?.depositName ||
-                            order?.buyer?.name ||
-                            order?.store?.storeName ||
-                            ''
-                    );
+                    const buyerDepositName = String(
+                        order?.buyer?.depositName || order?.buyer?.name || ''
+                    ).trim();
+                    const displayName = maskBuyerDepositName(buyerDepositName);
                     const amount =
                         typeof order?.usdtAmount === 'number'
                             ? `${numberFormatter.format(order.usdtAmount)} USDT`
