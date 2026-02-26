@@ -237,13 +237,6 @@ export default function P2PAgentManagementLayout({ children }: { children: React
             basePath: `/${lang}/p2p/agent-management/sales-management`,
           },
           {
-            key: 'sales-missing-buyorder-recovery',
-            label: '누락 구매주문 보정',
-            compactLabel: '누락보정',
-            description: '전송 누락 주문 보정',
-            basePath: `/${lang}/p2p/agent-management/buyorder-management/missing-order-recovery`,
-          },
-          {
             key: 'sales-fee-wallet-management',
             label: '수수료 지급용 지갑 관리',
             compactLabel: '수수료',
