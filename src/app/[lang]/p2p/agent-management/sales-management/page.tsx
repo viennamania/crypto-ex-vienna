@@ -744,7 +744,6 @@ export default function P2PAgentSalesManagementPage() {
   const [orders, setOrders] = useState<AgentSalesOrderItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [totalPlatformFeeAmount, setTotalPlatformFeeAmount] = useState(0);
   const [copiedTradeId, setCopiedTradeId] = useState('');
   const [copiedWalletAddress, setCopiedWalletAddress] = useState('');
   const [escrowWalletBalanceByAddress, setEscrowWalletBalanceByAddress] = useState<
@@ -766,7 +765,6 @@ export default function P2PAgentSalesManagementPage() {
       setAgent(null);
       setOrders([]);
       setTotalCount(0);
-      setTotalPlatformFeeAmount(0);
       setPolling(false);
       setError(null);
       return;
@@ -816,14 +814,10 @@ export default function P2PAgentSalesManagementPage() {
         : [];
       const normalizedOrders = items.map((item) => normalizeSalesOrder(item));
       const resolvedTotalCount = toNumber(payloadRecord.totalCount || payloadResult.totalCount || normalizedOrders.length);
-      const resolvedTotalPlatformFeeAmount = toNumber(
-        payloadRecord.totalPlatformFeeAmount || payloadResult.totalPlatformFeeAmount,
-      );
 
       setAgent(agentData);
       setOrders(normalizedOrders);
       setTotalCount(resolvedTotalCount);
-      setTotalPlatformFeeAmount(resolvedTotalPlatformFeeAmount);
     } catch (loadError) {
       if (mode === 'polling') {
         console.error('Failed to poll agent sales orders', loadError);
@@ -831,7 +825,6 @@ export default function P2PAgentSalesManagementPage() {
         setAgent(null);
         setOrders([]);
         setTotalCount(0);
-        setTotalPlatformFeeAmount(0);
         setError(loadError instanceof Error ? loadError.message : '판매 거래내역을 불러오지 못했습니다.');
       }
     } finally {
@@ -1622,7 +1615,7 @@ export default function P2PAgentSalesManagementPage() {
             </form>
           </section>
 
-          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-8">
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-7">
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
               <p className="text-xs font-semibold text-slate-500">전체 거래</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">{totalCount.toLocaleString()}건</p>
@@ -1652,10 +1645,6 @@ export default function P2PAgentSalesManagementPage() {
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
               <p className="text-xs font-semibold text-slate-500">총 주문 수량</p>
               <p className="mt-1 text-xl font-bold text-cyan-700">{formatUsdt(dashboardStats.paymentConfirmedUsdtAmount)}</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <p className="text-xs font-semibold text-slate-500">플랫폼 수수료</p>
-              <p className="mt-1 text-xl font-bold text-indigo-700">{formatUsdt(totalPlatformFeeAmount)}</p>
             </div>
           </section>
 
