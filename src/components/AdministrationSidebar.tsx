@@ -67,7 +67,6 @@ const buildMenuItems = (lang: string): MenuItem[] => {
     { label: '정책 관리', hint: 'Policy', href: `${root}/policy` },
     { label: '공지 관리', hint: 'Notice', href: `${root}/notice` },
     { label: '배너 관리', hint: 'Banner', href: `${root}/banner` },
-    { label: '고객센터 설정', hint: 'Support', href: `${root}/support-settings` },
   ];
 };
 

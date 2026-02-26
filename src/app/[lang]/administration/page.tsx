@@ -116,6 +116,7 @@ const walletAuthOptions = ["google", "email"];
 const showTradeSummary = false;
 const showP2PBuy = false;
 const showBuyerSummary = false;
+const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@example.com';
 
 
 export default function Index({ params }: any) {
@@ -2294,11 +2295,13 @@ export default function Index({ params }: any) {
                   </button>
                   <button
                     onClick={() => {
-                      router.push('/' + params.lang + '/administration/support-settings');
+                      if (typeof window !== 'undefined') {
+                        window.location.href = `mailto:${SUPPORT_EMAIL}`;
+                      }
                     }}
                     className="bg-white text-sm text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 whitespace-nowrap"
                   >
-                    상담원 설정
+                    이메일 문의
                   </button>
                   <button
                     onClick={() => {
