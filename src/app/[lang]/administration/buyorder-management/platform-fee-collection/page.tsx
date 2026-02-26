@@ -666,12 +666,6 @@ export default function PlatformFeeCollectionPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Link
-                href="history"
-                className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                수납 이력
-              </Link>
               <div className="text-right">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Last Updated</p>
                 <p className="text-xs font-semibold text-slate-700">{lastUpdatedAt ? formatDateTime(lastUpdatedAt) : '-'}</p>
