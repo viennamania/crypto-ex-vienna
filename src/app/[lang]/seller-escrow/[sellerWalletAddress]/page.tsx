@@ -14383,18 +14383,17 @@ type BuyerAutoReplyContext = {
 };
 
 const AUTO_REPLY_STORAGE_PREFIX = 'buyer-auto-reply';
+const BUYER_CONSENT_AUTO_MESSAGE = '동의함';
 
 const AutoBuyerReplyListener = ({
   channelUrl,
   buyerWalletAddress,
   sellerWalletAddress,
-  context,
   enabled,
 }: {
   channelUrl: string | null;
   buyerWalletAddress?: string;
   sellerWalletAddress?: string;
-  context?: BuyerAutoReplyContext | null;
   enabled: boolean;
 }) => {
   const { state } = useSendbird();
@@ -14441,27 +14440,13 @@ const AutoBuyerReplyListener = ({
 
         pendingRef.current.add(channelUrl);
         try {
-          const aiResponse = await fetch('/api/user/generateBuyerIntentMessage', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              buyerWalletAddress,
-              sellerWalletAddress,
-              ...(context ?? {}),
-            }),
-          });
-          const aiData = await aiResponse.json().catch(() => ({}));
-          if (!aiResponse.ok || !aiData?.text) {
-            return;
-          }
-
           const response = await fetch('/api/sendbird/welcome-message', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               channelUrl,
               senderId: buyerWalletAddress,
-              message: aiData.text,
+              message: BUYER_CONSENT_AUTO_MESSAGE,
             }),
           });
           if (response.ok) {
@@ -14487,7 +14472,7 @@ const AutoBuyerReplyListener = ({
         // ignore cleanup errors
       }
     };
-  }, [sdk, channelUrl, buyerWalletAddress, sellerWalletAddress, context, enabled]);
+  }, [sdk, channelUrl, buyerWalletAddress, sellerWalletAddress, enabled]);
 
   return null;
 };
@@ -14805,7 +14790,6 @@ const SendbirdChatEmbed = ({
                 channelUrl={channelUrl}
                 buyerWalletAddress={buyerWalletAddress}
                 sellerWalletAddress={sellerWalletAddress}
-                context={buyerAutoReplyContext}
                 enabled={shouldShowChat}
               />
               <AutoSellerReplyListener
