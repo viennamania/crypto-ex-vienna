@@ -116,7 +116,7 @@ const walletAuthOptions = ["google", "email"];
 const showTradeSummary = false;
 const showP2PBuy = false;
 const showBuyerSummary = false;
-const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@example.com';
+const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@orangex.center';
 
 
 export default function Index({ params }: any) {

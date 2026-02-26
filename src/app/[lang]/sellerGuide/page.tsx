@@ -488,7 +488,7 @@ export default async function SellerGuidePage({ params }: { params: { lang?: str
                         Please review fees, exchange rates, and settlement terms before payment.
                     </p>
                     <div className="text-sm text-slate-400">
-                        <p>Email: support@example.com</p>
+                        <p>Email: support@orangex.center</p>
                         <p>Address: 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
                     </div>
                     <ClientFooterCopyright className="text-sm text-slate-500" />

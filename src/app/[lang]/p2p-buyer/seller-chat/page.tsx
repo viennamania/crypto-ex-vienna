@@ -1967,7 +1967,7 @@ export default function SellerChatPage() {
                 </p>
 
                 <div className="mt-4 space-y-1 text-[11px] text-[#b6beca]">
-                  <p>Email: support@example.com</p>
+                  <p>Email: support@orangex.center</p>
                   <p>Address: 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
                 </div>
 

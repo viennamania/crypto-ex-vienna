@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useActiveAccount } from 'thirdweb/react';
 
-const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@example.com';
+const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@orangex.center';
 
 const AdminSupportChatWidget = () => {
   const activeAccount = useActiveAccount();
@@ -12,6 +12,7 @@ const AdminSupportChatWidget = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loadingAdmin, setLoadingAdmin] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
 
   useEffect(() => {
     if (!address) {
@@ -65,11 +66,35 @@ const AdminSupportChatWidget = () => {
     return null;
   }
 
+  if (!isOpen) {
+    return (
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-24 right-6 z-50 inline-flex h-11 items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-800 shadow-[0_18px_45px_-28px_rgba(15,23,42,0.6)] transition hover:border-slate-400 md:bottom-14"
+      >
+        지원창 열기
+      </button>
+    );
+  }
+
   return (
     <div className="fixed bottom-24 right-6 z-50 w-[320px] max-w-[92vw] rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.7)] backdrop-blur md:bottom-14">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Support</p>
-      <p className="mt-1 text-sm font-semibold text-slate-900">관리자 채팅은 종료되었습니다.</p>
-      <p className="mt-1 text-xs text-slate-600">문의는 아래 이메일로 부탁드립니다.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Support</p>
+          <p className="mt-1 text-sm font-semibold text-slate-900">관리자 채팅은 종료되었습니다.</p>
+          <p className="mt-1 text-xs text-slate-600">문의는 아래 이메일로 부탁드립니다.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsOpen(false)}
+          aria-label="지원창 닫기"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-600 transition hover:border-slate-400"
+        >
+          X
+        </button>
+      </div>
 
       <div className="mt-3 flex items-center gap-2">
         <a

@@ -1383,7 +1383,7 @@ export default function SendUsdt({ params }: any) {
               결제 전에 수수료·환율·정산 조건을 확인해 주세요.
             </p>
             <div className="text-sm text-slate-500">
-              <p>이메일 : support@example.com</p>
+              <p>이메일 : support@orangex.center</p>
               <p>주소 : 14F, Corner St. Paul &amp; Tombs of the Kings, 8046 Pafos, Cyprus</p>
             </div>
             <ClientFooterCopyright className="text-xs text-slate-400" />
