@@ -207,6 +207,103 @@ const waitFor = (ms: number) =>
     window.setTimeout(() => resolve(), ms);
   });
 
+type PendingPaymentConfirm = {
+  paymentRequestId: string;
+  fromWalletAddress: string;
+  storecode: string;
+  chain: NetworkKey;
+  usdtAmount: number;
+  createdAt: string;
+  transactionHash?: string;
+  lastError?: string;
+  lastTriedAt?: string;
+};
+
+const PENDING_PAYMENT_CONFIRM_STORAGE_KEY = 'wallet-usdt-pending-confirms:v1';
+const PENDING_PAYMENT_CONFIRM_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
+const PENDING_PAYMENT_CONFIRM_RETRY_DELAYS_MS = [0, 1200, 2800] as const;
+
+const readPendingPaymentConfirms = (): PendingPaymentConfirm[] => {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const raw = window.localStorage.getItem(PENDING_PAYMENT_CONFIRM_STORAGE_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    const now = Date.now();
+    return parsed
+      .map((item) => {
+        if (!isRecord(item)) return null;
+        const paymentRequestId = String(item.paymentRequestId || '').trim();
+        const fromWalletAddress = String(item.fromWalletAddress || '').trim();
+        const storecode = String(item.storecode || '').trim();
+        const chainCandidate = String(item.chain || '').trim().toLowerCase();
+        const createdAt = String(item.createdAt || '').trim();
+        const createdAtMs = new Date(createdAt).getTime();
+        if (
+          !paymentRequestId ||
+          !isWalletAddress(fromWalletAddress) ||
+          !storecode ||
+          !isNetworkKey(chainCandidate) ||
+          !Number.isFinite(createdAtMs) ||
+          now - createdAtMs > PENDING_PAYMENT_CONFIRM_MAX_AGE_MS
+        ) {
+          return null;
+        }
+
+        const transactionHash = String(item.transactionHash || '').trim();
+        const lastError = String(item.lastError || '').trim();
+        const lastTriedAt = String(item.lastTriedAt || '').trim();
+        const usdtAmount = toSafeNumber(item.usdtAmount);
+        return {
+          paymentRequestId,
+          fromWalletAddress,
+          storecode,
+          chain: chainCandidate,
+          usdtAmount,
+          createdAt,
+          ...(transactionHash ? { transactionHash } : {}),
+          ...(lastError ? { lastError } : {}),
+          ...(lastTriedAt ? { lastTriedAt } : {}),
+        } as PendingPaymentConfirm;
+      })
+      .filter((item): item is PendingPaymentConfirm => Boolean(item));
+  } catch (error) {
+    console.error('Failed to read pending payment confirm queue', error);
+    return [];
+  }
+};
+
+const writePendingPaymentConfirms = (items: PendingPaymentConfirm[]) => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    if (!Array.isArray(items) || items.length === 0) {
+      window.localStorage.removeItem(PENDING_PAYMENT_CONFIRM_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(PENDING_PAYMENT_CONFIRM_STORAGE_KEY, JSON.stringify(items.slice(0, 30)));
+  } catch (error) {
+    console.error('Failed to write pending payment confirm queue', error);
+  }
+};
+
+const upsertPendingPaymentConfirm = (item: PendingPaymentConfirm) => {
+  const current = readPendingPaymentConfirms();
+  const deduped = current.filter((entry) => entry.paymentRequestId !== item.paymentRequestId);
+  writePendingPaymentConfirms([item, ...deduped]);
+};
+
+const removePendingPaymentConfirm = (paymentRequestId: string) => {
+  const normalizedPaymentRequestId = String(paymentRequestId || '').trim();
+  if (!normalizedPaymentRequestId) return;
+  const current = readPendingPaymentConfirms();
+  writePendingPaymentConfirms(current.filter((entry) => entry.paymentRequestId !== normalizedPaymentRequestId));
+};
+
 const resolveBuyerBankInfo = (buyer: unknown): BuyerBankInfoSnapshot | null => {
   if (!isRecord(buyer)) return null;
 
@@ -421,6 +518,7 @@ export default function PaymentUsdtPage({
   const [chatError, setChatError] = useState<string | null>(null);
   const [chatRefreshToken, setChatRefreshToken] = useState(0);
   const memberProfileRequestIdRef = useRef(0);
+  const flushingPendingConfirmRef = useRef(false);
   const amountInputRef = useRef<HTMLInputElement | null>(null);
   const memberStatusCardRef = useRef<HTMLDivElement | null>(null);
 
@@ -746,6 +844,116 @@ export default function PaymentUsdtPage({
     }
   }, [activeAccount?.address, selectedStorecode]);
 
+  const confirmPreparedPayment = useCallback(async ({
+    paymentRequestId,
+    fromWalletAddress,
+    transactionHash,
+    retryDelaysMs = PENDING_PAYMENT_CONFIRM_RETRY_DELAYS_MS,
+  }: {
+    paymentRequestId: string;
+    fromWalletAddress: string;
+    transactionHash: string;
+    retryDelaysMs?: readonly number[];
+  }) => {
+    let latestError: Error | null = null;
+    const attempts = Array.isArray(retryDelaysMs) && retryDelaysMs.length > 0
+      ? retryDelaysMs
+      : [0];
+
+    for (let attemptIndex = 0; attemptIndex < attempts.length; attemptIndex += 1) {
+      const delayMs = Number(attempts[attemptIndex] || 0);
+      if (delayMs > 0) {
+        await waitFor(delayMs);
+      }
+
+      try {
+        const response = await fetch('/api/wallet/payment-usdt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'confirm',
+            paymentRequestId,
+            fromWalletAddress,
+            transactionHash,
+          }),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(String(payload?.error || '결제 기록 저장에 실패했습니다.'));
+        }
+
+        const confirmedPayment = normalizePaymentRecord(payload?.result);
+        if (!confirmedPayment) {
+          throw new Error('결제 확정 응답이 올바르지 않습니다.');
+        }
+        return confirmedPayment;
+      } catch (error) {
+        latestError =
+          error instanceof Error
+            ? error
+            : new Error('결제 확정 요청 중 오류가 발생했습니다.');
+      }
+    }
+
+    throw latestError || new Error('결제 확정 요청에 실패했습니다.');
+  }, []);
+
+  const flushPendingPaymentConfirms = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+    if (flushingPendingConfirmRef.current) return;
+
+    const pendingItems = readPendingPaymentConfirms();
+    if (pendingItems.length === 0) return;
+
+    flushingPendingConfirmRef.current = true;
+    try {
+      const nowMs = Date.now();
+      const nextPendingItems: PendingPaymentConfirm[] = [];
+      let recoveredCount = 0;
+
+      for (const item of pendingItems) {
+        const createdAtMs = new Date(item.createdAt).getTime();
+        if (!Number.isFinite(createdAtMs) || nowMs - createdAtMs > PENDING_PAYMENT_CONFIRM_MAX_AGE_MS) {
+          continue;
+        }
+        if (!item.transactionHash) {
+          nextPendingItems.push(item);
+          continue;
+        }
+
+        try {
+          await confirmPreparedPayment({
+            paymentRequestId: item.paymentRequestId,
+            fromWalletAddress: item.fromWalletAddress,
+            transactionHash: item.transactionHash,
+            retryDelaysMs: [0, 1000],
+          });
+          recoveredCount += 1;
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : '결제 확정 요청 중 오류가 발생했습니다.';
+          nextPendingItems.push({
+            ...item,
+            lastError: message,
+            lastTriedAt: new Date().toISOString(),
+          });
+        }
+      }
+
+      writePendingPaymentConfirms(nextPendingItems);
+
+      if (recoveredCount > 0) {
+        if (!silent) {
+          toast.success(`미확정 결제 ${recoveredCount}건을 자동 복구했습니다.`);
+        }
+        await loadHistory();
+      }
+    } finally {
+      flushingPendingConfirmRef.current = false;
+    }
+  }, [confirmPreparedPayment, loadHistory]);
+
   const loadMemberProfile = useCallback(async () => {
     const requestId = memberProfileRequestIdRef.current + 1;
     memberProfileRequestIdRef.current = requestId;
@@ -918,6 +1126,16 @@ export default function PaymentUsdtPage({
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
+
+  useEffect(() => {
+    void flushPendingPaymentConfirms({ silent: true });
+
+    const timer = window.setInterval(() => {
+      void flushPendingPaymentConfirms({ silent: true });
+    }, 15000);
+
+    return () => window.clearInterval(timer);
+  }, [flushPendingPaymentConfirms]);
 
   useEffect(() => {
     loadMemberProfile();
@@ -1093,6 +1311,10 @@ export default function PaymentUsdtPage({
       return;
     }
 
+    const payerWalletAddress = String(activeAccount.address || '').trim();
+    const selectedStoreCode = String(selectedMerchant.storecode || '').trim();
+    let pendingConfirm: PendingPaymentConfirm | null = null;
+
     setPaying(true);
     try {
       const prepareResponse = await fetch('/api/wallet/payment-usdt', {
@@ -1124,6 +1346,16 @@ export default function PaymentUsdtPage({
         throw new Error('결제 요청 정보가 올바르지 않습니다.');
       }
 
+      pendingConfirm = {
+        paymentRequestId,
+        fromWalletAddress: payerWalletAddress,
+        storecode: selectedStoreCode,
+        chain: activeNetwork.id,
+        usdtAmount,
+        createdAt: new Date().toISOString(),
+      };
+      upsertPendingPaymentConfirm(pendingConfirm);
+
       const transaction = transfer({
         contract,
         to: toWalletAddress,
@@ -1140,35 +1372,30 @@ export default function PaymentUsdtPage({
         throw new Error('트랜잭션 해시를 확인할 수 없습니다.');
       }
 
-      const confirmResponse = await fetch('/api/wallet/payment-usdt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'confirm',
-          paymentRequestId,
-          fromWalletAddress: activeAccount.address,
-          transactionHash,
-        }),
+      pendingConfirm = {
+        ...pendingConfirm,
+        transactionHash,
+      };
+      upsertPendingPaymentConfirm(pendingConfirm);
+
+      const confirmedPayment = await confirmPreparedPayment({
+        paymentRequestId,
+        fromWalletAddress: payerWalletAddress,
+        transactionHash,
       });
 
-      const confirmData = await confirmResponse.json();
-      if (!confirmResponse.ok) {
-        throw new Error(confirmData?.error || '결제 기록 저장에 실패했습니다.');
-      }
+      removePendingPaymentConfirm(paymentRequestId);
 
-      const confirmedPayment = normalizePaymentRecord(confirmData?.result);
-      if (confirmedPayment) {
-        setLatestPaymentRecord(confirmedPayment);
-        setJustPaidRecordId(confirmedPayment.id || confirmedPayment.transactionHash);
-        setHistory((previous) => {
-          const deduped = previous.filter(
-            (item) =>
-              item.id !== confirmedPayment.id &&
-              item.transactionHash !== confirmedPayment.transactionHash,
-          );
-          return [confirmedPayment, ...deduped].slice(0, 8);
-        });
-      }
+      setLatestPaymentRecord(confirmedPayment);
+      setJustPaidRecordId(confirmedPayment.id || confirmedPayment.transactionHash);
+      setHistory((previous) => {
+        const deduped = previous.filter(
+          (item) =>
+            item.id !== confirmedPayment.id &&
+            item.transactionHash !== confirmedPayment.transactionHash,
+        );
+        return [confirmedPayment, ...deduped].slice(0, 8);
+      });
 
       toast.success('USDT 결제가 완료되었습니다.');
       setIsConfirmOpen(false);
@@ -1178,10 +1405,21 @@ export default function PaymentUsdtPage({
       await Promise.all([loadBalance(), loadHistory()]);
     } catch (error) {
       console.error('Failed to submit payment', error);
-      if (error instanceof Error) {
-        toast.error(error.message);
+      const errorMessage = error instanceof Error ? error.message : '결제 처리 중 오류가 발생했습니다.';
+
+      if (pendingConfirm?.paymentRequestId && pendingConfirm.transactionHash) {
+        upsertPendingPaymentConfirm({
+          ...pendingConfirm,
+          lastError: errorMessage,
+          lastTriedAt: new Date().toISOString(),
+        });
+        toast.error('온체인 전송은 완료되었으나 결제내역 확정이 지연되었습니다. 자동 재시도 중입니다.');
+        void flushPendingPaymentConfirms({ silent: true });
       } else {
-        toast.error('결제 처리 중 오류가 발생했습니다.');
+        if (pendingConfirm?.paymentRequestId) {
+          removePendingPaymentConfirm(pendingConfirm.paymentRequestId);
+        }
+        toast.error(errorMessage);
       }
     } finally {
       setPaying(false);

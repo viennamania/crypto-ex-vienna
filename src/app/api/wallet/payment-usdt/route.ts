@@ -3,7 +3,8 @@ import { ObjectId, type Collection } from "mongodb";
 import { randomInt } from "crypto";
 import { createThirdwebClient, Engine, getContract } from "thirdweb";
 import { balanceOf, transfer } from "thirdweb/extensions/erc20";
-import { ethereum, polygon, arbitrum, bsc } from "thirdweb/chains";
+import { ethereum, polygon, arbitrum, bsc, type Chain } from "thirdweb/chains";
+import { getRpcClient, eth_blockNumber, eth_getLogs, eth_getBlockByNumber } from "thirdweb/rpc";
 
 import clientPromise, { dbName } from "@lib/mongodb";
 import { getStoreByStorecode } from "@lib/api/store";
@@ -62,6 +63,9 @@ type WalletPaymentDocument = {
   createdAt: string;
   confirmedAt?: string;
   member?: PaymentMemberSnapshot;
+  reconcileAttemptedAt?: string;
+  reconcileAttempts?: number;
+  reconcileError?: string;
 };
 
 type WalletCollectDocument = {
@@ -113,6 +117,33 @@ const CHAIN_TO_TOKEN_DECIMALS: Record<ChainKey, number> = {
   arbitrum: 6,
   bsc: 18,
 };
+const CHAIN_TO_AVG_BLOCK_SECONDS: Record<ChainKey, number> = {
+  ethereum: 12,
+  polygon: 2,
+  arbitrum: 1,
+  bsc: 3,
+};
+const CHAIN_TO_CHAIN_OBJECT: Record<ChainKey, Chain> = {
+  ethereum,
+  polygon,
+  arbitrum,
+  bsc,
+};
+const CHAIN_TO_USDT_CONTRACT_ADDRESS: Record<ChainKey, string> = {
+  ethereum: ethereumContractAddressUSDT,
+  polygon: polygonContractAddressUSDT,
+  arbitrum: arbitrumContractAddressUSDT,
+  bsc: bscContractAddressUSDT,
+};
+const ERC20_TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const PREPARED_RECONCILE_MIN_AGE_MS = 2 * 60 * 1000;
+const PREPARED_RECONCILE_RETRY_INTERVAL_MS = 90 * 1000;
+const PREPARED_RECONCILE_MAX_LOOKBACK_DAYS = 7;
+const PREPARED_RECONCILE_SCAN_WINDOW_HOURS = 6;
+const PREPARED_RECONCILE_BATCH_SIZE = 5;
+const PREPARED_RECONCILE_TIMEOUT_MS = 4_500;
+const PREPARED_RECONCILE_MAX_CONFIRM_DELAY_MS = 24 * 60 * 60 * 1000;
+const RPC_LOG_BLOCK_CHUNK_SIZE = 900n;
 const PAYMENT_ID_MIN = 10_000_000;
 const PAYMENT_ID_MAX_EXCLUSIVE = 100_000_000;
 const PAYMENT_ID_MAX_RETRIES = 24;
@@ -130,10 +161,54 @@ const normalizeChain = (value: unknown): ChainKey => {
 
 const normalizeAddress = (value: unknown) => String(value || "").trim().toLowerCase();
 const normalizeAgentcode = (value: unknown) => String(value || "").trim();
+const normalizeHash = (value: unknown) => String(value || "").trim().toLowerCase();
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const isSameText = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+const parseBigIntLike = (value: unknown): bigint | null => {
+  if (typeof value === "bigint") return value;
+  const text = String(value || "").trim();
+  if (!text || text === "0x") return 0n;
+  try {
+    return BigInt(text);
+  } catch {
+    return null;
+  }
+};
+const addressToTopic = (value: string) =>
+  (`0x${normalizeAddress(value).replace(/^0x/, "").padStart(64, "0")}` as `0x${string}`);
+const amountToRaw = ({
+  amount,
+  decimals,
+}: {
+  amount: number;
+  decimals: number;
+}): bigint | null => {
+  if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(decimals) || decimals < 0) {
+    return null;
+  }
+
+  // `usdtAmount` is persisted with up to 6 decimals. Convert via micro units to avoid float drift.
+  const microUnits = Math.round(amount * 1_000_000);
+  if (!Number.isFinite(microUnits) || microUnits <= 0) {
+    return null;
+  }
+
+  const microAmount = BigInt(microUnits);
+  if (decimals >= 6) {
+    return microAmount * 10n ** BigInt(decimals - 6);
+  }
+  return microAmount / 10n ** BigInt(6 - decimals);
+};
+const withTimeout = async (work: Promise<void>, timeoutMs: number) => {
+  await Promise.race([
+    work,
+    new Promise<void>((resolve) => {
+      setTimeout(() => resolve(), timeoutMs);
+    }),
+  ]);
+};
 
 const resolveCollectRequester = async ({
   store,
@@ -414,6 +489,340 @@ const upsertCollectQueue = async ({
   );
 };
 
+const resolveChainRpcContext = async ({
+  chain,
+  thirdwebClient,
+  cache,
+}: {
+  chain: ChainKey;
+  thirdwebClient: ReturnType<typeof createThirdwebClient>;
+  cache: Map<ChainKey, {
+    rpcRequest: ReturnType<typeof getRpcClient>;
+    latestBlock: bigint;
+    latestBlockTimestampSec: number;
+    blockTimestampByNumber: Map<string, string>;
+  }>;
+}) => {
+  const cached = cache.get(chain);
+  if (cached) return cached;
+
+  const rpcRequest = getRpcClient({
+    client: thirdwebClient,
+    chain: CHAIN_TO_CHAIN_OBJECT[chain],
+  });
+  const latestBlock = await eth_blockNumber(rpcRequest);
+  const latestBlockData = await eth_getBlockByNumber(rpcRequest, {
+    blockNumber: latestBlock,
+    includeTransactions: false,
+  });
+  const latestTimestamp = parseBigIntLike(latestBlockData?.timestamp);
+  const latestBlockTimestampSec =
+    latestTimestamp !== null && latestTimestamp > 0n
+      ? Number(latestTimestamp)
+      : 0;
+
+  const next = {
+    rpcRequest,
+    latestBlock,
+    latestBlockTimestampSec,
+    blockTimestampByNumber: new Map<string, string>(),
+  };
+  cache.set(chain, next);
+  return next;
+};
+
+const resolveBlockTimestampIso = async ({
+  rpcRequest,
+  blockNumber,
+  cache,
+}: {
+  rpcRequest: ReturnType<typeof getRpcClient>;
+  blockNumber: bigint;
+  cache: Map<string, string>;
+}) => {
+  const cacheKey = blockNumber.toString();
+  const cached = cache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
+  try {
+    const block = await eth_getBlockByNumber(rpcRequest, {
+      blockNumber,
+      includeTransactions: false,
+    });
+    const timestamp = parseBigIntLike(block?.timestamp);
+    if (timestamp === null || timestamp <= 0n) {
+      cache.set(cacheKey, "");
+      return "";
+    }
+    const iso = new Date(Number(timestamp) * 1000).toISOString();
+    cache.set(cacheKey, iso);
+    return iso;
+  } catch {
+    cache.set(cacheKey, "");
+    return "";
+  }
+};
+
+const findMatchingTransferForPreparedPayment = async ({
+  payment,
+  thirdwebClient,
+  chainContextCache,
+}: {
+  payment: WalletPaymentDocument & { _id?: ObjectId };
+  thirdwebClient: ReturnType<typeof createThirdwebClient>;
+  chainContextCache: Map<ChainKey, {
+    rpcRequest: ReturnType<typeof getRpcClient>;
+    latestBlock: bigint;
+    latestBlockTimestampSec: number;
+    blockTimestampByNumber: Map<string, string>;
+  }>;
+}) => {
+  const chain = normalizeChain(payment.chain);
+  const fromWalletAddress = normalizeAddress(payment.fromWalletAddress);
+  const toWalletAddress = normalizeAddress(payment.toWalletAddress);
+  if (!isWalletAddress(fromWalletAddress) || !isWalletAddress(toWalletAddress)) {
+    return null;
+  }
+
+  const createdAtMs = new Date(String(payment.createdAt || "")).getTime();
+  if (!Number.isFinite(createdAtMs)) {
+    return null;
+  }
+
+  const decimals = CHAIN_TO_TOKEN_DECIMALS[chain];
+  const expectedAmountRaw = amountToRaw({
+    amount: Number(payment.usdtAmount || 0),
+    decimals,
+  });
+  if (expectedAmountRaw === null || expectedAmountRaw <= 0n) {
+    return null;
+  }
+
+  const chainContext = await resolveChainRpcContext({
+    chain,
+    thirdwebClient,
+    cache: chainContextCache,
+  });
+  const { rpcRequest, latestBlock, latestBlockTimestampSec, blockTimestampByNumber } = chainContext;
+  const avgBlockSeconds = Math.max(1, CHAIN_TO_AVG_BLOCK_SECONDS[chain]);
+  const createdAtSec = Math.floor(createdAtMs / 1000);
+
+  let estimatedBlock = latestBlock;
+  if (latestBlockTimestampSec > 0 && createdAtSec > 0 && createdAtSec < latestBlockTimestampSec) {
+    const diffSeconds = latestBlockTimestampSec - createdAtSec;
+    const offsetBlocks = BigInt(Math.floor(diffSeconds / avgBlockSeconds));
+    estimatedBlock = latestBlock > offsetBlocks ? latestBlock - offsetBlocks : 0n;
+  }
+
+  const scanWindowBlocks = BigInt(Math.ceil((PREPARED_RECONCILE_SCAN_WINDOW_HOURS * 60 * 60) / avgBlockSeconds));
+  let scanStart = estimatedBlock > scanWindowBlocks ? estimatedBlock - scanWindowBlocks : 0n;
+  let scanEnd = estimatedBlock + scanWindowBlocks;
+  if (scanEnd > latestBlock) {
+    scanEnd = latestBlock;
+  }
+
+  const maxLookbackBlocks = BigInt(
+    Math.ceil((PREPARED_RECONCILE_MAX_LOOKBACK_DAYS * 24 * 60 * 60) / avgBlockSeconds),
+  );
+  const minAllowedBlock = latestBlock > maxLookbackBlocks ? latestBlock - maxLookbackBlocks : 0n;
+  if (scanStart < minAllowedBlock) {
+    scanStart = minAllowedBlock;
+  }
+  if (scanEnd < scanStart) {
+    scanEnd = scanStart;
+  }
+
+  const transferTopic = ERC20_TRANSFER_TOPIC as `0x${string}`;
+  const fromTopic = addressToTopic(fromWalletAddress);
+  const toTopic = addressToTopic(toWalletAddress);
+  const usdtContractAddress = normalizeAddress(CHAIN_TO_USDT_CONTRACT_ADDRESS[chain]) as `0x${string}`;
+
+  let matched: {
+    transactionHash: string;
+    confirmedAt: string;
+    diffMs: number;
+  } | null = null;
+
+  for (let fromBlock = scanStart; fromBlock <= scanEnd; fromBlock += RPC_LOG_BLOCK_CHUNK_SIZE) {
+    const toBlockCandidate = fromBlock + RPC_LOG_BLOCK_CHUNK_SIZE - 1n;
+    const toBlock = toBlockCandidate > scanEnd ? scanEnd : toBlockCandidate;
+
+    const logs = await eth_getLogs(rpcRequest, {
+      address: usdtContractAddress,
+      fromBlock,
+      toBlock,
+      topics: [transferTopic, fromTopic, toTopic],
+    });
+
+    for (const log of logs) {
+      const amountRaw = parseBigIntLike(log?.data);
+      if (amountRaw === null || amountRaw !== expectedAmountRaw) {
+        continue;
+      }
+
+      const transactionHash = normalizeHash(log?.transactionHash);
+      if (!isTransactionHash(transactionHash)) {
+        continue;
+      }
+
+      const blockNumber =
+        typeof log?.blockNumber === "bigint"
+          ? log.blockNumber
+          : parseBigIntLike(log?.blockNumber);
+      if (blockNumber === null || blockNumber < 0n) {
+        continue;
+      }
+
+      const confirmedAt =
+        (await resolveBlockTimestampIso({
+          rpcRequest,
+          blockNumber,
+          cache: blockTimestampByNumber,
+        })) || new Date().toISOString();
+      const confirmedAtMs = new Date(confirmedAt).getTime();
+      const diffMs = Number.isFinite(confirmedAtMs)
+        ? Math.abs(confirmedAtMs - createdAtMs)
+        : Number.MAX_SAFE_INTEGER;
+      if (diffMs > PREPARED_RECONCILE_MAX_CONFIRM_DELAY_MS) {
+        continue;
+      }
+
+      if (!matched || diffMs < matched.diffMs) {
+        matched = {
+          transactionHash,
+          confirmedAt,
+          diffMs,
+        };
+      }
+    }
+  }
+
+  if (!matched) {
+    return null;
+  }
+
+  return {
+    transactionHash: matched.transactionHash,
+    confirmedAt: matched.confirmedAt,
+  };
+};
+
+const reconcilePreparedPayments = async ({
+  collection,
+  storecode,
+  fromWalletAddress,
+  limit = PREPARED_RECONCILE_BATCH_SIZE,
+}: {
+  collection: Collection<WalletPaymentDocument>;
+  storecode?: string;
+  fromWalletAddress?: string;
+  limit?: number;
+}) => {
+  const secretKey = String(process.env.THIRDWEB_SECRET_KEY || "").trim();
+  if (!secretKey) {
+    return;
+  }
+
+  const nowMs = Date.now();
+  const createdBeforeIso = new Date(nowMs - PREPARED_RECONCILE_MIN_AGE_MS).toISOString();
+  const createdAfterIso = new Date(
+    nowMs - PREPARED_RECONCILE_MAX_LOOKBACK_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const retryBeforeIso = new Date(nowMs - PREPARED_RECONCILE_RETRY_INTERVAL_MS).toISOString();
+  const query: any = {
+    status: "prepared",
+    createdAt: {
+      $gte: createdAfterIso,
+      $lte: createdBeforeIso,
+    },
+    $or: [
+      { reconcileAttemptedAt: { $exists: false } },
+      { reconcileAttemptedAt: { $lt: retryBeforeIso } },
+    ],
+  };
+
+  if (storecode) {
+    query.storecode = { $regex: `^${escapeRegex(storecode)}$`, $options: "i" };
+  }
+  if (fromWalletAddress) {
+    query.fromWalletAddress = normalizeAddress(fromWalletAddress);
+  }
+
+  const candidates = await collection
+    .find(query)
+    .sort({ createdAt: 1 })
+    .limit(Math.max(1, Math.min(limit, 10)))
+    .toArray();
+  if (candidates.length === 0) {
+    return;
+  }
+
+  const thirdwebClient = createThirdwebClient({ secretKey });
+  const chainContextCache = new Map<ChainKey, {
+    rpcRequest: ReturnType<typeof getRpcClient>;
+    latestBlock: bigint;
+    latestBlockTimestampSec: number;
+    blockTimestampByNumber: Map<string, string>;
+  }>();
+
+  for (const candidate of candidates) {
+    const paymentObjectId = candidate?._id;
+    if (!paymentObjectId) continue;
+
+    const attemptedAt = new Date().toISOString();
+    const nextAttemptCount = Number(candidate.reconcileAttempts || 0) + 1;
+
+    try {
+      const matched = await findMatchingTransferForPreparedPayment({
+        payment: candidate,
+        thirdwebClient,
+        chainContextCache,
+      });
+      if (!matched) {
+        await collection.updateOne(
+          { _id: paymentObjectId, status: "prepared" },
+          {
+            $set: {
+              reconcileAttemptedAt: attemptedAt,
+              reconcileAttempts: nextAttemptCount,
+              reconcileError: "matching transfer not found",
+            },
+          },
+        );
+        continue;
+      }
+
+      await collection.updateOne(
+        { _id: paymentObjectId, status: "prepared" },
+        {
+          $set: {
+            status: "confirmed",
+            transactionHash: matched.transactionHash,
+            confirmedAt: matched.confirmedAt || attemptedAt,
+            reconcileAttemptedAt: attemptedAt,
+            reconcileAttempts: nextAttemptCount,
+            reconcileError: "",
+          },
+        },
+      );
+    } catch (reconcileError) {
+      await collection.updateOne(
+        { _id: paymentObjectId, status: "prepared" },
+        {
+          $set: {
+            reconcileAttemptedAt: attemptedAt,
+            reconcileAttempts: nextAttemptCount,
+            reconcileError:
+              reconcileError instanceof Error
+                ? reconcileError.message
+                : "reconcile failed",
+          },
+        },
+      );
+    }
+  }
+};
+
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const action = String(body?.action || "").trim().toLowerCase();
@@ -654,6 +1063,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "invalid wallet address" }, { status: 400 });
     }
 
+    try {
+      await withTimeout(
+        reconcilePreparedPayments({
+          collection,
+          storecode,
+          fromWalletAddress,
+        }),
+        PREPARED_RECONCILE_TIMEOUT_MS,
+      );
+    } catch (reconcileError) {
+      console.error("wallet payment-usdt list reconcile error", reconcileError);
+    }
+
     const query: any = {
       fromWalletAddress,
       status: "confirmed",
@@ -696,6 +1118,18 @@ export async function POST(request: NextRequest) {
       adminWalletAddress !== storeAdminWalletAddress
     ) {
       return NextResponse.json({ error: "not authorized for this store" }, { status: 403 });
+    }
+
+    try {
+      await withTimeout(
+        reconcilePreparedPayments({
+          collection,
+          storecode,
+        }),
+        PREPARED_RECONCILE_TIMEOUT_MS,
+      );
+    } catch (reconcileError) {
+      console.error("wallet payment-usdt store-dashboard reconcile error", reconcileError);
     }
 
     const storeQuery = {
