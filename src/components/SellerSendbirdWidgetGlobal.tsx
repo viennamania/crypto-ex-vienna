@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { usePathname } from 'next/navigation';
 import { useActiveAccount } from 'thirdweb/react';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import { useSendbird } from '@sendbird/uikit-react';
@@ -148,6 +149,7 @@ const SellerChannelList = ({
 
 const SellerSendbirdWidgetGlobal = () => {
   const activeAccount = useActiveAccount();
+  const pathname = usePathname();
   const address = activeAccount?.address;
   const [ownerWalletAddress, setOwnerWalletAddress] = useState('');
   const [sessionToken, setSessionToken] = useState<string | null>(null);
@@ -163,6 +165,9 @@ const SellerSendbirdWidgetGlobal = () => {
   const [isSellerActive, setIsSellerActive] = useState(false);
   const [isCheckingSeller, setIsCheckingSeller] = useState(false);
   const effectiveWalletAddress = address || ownerWalletAddress;
+  const normalizedPathname = (pathname || '').replace(/\/+$/, '');
+  const isSellerEscrowRoute = normalizedPathname.split('/').filter(Boolean).includes('seller-escrow');
+  const widgetZIndexClass = isSellerEscrowRoute && isOpen ? 'z-[110]' : 'z-40';
 
   useEffect(() => {
     setIsMounted(true);
@@ -425,7 +430,7 @@ const SellerSendbirdWidgetGlobal = () => {
   }
 
   return createPortal(
-    <div className="fixed bottom-28 right-6 z-40 flex flex-col items-end gap-3">
+    <div className={`fixed bottom-28 right-6 ${widgetZIndexClass} flex flex-col items-end gap-3`}>
       {isOpen && (
         <div
           id="seller-chat-list"
