@@ -12,8 +12,6 @@ import { AutoConnect, useActiveAccount } from 'thirdweb/react';
 import { getUserPhoneNumber } from 'thirdweb/wallets/in-app';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
-import { useSendbird } from '@sendbird/uikit-react';
-import { GroupChannelHandler } from '@sendbird/chat/groupChannel';
 
 import { client } from '@/app/client';
 import { useClientWallets } from '@/lib/useClientWallets';
@@ -295,15 +293,6 @@ const SENDBIRD_APP_ID =
   process.env.NEXT_PUBLIC_SENDBIRD_APP_ID ||
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID ||
   '';
-const BUYER_AUTO_REPLY_STORAGE_PREFIX = 'wallet-management-buyer-auto-reply';
-const BUYER_CONSENT_AUTO_MESSAGE = '동의함';
-const CONSENT_REQUEST_KEYWORDS = [
-  '본 거래를 진행하기전 숙지 부탁드립니다',
-  '불법도박 재테크 마약 거래용으로 사용시 법적 책임',
-  '모든 민·형사상의 대한 책임은 구매자',
-  '동의하셔야',
-  '동의',
-];
 
 const createInitialCancelTradeProgressSteps = (): CancelTradeProgressStepItem[] =>
   CANCEL_TRADE_PROGRESS_STEP_DEFINITIONS.map((item) => ({
@@ -478,117 +467,6 @@ const splitTrailingPunctuation = (value: string) => {
     core: value.slice(0, -match[1].length),
     trailing: match[1],
   };
-};
-
-const isSellerConsentRequestMessage = (value: string) => {
-  const normalized = String(value || '').trim();
-  if (!normalized) return false;
-  return CONSENT_REQUEST_KEYWORDS.some((keyword) => normalized.includes(keyword));
-};
-
-const AutoBuyerConsentReplyListener = ({
-  channelUrl,
-  buyerWalletAddress,
-  sellerWalletAddress,
-  enabled,
-}: {
-  channelUrl: string | null;
-  buyerWalletAddress?: string;
-  sellerWalletAddress?: string;
-  enabled: boolean;
-}) => {
-  const { state } = useSendbird();
-  const sdk = state?.stores?.sdkStore?.sdk;
-  const sentRef = useRef<Set<string>>(new Set());
-  const pendingRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (!enabled) {
-      return;
-    }
-    if (!sdk?.groupChannel?.addGroupChannelHandler || !channelUrl) {
-      return;
-    }
-    if (!buyerWalletAddress || !sellerWalletAddress) {
-      return;
-    }
-
-    const normalizedBuyerWalletAddress = buyerWalletAddress.trim();
-    const normalizedSellerWalletAddress = sellerWalletAddress.trim();
-    if (!normalizedBuyerWalletAddress || !normalizedSellerWalletAddress) {
-      return;
-    }
-    if (normalizedBuyerWalletAddress.toLowerCase() === normalizedSellerWalletAddress.toLowerCase()) {
-      return;
-    }
-
-    const storageKey = `${BUYER_AUTO_REPLY_STORAGE_PREFIX}:${normalizedBuyerWalletAddress}:${channelUrl}`;
-    if (typeof window !== 'undefined' && window.localStorage.getItem(storageKey) === '1') {
-      sentRef.current.add(channelUrl);
-    }
-
-    const handlerId = `${BUYER_AUTO_REPLY_STORAGE_PREFIX}:${channelUrl}`;
-    const handler = new GroupChannelHandler({
-      onMessageReceived: async (channel, message) => {
-        if (!channel || channel.url !== channelUrl) {
-          return;
-        }
-        if (!message) {
-          return;
-        }
-
-        const senderId =
-          'sender' in message ? (message as { sender?: { userId?: string } })?.sender?.userId : '';
-        if (!senderId || senderId.trim().toLowerCase() !== normalizedSellerWalletAddress.toLowerCase()) {
-          return;
-        }
-        if (sentRef.current.has(channelUrl) || pendingRef.current.has(channelUrl)) {
-          return;
-        }
-
-        const receivedMessageText =
-          'message' in message ? String((message as { message?: string })?.message || '').trim() : '';
-        if (!isSellerConsentRequestMessage(receivedMessageText)) {
-          return;
-        }
-
-        pendingRef.current.add(channelUrl);
-        try {
-          const response = await fetch('/api/sendbird/welcome-message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              channelUrl,
-              senderId: normalizedBuyerWalletAddress,
-              message: BUYER_CONSENT_AUTO_MESSAGE,
-            }),
-          });
-          if (response.ok) {
-            sentRef.current.add(channelUrl);
-            if (typeof window !== 'undefined') {
-              window.localStorage.setItem(storageKey, '1');
-            }
-          }
-        } catch {
-          // Ignore auto-reply errors; user can still reply manually.
-        } finally {
-          pendingRef.current.delete(channelUrl);
-        }
-      },
-    });
-
-    sdk.groupChannel.addGroupChannelHandler(handlerId, handler);
-
-    return () => {
-      try {
-        sdk.groupChannel.removeGroupChannelHandler(handlerId);
-      } catch {
-        // Ignore cleanup errors.
-      }
-    };
-  }, [sdk, channelUrl, buyerWalletAddress, sellerWalletAddress, enabled]);
-
-  return null;
 };
 
 const renderTextWithAutoLinks = (text?: string | null, linkClassName?: string) => {
@@ -3574,12 +3452,6 @@ export default function BuyUsdtPage({
                     accessToken={chatSessionToken}
                     theme="light"
                   >
-                    <AutoBuyerConsentReplyListener
-                      channelUrl={chatChannelUrl}
-                      buyerWalletAddress={activeAccount.address}
-                      sellerWalletAddress={selectedSeller.walletAddress}
-                      enabled
-                    />
                     <GroupChannel channelUrl={chatChannelUrl} />
                   </SendbirdProvider>
                 )}
