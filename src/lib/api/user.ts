@@ -793,7 +793,7 @@ export async function updateOne(data: any) {
     $options: 'i',
   };
 
-  const currentUser = await collection.findOne<UserProps>(
+  const currentUser = await collection.findOne<{ _id: any }>(
     {
       storecode: normalizedStorecode,
       walletAddress: walletRegex,
@@ -806,7 +806,7 @@ export async function updateOne(data: any) {
   }
 
   // Allow same nickname for the same user; block only when another user already uses it.
-  const nicknameOwner = await collection.findOne<UserProps>(
+  const nicknameOwner = await collection.findOne<{ _id: any }>(
     {
       storecode: normalizedStorecode,
       nickname: normalizedNickname,
