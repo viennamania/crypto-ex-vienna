@@ -168,6 +168,19 @@ const SellerSendbirdWidgetGlobal = () => {
   const normalizedPathname = (pathname || '').replace(/\/+$/, '');
   const isSellerEscrowRoute = normalizedPathname.split('/').filter(Boolean).includes('seller-escrow');
   const widgetZIndexClass = isSellerEscrowRoute && isOpen ? 'z-[110]' : 'z-40';
+  const widgetBottomClass = isSellerEscrowRoute ? 'bottom-24 sm:bottom-28' : 'bottom-6 sm:bottom-8';
+  const widgetPanelMaxHeight = isSellerEscrowRoute
+    ? 'calc(100dvh - 14rem)'
+    : 'calc(100dvh - 8rem)';
+  const mobilePaneHeight = isSellerEscrowRoute
+    ? 'clamp(210px, 38dvh, 340px)'
+    : 'clamp(240px, 44dvh, 380px)';
+  const tabletPaneHeight = isSellerEscrowRoute
+    ? 'clamp(240px, 42dvh, 400px)'
+    : 'clamp(280px, 50dvh, 460px)';
+  const desktopPaneHeight = isSellerEscrowRoute
+    ? 'clamp(280px, 48dvh, 520px)'
+    : 'clamp(320px, 56dvh, 640px)';
 
   useEffect(() => {
     setIsMounted(true);
@@ -430,13 +443,14 @@ const SellerSendbirdWidgetGlobal = () => {
   }
 
   return createPortal(
-    <div className={`fixed bottom-28 right-6 ${widgetZIndexClass} flex flex-col items-end gap-3`}>
+    <div className={`fixed ${widgetBottomClass} right-3 sm:right-6 ${widgetZIndexClass} flex flex-col items-end gap-3`}>
       {isOpen && (
         <div
           id="seller-chat-list"
           className="w-[340px] max-w-[calc(100vw-8rem)] md:w-[420px] md:max-w-[70vw] lg:w-[760px] lg:max-w-[70vw] xl:w-[900px] xl:max-w-[75vw]"
+          style={{ maxHeight: widgetPanelMaxHeight }}
         >
-          <div className="rounded-2xl border border-slate-200/70 bg-white/95 p-4 shadow-[0_20px_55px_-40px_rgba(15,23,42,0.6)] backdrop-blur">
+          <div className="flex h-full max-h-full flex-col rounded-2xl border border-slate-200/70 bg-white/95 p-4 shadow-[0_20px_55px_-40px_rgba(15,23,42,0.6)] backdrop-blur">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 {view === 'chat' && (
@@ -465,25 +479,90 @@ const SellerSendbirdWidgetGlobal = () => {
               </div>
             </div>
 
-            {errorMessage ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                {errorMessage}
-              </div>
-            ) : !sessionToken ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
-                채팅을 준비 중입니다.
-              </div>
-            ) : (
-              <SendbirdProvider
-                appId={NEXT_PUBLIC_SENDBIRD_APP_ID}
-                userId={effectiveWalletAddress}
-                accessToken={sessionToken}
-                theme="light"
-              >
-                <div className="lg:grid lg:grid-cols-[minmax(200px,260px)_minmax(0,1fr)] lg:gap-4">
-                  {/* Mobile: list only */}
-                  {view === 'list' && (
-                    <div className="h-[360px] overflow-hidden rounded-xl border border-slate-200 bg-white md:h-[480px] lg:hidden">
+            <div className="min-h-0 flex-1">
+              {errorMessage ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  {errorMessage}
+                </div>
+              ) : !sessionToken ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
+                  채팅을 준비 중입니다.
+                </div>
+              ) : (
+                <SendbirdProvider
+                  appId={NEXT_PUBLIC_SENDBIRD_APP_ID}
+                  userId={effectiveWalletAddress}
+                  accessToken={sessionToken}
+                  theme="light"
+                >
+                  <div className="lg:grid lg:grid-cols-[minmax(200px,260px)_minmax(0,1fr)] lg:gap-4">
+                    {/* Mobile: list only */}
+                    {view === 'list' && (
+                      <div
+                        className="overflow-hidden rounded-xl border border-slate-200 bg-white lg:hidden"
+                        style={{ height: mobilePaneHeight }}
+                      >
+                        <div className="hidden md:block lg:hidden h-full" style={{ height: tabletPaneHeight }}>
+                          <SellerChannelList
+                            selectedChannelUrl={selectedChannelUrl}
+                            onChannelSelect={(channel) => {
+                              setSelectedChannelUrl(channel?.url ?? null);
+                              setView('chat');
+                            }}
+                            onChannelCreated={(channel) => {
+                              setSelectedChannelUrl(channel?.url ?? null);
+                              setView('chat');
+                            }}
+                          />
+                        </div>
+                        <div className="h-full md:hidden">
+                          <SellerChannelList
+                            selectedChannelUrl={selectedChannelUrl}
+                            onChannelSelect={(channel) => {
+                              setSelectedChannelUrl(channel?.url ?? null);
+                              setView('chat');
+                            }}
+                            onChannelCreated={(channel) => {
+                              setSelectedChannelUrl(channel?.url ?? null);
+                              setView('chat');
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mobile: chat only */}
+                    {view === 'chat' && (
+                      <div
+                        className="overflow-hidden rounded-xl border border-slate-200 bg-white lg:hidden"
+                        style={{ height: mobilePaneHeight }}
+                      >
+                        <div className="hidden md:block lg:hidden h-full" style={{ height: tabletPaneHeight }}>
+                          {selectedChannelUrl ? (
+                            <GroupChannel channelUrl={selectedChannelUrl} />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                              대화를 선택하세요.
+                            </div>
+                          )}
+                        </div>
+                        <div className="h-full md:hidden">
+                          {selectedChannelUrl ? (
+                            <GroupChannel channelUrl={selectedChannelUrl} />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                              대화를 선택하세요.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Desktop: list + chat side by side */}
+                    <div
+                      className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white lg:block"
+                      style={{ height: desktopPaneHeight }}
+                    >
                       <SellerChannelList
                         selectedChannelUrl={selectedChannelUrl}
                         onChannelSelect={(channel) => {
@@ -496,11 +575,10 @@ const SellerSendbirdWidgetGlobal = () => {
                         }}
                       />
                     </div>
-                  )}
-
-                  {/* Mobile: chat only */}
-                  {view === 'chat' && (
-                    <div className="h-[360px] overflow-hidden rounded-xl border border-slate-200 bg-white md:h-[480px] lg:hidden">
+                    <div
+                      className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white lg:block"
+                      style={{ height: desktopPaneHeight }}
+                    >
                       {selectedChannelUrl ? (
                         <GroupChannel channelUrl={selectedChannelUrl} />
                       ) : (
@@ -509,34 +587,10 @@ const SellerSendbirdWidgetGlobal = () => {
                         </div>
                       )}
                     </div>
-                  )}
-
-                  {/* Desktop: list + chat side by side */}
-                  <div className="hidden h-[640px] overflow-hidden rounded-xl border border-slate-200 bg-white lg:block">
-                    <SellerChannelList
-                      selectedChannelUrl={selectedChannelUrl}
-                      onChannelSelect={(channel) => {
-                        setSelectedChannelUrl(channel?.url ?? null);
-                        setView('chat');
-                      }}
-                      onChannelCreated={(channel) => {
-                        setSelectedChannelUrl(channel?.url ?? null);
-                        setView('chat');
-                      }}
-                    />
                   </div>
-                  <div className="hidden h-[640px] overflow-hidden rounded-xl border border-slate-200 bg-white lg:block">
-                    {selectedChannelUrl ? (
-                      <GroupChannel channelUrl={selectedChannelUrl} />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                        대화를 선택하세요.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </SendbirdProvider>
-            )}
+                </SendbirdProvider>
+              )}
+            </div>
           </div>
         </div>
       )}

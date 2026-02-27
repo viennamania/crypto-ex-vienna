@@ -2027,6 +2027,50 @@ export default function Index({ params }: any) {
     void refreshSellerChats();
   }, [ownerWalletAddress, refreshSellerChats]);
 
+  useEffect(() => {
+    if (!isOwnerSeller || !ownerWalletAddress || typeof window === 'undefined') {
+      return;
+    }
+
+    let active = true;
+
+    const refreshSellerChatsSilently = () => {
+      if (!active) {
+        return;
+      }
+      void refreshSellerChats({ silent: true });
+    };
+
+    const intervalId = window.setInterval(refreshSellerChatsSilently, 8000);
+
+    const handleWindowFocus = () => {
+      refreshSellerChatsSilently();
+    };
+
+    const handleVisibilityChange = () => {
+      if (typeof document === 'undefined') {
+        return;
+      }
+      if (document.visibilityState === 'visible') {
+        refreshSellerChatsSilently();
+      }
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleWindowFocus);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+    };
+  }, [isOwnerSeller, ownerWalletAddress, refreshSellerChats]);
+
   const queueSellerRealtimeRefresh = useCallback(() => {
     if (sellerRealtimeRefreshTimerRef.current) {
       clearTimeout(sellerRealtimeRefreshTimerRef.current);
@@ -3299,7 +3343,7 @@ export default function Index({ params }: any) {
     void startChatNotificationLoop();
   }, [
     isOwnerSeller,
-    sellerUnreadChatAlerts.length,
+    sellerUnreadChatAlerts,
     startChatNotificationLoop,
     stopChatNotificationLoop,
   ]);
