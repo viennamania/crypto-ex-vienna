@@ -213,6 +213,15 @@ type SellerChatItem = {
   unreadMessageCount?: number;
 };
 
+type SellerRealtimeMessagePayload = {
+  channelUrl: string;
+  preview?: string;
+  updatedAt?: number;
+  senderId?: string;
+  senderNickname?: string;
+  senderProfileUrl?: string;
+};
+
 const SELLER_OPEN_CHANNEL_EVENT = 'seller-sendbird-open-channel';
 
 type BuyOrderConfirmDraft = {
@@ -1869,6 +1878,8 @@ export default function Index({ params }: any) {
   const chatUnreadTotalRef = useRef<number | null>(null);
   const chatInitializedRef = useRef(false);
   const chatUnreadByChannelRef = useRef<Record<string, number>>({});
+  const sellerRealtimeRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [sellerRealtimeSessionToken, setSellerRealtimeSessionToken] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -1964,23 +1975,18 @@ export default function Index({ params }: any) {
     };
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-    chatInitializedRef.current = false;
-    chatUnreadTotalRef.current = null;
-    chatUnreadByChannelRef.current = {};
-
-    const fetchSellerChats = async () => {
+  const refreshSellerChats = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
       if (!ownerWalletAddress) {
-        if (isMounted) {
-          setSellerChatItems([]);
-          setSellerChatError(null);
-        }
+        setSellerChatItems([]);
+        setSellerChatError(null);
+        setSellerChatLoading(false);
         return;
       }
 
-      setSellerChatLoading(true);
+      if (!silent) {
+        setSellerChatLoading(true);
+      }
       setSellerChatError(null);
 
       try {
@@ -1999,34 +2005,165 @@ export default function Index({ params }: any) {
         }
 
         const data = (await response.json()) as { items?: SellerChatItem[] };
-        if (isMounted) {
-          setSellerChatItems(data.items || []);
-          chatInitializedRef.current = true;
-        }
+        setSellerChatItems(data.items || []);
+        chatInitializedRef.current = true;
       } catch (error) {
-        if (isMounted) {
-          const message = error instanceof Error ? error.message : '대화목록을 불러오지 못했습니다.';
-          setSellerChatError(message);
-        }
+        const message = error instanceof Error ? error.message : '대화목록을 불러오지 못했습니다.';
+        setSellerChatError(message);
       } finally {
-        if (isMounted) {
+        if (!silent) {
           setSellerChatLoading(false);
         }
       }
-    };
+    },
+    [ownerWalletAddress],
+  );
 
-    fetchSellerChats();
-    if (ownerWalletAddress) {
-      intervalId = setInterval(fetchSellerChats, 15000);
+  useEffect(() => {
+    chatInitializedRef.current = false;
+    chatUnreadTotalRef.current = null;
+    chatUnreadByChannelRef.current = {};
+
+    void refreshSellerChats();
+  }, [ownerWalletAddress, refreshSellerChats]);
+
+  const queueSellerRealtimeRefresh = useCallback(() => {
+    if (sellerRealtimeRefreshTimerRef.current) {
+      clearTimeout(sellerRealtimeRefreshTimerRef.current);
     }
 
-    return () => {
-      isMounted = false;
-      if (intervalId) {
-        clearInterval(intervalId);
+    sellerRealtimeRefreshTimerRef.current = setTimeout(() => {
+      sellerRealtimeRefreshTimerRef.current = null;
+      void refreshSellerChats({ silent: true });
+    }, 450);
+  }, [refreshSellerChats]);
+
+  const handleSellerRealtimeBuyerMessage = useCallback((payload: SellerRealtimeMessagePayload) => {
+    if (!isOwnerSeller) {
+      return;
+    }
+
+    const normalizedChannelUrl = String(payload.channelUrl || '').trim();
+    if (!normalizedChannelUrl) {
+      return;
+    }
+
+    const fallbackUpdatedAt = Date.now();
+    const nextUpdatedAt = Number(payload.updatedAt || fallbackUpdatedAt) || fallbackUpdatedAt;
+    const nextPreview = String(payload.preview || '').trim() || '새 메시지가 도착했습니다.';
+    const nextSenderId = String(payload.senderId || '').trim();
+    const nextSenderNickname = String(payload.senderNickname || '').trim();
+    const nextSenderProfileUrl = String(payload.senderProfileUrl || '').trim();
+
+    chatInitializedRef.current = true;
+
+    setSellerChatItems((previousItems) => {
+      let found = false;
+      const nextItems = previousItems.map((item) => {
+        if (item.channelUrl !== normalizedChannelUrl) {
+          return item;
+        }
+
+        found = true;
+        const nextUnreadCount = Math.max(0, Number(item.unreadMessageCount || 0)) + 1;
+        const existingMembers = Array.isArray(item.members) ? [...item.members] : [];
+        const firstMember = existingMembers[0];
+        const isPlaceholderMember = !firstMember || !String(firstMember.userId || '').trim();
+        if (isPlaceholderMember && nextSenderId) {
+          existingMembers[0] = {
+            userId: nextSenderId,
+            nickname: nextSenderNickname || nextSenderId,
+            profileUrl: nextSenderProfileUrl,
+          };
+        }
+
+        return {
+          ...item,
+          members: existingMembers,
+          unreadMessageCount: nextUnreadCount,
+          lastMessage: nextPreview,
+          updatedAt: nextUpdatedAt,
+        };
+      });
+
+      if (found) {
+        return nextItems;
+      }
+
+      return [
+        {
+          channelUrl: normalizedChannelUrl,
+          members: [
+            {
+              userId: nextSenderId || 'buyer',
+              nickname: nextSenderNickname || nextSenderId || '구매자',
+              profileUrl: nextSenderProfileUrl,
+            },
+          ],
+          lastMessage: nextPreview,
+          updatedAt: nextUpdatedAt,
+          unreadMessageCount: 1,
+        },
+        ...previousItems,
+      ];
+    });
+
+    queueSellerRealtimeRefresh();
+  }, [isOwnerSeller, queueSellerRealtimeRefresh]);
+
+  const handleSellerRealtimeChannelEvent = useCallback(() => {
+    if (!isOwnerSeller) {
+      return;
+    }
+    queueSellerRealtimeRefresh();
+  }, [isOwnerSeller, queueSellerRealtimeRefresh]);
+
+  useEffect(() => () => {
+    if (sellerRealtimeRefreshTimerRef.current) {
+      clearTimeout(sellerRealtimeRefreshTimerRef.current);
+      sellerRealtimeRefreshTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isOwnerSeller || !ownerWalletAddress || !NEXT_PUBLIC_SENDBIRD_APP_ID) {
+      setSellerRealtimeSessionToken(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const issueSessionToken = async () => {
+      try {
+        const response = await fetch('/api/sendbird/session-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: ownerWalletAddress,
+            nickname: `${ownerWalletAddress.slice(0, 6)}...`,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data?.sessionToken) {
+          throw new Error(data?.error || '판매자 채팅 세션 토큰 발급에 실패했습니다.');
+        }
+        if (!cancelled) {
+          setSellerRealtimeSessionToken(String(data.sessionToken));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setSellerRealtimeSessionToken(null);
+        }
+        console.warn('seller realtime chat token issue failed', error);
       }
     };
-  }, [ownerWalletAddress]);
+
+    void issueSessionToken();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOwnerSeller, ownerWalletAddress]);
 
   useEffect(() => {
     if (!ownerWalletAddress) {
@@ -7119,33 +7256,6 @@ const fetchBuyOrders = async () => {
     return () => clearInterval(interval);
   }, []);
 
-  const sellerPromotionContext = useMemo(() => {
-    if (!ownerWalletAddress) {
-      return null;
-    }
-    const ownerSeller = sellersBalance.find((item) => item?.walletAddress === ownerWalletAddress);
-    if (!ownerSeller) {
-      return null;
-    }
-    const priceSettingMethod = ownerSeller?.seller?.priceSettingMethod;
-    const market = ownerSeller?.seller?.market;
-    let price = ownerSeller?.seller?.price;
-    if (!price && ownerSeller?.seller?.usdtToKrwRate) {
-      price = ownerSeller.seller.usdtToKrwRate;
-    }
-    return {
-      priceSettingMethod,
-      market,
-      price,
-      escrowBalance: ownerSeller?.currentUsdtBalance,
-      promotionText: ownerSeller?.seller?.promotionText || ownerSeller?.promotionText || '',
-    };
-  }, [ownerWalletAddress, sellersBalance]);
-
-
-
-
-
 
   // /api/user/toggleAutoProcessDeposit
   const [togglingAutoProcessDeposit, setTogglingAutoProcessDeposit] = useState(false);
@@ -9780,6 +9890,24 @@ const fetchBuyOrders = async () => {
             </div>
           )}
 
+          {isOwnerSeller && ownerWalletAddress && sellerRealtimeSessionToken && NEXT_PUBLIC_SENDBIRD_APP_ID && (
+            <div className="hidden" aria-hidden="true">
+              <SendbirdProvider
+                appId={NEXT_PUBLIC_SENDBIRD_APP_ID}
+                userId={ownerWalletAddress}
+                accessToken={sellerRealtimeSessionToken}
+                theme="light"
+              >
+                <SellerRealtimeUnreadListener
+                  ownerWalletAddress={ownerWalletAddress}
+                  enabled={isOwnerSeller}
+                  onBuyerMessage={handleSellerRealtimeBuyerMessage}
+                  onChannelEvent={handleSellerRealtimeChannelEvent}
+                />
+              </SendbirdProvider>
+            </div>
+          )}
+
           {/* 판매자 대화목록 섹션 */}
           {isOwnerSeller ? (
             <div className="w-full rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 px-4 py-4 shadow-[0_20px_50px_-40px_rgba(217,119,6,0.85)]">
@@ -9812,7 +9940,6 @@ const fetchBuyOrders = async () => {
                 onOpenChange={setIsChatOpen}
                 variant="inline"
                 hasTopTradingAlert={hasMyActiveTradingOrders}
-                promotionContext={sellerPromotionContext}
             />
           )}
           <div className="w-full flex flex-col items-start justify-center gap-2
@@ -14372,17 +14499,6 @@ const TradeDetail = (
   };
 
 
-
-
-type BuyerAutoReplyContext = {
-  buyerWalletAddress?: string;
-  sellerWalletAddress?: string;
-  priceSettingMethod?: string;
-  market?: string;
-  price?: number | string;
-  escrowBalance?: number | string;
-};
-
 const AUTO_REPLY_STORAGE_PREFIX = 'buyer-auto-reply';
 const BUYER_CONSENT_AUTO_MESSAGE = '동의함';
 
@@ -14478,104 +14594,75 @@ const AutoBuyerReplyListener = ({
   return null;
 };
 
-const AutoSellerReplyListener = ({
-  channelUrl,
-  buyerWalletAddress,
-  sellerWalletAddress,
-  context,
+const SellerRealtimeUnreadListener = ({
+  ownerWalletAddress,
   enabled,
+  onBuyerMessage,
+  onChannelEvent,
 }: {
-  channelUrl: string | null;
-  buyerWalletAddress?: string;
-  sellerWalletAddress?: string;
-  context?: BuyerAutoReplyContext | null;
+  ownerWalletAddress: string;
   enabled: boolean;
+  onBuyerMessage: (payload: SellerRealtimeMessagePayload) => void;
+  onChannelEvent?: (channelUrl: string) => void;
 }) => {
   const { state } = useSendbird();
   const sdk = state?.stores?.sdkStore?.sdk;
-  const repliedRef = useRef<Set<string | number>>(new Set());
-  const pendingRef = useRef<Set<string | number>>(new Set());
 
   useEffect(() => {
     if (!enabled) {
       return;
     }
-    if (!sdk?.groupChannel?.addGroupChannelHandler || !channelUrl) {
-      return;
-    }
-    if (!buyerWalletAddress || !sellerWalletAddress) {
-      return;
-    }
-    if (buyerWalletAddress === sellerWalletAddress) {
+    if (!ownerWalletAddress || !sdk?.groupChannel?.addGroupChannelHandler) {
       return;
     }
 
-    const handlerId = `seller-auto-reply:${channelUrl}`;
+    const normalizedOwnerWalletAddress = ownerWalletAddress.toLowerCase();
+    const handlerId = `seller-realtime-unread:${ownerWalletAddress}`;
     const handler = new GroupChannelHandler({
-      onMessageReceived: async (channel, message) => {
-        if (!channel || channel.url !== channelUrl) {
-          return;
-        }
-        if (!message) {
-          return;
-        }
-        const senderId =
-          'sender' in message ? (message as { sender?: { userId?: string } })?.sender?.userId : undefined;
-        if (senderId !== buyerWalletAddress) {
-          return;
-        }
-        const messageId =
-          'messageId' in message ? (message as { messageId?: number })?.messageId : undefined;
-        const key = messageId ?? `${channelUrl}:${(message as any)?.createdAt ?? Date.now()}`;
-        if (repliedRef.current.has(key) || pendingRef.current.has(key)) {
+      onMessageReceived: (channel, message) => {
+        if (!channel?.url || !message) {
           return;
         }
 
-        const messageText =
-          'message' in message ? (message as { message?: string })?.message?.trim?.() : '';
-        if (!messageText) {
+        const sender =
+          'sender' in message ? (message as { sender?: { userId?: string; nickname?: string; profileUrl?: string } })?.sender : undefined;
+        const senderId = String(sender?.userId || '').trim();
+
+        if (!senderId || senderId.toLowerCase() === normalizedOwnerWalletAddress) {
           return;
         }
 
-        pendingRef.current.add(key);
-        try {
-          const delayMs = 2000 + Math.floor(Math.random() * 2000);
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        const preview =
+          'message' in message ? String((message as { message?: string })?.message || '').trim() : '';
+        const createdAtRaw =
+          'createdAt' in message ? Number((message as { createdAt?: number })?.createdAt) : Date.now();
+        const createdAt = Number.isFinite(createdAtRaw) && createdAtRaw > 0 ? createdAtRaw : Date.now();
 
-          const aiResponse = await fetch('/api/user/generateSellerAutoReply', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              message: messageText,
-              ...(context ?? {}),
-            }),
-          });
-          const aiData = await aiResponse.json().catch(() => ({}));
-          if (!aiResponse.ok || !aiData?.text) {
-            return;
-          }
-
-          const response = await fetch('/api/sendbird/welcome-message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              channelUrl,
-              senderId: sellerWalletAddress,
-              message: aiData.text,
-            }),
-          });
-          if (response.ok) {
-            repliedRef.current.add(key);
-          }
-        } catch {
-          // ignore auto-reply errors
-        } finally {
-          pendingRef.current.delete(key);
+        onBuyerMessage({
+          channelUrl: channel.url,
+          preview: preview || '새 메시지가 도착했습니다.',
+          updatedAt: createdAt,
+          senderId,
+          senderNickname: String(sender?.nickname || '').trim() || senderId,
+          senderProfileUrl: String(sender?.profileUrl || '').trim(),
+        });
+      },
+      onChannelChanged: (channel) => {
+        if (!channel?.url) {
+          return;
         }
+        onChannelEvent?.(channel.url);
+      },
+      onUserMarkedRead: (channel) => {
+        if (!channel?.url) {
+          return;
+        }
+        onChannelEvent?.(channel.url);
       },
     });
 
     sdk.groupChannel.addGroupChannelHandler(handlerId, handler);
+
     return () => {
       try {
         sdk.groupChannel.removeGroupChannelHandler(handlerId);
@@ -14583,7 +14670,7 @@ const AutoSellerReplyListener = ({
         // ignore cleanup errors
       }
     };
-  }, [sdk, channelUrl, buyerWalletAddress, sellerWalletAddress, context, enabled]);
+  }, [sdk, ownerWalletAddress, enabled, onBuyerMessage, onChannelEvent]);
 
   return null;
 };
@@ -14596,7 +14683,6 @@ const SendbirdChatEmbed = ({
   onOpenChange,
   variant = 'floating',
   hasTopTradingAlert = false,
-  promotionContext,
 }: {
   buyerWalletAddress?: string;
   sellerWalletAddress: string;
@@ -14605,13 +14691,6 @@ const SendbirdChatEmbed = ({
   onOpenChange: (open: boolean) => void;
   variant?: 'floating' | 'inline';
   hasTopTradingAlert?: boolean;
-  promotionContext?: {
-    priceSettingMethod?: string;
-    market?: string;
-    price?: number | string;
-    escrowBalance?: number | string;
-    promotionText?: string;
-  } | null;
 }) => {
   const isInline = variant === 'inline';
   const shouldShowChat = isInline || isOpen;
@@ -14631,20 +14710,6 @@ const SendbirdChatEmbed = ({
   const [channelUrl, setChannelUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const buyerAutoReplyContext = useMemo<BuyerAutoReplyContext | null>(() => {
-    if (!buyerWalletAddress || !sellerWalletAddress) {
-      return null;
-    }
-    return {
-      buyerWalletAddress,
-      sellerWalletAddress,
-      priceSettingMethod: promotionContext?.priceSettingMethod,
-      market: promotionContext?.market,
-      price: promotionContext?.price,
-      escrowBalance: promotionContext?.escrowBalance,
-    };
-  }, [buyerWalletAddress, promotionContext, sellerWalletAddress]);
-  const sellerAutoReplyContext = buyerAutoReplyContext;
 
   useEffect(() => {
     let isMounted = true;
@@ -14808,13 +14873,6 @@ const SendbirdChatEmbed = ({
                 channelUrl={channelUrl}
                 buyerWalletAddress={buyerWalletAddress}
                 sellerWalletAddress={sellerWalletAddress}
-                enabled={shouldShowChat}
-              />
-              <AutoSellerReplyListener
-                channelUrl={channelUrl}
-                buyerWalletAddress={buyerWalletAddress}
-                sellerWalletAddress={sellerWalletAddress}
-                context={sellerAutoReplyContext}
                 enabled={shouldShowChat}
               />
               <GroupChannel channelUrl={channelUrl} />
