@@ -174,6 +174,47 @@ type CancelTradeProgressApiEvent =
       };
     };
 
+type BuyOrderProgressPhase = 'idle' | 'processing' | 'completed' | 'error';
+type BuyOrderProgressStepState = 'pending' | 'active' | 'completed' | 'error';
+type BuyOrderProgressStepItem = {
+  key: string;
+  title: string;
+  description: string;
+  state: BuyOrderProgressStepState;
+  updatedAt: string;
+  detail?: string;
+};
+type BuyOrderProgressResultPayload = {
+  result?: boolean;
+  created?: boolean;
+  reason?: string;
+  order?: Record<string, unknown> | null;
+};
+type BuyOrderProgressApiEvent =
+  | {
+      type: 'progress';
+      step?: string;
+      title?: string;
+      description?: string;
+      status?: 'processing' | 'completed' | 'error';
+      occurredAt?: string;
+      detail?: string;
+      data?: Record<string, unknown>;
+    }
+  | {
+      type: 'result';
+      payload?: BuyOrderProgressResultPayload;
+    }
+  | {
+      type: 'error';
+      status?: number;
+      payload?: {
+        error?: string;
+        message?: string;
+        detail?: string;
+      };
+    };
+
 const displayFont = Playfair_Display({
   subsets: ['latin'],
   weight: ['600', '700'],
@@ -289,6 +330,83 @@ const CANCEL_TRADE_PROGRESS_STEP_DEFINITIONS = [
     description: '거래 취소가 최종 완료되었습니다.',
   },
 ];
+const BUY_ORDER_PROGRESS_STEP_DEFINITIONS = [
+  {
+    key: 'REQUEST_VALIDATED',
+    title: '요청 검증',
+    description: '구매 주문 요청값을 확인합니다.',
+  },
+  {
+    key: 'ACTIVE_ORDER_CHECKING',
+    title: '기존 거래 확인',
+    description: '진행중인 동일 거래가 있는지 확인합니다.',
+  },
+  {
+    key: 'ORDER_CREATE_STARTED',
+    title: '주문 생성 시작',
+    description: '새 구매 주문 생성을 시작합니다.',
+  },
+  {
+    key: 'SELLER_VALIDATED',
+    title: '판매자 확인',
+    description: '판매자 정보와 에스크로 지갑을 확인합니다.',
+  },
+  {
+    key: 'BUYER_VALIDATED',
+    title: '구매자 확인',
+    description: '구매자 지갑 및 입금자명 정보를 확인합니다.',
+  },
+  {
+    key: 'AMOUNT_VALIDATED',
+    title: '주문 금액 확정',
+    description: 'USDT/KRW 주문 금액과 환율 정보를 확정합니다.',
+  },
+  {
+    key: 'PLATFORM_FEE_VALIDATED',
+    title: '수수료 설정 확인',
+    description: '플랫폼 수수료 및 락업 수량을 확인합니다.',
+  },
+  {
+    key: 'BUYER_ESCROW_WALLET_CREATED',
+    title: '구매 에스크로 지갑 생성',
+    description: '구매자 전용 에스크로 지갑을 생성합니다.',
+  },
+  {
+    key: 'ESCROW_TRANSFER_SUBMITTED',
+    title: '에스크로 전송 요청',
+    description: '판매자 에스크로에서 구매 에스크로로 전송을 요청합니다.',
+  },
+  {
+    key: 'ESCROW_TRANSFER_CONFIRMED',
+    title: '에스크로 전송 확인',
+    description: '온체인 전송 확인을 완료합니다.',
+  },
+  {
+    key: 'ORDER_INSERTED',
+    title: '주문 생성 완료',
+    description: '주문을 저장하고 입금요청 상태로 전환합니다.',
+  },
+  {
+    key: 'ORDER_STATUS_CHECKING',
+    title: '주문 상태 조회',
+    description: '최종 주문 상태를 확인합니다.',
+  },
+  {
+    key: 'ORDER_READY',
+    title: '주문 준비 완료',
+    description: '주문이 입금요청 상태로 준비되었습니다.',
+  },
+  {
+    key: 'CONSENT_REQUEST_MESSAGE',
+    title: '동의 요청 메시지 발송',
+    description: '판매자 채팅으로 동의 요청 메시지를 전송합니다.',
+  },
+  {
+    key: 'BUY_ORDER_RESULT_READY',
+    title: '구매 신청 완료',
+    description: '구매 신청이 정상 처리되었습니다.',
+  },
+] as const;
 const SENDBIRD_APP_ID =
   process.env.NEXT_PUBLIC_SENDBIRD_APP_ID ||
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID ||
@@ -296,6 +414,15 @@ const SENDBIRD_APP_ID =
 
 const createInitialCancelTradeProgressSteps = (): CancelTradeProgressStepItem[] =>
   CANCEL_TRADE_PROGRESS_STEP_DEFINITIONS.map((item) => ({
+    key: item.key,
+    title: item.title,
+    description: item.description,
+    state: item.key === 'REQUEST_VALIDATED' ? 'active' : 'pending',
+    updatedAt: '',
+  }));
+
+const createInitialBuyOrderProgressSteps = (): BuyOrderProgressStepItem[] =>
+  BUY_ORDER_PROGRESS_STEP_DEFINITIONS.map((item) => ({
     key: item.key,
     title: item.title,
     description: item.description,
@@ -755,6 +882,11 @@ export default function BuyUsdtPage({
   const amountInputRef = useRef<HTMLInputElement | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submittingBuy, setSubmittingBuy] = useState(false);
+  const [buyOrderProgressPhase, setBuyOrderProgressPhase] =
+    useState<BuyOrderProgressPhase>('idle');
+  const [buyOrderProgressSummary, setBuyOrderProgressSummary] = useState('구매 신청 전입니다.');
+  const [buyOrderProgressSteps, setBuyOrderProgressSteps] =
+    useState<BuyOrderProgressStepItem[]>(() => createInitialBuyOrderProgressSteps());
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [cancelingTrade, setCancelingTrade] = useState(false);
   const [cancelTradeProgressPhase, setCancelTradeProgressPhase] =
@@ -779,6 +911,9 @@ export default function BuyUsdtPage({
   const [latestHistoryNowMs, setLatestHistoryNowMs] = useState<number>(() => Date.now());
   const [purchaseCompleteJackpot, setPurchaseCompleteJackpot] = useState<PurchaseCompleteJackpot | null>(null);
   const [recentEscrowCompletedTradeId, setRecentEscrowCompletedTradeId] = useState('');
+  const buyOrderProgressListRef = useRef<HTMLDivElement | null>(null);
+  const cancelTradeProgressListRef = useRef<HTMLDivElement | null>(null);
+  const privateTradeStatusRequestIdRef = useRef(0);
   const buyerProfileRequestIdRef = useRef(0);
   const paymentRequestedWatchRef = useRef<{ orderId: string; tradeId: string; usdtAmount: number } | null>(null);
   const jackpotShownOrderKeysRef = useRef<Set<string>>(new Set());
@@ -967,6 +1102,38 @@ export default function BuyUsdtPage({
       label: '대기',
     };
   }, [cancelTradeProgressPhase]);
+  const buyOrderProgressPhaseMeta = useMemo(() => {
+    if (buyOrderProgressPhase === 'completed') {
+      return {
+        container: 'border-emerald-200 bg-emerald-50/70',
+        badge: 'border-emerald-300 bg-emerald-100 text-emerald-700',
+        summary: 'text-emerald-700',
+        label: '완료',
+      };
+    }
+    if (buyOrderProgressPhase === 'processing') {
+      return {
+        container: 'border-cyan-200 bg-cyan-50/70',
+        badge: 'border-cyan-300 bg-cyan-100 text-cyan-700',
+        summary: 'text-cyan-700',
+        label: '진행중',
+      };
+    }
+    if (buyOrderProgressPhase === 'error') {
+      return {
+        container: 'border-rose-200 bg-rose-50/70',
+        badge: 'border-rose-300 bg-rose-100 text-rose-700',
+        summary: 'text-rose-700',
+        label: '오류',
+      };
+    }
+    return {
+      container: 'border-slate-200 bg-white/90',
+      badge: 'border-slate-300 bg-slate-100 text-slate-600',
+      summary: 'text-slate-600',
+      label: '대기',
+    };
+  }, [buyOrderProgressPhase]);
   const paymentRequestCountdown = useMemo(() => {
     if (!activePrivateTradeOrder || activePrivateTradeOrder.status !== 'paymentRequested') {
       return null;
@@ -1307,14 +1474,19 @@ export default function BuyUsdtPage({
   }, [sellerFromQuery, sellerSortOption, storecode]);
 
   const loadPrivateTradeStatus = useCallback(async (options?: { silent?: boolean }) => {
+    const requestId = privateTradeStatusRequestIdRef.current + 1;
+    privateTradeStatusRequestIdRef.current = requestId;
     const isSilent = options?.silent === true;
+    const isLatestRequest = () => requestId === privateTradeStatusRequestIdRef.current;
 
     if (!activeAccount?.address || !selectedSeller?.walletAddress) {
-      setPrivateTradeStatus(null);
+      if (isLatestRequest()) {
+        setPrivateTradeStatus(null);
+      }
       return;
     }
 
-    if (!isSilent) {
+    if (!isSilent && isLatestRequest()) {
       setLoadingPrivateTradeStatus(true);
     }
     try {
@@ -1329,6 +1501,10 @@ export default function BuyUsdtPage({
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data?.error || '거래 상태를 조회하지 못했습니다.');
+      }
+
+      if (!isLatestRequest()) {
+        return;
       }
 
       const result = data?.result && typeof data.result === 'object'
@@ -1347,9 +1523,11 @@ export default function BuyUsdtPage({
       }
     } catch (error) {
       console.error('Failed to load private trade status', error);
-      setPrivateTradeStatus(null);
+      if (isLatestRequest()) {
+        setPrivateTradeStatus(null);
+      }
     } finally {
-      if (!isSilent) {
+      if (!isSilent && isLatestRequest()) {
         setLoadingPrivateTradeStatus(false);
       }
     }
@@ -2138,6 +2316,7 @@ export default function BuyUsdtPage({
       toast.error('판매자가 제공 가능한 수량을 초과했습니다.');
       return;
     }
+    resetBuyOrderProgressFlow();
     setConfirmOpen(true);
   };
 
@@ -2184,9 +2363,33 @@ export default function BuyUsdtPage({
       return;
     }
 
+    const markBuyOrderProgressError = (message: string) => {
+      const occurredAt = new Date().toISOString();
+      setBuyOrderProgressPhase('error');
+      setBuyOrderProgressSummary(message);
+      setBuyOrderProgressSteps((prev) => {
+        const activeIndex = prev.findIndex((item) => item.state === 'active');
+        if (activeIndex < 0) {
+          return prev;
+        }
+        return prev.map((item, index) => (
+          index === activeIndex
+            ? {
+                ...item,
+                state: 'error',
+                updatedAt: item.updatedAt || occurredAt,
+                detail: item.detail || message,
+              }
+            : item
+        ));
+      });
+    };
+
     setRecentEscrowCompletedTradeId('');
-    setConfirmOpen(false);
     setSubmittingBuy(true);
+    setBuyOrderProgressSteps(createInitialBuyOrderProgressSteps());
+    setBuyOrderProgressPhase('processing');
+    setBuyOrderProgressSummary('요청 검증 단계를 처리중입니다.');
     try {
       const response = await fetch('/api/order/buyOrderPrivateSale', {
         method: 'POST',
@@ -2196,15 +2399,103 @@ export default function BuyUsdtPage({
           sellerWalletAddress: selectedSeller.walletAddress,
           usdtAmount: normalizedSubmitUsdtAmount,
           krwAmount: normalizedSubmitKrwAmount,
+          liveProgress: true,
           ...(storecode ? { storecode } : {}),
         }),
       });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data?.result) {
-        throw new Error(data?.message || data?.error || '구매 신청에 실패했습니다.');
+
+      let resultPayload: BuyOrderProgressResultPayload | null = null;
+      let streamErrorMessage = '';
+      const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+
+      if (contentType.includes('application/x-ndjson')) {
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('실시간 구매 신청 진행 상태를 읽을 수 없습니다.');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+        const handleStreamLine = (line: string) => {
+          const trimmed = line.trim();
+          if (!trimmed) {
+            return;
+          }
+          try {
+            const parsed = JSON.parse(trimmed) as BuyOrderProgressApiEvent;
+            if (parsed.type === 'progress') {
+              applyBuyOrderProgressEvent(parsed);
+              return;
+            }
+            if (parsed.type === 'result') {
+              if (parsed.payload && typeof parsed.payload === 'object') {
+                resultPayload = parsed.payload as BuyOrderProgressResultPayload;
+              }
+              return;
+            }
+            if (parsed.type === 'error') {
+              streamErrorMessage = resolveBuyOrderApiErrorMessage(parsed.payload);
+              markBuyOrderProgressError(streamErrorMessage);
+            }
+          } catch (parseError) {
+            console.warn('submitBuyOrder progress line parse failed', parseError);
+          }
+        };
+
+        while (true) {
+          const { done, value } = await reader.read();
+          buffer += decoder.decode(value || new Uint8Array(0), { stream: !done });
+
+          let newlineIndex = buffer.indexOf('\n');
+          while (newlineIndex >= 0) {
+            const line = buffer.slice(0, newlineIndex);
+            buffer = buffer.slice(newlineIndex + 1);
+            handleStreamLine(line);
+            newlineIndex = buffer.indexOf('\n');
+          }
+
+          if (done) {
+            break;
+          }
+        }
+
+        if (buffer.trim()) {
+          handleStreamLine(buffer);
+        }
+      } else {
+        const payload = await response.json().catch(() => ({}));
+        resultPayload = payload && typeof payload === 'object'
+          ? (payload as BuyOrderProgressResultPayload)
+          : null;
+        if (!response.ok) {
+          streamErrorMessage = resolveBuyOrderApiErrorMessage(
+            payload && typeof payload === 'object'
+              ? (payload as { message?: string; detail?: string; error?: string })
+              : undefined,
+          );
+        }
       }
 
-      const order = data?.order && typeof data.order === 'object' ? data.order : null;
+      if (!response.ok) {
+        throw new Error(streamErrorMessage || '구매 신청에 실패했습니다.');
+      }
+
+      if (!resultPayload?.result) {
+        throw new Error(streamErrorMessage || '구매 신청 결과를 확인하지 못했습니다.');
+      }
+
+      applyBuyOrderProgressEvent({
+        type: 'progress',
+        step: 'BUY_ORDER_RESULT_READY',
+        title: '구매 신청 완료',
+        description: '구매 신청이 정상 처리되었습니다.',
+        status: 'completed',
+        occurredAt: new Date().toISOString(),
+      });
+
+      const order = resultPayload?.order && typeof resultPayload.order === 'object'
+        ? resultPayload.order
+        : null;
       const orderStatus = String(order?.status || '');
 
       if (order && TRADABLE_STATUSES.has(orderStatus)) {
@@ -2217,13 +2508,14 @@ export default function BuyUsdtPage({
         setPrivateTradeStatus(null);
       }
 
-      const createdNewOrder = data?.created === true;
+      const createdNewOrder = resultPayload?.created === true;
       toast.success(
         createdNewOrder
           ? '구매 신청이 완료되었습니다.'
           : '이미 진행중인 거래가 있습니다.',
       );
       setConfirmOpen(false);
+      resetBuyOrderProgressFlow();
       setAmountInput('');
       setKrwInput('');
       setLastEditedAmountType('usdt');
@@ -2236,7 +2528,9 @@ export default function BuyUsdtPage({
       setChatRefreshToken((prev) => prev + 1);
     } catch (error) {
       console.error('Failed to submit buy order', error);
-      toast.error(error instanceof Error ? error.message : '구매 신청 처리 중 오류가 발생했습니다.');
+      const message = error instanceof Error ? error.message : '구매 신청 처리 중 오류가 발생했습니다.';
+      markBuyOrderProgressError(message);
+      toast.error(message);
     } finally {
       setSubmittingBuy(false);
     }
@@ -2269,6 +2563,187 @@ export default function BuyUsdtPage({
       toast.error(`${label} 복사에 실패했습니다.`);
     }
   }, []);
+
+  const resetBuyOrderProgressFlow = useCallback(() => {
+    setBuyOrderProgressSteps(createInitialBuyOrderProgressSteps());
+    setBuyOrderProgressSummary('구매 신청 전입니다.');
+    setBuyOrderProgressPhase('idle');
+  }, []);
+
+  const closeBuyOrderConfirmModal = useCallback(() => {
+    if (submittingBuy) return;
+    setConfirmOpen(false);
+    resetBuyOrderProgressFlow();
+  }, [submittingBuy, resetBuyOrderProgressFlow]);
+
+  const resolveBuyOrderApiErrorMessage = useCallback(
+    (payload?: { message?: string; detail?: string; error?: string }) =>
+      payload?.message
+      || payload?.detail
+      || payload?.error
+      || '구매 신청 처리에 실패했습니다.',
+    [],
+  );
+
+  const resolveBuyOrderProgressDetail = useCallback(
+    (event: Extract<BuyOrderProgressApiEvent, { type: 'progress' }>) => {
+      const detail = typeof event.detail === 'string' ? event.detail.trim() : '';
+      if (detail) return detail;
+
+      const data = event.data;
+      if (!data || typeof data !== 'object') {
+        return '';
+      }
+
+      const transactionHash =
+        typeof data.transactionHash === 'string' ? data.transactionHash.trim() : '';
+      const transactionId =
+        typeof data.transactionId === 'string' ? data.transactionId.trim() : '';
+      const tradeId = typeof data.tradeId === 'string' ? data.tradeId.trim() : '';
+      const orderId = typeof data.orderId === 'string' ? data.orderId.trim() : '';
+      const channelUrl = typeof data.channelUrl === 'string' ? data.channelUrl.trim() : '';
+
+      if (transactionHash) return `Tx: ${transactionHash}`;
+      if (transactionId) return `Queue: ${transactionId}`;
+      if (tradeId) return `TID: ${tradeId}`;
+      if (orderId) return `OID: ${orderId}`;
+      if (channelUrl) return `채널: ${channelUrl}`;
+      return '';
+    },
+    [],
+  );
+
+  const applyBuyOrderProgressEvent = useCallback(
+    (event: Extract<BuyOrderProgressApiEvent, { type: 'progress' }>) => {
+      const stepKey = typeof event.step === 'string' ? event.step.trim() : '';
+      const incomingTitle = typeof event.title === 'string' ? event.title.trim() : '';
+      const incomingDescription =
+        typeof event.description === 'string' ? event.description.trim() : '';
+      const occurredAt =
+        typeof event.occurredAt === 'string' && event.occurredAt
+          ? event.occurredAt
+          : new Date().toISOString();
+      const status =
+        event.status === 'completed' || event.status === 'error' || event.status === 'processing'
+          ? event.status
+          : 'processing';
+      const nextState: BuyOrderProgressStepState =
+        status === 'completed' ? 'completed' : status === 'error' ? 'error' : 'active';
+      const detail = resolveBuyOrderProgressDetail(event);
+
+      setBuyOrderProgressSteps((prev) => {
+        const stepIndex = prev.findIndex((item) => item.key === stepKey);
+        const withSettledActive = prev.map((item, index) => {
+          if (
+            item.state === 'active'
+            && status !== 'error'
+            && (stepIndex < 0 || index !== stepIndex)
+          ) {
+            return {
+              ...item,
+              state: 'completed' as BuyOrderProgressStepState,
+              updatedAt: item.updatedAt || occurredAt,
+            };
+          }
+          return item;
+        });
+
+        if (!stepKey) {
+          return withSettledActive;
+        }
+
+        if (stepIndex >= 0) {
+          return withSettledActive.map((item, index) => {
+            if (index !== stepIndex) {
+              return item;
+            }
+            return {
+              ...item,
+              title: incomingTitle || item.title,
+              description: incomingDescription || item.description,
+              state: nextState,
+              updatedAt: occurredAt,
+              detail: detail || item.detail,
+            };
+          });
+        }
+
+        return [
+          ...withSettledActive,
+          {
+            key: stepKey,
+            title: incomingTitle || stepKey,
+            description: incomingDescription || '',
+            state: nextState,
+            updatedAt: occurredAt,
+            ...(detail ? { detail } : {}),
+          },
+        ];
+      });
+
+      const stepTitle = incomingTitle || stepKey || '구매 신청 처리';
+      if (status === 'error') {
+        setBuyOrderProgressPhase('error');
+        setBuyOrderProgressSummary(`${stepTitle} 단계에서 오류가 발생했습니다.`);
+        return;
+      }
+
+      if (stepKey === 'BUY_ORDER_RESULT_READY' && status === 'completed') {
+        setBuyOrderProgressPhase('completed');
+        setBuyOrderProgressSummary('구매 신청이 완료되었습니다.');
+        return;
+      }
+
+      setBuyOrderProgressPhase('processing');
+      setBuyOrderProgressSummary(
+        status === 'completed'
+          ? `${stepTitle} 단계를 완료했습니다.`
+          : `${stepTitle} 단계를 처리중입니다.`,
+      );
+    },
+    [resolveBuyOrderProgressDetail],
+  );
+
+  useEffect(() => {
+    if (!confirmOpen) {
+      return;
+    }
+
+    const container = buyOrderProgressListRef.current;
+    if (!container) {
+      return;
+    }
+
+    const targetStep =
+      buyOrderProgressSteps.find((step) => step.state === 'active' || step.state === 'error')
+      || [...buyOrderProgressSteps].reverse().find((step) => step.state === 'completed');
+    if (!targetStep) {
+      return;
+    }
+
+    const target = container.querySelector<HTMLElement>(
+      `[data-buy-order-progress-step="${targetStep.key}"]`,
+    );
+    if (!target) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const targetCenterTop =
+        container.scrollTop
+        + (targetRect.top - containerRect.top)
+        + (targetRect.height / 2);
+      const centeredTop = targetCenterTop - (container.clientHeight / 2);
+      const maxTop = Math.max(0, container.scrollHeight - container.clientHeight);
+      const nextTop = Math.max(0, Math.min(centeredTop, maxTop));
+      container.scrollTo({
+        top: nextTop,
+        behavior: 'auto',
+      });
+    });
+  }, [buyOrderProgressSteps, confirmOpen]);
 
   const resetCancelTradeProgressFlow = useCallback(() => {
     setCancelTradeProgressSteps(createInitialCancelTradeProgressSteps());
@@ -2409,6 +2884,47 @@ export default function BuyUsdtPage({
     },
     [resolveCancelTradeProgressDetail],
   );
+
+  useEffect(() => {
+    if (!cancelConfirmOpen) {
+      return;
+    }
+
+    const container = cancelTradeProgressListRef.current;
+    if (!container) {
+      return;
+    }
+
+    const targetStep =
+      cancelTradeProgressSteps.find((step) => step.state === 'active' || step.state === 'error')
+      || [...cancelTradeProgressSteps].reverse().find((step) => step.state === 'completed');
+    if (!targetStep) {
+      return;
+    }
+
+    const target = container.querySelector<HTMLElement>(
+      `[data-cancel-trade-progress-step="${targetStep.key}"]`,
+    );
+    if (!target) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const targetCenterTop =
+        container.scrollTop
+        + (targetRect.top - containerRect.top)
+        + (targetRect.height / 2);
+      const centeredTop = targetCenterTop - (container.clientHeight / 2);
+      const maxTop = Math.max(0, container.scrollHeight - container.clientHeight);
+      const nextTop = Math.max(0, Math.min(centeredTop, maxTop));
+      container.scrollTo({
+        top: nextTop,
+        behavior: 'auto',
+      });
+    });
+  }, [cancelTradeProgressSteps, cancelConfirmOpen]);
 
   const openCancelTradeModal = () => {
     if (!activeAccount?.address) {
@@ -2599,6 +3115,8 @@ export default function BuyUsdtPage({
       });
 
       toast.success('진행중 거래를 취소했습니다.');
+      privateTradeStatusRequestIdRef.current += 1;
+      setPrivateTradeStatus(null);
       setCancelConfirmOpen(false);
       resetCancelTradeProgressFlow();
       setAmountInput('');
@@ -3650,14 +4168,14 @@ export default function BuyUsdtPage({
       )}
 
       {cancelConfirmOpen && activePrivateTradeOrder && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-slate-950/55 px-4 py-3 backdrop-blur-sm sm:items-center sm:py-4">
           <button
             type="button"
             aria-label="취소 확인 닫기"
             onClick={closeCancelTradeModal}
             className="absolute inset-0"
           />
-          <div className="relative w-full max-w-[430px] rounded-3xl border border-rose-200 bg-white p-6 shadow-[0_40px_100px_-45px_rgba(225,29,72,0.45)]">
+          <div className="relative w-full max-w-[430px] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border border-rose-200 bg-white p-5 shadow-[0_40px_100px_-45px_rgba(225,29,72,0.45)] sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             <p className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
               거래 취소 확인
             </p>
@@ -3713,12 +4231,16 @@ export default function BuyUsdtPage({
                 {cancelTradeProgressSummary}
               </p>
 
-              <div className="mt-3 max-h-52 space-y-1.5 overflow-y-auto pr-1">
+              <div
+                ref={cancelTradeProgressListRef}
+                className="mt-3 max-h-52 space-y-1.5 overflow-y-auto pr-1"
+              >
                 {cancelTradeProgressSteps.map((step, index) => {
                   const style = getCancelTradeProgressStyle(step.state);
                   return (
                     <div
                       key={step.key}
+                      data-cancel-trade-progress-step={step.key}
                       className={`rounded-lg border px-2.5 py-2 ${style.container}`}
                     >
                       <div className="flex items-start gap-2">
@@ -3756,6 +4278,12 @@ export default function BuyUsdtPage({
                 })}
               </div>
             </div>
+
+            {cancelingTrade && (
+              <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                거래 취소를 처리 중입니다. 완료될 때까지 이 창을 닫지 마세요.
+              </p>
+            )}
 
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
@@ -4001,8 +4529,14 @@ export default function BuyUsdtPage({
       )}
 
       {confirmOpen && selectedSeller && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-[430px] rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_40px_100px_-45px_rgba(2,132,199,0.9)]">
+        <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-slate-950/55 px-4 py-3 backdrop-blur-sm sm:items-center sm:py-4">
+          <button
+            type="button"
+            aria-label="구매 신청 확인 닫기"
+            onClick={closeBuyOrderConfirmModal}
+            className="absolute inset-0"
+          />
+          <div className="relative w-full max-w-[430px] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_40px_100px_-45px_rgba(2,132,199,0.9)] sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             <p className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
               구매 신청 확인
             </p>
@@ -4031,6 +4565,70 @@ export default function BuyUsdtPage({
               </div>
             </div>
 
+            <div className={`mt-4 rounded-xl border px-3 py-3 ${buyOrderProgressPhaseMeta.container}`}>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                  구매 신청 진행 상태
+                </p>
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${buyOrderProgressPhaseMeta.badge}`}>
+                  {buyOrderProgressPhaseMeta.label}
+                </span>
+              </div>
+              <p className="mt-1 text-[10px] font-semibold text-slate-500">
+                구매 신청 API 단계를 실시간으로 표시합니다.
+              </p>
+              <p className={`mt-1 text-[11px] font-semibold ${buyOrderProgressPhaseMeta.summary}`}>
+                {buyOrderProgressSummary}
+              </p>
+
+              <div
+                ref={buyOrderProgressListRef}
+                className="mt-3 max-h-52 space-y-1.5 overflow-y-auto pr-1"
+              >
+                {buyOrderProgressSteps.map((step, index) => {
+                  const style = getCancelTradeProgressStyle(step.state);
+                  return (
+                    <div
+                      key={step.key}
+                      data-buy-order-progress-step={step.key}
+                      className={`rounded-lg border px-2.5 py-2 ${style.container}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span
+                          className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${style.badge}`}
+                        >
+                          {step.state === 'completed' ? '✓' : index + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className={`text-xs font-semibold ${style.title}`}>{step.title}</p>
+                            <span className={`text-[10px] font-semibold ${style.status}`}>
+                              {getCancelTradeProgressStatusLabel(step.state)}
+                            </span>
+                          </div>
+                          <p className={`mt-0.5 text-[11px] ${style.description}`}>
+                            {step.description}
+                          </p>
+                          {(step.updatedAt || step.detail) && (
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                              {step.updatedAt && (
+                                <span className="font-semibold tabular-nums">
+                                  {formatDateTime(step.updatedAt)}
+                                </span>
+                              )}
+                              {step.detail && (
+                                <span className="truncate font-semibold">{step.detail}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {submittingBuy && (
               <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
                 구매 신청을 처리 중입니다. 완료될 때까지 이 창을 닫지 마세요.
@@ -4040,7 +4638,7 @@ export default function BuyUsdtPage({
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setConfirmOpen(false)}
+                onClick={closeBuyOrderConfirmModal}
                 disabled={submittingBuy}
                 className="h-11 rounded-2xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
               >

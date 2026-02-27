@@ -164,7 +164,7 @@ export default function WalletConnectPrompt({
                     type="button"
                     onClick={handleConnectWallet}
                     disabled={isConnecting}
-                    className="inline-flex h-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#0f172a_0%,#0f766e_100%)] text-sm font-extrabold text-white transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex h-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#0f172a_0%,#0f766e_100%)] whitespace-nowrap text-sm font-extrabold text-white transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isConnecting ? '연결 중...' : '휴대폰으로 계속'}
                   </button>

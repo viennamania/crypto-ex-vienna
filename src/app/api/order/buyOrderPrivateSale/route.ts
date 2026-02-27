@@ -262,7 +262,7 @@ const sendSellerConsentRequestMessage = async ({
   });
 
   const message = tradeId
-    ? `구매주문번호: ${tradeId}\n${BUYER_CONSENT_REQUEST_MESSAGE}`
+    ? `구매주문번호: ${tradeId}\n\n${BUYER_CONSENT_REQUEST_MESSAGE}`
     : BUYER_CONSENT_REQUEST_MESSAGE;
 
   const response = await sendbirdFetchWithTimeout(
