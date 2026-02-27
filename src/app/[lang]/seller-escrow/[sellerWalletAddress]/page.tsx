@@ -9811,6 +9811,7 @@ const fetchBuyOrders = async () => {
                 isOpen={isChatOpen}
                 onOpenChange={setIsChatOpen}
                 variant="inline"
+                hasTopTradingAlert={hasMyActiveTradingOrders}
                 promotionContext={sellerPromotionContext}
             />
           )}
@@ -14594,6 +14595,7 @@ const SendbirdChatEmbed = ({
   isOpen,
   onOpenChange,
   variant = 'floating',
+  hasTopTradingAlert = false,
   promotionContext,
 }: {
   buyerWalletAddress?: string;
@@ -14602,6 +14604,7 @@ const SendbirdChatEmbed = ({
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   variant?: 'floating' | 'inline';
+  hasTopTradingAlert?: boolean;
   promotionContext?: {
     priceSettingMethod?: string;
     market?: string;
@@ -14612,6 +14615,18 @@ const SendbirdChatEmbed = ({
 }) => {
   const isInline = variant === 'inline';
   const shouldShowChat = isInline || isOpen;
+  const chatViewportHeight = useMemo(
+    () => (isInline
+      ? 'clamp(260px, calc(100dvh - 18rem), 520px)'
+      : 'clamp(220px, calc(100dvh - 16rem), 520px)'),
+    [isInline],
+  );
+  const floatingContainerClassName = useMemo(() => {
+    const topInsetClass = hasTopTradingAlert
+      ? 'top-24 sm:top-28'
+      : 'top-3 sm:top-6';
+    return `fixed ${topInsetClass} bottom-3 right-3 z-50 flex w-[min(360px,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-xl sm:bottom-6 sm:right-6 sm:w-[360px] sm:p-6`;
+  }, [hasTopTradingAlert]);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [channelUrl, setChannelUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -14727,7 +14742,7 @@ const SendbirdChatEmbed = ({
 
   if (!shouldShowChat) {
     return (
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-3 right-3 z-50 sm:bottom-6 sm:right-6">
         <button
           type="button"
           onClick={() => onOpenChange(true)}
@@ -14743,8 +14758,8 @@ const SendbirdChatEmbed = ({
     <div
       className={
         isInline
-          ? 'w-full rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-xl'
-          : 'fixed bottom-6 right-6 z-50 w-[360px] max-w-[calc(100vw-3rem)] rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-xl'
+          ? 'w-full rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-xl sm:p-6'
+          : floatingContainerClassName
       }
     >
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -14778,7 +14793,10 @@ const SendbirdChatEmbed = ({
           {errorMessage}
         </div>
       ) : (
-        <div className="h-[520px] overflow-hidden rounded-xl border border-slate-200">
+        <div
+          className={`min-h-0 overflow-hidden rounded-xl border border-slate-200 ${isInline ? '' : 'flex-1'}`}
+          style={isInline ? { height: chatViewportHeight } : undefined}
+        >
           {sessionToken && channelUrl ? (
             <SendbirdProvider
               appId={NEXT_PUBLIC_SENDBIRD_APP_ID}
