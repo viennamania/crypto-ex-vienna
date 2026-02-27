@@ -12341,6 +12341,7 @@ export async function acceptBuyOrderPrivateSale(
   {
     buyerWalletAddress,
     sellerWalletAddress,
+    buyerStorecode,
     usdtAmount,
     krwAmount,
     requesterIpAddress = '',
@@ -12348,6 +12349,7 @@ export async function acceptBuyOrderPrivateSale(
   }: {
     buyerWalletAddress: string;
     sellerWalletAddress: string;
+    buyerStorecode?: string;
     usdtAmount: number;
     krwAmount?: number;
     requesterIpAddress?: string;
@@ -12405,6 +12407,8 @@ export async function acceptBuyOrderPrivateSale(
 
     const normalizedSellerWalletAddress = String(sellerWalletAddress || '').trim();
     const normalizedBuyerWalletAddress = String(buyerWalletAddress || '').trim();
+    const normalizedBuyerStorecode = String(buyerStorecode || '').trim();
+    const resolvedBuyerStorecode = normalizedBuyerStorecode || 'admin';
     const sellerWalletRegex = {
       $regex: `^${escapeRegex(normalizedSellerWalletAddress)}$`,
       $options: 'i',
@@ -12501,14 +12505,18 @@ export async function acceptBuyOrderPrivateSale(
     // get buyer information from users collection
     const buyer = await usersCollection.findOne<any>(
       {
-        storecode: 'admin',
+        storecode: resolvedBuyerStorecode,
         walletAddress: buyerWalletRegex,
       },
       { projection: { nickname: 1, avatar: 1, buyer: 1, walletAddress: 1 } }
     );
 
     if (!buyer) {
-      console.log('acceptBuyOrderPrivateSale: buyer not found for walletAddress: ' + buyerWalletAddress);
+      console.log(
+        'acceptBuyOrderPrivateSale: buyer not found for storecode/walletAddress:',
+        resolvedBuyerStorecode,
+        buyerWalletAddress,
+      );
       return { success: false, error: 'BUYER_NOT_FOUND' };
     }
 

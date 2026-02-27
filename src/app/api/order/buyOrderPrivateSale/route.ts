@@ -55,6 +55,7 @@ type RequestPayload = {
   sellerWalletAddress: string;
   usdtAmount: number;
   krwAmount?: number;
+  storecode?: string;
   requesterIpAddress: string;
   liveProgress: boolean;
 };
@@ -298,6 +299,7 @@ const parseRequestPayload = (body: any, request: NextRequest): RequestPayload =>
   const krwAmountRaw = Number(body?.krwAmount || 0);
   const krwAmount =
     Number.isFinite(krwAmountRaw) && krwAmountRaw > 0 ? Math.floor(krwAmountRaw) : undefined;
+  const storecode = typeof body?.storecode === 'string' ? body.storecode.trim() : '';
   const bodyPublicIpAddress =
     typeof body?.publicIpAddress === 'string' ? body.publicIpAddress.trim() : '';
   const bodyBuyerIpAddress =
@@ -320,6 +322,7 @@ const parseRequestPayload = (body: any, request: NextRequest): RequestPayload =>
     sellerWalletAddress,
     usdtAmount,
     krwAmount,
+    ...(storecode ? { storecode } : {}),
     requesterIpAddress,
     liveProgress,
   };
@@ -336,6 +339,7 @@ const executeBuyOrderPrivateSale = async (
     sellerWalletAddress,
     usdtAmount,
     krwAmount,
+    storecode,
     requesterIpAddress,
   } = payload;
 
@@ -406,6 +410,7 @@ const executeBuyOrderPrivateSale = async (
       sellerWalletAddress,
       usdtAmount,
       krwAmount,
+      ...(storecode ? { buyerStorecode: storecode } : {}),
       requesterIpAddress,
       onProgress,
     });

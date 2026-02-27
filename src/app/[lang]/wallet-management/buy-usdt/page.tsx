@@ -2306,11 +2306,12 @@ export default function BuyUsdtPage({
       const response = await fetch('/api/order/buyOrderPrivateSale', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+        body: JSON.stringify({
           buyerWalletAddress: activeAccount.address,
           sellerWalletAddress: selectedSeller.walletAddress,
           usdtAmount: normalizedSubmitUsdtAmount,
           krwAmount: normalizedSubmitKrwAmount,
+          ...(storecode ? { storecode } : {}),
         }),
       });
       const data = await response.json().catch(() => ({}));
