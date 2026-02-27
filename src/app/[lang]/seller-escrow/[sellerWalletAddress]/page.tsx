@@ -13652,7 +13652,7 @@ const fetchBuyOrders = async () => {
           isOpen={isBuyerTradeCancelModalOpen}
           onClose={closeBuyerTradeCancelModal}
         >
-          <div className="w-[min(94vw,500px)] rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+          <div className="flex max-h-[92dvh] w-[min(94vw,500px)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 sm:p-5">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h3 className="text-base font-bold text-slate-900">거래 취소 확인</h3>
@@ -13668,129 +13668,131 @@ const fetchBuyOrders = async () => {
               </button>
             </div>
 
-            {buyerTradeCancelDraft && (
-              <div className="mt-4 grid grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-700">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-slate-500">거래번호(TID)</span>
-                  <span className="font-semibold text-slate-900">
-                    {buyerTradeCancelDraft.tradeId ? `#${buyerTradeCancelDraft.tradeId}` : '-'}
-                  </span>
+            <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
+              {buyerTradeCancelDraft && (
+                <div className="grid grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-700">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">거래번호(TID)</span>
+                    <span className="font-semibold text-slate-900">
+                      {buyerTradeCancelDraft.tradeId ? `#${buyerTradeCancelDraft.tradeId}` : '-'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">결제 금액</span>
+                    <span className="font-semibold text-slate-900">
+                      {formatKrwValue(buyerTradeCancelDraft.krwAmount)} 원
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">주문 수량</span>
+                    <span className="font-semibold text-slate-900">
+                      {Number(buyerTradeCancelDraft.usdtAmount || 0).toFixed(6)} USDT
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">입금요청시각</span>
+                    <span className="font-semibold text-slate-900">
+                      {buyerTradeCancelDraft.paymentRequestedAt
+                        ? formatTradeHistoryFullTime(buyerTradeCancelDraft.paymentRequestedAt)
+                        : '-'}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-slate-500">결제 금액</span>
-                  <span className="font-semibold text-slate-900">
-                    {formatKrwValue(buyerTradeCancelDraft.krwAmount)} 원
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-slate-500">주문 수량</span>
-                  <span className="font-semibold text-slate-900">
-                    {Number(buyerTradeCancelDraft.usdtAmount || 0).toFixed(6)} USDT
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-slate-500">입금요청시각</span>
-                  <span className="font-semibold text-slate-900">
-                    {buyerTradeCancelDraft.paymentRequestedAt
-                      ? formatTradeHistoryFullTime(buyerTradeCancelDraft.paymentRequestedAt)
-                      : '-'}
-                  </span>
-                </div>
+              )}
+
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                취소 시 구매 에스크로 잔액은 판매자 에스크로 지갑으로 회수됩니다.
               </div>
-            )}
 
-            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-              취소 시 구매 에스크로 잔액은 판매자 에스크로 지갑으로 회수됩니다.
-            </div>
-
-            <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50/90 px-3 py-3">
-              <p className="text-xs font-extrabold text-rose-800">
-                취소 시 불이익 안내
-              </p>
-              <ul className="mt-1.5 list-disc space-y-1 pl-4 text-[11px] font-semibold text-rose-700">
-                <li>구매자 신뢰도 점수가 {BUYER_CANCEL_REPUTATION_PENALTY_POINTS}점 하락합니다.</li>
-                <li>구매 취소 횟수가 누적되어 향후 거래 노출/우선순위에 영향을 줄 수 있습니다.</li>
-                <li>취소 이력은 운영 및 정산 이력에 기록됩니다.</li>
-              </ul>
-              <label className="mt-2.5 flex items-start gap-2 rounded-lg border border-rose-200 bg-white/80 px-2.5 py-2 text-[11px] font-semibold text-rose-800">
-                <input
-                  type="checkbox"
-                  checked={buyerTradeCancelPenaltyAcknowledged}
-                  onChange={(event) => setBuyerTradeCancelPenaltyAcknowledged(event.target.checked)}
-                  disabled={cancelingBuyerPrivateTrade || isBuyerTradeCancelActionCompleted}
-                  className="mt-0.5 h-3.5 w-3.5 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
-                />
-                <span>위 불이익을 확인했으며 거래 취소를 진행합니다.</span>
-              </label>
-            </div>
-
-            <div className={`mt-3 rounded-xl border px-3 py-3 ${buyerTradeCancelProgressPhaseMeta.container}`}>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
-                  취소 진행 상태
+              <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50/90 px-3 py-3">
+                <p className="text-xs font-extrabold text-rose-800">
+                  취소 시 불이익 안내
                 </p>
-                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${buyerTradeCancelProgressPhaseMeta.badge}`}>
-                  {buyerTradeCancelProgressPhaseMeta.label}
-                </span>
+                <ul className="mt-1.5 list-disc space-y-1 pl-4 text-[11px] font-semibold text-rose-700">
+                  <li>구매자 신뢰도 점수가 {BUYER_CANCEL_REPUTATION_PENALTY_POINTS}점 하락합니다.</li>
+                  <li>구매 취소 횟수가 누적되어 향후 거래 노출/우선순위에 영향을 줄 수 있습니다.</li>
+                  <li>취소 이력은 운영 및 정산 이력에 기록됩니다.</li>
+                </ul>
+                <label className="mt-2.5 flex items-start gap-2 rounded-lg border border-rose-200 bg-white/80 px-2.5 py-2 text-[11px] font-semibold text-rose-800">
+                  <input
+                    type="checkbox"
+                    checked={buyerTradeCancelPenaltyAcknowledged}
+                    onChange={(event) => setBuyerTradeCancelPenaltyAcknowledged(event.target.checked)}
+                    disabled={cancelingBuyerPrivateTrade || isBuyerTradeCancelActionCompleted}
+                    className="mt-0.5 h-3.5 w-3.5 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
+                  />
+                  <span>위 불이익을 확인했으며 거래 취소를 진행합니다.</span>
+                </label>
               </div>
-              <p className="mt-1 text-[10px] font-semibold text-slate-500">
-                취소 API 단계가 실시간으로 반영됩니다.
-              </p>
-              <p className={`mt-1 text-[11px] font-semibold ${buyerTradeCancelProgressPhaseMeta.summary}`}>
-                {buyerTradeCancelProgressSummary}
-              </p>
 
-              <div className="mt-3 max-h-56 space-y-1.5 overflow-y-auto pr-1">
-                {buyerTradeCancelProgressSteps.map((step, index) => {
-                  const style = getBuyerTradeCancelProgressStyle(step.state);
-                  return (
-                    <div
-                      key={step.key}
-                      className={`rounded-lg border px-2.5 py-2 ${style.container}`}
-                    >
-                      <div className="flex items-start gap-2">
-                        <span
-                          className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${style.badge}`}
-                        >
-                          {step.state === 'completed' ? '✓' : index + 1}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className={`text-xs font-semibold ${style.title}`}>{step.title}</p>
-                            <span className={`text-[10px] font-semibold ${style.status}`}>
-                              {getBuyerTradeCancelProgressStatusLabel(step.state)}
-                            </span>
-                          </div>
-                          <p className={`mt-0.5 text-[11px] ${style.description}`}>
-                            {step.description}
-                          </p>
-                          {(step.updatedAt || step.detail) && (
-                            <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
-                              {step.updatedAt && (
-                                <span className="font-semibold tabular-nums">
-                                  {formatTradeHistoryTime(step.updatedAt)}
-                                </span>
-                              )}
-                              {step.detail && (
-                                <span className="truncate font-semibold">{step.detail}</span>
-                              )}
+              <div className={`mt-3 rounded-xl border px-3 py-3 ${buyerTradeCancelProgressPhaseMeta.container}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                    취소 진행 상태
+                  </p>
+                  <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${buyerTradeCancelProgressPhaseMeta.badge}`}>
+                    {buyerTradeCancelProgressPhaseMeta.label}
+                  </span>
+                </div>
+                <p className="mt-1 text-[10px] font-semibold text-slate-500">
+                  취소 API 단계가 실시간으로 반영됩니다.
+                </p>
+                <p className={`mt-1 text-[11px] font-semibold ${buyerTradeCancelProgressPhaseMeta.summary}`}>
+                  {buyerTradeCancelProgressSummary}
+                </p>
+
+                <div className="mt-3 max-h-52 space-y-1.5 overflow-y-auto pr-1 sm:max-h-56">
+                  {buyerTradeCancelProgressSteps.map((step, index) => {
+                    const style = getBuyerTradeCancelProgressStyle(step.state);
+                    return (
+                      <div
+                        key={step.key}
+                        className={`rounded-lg border px-2.5 py-2 ${style.container}`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <span
+                            className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${style.badge}`}
+                          >
+                            {step.state === 'completed' ? '✓' : index + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className={`text-xs font-semibold ${style.title}`}>{step.title}</p>
+                              <span className={`text-[10px] font-semibold ${style.status}`}>
+                                {getBuyerTradeCancelProgressStatusLabel(step.state)}
+                              </span>
                             </div>
-                          )}
+                            <p className={`mt-0.5 text-[11px] ${style.description}`}>
+                              {step.description}
+                            </p>
+                            {(step.updatedAt || step.detail) && (
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                                {step.updatedAt && (
+                                  <span className="font-semibold tabular-nums">
+                                    {formatTradeHistoryTime(step.updatedAt)}
+                                  </span>
+                                )}
+                                {step.detail && (
+                                  <span className="truncate font-semibold">{step.detail}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
+
+              {buyerTradeCancelError && (
+                <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                  {buyerTradeCancelError}
+                </div>
+              )}
             </div>
 
-            {buyerTradeCancelError && (
-              <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
-                {buyerTradeCancelError}
-              </div>
-            )}
-
-            <div className="mt-4">
+            <div className="mt-3 shrink-0 sm:mt-4">
               <button
                 type="button"
                 onClick={confirmBuyerTradeCancelFromModal}
@@ -13816,7 +13818,7 @@ const fetchBuyOrders = async () => {
           isOpen={isBuyOrderConfirmModalOpen}
           onClose={closeBuyOrderConfirmModal}
         >
-          <div className="w-[min(94vw,480px)] rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+          <div className="flex max-h-[92dvh] w-[min(94vw,480px)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 sm:p-5">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h3 className="text-base font-bold text-slate-900">구매 주문 확인</h3>
@@ -13832,105 +13834,107 @@ const fetchBuyOrders = async () => {
               </button>
             </div>
 
-            {buyOrderConfirmDraft && (
-              <div className="mt-4 grid grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-700">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-slate-500">판매자</span>
-                  <span className="font-semibold text-slate-900 break-all text-right">
-                    {buyOrderConfirmDraft.sellerName}
-                  </span>
+            <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
+              {buyOrderConfirmDraft && (
+                <div className="grid grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-700">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">판매자</span>
+                    <span className="break-all text-right font-semibold text-slate-900">
+                      {buyOrderConfirmDraft.sellerName}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">결제 금액</span>
+                    <span className="font-semibold text-slate-900">
+                      {formatKrwValue(buyOrderConfirmDraft.krwAmount)} 원
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">주문 수량</span>
+                    <span className="font-semibold text-slate-900">
+                      {Number(buyOrderConfirmDraft.usdtAmount || 0).toFixed(6)} USDT
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">단가</span>
+                    <span className="font-semibold text-slate-900">
+                      {buyOrderConfirmDraft.rate > 0
+                        ? `${formatKrwValue(buyOrderConfirmDraft.rate)} KRW`
+                        : '-'}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-slate-500">결제 금액</span>
-                  <span className="font-semibold text-slate-900">
-                    {formatKrwValue(buyOrderConfirmDraft.krwAmount)} 원
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-slate-500">주문 수량</span>
-                  <span className="font-semibold text-slate-900">
-                    {Number(buyOrderConfirmDraft.usdtAmount || 0).toFixed(6)} USDT
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-slate-500">단가</span>
-                  <span className="font-semibold text-slate-900">
-                    {buyOrderConfirmDraft.rate > 0
-                      ? `${formatKrwValue(buyOrderConfirmDraft.rate)} KRW`
-                      : '-'}
-                  </span>
-                </div>
+              )}
+
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                주문 생성 후 입금요청 상태로 전환됩니다.
               </div>
-            )}
 
-            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-              주문 생성 후 입금요청 상태로 전환됩니다.
-            </div>
-
-            <div className={`mt-3 rounded-xl border px-3 py-3 ${buyOrderProgressPhaseMeta.container}`}>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
-                  주문 진행 상태
+              <div className={`mt-3 rounded-xl border px-3 py-3 ${buyOrderProgressPhaseMeta.container}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                    주문 진행 상태
+                  </p>
+                  <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${buyOrderProgressPhaseMeta.badge}`}>
+                    {buyOrderProgressPhaseMeta.label}
+                  </span>
+                </div>
+                <p className={`mt-1 text-[11px] font-semibold ${buyOrderProgressPhaseMeta.summary}`}>
+                  {buyOrderProgressSummary}
                 </p>
-                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${buyOrderProgressPhaseMeta.badge}`}>
-                  {buyOrderProgressPhaseMeta.label}
-                </span>
-              </div>
-              <p className={`mt-1 text-[11px] font-semibold ${buyOrderProgressPhaseMeta.summary}`}>
-                {buyOrderProgressSummary}
-              </p>
 
-              <div className="mt-3 max-h-56 space-y-1.5 overflow-y-auto pr-1">
-                {buyOrderProgressSteps.map((step, index) => {
-                  const style = getBuyOrderProgressStepStyle(step.state);
-                  return (
-                    <div
-                      key={step.key}
-                      className={`rounded-lg border px-2.5 py-2 ${style.container}`}
-                    >
-                      <div className="flex items-start gap-2">
-                        <span
-                          className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${style.badge}`}
-                        >
-                          {step.state === 'completed' ? '✓' : index + 1}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className={`text-xs font-semibold ${style.title}`}>{step.title}</p>
-                            <span className={`text-[10px] font-semibold ${style.status}`}>
-                              {getBuyOrderProgressStepStatusLabel(step.state)}
-                            </span>
-                          </div>
-                          <p className={`mt-0.5 text-[11px] ${style.description}`}>
-                            {step.description}
-                          </p>
-                          {(step.updatedAt || step.detail) && (
-                            <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
-                              {step.updatedAt && (
-                                <span className="font-semibold tabular-nums">
-                                  {formatTradeHistoryTime(step.updatedAt)}
-                                </span>
-                              )}
-                              {step.detail && (
-                                <span className="truncate font-semibold">{step.detail}</span>
-                              )}
+                <div className="mt-3 max-h-52 space-y-1.5 overflow-y-auto pr-1 sm:max-h-56">
+                  {buyOrderProgressSteps.map((step, index) => {
+                    const style = getBuyOrderProgressStepStyle(step.state);
+                    return (
+                      <div
+                        key={step.key}
+                        className={`rounded-lg border px-2.5 py-2 ${style.container}`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <span
+                            className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${style.badge}`}
+                          >
+                            {step.state === 'completed' ? '✓' : index + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className={`text-xs font-semibold ${style.title}`}>{step.title}</p>
+                              <span className={`text-[10px] font-semibold ${style.status}`}>
+                                {getBuyOrderProgressStepStatusLabel(step.state)}
+                              </span>
                             </div>
-                          )}
+                            <p className={`mt-0.5 text-[11px] ${style.description}`}>
+                              {step.description}
+                            </p>
+                            {(step.updatedAt || step.detail) && (
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                                {step.updatedAt && (
+                                  <span className="font-semibold tabular-nums">
+                                    {formatTradeHistoryTime(step.updatedAt)}
+                                  </span>
+                                )}
+                                {step.detail && (
+                                  <span className="truncate font-semibold">{step.detail}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
+
+              {buyOrderConfirmError && (
+                <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                  {buyOrderConfirmError}
+                </div>
+              )}
             </div>
 
-            {buyOrderConfirmError && (
-              <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
-                {buyOrderConfirmError}
-              </div>
-            )}
-
-            <div className="mt-4">
+            <div className="mt-3 shrink-0 sm:mt-4">
               <button
                 type="button"
                 onClick={confirmBuyOrderFromModal}
