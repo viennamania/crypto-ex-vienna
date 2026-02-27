@@ -14501,6 +14501,20 @@ const TradeDetail = (
 
 const AUTO_REPLY_STORAGE_PREFIX = 'buyer-auto-reply';
 const BUYER_CONSENT_AUTO_MESSAGE = '동의함';
+const CONSENT_REQUEST_KEYWORDS = [
+  '본 거래를 진행하기전 숙지 부탁드립니다',
+  '불법도박 재테크 마약 거래용으로 사용시 법적 책임',
+  '모든 민·형사상의 대한 책임은 구매자',
+  '동의하셔야',
+];
+
+const isSellerConsentRequestMessage = (value: string) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return false;
+  }
+  return CONSENT_REQUEST_KEYWORDS.some((keyword) => normalized.includes(keyword));
+};
 
 const AutoBuyerReplyListener = ({
   channelUrl,
@@ -14528,11 +14542,16 @@ const AutoBuyerReplyListener = ({
     if (!buyerWalletAddress || !sellerWalletAddress) {
       return;
     }
-    if (buyerWalletAddress === sellerWalletAddress) {
+    const normalizedBuyerWalletAddress = buyerWalletAddress.trim();
+    const normalizedSellerWalletAddress = sellerWalletAddress.trim();
+    if (!normalizedBuyerWalletAddress || !normalizedSellerWalletAddress) {
+      return;
+    }
+    if (normalizedBuyerWalletAddress.toLowerCase() === normalizedSellerWalletAddress.toLowerCase()) {
       return;
     }
 
-    const storageKey = `${AUTO_REPLY_STORAGE_PREFIX}:${buyerWalletAddress}:${channelUrl}`;
+    const storageKey = `${AUTO_REPLY_STORAGE_PREFIX}:${normalizedBuyerWalletAddress}:${channelUrl}`;
     if (typeof window !== 'undefined' && window.localStorage.getItem(storageKey) === '1') {
       sentRef.current.add(channelUrl);
     }
@@ -14547,11 +14566,17 @@ const AutoBuyerReplyListener = ({
           return;
         }
         const senderId =
-          'sender' in message ? (message as { sender?: { userId?: string } })?.sender?.userId : undefined;
-        if (senderId !== sellerWalletAddress) {
+          'sender' in message ? (message as { sender?: { userId?: string } })?.sender?.userId : '';
+        if (!senderId || senderId.trim().toLowerCase() !== normalizedSellerWalletAddress.toLowerCase()) {
           return;
         }
         if (sentRef.current.has(channelUrl) || pendingRef.current.has(channelUrl)) {
+          return;
+        }
+
+        const receivedMessageText =
+          'message' in message ? String((message as { message?: string })?.message || '').trim() : '';
+        if (!isSellerConsentRequestMessage(receivedMessageText)) {
           return;
         }
 
@@ -14562,7 +14587,7 @@ const AutoBuyerReplyListener = ({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               channelUrl,
-              senderId: buyerWalletAddress,
+              senderId: normalizedBuyerWalletAddress,
               message: BUYER_CONSENT_AUTO_MESSAGE,
             }),
           });
