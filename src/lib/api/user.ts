@@ -805,7 +805,7 @@ export async function updateOne(data: any) {
 
   if (checkUser) {
 
-    console.log('updateOne exists: ' + JSON.stringify(checkUser));
+    ///console.log('updateOne exists: ' + JSON.stringify(checkUser));
 
     return null;
   }

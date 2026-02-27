@@ -886,6 +886,10 @@ export default function BuyUsdtPage({
     () => Boolean(storecode && storecode.toLowerCase() !== 'admin'),
     [storecode],
   );
+  const buyerProfileLookupStorecode = useMemo(
+    () => storecode || 'admin',
+    [storecode],
+  );
   const hasStoreMemberProfile = Boolean(storeMemberProfile);
   const storeMemberBankSnapshot = useMemo(
     () => resolveBuyerBankSnapshot(storeMemberProfile?.buyer),
@@ -1369,7 +1373,7 @@ export default function BuyUsdtPage({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          storecode: 'admin',
+          storecode: buyerProfileLookupStorecode,
           walletAddress: activeAccount.address,
         }),
       });
@@ -1420,7 +1424,7 @@ export default function BuyUsdtPage({
         setLoadingBuyerProfile(false);
       }
     }
-  }, [activeAccount?.address]);
+  }, [activeAccount?.address, buyerProfileLookupStorecode]);
 
   const loadStoreMemberProfile = useCallback(async () => {
     const requestId = storeMemberProfileRequestIdRef.current + 1;
@@ -2074,7 +2078,6 @@ export default function BuyUsdtPage({
       console.error('Failed to link store member for purchase', error);
       const message = error instanceof Error ? error.message : '가맹점 회원 연동 중 오류가 발생했습니다.';
       setStoreMemberProfileError(message);
-      toast.error(message);
     } finally {
       const elapsed = Date.now() - linkingStartedAt;
       const remaining = Math.max(0, STORE_MEMBER_LINKING_MIN_MS - elapsed);
