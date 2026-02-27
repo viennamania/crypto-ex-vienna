@@ -776,52 +776,56 @@ export async function updateOne(data: any) {
 
 
 
-  if (
-    !data.storecode ||
-    !data.walletAddress || !data.nickname || !data.storecode) {
+  const normalizedStorecode = String(data?.storecode || '').trim();
+  const normalizedWalletAddress = String(data?.walletAddress || '').trim();
+  const normalizedNickname = String(data?.nickname || '').trim();
 
+  if (!normalizedStorecode || !normalizedWalletAddress || !normalizedNickname) {
     console.log('updateOne data: ' + JSON.stringify(data));
-
     return null;
   }
-
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
 
+  const walletRegex = {
+    $regex: `^${escapeRegExp(normalizedWalletAddress)}$`,
+    $options: 'i',
+  };
 
-  // update and return updated user
-
-  const checkUser = await collection.findOne<UserProps>(
-    
+  const currentUser = await collection.findOne<UserProps>(
     {
-      storecode: data.storecode,
-      nickname: data.nickname,
-    }
-    
-  )
-      
+      storecode: normalizedStorecode,
+      walletAddress: walletRegex,
+    },
+    { projection: { _id: 1 } },
+  );
 
-
-  if (checkUser) {
-
-    ///console.log('updateOne exists: ' + JSON.stringify(checkUser));
-
+  if (!currentUser?._id) {
     return null;
   }
 
-
-
-
-
-  const result = await collection.updateOne(
+  // Allow same nickname for the same user; block only when another user already uses it.
+  const nicknameOwner = await collection.findOne<UserProps>(
     {
-      walletAddress: data.walletAddress,
-      storecode: data.storecode,
+      storecode: normalizedStorecode,
+      nickname: normalizedNickname,
+      _id: { $ne: currentUser._id },
+    },
+    { projection: { _id: 1 } },
+  );
+
+  if (nicknameOwner?._id) {
+    return null;
+  }
+
+  await collection.updateOne(
+    {
+      _id: currentUser._id,
     },
     {
       $set: {
-        nickname: data.nickname,
+        nickname: normalizedNickname,
         ...(String(data.email || '').trim() ? { email: String(data.email || '').trim() } : {}),
         ...(String(data.mobile || '').trim() ? { mobile: String(data.mobile || '').trim() } : {}),
         updatedAt: new Date().toISOString(),
@@ -829,18 +833,13 @@ export async function updateOne(data: any) {
     }
   );
 
-  if (result) {
-    const updated = await collection.findOne<UserProps>(
-      {
-        storecode: data.storecode,
-        walletAddress: data.walletAddress
-      },
-    );
+  const updated = await collection.findOne<UserProps>(
+    {
+      _id: currentUser._id,
+    },
+  );
 
-    return updated;
-  } else {
-    return null;
-  }
+  return updated;
 
 }
 

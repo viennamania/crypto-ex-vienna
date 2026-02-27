@@ -218,6 +218,12 @@ export async function POST(request: NextRequest) {
       mobile: mobile,
     });
 
+    if (!updatedUser) {
+      return NextResponse.json({
+        error: "구매자 정보 갱신에 실패했습니다.",
+      }, { status: 409 });
+    }
+
     return NextResponse.json({
       result: updatedUser,
     });
