@@ -10,6 +10,27 @@ import {
 const normalizeUsdtAmount = (value: number) =>
   Math.floor(Number(value || 0) * 1_000_000) / 1_000_000;
 
+const SENDBIRD_APPLICATION_ID =
+  process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
+const SENDBIRD_API_BASE = SENDBIRD_APPLICATION_ID ? `https://api-${SENDBIRD_APPLICATION_ID}.sendbird.com/v3` : '';
+const SENDBIRD_REQUEST_TIMEOUT_MS = Number(process.env.SENDBIRD_REQUEST_TIMEOUT_MS ?? 8000);
+const BUYER_CONSENT_REQUEST_MESSAGE = [
+  '—————————————————————————',
+  '네 안녕하세요',
+  '',
+  '본 거래를 진행하기전 숙지 부탁드립니다.',
+  '',
+  '*단 지정된 은행에서 연락처 송금으로만 가능합니다*',
+  '(신한/우리/케이뱅크/카카오뱅크/국민은행)',
+  '*은행별 개인 한도가 상이합니다*',
+  '',
+  '코인(USDT) 거래를 원칙으로 합니다.',
+  '트레이더와 코인(USDT)거래는 불법자금은 받지 않습니다.',
+  '거래를 이용하여 불법도박 재테크 마약 거래용으로 사용시 법적 책임이 따른다는 것에 동의하셔야합니다.',
+  '',
+  '판매자의 의무는 입금된 금원에 해당하는 가상화폐를 지급 및 전송하는 것 이외의 다른 의무는 없으며 본 가상화폐거래로 인해 발생되는 모든 민·형사상의 대한 책임은 구매자에 있으며 구매자는 이를 동의하셔야 합니다.',
+].join('\n');
+
 const FAILURE_MESSAGE_BY_REASON: Record<string, string> = {
   SELLER_NOT_FOUND: '판매자 정보를 찾을 수 없습니다.',
   SELLER_ESCROW_WALLET_MISSING: '판매자 에스크로 지갑이 설정되지 않았습니다.',
@@ -60,6 +81,16 @@ type BuyOrderPrivateSaleStreamEvent =
   | BuyOrderPrivateSaleResultResponse
   | BuyOrderPrivateSaleErrorResponse;
 
+type SendSellerConsentRequestResult =
+  | {
+      sent: true;
+      channelUrl: string;
+    }
+  | {
+      sent: false;
+      reason: string;
+    };
+
 class RouteError extends Error {
   status: number;
   payload: Record<string, unknown>;
@@ -89,6 +120,167 @@ const toCreationFailurePayload = (
     ? `${FAILURE_MESSAGE_BY_REASON[created.error] || `구매 주문 생성 실패 (${created.error})`}: ${created.detail}`
     : (FAILURE_MESSAGE_BY_REASON[created.error] || `구매 주문 생성 실패 (${created.error})`),
 });
+
+const toTrimmedString = (value: unknown) => String(value ?? '').trim();
+
+const buildSendbirdHeaders = () => {
+  const apiToken = process.env.SENDBIRD_API_TOKEN;
+  if (!apiToken) {
+    return null;
+  }
+  return {
+    'Content-Type': 'application/json',
+    'Api-Token': apiToken,
+  };
+};
+
+const sendbirdFetchWithTimeout = async (
+  label: string,
+  url: string,
+  init: RequestInit,
+) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), SENDBIRD_REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    const isTimeout = error instanceof DOMException && error.name === 'AbortError';
+    throw new Error(isTimeout ? `[${label}] Sendbird request timed out` : `[${label}] Sendbird request failed`);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
+const createSendbirdUserIfNeeded = async (
+  headers: Record<string, string>,
+  userId: string,
+) => {
+  const response = await sendbirdFetchWithTimeout(
+    `create-user:${userId}`,
+    `${SENDBIRD_API_BASE}/users`,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        user_id: userId,
+        nickname: userId,
+      }),
+    },
+  );
+
+  if (response.ok) {
+    return;
+  }
+
+  const error = await response.json().catch(() => null);
+  const message = toTrimmedString(error?.message).toLowerCase();
+  if (message.includes('already') || message.includes('exist') || message.includes('unique constraint')) {
+    return;
+  }
+
+  throw new Error(toTrimmedString(error?.message) || 'Failed to create Sendbird user');
+};
+
+const ensureSendbirdGroupChannel = async ({
+  headers,
+  buyerWalletAddress,
+  sellerWalletAddress,
+}: {
+  headers: Record<string, string>;
+  buyerWalletAddress: string;
+  sellerWalletAddress: string;
+}) => {
+  await createSendbirdUserIfNeeded(headers, buyerWalletAddress);
+  await createSendbirdUserIfNeeded(headers, sellerWalletAddress);
+
+  const response = await sendbirdFetchWithTimeout(
+    `group-channel:${buyerWalletAddress}:${sellerWalletAddress}`,
+    `${SENDBIRD_API_BASE}/group_channels`,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        name: `escrow-${buyerWalletAddress.slice(0, 6)}-${sellerWalletAddress.slice(0, 6)}`,
+        user_ids: [buyerWalletAddress, sellerWalletAddress],
+        is_distinct: true,
+        custom_type: 'escrow',
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(toTrimmedString(error?.message) || 'Failed to create Sendbird group channel');
+  }
+
+  const data = await response.json().catch(() => null);
+  const channelUrl = toTrimmedString(data?.channel_url);
+  if (!channelUrl) {
+    throw new Error('channel_url missing from Sendbird response');
+  }
+
+  return channelUrl;
+};
+
+const sendSellerConsentRequestMessage = async ({
+  buyerWalletAddress,
+  sellerWalletAddress,
+  tradeId,
+}: {
+  buyerWalletAddress: string;
+  sellerWalletAddress: string;
+  tradeId: string;
+}): Promise<SendSellerConsentRequestResult> => {
+  const normalizedBuyerWalletAddress = toTrimmedString(buyerWalletAddress);
+  const normalizedSellerWalletAddress = toTrimmedString(sellerWalletAddress);
+
+  if (!normalizedBuyerWalletAddress || !normalizedSellerWalletAddress) {
+    return { sent: false, reason: 'buyer/seller wallet address is missing' };
+  }
+  if (normalizedBuyerWalletAddress.toLowerCase() === normalizedSellerWalletAddress.toLowerCase()) {
+    return { sent: false, reason: 'buyer and seller wallet addresses are identical' };
+  }
+  if (!SENDBIRD_API_BASE) {
+    return { sent: false, reason: 'Sendbird application id is missing' };
+  }
+
+  const headers = buildSendbirdHeaders();
+  if (!headers) {
+    return { sent: false, reason: 'Sendbird API token is missing' };
+  }
+
+  const channelUrl = await ensureSendbirdGroupChannel({
+    headers,
+    buyerWalletAddress: normalizedBuyerWalletAddress,
+    sellerWalletAddress: normalizedSellerWalletAddress,
+  });
+
+  const message = BUYER_CONSENT_REQUEST_MESSAGE;
+
+  const response = await sendbirdFetchWithTimeout(
+    `send-consent-request:${tradeId || 'unknown'}`,
+    `${SENDBIRD_API_BASE}/group_channels/${encodeURIComponent(channelUrl)}/messages`,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        message_type: 'MESG',
+        user_id: normalizedSellerWalletAddress,
+        message,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(toTrimmedString(error?.message) || 'Failed to send consent request message');
+  }
+
+  return {
+    sent: true,
+    channelUrl,
+  };
+};
 
 const parseRequestPayload = (body: any, request: NextRequest): RequestPayload => {
   const buyerWalletAddress =
@@ -249,6 +441,69 @@ const executeBuyOrderPrivateSale = async (
       orderId: String(tradeStatus.order.orderId || ''),
     },
   });
+
+  if (createdNewOrder) {
+    await emitProgress({
+      step: 'CONSENT_REQUEST_MESSAGE',
+      title: '동의 요청 메시지 발송',
+      description: '판매자 명의로 구매자에게 동의 요청 메시지를 전송하고 있습니다.',
+      status: 'processing',
+    });
+
+    const order = tradeStatus.order as Record<string, unknown>;
+    const orderBuyer = order?.buyer && typeof order.buyer === 'object'
+      ? (order.buyer as Record<string, unknown>)
+      : null;
+    const orderSeller = order?.seller && typeof order.seller === 'object'
+      ? (order.seller as Record<string, unknown>)
+      : null;
+
+    const resolvedBuyerWalletAddress =
+      toTrimmedString(orderBuyer?.walletAddress)
+      || toTrimmedString(order?.walletAddress)
+      || buyerWalletAddress;
+    const resolvedSellerWalletAddress =
+      toTrimmedString(orderSeller?.walletAddress)
+      || sellerWalletAddress;
+    const tradeId = toTrimmedString(order?.tradeId);
+
+    try {
+      const sendResult = await sendSellerConsentRequestMessage({
+        buyerWalletAddress: resolvedBuyerWalletAddress,
+        sellerWalletAddress: resolvedSellerWalletAddress,
+        tradeId,
+      });
+
+      if (sendResult.sent) {
+        await emitProgress({
+          step: 'CONSENT_REQUEST_MESSAGE',
+          title: '동의 요청 메시지 발송',
+          description: '동의 요청 메시지를 채팅에 전송했습니다.',
+          status: 'completed',
+          data: {
+            channelUrl: sendResult.channelUrl,
+          },
+        });
+      } else {
+        await emitProgress({
+          step: 'CONSENT_REQUEST_MESSAGE',
+          title: '동의 요청 메시지 발송',
+          description: '동의 요청 메시지 전송을 건너뛰었습니다.',
+          status: 'completed',
+          detail: sendResult.reason,
+        });
+      }
+    } catch (sendError) {
+      console.error('buyOrderPrivateSale: failed to send consent request message', sendError);
+      await emitProgress({
+        step: 'CONSENT_REQUEST_MESSAGE',
+        title: '동의 요청 메시지 발송',
+        description: '동의 요청 메시지 전송에 실패했습니다.',
+        status: 'error',
+        detail: toErrorDetailMessage(sendError),
+      });
+    }
+  }
 
   return {
     result: true,
