@@ -3134,7 +3134,7 @@ export default function Index({ params }: any) {
       return;
     }
 
-    const audio = new Audio('/notification.mp3');
+    const audio = new Audio('/notification-chat.mp3');
     audio.preload = 'auto';
     notificationAudioRef.current = audio;
     setNotificationAudioUnlocked(false);
