@@ -2205,7 +2205,7 @@ export default function Index({ params }: any) {
     });
 
     if (hasNewUnreadMessage && isOwnerSeller) {
-      const audio = notificationAudioRef.current;
+      const audio = chatNotificationAudioRef.current;
       if (audio) {
         if (!(audio.loop && !audio.paused)) {
           audio.loop = true;
@@ -2217,16 +2217,16 @@ export default function Index({ params }: any) {
           audio.currentTime = 0;
           audio.play()
             .then(() => {
-              setNotificationAudioUnlocked(true);
-              setNotificationAudioUnlockNeeded(false);
+              setChatNotificationAudioUnlocked(true);
+              setChatNotificationAudioUnlockNeeded(false);
             })
             .catch((error) => {
               console.warn('seller chat notification audio play blocked', error);
-              setNotificationAudioUnlockNeeded(true);
+              setChatNotificationAudioUnlockNeeded(true);
             });
         }
       } else {
-        setNotificationAudioUnlockNeeded(true);
+        setChatNotificationAudioUnlockNeeded(true);
       }
     }
 
@@ -2667,9 +2667,12 @@ export default function Index({ params }: any) {
   >('idle');
   const [updatingAudioByOrderId, setUpdatingAudioByOrderId] = useState<Record<string, boolean>>({});
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const chatNotificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const buyerTradeAlertRef = useRef<{ orderKey: string; status: string; paymentRequestedAt: string } | null>(null);
   const [notificationAudioUnlocked, setNotificationAudioUnlocked] = useState(false);
   const [notificationAudioUnlockNeeded, setNotificationAudioUnlockNeeded] = useState(false);
+  const [chatNotificationAudioUnlocked, setChatNotificationAudioUnlocked] = useState(false);
+  const [chatNotificationAudioUnlockNeeded, setChatNotificationAudioUnlockNeeded] = useState(false);
   const buyerActivePaymentRequestedOrderCount = useMemo(
     () =>
       Object.values(privateTradeStatusBySellerWallet).filter((status) =>
@@ -3063,6 +3066,40 @@ export default function Index({ params }: any) {
     audio.currentTime = 0;
   }, []);
 
+  const startChatNotificationLoop = useCallback(async () => {
+    const audio = chatNotificationAudioRef.current;
+    if (!audio) {
+      return false;
+    }
+
+    try {
+      audio.muted = false;
+      audio.volume = 1;
+      audio.loop = true;
+      if (audio.paused) {
+        audio.currentTime = 0;
+        await audio.play();
+      }
+      setChatNotificationAudioUnlocked(true);
+      setChatNotificationAudioUnlockNeeded(false);
+      return true;
+    } catch (error) {
+      console.warn('chat notification audio play blocked', error);
+      setChatNotificationAudioUnlockNeeded(true);
+      return false;
+    }
+  }, []);
+
+  const stopChatNotificationLoop = useCallback(() => {
+    const audio = chatNotificationAudioRef.current;
+    if (!audio) {
+      return;
+    }
+    audio.loop = false;
+    audio.pause();
+    audio.currentTime = 0;
+  }, []);
+
   const playNotificationOnce = useCallback(async () => {
     if (hasActiveTradingAudioEnabledOrders) {
       return false;
@@ -3129,12 +3166,51 @@ export default function Index({ params }: any) {
     }
   }, [hasActiveTradingAudioEnabledOrders, startNotificationLoop]);
 
+  const unlockChatNotificationAudio = useCallback(async () => {
+    const audio = chatNotificationAudioRef.current;
+    if (!audio) {
+      return false;
+    }
+
+    const prevMuted = audio.muted;
+    const prevVolume = audio.volume;
+
+    try {
+      audio.muted = true;
+      audio.volume = 0;
+      audio.currentTime = 0;
+      await audio.play();
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = prevMuted;
+      audio.volume = prevVolume;
+
+      setChatNotificationAudioUnlocked(true);
+      setChatNotificationAudioUnlockNeeded(false);
+
+      if (isOwnerSeller && sellerUnreadChatAlerts.length > 0) {
+        await startChatNotificationLoop();
+      }
+
+      return true;
+    } catch (error) {
+      console.warn('chat notification audio unlock failed', error);
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = prevMuted;
+      audio.volume = prevVolume;
+      setChatNotificationAudioUnlocked(false);
+      setChatNotificationAudioUnlockNeeded(true);
+      return false;
+    }
+  }, [isOwnerSeller, sellerUnreadChatAlerts.length, startChatNotificationLoop]);
+
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
     }
 
-    const audio = new Audio('/notification-chat.mp3');
+    const audio = new Audio('/notification.mp3');
     audio.preload = 'auto';
     notificationAudioRef.current = audio;
     setNotificationAudioUnlocked(false);
@@ -3151,12 +3227,37 @@ export default function Index({ params }: any) {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || notificationAudioUnlocked) {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const audio = new Audio('/notification-chat.mp3');
+    audio.preload = 'auto';
+    chatNotificationAudioRef.current = audio;
+    setChatNotificationAudioUnlocked(false);
+    setChatNotificationAudioUnlockNeeded(false);
+
+    return () => {
+      if (!chatNotificationAudioRef.current) {
+        return;
+      }
+      chatNotificationAudioRef.current.pause();
+      chatNotificationAudioRef.current.currentTime = 0;
+      chatNotificationAudioRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      typeof window === 'undefined'
+      || (notificationAudioUnlocked && chatNotificationAudioUnlocked)
+    ) {
       return;
     }
 
     const handleUserUnlock = () => {
       void unlockNotificationAudio();
+      void unlockChatNotificationAudio();
     };
 
     window.addEventListener('pointerdown', handleUserUnlock, { passive: true });
@@ -3166,13 +3267,15 @@ export default function Index({ params }: any) {
       window.removeEventListener('pointerdown', handleUserUnlock);
       window.removeEventListener('keydown', handleUserUnlock);
     };
-  }, [notificationAudioUnlocked, unlockNotificationAudio]);
+  }, [
+    notificationAudioUnlocked,
+    chatNotificationAudioUnlocked,
+    unlockNotificationAudio,
+    unlockChatNotificationAudio,
+  ]);
 
   useEffect(() => {
-    const hasOwnerSellerUnreadChat =
-      isOwnerSeller && sellerUnreadChatAlerts.length > 0;
-
-    if (!hasActiveTradingAudioEnabledOrders && !hasOwnerSellerUnreadChat) {
+    if (!hasActiveTradingAudioEnabledOrders) {
       stopNotificationLoop();
       return;
     }
@@ -3180,10 +3283,25 @@ export default function Index({ params }: any) {
     void startNotificationLoop();
   }, [
     hasActiveTradingAudioEnabledOrders,
-    isOwnerSeller,
-    sellerUnreadChatAlerts.length,
     startNotificationLoop,
     stopNotificationLoop,
+  ]);
+
+  useEffect(() => {
+    const hasOwnerSellerUnreadChat =
+      isOwnerSeller && sellerUnreadChatAlerts.length > 0;
+
+    if (!hasOwnerSellerUnreadChat) {
+      stopChatNotificationLoop();
+      return;
+    }
+
+    void startChatNotificationLoop();
+  }, [
+    isOwnerSeller,
+    sellerUnreadChatAlerts.length,
+    startChatNotificationLoop,
+    stopChatNotificationLoop,
   ]);
 
   useEffect(() => {
@@ -8467,11 +8585,11 @@ const fetchBuyOrders = async () => {
         )}
         {isOwnerSeller && sellerUnreadChatAlerts.length > 0 && (
           <aside className="fixed right-2 top-1/2 z-[92] flex w-[min(92vw,320px)] -translate-y-1/2 flex-col gap-2 sm:right-4 sm:w-[300px]">
-            {notificationAudioUnlockNeeded && (
+            {chatNotificationAudioUnlockNeeded && (
               <button
                 type="button"
                 onClick={() => {
-                  void unlockNotificationAudio();
+                  void unlockChatNotificationAudio();
                 }}
                 className="inline-flex items-center justify-center rounded-xl border border-amber-300 bg-amber-50/95 px-3 py-2 text-[11px] font-bold text-amber-900 shadow-[0_14px_32px_-24px_rgba(180,83,9,0.7)] backdrop-blur-sm transition hover:bg-amber-100"
               >
@@ -14506,6 +14624,7 @@ const CONSENT_REQUEST_KEYWORDS = [
   '불법도박 재테크 마약 거래용으로 사용시 법적 책임',
   '모든 민·형사상의 대한 책임은 구매자',
   '동의하셔야',
+  '동의',
 ];
 
 const isSellerConsentRequestMessage = (value: string) => {

@@ -302,6 +302,7 @@ const CONSENT_REQUEST_KEYWORDS = [
   '불법도박 재테크 마약 거래용으로 사용시 법적 책임',
   '모든 민·형사상의 대한 책임은 구매자',
   '동의하셔야',
+  '동의',
 ];
 
 const createInitialCancelTradeProgressSteps = (): CancelTradeProgressStepItem[] =>
