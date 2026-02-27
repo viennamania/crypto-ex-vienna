@@ -22,12 +22,14 @@ export async function POST(request: NextRequest) {
   const password = String(body?.password || "").trim();
   const walletAddress = String(body?.walletAddress || "").trim();
   const mobile = String(body?.mobile || "").trim();
+  const depositName = String(body?.depositName || "").trim();
 
   console.log(`[${requestId}] request_received`, {
     storecode,
     nickname,
     walletAddress: shortWallet(walletAddress),
     hasMobile: Boolean(mobile),
+    hasDepositName: Boolean(depositName),
     passwordLength: password.length,
     passwordIsNumeric: /^\d+$/.test(password),
   });
@@ -79,6 +81,7 @@ export async function POST(request: NextRequest) {
         storecode: 1,
         nickname: 1,
         walletAddress: 1,
+        mobile: 1,
         buyer: 1,
       },
     },
@@ -102,22 +105,19 @@ export async function POST(request: NextRequest) {
   }
 
   const existingMemberWalletAddress = String(member?.walletAddress || "").trim();
-  if (existingMemberWalletAddress) {
-    const isSameWallet =
-      existingMemberWalletAddress.toLowerCase() === walletAddress.toLowerCase();
-
+  const isSameWallet =
+    Boolean(existingMemberWalletAddress)
+    && existingMemberWalletAddress.toLowerCase() === walletAddress.toLowerCase();
+  if (existingMemberWalletAddress && !isSameWallet) {
     console.warn(`[${requestId}] member_already_has_wallet`, {
       memberNickname: String(member.nickname || ""),
       memberWalletAddress: shortWallet(existingMemberWalletAddress),
       inputWalletAddress: shortWallet(walletAddress),
-      isSameWallet,
     });
 
     return NextResponse.json(
       {
-        error: isSameWallet
-          ? "이미 이 지갑에 연동된 회원입니다."
-          : "이미 다른 지갑에 연동된 회원입니다.",
+        error: "이미 다른 지갑에 연동된 회원입니다.",
       },
       { status: 409 },
     );
@@ -145,36 +145,77 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  console.log(`[${requestId}] updating_member_wallet`, {
+  const memberBuyer =
+    member?.buyer && typeof member.buyer === "object"
+      ? (member.buyer as Record<string, any>)
+      : {};
+  const memberBankInfo =
+    memberBuyer?.bankInfo && typeof memberBuyer.bankInfo === "object"
+      ? (memberBuyer.bankInfo as Record<string, any>)
+      : {};
+  const existingAccountHolder = String(
+    memberBankInfo?.accountHolder
+      ?? memberBankInfo?.depositName
+      ?? memberBuyer?.depositName
+      ?? "",
+  ).trim();
+
+  const updateSet: Record<string, unknown> = {
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (!existingMemberWalletAddress) {
+    updateSet.walletAddress = walletAddress;
+  }
+
+  if (mobile) {
+    updateSet.mobile = mobile;
+  }
+
+  if (!existingAccountHolder && depositName) {
+    updateSet["buyer.depositName"] = depositName;
+    updateSet["buyer.bankInfo.accountHolder"] = depositName;
+    updateSet["buyer.bankInfo.depositName"] = depositName;
+  }
+
+  const shouldUpdate = Object.keys(updateSet).some((key) => key !== "updatedAt");
+
+  console.log(`[${requestId}] syncing_member_profile`, {
     memberNickname: String(member.nickname || ""),
     inputWalletAddress: shortWallet(walletAddress),
+    isSameWallet,
+    willSetWalletAddress: !existingMemberWalletAddress,
     updateMobile: Boolean(mobile),
+    hasExistingAccountHolder: Boolean(existingAccountHolder),
+    willSetDepositName: Boolean(!existingAccountHolder && depositName),
   });
 
-  const updateResult = await users.updateOne(
-    { _id: member._id },
-    {
-      $set: {
-        walletAddress,
-        ...(mobile ? { mobile } : {}),
-        updatedAt: new Date().toISOString(),
+  if (shouldUpdate) {
+    const updateResult = await users.updateOne(
+      { _id: member._id },
+      {
+        $set: updateSet,
       },
-    },
-  );
-
-  console.log(`[${requestId}] update_result`, {
-    matchedCount: updateResult.matchedCount,
-    modifiedCount: updateResult.modifiedCount,
-  });
-
-  if (updateResult.matchedCount === 0) {
-    console.warn(`[${requestId}] update_failed_member_not_found_after_lookup`, {
-      memberId: String(member._id),
-    });
-    return NextResponse.json(
-      { error: "회원 정보를 찾지 못했습니다." },
-      { status: 404 },
     );
+
+    console.log(`[${requestId}] update_result`, {
+      matchedCount: updateResult.matchedCount,
+      modifiedCount: updateResult.modifiedCount,
+    });
+
+    if (updateResult.matchedCount === 0) {
+      console.warn(`[${requestId}] update_failed_member_not_found_after_lookup`, {
+        memberId: String(member._id),
+      });
+      return NextResponse.json(
+        { error: "회원 정보를 찾지 못했습니다." },
+        { status: 404 },
+      );
+    }
+  } else {
+    console.log(`[${requestId}] no_profile_update_needed`, {
+      memberNickname: String(member.nickname || ""),
+    });
   }
 
   const updated = await users.findOne(
@@ -197,8 +238,25 @@ export async function POST(request: NextRequest) {
     hasBuyer: Boolean(updated?.buyer),
   });
 
+  const updatedBuyer =
+    updated?.buyer && typeof updated.buyer === "object"
+      ? (updated.buyer as Record<string, any>)
+      : {};
+  const updatedBuyerBankInfo =
+    updatedBuyer?.bankInfo && typeof updatedBuyer.bankInfo === "object"
+      ? (updatedBuyer.bankInfo as Record<string, any>)
+      : {};
+  const updatedAccountHolder = String(
+    updatedBuyerBankInfo?.accountHolder
+      ?? updatedBuyerBankInfo?.depositName
+      ?? updatedBuyer?.depositName
+      ?? "",
+  ).trim();
+
   return NextResponse.json({
     success: true,
     result: updated,
+    depositName: updatedAccountHolder,
+    hasDepositName: Boolean(updatedAccountHolder),
   });
 }

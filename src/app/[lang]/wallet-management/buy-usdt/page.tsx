@@ -2131,6 +2131,7 @@ export default function BuyUsdtPage({
 
     const nickname = toTrimmedString(storeMemberLinkNicknameInput);
     const password = toTrimmedString(storeMemberLinkPasswordInput);
+    const depositNameInput = toTrimmedString(buyerDepositNameInput);
     if (nickname.length < 2) {
       toast.error('가맹점 회원 아이디를 2자 이상 입력해 주세요.');
       return;
@@ -2158,6 +2159,7 @@ export default function BuyUsdtPage({
           storecode,
           walletAddress: activeAccount.address,
           mobile: thirdwebMobile,
+          ...(depositNameInput ? { depositName: depositNameInput } : {}),
           nickname,
           password,
         }),
@@ -2175,9 +2177,14 @@ export default function BuyUsdtPage({
           ? (linkedMember.buyer as Record<string, unknown>)
           : null;
       const linkedSnapshot = resolveBuyerBankSnapshot(linkedBuyer);
-      const linkedDepositName = toTrimmedString(linkedSnapshot.accountHolder);
+      const linkedDepositName = toTrimmedString(
+        linkedSnapshot.accountHolder || data?.depositName || depositNameInput,
+      );
       if (!linkedDepositName) {
-        throw new Error('연동된 가맹점 회원의 입금자명을 찾지 못했습니다. 가맹점에 문의해 주세요.');
+        await Promise.all([loadStoreMemberProfile(), loadBuyerProfile()]);
+        setStoreMemberLinkPasswordInput('');
+        setStoreMemberProfileError('회원 연동은 완료되었습니다. 입금자명을 입력한 뒤 저장하기를 눌러주세요.');
+        return;
       }
 
       const memberNickname = toTrimmedString(linkedMember?.nickname);
