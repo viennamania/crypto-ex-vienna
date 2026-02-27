@@ -15,7 +15,6 @@ const SENDBIRD_APPLICATION_ID =
 const SENDBIRD_API_BASE = SENDBIRD_APPLICATION_ID ? `https://api-${SENDBIRD_APPLICATION_ID}.sendbird.com/v3` : '';
 const SENDBIRD_REQUEST_TIMEOUT_MS = Number(process.env.SENDBIRD_REQUEST_TIMEOUT_MS ?? 8000);
 const BUYER_CONSENT_REQUEST_MESSAGE = [
-  '—————————————————————————',
   '네 안녕하세요',
   '',
   '본 거래를 진행하기전 숙지 부탁드립니다.',
