@@ -12,6 +12,8 @@ type StoreMember = {
   password: string;
   verified: boolean;
   createdAt: string;
+  privateSaleConsentAccepted: boolean;
+  privateSaleConsentAcceptedAt: string;
 };
 
 type DashboardStore = {
@@ -72,6 +74,9 @@ export default function P2PStoreMemberManagementPage() {
   const [deletingMember, setDeletingMember] = useState(false);
   const [deleteMemberError, setDeleteMemberError] = useState<string | null>(null);
   const [deleteMemberSuccess, setDeleteMemberSuccess] = useState<string | null>(null);
+  const [resettingConsentMemberId, setResettingConsentMemberId] = useState<string | null>(null);
+  const [resetConsentError, setResetConsentError] = useState<string | null>(null);
+  const [resetConsentSuccess, setResetConsentSuccess] = useState<string | null>(null);
   const [siteOrigin, setSiteOrigin] = useState('');
   const [homeUrlCopyFeedback, setHomeUrlCopyFeedback] = useState('');
 
@@ -137,6 +142,14 @@ export default function P2PStoreMemberManagementPage() {
           const member = isRecord(user) ? user : {};
           const buyer = isRecord(member.buyer) ? member.buyer : {};
           const buyerBankInfo = isRecord(buyer.bankInfo) ? buyer.bankInfo : {};
+          const privateSaleConsent = isRecord(buyer.privateSaleConsent)
+            ? buyer.privateSaleConsent
+            : null;
+          const privateSaleConsentStatus = String(privateSaleConsent?.status || '').trim().toLowerCase();
+          const privateSaleConsentAccepted =
+            privateSaleConsent?.accepted === true || privateSaleConsentStatus === 'accepted';
+          const privateSaleConsentAcceptedAt = String(privateSaleConsent?.acceptedAt || '').trim();
+
           return {
             id: String(member._id || member.id || ''),
             nickname: String(member.nickname || '').trim() || '-',
@@ -147,6 +160,8 @@ export default function P2PStoreMemberManagementPage() {
             password: String(member.password ?? '').trim(),
             verified: member.verified === true,
             createdAt: String(member.createdAt || ''),
+            privateSaleConsentAccepted,
+            privateSaleConsentAcceptedAt,
           };
         }),
       );
@@ -475,6 +490,52 @@ export default function P2PStoreMemberManagementPage() {
     }
   }, [connectedWalletAddress, deleteModalMember, deletingMember, storecode]);
 
+  const resetMemberConsent = useCallback(async (member: StoreMember) => {
+    const walletAddress = String(member.walletAddress || '').trim();
+    if (!walletAddress) {
+      setResetConsentError('지갑주소가 없어 이용동의를 초기화할 수 없습니다.');
+      return;
+    }
+    if (resettingConsentMemberId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `[${member.nickname}] 회원의 이용동의 상태를 초기화할까요?\n초기화하면 다음 거래에서 다시 동의가 필요합니다.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setResetConsentError(null);
+    setResetConsentSuccess(null);
+    setResettingConsentMemberId(member.id);
+    try {
+      const response = await fetch('/api/user/resetPrivateSaleConsent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode,
+          walletAddress,
+          memberId: member.id,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.result) {
+        throw new Error(String(payload?.error || payload?.message || '이용동의 초기화에 실패했습니다.'));
+      }
+
+      setResetConsentSuccess('이용동의가 초기화되었습니다.');
+      await loadMembers();
+    } catch (resetError) {
+      setResetConsentError(
+        resetError instanceof Error ? resetError.message : '이용동의 초기화에 실패했습니다.',
+      );
+    } finally {
+      setResettingConsentMemberId(null);
+    }
+  }, [loadMembers, resettingConsentMemberId, storecode]);
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
@@ -536,6 +597,18 @@ export default function P2PStoreMemberManagementPage() {
           {deleteMemberSuccess && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
               {deleteMemberSuccess}
+            </div>
+          )}
+
+          {resetConsentSuccess && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+              {resetConsentSuccess}
+            </div>
+          )}
+
+          {resetConsentError && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+              {resetConsentError}
             </div>
           )}
 
@@ -615,12 +688,13 @@ export default function P2PStoreMemberManagementPage() {
             ) : (
               <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
                 <div className="store-member-table-scroll max-h-[560px] overflow-auto">
-                  <table className="store-member-table min-w-[820px] w-full table-auto">
+                  <table className="store-member-table min-w-[980px] w-full table-auto">
                     <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                       <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                         <th className="px-3 py-2">회원 아이디</th>
                         <th className="px-3 py-2">입금자명</th>
                         <th className="px-3 py-2">지갑주소</th>
+                        <th className="px-3 py-2">이용동의</th>
                         <th className="px-3 py-2">등록일</th>
                         <th className="px-3 py-2 text-right">관리</th>
                       </tr>
@@ -654,6 +728,36 @@ export default function P2PStoreMemberManagementPage() {
                                 <span className="inline-flex h-5 items-center rounded-full border border-amber-200 bg-amber-50 px-2 text-[10px] font-semibold text-amber-700">
                                   지갑 연동안됩
                                 </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-xs text-slate-500">
+                            <div className="inline-flex items-center gap-1.5">
+                              <span
+                                className={`inline-flex h-5 items-center rounded-full border px-1.5 text-[10px] font-semibold ${
+                                  member.privateSaleConsentAccepted
+                                    ? 'border-cyan-200 bg-cyan-50 text-cyan-700'
+                                    : 'border-slate-200 bg-slate-50 text-slate-600'
+                                }`}
+                              >
+                                {member.privateSaleConsentAccepted ? '동의완료' : '미동의'}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                {member.privateSaleConsentAcceptedAt
+                                  ? toDateTime(member.privateSaleConsentAcceptedAt)
+                                  : '-'}
+                              </span>
+                              {member.privateSaleConsentAccepted && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void resetMemberConsent(member);
+                                  }}
+                                  disabled={Boolean(resettingConsentMemberId)}
+                                  className="inline-flex h-5 items-center rounded-md border border-rose-300 bg-rose-50 px-1.5 text-[10px] font-semibold text-rose-700 transition hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {resettingConsentMemberId === member.id ? '리셋 중...' : '리셋'}
+                                </button>
                               )}
                             </div>
                           </td>
