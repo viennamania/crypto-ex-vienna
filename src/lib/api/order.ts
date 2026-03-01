@@ -5812,10 +5812,21 @@ export async function completePrivateBuyOrderBySeller(
     return { success: false, error: 'INVALID_SELLER_WALLET_ADDRESS' };
   }
 
+  const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
   const toWalletCandidates = (value: string) => {
     const trimmed = value.trim();
     if (!trimmed) return [] as string[];
     return Array.from(new Set([trimmed, trimmed.toLowerCase(), trimmed.toUpperCase()]));
+  };
+
+  const toWalletAddressRegexQuery = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    return {
+      $regex: `^${escapeRegex(trimmed)}$`,
+      $options: 'i',
+    };
   };
 
   const client = await clientPromise;
@@ -5853,6 +5864,7 @@ export async function completePrivateBuyOrderBySeller(
   }
 
   const sellerWalletCandidates = toWalletCandidates(sellerWalletAddress);
+  const sellerWalletRegexQuery = toWalletAddressRegexQuery(sellerWalletAddress);
   const orderSellerWalletCandidates = toWalletCandidates(
     typeof order?.seller?.walletAddress === 'string' ? order.seller.walletAddress : '',
   );
@@ -5866,7 +5878,7 @@ export async function completePrivateBuyOrderBySeller(
 
   const sellerUser = await usersCollection.findOne<any>(
     {
-      walletAddress: { $in: sellerWalletCandidates },
+      walletAddress: sellerWalletRegexQuery || { $in: sellerWalletCandidates },
       storecode: 'admin',
       seller: { $exists: true },
     },
@@ -6218,8 +6230,8 @@ export async function completePrivateBuyOrderBySeller(
       privateSale: true,
       status: 'paymentRequested',
       $or: [
-        { 'seller.walletAddress': { $in: sellerWalletCandidates } },
-        { sellerWalletAddress: { $in: sellerWalletCandidates } },
+        { 'seller.walletAddress': sellerWalletRegexQuery || { $in: sellerWalletCandidates } },
+        { sellerWalletAddress: sellerWalletRegexQuery || { $in: sellerWalletCandidates } },
       ],
     },
     {
@@ -6246,7 +6258,7 @@ export async function completePrivateBuyOrderBySeller(
 
   await usersCollection.updateOne(
     {
-      walletAddress: { $in: sellerWalletCandidates },
+      walletAddress: sellerWalletRegexQuery || { $in: sellerWalletCandidates },
       storecode: 'admin',
       'seller.buyOrder._id': objectId,
     },
@@ -6264,10 +6276,11 @@ export async function completePrivateBuyOrderBySeller(
   );
 
   const buyerWalletCandidates = toWalletCandidates(orderBuyerWalletAddress);
+  const buyerWalletRegexQuery = toWalletAddressRegexQuery(orderBuyerWalletAddress);
   if (buyerWalletCandidates.length > 0) {
     await usersCollection.updateOne(
       {
-        walletAddress: { $in: buyerWalletCandidates },
+        walletAddress: buyerWalletRegexQuery || { $in: buyerWalletCandidates },
         storecode: 'admin',
       },
       {
