@@ -11015,29 +11015,17 @@ const fetchBuyOrders = async () => {
                                               <span className="text-xs text-slate-500">
                                                 결제방법 {getPaymentMethodLabel(order?.paymentMethod, order?.seller?.bankInfo?.bankName)}
                                               </span>
-                                              <div
-                                                className={`mt-1 inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold ${
-                                                  buyerConsentSnapshot.accepted
-                                                    ? 'border-emerald-300 bg-emerald-100 text-emerald-700'
-                                                    : 'border-rose-300 bg-rose-100 text-rose-700'
-                                                }`}
-                                              >
-                                                <span
-                                                  className={`inline-block h-1.5 w-1.5 rounded-full ${
-                                                    buyerConsentSnapshot.accepted
-                                                      ? 'bg-emerald-500'
-                                                      : 'bg-rose-500'
-                                                  }`}
-                                                />
-                                                {buyerConsentSnapshot.accepted
-                                                  ? '이용동의 완료'
-                                                  : '이용동의 미완료'}
-                                              </div>
-                                              <span className="text-[11px] text-slate-500">
-                                                {buyerConsentSnapshot.accepted
-                                                  ? `동의시각 ${formatTradeHistoryTime(buyerConsentSnapshot.acceptedAt)}`
-                                                  : `요청시각 ${formatTradeHistoryTime(buyerConsentSnapshot.requestedAt)}`}
-                                              </span>
+                                              {buyerConsentSnapshot.accepted && (
+                                                <>
+                                                  <div className="mt-1 inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+                                                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                                    이용동의 완료
+                                                  </div>
+                                                  <span className="text-[11px] text-slate-500">
+                                                    동의시각 {formatTradeHistoryTime(buyerConsentSnapshot.acceptedAt)}
+                                                  </span>
+                                                </>
+                                              )}
                                             </div>
                                             <div className="flex flex-col items-end text-right">
                                               <span className="font-semibold text-amber-700" style={{ fontFamily: 'monospace' }}>
