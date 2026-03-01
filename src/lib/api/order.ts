@@ -13028,6 +13028,14 @@ export async function acceptBuyOrderPrivateSale(
       createdAt: nowIso,
       acceptedAt: nowIso,
       paymentRequestedAt: nowIso,
+      buyerConsent: {
+        required: true,
+        keyword: '동의함',
+        status: 'pending',
+        accepted: false,
+        requestedAt: nowIso,
+        reminderCount: 0,
+      },
       buyer: {
         nickname: buyer.nickname || '',
         avatar: buyer.avatar || '',
@@ -13653,6 +13661,14 @@ export async function recoverMissingPrivateBuyOrder(
     createdAt: nowIso,
     acceptedAt: nowIso,
     paymentRequestedAt: nowIso,
+    buyerConsent: {
+      required: true,
+      keyword: '동의함',
+      status: 'pending',
+      accepted: false,
+      requestedAt: nowIso,
+      reminderCount: 0,
+    },
     recovery: {
       type: 'MISSING_BUYORDER_RECOVERY',
       recoveredAt: recoveredAtIso,

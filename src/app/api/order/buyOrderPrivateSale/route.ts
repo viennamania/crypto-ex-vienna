@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { ObjectId } from 'mongodb';
 import { pickFirstPublicIpAddress, normalizeIpAddress } from '@/lib/ip-address';
+import clientPromise, { dbName } from '@/lib/mongodb';
 
 import {
   acceptBuyOrderPrivateSale,
@@ -14,6 +16,7 @@ const SENDBIRD_APPLICATION_ID =
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
 const SENDBIRD_API_BASE = SENDBIRD_APPLICATION_ID ? `https://api-${SENDBIRD_APPLICATION_ID}.sendbird.com/v3` : '';
 const SENDBIRD_REQUEST_TIMEOUT_MS = Number(process.env.SENDBIRD_REQUEST_TIMEOUT_MS ?? 8000);
+const BUYER_CONSENT_KEYWORD = '동의함';
 const BUYER_CONSENT_REQUEST_MESSAGE = [
   '네 안녕하세요',
   '',
@@ -33,7 +36,7 @@ const BUYER_CONSENT_REQUEST_MESSAGE = [
   '',
   '',
   '동의하지 않으시면 취소 하시면 됩니다.',
-  '동의하시면  [[동의함]] 이라고 적어주십시요.',
+  `동의하시면  [[${BUYER_CONSENT_KEYWORD}]] 이라고 적어주십시요.`,
 ].join('\n');
 
 const FAILURE_MESSAGE_BY_REASON: Record<string, string> = {
@@ -128,6 +131,44 @@ const toCreationFailurePayload = (
 });
 
 const toTrimmedString = (value: unknown) => String(value ?? '').trim();
+const isObjectIdHex = (value: string) => /^[a-fA-F0-9]{24}$/.test(value);
+
+const updateBuyOrderConsentRequestState = async ({
+  orderId,
+  channelUrl,
+}: {
+  orderId: string;
+  channelUrl: string;
+}) => {
+  const normalizedOrderId = toTrimmedString(orderId);
+  const normalizedChannelUrl = toTrimmedString(channelUrl);
+
+  if (!isObjectIdHex(normalizedOrderId) || !normalizedChannelUrl) {
+    return;
+  }
+
+  const client = await clientPromise;
+  const buyordersCollection = client.db(dbName).collection('buyorders');
+  const nowIso = new Date().toISOString();
+
+  await buyordersCollection.updateOne(
+    {
+      _id: new ObjectId(normalizedOrderId),
+    },
+    {
+      $set: {
+        'buyerConsent.required': true,
+        'buyerConsent.keyword': BUYER_CONSENT_KEYWORD,
+        'buyerConsent.status': 'pending',
+        'buyerConsent.accepted': false,
+        'buyerConsent.channelUrl': normalizedChannelUrl,
+        'buyerConsent.requestMessageSentAt': nowIso,
+        'buyerConsent.requestedAt': nowIso,
+        updatedAt: nowIso,
+      },
+    },
+  );
+};
 
 const buildSendbirdHeaders = () => {
   const apiToken = process.env.SENDBIRD_API_TOKEN;
@@ -478,6 +519,7 @@ const executeBuyOrderPrivateSale = async (
       toTrimmedString(orderSeller?.walletAddress)
       || sellerWalletAddress;
     const tradeId = toTrimmedString(order?.tradeId);
+    const orderId = toTrimmedString(order?.orderId || tradeStatus?.order?.orderId);
 
     try {
       const sendResult = await sendSellerConsentRequestMessage({
@@ -487,6 +529,15 @@ const executeBuyOrderPrivateSale = async (
       });
 
       if (sendResult.sent) {
+        try {
+          await updateBuyOrderConsentRequestState({
+            orderId,
+            channelUrl: sendResult.channelUrl,
+          });
+        } catch (consentUpdateError) {
+          console.error('buyOrderPrivateSale: failed to update buyerConsent request state', consentUpdateError);
+        }
+
         await emitProgress({
           step: 'CONSENT_REQUEST_MESSAGE',
           title: '동의 요청 메시지 발송',
