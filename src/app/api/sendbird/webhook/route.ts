@@ -12,6 +12,7 @@ const BUYER_CONSENT_KEYWORD = '동의함';
 const BUYER_CONSENT_REMINDER_MESSAGE = '반드시 동의함이라고 적어주세요';
 const ACTIVE_PRIVATE_SALE_ORDER_STATUSES = ['ordered', 'accepted', 'paymentRequested'];
 const EVM_WALLET_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
+const WEBHOOK_LOG_PREFIX = '[sendbird-webhook]';
 
 type SendbirdActiveBuyOrder = {
   _id: unknown;
@@ -340,6 +341,29 @@ const resolveOrderBuyerWalletAddress = (order: SendbirdActiveBuyOrder) =>
 const resolveOrderSellerWalletAddress = (order: SendbirdActiveBuyOrder) =>
   normalizeWalletAddress(order?.seller?.walletAddress || '');
 
+const logWebhook = (
+  stage: string,
+  details: Record<string, unknown>,
+  level: 'info' | 'warn' | 'error' = 'info',
+) => {
+  const payload = {
+    stage,
+    at: new Date().toISOString(),
+    ...details,
+  };
+
+  if (level === 'warn') {
+    console.warn(WEBHOOK_LOG_PREFIX, payload);
+    return;
+  }
+  if (level === 'error') {
+    console.error(WEBHOOK_LOG_PREFIX, payload);
+    return;
+  }
+
+  console.log(WEBHOOK_LOG_PREFIX, payload);
+};
+
 const BUY_ORDER_PROJECTION = {
   _id: 1,
   tradeId: 1,
@@ -352,6 +376,11 @@ const BUY_ORDER_PROJECTION = {
 };
 
 export async function POST(request: Request) {
+  const requestId = toTrimmedString(
+    request.headers.get('x-vercel-id')
+    || request.headers.get('x-request-id')
+    || crypto.randomUUID(),
+  );
   const rawBody = await request.text();
   const webhookSignature = toTrimmedString(
     request.headers.get('x-sendbird-signature')
@@ -359,11 +388,19 @@ export async function POST(request: Request) {
     || '',
   );
 
+  logWebhook('received', {
+    requestId,
+    bodyLength: rawBody.length,
+    hasSignature: Boolean(webhookSignature),
+  });
+
   if (!webhookSignature) {
+    logWebhook('rejected_missing_signature', { requestId }, 'warn');
     return NextResponse.json({ error: 'UNAUTHORIZED_WEBHOOK' }, { status: 401 });
   }
 
   if (!verifySendbirdWebhookSignature({ rawBody, signature: webhookSignature })) {
+    logWebhook('rejected_invalid_signature', { requestId }, 'warn');
     return NextResponse.json({ error: 'UNAUTHORIZED_WEBHOOK' }, { status: 401 });
   }
 
@@ -371,11 +408,13 @@ export async function POST(request: Request) {
   try {
     body = JSON.parse(rawBody) as Record<string, unknown>;
   } catch {
+    logWebhook('rejected_invalid_json', { requestId }, 'warn');
     return NextResponse.json({ error: 'INVALID_JSON' }, { status: 400 });
   }
 
   const category = resolveCategory(body);
   if (category !== 'group_channel:message_send') {
+    logWebhook('ignored_unsupported_category', { requestId, category });
     return NextResponse.json({ result: true, ignored: true, reason: 'category_not_supported' });
   }
 
@@ -387,7 +426,18 @@ export async function POST(request: Request) {
   const channelUrlFromWebhook = resolveChannelUrl({ body, payload });
   const channelMemberWalletAddresses = resolveChannelMemberWalletAddresses({ body, payload });
 
+  logWebhook('message_parsed', {
+    requestId,
+    category,
+    senderWalletAddress,
+    channelUrl: channelUrlFromWebhook,
+    buyerMessageId: buyerMessageId || null,
+    buyerMessageMatchesKeyword: buyerMessage === BUYER_CONSENT_KEYWORD,
+    channelMemberCount: channelMemberWalletAddresses.length,
+  });
+
   if (!senderWalletAddress) {
+    logWebhook('ignored_sender_wallet_not_found', { requestId }, 'warn');
     return NextResponse.json({ result: true, ignored: true, reason: 'sender_wallet_not_found' });
   }
 
@@ -460,11 +510,17 @@ export async function POST(request: Request) {
     }
 
     if (!activeOrder || !activeOrder._id) {
+      logWebhook('ignored_active_order_not_found', {
+        requestId,
+        senderWalletAddress,
+        channelUrl: channelUrlFromWebhook,
+      });
       return NextResponse.json({ result: true, ignored: true, reason: 'active_order_not_found' });
     }
 
     const orderBuyerWalletAddress = resolveOrderBuyerWalletAddress(activeOrder);
     const orderSellerWalletAddress = resolveOrderSellerWalletAddress(activeOrder);
+    const tradeId = toTrimmedString(activeOrder.tradeId);
     const orderConsent = isRecord(activeOrder.buyerConsent) ? activeOrder.buyerConsent : null;
     const orderConsentStatus = toTrimmedString(orderConsent?.status).toLowerCase();
     const orderConsentAccepted = orderConsent?.accepted === true || orderConsentStatus === 'accepted';
@@ -472,14 +528,22 @@ export async function POST(request: Request) {
     const resolvedChannelUrl = channelUrlFromWebhook || toTrimmedString(orderConsent?.channelUrl);
 
     if (!orderBuyerWalletAddress || orderBuyerWalletAddress.toLowerCase() !== senderWalletAddress.toLowerCase()) {
+      logWebhook('ignored_sender_is_not_buyer', {
+        requestId,
+        tradeId,
+        senderWalletAddress,
+        orderBuyerWalletAddress,
+      }, 'warn');
       return NextResponse.json({ result: true, ignored: true, reason: 'sender_is_not_buyer' });
     }
 
     if (orderConsentAccepted) {
+      logWebhook('ignored_consent_already_accepted', { requestId, tradeId });
       return NextResponse.json({ result: true, ignored: true, reason: 'consent_already_accepted' });
     }
 
     if (buyerMessageId && orderLastProcessedMessageId && buyerMessageId === orderLastProcessedMessageId) {
+      logWebhook('ignored_duplicate_webhook_message', { requestId, tradeId, buyerMessageId });
       return NextResponse.json({ result: true, ignored: true, reason: 'duplicate_webhook_message' });
     }
 
@@ -516,12 +580,20 @@ export async function POST(request: Request) {
         acceptedSet['buyerConsent.lastProcessedMessageId'] = buyerMessageId;
       }
 
-      await buyordersCollection.updateOne(acceptFilter, { $set: acceptedSet });
+      const acceptResult = await buyordersCollection.updateOne(acceptFilter, { $set: acceptedSet });
+
+      logWebhook('processed_consent_accepted', {
+        requestId,
+        tradeId,
+        buyerMessageId: buyerMessageId || null,
+        matchedCount: acceptResult.matchedCount,
+        modifiedCount: acceptResult.modifiedCount,
+      });
 
       return NextResponse.json({
         result: true,
         accepted: true,
-        tradeId: toTrimmedString(activeOrder.tradeId),
+        tradeId,
       });
     }
 
@@ -559,6 +631,11 @@ export async function POST(request: Request) {
     );
 
     if (markInvalidResult.matchedCount === 0) {
+      logWebhook('ignored_already_processed_or_no_pending_order', {
+        requestId,
+        tradeId,
+        buyerMessageId: buyerMessageId || null,
+      });
       return NextResponse.json({
         result: true,
         ignored: true,
@@ -569,6 +646,14 @@ export async function POST(request: Request) {
     const reminderResult = await sendReminderMessageToBuyer({
       channelUrl: resolvedChannelUrl,
       sellerWalletAddress: orderSellerWalletAddress,
+    });
+
+    logWebhook('processed_consent_invalid_message', {
+      requestId,
+      tradeId,
+      buyerMessageId: buyerMessageId || null,
+      reminderSent: reminderResult.sent,
+      reminderReason: reminderResult.reason,
     });
 
     const reminderSet: Record<string, unknown> = {
@@ -590,10 +675,13 @@ export async function POST(request: Request) {
       accepted: false,
       reminderSent: reminderResult.sent,
       reminderReason: reminderResult.reason,
-      tradeId: toTrimmedString(activeOrder.tradeId),
+      tradeId,
     });
   } catch (error) {
-    console.error('sendbird webhook consent validation failed', error);
+    logWebhook('failed_internal_error', {
+      requestId,
+      errorMessage: toTrimmedString((error as Error)?.message),
+    }, 'error');
     return NextResponse.json(
       {
         error: 'INTERNAL_SERVER_ERROR',
@@ -603,4 +691,3 @@ export async function POST(request: Request) {
     );
   }
 }
-
