@@ -232,6 +232,7 @@ const QUICK_BUY_AMOUNTS = [10, 30, 50, 100, 300, 500];
 const TRADABLE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
 const PRIVATE_TRADE_PAYMENT_WINDOW_MS = 30 * 60 * 1000;
 const BUYER_PROFILE_LOADING_MIN_MS = 5000;
+const BUYER_CONSENT_REFRESH_POLLING_MS = 2500;
 const STORE_MEMBER_LINKING_MIN_MS = 5000;
 const JACKPOT_AUTO_HIDE_MS = 5200;
 const PRIVATE_TRADE_STATUS_LABEL: Record<string, string> = {
@@ -1600,19 +1601,22 @@ export default function BuyUsdtPage({
     }
   }, [activeAccount?.address, selectedSeller?.walletAddress]);
 
-  const loadBuyerProfile = useCallback(async () => {
+  const loadBuyerProfile = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
     const requestId = buyerProfileRequestIdRef.current + 1;
     buyerProfileRequestIdRef.current = requestId;
     const loadingStartedAt = Date.now();
 
     if (!activeAccount?.address) {
       setBuyerProfile(null);
-      if (requestId === buyerProfileRequestIdRef.current) {
+      if (!silent && requestId === buyerProfileRequestIdRef.current) {
         setLoadingBuyerProfile(false);
       }
       return;
     }
-    setLoadingBuyerProfile(true);
+    if (!silent) {
+      setLoadingBuyerProfile(true);
+    }
     try {
       const response = await fetch('/api/user/getUser', {
         method: 'POST',
@@ -1660,29 +1664,36 @@ export default function BuyUsdtPage({
       }
       setBuyerProfile(null);
     } finally {
-      const elapsed = Date.now() - loadingStartedAt;
-      const remaining = Math.max(0, BUYER_PROFILE_LOADING_MIN_MS - elapsed);
-      if (remaining > 0) {
-        await waitFor(remaining);
-      }
-      if (requestId === buyerProfileRequestIdRef.current) {
-        setLoadingBuyerProfile(false);
+      if (!silent) {
+        const elapsed = Date.now() - loadingStartedAt;
+        const remaining = Math.max(0, BUYER_PROFILE_LOADING_MIN_MS - elapsed);
+        if (remaining > 0) {
+          await waitFor(remaining);
+        }
+        if (requestId === buyerProfileRequestIdRef.current) {
+          setLoadingBuyerProfile(false);
+        }
       }
     }
   }, [activeAccount?.address, buyerProfileLookupStorecode]);
 
-  const loadStoreMemberProfile = useCallback(async () => {
+  const loadStoreMemberProfile = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
     const requestId = storeMemberProfileRequestIdRef.current + 1;
     storeMemberProfileRequestIdRef.current = requestId;
 
     if (!activeAccount?.address || !isStoreScopedPurchase) {
       setStoreMemberProfile(null);
       setStoreMemberProfileError(null);
-      setLoadingStoreMemberProfile(false);
+      if (!silent) {
+        setLoadingStoreMemberProfile(false);
+      }
       return;
     }
 
-    setLoadingStoreMemberProfile(true);
+    if (!silent) {
+      setLoadingStoreMemberProfile(true);
+    }
     try {
       const response = await fetch('/api/user/getUser', {
         method: 'POST',
@@ -1727,7 +1738,7 @@ export default function BuyUsdtPage({
         error instanceof Error ? error.message : '가맹점 회원 정보를 불러오지 못했습니다.',
       );
     } finally {
-      if (requestId === storeMemberProfileRequestIdRef.current) {
+      if (!silent && requestId === storeMemberProfileRequestIdRef.current) {
         setLoadingStoreMemberProfile(false);
       }
     }
@@ -2140,6 +2151,35 @@ export default function BuyUsdtPage({
   useEffect(() => {
     connectSellerChat();
   }, [connectSellerChat, chatRefreshToken]);
+
+  useEffect(() => {
+    if (!activeAccount?.address || !chatChannelUrl || isSelectedSellerBuyer || hasBuyerPrivateSaleConsent) {
+      return;
+    }
+
+    void loadBuyerProfile({ silent: true });
+    if (isStoreScopedPurchase) {
+      void loadStoreMemberProfile({ silent: true });
+    }
+
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      void loadBuyerProfile({ silent: true });
+      if (isStoreScopedPurchase) {
+        void loadStoreMemberProfile({ silent: true });
+      }
+    }, BUYER_CONSENT_REFRESH_POLLING_MS);
+
+    return () => clearInterval(interval);
+  }, [
+    activeAccount?.address,
+    chatChannelUrl,
+    hasBuyerPrivateSaleConsent,
+    isSelectedSellerBuyer,
+    isStoreScopedPurchase,
+    loadBuyerProfile,
+    loadStoreMemberProfile,
+  ]);
 
   useEffect(() => {
     if (activePrivateTradeOrder?.orderId) {
@@ -3704,17 +3744,33 @@ export default function BuyUsdtPage({
                           입금 후 판매자 채팅에서 입금 확인을 요청해 주세요.
                         </p>
 
-                        <div className="mt-2 flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={openCancelTradeModal}
-                            disabled={!canCancelActiveTrade || cancelingTrade}
-                            className="inline-flex h-7 items-center rounded-lg border border-rose-300 bg-white px-2.5 text-[11px] font-semibold text-rose-700 transition hover:border-rose-400 hover:text-rose-800 disabled:cursor-not-allowed disabled:opacity-55"
-                          >
-                            {cancelingTrade ? '취소 처리 중...' : '거래 취소'}
-                          </button>
+                        <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2.5">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="text-[11px] font-semibold text-rose-700">
+                              입금 전 주문 취소가 필요하면 아래 버튼을 눌러 진행하세요.
+                            </span>
+                            <button
+                              type="button"
+                              onClick={openCancelTradeModal}
+                              disabled={!canCancelActiveTrade || cancelingTrade}
+                              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-500 bg-rose-600 px-3 text-xs font-extrabold text-white shadow-[0_14px_24px_-18px_rgba(225,29,72,0.9)] transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:border-rose-200 disabled:bg-rose-200 disabled:text-rose-500"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path
+                                  d="M18 6L6 18M6 6l12 12"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                              {cancelingTrade ? '취소 처리 중...' : '거래 취소'}
+                            </button>
+                          </div>
                           {!canCancelActiveTrade && (
-                            <span className="text-[11px] text-slate-500">입금 요청 상태에서만 취소 가능합니다.</span>
+                            <p className="mt-1 text-[11px] font-semibold text-rose-600">
+                              입금 요청 상태에서만 취소 가능합니다.
+                            </p>
                           )}
                         </div>
                       </div>

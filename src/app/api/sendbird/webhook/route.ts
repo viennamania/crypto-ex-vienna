@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import clientPromise, { dbName } from '@/lib/mongodb';
 import {
+  BUYER_CONSENT_ACCEPTED_FOLLOW_UP_MESSAGE,
   BUYER_CONSENT_KEYWORD,
   BUYER_CONSENT_REMINDER_MESSAGE,
   buildBuyerConsentRequestMessage,
@@ -146,27 +147,32 @@ const sendbirdFetchWithTimeout = async (
   }
 };
 
-const sendReminderMessageToBuyer = async ({
+const sendGroupChannelMessageAsUser = async ({
+  label,
   channelUrl,
-  sellerWalletAddress,
+  senderWalletAddress,
+  message,
 }: {
+  label: string;
   channelUrl: string;
-  sellerWalletAddress: string;
-}): Promise<{ sent: boolean; reminderMessageId: string; reason: string }> => {
+  senderWalletAddress: string;
+  message: string;
+}): Promise<{ sent: boolean; messageId: string; reason: string }> => {
   const normalizedChannelUrl = toTrimmedString(channelUrl);
-  const normalizedSellerWalletAddress = normalizeWalletAddress(sellerWalletAddress);
+  const normalizedSenderWalletAddress = normalizeWalletAddress(senderWalletAddress);
+  const normalizedMessage = toTrimmedString(message);
 
-  if (!normalizedChannelUrl || !normalizedSellerWalletAddress) {
+  if (!normalizedChannelUrl || !normalizedSenderWalletAddress || !normalizedMessage) {
     return {
       sent: false,
-      reminderMessageId: '',
-      reason: 'channelUrl/sellerWalletAddress is missing',
+      messageId: '',
+      reason: 'channelUrl/senderWalletAddress/message is missing',
     };
   }
   if (!SENDBIRD_API_BASE) {
     return {
       sent: false,
-      reminderMessageId: '',
+      messageId: '',
       reason: 'Sendbird application id is missing',
     };
   }
@@ -175,21 +181,21 @@ const sendReminderMessageToBuyer = async ({
   if (!headers) {
     return {
       sent: false,
-      reminderMessageId: '',
+      messageId: '',
       reason: 'Sendbird API token is missing',
     };
   }
 
   const response = await sendbirdFetchWithTimeout(
-    'send-buyer-consent-reminder',
+    label,
     `${SENDBIRD_API_BASE}/group_channels/${encodeURIComponent(normalizedChannelUrl)}/messages`,
     {
       method: 'POST',
       headers,
       body: JSON.stringify({
         message_type: 'MESG',
-        user_id: normalizedSellerWalletAddress,
-        message: BUYER_CONSENT_REMINDER_MESSAGE,
+        user_id: normalizedSenderWalletAddress,
+        message: normalizedMessage,
       }),
     },
   );
@@ -198,18 +204,58 @@ const sendReminderMessageToBuyer = async ({
     const error = await response.json().catch(() => null);
     return {
       sent: false,
-      reminderMessageId: '',
-      reason: toTrimmedString(error?.message) || 'failed to send reminder message',
+      messageId: '',
+      reason: toTrimmedString(error?.message) || 'failed to send message',
     };
   }
 
   const data = await response.json().catch(() => null);
-  const reminderMessageId = toTrimmedString(data?.message_id || data?.msg_id);
+  const messageId = toTrimmedString(data?.message_id || data?.msg_id);
 
   return {
     sent: true,
-    reminderMessageId,
+    messageId,
     reason: '',
+  };
+};
+
+const sendReminderMessageToBuyer = async ({
+  channelUrl,
+  sellerWalletAddress,
+}: {
+  channelUrl: string;
+  sellerWalletAddress: string;
+}): Promise<{ sent: boolean; reminderMessageId: string; reason: string }> => {
+  const result = await sendGroupChannelMessageAsUser({
+    label: 'send-buyer-consent-reminder',
+    channelUrl,
+    senderWalletAddress: sellerWalletAddress,
+    message: BUYER_CONSENT_REMINDER_MESSAGE,
+  });
+  return {
+    sent: result.sent,
+    reminderMessageId: result.messageId,
+    reason: result.reason,
+  };
+};
+
+const sendAcceptedFollowUpMessageToBuyer = async ({
+  channelUrl,
+  sellerWalletAddress,
+}: {
+  channelUrl: string;
+  sellerWalletAddress: string;
+}): Promise<{ sent: boolean; followUpMessageId: string; reason: string }> => {
+  const result = await sendGroupChannelMessageAsUser({
+    label: 'send-buyer-consent-accepted-followup',
+    channelUrl,
+    senderWalletAddress: sellerWalletAddress,
+    message: BUYER_CONSENT_ACCEPTED_FOLLOW_UP_MESSAGE,
+  });
+  return {
+    sent: result.sent,
+    followUpMessageId: result.messageId,
+    reason: result.reason,
   };
 };
 
@@ -668,6 +714,7 @@ export async function POST(request: Request) {
       }
 
       const acceptResult = await buyordersCollection.updateOne(acceptFilter, { $set: acceptedSet });
+      const consentAcceptedNow = acceptResult.matchedCount > 0;
 
       try {
         const userConsentUpdateResult = await updateBuyerUserConsentRecords({
@@ -695,6 +742,44 @@ export async function POST(request: Request) {
           tradeId,
           errorMessage: toTrimmedString((userConsentError as Error)?.message),
         }, 'error');
+      }
+
+      if (consentAcceptedNow) {
+        try {
+          const followUpResult = await sendAcceptedFollowUpMessageToBuyer({
+            channelUrl: resolvedChannelUrl,
+            sellerWalletAddress: orderConsentRequestSellerWalletAddress,
+          });
+
+          logWebhook('processed_consent_accepted_followup_message', {
+            requestId,
+            tradeId,
+            sent: followUpResult.sent,
+            reason: followUpResult.reason,
+            followUpMessageId: followUpResult.followUpMessageId || null,
+          });
+
+          if (followUpResult.sent) {
+            const followUpSet: Record<string, unknown> = {
+              'buyerConsent.lastAcceptedFollowUpMessage': BUYER_CONSENT_ACCEPTED_FOLLOW_UP_MESSAGE,
+              'buyerConsent.lastAcceptedFollowUpMessageAt': nowIso,
+              updatedAt: nowIso,
+            };
+            if (followUpResult.followUpMessageId) {
+              followUpSet['buyerConsent.lastAcceptedFollowUpMessageId'] = followUpResult.followUpMessageId;
+            }
+            await buyordersCollection.updateOne(
+              { _id: activeOrder._id },
+              { $set: followUpSet },
+            );
+          }
+        } catch (followUpError) {
+          logWebhook('failed_consent_accepted_followup_message', {
+            requestId,
+            tradeId,
+            errorMessage: toTrimmedString((followUpError as Error)?.message),
+          }, 'error');
+        }
       }
 
       logWebhook('processed_consent_accepted', {

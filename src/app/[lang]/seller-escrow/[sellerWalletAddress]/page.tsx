@@ -1323,6 +1323,49 @@ const getBuyerDepositNameForTradeList = (orderLike: any, isOwnerView: boolean) =
   return isOwnerView ? rawDepositName : ensureMaskedBuyerName(rawDepositName);
 };
 
+const pickFirstNonEmptyText = (...values: unknown[]) => {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+};
+
+const getBuyerConsentSnapshotForTradeList = (orderLike: any) => {
+  const orderConsent =
+    orderLike?.buyerConsent && typeof orderLike.buyerConsent === 'object'
+      ? orderLike.buyerConsent
+      : null;
+  const buyerConsent =
+    orderLike?.buyer?.privateSaleConsent && typeof orderLike.buyer.privateSaleConsent === 'object'
+      ? orderLike.buyer.privateSaleConsent
+      : null;
+
+  const orderConsentStatus = String(orderConsent?.status || '').trim().toLowerCase();
+  const buyerConsentStatus = String(buyerConsent?.status || '').trim().toLowerCase();
+  const accepted =
+    orderConsent?.accepted === true
+    || orderConsentStatus === 'accepted'
+    || buyerConsent?.accepted === true
+    || buyerConsentStatus === 'accepted';
+
+  const acceptedAt = pickFirstNonEmptyText(
+    orderConsent?.acceptedAt,
+    buyerConsent?.acceptedAt,
+  );
+  const requestedAt = pickFirstNonEmptyText(
+    orderConsent?.requestedAt,
+    orderLike?.createdAt,
+  );
+
+  return {
+    accepted,
+    acceptedAt,
+    requestedAt,
+  };
+};
+
 const getPaymentMethodLabel = (paymentMethod?: string | null, paymentBankName?: string | null) => {
   const method = String(paymentMethod || '').trim().toLowerCase();
   const bankName = String(paymentBankName || '').trim();
@@ -10901,6 +10944,7 @@ const fetchBuyOrders = async () => {
                                         !paymentCountdown.expired && paymentCountdown.remainingMs <= (5 * 60 * 1000);
                                       const isCountdownDanger =
                                         !paymentCountdown.expired && paymentCountdown.remainingMs <= (2 * 60 * 1000);
+                                      const buyerConsentSnapshot = getBuyerConsentSnapshotForTradeList(order);
                                       const countdownProgressWidth = Math.round(paymentCountdown.remainingRatio * 100);
                                       const countdownHue = Math.max(0, Math.min(120, Math.round(paymentCountdown.remainingRatio * 120)));
                                       const countdownBadgeClass = paymentCountdown.expired
@@ -10970,6 +11014,29 @@ const fetchBuyOrders = async () => {
                                               </span>
                                               <span className="text-xs text-slate-500">
                                                 결제방법 {getPaymentMethodLabel(order?.paymentMethod, order?.seller?.bankInfo?.bankName)}
+                                              </span>
+                                              <div
+                                                className={`mt-1 inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold ${
+                                                  buyerConsentSnapshot.accepted
+                                                    ? 'border-emerald-300 bg-emerald-100 text-emerald-700'
+                                                    : 'border-rose-300 bg-rose-100 text-rose-700'
+                                                }`}
+                                              >
+                                                <span
+                                                  className={`inline-block h-1.5 w-1.5 rounded-full ${
+                                                    buyerConsentSnapshot.accepted
+                                                      ? 'bg-emerald-500'
+                                                      : 'bg-rose-500'
+                                                  }`}
+                                                />
+                                                {buyerConsentSnapshot.accepted
+                                                  ? '이용동의 완료'
+                                                  : '이용동의 미완료'}
+                                              </div>
+                                              <span className="text-[11px] text-slate-500">
+                                                {buyerConsentSnapshot.accepted
+                                                  ? `동의시각 ${formatTradeHistoryTime(buyerConsentSnapshot.acceptedAt)}`
+                                                  : `요청시각 ${formatTradeHistoryTime(buyerConsentSnapshot.requestedAt)}`}
                                               </span>
                                             </div>
                                             <div className="flex flex-col items-end text-right">

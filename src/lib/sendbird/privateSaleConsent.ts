@@ -2,6 +2,17 @@ export const BUYER_CONSENT_KEYWORD = '동의함';
 
 export const BUYER_CONSENT_REMINDER_MESSAGE = '반드시 동의함이라고 적어주세요';
 
+export const BUYER_CONSENT_ACCEPTED_FOLLOW_UP_MESSAGE = [
+  '거래를 진행하겠습니다.',
+  '',
+  '거래날짜/거래금액/은행명/이름/연락처',
+  '순차적으로 기입해주시길 바랍니다.',
+  '',
+  '기재하신 내용과 송금정보 불일치시 거래가 불발 되는점 인지 부탁드리겠습니다.',
+  '',
+  '카카오뱅크의 경우 연락처 저장 후 앱내에 반영되는데 시간이 1~20분정도 소요될수 있으니 이점 참고바랍니다.',
+].join('\n');
+
 export const BUYER_CONSENT_REQUEST_MESSAGE = [
   '네 안녕하세요',
   '',
