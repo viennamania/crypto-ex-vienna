@@ -15,6 +15,7 @@ type StoreSummaryItem = {
 type StoreMemberItem = {
   id: string;
   nickname: string;
+  depositName: string;
   walletAddress: string;
   email: string;
   mobile: string;
@@ -163,6 +164,7 @@ export default function AdministrationStoreMemberManagementPage() {
       const normalizedMembers = rawUsers.map((item: unknown) => {
         const row = isRecord(item) ? item : {};
         const buyer = isRecord(row.buyer) ? row.buyer : null;
+        const buyerBankInfo = isRecord(buyer?.bankInfo) ? buyer.bankInfo : null;
         const privateSaleConsent = isRecord(buyer?.privateSaleConsent)
           ? buyer.privateSaleConsent
           : null;
@@ -173,6 +175,9 @@ export default function AdministrationStoreMemberManagementPage() {
         return {
           id: String(row._id || row.id || ''),
           nickname: String(row.nickname || '').trim() || '-',
+          depositName: String(
+            buyer?.depositName || buyerBankInfo?.depositName || buyerBankInfo?.accountHolder || '',
+          ).trim(),
           walletAddress: String(row.walletAddress || '').trim(),
           email: String(row.email || '').trim(),
           mobile: String(row.mobile || '').trim(),
@@ -436,7 +441,7 @@ export default function AdministrationStoreMemberManagementPage() {
                     applyKeywordSearch();
                   }
                 }}
-                placeholder="회원 아이디/지갑주소/이메일/전화 검색"
+                placeholder="회원 아이디/입금자명/지갑주소/이메일/전화 검색"
                 className="h-9 w-60 rounded-lg border border-slate-300 bg-white px-3 text-xs text-slate-700 outline-none transition focus:border-cyan-500"
               />
               <button
@@ -475,10 +480,11 @@ export default function AdministrationStoreMemberManagementPage() {
           {selectedStorecode && (
             <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[980px] table-auto">
+                <table className="w-full min-w-[1080px] table-auto">
                   <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                     <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                       <th className="px-3 py-2">회원 아이디</th>
+                      <th className="px-3 py-2">입금자명</th>
                       <th className="px-3 py-2">지갑주소</th>
                       <th className="px-3 py-2">이용동의</th>
                       <th className="px-3 py-2">등록일</th>
@@ -488,7 +494,7 @@ export default function AdministrationStoreMemberManagementPage() {
                   <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
                     {loadingMembers && (
                       <tr>
-                        <td colSpan={5} className="px-3 py-4 text-center text-sm text-slate-500">
+                        <td colSpan={6} className="px-3 py-4 text-center text-sm text-slate-500">
                           회원 목록을 불러오는 중입니다...
                         </td>
                       </tr>
@@ -499,6 +505,7 @@ export default function AdministrationStoreMemberManagementPage() {
                       return (
                         <tr key={`${member.id}-${member.walletAddress}`} className="transition hover:bg-slate-50/70">
                           <td className="px-3 py-2.5 font-semibold text-slate-900">{member.nickname}</td>
+                          <td className="px-3 py-2.5 text-xs text-slate-700">{member.depositName || '-'}</td>
                           <td className="px-3 py-2.5 text-xs text-slate-500">
                             <div className="inline-flex items-center gap-1.5">
                               <span>{shortAddress(member.walletAddress)}</span>
