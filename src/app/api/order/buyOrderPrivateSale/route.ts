@@ -2,6 +2,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { ObjectId } from 'mongodb';
 import { pickFirstPublicIpAddress, normalizeIpAddress } from '@/lib/ip-address';
 import clientPromise, { dbName } from '@/lib/mongodb';
+import {
+  BUYER_CONSENT_KEYWORD,
+  buildBuyerConsentRequestMessage,
+} from '@/lib/sendbird/privateSaleConsent';
 
 import {
   acceptBuyOrderPrivateSale,
@@ -16,28 +20,6 @@ const SENDBIRD_APPLICATION_ID =
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
 const SENDBIRD_API_BASE = SENDBIRD_APPLICATION_ID ? `https://api-${SENDBIRD_APPLICATION_ID}.sendbird.com/v3` : '';
 const SENDBIRD_REQUEST_TIMEOUT_MS = Number(process.env.SENDBIRD_REQUEST_TIMEOUT_MS ?? 8000);
-const BUYER_CONSENT_KEYWORD = '동의함';
-const BUYER_CONSENT_REQUEST_MESSAGE = [
-  '네 안녕하세요',
-  '',
-  '본 거래를 진행하기전 숙지 부탁드립니다.',
-  '',
-  '*단 지정된 은행에서 연락처 송금으로만 가능합니다*',
-  '(신한/우리/케이뱅크/카카오뱅크/국민은행)',
-  '*은행별 개인 한도가 상이합니다*',
-  '',
-  '코인(USDT) 거래를 원칙으로 합니다.',
-  '트레이더와 코인(USDT)거래는 불법자금은 받지 않습니다.',
-  '거래를 이용하여 불법도박 재테크 마약 거래용으로 사용시 법적 책임이 따른다는 것에 동의하셔야합니다.',
-  '',
-  '판매자의 의무는 입금된 금원에 해당하는 가상화폐를 지급 및 전송하는 것 이외의 다른 의무는 없으며 본 가상화폐거래로 인해 발생되는 모든 민·형사상의 대한 책임은 구매자에 있으며 구매자는 이를 동의하셔야 합니다.',
-  '',
-  '이 모든 대화 내역은 증거자료로 남습니다.',
-  '',
-  '',
-  '동의하지 않으시면 취소 하시면 됩니다.',
-  `동의하시면  [[${BUYER_CONSENT_KEYWORD}]] 이라고 적어주십시요.`,
-].join('\n');
 
 const FAILURE_MESSAGE_BY_REASON: Record<string, string> = {
   SELLER_NOT_FOUND: '판매자 정보를 찾을 수 없습니다.',
@@ -94,11 +76,19 @@ type SendSellerConsentRequestResult =
   | {
       sent: true;
       channelUrl: string;
+      requestMessage: string;
     }
   | {
       sent: false;
       reason: string;
     };
+
+type BuyerPrivateSaleConsentState = {
+  hasAcceptedConsent: boolean;
+  acceptedAt: string;
+  consentMessage: string;
+  sourceSellerWalletAddress: string;
+};
 
 class RouteError extends Error {
   status: number;
@@ -132,16 +122,25 @@ const toCreationFailurePayload = (
 
 const toTrimmedString = (value: unknown) => String(value ?? '').trim();
 const isObjectIdHex = (value: string) => /^[a-fA-F0-9]{24}$/.test(value);
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const updateBuyOrderConsentRequestState = async ({
   orderId,
   channelUrl,
+  requestMessage,
+  sellerWalletAddress,
 }: {
   orderId: string;
   channelUrl: string;
+  requestMessage: string;
+  sellerWalletAddress: string;
 }) => {
   const normalizedOrderId = toTrimmedString(orderId);
   const normalizedChannelUrl = toTrimmedString(channelUrl);
+  const normalizedRequestMessage = toTrimmedString(requestMessage);
+  const normalizedSellerWalletAddress = toTrimmedString(sellerWalletAddress);
 
   if (!isObjectIdHex(normalizedOrderId) || !normalizedChannelUrl) {
     return;
@@ -151,21 +150,139 @@ const updateBuyOrderConsentRequestState = async ({
   const buyordersCollection = client.db(dbName).collection('buyorders');
   const nowIso = new Date().toISOString();
 
+  const consentSet: Record<string, unknown> = {
+    'buyerConsent.required': true,
+    'buyerConsent.keyword': BUYER_CONSENT_KEYWORD,
+    'buyerConsent.status': 'pending',
+    'buyerConsent.accepted': false,
+    'buyerConsent.channelUrl': normalizedChannelUrl,
+    'buyerConsent.requestMessageSentAt': nowIso,
+    'buyerConsent.requestedAt': nowIso,
+    updatedAt: nowIso,
+  };
+  if (normalizedRequestMessage) {
+    consentSet['buyerConsent.requestMessage'] = normalizedRequestMessage;
+  }
+  if (normalizedSellerWalletAddress) {
+    consentSet['buyerConsent.requestSellerWalletAddress'] = normalizedSellerWalletAddress;
+  }
+
   await buyordersCollection.updateOne(
     {
       _id: new ObjectId(normalizedOrderId),
     },
     {
-      $set: {
-        'buyerConsent.required': true,
-        'buyerConsent.keyword': BUYER_CONSENT_KEYWORD,
-        'buyerConsent.status': 'pending',
-        'buyerConsent.accepted': false,
-        'buyerConsent.channelUrl': normalizedChannelUrl,
-        'buyerConsent.requestMessageSentAt': nowIso,
-        'buyerConsent.requestedAt': nowIso,
-        updatedAt: nowIso,
+      $set: consentSet,
+    },
+  );
+};
+
+const getBuyerPrivateSaleConsentState = async ({
+  buyerWalletAddress,
+}: {
+  buyerWalletAddress: string;
+}): Promise<BuyerPrivateSaleConsentState> => {
+  const normalizedBuyerWalletAddress = toTrimmedString(buyerWalletAddress);
+  if (!normalizedBuyerWalletAddress) {
+    return {
+      hasAcceptedConsent: false,
+      acceptedAt: '',
+      consentMessage: '',
+      sourceSellerWalletAddress: '',
+    };
+  }
+
+  const walletAddressQuery = {
+    $regex: `^${escapeRegex(normalizedBuyerWalletAddress)}$`,
+    $options: 'i',
+  };
+
+  const client = await clientPromise;
+  const usersCollection = client.db(dbName).collection('users');
+  const matchedUser = await usersCollection.findOne(
+    {
+      walletAddress: walletAddressQuery,
+      $or: [
+        { 'buyer.privateSaleConsent.accepted': true },
+        { 'buyer.privateSaleConsent.status': 'accepted' },
+      ],
+    },
+    {
+      sort: {
+        'buyer.privateSaleConsent.acceptedAt': -1,
+        updatedAt: -1,
       },
+      projection: {
+        _id: 1,
+        walletAddress: 1,
+        buyer: 1,
+      },
+    },
+  );
+
+  const buyerRecord = isRecord(matchedUser?.buyer) ? matchedUser.buyer : null;
+  const consentRecord = isRecord(buyerRecord?.privateSaleConsent)
+    ? buyerRecord.privateSaleConsent
+    : null;
+  const consentStatus = toTrimmedString(consentRecord?.status).toLowerCase();
+  const hasAcceptedConsent = consentRecord?.accepted === true || consentStatus === 'accepted';
+
+  return {
+    hasAcceptedConsent,
+    acceptedAt: toTrimmedString(consentRecord?.acceptedAt),
+    consentMessage: toTrimmedString(consentRecord?.consentMessage),
+    sourceSellerWalletAddress: toTrimmedString(
+      consentRecord?.sourceSellerWalletAddress || consentRecord?.sellerWalletAddress,
+    ),
+  };
+};
+
+const updateBuyOrderConsentAcceptedStateFromUser = async ({
+  orderId,
+  sellerWalletAddress,
+  buyerConsentState,
+}: {
+  orderId: string;
+  sellerWalletAddress: string;
+  buyerConsentState: BuyerPrivateSaleConsentState;
+}) => {
+  const normalizedOrderId = toTrimmedString(orderId);
+  if (!isObjectIdHex(normalizedOrderId)) {
+    return;
+  }
+
+  const normalizedSellerWalletAddress = toTrimmedString(sellerWalletAddress);
+  const nowIso = new Date().toISOString();
+  const acceptedAt = toTrimmedString(buyerConsentState.acceptedAt) || nowIso;
+
+  const consentSet: Record<string, unknown> = {
+    'buyerConsent.required': false,
+    'buyerConsent.keyword': BUYER_CONSENT_KEYWORD,
+    'buyerConsent.status': 'accepted',
+    'buyerConsent.accepted': true,
+    'buyerConsent.acceptedAt': acceptedAt,
+    'buyerConsent.acceptedSource': 'buyer_user_profile',
+    'buyerConsent.requestSkippedAt': nowIso,
+    'buyerConsent.requestSkippedReason': 'buyer_has_user_consent',
+    updatedAt: nowIso,
+  };
+  if (buyerConsentState.consentMessage) {
+    consentSet['buyerConsent.requestMessage'] = buyerConsentState.consentMessage;
+  }
+  if (buyerConsentState.sourceSellerWalletAddress) {
+    consentSet['buyerConsent.requestSellerWalletAddress'] = buyerConsentState.sourceSellerWalletAddress;
+  } else if (normalizedSellerWalletAddress) {
+    consentSet['buyerConsent.requestSellerWalletAddress'] = normalizedSellerWalletAddress;
+  }
+
+  const client = await clientPromise;
+  const buyordersCollection = client.db(dbName).collection('buyorders');
+  await buyordersCollection.updateOne(
+    {
+      _id: new ObjectId(normalizedOrderId),
+    },
+    {
+      $set: consentSet,
     },
   );
 };
@@ -302,9 +419,7 @@ const sendSellerConsentRequestMessage = async ({
     sellerWalletAddress: normalizedSellerWalletAddress,
   });
 
-  const message = tradeId
-    ? `구매주문번호: ${tradeId}\n\n${BUYER_CONSENT_REQUEST_MESSAGE}`
-    : BUYER_CONSENT_REQUEST_MESSAGE;
+  const requestMessage = buildBuyerConsentRequestMessage(tradeId);
 
   const response = await sendbirdFetchWithTimeout(
     `send-consent-request:${tradeId || 'unknown'}`,
@@ -315,7 +430,7 @@ const sendSellerConsentRequestMessage = async ({
       body: JSON.stringify({
         message_type: 'MESG',
         user_id: normalizedSellerWalletAddress,
-        message,
+        message: requestMessage,
       }),
     },
   );
@@ -328,6 +443,7 @@ const sendSellerConsentRequestMessage = async ({
   return {
     sent: true,
     channelUrl,
+    requestMessage,
   };
 };
 
@@ -499,7 +615,7 @@ const executeBuyOrderPrivateSale = async (
     await emitProgress({
       step: 'CONSENT_REQUEST_MESSAGE',
       title: '동의 요청 메시지 발송',
-      description: '판매자 명의로 구매자에게 동의 요청 메시지를 전송하고 있습니다.',
+      description: '구매자 이용동의 상태를 확인하고, 필요 시 판매자 명의로 동의 요청 메시지를 전송합니다.',
       status: 'processing',
     });
 
@@ -522,39 +638,67 @@ const executeBuyOrderPrivateSale = async (
     const orderId = toTrimmedString(order?.orderId || tradeStatus?.order?.orderId);
 
     try {
-      const sendResult = await sendSellerConsentRequestMessage({
+      const buyerConsentState = await getBuyerPrivateSaleConsentState({
         buyerWalletAddress: resolvedBuyerWalletAddress,
-        sellerWalletAddress: resolvedSellerWalletAddress,
-        tradeId,
       });
 
-      if (sendResult.sent) {
+      if (buyerConsentState.hasAcceptedConsent) {
         try {
-          await updateBuyOrderConsentRequestState({
+          await updateBuyOrderConsentAcceptedStateFromUser({
             orderId,
-            channelUrl: sendResult.channelUrl,
+            sellerWalletAddress: resolvedSellerWalletAddress,
+            buyerConsentState,
           });
         } catch (consentUpdateError) {
-          console.error('buyOrderPrivateSale: failed to update buyerConsent request state', consentUpdateError);
+          console.error('buyOrderPrivateSale: failed to mark buyorder consent from buyer user profile', consentUpdateError);
         }
 
         await emitProgress({
           step: 'CONSENT_REQUEST_MESSAGE',
           title: '동의 요청 메시지 발송',
-          description: '동의 요청 메시지를 채팅에 전송했습니다.',
+          description: '구매자 user 이용동의 기록이 있어 동의 요청 메시지 전송을 건너뛰었습니다.',
           status: 'completed',
-          data: {
-            channelUrl: sendResult.channelUrl,
-          },
+          detail: buyerConsentState.acceptedAt
+            ? `기존 동의 시각: ${buyerConsentState.acceptedAt}`
+            : '기존 동의 기록 확인됨',
         });
       } else {
-        await emitProgress({
-          step: 'CONSENT_REQUEST_MESSAGE',
-          title: '동의 요청 메시지 발송',
-          description: '동의 요청 메시지 전송을 건너뛰었습니다.',
-          status: 'completed',
-          detail: sendResult.reason,
+        const sendResult = await sendSellerConsentRequestMessage({
+          buyerWalletAddress: resolvedBuyerWalletAddress,
+          sellerWalletAddress: resolvedSellerWalletAddress,
+          tradeId,
         });
+
+        if (sendResult.sent) {
+          try {
+            await updateBuyOrderConsentRequestState({
+              orderId,
+              channelUrl: sendResult.channelUrl,
+              requestMessage: sendResult.requestMessage,
+              sellerWalletAddress: resolvedSellerWalletAddress,
+            });
+          } catch (consentUpdateError) {
+            console.error('buyOrderPrivateSale: failed to update buyerConsent request state', consentUpdateError);
+          }
+
+          await emitProgress({
+            step: 'CONSENT_REQUEST_MESSAGE',
+            title: '동의 요청 메시지 발송',
+            description: '동의 요청 메시지를 채팅에 전송했습니다.',
+            status: 'completed',
+            data: {
+              channelUrl: sendResult.channelUrl,
+            },
+          });
+        } else {
+          await emitProgress({
+            step: 'CONSENT_REQUEST_MESSAGE',
+            title: '동의 요청 메시지 발송',
+            description: '동의 요청 메시지 전송을 건너뛰었습니다.',
+            status: 'completed',
+            detail: sendResult.reason,
+          });
+        }
       }
     } catch (sendError) {
       console.error('buyOrderPrivateSale: failed to send consent request message', sendError);

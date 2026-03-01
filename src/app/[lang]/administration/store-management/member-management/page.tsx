@@ -21,6 +21,8 @@ type StoreMemberItem = {
   verified: boolean;
   role: string;
   createdAt: string;
+  privateSaleConsentAccepted: boolean;
+  privateSaleConsentAcceptedAt: string;
 };
 
 const MEMBER_PAGE_SIZE = 20;
@@ -159,6 +161,14 @@ export default function AdministrationStoreMemberManagementPage() {
       const normalizedPage = Math.min(membersPage, totalPages);
       const normalizedMembers = rawUsers.map((item: unknown) => {
         const row = isRecord(item) ? item : {};
+        const buyer = isRecord(row.buyer) ? row.buyer : null;
+        const privateSaleConsent = isRecord(buyer?.privateSaleConsent)
+          ? buyer.privateSaleConsent
+          : null;
+        const privateSaleConsentStatus = String(privateSaleConsent?.status || '').trim().toLowerCase();
+        const privateSaleConsentAccepted = privateSaleConsent?.accepted === true || privateSaleConsentStatus === 'accepted';
+        const privateSaleConsentAcceptedAt = String(privateSaleConsent?.acceptedAt || '').trim();
+
         return {
           id: String(row._id || row.id || ''),
           nickname: String(row.nickname || '').trim() || '-',
@@ -168,6 +178,8 @@ export default function AdministrationStoreMemberManagementPage() {
           verified: row.verified === true,
           role: String(row.role || 'member').trim() || 'member',
           createdAt: String(row.createdAt || ''),
+          privateSaleConsentAccepted,
+          privateSaleConsentAcceptedAt,
         };
       });
 
@@ -418,11 +430,12 @@ export default function AdministrationStoreMemberManagementPage() {
           {selectedStorecode && (
             <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px] table-auto">
+                <table className="w-full min-w-[980px] table-auto">
                   <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                     <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                       <th className="px-3 py-2">회원 아이디</th>
                       <th className="px-3 py-2">지갑주소</th>
+                      <th className="px-3 py-2">이용동의</th>
                       <th className="px-3 py-2">등록일</th>
                       <th className="px-3 py-2">관리</th>
                     </tr>
@@ -430,7 +443,7 @@ export default function AdministrationStoreMemberManagementPage() {
                   <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
                     {loadingMembers && (
                       <tr>
-                        <td colSpan={4} className="px-3 py-4 text-center text-sm text-slate-500">
+                        <td colSpan={5} className="px-3 py-4 text-center text-sm text-slate-500">
                           회원 목록을 불러오는 중입니다...
                         </td>
                       </tr>
@@ -449,6 +462,24 @@ export default function AdministrationStoreMemberManagementPage() {
                                   연동완료
                                 </span>
                               )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-xs text-slate-500">
+                            <div className="inline-flex items-center gap-1.5">
+                              <span
+                                className={`inline-flex h-5 items-center rounded-full border px-1.5 text-[10px] font-semibold ${
+                                  member.privateSaleConsentAccepted
+                                    ? 'border-cyan-200 bg-cyan-50 text-cyan-700'
+                                    : 'border-slate-200 bg-slate-50 text-slate-600'
+                                }`}
+                              >
+                                {member.privateSaleConsentAccepted ? '동의완료' : '미동의'}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                {member.privateSaleConsentAcceptedAt
+                                  ? toDateTime(member.privateSaleConsentAcceptedAt)
+                                  : '-'}
+                              </span>
                             </div>
                           </td>
                           <td className="px-3 py-2.5 text-xs text-slate-500">{toDateTime(member.createdAt)}</td>

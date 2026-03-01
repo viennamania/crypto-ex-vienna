@@ -1,6 +1,11 @@
 import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import clientPromise, { dbName } from '@/lib/mongodb';
+import {
+  BUYER_CONSENT_KEYWORD,
+  BUYER_CONSENT_REMINDER_MESSAGE,
+  buildBuyerConsentRequestMessage,
+} from '@/lib/sendbird/privateSaleConsent';
 
 export const runtime = 'nodejs';
 
@@ -8,8 +13,6 @@ const SENDBIRD_APPLICATION_ID =
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
 const SENDBIRD_API_BASE = SENDBIRD_APPLICATION_ID ? `https://api-${SENDBIRD_APPLICATION_ID}.sendbird.com/v3` : '';
 const SENDBIRD_REQUEST_TIMEOUT_MS = Number(process.env.SENDBIRD_REQUEST_TIMEOUT_MS ?? 8000);
-const BUYER_CONSENT_KEYWORD = '동의함';
-const BUYER_CONSENT_REMINDER_MESSAGE = '반드시 동의함이라고 적어주세요';
 const ACTIVE_PRIVATE_SALE_ORDER_STATUSES = ['ordered', 'accepted', 'paymentRequested'];
 const EVM_WALLET_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 const WEBHOOK_LOG_PREFIX = '[sendbird-webhook]';
@@ -29,6 +32,10 @@ type SendbirdActiveBuyOrder = {
     status?: unknown;
     accepted?: unknown;
     channelUrl?: unknown;
+    requestMessage?: unknown;
+    requestMessageSentAt?: unknown;
+    requestSellerWalletAddress?: unknown;
+    requestedAt?: unknown;
     lastProcessedMessageId?: unknown;
   };
   createdAt?: unknown;
@@ -364,6 +371,79 @@ const logWebhook = (
   console.log(WEBHOOK_LOG_PREFIX, payload);
 };
 
+const updateBuyerUserConsentRecords = async ({
+  usersCollection,
+  buyerWalletAddress,
+  sellerWalletAddress,
+  tradeId,
+  channelUrl,
+  consentMessage,
+  consentMessageSentAt,
+  acceptedAt,
+  acceptedMessageId,
+  acceptedMessageAt,
+}: {
+  usersCollection: {
+    updateMany: (
+      filter: Record<string, unknown>,
+      update: Record<string, unknown>,
+    ) => Promise<{ matchedCount: number; modifiedCount: number }>;
+  };
+  buyerWalletAddress: string;
+  sellerWalletAddress: string;
+  tradeId: string;
+  channelUrl: string;
+  consentMessage: string;
+  consentMessageSentAt: string;
+  acceptedAt: string;
+  acceptedMessageId: string;
+  acceptedMessageAt: string;
+}) => {
+  const normalizedBuyerWalletAddress = normalizeWalletAddress(buyerWalletAddress);
+  if (!normalizedBuyerWalletAddress) {
+    return { matchedCount: 0, modifiedCount: 0 };
+  }
+
+  const nowIso = new Date().toISOString();
+  const consentSet: Record<string, unknown> = {
+    'buyer.privateSaleConsent.required': true,
+    'buyer.privateSaleConsent.keyword': BUYER_CONSENT_KEYWORD,
+    'buyer.privateSaleConsent.status': 'accepted',
+    'buyer.privateSaleConsent.accepted': true,
+    'buyer.privateSaleConsent.acceptedAt': acceptedAt || nowIso,
+    'buyer.privateSaleConsent.acceptedByMessage': BUYER_CONSENT_KEYWORD,
+    'buyer.privateSaleConsent.acceptedMessageAt': acceptedMessageAt || nowIso,
+    'buyer.privateSaleConsent.lastTradeId': tradeId,
+    'buyer.privateSaleConsent.lastChannelUrl': channelUrl,
+    'buyer.privateSaleConsent.sourceSellerWalletAddress': sellerWalletAddress,
+    updatedAt: nowIso,
+  };
+
+  const normalizedConsentMessage = toTrimmedString(consentMessage);
+  if (normalizedConsentMessage) {
+    consentSet['buyer.privateSaleConsent.consentMessage'] = normalizedConsentMessage;
+  }
+
+  const normalizedConsentMessageSentAt = toTrimmedString(consentMessageSentAt);
+  if (normalizedConsentMessageSentAt) {
+    consentSet['buyer.privateSaleConsent.consentMessageSentAt'] = normalizedConsentMessageSentAt;
+  }
+
+  const normalizedAcceptedMessageId = toTrimmedString(acceptedMessageId);
+  if (normalizedAcceptedMessageId) {
+    consentSet['buyer.privateSaleConsent.acceptedMessageId'] = normalizedAcceptedMessageId;
+  }
+
+  return usersCollection.updateMany(
+    {
+      walletAddress: toWalletAddressRegexQuery(normalizedBuyerWalletAddress),
+    },
+    {
+      $set: consentSet,
+    },
+  );
+};
+
 const BUY_ORDER_PROJECTION = {
   _id: 1,
   tradeId: 1,
@@ -444,6 +524,7 @@ export async function POST(request: Request) {
   try {
     const client = await clientPromise;
     const buyordersCollection = client.db(dbName).collection('buyorders');
+    const usersCollection = client.db(dbName).collection('users');
 
     const senderWalletRegexQuery = toWalletAddressRegexQuery(senderWalletAddress);
     const counterPartyWalletAddress =
@@ -526,6 +607,12 @@ export async function POST(request: Request) {
     const orderConsentAccepted = orderConsent?.accepted === true || orderConsentStatus === 'accepted';
     const orderLastProcessedMessageId = toTrimmedString(orderConsent?.lastProcessedMessageId);
     const resolvedChannelUrl = channelUrlFromWebhook || toTrimmedString(orderConsent?.channelUrl);
+    const orderConsentRequestMessage = toTrimmedString(orderConsent?.requestMessage)
+      || buildBuyerConsentRequestMessage(tradeId);
+    const orderConsentRequestedAt = toTrimmedString(orderConsent?.requestMessageSentAt || orderConsent?.requestedAt);
+    const orderConsentRequestSellerWalletAddress =
+      normalizeWalletAddress(orderConsent?.requestSellerWalletAddress)
+      || orderSellerWalletAddress;
 
     if (!orderBuyerWalletAddress || orderBuyerWalletAddress.toLowerCase() !== senderWalletAddress.toLowerCase()) {
       logWebhook('ignored_sender_is_not_buyer', {
@@ -581,6 +668,34 @@ export async function POST(request: Request) {
       }
 
       const acceptResult = await buyordersCollection.updateOne(acceptFilter, { $set: acceptedSet });
+
+      try {
+        const userConsentUpdateResult = await updateBuyerUserConsentRecords({
+          usersCollection,
+          buyerWalletAddress: orderBuyerWalletAddress,
+          sellerWalletAddress: orderConsentRequestSellerWalletAddress,
+          tradeId,
+          channelUrl: resolvedChannelUrl,
+          consentMessage: orderConsentRequestMessage,
+          consentMessageSentAt: orderConsentRequestedAt,
+          acceptedAt: nowIso,
+          acceptedMessageId: buyerMessageId,
+          acceptedMessageAt: buyerMessageCreatedAtIso,
+        });
+
+        logWebhook('buyer_user_consent_updated', {
+          requestId,
+          tradeId,
+          matchedCount: userConsentUpdateResult.matchedCount,
+          modifiedCount: userConsentUpdateResult.modifiedCount,
+        });
+      } catch (userConsentError) {
+        logWebhook('failed_buyer_user_consent_update', {
+          requestId,
+          tradeId,
+          errorMessage: toTrimmedString((userConsentError as Error)?.message),
+        }, 'error');
+      }
 
       logWebhook('processed_consent_accepted', {
         requestId,
