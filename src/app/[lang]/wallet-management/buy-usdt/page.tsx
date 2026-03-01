@@ -678,6 +678,14 @@ const formatUsdtInputFromNumber = (value: number) => {
   return value.toFixed(6);
 };
 
+const toDateTime = (value: string) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '-';
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleString('ko-KR');
+};
+
 const formatCountdownClock = (remainingMs: number) => {
   const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
   const minutes = Math.floor(totalSeconds / 60);
@@ -728,6 +736,27 @@ const resolveBuyerBankSnapshot = (buyer: unknown) => {
     bankName,
     accountNumber,
     accountHolder,
+  };
+};
+
+const resolveBuyerPrivateSaleConsentSnapshot = (buyer: unknown) => {
+  const safeBuyer = isRecord(buyer) ? buyer : null;
+  const consent = isRecord(safeBuyer?.privateSaleConsent) ? safeBuyer.privateSaleConsent : null;
+  const status = toTrimmedString(consent?.status).toLowerCase();
+  const accepted = consent?.accepted === true || status === 'accepted';
+  const acceptedAt = toTrimmedString(consent?.acceptedAt);
+  const keyword = toTrimmedString(consent?.keyword);
+  const consentMessage = toTrimmedString(consent?.consentMessage);
+  const sourceSellerWalletAddress = normalizeWalletAddress(
+    consent?.sourceSellerWalletAddress || consent?.sellerWalletAddress,
+  );
+
+  return {
+    accepted,
+    acceptedAt,
+    keyword,
+    consentMessage,
+    sourceSellerWalletAddress,
   };
 };
 
@@ -1029,6 +1058,30 @@ export default function BuyUsdtPage({
   const storeMemberBankSnapshot = useMemo(
     () => resolveBuyerBankSnapshot(storeMemberProfile?.buyer),
     [storeMemberProfile?.buyer],
+  );
+  const buyerPrivateSaleConsent = useMemo(() => {
+    const profileConsent = resolveBuyerPrivateSaleConsentSnapshot(buyerProfile?.buyer);
+    if (
+      profileConsent.accepted
+      || profileConsent.acceptedAt
+      || profileConsent.consentMessage
+      || profileConsent.sourceSellerWalletAddress
+    ) {
+      return profileConsent;
+    }
+    return resolveBuyerPrivateSaleConsentSnapshot(storeMemberProfile?.buyer);
+  }, [buyerProfile?.buyer, storeMemberProfile?.buyer]);
+  const hasBuyerPrivateSaleConsent = buyerPrivateSaleConsent.accepted;
+  const buyerPrivateSaleConsentAcceptedAtLabel = useMemo(
+    () => (buyerPrivateSaleConsent.acceptedAt ? toDateTime(buyerPrivateSaleConsent.acceptedAt) : ''),
+    [buyerPrivateSaleConsent.acceptedAt],
+  );
+  const buyerPrivateSaleConsentSourceSellerLabel = useMemo(
+    () =>
+      buyerPrivateSaleConsent.sourceSellerWalletAddress
+        ? shortAddress(buyerPrivateSaleConsent.sourceSellerWalletAddress)
+        : '',
+    [buyerPrivateSaleConsent.sourceSellerWalletAddress],
   );
   const storeMemberAccountHolder = toTrimmedString(storeMemberBankSnapshot.accountHolder);
   const needsStoreMemberLinkForPurchase = isStoreScopedPurchase && !hasStoreMemberProfile;
@@ -3683,6 +3736,31 @@ export default function BuyUsdtPage({
                         <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm">
                           <p className="font-semibold text-rose-700">현재 선택한 판매자는 구매자와 동일한 계정입니다.</p>
                           <p className="mt-1 text-xs text-rose-600">자기 자신과는 거래할 수 없습니다. 판매자를 다시 선택해 주세요.</p>
+                        </div>
+                      )}
+                      {activeAccount?.address && !isSelectedSellerBuyer && hasBuyerPrivateSaleConsent && (
+                        <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2.5">
+                          <p className="text-xs font-semibold text-cyan-700">이용동의 완료</p>
+                          <p className="mt-1 text-[11px] text-cyan-700">
+                            {buyerPrivateSaleConsentAcceptedAtLabel
+                              ? `${buyerPrivateSaleConsentAcceptedAtLabel}에 이용동의를 완료했습니다.`
+                              : '이용동의를 완료했습니다.'}
+                          </p>
+                          {buyerPrivateSaleConsentSourceSellerLabel && (
+                            <p className="mt-1 text-[10px] text-cyan-700">
+                              동의 판매자: {buyerPrivateSaleConsentSourceSellerLabel}
+                            </p>
+                          )}
+                          {buyerPrivateSaleConsent.consentMessage && (
+                            <div className="mt-2 rounded-lg border border-cyan-200 bg-white/90 px-2.5 py-2">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-cyan-700">
+                                이용동의 문구
+                              </p>
+                              <p className="mt-1 whitespace-pre-wrap break-words text-[11px] leading-relaxed text-slate-700">
+                                {buyerPrivateSaleConsent.consentMessage}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
                       {activeAccount?.address && !isSelectedSellerBuyer && !SENDBIRD_APP_ID && (

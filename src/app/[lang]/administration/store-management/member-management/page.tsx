@@ -63,6 +63,7 @@ export default function AdministrationStoreMemberManagementPage() {
   const [membersTotalCount, setMembersTotalCount] = useState(0);
   const [deleteTargetMember, setDeleteTargetMember] = useState<StoreMemberItem | null>(null);
   const [deletingMember, setDeletingMember] = useState(false);
+  const [resettingConsentMemberId, setResettingConsentMemberId] = useState<string | null>(null);
 
   const loadStores = useCallback(async () => {
     setLoadingStores(true);
@@ -288,6 +289,50 @@ export default function AdministrationStoreMemberManagementPage() {
     }
   }, [deleteTargetMember, deletingMember, loadMembers, selectedStorecode]);
 
+  const resetMemberConsent = useCallback(async (member: StoreMemberItem) => {
+    const walletAddress = String(member.walletAddress || '').trim();
+    if (!walletAddress) {
+      toast.error('지갑주소가 없어 이용동의를 초기화할 수 없습니다.');
+      return;
+    }
+    if (resettingConsentMemberId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `[${member.nickname}] 회원의 이용동의 상태를 초기화할까요?\n초기화하면 다음 거래에서 다시 동의가 필요합니다.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setResettingConsentMemberId(member.id);
+    try {
+      const response = await fetch('/api/user/resetPrivateSaleConsent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: selectedStorecode,
+          walletAddress,
+          memberId: member.id,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.result) {
+        throw new Error(String(payload?.error || payload?.message || '이용동의 초기화에 실패했습니다.'));
+      }
+
+      toast.success('이용동의가 초기화되었습니다.');
+      await loadMembers();
+    } catch (resetError) {
+      const message = resetError instanceof Error ? resetError.message : '이용동의 초기화에 실패했습니다.';
+      setMembersError(message);
+      toast.error(message);
+    } finally {
+      setResettingConsentMemberId(null);
+    }
+  }, [loadMembers, resettingConsentMemberId, selectedStorecode]);
+
   return (
     <main className="px-4 pb-10 pt-6 lg:px-6 lg:pt-8">
       <div className="mx-auto w-full max-w-7xl space-y-4">
@@ -480,6 +525,16 @@ export default function AdministrationStoreMemberManagementPage() {
                                   ? toDateTime(member.privateSaleConsentAcceptedAt)
                                   : '-'}
                               </span>
+                              {member.privateSaleConsentAccepted && (
+                                <button
+                                  type="button"
+                                  onClick={() => resetMemberConsent(member)}
+                                  disabled={Boolean(resettingConsentMemberId)}
+                                  className="inline-flex h-5 items-center rounded-md border border-rose-300 bg-rose-50 px-1.5 text-[10px] font-semibold text-rose-700 transition hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {resettingConsentMemberId === member.id ? '리셋 중...' : '리셋'}
+                                </button>
+                              )}
                             </div>
                           </td>
                           <td className="px-3 py-2.5 text-xs text-slate-500">{toDateTime(member.createdAt)}</td>
