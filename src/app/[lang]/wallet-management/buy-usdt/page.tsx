@@ -945,6 +945,7 @@ export default function BuyUsdtPage({
   const cancelTradeProgressListRef = useRef<HTMLDivElement | null>(null);
   const privateTradeStatusRequestIdRef = useRef(0);
   const buyerProfileRequestIdRef = useRef(0);
+  const buyerProfileLoadingRequestIdRef = useRef(0);
   const paymentRequestedWatchRef = useRef<{ orderId: string; tradeId: string; usdtAmount: number } | null>(null);
   const jackpotShownOrderKeysRef = useRef<Set<string>>(new Set());
 
@@ -1606,10 +1607,13 @@ export default function BuyUsdtPage({
     const requestId = buyerProfileRequestIdRef.current + 1;
     buyerProfileRequestIdRef.current = requestId;
     const loadingStartedAt = Date.now();
+    if (!silent) {
+      buyerProfileLoadingRequestIdRef.current = requestId;
+    }
 
     if (!activeAccount?.address) {
       setBuyerProfile(null);
-      if (!silent && requestId === buyerProfileRequestIdRef.current) {
+      if (!silent && requestId === buyerProfileLoadingRequestIdRef.current) {
         setLoadingBuyerProfile(false);
       }
       return;
@@ -1670,7 +1674,7 @@ export default function BuyUsdtPage({
         if (remaining > 0) {
           await waitFor(remaining);
         }
-        if (requestId === buyerProfileRequestIdRef.current) {
+        if (requestId === buyerProfileLoadingRequestIdRef.current) {
           setLoadingBuyerProfile(false);
         }
       }
