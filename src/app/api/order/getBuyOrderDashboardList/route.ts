@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
     const storecodeRegex = toRegexFilter(body?.storecode);
     const searchTradeIdRegex = toRegexFilter(body?.searchTradeId);
     const searchBuyerRegex = toRegexFilter(body?.searchBuyer);
+    const searchSellerIdRegex = toRegexFilter(body?.searchSellerId);
     const searchDepositNameRegex = toRegexFilter(body?.searchDepositName);
     const searchStoreNameRegex = toRegexFilter(body?.searchStoreName);
     const privateSaleMode =
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
       ...(storecodeRegex ? { storecode: storecodeRegex } : { storecode: { $ne: null } }),
       ...(searchTradeIdRegex ? { tradeId: searchTradeIdRegex } : {}),
       ...(searchBuyerRegex ? { nickname: searchBuyerRegex } : {}),
+      ...(searchSellerIdRegex ? { 'seller.nickname': searchSellerIdRegex } : {}),
       ...(searchStoreNameRegex ? { 'store.storeName': searchStoreNameRegex } : {}),
       ...(searchDepositNameRegex
         ? {

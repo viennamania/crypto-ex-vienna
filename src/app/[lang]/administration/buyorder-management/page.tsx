@@ -143,6 +143,7 @@ type SearchFilters = {
   date: string;
   searchTradeId: string;
   searchBuyer: string;
+  searchSellerId: string;
   searchDepositName: string;
   searchStoreName: string;
 };
@@ -813,6 +814,7 @@ const createDefaultFilters = (): SearchFilters => {
     date: today,
     searchTradeId: '',
     searchBuyer: '',
+    searchSellerId: '',
     searchDepositName: '',
     searchStoreName: '',
   };
@@ -1016,6 +1018,7 @@ export default function BuyOrderManagementPage() {
           searchStoreName: appliedFilters.searchStoreName || '',
           searchTradeId: appliedFilters.searchTradeId || '',
           searchBuyer: appliedFilters.searchBuyer || '',
+          searchSellerId: appliedFilters.searchSellerId || '',
           searchDepositName: appliedFilters.searchDepositName || '',
           fromDate: selectedDate,
           toDate: selectedDate,
@@ -1139,6 +1142,7 @@ export default function BuyOrderManagementPage() {
       date: draftFilters.date || getTodayDate(),
       searchTradeId: draftFilters.searchTradeId.trim(),
       searchBuyer: draftFilters.searchBuyer.trim(),
+      searchSellerId: draftFilters.searchSellerId.trim(),
       searchDepositName: draftFilters.searchDepositName.trim(),
       searchStoreName: draftFilters.searchStoreName.trim(),
     };
@@ -1755,6 +1759,19 @@ export default function BuyOrderManagementPage() {
                 value={draftFilters.searchBuyer}
                 onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchBuyer: event.target.value }))}
                 placeholder="구매자 검색"
+                disabled={!isWalletConnected}
+                className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500"
+              />
+            </div>
+            <div className="lg:col-span-2">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                판매자 아이디
+              </label>
+              <input
+                type="text"
+                value={draftFilters.searchSellerId}
+                onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchSellerId: event.target.value }))}
+                placeholder="판매자 아이디 검색"
                 disabled={!isWalletConnected}
                 className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500"
               />
