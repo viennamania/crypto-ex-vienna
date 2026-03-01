@@ -30,6 +30,9 @@ export default function P2PAgentStoreMemberManagementPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedWalletAddress, setCopiedWalletAddress] = useState('');
+  const [resettingConsentMemberId, setResettingConsentMemberId] = useState<string | null>(null);
+  const [resetConsentError, setResetConsentError] = useState<string | null>(null);
+  const [resetConsentSuccess, setResetConsentSuccess] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!agentcode) {
@@ -103,6 +106,52 @@ export default function P2PAgentStoreMemberManagementPage() {
     }
   }, []);
 
+  const resetMemberConsent = useCallback(async (member: AgentUserItem) => {
+    const memberWalletAddress = String(member.walletAddress || '').trim();
+    if (!memberWalletAddress) {
+      setResetConsentError('지갑주소가 없어 이용동의를 초기화할 수 없습니다.');
+      return;
+    }
+    if (resettingConsentMemberId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `[${member.nickname || '-'}] 회원의 이용동의 상태를 초기화할까요?\n초기화하면 다음 거래에서 다시 동의가 필요합니다.`,
+    );
+    if (!confirmed) return;
+
+    const memberResetKey = member.id || memberWalletAddress.toLowerCase();
+    setResetConsentError(null);
+    setResetConsentSuccess(null);
+    setResettingConsentMemberId(memberResetKey);
+    try {
+      const response = await fetch('/api/user/resetPrivateSaleConsent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: member.storecode || selectedStorecode,
+          walletAddress: memberWalletAddress,
+          memberId: member.id,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.result) {
+        throw new Error(String(payload?.error || payload?.message || '이용동의 초기화에 실패했습니다.'));
+      }
+
+      setResetConsentSuccess('이용동의가 초기화되었습니다.');
+      await loadData();
+    } catch (resetError) {
+      setResetConsentError(
+        resetError instanceof Error ? resetError.message : '이용동의 초기화에 실패했습니다.',
+      );
+    } finally {
+      setResettingConsentMemberId(null);
+    }
+  }, [loadData, resettingConsentMemberId, selectedStorecode]);
+
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalCount / PAGE_SIZE)),
     [PAGE_SIZE, totalCount],
@@ -164,7 +213,7 @@ export default function P2PAgentStoreMemberManagementPage() {
                   setKeyword(event.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder="닉네임/가맹점/지갑/role 검색"
+                placeholder="닉네임/입금자명/가맹점/지갑/role 검색"
                 className="h-9 w-full max-w-md rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
               />
             </div>
@@ -250,6 +299,18 @@ export default function P2PAgentStoreMemberManagementPage() {
             <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">{error}</div>
           )}
 
+          {resetConsentSuccess && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+              {resetConsentSuccess}
+            </div>
+          )}
+
+          {resetConsentError && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+              {resetConsentError}
+            </div>
+          )}
+
           {!loading && !error && (
             <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
               <table className="min-w-full text-sm">
@@ -260,19 +321,21 @@ export default function P2PAgentStoreMemberManagementPage() {
                     <th className="px-4 py-3">가맹점</th>
                     <th className="px-4 py-3">역할</th>
                     <th className="px-4 py-3">검증</th>
+                    <th className="px-4 py-3">이용동의</th>
                     <th className="px-4 py-3">등록일</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {members.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">
+                      <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
                         표시할 회원이 없습니다.
                       </td>
                     </tr>
                   ) : (
                     members.map((member) => {
                       const memberWalletAddress = String(member.walletAddress || '').trim();
+                      const memberResetKey = member.id || memberWalletAddress.toLowerCase();
 
                       return (
                       <tr key={member.id || `${member.storecode}-${member.nickname}`} className="text-slate-700">
@@ -325,6 +388,36 @@ export default function P2PAgentStoreMemberManagementPage() {
                           <span className={`inline-flex rounded-full px-2 py-0.5 font-semibold ${member.verified ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                             {member.verified ? 'verified' : 'pending'}
                           </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-600">
+                          <div className="inline-flex flex-wrap items-center gap-1.5">
+                            <span
+                              className={`inline-flex rounded-full px-2 py-0.5 font-semibold ${
+                                member.privateSaleConsentAccepted
+                                  ? 'bg-cyan-100 text-cyan-700'
+                                  : 'bg-slate-100 text-slate-600'
+                              }`}
+                            >
+                              {member.privateSaleConsentAccepted ? '동의완료' : '미동의'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {member.privateSaleConsentAcceptedAt
+                                ? toDateTime(member.privateSaleConsentAcceptedAt)
+                                : '-'}
+                            </span>
+                            {member.privateSaleConsentAccepted && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void resetMemberConsent(member);
+                                }}
+                                disabled={Boolean(resettingConsentMemberId) || !memberWalletAddress}
+                                className="inline-flex h-5 items-center rounded-md border border-rose-300 bg-rose-50 px-1.5 text-[10px] font-semibold text-rose-700 transition hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {resettingConsentMemberId === memberResetKey ? '리셋 중...' : '리셋'}
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600">{toDateTime(member.createdAt)}</td>
                       </tr>

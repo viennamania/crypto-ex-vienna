@@ -34,6 +34,8 @@ export type AgentUserItem = {
   verified: boolean;
   createdAt: string;
   buyerDepositName: string;
+  privateSaleConsentAccepted: boolean;
+  privateSaleConsentAcceptedAt: string;
   sellerStatus: string;
   sellerUsdtToKrwRate: number;
 };
@@ -216,6 +218,8 @@ const normalizeUser = (value: unknown): AgentUserItem => {
   const buyer = isRecord(source.buyer) ? source.buyer : {};
   const seller = isRecord(source.seller) ? source.seller : {};
   const store = isRecord(source.store) ? source.store : {};
+  const privateSaleConsent = isRecord(buyer.privateSaleConsent) ? buyer.privateSaleConsent : {};
+  const privateSaleConsentStatus = toText(privateSaleConsent.status).trim().toLowerCase();
 
   return {
     id: toText(source._id) || toText(source.id),
@@ -230,6 +234,8 @@ const normalizeUser = (value: unknown): AgentUserItem => {
     verified: source.verified === true,
     createdAt: toText(source.createdAt),
     buyerDepositName: toText(buyer.depositName) || toText(buyer?.bankInfo && isRecord(buyer.bankInfo) ? buyer.bankInfo.depositName : ''),
+    privateSaleConsentAccepted: privateSaleConsent.accepted === true || privateSaleConsentStatus === 'accepted',
+    privateSaleConsentAcceptedAt: toText(privateSaleConsent.acceptedAt),
     sellerStatus: toText(seller.sellerStatus) || toText(seller.status),
     sellerUsdtToKrwRate: toNumber(seller.usdtToKrwRate),
   };

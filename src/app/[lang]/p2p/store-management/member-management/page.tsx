@@ -12,8 +12,6 @@ type StoreMember = {
   password: string;
   verified: boolean;
   createdAt: string;
-  privateSaleConsentAccepted: boolean;
-  privateSaleConsentAcceptedAt: string;
 };
 
 type DashboardStore = {
@@ -40,6 +38,9 @@ const toDateTime = (value: string) => {
   if (Number.isNaN(parsed.getTime())) return '-';
   return parsed.toLocaleString('ko-KR');
 };
+
+const MEMBER_PAGE_SIZE = 20;
+const MEMBER_PAGINATION_BUTTON_COUNT = 5;
 
 export default function P2PStoreMemberManagementPage() {
   const activeAccount = useActiveAccount();
@@ -74,11 +75,9 @@ export default function P2PStoreMemberManagementPage() {
   const [deletingMember, setDeletingMember] = useState(false);
   const [deleteMemberError, setDeleteMemberError] = useState<string | null>(null);
   const [deleteMemberSuccess, setDeleteMemberSuccess] = useState<string | null>(null);
-  const [resettingConsentMemberId, setResettingConsentMemberId] = useState<string | null>(null);
-  const [resetConsentError, setResetConsentError] = useState<string | null>(null);
-  const [resetConsentSuccess, setResetConsentSuccess] = useState<string | null>(null);
   const [siteOrigin, setSiteOrigin] = useState('');
   const [homeUrlCopyFeedback, setHomeUrlCopyFeedback] = useState('');
+  const [memberPage, setMemberPage] = useState(1);
 
   const loadMembers = useCallback(async () => {
     if (!storecode) {
@@ -142,13 +141,6 @@ export default function P2PStoreMemberManagementPage() {
           const member = isRecord(user) ? user : {};
           const buyer = isRecord(member.buyer) ? member.buyer : {};
           const buyerBankInfo = isRecord(buyer.bankInfo) ? buyer.bankInfo : {};
-          const privateSaleConsent = isRecord(buyer.privateSaleConsent)
-            ? buyer.privateSaleConsent
-            : null;
-          const privateSaleConsentStatus = String(privateSaleConsent?.status || '').trim().toLowerCase();
-          const privateSaleConsentAccepted =
-            privateSaleConsent?.accepted === true || privateSaleConsentStatus === 'accepted';
-          const privateSaleConsentAcceptedAt = String(privateSaleConsent?.acceptedAt || '').trim();
 
           return {
             id: String(member._id || member.id || ''),
@@ -160,8 +152,6 @@ export default function P2PStoreMemberManagementPage() {
             password: String(member.password ?? '').trim(),
             verified: member.verified === true,
             createdAt: String(member.createdAt || ''),
-            privateSaleConsentAccepted,
-            privateSaleConsentAcceptedAt,
           };
         }),
       );
@@ -286,6 +276,36 @@ export default function P2PStoreMemberManagementPage() {
       );
     });
   }, [members, keyword]);
+
+  const memberTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredMembers.length / MEMBER_PAGE_SIZE)),
+    [filteredMembers.length],
+  );
+
+  const paginatedMembers = useMemo(() => {
+    const start = (memberPage - 1) * MEMBER_PAGE_SIZE;
+    return filteredMembers.slice(start, start + MEMBER_PAGE_SIZE);
+  }, [filteredMembers, memberPage]);
+
+  const visibleMemberPageNumbers = useMemo(() => {
+    let start = Math.max(1, memberPage - Math.floor(MEMBER_PAGINATION_BUTTON_COUNT / 2));
+    let end = start + MEMBER_PAGINATION_BUTTON_COUNT - 1;
+    if (end > memberTotalPages) {
+      end = memberTotalPages;
+      start = Math.max(1, end - MEMBER_PAGINATION_BUTTON_COUNT + 1);
+    }
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }, [memberPage, memberTotalPages]);
+
+  useEffect(() => {
+    setMemberPage(1);
+  }, [keyword, storecode]);
+
+  useEffect(() => {
+    if (memberPage > memberTotalPages) {
+      setMemberPage(memberTotalPages);
+    }
+  }, [memberPage, memberTotalPages]);
 
   const verifiedCount = useMemo(
     () => members.filter((member) => member.verified).length,
@@ -490,52 +510,6 @@ export default function P2PStoreMemberManagementPage() {
     }
   }, [connectedWalletAddress, deleteModalMember, deletingMember, storecode]);
 
-  const resetMemberConsent = useCallback(async (member: StoreMember) => {
-    const walletAddress = String(member.walletAddress || '').trim();
-    if (!walletAddress) {
-      setResetConsentError('지갑주소가 없어 이용동의를 초기화할 수 없습니다.');
-      return;
-    }
-    if (resettingConsentMemberId) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `[${member.nickname}] 회원의 이용동의 상태를 초기화할까요?\n초기화하면 다음 거래에서 다시 동의가 필요합니다.`,
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    setResetConsentError(null);
-    setResetConsentSuccess(null);
-    setResettingConsentMemberId(member.id);
-    try {
-      const response = await fetch('/api/user/resetPrivateSaleConsent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storecode,
-          walletAddress,
-          memberId: member.id,
-        }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.result) {
-        throw new Error(String(payload?.error || payload?.message || '이용동의 초기화에 실패했습니다.'));
-      }
-
-      setResetConsentSuccess('이용동의가 초기화되었습니다.');
-      await loadMembers();
-    } catch (resetError) {
-      setResetConsentError(
-        resetError instanceof Error ? resetError.message : '이용동의 초기화에 실패했습니다.',
-      );
-    } finally {
-      setResettingConsentMemberId(null);
-    }
-  }, [loadMembers, resettingConsentMemberId, storecode]);
-
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
@@ -600,18 +574,6 @@ export default function P2PStoreMemberManagementPage() {
             </div>
           )}
 
-          {resetConsentSuccess && (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-              {resetConsentSuccess}
-            </div>
-          )}
-
-          {resetConsentError && (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
-              {resetConsentError}
-            </div>
-          )}
-
           {store && (
             <section className="rounded-2xl border border-cyan-200 bg-cyan-50/60 px-4 py-4">
               <div className="flex items-center gap-3">
@@ -653,7 +615,7 @@ export default function P2PStoreMemberManagementPage() {
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 value={keyword}
                 onChange={(event) => setKeyword(event.target.value)}
@@ -686,107 +648,118 @@ export default function P2PStoreMemberManagementPage() {
             ) : filteredMembers.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">조건에 맞는 회원이 없습니다.</p>
             ) : (
-              <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
-                <div className="store-member-table-scroll max-h-[560px] overflow-auto">
-                  <table className="store-member-table min-w-[980px] w-full table-auto">
-                    <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
-                      <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
-                        <th className="px-3 py-2">회원 아이디</th>
-                        <th className="px-3 py-2">입금자명</th>
-                        <th className="px-3 py-2">지갑주소</th>
-                        <th className="px-3 py-2">이용동의</th>
-                        <th className="px-3 py-2">등록일</th>
-                        <th className="px-3 py-2 text-right">관리</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
-                      {filteredMembers.map((member) => {
-                        const hasWalletAddress = Boolean(String(member.walletAddress || '').trim());
-
-                        return (
-                        <tr key={`${member.id}-${member.walletAddress}`} className="transition hover:bg-slate-50/70">
-                          <td className="px-3 py-2.5 font-semibold text-slate-900">{member.nickname}</td>
-                          <td className="px-3 py-2.5 text-xs text-slate-700">{member.depositName || '-'}</td>
-                          <td className="px-3 py-2.5 text-xs text-slate-500">
-                            <div className="inline-flex items-center gap-1.5">
-                              <span>{shortAddress(member.walletAddress)}</span>
-                              {hasWalletAddress && (
-                                <span className="inline-flex h-5 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 text-[10px] font-semibold text-emerald-700">
-                                  연동완료
-                                </span>
-                              )}
-                              {hasWalletAddress && (
-                                <button
-                                  type="button"
-                                  onClick={() => openUnlinkModal(member)}
-                                  className="inline-flex h-5 items-center rounded-full border border-rose-200 bg-rose-50 px-2 text-[10px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
-                                >
-                                  연동해제하기
-                                </button>
-                              )}
-                              {!hasWalletAddress && (
-                                <span className="inline-flex h-5 items-center rounded-full border border-amber-200 bg-amber-50 px-2 text-[10px] font-semibold text-amber-700">
-                                  지갑 연동안됩
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2.5 text-xs text-slate-500">
-                            <div className="inline-flex items-center gap-1.5">
-                              <span
-                                className={`inline-flex h-5 items-center rounded-full border px-1.5 text-[10px] font-semibold ${
-                                  member.privateSaleConsentAccepted
-                                    ? 'border-cyan-200 bg-cyan-50 text-cyan-700'
-                                    : 'border-slate-200 bg-slate-50 text-slate-600'
-                                }`}
-                              >
-                                {member.privateSaleConsentAccepted ? '동의완료' : '미동의'}
-                              </span>
-                              <span className="text-[10px] text-slate-400">
-                                {member.privateSaleConsentAcceptedAt
-                                  ? toDateTime(member.privateSaleConsentAcceptedAt)
-                                  : '-'}
-                              </span>
-                              {member.privateSaleConsentAccepted && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    void resetMemberConsent(member);
-                                  }}
-                                  disabled={Boolean(resettingConsentMemberId)}
-                                  className="inline-flex h-5 items-center rounded-md border border-rose-300 bg-rose-50 px-1.5 text-[10px] font-semibold text-rose-700 transition hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                  {resettingConsentMemberId === member.id ? '리셋 중...' : '리셋'}
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2.5 text-xs text-slate-500">{toDateTime(member.createdAt)}</td>
-                          <td className="px-3 py-2.5 text-right">
-                            <div className="inline-flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => openPasswordModal(member)}
-                                className="inline-flex h-7 items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 text-[11px] font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100"
-                              >
-                                비밀번호
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openDeleteModal(member)}
-                                className="inline-flex h-7 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
-                              >
-                                삭제
-                              </button>
-                            </div>
-                          </td>
+              <>
+                <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+                  <div className="store-member-table-scroll max-h-[560px] overflow-y-auto">
+                    <table className="store-member-table w-full table-fixed">
+                      <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
+                        <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
+                          <th className="w-[16%] px-3 py-2">회원 아이디</th>
+                          <th className="w-[16%] px-3 py-2">입금자명</th>
+                          <th className="w-[34%] px-3 py-2">지갑주소</th>
+                          <th className="w-[14%] px-3 py-2">등록일</th>
+                          <th className="w-[20%] px-3 py-2 text-right">관리</th>
                         </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
+                        {paginatedMembers.map((member) => {
+                          const hasWalletAddress = Boolean(String(member.walletAddress || '').trim());
+
+                          return (
+                            <tr key={`${member.id}-${member.walletAddress}`} className="transition hover:bg-slate-50/70">
+                              <td className="px-3 py-2.5 font-semibold text-slate-900">{member.nickname}</td>
+                              <td className="px-3 py-2.5 text-xs text-slate-700">{member.depositName || '-'}</td>
+                              <td className="px-3 py-2.5 text-xs text-slate-500">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="break-all">{shortAddress(member.walletAddress)}</span>
+                                  {hasWalletAddress && (
+                                    <span className="inline-flex h-5 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 text-[10px] font-semibold text-emerald-700">
+                                      연동완료
+                                    </span>
+                                  )}
+                                  {hasWalletAddress && (
+                                    <button
+                                      type="button"
+                                      onClick={() => openUnlinkModal(member)}
+                                      className="inline-flex h-5 items-center rounded-full border border-rose-200 bg-rose-50 px-2 text-[10px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                                    >
+                                      연동해제하기
+                                    </button>
+                                  )}
+                                  {!hasWalletAddress && (
+                                    <span className="inline-flex h-5 items-center rounded-full border border-amber-200 bg-amber-50 px-2 text-[10px] font-semibold text-amber-700">
+                                      지갑 연동안됨
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2.5 text-xs text-slate-500">{toDateTime(member.createdAt)}</td>
+                              <td className="px-3 py-2.5 text-right">
+                                <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => openPasswordModal(member)}
+                                    className="inline-flex h-7 items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 text-[11px] font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100"
+                                  >
+                                    비밀번호
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => openDeleteModal(member)}
+                                    className="inline-flex h-7 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                                  >
+                                    삭제
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+
+                {memberTotalPages > 1 && (
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-slate-500">
+                      총 {filteredMembers.length.toLocaleString()}명 · {memberPage}/{memberTotalPages} 페이지
+                    </p>
+                    <div className="inline-flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setMemberPage((prev) => Math.max(1, prev - 1))}
+                        disabled={memberPage <= 1}
+                        className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        이전
+                      </button>
+                      {visibleMemberPageNumbers.map((pageNumber) => (
+                        <button
+                          key={pageNumber}
+                          type="button"
+                          onClick={() => setMemberPage(pageNumber)}
+                          className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-xs font-semibold transition ${
+                            pageNumber === memberPage
+                              ? 'border-cyan-500 bg-cyan-50 text-cyan-700'
+                              : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'
+                          }`}
+                        >
+                          {pageNumber}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setMemberPage((prev) => Math.min(memberTotalPages, prev + 1))}
+                        disabled={memberPage >= memberTotalPages}
+                        className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        다음
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </section>
         </>
@@ -1107,7 +1080,7 @@ export default function P2PStoreMemberManagementPage() {
         </div>
       )}
       <style jsx global>{`
-        @media (max-width: 1024px) {
+        @media (max-width: 767px) {
           .p2p-mobile-shell .store-member-table-scroll {
             overflow-x: auto !important;
             -webkit-overflow-scrolling: touch;
