@@ -11028,7 +11028,13 @@ const fetchBuyOrders = async () => {
                                               )}
                                             </div>
                                             <div className="flex flex-col items-end text-right">
-                                              <span className="font-semibold text-amber-700" style={{ fontFamily: 'monospace' }}>
+                                              <span className="font-semibold text-amber-700 sm:hidden" style={{ fontFamily: 'monospace' }}>
+                                                {formatKrwValue(order.krwAmount)}원
+                                              </span>
+                                              <span className="font-semibold text-amber-700 sm:hidden" style={{ fontFamily: 'monospace' }}>
+                                                {(Number(order.usdtAmount || 0)).toFixed(3)} USDT
+                                              </span>
+                                              <span className="hidden font-semibold text-amber-700 sm:inline" style={{ fontFamily: 'monospace' }}>
                                                 {formatKrwValue(order.krwAmount)}원 / {(Number(order.usdtAmount || 0)).toFixed(3)} USDT
                                               </span>
                                               <span className="text-xs text-amber-800/90" style={{ fontFamily: 'monospace' }}>
