@@ -3654,6 +3654,65 @@ export default function BuyUsdtPage({
                     ) : (
                       <p className="mt-2 text-slate-500">현재 이 판매자와 진행중인 거래가 없습니다.</p>
                     )}
+
+                    <div className="mt-4 border-t border-slate-200 pt-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">판매자 채팅</p>
+                          <p className="mt-1 text-sm font-semibold text-slate-900">실시간 채팅</p>
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            거래 조건과 입금 안내를 판매자와 실시간으로 확인하세요.
+                          </p>
+                        </div>
+                        {!shouldShowSelfSellerChatAlert && (
+                          <button
+                            type="button"
+                            onClick={() => setChatRefreshToken((prev) => prev + 1)}
+                            disabled={chatLoading}
+                            className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {chatLoading ? '연결 중...' : '재연결'}
+                          </button>
+                        )}
+                      </div>
+
+                      {!activeAccount?.address && (
+                        <p className="mt-3 text-xs text-slate-500">지갑 연결 후 판매자 채팅을 사용할 수 있습니다.</p>
+                      )}
+                      {shouldShowSelfSellerChatAlert && (
+                        <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm">
+                          <p className="font-semibold text-rose-700">현재 선택한 판매자는 구매자와 동일한 계정입니다.</p>
+                          <p className="mt-1 text-xs text-rose-600">자기 자신과는 거래할 수 없습니다. 판매자를 다시 선택해 주세요.</p>
+                        </div>
+                      )}
+                      {activeAccount?.address && !isSelectedSellerBuyer && !SENDBIRD_APP_ID && (
+                        <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">
+                          채팅 설정이 비어 있어 연결할 수 없습니다. NEXT_PUBLIC_SENDBIRD_APP_ID 설정을 확인해 주세요.
+                        </p>
+                      )}
+                      {activeAccount?.address && !isSelectedSellerBuyer && SENDBIRD_APP_ID && (
+                        <div className="mt-3 h-[380px] overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                          {chatError ? (
+                            <div className="px-4 py-4 text-xs font-semibold text-rose-600">{chatError}</div>
+                          ) : !buyerDisplayName || loadingBuyerProfile ? (
+                            <div className="px-4 py-4 text-xs text-slate-500">내 회원 정보를 불러오는 중입니다...</div>
+                          ) : !chatSessionToken || !chatChannelUrl ? (
+                            <div className="px-4 py-4 text-xs text-slate-500">
+                              {chatLoading ? '채팅을 준비 중입니다...' : '채팅 채널을 연결하는 중입니다...'}
+                            </div>
+                          ) : (
+                            <SendbirdProvider
+                              appId={SENDBIRD_APP_ID}
+                              userId={activeAccount.address}
+                              accessToken={chatSessionToken}
+                              theme="light"
+                            >
+                              <GroupChannel channelUrl={chatChannelUrl} />
+                            </SendbirdProvider>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <button
@@ -3914,69 +3973,6 @@ export default function BuyUsdtPage({
             )}
           </section>
 
-          {buyTab === 'buy' && (
-          <section className="rounded-3xl border border-white/70 bg-white/75 p-5 shadow-[0_26px_60px_-35px_rgba(15,23,42,0.45)] backdrop-blur">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">STEP 2</p>
-                <h2 className="mt-1 text-lg font-semibold text-slate-900">판매자 채팅</h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  거래 조건과 입금 안내를 판매자와 실시간으로 확인하세요.
-                </p>
-              </div>
-              {!shouldShowSelfSellerChatAlert && (
-                <button
-                  type="button"
-                  onClick={() => setChatRefreshToken((prev) => prev + 1)}
-                  disabled={chatLoading}
-                  className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {chatLoading ? '연결 중...' : '재연결'}
-                </button>
-              )}
-            </div>
-
-            {!activeAccount?.address && (
-              <p className="mt-3 text-sm text-slate-500">지갑 연결 후 판매자 채팅을 사용할 수 있습니다.</p>
-            )}
-            {activeAccount?.address && !selectedSeller && (
-              <p className="mt-3 text-sm text-slate-500">판매자를 선택하면 채팅이 자동으로 연결됩니다.</p>
-            )}
-            {shouldShowSelfSellerChatAlert && (
-              <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm">
-                <p className="font-semibold text-rose-700">현재 선택한 판매자는 구매자와 동일한 계정입니다.</p>
-                <p className="mt-1 text-xs text-rose-600">자기 자신과는 거래할 수 없습니다. 판매자를 다시 선택해 주세요.</p>
-              </div>
-            )}
-            {activeAccount?.address && selectedSeller && !isSelectedSellerBuyer && !SENDBIRD_APP_ID && (
-              <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">
-                채팅 설정이 비어 있어 연결할 수 없습니다. NEXT_PUBLIC_SENDBIRD_APP_ID 설정을 확인해 주세요.
-              </p>
-            )}
-            {activeAccount?.address && selectedSeller && !isSelectedSellerBuyer && SENDBIRD_APP_ID && (
-              <div className="mt-3 h-[420px] overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                {chatError ? (
-                  <div className="px-4 py-4 text-xs font-semibold text-rose-600">{chatError}</div>
-                ) : !buyerDisplayName || loadingBuyerProfile ? (
-                  <div className="px-4 py-4 text-xs text-slate-500">내 회원 정보를 불러오는 중입니다...</div>
-                ) : !chatSessionToken || !chatChannelUrl ? (
-                  <div className="px-4 py-4 text-xs text-slate-500">
-                    {chatLoading ? '채팅을 준비 중입니다...' : '채팅 채널을 연결하는 중입니다...'}
-                  </div>
-                ) : (
-                  <SendbirdProvider
-                    appId={SENDBIRD_APP_ID}
-                    userId={activeAccount.address}
-                    accessToken={chatSessionToken}
-                    theme="light"
-                  >
-                    <GroupChannel channelUrl={chatChannelUrl} />
-                  </SendbirdProvider>
-                )}
-              </div>
-            )}
-          </section>
-          )}
         </div>
       </div>
 
