@@ -1083,6 +1083,20 @@ export default function BuyUsdtPage({
         : '',
     [buyerPrivateSaleConsent.sourceSellerWalletAddress],
   );
+  const buyerPrivateSaleConsentSourceSellerNickname = useMemo(() => {
+    const sourceWallet = buyerPrivateSaleConsent.sourceSellerWalletAddress;
+    if (!sourceWallet) return '';
+    const loweredSourceWallet = sourceWallet.toLowerCase();
+    const matchedSeller =
+      sellers.find((seller) => seller.walletAddress.toLowerCase() === loweredSourceWallet)
+      || sellerPickerSellers.find((seller) => seller.walletAddress.toLowerCase() === loweredSourceWallet)
+      || null;
+    return matchedSeller ? toTrimmedString(matchedSeller.nickname) : '';
+  }, [
+    buyerPrivateSaleConsent.sourceSellerWalletAddress,
+    sellerPickerSellers,
+    sellers,
+  ]);
   const storeMemberAccountHolder = toTrimmedString(storeMemberBankSnapshot.accountHolder);
   const needsStoreMemberLinkForPurchase = isStoreScopedPurchase && !hasStoreMemberProfile;
   const shouldShowBuyerProfileNextStep = !loadingBuyerProfile && (
@@ -3748,18 +3762,10 @@ export default function BuyUsdtPage({
                           </p>
                           {buyerPrivateSaleConsentSourceSellerLabel && (
                             <p className="mt-1 text-[10px] text-cyan-700">
-                              동의 판매자: {buyerPrivateSaleConsentSourceSellerLabel}
+                              동의 판매자: {buyerPrivateSaleConsentSourceSellerNickname
+                                ? `${buyerPrivateSaleConsentSourceSellerNickname} (${buyerPrivateSaleConsentSourceSellerLabel})`
+                                : buyerPrivateSaleConsentSourceSellerLabel}
                             </p>
-                          )}
-                          {buyerPrivateSaleConsent.consentMessage && (
-                            <div className="mt-2 rounded-lg border border-cyan-200 bg-white/90 px-2.5 py-2">
-                              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-cyan-700">
-                                이용동의 문구
-                              </p>
-                              <p className="mt-1 whitespace-pre-wrap break-words text-[11px] leading-relaxed text-slate-700">
-                                {buyerPrivateSaleConsent.consentMessage}
-                              </p>
-                            </div>
                           )}
                         </div>
                       )}
