@@ -6336,6 +6336,7 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
     paymentAccountHolder: string;
     paymentContactMemo: string;
     isContactTransfer: boolean;
+    consentChannelUrl: string;
     buyerWalletAddress: string;
     sellerWalletAddress: string;
   } | null;
@@ -6403,6 +6404,7 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
       walletAddress: 1,
       buyer: 1,
       seller: 1,
+      buyerConsent: 1,
     };
 
     const baseMatch = {
@@ -6502,6 +6504,9 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
       paymentAccountHolder,
       paymentContactMemo,
       isContactTransfer,
+      consentChannelUrl:
+        (typeof order?.buyerConsent?.channelUrl === 'string' && order.buyerConsent.channelUrl)
+        || '',
       buyerWalletAddress:
         (typeof order?.buyer?.walletAddress === 'string' && order.buyer.walletAddress)
         || (typeof order?.walletAddress === 'string' ? order.walletAddress : ''),

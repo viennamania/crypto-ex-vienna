@@ -203,6 +203,13 @@ interface BuyOrder {
     transferMode?: string;
   };
 
+  buyerConsent?: {
+    status?: string;
+    accepted?: boolean;
+    acceptedAt?: string;
+    channelUrl?: string;
+  };
+
 }
 
 type SellerChatItem = {
@@ -381,6 +388,7 @@ const ACTIVE_TRADING_ORDER_STATUSES = new Set(['ordered', 'accepted', 'paymentRe
 const BUYER_CANCEL_REPUTATION_PENALTY_POINTS = 1;
 const SELLER_ESCROW_BALANCE_POLLING_MS = 5000;
 const SELLER_ESCROW_ORDER_POLLING_MS = 5000;
+const BUYER_CONSENT_KEYWORD = '동의함';
 const BUY_ORDER_PROGRESS_STEP_DEFINITIONS: Array<{
   key: string;
   title: string;
@@ -1350,25 +1358,17 @@ const getBuyerConsentSnapshotForTradeList = (orderLike: any) => {
     orderLike?.buyerConsent && typeof orderLike.buyerConsent === 'object'
       ? orderLike.buyerConsent
       : null;
-  const buyerConsent =
-    orderLike?.buyer?.privateSaleConsent && typeof orderLike.buyer.privateSaleConsent === 'object'
-      ? orderLike.buyer.privateSaleConsent
-      : null;
-
   const orderConsentStatus = String(orderConsent?.status || '').trim().toLowerCase();
-  const buyerConsentStatus = String(buyerConsent?.status || '').trim().toLowerCase();
   const accepted =
     orderConsent?.accepted === true
-    || orderConsentStatus === 'accepted'
-    || buyerConsent?.accepted === true
-    || buyerConsentStatus === 'accepted';
+    || orderConsentStatus === 'accepted';
 
   const acceptedAt = pickFirstNonEmptyText(
     orderConsent?.acceptedAt,
-    buyerConsent?.acceptedAt,
   );
   const requestedAt = pickFirstNonEmptyText(
     orderConsent?.requestedAt,
+    orderConsent?.requestMessageSentAt,
     orderLike?.createdAt,
   );
 
@@ -1924,6 +1924,11 @@ export default function Index({ params }: any) {
 
   const [selectedChatChannelUrl, setSelectedChatChannelUrl] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const ownerChatDrawerChannelUrl = useMemo(
+    () => (isOwnerSeller ? String(selectedChatChannelUrl || '').trim() : ''),
+    [isOwnerSeller, selectedChatChannelUrl],
+  );
+  const isOwnerChatDrawerOpen = Boolean(isOwnerSeller && isChatOpen && ownerChatDrawerChannelUrl);
 
   const [sellerChatItems, setSellerChatItems] = useState<SellerChatItem[]>([]);
   const [sellerChatLoading, setSellerChatLoading] = useState(false);
@@ -1935,6 +1940,7 @@ export default function Index({ params }: any) {
   const chatInitializedRef = useRef(false);
   const chatUnreadByChannelRef = useRef<Record<string, number>>({});
   const sellerRealtimeRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activePaymentRequestedOrdersRealtimeRefreshTimerRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [sellerRealtimeSessionToken, setSellerRealtimeSessionToken] = useState<string | null>(null);
 
   useEffect(() => {
@@ -2138,6 +2144,29 @@ export default function Index({ params }: any) {
     }, 450);
   }, [refreshSellerChats]);
 
+  const clearActivePaymentRequestedOrdersRealtimeRefreshTimers = useCallback(() => {
+    if (activePaymentRequestedOrdersRealtimeRefreshTimerRefs.current.length <= 0) {
+      return;
+    }
+    for (const timerId of activePaymentRequestedOrdersRealtimeRefreshTimerRefs.current) {
+      clearTimeout(timerId);
+    }
+    activePaymentRequestedOrdersRealtimeRefreshTimerRefs.current = [];
+  }, []);
+
+  const queueActivePaymentRequestedOrdersRealtimeRefresh = useCallback((mode: 'single' | 'burst' = 'single') => {
+    clearActivePaymentRequestedOrdersRealtimeRefreshTimers();
+    const delays = mode === 'burst'
+      ? [350, 900, 1800, 3200, 5000]
+      : [1200];
+
+    activePaymentRequestedOrdersRealtimeRefreshTimerRefs.current = delays.map((delayMs) => (
+      setTimeout(() => {
+        setActivePaymentRequestedOrdersRefreshNonce((previous) => previous + 1);
+      }, delayMs)
+    ));
+  }, [clearActivePaymentRequestedOrdersRealtimeRefreshTimers]);
+
   const handleSellerRealtimeBuyerMessage = useCallback((payload: SellerRealtimeMessagePayload) => {
     if (!isOwnerSeller) {
       return;
@@ -2150,7 +2179,8 @@ export default function Index({ params }: any) {
 
     const fallbackUpdatedAt = Date.now();
     const nextUpdatedAt = Number(payload.updatedAt || fallbackUpdatedAt) || fallbackUpdatedAt;
-    const nextPreview = String(payload.preview || '').trim() || '새 메시지가 도착했습니다.';
+    const nextPreviewRaw = String(payload.preview || '').trim();
+    const nextPreview = nextPreviewRaw || '새 메시지가 도착했습니다.';
     const nextSenderId = String(payload.senderId || '').trim();
     const nextSenderNickname = String(payload.senderNickname || '').trim();
     const nextSenderProfileUrl = String(payload.senderProfileUrl || '').trim();
@@ -2209,7 +2239,10 @@ export default function Index({ params }: any) {
     });
 
     queueSellerRealtimeRefresh();
-  }, [isOwnerSeller, queueSellerRealtimeRefresh]);
+    if (nextPreviewRaw === BUYER_CONSENT_KEYWORD) {
+      queueActivePaymentRequestedOrdersRealtimeRefresh('burst');
+    }
+  }, [isOwnerSeller, queueSellerRealtimeRefresh, queueActivePaymentRequestedOrdersRealtimeRefresh]);
 
   const handleSellerRealtimeChannelEvent = useCallback(() => {
     if (!isOwnerSeller) {
@@ -2223,7 +2256,8 @@ export default function Index({ params }: any) {
       clearTimeout(sellerRealtimeRefreshTimerRef.current);
       sellerRealtimeRefreshTimerRef.current = null;
     }
-  }, []);
+    clearActivePaymentRequestedOrdersRealtimeRefreshTimers();
+  }, [clearActivePaymentRequestedOrdersRealtimeRefreshTimers]);
 
   useEffect(() => {
     if (!isOwnerSeller || !ownerWalletAddress || !NEXT_PUBLIC_SENDBIRD_APP_ID) {
@@ -2739,6 +2773,7 @@ export default function Index({ params }: any) {
   const [activePaymentRequestedOrders, setActivePaymentRequestedOrders] = useState<BuyOrder[]>([]);
   const [loadingActivePaymentRequestedOrders, setLoadingActivePaymentRequestedOrders] = useState(false);
   const [loadedActivePaymentRequestedOrders, setLoadedActivePaymentRequestedOrders] = useState(false);
+  const [activePaymentRequestedOrdersRefreshNonce, setActivePaymentRequestedOrdersRefreshNonce] = useState(0);
   const [isSellerWalletPanelOpen, setIsSellerWalletPanelOpen] = useState(false);
   const [sellerWalletPanelTab, setSellerWalletPanelTab] = useState<'deposit' | 'withdraw' | 'history'>('deposit');
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
@@ -6342,7 +6377,12 @@ const fetchBuyOrders = async () => {
       mounted = false;
       clearInterval(interval);
     };
-  }, [address, sellerWalletAddressParam, targetSellerEscrowWalletAddress]);
+  }, [
+    address,
+    sellerWalletAddressParam,
+    targetSellerEscrowWalletAddress,
+    activePaymentRequestedOrdersRefreshNonce,
+  ]);
 
   useEffect(() => {
     if (!address || privateTradeTargetSellerWallets.length === 0) {
@@ -8747,6 +8787,71 @@ const fetchBuyOrders = async () => {
           </aside>
         )}
 
+        {isOwnerSeller && (
+          <>
+            <button
+              type="button"
+              aria-label="채팅 패널 닫기"
+              onClick={() => setIsChatOpen(false)}
+              className={`fixed inset-0 z-[93] bg-slate-900/45 transition-opacity duration-200 ${
+                isOwnerChatDrawerOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+              }`}
+            />
+
+            <aside
+              className={`fixed left-0 top-0 z-[94] h-dvh w-[min(94vw,460px)] border-r border-slate-200 bg-white shadow-[0_35px_80px_-45px_rgba(15,23,42,0.75)] transition-transform duration-200 ${
+                isOwnerChatDrawerOpen ? 'translate-x-0' : '-translate-x-full'
+              }`}
+            >
+              <div className="flex h-full flex-col">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">판매자 채팅</p>
+                    <p className="text-sm font-bold text-slate-900">구매자 대화 내용</p>
+                    <p className="text-[11px] text-slate-500" title={ownerChatDrawerChannelUrl || undefined}>
+                      채널: {ownerChatDrawerChannelUrl || '-'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsChatOpen(false)}
+                    className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                  >
+                    닫기
+                  </button>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-hidden p-3">
+                  {!NEXT_PUBLIC_SENDBIRD_APP_ID ? (
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+                      채팅 설정이 비어 있습니다. `NEXT_PUBLIC_SENDBIRD_APP_ID` 값을 확인해 주세요.
+                    </div>
+                  ) : !ownerWalletAddress || !sellerRealtimeSessionToken ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                      판매자 채팅 세션을 준비 중입니다...
+                    </div>
+                  ) : !ownerChatDrawerChannelUrl ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                      거래내역의 채팅 버튼을 눌러 대화 내용을 확인하세요.
+                    </div>
+                  ) : (
+                    <div className="h-full overflow-hidden rounded-xl border border-slate-200 bg-white">
+                      <SendbirdProvider
+                        appId={NEXT_PUBLIC_SENDBIRD_APP_ID}
+                        userId={ownerWalletAddress}
+                        accessToken={sellerRealtimeSessionToken}
+                        theme="light"
+                      >
+                        <GroupChannel channelUrl={ownerChatDrawerChannelUrl} />
+                      </SendbirdProvider>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </aside>
+          </>
+        )}
+
 
       <div className="w-full space-y-5">
         <div className="mb-2 flex w-full items-center justify-between gap-2">
@@ -10126,10 +10231,10 @@ const fetchBuyOrders = async () => {
             </div>
           )}
 
-          {/* 판매자 대화목록 섹션 */}
-          {isOwnerSeller ? (
-            <div className="w-full rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 px-4 py-4 shadow-[0_20px_50px_-40px_rgba(217,119,6,0.85)]">
-              <div className="flex items-start gap-3">
+	          {/* 판매자 대화목록 섹션 */}
+	          {isOwnerSeller ? (
+	            <div className="w-full rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 px-4 py-4 shadow-[0_20px_50px_-40px_rgba(217,119,6,0.85)]">
+	              <div className="flex items-start gap-3">
                 <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-200 bg-white text-amber-600 shadow-sm">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path
@@ -10140,15 +10245,15 @@ const fetchBuyOrders = async () => {
                       strokeLinejoin="round"
                     />
                   </svg>
-                </span>
-                <div className="space-y-1">
-                  <p className="text-sm font-extrabold text-amber-800">구매자 - 판매자 대화창 비노출</p>
-                  <p className="text-xs font-semibold text-amber-700/90">
-                    내 판매자 페이지에서는 구매자 - 판매자 대화창을 보여주지 않습니다.
-                  </p>
-                </div>
-              </div>
-            </div>
+	                </span>
+	                <div className="space-y-1">
+	                  <p className="text-sm font-extrabold text-amber-800">구매자 - 판매자 채팅 조회</p>
+	                  <p className="text-xs font-semibold text-amber-700/90">
+	                    거래내역의 채팅 컬럼에서 `채팅내용 보기` 버튼을 누르면 좌측 패널에서 대화를 확인할 수 있습니다.
+	                  </p>
+	                </div>
+	              </div>
+	            </div>
           ) : (
             <SendbirdChatEmbed
                 buyerWalletAddress={address}
@@ -10958,6 +11063,7 @@ const fetchBuyOrders = async () => {
                                       const isCountdownDanger =
                                         !paymentCountdown.expired && paymentCountdown.remainingMs <= (2 * 60 * 1000);
                                       const buyerConsentSnapshot = getBuyerConsentSnapshotForTradeList(order);
+                                      const orderChatChannelUrl = String((order as any)?.buyerConsent?.channelUrl || '').trim();
                                       const countdownProgressWidth = Math.round(paymentCountdown.remainingRatio * 100);
                                       const countdownHue = Math.max(0, Math.min(120, Math.round(paymentCountdown.remainingRatio * 120)));
                                       const countdownBadgeClass = paymentCountdown.expired
@@ -11006,6 +11112,15 @@ const fetchBuyOrders = async () => {
                                                   style={countdownProgressStyle}
                                                 />
                                               </div>
+                                              {orderChatChannelUrl && (
+                                                <button
+                                                  type="button"
+                                                  className="rounded-md border border-sky-300 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                                                  onClick={() => openSellerChatWidgetChannel(orderChatChannelUrl)}
+                                                >
+                                                  채팅 열기
+                                                </button>
+                                              )}
                                               {isOwnerSeller && (
                                                 <button
                                                   type="button"
@@ -11028,7 +11143,7 @@ const fetchBuyOrders = async () => {
                                               <span className="text-xs text-slate-500">
                                                 결제방법 {getPaymentMethodLabel(order?.paymentMethod, order?.seller?.bankInfo?.bankName)}
                                               </span>
-                                              {buyerConsentSnapshot.accepted && (
+                                              {buyerConsentSnapshot.accepted ? (
                                                 <>
                                                   <div className="mt-1 inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-700">
                                                     <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -11036,6 +11151,16 @@ const fetchBuyOrders = async () => {
                                                   </div>
                                                   <span className="text-[11px] text-slate-500">
                                                     동의시각 {formatTradeHistoryTime(buyerConsentSnapshot.acceptedAt)}
+                                                  </span>
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <div className="mt-1 inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-800">
+                                                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                                    이용동의 미완료
+                                                  </div>
+                                                  <span className="text-[11px] text-slate-500">
+                                                    구매자 채팅창에 정확히 &quot;동의함&quot; 입력 필요
                                                   </span>
                                                 </>
                                               )}
@@ -12217,6 +12342,7 @@ const fetchBuyOrders = async () => {
                     {isOwnerSeller && (
                       <th className="px-4 py-3 text-left font-semibold">플랫폼 수수료</th>
                     )}
+                    <th className="px-4 py-3 text-left font-semibold">채팅</th>
                     <th className="px-4 py-3 text-left font-semibold">상태</th>
                   </tr>
                 </thead>
@@ -12224,7 +12350,7 @@ const fetchBuyOrders = async () => {
                   {buyOrders.length === 0 && (
                     <tr>
                       <td
-                        colSpan={isOwnerSeller ? 7 : 6}
+                        colSpan={isOwnerSeller ? 8 : 7}
                         className="px-4 py-10 text-center text-sm font-medium text-slate-500"
                       >
                         거래내역이 없습니다.
@@ -12269,6 +12395,7 @@ const fetchBuyOrders = async () => {
                     const platformFeeRate = getOrderPlatformFeeRate(item);
                     const platformFeeAmount = getOrderPlatformFeeAmount(item);
                     const platformFeeWalletAddress = getOrderPlatformFeeWalletAddress(item);
+                    const orderChatChannelUrl = String(item?.buyerConsent?.channelUrl || '').trim();
 
                     return (
                       <tr
@@ -12340,6 +12467,23 @@ const fetchBuyOrders = async () => {
                             </div>
                           </td>
                         )}
+                        <td className="px-4 py-3">
+                          {isOwnerSeller ? (
+                            orderChatChannelUrl ? (
+                              <button
+                                type="button"
+                                onClick={() => openSellerChatWidgetChannel(orderChatChannelUrl)}
+                                className="inline-flex items-center rounded-lg border border-sky-300 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700 transition hover:border-sky-400 hover:bg-sky-100"
+                              >
+                                채팅내용 보기
+                              </button>
+                            ) : (
+                              <span className="text-xs font-medium text-slate-400">채널 없음</span>
+                            )
+                          ) : (
+                            <span className="text-xs font-medium text-slate-400">비공개</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <span
                             className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getTradeStatusBadgeClass(

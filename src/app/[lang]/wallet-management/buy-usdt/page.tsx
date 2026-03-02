@@ -86,6 +86,7 @@ type PrivateTradeOrder = {
   paymentAccountHolder: string;
   paymentContactMemo: string;
   isContactTransfer: boolean;
+  consentChannelUrl: string;
   buyerWalletAddress: string;
   sellerWalletAddress: string;
 };
@@ -979,6 +980,14 @@ export default function BuyUsdtPage({
   const activePrivateTradeOrder = useMemo(
     () => (privateTradeStatus?.isTrading && privateTradeStatus.order ? privateTradeStatus.order : null),
     [privateTradeStatus],
+  );
+  const activePrivateTradeChannelUrl = useMemo(
+    () => toTrimmedString(activePrivateTradeOrder?.consentChannelUrl),
+    [activePrivateTradeOrder?.consentChannelUrl],
+  );
+  const hasActivePrivateTradeOrder = Boolean(activePrivateTradeOrder?.orderId);
+  const hasActivePrivateTradeChatChannel = Boolean(
+    activePrivateTradeOrder?.orderId && activePrivateTradeChannelUrl,
   );
   const activeTradeDepositInfo = useMemo(() => {
     if (!activePrivateTradeOrder) return null;
@@ -1938,6 +1947,12 @@ export default function BuyUsdtPage({
     if (!buyerDisplayName) {
       return;
     }
+    if (!activePrivateTradeChannelUrl) {
+      setChatSessionToken(null);
+      setChatChannelUrl(null);
+      setChatError(null);
+      return;
+    }
 
     setChatLoading(true);
     setChatError(null);
@@ -1966,21 +1981,8 @@ export default function BuyUsdtPage({
         throw new Error(sessionData?.error || '채팅 세션 토큰 발급에 실패했습니다.');
       }
 
-      const channelResponse = await fetch('/api/sendbird/group-channel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          buyerId: activeAccount.address,
-          sellerId: selectedSeller.walletAddress,
-        }),
-      });
-      const channelData = await channelResponse.json().catch(() => ({}));
-      if (!channelResponse.ok || !channelData?.channelUrl) {
-        throw new Error(channelData?.error || '판매자 채팅 채널 생성에 실패했습니다.');
-      }
-
       setChatSessionToken(String(sessionData.sessionToken));
-      setChatChannelUrl(String(channelData.channelUrl));
+      setChatChannelUrl(activePrivateTradeChannelUrl);
     } catch (error) {
       console.error('Failed to connect seller chat', error);
       setChatSessionToken(null);
@@ -1995,6 +1997,7 @@ export default function BuyUsdtPage({
     isSelectedSellerBuyer,
     buyerDisplayName,
     buyerProfile?.avatar,
+    activePrivateTradeChannelUrl,
   ]);
 
   useEffect(() => {
@@ -3799,10 +3802,10 @@ export default function BuyUsdtPage({
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">판매자 채팅</p>
                           <p className="mt-1 text-sm font-semibold text-slate-900">실시간 채팅</p>
                           <p className="mt-1 text-[11px] text-slate-500">
-                            거래 조건과 입금 안내를 판매자와 실시간으로 확인하세요.
+                            구매신청 완료 후 생성된 주문 채팅에서 판매자와 거래 정보를 확인하세요.
                           </p>
                         </div>
-                        {!shouldShowSelfSellerChatAlert && (
+                        {!shouldShowSelfSellerChatAlert && hasActivePrivateTradeChatChannel && (
                           <button
                             type="button"
                             onClick={() => setChatRefreshToken((prev) => prev + 1)}
@@ -3857,11 +3860,19 @@ export default function BuyUsdtPage({
                         <div className="mt-3 h-[380px] overflow-hidden rounded-2xl border border-slate-200 bg-white">
                           {chatError ? (
                             <div className="px-4 py-4 text-xs font-semibold text-rose-600">{chatError}</div>
+                          ) : !hasActivePrivateTradeOrder ? (
+                            <div className="px-4 py-4 text-xs text-slate-500">
+                              구매신청을 완료하면 주문 전용 채팅 채널이 생성됩니다.
+                            </div>
+                          ) : !hasActivePrivateTradeChatChannel ? (
+                            <div className="px-4 py-4 text-xs text-slate-500">
+                              주문 채팅 채널을 준비 중입니다. 잠시 후 다시 확인해 주세요.
+                            </div>
                           ) : !buyerDisplayName || loadingBuyerProfile ? (
                             <div className="px-4 py-4 text-xs text-slate-500">내 회원 정보를 불러오는 중입니다...</div>
                           ) : !chatSessionToken || !chatChannelUrl ? (
                             <div className="px-4 py-4 text-xs text-slate-500">
-                              {chatLoading ? '채팅을 준비 중입니다...' : '채팅 채널을 연결하는 중입니다...'}
+                              {chatLoading ? '채팅을 준비 중입니다...' : '주문 채팅 채널을 연결하는 중입니다...'}
                             </div>
                           ) : (
                             <SendbirdProvider
@@ -3996,7 +4007,7 @@ export default function BuyUsdtPage({
                           : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
                       } disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400`}
                     >
-                      {formatUsdtDisplay(value)} USDT
+                      {value.toLocaleString(undefined, { maximumFractionDigits: 0 })} USDT
                     </button>
                   ))}
                 </div>
