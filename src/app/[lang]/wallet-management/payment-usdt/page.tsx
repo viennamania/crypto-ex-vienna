@@ -207,6 +207,15 @@ const waitFor = (ms: number) =>
     window.setTimeout(() => resolve(), ms);
   });
 
+const generatePrepareRequestKey = () => {
+  const randomPart =
+    typeof globalThis !== 'undefined' &&
+    typeof globalThis.crypto?.randomUUID === 'function'
+      ? globalThis.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `wallet-payment-${randomPart}`;
+};
+
 type PendingPaymentConfirm = {
   paymentRequestId: string;
   fromWalletAddress: string;
@@ -519,6 +528,7 @@ export default function PaymentUsdtPage({
   const [chatRefreshToken, setChatRefreshToken] = useState(0);
   const memberProfileRequestIdRef = useRef(0);
   const flushingPendingConfirmRef = useRef(false);
+  const submitPaymentLockRef = useRef(false);
   const amountInputRef = useRef<HTMLInputElement | null>(null);
   const memberStatusCardRef = useRef<HTMLDivElement | null>(null);
 
@@ -1306,15 +1316,18 @@ export default function PaymentUsdtPage({
       usdtAmount <= 0 ||
       exchangeRate <= 0 ||
       krwAmount <= 0 ||
-      paying
+      paying ||
+      submitPaymentLockRef.current
     ) {
       return;
     }
 
     const payerWalletAddress = String(activeAccount.address || '').trim();
     const selectedStoreCode = String(selectedMerchant.storecode || '').trim();
+    const prepareRequestKey = generatePrepareRequestKey();
     let pendingConfirm: PendingPaymentConfirm | null = null;
 
+    submitPaymentLockRef.current = true;
     setPaying(true);
     try {
       const prepareResponse = await fetch('/api/wallet/payment-usdt', {
@@ -1328,6 +1341,7 @@ export default function PaymentUsdtPage({
           krwAmount,
           exchangeRate,
           usdtAmount,
+          prepareRequestKey,
           memberNickname: myMemberProfile?.nickname || '',
           memberStorecode: myMemberProfile?.storecode || '',
           memberBuyerBankInfo: memberBankInfoSnapshot,
@@ -1423,6 +1437,7 @@ export default function PaymentUsdtPage({
       }
     } finally {
       setPaying(false);
+      submitPaymentLockRef.current = false;
     }
   };
 

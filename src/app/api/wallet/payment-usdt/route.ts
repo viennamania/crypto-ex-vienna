@@ -33,6 +33,7 @@ type PaymentMemberSnapshot = {
 type WalletPaymentDocument = {
   _id?: ObjectId;
   paymentId?: string;
+  prepareRequestKey?: string;
   agentcode?: string;
   storecode: string;
   storeName: string;
@@ -143,6 +144,8 @@ const PREPARED_RECONCILE_SCAN_WINDOW_HOURS = 6;
 const PREPARED_RECONCILE_BATCH_SIZE = 5;
 const PREPARED_RECONCILE_TIMEOUT_MS = 4_500;
 const PREPARED_RECONCILE_MAX_CONFIRM_DELAY_MS = 24 * 60 * 60 * 1000;
+const PREPARED_RECONCILE_EARLY_TOLERANCE_MS = 90 * 1000;
+const PREPARE_IDEMPOTENCY_WINDOW_MS = 5 * 60 * 1000;
 const RPC_LOG_BLOCK_CHUNK_SIZE = 900n;
 const PAYMENT_ID_MIN = 10_000_000;
 const PAYMENT_ID_MAX_EXCLUSIVE = 100_000_000;
@@ -380,6 +383,23 @@ const serializePayment = (doc: WalletPaymentDocument & { _id?: ObjectId }) => {
     member: doc.member || null,
   };
 };
+
+const serializePreparedPaymentRequest = (doc: WalletPaymentDocument & { _id?: ObjectId }) => ({
+  paymentRequestId: doc._id?.toString() || "",
+  paymentId: String(doc.paymentId || ""),
+  agentcode: doc.agentcode || "",
+  storecode: doc.storecode,
+  storeName: doc.storeName,
+  chain: doc.chain,
+  fromWalletAddress: doc.fromWalletAddress,
+  toWalletAddress: doc.toWalletAddress,
+  usdtAmount: doc.usdtAmount,
+  krwAmount: doc.krwAmount ?? 0,
+  exchangeRate: doc.exchangeRate ?? 0,
+  status: doc.status,
+  createdAt: doc.createdAt,
+  member: doc.member || null,
+});
 
 const serializeCollect = (doc: WalletCollectDocument & { _id?: ObjectId }) => ({
   id: doc._id?.toString() || "",
@@ -680,18 +700,23 @@ const findMatchingTransferForPreparedPayment = async ({
           cache: blockTimestampByNumber,
         })) || new Date().toISOString();
       const confirmedAtMs = new Date(confirmedAt).getTime();
-      const diffMs = Number.isFinite(confirmedAtMs)
-        ? Math.abs(confirmedAtMs - createdAtMs)
-        : Number.MAX_SAFE_INTEGER;
-      if (diffMs > PREPARED_RECONCILE_MAX_CONFIRM_DELAY_MS) {
+      if (!Number.isFinite(confirmedAtMs)) {
+        continue;
+      }
+      const confirmedTooEarlyByMs = createdAtMs - confirmedAtMs;
+      if (confirmedTooEarlyByMs > PREPARED_RECONCILE_EARLY_TOLERANCE_MS) {
+        continue;
+      }
+      const delayMs = Math.max(0, confirmedAtMs - createdAtMs);
+      if (delayMs > PREPARED_RECONCILE_MAX_CONFIRM_DELAY_MS) {
         continue;
       }
 
-      if (!matched || diffMs < matched.diffMs) {
+      if (!matched || delayMs < matched.diffMs) {
         matched = {
           transactionHash,
           confirmedAt,
-          diffMs,
+          diffMs: delayMs,
         };
       }
     }
@@ -792,6 +817,28 @@ const reconcilePreparedPayments = async ({
         continue;
       }
 
+      const duplicateTransaction = await collection.findOne(
+        {
+          _id: { $ne: paymentObjectId },
+          status: "confirmed",
+          transactionHash: { $regex: `^${escapeRegex(matched.transactionHash)}$`, $options: "i" },
+        },
+        { projection: { _id: 1, paymentId: 1 } },
+      );
+      if (duplicateTransaction) {
+        await collection.updateOne(
+          { _id: paymentObjectId, status: "prepared" },
+          {
+            $set: {
+              reconcileAttemptedAt: attemptedAt,
+              reconcileAttempts: nextAttemptCount,
+              reconcileError: `transaction hash already linked (${String(duplicateTransaction.paymentId || duplicateTransaction._id || "")})`,
+            },
+          },
+        );
+        continue;
+      }
+
       await collection.updateOne(
         { _id: paymentObjectId, status: "prepared" },
         {
@@ -837,6 +884,11 @@ export async function POST(request: NextRequest) {
     const fromWalletAddress = normalizeAddress(body?.fromWalletAddress);
     const usdtAmount = normalizeAmount(body?.usdtAmount);
     const chain = normalizeChain(body?.chain);
+    const prepareRequestKey = String(
+      body?.prepareRequestKey
+      ?? body?.prepare_request_key
+      ?? "",
+    ).trim().slice(0, 128);
     const hasKrwAmount = body?.krwAmount !== undefined;
     const hasExchangeRate = body?.exchangeRate !== undefined;
     const krwAmount = hasKrwAmount ? normalizeKrwAmount(body?.krwAmount) : undefined;
@@ -893,6 +945,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "store payment wallet is not configured" }, { status: 400 });
     }
 
+    if (prepareRequestKey) {
+      const existingByRequestKey = await collection.findOne(
+        {
+          prepareRequestKey,
+          chain,
+          fromWalletAddress,
+          storecode: { $regex: `^${escapeRegex(storecode)}$`, $options: "i" },
+        },
+        { sort: { createdAt: -1 } },
+      );
+      if (existingByRequestKey) {
+        return NextResponse.json({
+          result: serializePreparedPaymentRequest(existingByRequestKey),
+        });
+      }
+    }
+
     const memberUser = await getOneByWalletAddress(storecode, fromWalletAddress);
     if (!memberUser) {
       return NextResponse.json(
@@ -941,6 +1010,27 @@ export async function POST(request: NextRequest) {
           }
         : undefined;
 
+    const recentPreparedThresholdIso = new Date(
+      Date.now() - PREPARE_IDEMPOTENCY_WINDOW_MS,
+    ).toISOString();
+    const existingRecentPrepared = await collection.findOne(
+      {
+        status: "prepared",
+        storecode: { $regex: `^${escapeRegex(storecode)}$`, $options: "i" },
+        chain,
+        fromWalletAddress,
+        toWalletAddress: { $regex: `^${escapeRegex(toWalletAddress)}$`, $options: "i" },
+        usdtAmount,
+        createdAt: { $gte: recentPreparedThresholdIso },
+      },
+      { sort: { createdAt: -1 } },
+    );
+    if (existingRecentPrepared) {
+      return NextResponse.json({
+        result: serializePreparedPaymentRequest(existingRecentPrepared),
+      });
+    }
+
     const paymentId = await generateUniquePaymentId(collection);
 
     const paymentRequest: WalletPaymentDocument = {
@@ -962,6 +1052,7 @@ export async function POST(request: NextRequest) {
             platform_fee_wallet_address: platformFeeWalletAddress,
           }
         : {}),
+      ...(prepareRequestKey ? { prepareRequestKey } : {}),
       status: "prepared",
       createdAt: new Date().toISOString(),
       ...(memberSnapshot ? { member: memberSnapshot } : {}),
@@ -970,29 +1061,17 @@ export async function POST(request: NextRequest) {
     const inserted = await collection.insertOne(paymentRequest);
 
     return NextResponse.json({
-      result: {
-        paymentRequestId: inserted.insertedId.toString(),
-        paymentId: paymentRequest.paymentId || "",
-        agentcode: paymentRequest.agentcode || '',
-        storecode: paymentRequest.storecode,
-        storeName: paymentRequest.storeName,
-        chain: paymentRequest.chain,
-        fromWalletAddress: paymentRequest.fromWalletAddress,
-        toWalletAddress: paymentRequest.toWalletAddress,
-        usdtAmount: paymentRequest.usdtAmount,
-        krwAmount: paymentRequest.krwAmount ?? 0,
-        exchangeRate: paymentRequest.exchangeRate ?? 0,
-        status: paymentRequest.status,
-        createdAt: paymentRequest.createdAt,
-        member: paymentRequest.member || null,
-      },
+      result: serializePreparedPaymentRequest({
+        ...paymentRequest,
+        _id: inserted.insertedId,
+      }),
     });
   }
 
   if (action === "confirm") {
     const paymentRequestId = String(body?.paymentRequestId || "").trim();
     const fromWalletAddress = normalizeAddress(body?.fromWalletAddress);
-    const transactionHash = String(body?.transactionHash || "").trim();
+    const transactionHash = normalizeHash(body?.transactionHash);
 
     if (!ObjectId.isValid(paymentRequestId)) {
       return NextResponse.json({ error: "invalid paymentRequestId" }, { status: 400 });
@@ -1013,6 +1092,37 @@ export async function POST(request: NextRequest) {
     if (existing.fromWalletAddress !== fromWalletAddress) {
       return NextResponse.json({ error: "wallet mismatch for this payment request" }, { status: 403 });
     }
+    const existingTransactionHash = normalizeHash(existing.transactionHash || "");
+    if (existing.status === "confirmed") {
+      if (existingTransactionHash && existingTransactionHash !== transactionHash) {
+        return NextResponse.json(
+          { error: "payment request already confirmed with another transaction hash" },
+          { status: 409 },
+        );
+      }
+      return NextResponse.json({
+        result: serializePayment(existing),
+      });
+    }
+
+    const duplicateTransaction = await collection.findOne(
+      {
+        _id: { $ne: _id },
+        status: "confirmed",
+        transactionHash: { $regex: `^${escapeRegex(transactionHash)}$`, $options: "i" },
+      },
+      { projection: { _id: 1, paymentId: 1 } },
+    );
+    if (duplicateTransaction) {
+      return NextResponse.json(
+        {
+          error: "transaction hash already linked to another payment request",
+          duplicatePaymentRequestId: duplicateTransaction._id?.toString() || "",
+          duplicatePaymentId: String(duplicateTransaction.paymentId || ""),
+        },
+        { status: 409 },
+      );
+    }
 
     const currentAgentcode = String(existing.agentcode || "").trim();
     let resolvedAgentcode = currentAgentcode;
@@ -1025,12 +1135,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const updatePayload: Record<string, unknown> = {};
-    if (existing.status !== "confirmed") {
-      updatePayload.status = "confirmed";
-      updatePayload.transactionHash = transactionHash;
-      updatePayload.confirmedAt = new Date().toISOString();
-    }
+    const updatePayload: Record<string, unknown> = {
+      status: "confirmed",
+      transactionHash,
+      confirmedAt: new Date().toISOString(),
+    };
     if (resolvedAgentcode && resolvedAgentcode !== currentAgentcode) {
       updatePayload.agentcode = resolvedAgentcode;
     }

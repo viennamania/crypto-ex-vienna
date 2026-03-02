@@ -1376,11 +1376,15 @@ const getBuyerConsentSnapshotForTradeList = (orderLike: any) => {
     orderConsent?.requestMessageSentAt,
     orderLike?.createdAt,
   );
+  const channelUrl = pickFirstNonEmptyText(
+    orderConsent?.channelUrl,
+  );
 
   return {
     accepted,
     acceptedAt,
     requestedAt,
+    channelUrl,
   };
 };
 
@@ -10282,7 +10286,7 @@ const fetchBuyOrders = async () => {
 	                <div className="space-y-1">
 	                  <p className="text-sm font-extrabold text-amber-800">구매자 - 판매자 채팅 조회</p>
 	                  <p className="text-xs font-semibold text-amber-700/90">
-	                    거래내역의 채팅 컬럼에서 `채팅내용 보기` 버튼을 누르면 좌측 패널에서 대화를 확인할 수 있습니다.
+	                    거래내역의 이용 동의 컬럼에서 `채팅 내용 보기` 버튼을 누르면 좌측 패널에서 대화를 확인할 수 있습니다.
 	                  </p>
 	                </div>
 	              </div>
@@ -12520,6 +12524,19 @@ const fetchBuyOrders = async () => {
                                   <span className="text-[11px] text-slate-500">
                                     동의시각 {formatTradeHistoryTime(buyerConsentSnapshot.acceptedAt)}
                                   </span>
+                                  {buyerConsentSnapshot.channelUrl ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => openSellerChatWidgetChannel(buyerConsentSnapshot.channelUrl)}
+                                      className="inline-flex items-center rounded-md border border-sky-300 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 transition hover:bg-sky-100"
+                                    >
+                                      채팅 내용 보기
+                                    </button>
+                                  ) : (
+                                    <span className="text-[11px] text-slate-400">
+                                      채팅 채널 없음
+                                    </span>
+                                  )}
                                 </>
                               ) : (
                                 <>
