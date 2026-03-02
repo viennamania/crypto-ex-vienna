@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { pickFirstPublicIpAddress } from '@/lib/ip-address';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: NextRequest) {
   try {
     const ipAddress = pickFirstPublicIpAddress([
