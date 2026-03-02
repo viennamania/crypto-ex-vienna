@@ -87,6 +87,10 @@ type PrivateTradeOrder = {
   paymentContactMemo: string;
   isContactTransfer: boolean;
   consentChannelUrl: string;
+  consentStatus: string;
+  consentAccepted: boolean;
+  consentAcceptedAt: string;
+  consentRequestedAt: string;
   buyerWalletAddress: string;
   sellerWalletAddress: string;
 };
@@ -257,6 +261,11 @@ const ESCROW_FLOW_STEP_DEFINITIONS = [
     key: 'escrow-lock',
     title: '에스크로 잠금 처리',
     description: '판매자 에스크로에서 구매용 에스크로로 USDT를 잠급니다.',
+  },
+  {
+    key: 'consent-check',
+    title: '이용동의 확인',
+    description: '주문 채팅에서 "동의함" 입력 여부를 확인합니다.',
   },
   {
     key: 'deposit-check',
@@ -963,6 +972,19 @@ export default function BuyUsdtPage({
     () => toTrimmedString(activePrivateTradeOrder?.consentChannelUrl),
     [activePrivateTradeOrder?.consentChannelUrl],
   );
+  const activePrivateTradeConsentAccepted = useMemo(() => {
+    if (!activePrivateTradeOrder) return false;
+    const status = toTrimmedString(activePrivateTradeOrder.consentStatus).toLowerCase();
+    return activePrivateTradeOrder.consentAccepted === true || status === 'accepted';
+  }, [activePrivateTradeOrder]);
+  const activePrivateTradeConsentRequestedAt = useMemo(
+    () => toTrimmedString(activePrivateTradeOrder?.consentRequestedAt),
+    [activePrivateTradeOrder?.consentRequestedAt],
+  );
+  const activePrivateTradeConsentAcceptedAt = useMemo(
+    () => toTrimmedString(activePrivateTradeOrder?.consentAcceptedAt),
+    [activePrivateTradeOrder?.consentAcceptedAt],
+  );
   const hasActivePrivateTradeOrder = Boolean(activePrivateTradeOrder?.orderId);
   const hasActivePrivateTradeChatChannel = Boolean(
     activePrivateTradeOrder?.orderId && activePrivateTradeChannelUrl,
@@ -1304,12 +1326,20 @@ export default function BuyUsdtPage({
     if (escrowFlowPhase === 'SUBMITTING') {
       return '구매 신청과 에스크로 잠금 요청을 처리 중입니다.';
     }
-    if (escrowFlowPhase === 'ORDERED' || escrowFlowPhase === 'ACCEPTED') {
+    if (escrowFlowPhase === 'ORDERED') {
       return '주문 생성 후 에스크로 잠금이 진행되고 있습니다.';
+    }
+    if (escrowFlowPhase === 'ACCEPTED') {
+      return activePrivateTradeConsentAccepted
+        ? '이용동의가 완료되었습니다. 입금 안내를 확인해 주세요.'
+        : '주문 채팅에서 "동의함"을 입력하면 입금 단계로 진행됩니다.';
     }
     if (escrowFlowPhase === 'PAYMENT_REQUESTED') {
       if (paymentRequestCountdown?.isExpired) {
         return '입금 제한 시간이 만료되었습니다. 거래 취소 후 다시 신청해 주세요.';
+      }
+      if (!activePrivateTradeConsentAccepted) {
+        return '이용동의 확인 대기중입니다. 주문 채팅에 "동의함"을 입력해 주세요.';
       }
       return '입금 정보 확인 후 30분 내 입금을 완료해 주세요.';
     }
@@ -1317,30 +1347,55 @@ export default function BuyUsdtPage({
       return '입금 확인이 완료되어 구매가 정상 종료되었습니다.';
     }
     return '구매 버튼을 누르면 에스크로 처리 단계가 실시간으로 표시됩니다.';
-  }, [escrowFlowPhase, paymentRequestCountdown?.isExpired]);
+  }, [activePrivateTradeConsentAccepted, escrowFlowPhase, paymentRequestCountdown?.isExpired]);
 
   const escrowFlowSteps = useMemo<EscrowFlowStepItem[]>(() => {
-    let stepStates: EscrowFlowStepState[] = ['active', 'pending', 'pending', 'pending'];
+    let stepStates: EscrowFlowStepState[] = ['active', 'pending', 'pending', 'pending', 'pending'];
 
     if (escrowFlowPhase === 'SUBMITTING') {
-      stepStates = ['active', 'pending', 'pending', 'pending'];
+      stepStates = ['active', 'pending', 'pending', 'pending', 'pending'];
     } else if (escrowFlowPhase === 'ORDERED') {
-      stepStates = ['completed', 'active', 'pending', 'pending'];
+      stepStates = ['completed', 'active', 'pending', 'pending', 'pending'];
     } else if (escrowFlowPhase === 'ACCEPTED') {
-      stepStates = ['completed', 'completed', 'active', 'pending'];
+      stepStates = activePrivateTradeConsentAccepted
+        ? ['completed', 'completed', 'completed', 'active', 'pending']
+        : ['completed', 'completed', 'active', 'pending', 'pending'];
     } else if (escrowFlowPhase === 'PAYMENT_REQUESTED') {
-      stepStates = ['completed', 'completed', 'active', 'pending'];
+      stepStates = activePrivateTradeConsentAccepted
+        ? ['completed', 'completed', 'completed', 'active', 'pending']
+        : ['completed', 'completed', 'active', 'pending', 'pending'];
     } else if (escrowFlowPhase === 'COMPLETED') {
-      stepStates = ['completed', 'completed', 'completed', 'completed'];
+      stepStates = ['completed', 'completed', 'completed', 'completed', 'completed'];
     }
 
-    return ESCROW_FLOW_STEP_DEFINITIONS.map((step, index) => ({
-      key: step.key,
-      title: step.title,
-      description: step.description,
-      state: stepStates[index] || 'pending',
-    }));
-  }, [escrowFlowPhase]);
+    return ESCROW_FLOW_STEP_DEFINITIONS.map((step, index) => {
+      let description = step.description;
+      if (step.key === 'consent-check') {
+        if (activePrivateTradeConsentAccepted) {
+          const acceptedAtLabel = formatDateTime(activePrivateTradeConsentAcceptedAt);
+          description = acceptedAtLabel !== '-'
+            ? `구매자가 이용동의를 완료했습니다. (${acceptedAtLabel})`
+            : '구매자가 이용동의를 완료했습니다.';
+        } else {
+          const requestedAtLabel = formatDateTime(activePrivateTradeConsentRequestedAt);
+          description = requestedAtLabel !== '-'
+            ? `주문 채팅에서 "동의함" 입력을 기다리는 중입니다. (요청 ${requestedAtLabel})`
+            : '주문 채팅에서 "동의함" 입력을 기다리는 중입니다.';
+        }
+      }
+      return {
+        key: step.key,
+        title: step.title,
+        description,
+        state: stepStates[index] || 'pending',
+      };
+    });
+  }, [
+    activePrivateTradeConsentAccepted,
+    activePrivateTradeConsentAcceptedAt,
+    activePrivateTradeConsentRequestedAt,
+    escrowFlowPhase,
+  ]);
 
   const loadBalance = useCallback(async () => {
     if (!activeAccount?.address) {

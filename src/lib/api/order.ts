@@ -6337,6 +6337,10 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
     paymentContactMemo: string;
     isContactTransfer: boolean;
     consentChannelUrl: string;
+    consentStatus: string;
+    consentAccepted: boolean;
+    consentAcceptedAt: string;
+    consentRequestedAt: string;
     buyerWalletAddress: string;
     sellerWalletAddress: string;
   } | null;
@@ -6507,6 +6511,22 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
       consentChannelUrl:
         (typeof order?.buyerConsent?.channelUrl === 'string' && order.buyerConsent.channelUrl)
         || '',
+      consentStatus:
+        (typeof order?.buyerConsent?.status === 'string' && order.buyerConsent.status)
+        || '',
+      consentAccepted:
+        order?.buyerConsent?.accepted === true
+        || String(order?.buyerConsent?.status || '').trim().toLowerCase() === 'accepted',
+      consentAcceptedAt:
+        (typeof order?.buyerConsent?.acceptedAt === 'string' && order.buyerConsent.acceptedAt)
+        || '',
+      consentRequestedAt:
+        (typeof order?.buyerConsent?.requestedAt === 'string' && order.buyerConsent.requestedAt)
+        || (
+          typeof order?.buyerConsent?.requestMessageSentAt === 'string'
+            ? order.buyerConsent.requestMessageSentAt
+            : ''
+        ),
       buyerWalletAddress:
         (typeof order?.buyer?.walletAddress === 'string' && order.buyer.walletAddress)
         || (typeof order?.walletAddress === 'string' ? order.walletAddress : ''),

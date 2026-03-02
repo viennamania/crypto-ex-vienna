@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { useActiveAccount } from 'thirdweb/react';
+import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
+import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 
 import AgentInfoCard from '../_components/AgentInfoCard';
 import {
@@ -75,6 +77,14 @@ type AgentSalesOrderItem = {
   createdAt: string;
   paymentRequestedAt: string;
   paymentConfirmedAt: string;
+  buyerConsent: {
+    status: string;
+    accepted: boolean;
+    acceptedAt: string;
+    requestedAt: string;
+    requestMessageSentAt: string;
+    channelUrl: string;
+  };
 };
 
 type SellerSalesSummaryItem = {
@@ -85,6 +95,13 @@ type SellerSalesSummaryItem = {
   totalUsdtAmount: number;
   paymentConfirmedCount: number;
   latestCreatedAt: string;
+};
+
+type BuyerConsentSnapshot = {
+  accepted: boolean;
+  acceptedAt: string;
+  requestedAt: string;
+  channelUrl: string;
 };
 
 type EscrowWalletBalanceState = {
@@ -180,6 +197,7 @@ const normalizeSalesOrder = (value: unknown): AgentSalesOrderItem => {
   const paymentConfirmedBy = isRecord(source.paymentConfirmedBy) ? source.paymentConfirmedBy : {};
   const platformFee = isRecord(source.platformFee) ? source.platformFee : {};
   const settlement = isRecord(source.settlement) ? source.settlement : {};
+  const buyerConsent = isRecord(source.buyerConsent) ? source.buyerConsent : {};
   const usdtAmount = toNumber(source.usdtAmount);
 
   const resolvedPlatformFeeRate =
@@ -302,6 +320,14 @@ const normalizeSalesOrder = (value: unknown): AgentSalesOrderItem => {
     createdAt: toText(source.createdAt),
     paymentRequestedAt: toText(source.paymentRequestedAt),
     paymentConfirmedAt: toText(source.paymentConfirmedAt),
+    buyerConsent: {
+      status: toText(buyerConsent.status),
+      accepted: buyerConsent.accepted === true || String(buyerConsent.status || '').trim().toLowerCase() === 'accepted',
+      acceptedAt: toText(buyerConsent.acceptedAt),
+      requestedAt: toText(buyerConsent.requestedAt),
+      requestMessageSentAt: toText(buyerConsent.requestMessageSentAt),
+      channelUrl: toText(buyerConsent.channelUrl),
+    },
   };
 };
 
@@ -457,6 +483,9 @@ const PAGE_SIZE = 20;
 const POLLING_INTERVAL_MS = 5000;
 const BALANCE_CHECK_COOLDOWN_MS = 10_000;
 const PAYMENT_REQUEST_COUNTDOWN_LIMIT_MS = 30 * 60 * 1000;
+const SENDBIRD_APP_ID = process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID
+  || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID
+  || '';
 const CANCEL_ORDER_PROGRESS_STEP_DEFINITIONS: Array<{
   key: string;
   title: string;
@@ -626,6 +655,24 @@ const getCancellerLabel = (order: AgentSalesOrderItem) => {
 const getBuyerDepositNameLabel = (order: AgentSalesOrderItem) =>
   String(order.buyerDepositName || '').trim() || '-';
 
+const getOrderBuyerConsentSnapshot = (order: AgentSalesOrderItem): BuyerConsentSnapshot => {
+  const consent = order?.buyerConsent && typeof order.buyerConsent === 'object'
+    ? order.buyerConsent
+    : null;
+  const status = String(consent?.status || '').trim().toLowerCase();
+  const accepted = consent?.accepted === true || status === 'accepted';
+  const acceptedAt = String(consent?.acceptedAt || '').trim();
+  const requestedAt = String(consent?.requestedAt || consent?.requestMessageSentAt || '').trim();
+  const channelUrl = String(consent?.channelUrl || '').trim();
+
+  return {
+    accepted,
+    acceptedAt,
+    requestedAt,
+    channelUrl,
+  };
+};
+
 const getBuyerIp = (order: AgentSalesOrderItem) => {
   const candidates = [
     order.buyerIpAddress,
@@ -751,6 +798,12 @@ export default function P2PAgentSalesManagementPage() {
   >({});
   const [escrowWalletBalanceTickMs, setEscrowWalletBalanceTickMs] = useState(() => Date.now());
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [isOrderChatDrawerOpen, setIsOrderChatDrawerOpen] = useState(false);
+  const [selectedOrderChatChannelUrl, setSelectedOrderChatChannelUrl] = useState('');
+  const [selectedOrderChatTradeId, setSelectedOrderChatTradeId] = useState('');
+  const [orderChatSessionToken, setOrderChatSessionToken] = useState<string | null>(null);
+  const [orderChatSessionLoading, setOrderChatSessionLoading] = useState(false);
+  const [orderChatSessionError, setOrderChatSessionError] = useState<string | null>(null);
   const [cancelTargetOrder, setCancelTargetOrder] = useState<AgentSalesOrderItem | null>(null);
   const [cancelingOrder, setCancelingOrder] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -759,6 +812,8 @@ export default function P2PAgentSalesManagementPage() {
   const [cancelProgressSummary, setCancelProgressSummary] = useState('취소 요청 전입니다.');
   const [cancelProgressPhase, setCancelProgressPhase] = useState<'idle' | 'processing' | 'completed' | 'error'>('idle');
   const requestInFlightRef = useRef(false);
+  const orderChatViewerUserId = String(activeAccount?.address || agent?.adminWalletAddress || '').trim();
+  const orderChatViewerNickname = String(agent?.agentName || '').trim() || '에이전트';
 
   const loadData = useCallback(async (mode: 'manual' | 'polling' = 'manual') => {
     if (!agentcode) {
@@ -875,6 +930,60 @@ export default function P2PAgentSalesManagementPage() {
       window.clearInterval(intervalId);
     };
   }, [hasActiveEscrowWalletBalanceCooldown]);
+
+  useEffect(() => {
+    if (!isOrderChatDrawerOpen) {
+      setOrderChatSessionError(null);
+      return;
+    }
+    if (!SENDBIRD_APP_ID) {
+      setOrderChatSessionToken(null);
+      setOrderChatSessionError('채팅 설정이 비어 있습니다. NEXT_PUBLIC_SENDBIRD_APP_ID 값을 확인해 주세요.');
+      return;
+    }
+    if (!orderChatViewerUserId) {
+      setOrderChatSessionToken(null);
+      setOrderChatSessionError('에이전트 지갑 정보를 확인할 수 없습니다.');
+      return;
+    }
+
+    let cancelled = false;
+    const issueSessionToken = async () => {
+      setOrderChatSessionLoading(true);
+      setOrderChatSessionError(null);
+      try {
+        const response = await fetch('/api/sendbird/session-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: orderChatViewerUserId,
+            nickname: orderChatViewerNickname || `agent_${orderChatViewerUserId.slice(0, 6)}`,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.sessionToken) {
+          throw new Error(payload?.error || '에이전트 채팅 세션 토큰 발급에 실패했습니다.');
+        }
+        if (!cancelled) {
+          setOrderChatSessionToken(String(payload.sessionToken));
+        }
+      } catch (sessionError: any) {
+        if (!cancelled) {
+          setOrderChatSessionToken(null);
+          setOrderChatSessionError(String(sessionError?.message || '채팅 세션 발급에 실패했습니다.'));
+        }
+      } finally {
+        if (!cancelled) {
+          setOrderChatSessionLoading(false);
+        }
+      }
+    };
+
+    void issueSessionToken();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOrderChatDrawerOpen, orderChatViewerNickname, orderChatViewerUserId]);
 
   const filteredOrders = useMemo(() => {
     const normalizedTradeId = appliedFilters.searchTradeId.trim().toLowerCase();
@@ -1742,21 +1851,22 @@ export default function P2PAgentSalesManagementPage() {
               <table className="w-full table-fixed">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
-                    <th className="w-[11%] px-3 py-3">상태</th>
-                    <th className="w-[16%] px-3 py-3">주문시각/거래번호(TID)</th>
-                    <th className="w-[11%] px-3 py-3">구매자</th>
+                    <th className="w-[10%] px-3 py-3">상태</th>
+                    <th className="w-[15%] px-3 py-3">주문시각/거래번호(TID)</th>
+                    <th className="w-[10%] px-3 py-3">구매자</th>
                     <th className="w-[9%] px-3 py-3 text-right">주문금액</th>
-                    <th className="w-[15%] px-3 py-3">판매자/결제방법</th>
-                    <th className="w-[14%] px-3 py-3">에이전트 정보</th>
-                    <th className="w-[10%] px-3 py-3">플랫폼 수수료</th>
+                    <th className="w-[14%] px-3 py-3">판매자/결제방법</th>
+                    <th className="w-[13%] px-3 py-3">에이전트 정보</th>
+                    <th className="w-[9%] px-3 py-3">플랫폼 수수료</th>
                     <th className="w-[7%] px-3 py-3">전송내역</th>
-                    <th className="w-[7%] px-3 py-3 text-center">액션</th>
+                    <th className="w-[8%] px-3 py-3">이용동의</th>
+                    <th className="w-[5%] px-3 py-3 text-center">액션</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-500">
+                      <td colSpan={10} className="px-4 py-8 text-center text-sm text-slate-500">
                         표시할 거래가 없습니다.
                       </td>
                     </tr>
@@ -1903,6 +2013,13 @@ export default function P2PAgentSalesManagementPage() {
                           (agentCreditWalletCooldownRemainingMs / BALANCE_CHECK_COOLDOWN_MS) * 100,
                         ),
                       );
+                      const buyerConsentSnapshot = getOrderBuyerConsentSnapshot(order);
+                      const buyerConsentAcceptedAtLabel = buyerConsentSnapshot.acceptedAt
+                        ? formatDateTime(buyerConsentSnapshot.acceptedAt)
+                        : '-';
+                      const buyerConsentRequestedAtLabel = buyerConsentSnapshot.requestedAt
+                        ? formatDateTime(buyerConsentSnapshot.requestedAt)
+                        : '-';
 
                       return (
                       <tr key={order.id || order.tradeId} className="bg-white text-sm text-slate-700">
@@ -2430,6 +2547,46 @@ export default function P2PAgentSalesManagementPage() {
                             <span className="text-xs text-slate-400">-</span>
                           )}
                         </td>
+                        <td className="px-3 py-3">
+                          <div className="flex flex-col gap-1">
+                            {buyerConsentSnapshot.accepted ? (
+                              <>
+                                <span className="inline-flex w-fit items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
+                                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                  동의완료
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                  {buyerConsentAcceptedAtLabel}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="inline-flex w-fit items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700">
+                                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                  미완료
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                  {buyerConsentRequestedAtLabel}
+                                </span>
+                              </>
+                            )}
+                            {buyerConsentSnapshot.channelUrl ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedOrderChatChannelUrl(buyerConsentSnapshot.channelUrl);
+                                  setSelectedOrderChatTradeId(String(order.tradeId || '').trim());
+                                  setIsOrderChatDrawerOpen(true);
+                                }}
+                                className="inline-flex w-fit items-center rounded-md border border-sky-300 bg-sky-50 px-2 py-0.5 text-[10px] font-extrabold text-sky-700 transition hover:border-sky-400 hover:bg-sky-100"
+                              >
+                                채팅 보기
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-slate-400">채널 없음</span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-3 py-3 text-center">
                           {canCancelOrderByStatus ? (
                             <button
@@ -2504,6 +2661,76 @@ export default function P2PAgentSalesManagementPage() {
           )}
         </>
       )}
+
+      <>
+        <button
+          type="button"
+          aria-label="주문 채팅 패널 닫기"
+          onClick={() => setIsOrderChatDrawerOpen(false)}
+          className={`fixed inset-0 z-[104] bg-slate-900/45 transition-opacity duration-200 ${
+            isOrderChatDrawerOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+        />
+        <aside
+          className={`fixed left-0 top-0 z-[105] h-dvh w-[min(94vw,460px)] border-r border-slate-200 bg-white shadow-[0_35px_80px_-45px_rgba(15,23,42,0.75)] transition-transform duration-200 ${
+            isOrderChatDrawerOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="flex h-full flex-col">
+            <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">주문 채팅</p>
+                <p className="text-sm font-bold text-slate-900">구매자 ↔ 판매자 대화 내역</p>
+                <p className="text-[11px] text-slate-500">
+                  TID: {selectedOrderChatTradeId || '-'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOrderChatDrawerOpen(false)}
+                className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-hidden p-3">
+              {!SENDBIRD_APP_ID ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+                  채팅 설정이 비어 있습니다. `NEXT_PUBLIC_SENDBIRD_APP_ID` 값을 확인해 주세요.
+                </div>
+              ) : !orderChatViewerUserId ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                  에이전트 지갑 정보 확인 후 채팅 내역을 확인할 수 있습니다.
+                </div>
+              ) : orderChatSessionError ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+                  {orderChatSessionError}
+                </div>
+              ) : !selectedOrderChatChannelUrl ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                  이용동의 컬럼의 `채팅 보기` 버튼을 눌러 채팅 내역을 열어주세요.
+                </div>
+              ) : orderChatSessionLoading || !orderChatSessionToken ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                  채팅 세션을 준비 중입니다...
+                </div>
+              ) : (
+                <div className="h-full overflow-hidden rounded-xl border border-slate-200 bg-white">
+                  <SendbirdProvider
+                    appId={SENDBIRD_APP_ID}
+                    userId={orderChatViewerUserId}
+                    accessToken={orderChatSessionToken}
+                    theme="light"
+                  >
+                    <GroupChannel channelUrl={selectedOrderChatChannelUrl} />
+                  </SendbirdProvider>
+                </div>
+              )}
+            </div>
+          </div>
+        </aside>
+      </>
 
       {cancelTargetOrder && (
         <div
