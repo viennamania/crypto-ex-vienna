@@ -233,7 +233,6 @@ const QUICK_BUY_AMOUNTS = [10, 30, 50, 100, 300, 500];
 const TRADABLE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
 const PRIVATE_TRADE_PAYMENT_WINDOW_MS = 30 * 60 * 1000;
 const BUYER_PROFILE_LOADING_MIN_MS = 5000;
-const BUYER_CONSENT_REFRESH_POLLING_MS = 2500;
 const STORE_MEMBER_LINKING_MIN_MS = 5000;
 const JACKPOT_AUTO_HIDE_MS = 5200;
 const PRIVATE_TRADE_STATUS_LABEL: Record<string, string> = {
@@ -752,27 +751,6 @@ const resolveBuyerBankSnapshot = (buyer: unknown) => {
   };
 };
 
-const resolveBuyerPrivateSaleConsentSnapshot = (buyer: unknown) => {
-  const safeBuyer = isRecord(buyer) ? buyer : null;
-  const consent = isRecord(safeBuyer?.privateSaleConsent) ? safeBuyer.privateSaleConsent : null;
-  const status = toTrimmedString(consent?.status).toLowerCase();
-  const accepted = consent?.accepted === true || status === 'accepted';
-  const acceptedAt = toTrimmedString(consent?.acceptedAt);
-  const keyword = toTrimmedString(consent?.keyword);
-  const consentMessage = toTrimmedString(consent?.consentMessage);
-  const sourceSellerWalletAddress = normalizeWalletAddress(
-    consent?.sourceSellerWalletAddress || consent?.sellerWalletAddress,
-  );
-
-  return {
-    accepted,
-    acceptedAt,
-    keyword,
-    consentMessage,
-    sourceSellerWalletAddress,
-  };
-};
-
 const normalizeSellerFromUser = (rawUser: unknown): SellerItem | null => {
   if (!isRecord(rawUser)) return null;
 
@@ -1081,44 +1059,6 @@ export default function BuyUsdtPage({
     () => resolveBuyerBankSnapshot(storeMemberProfile?.buyer),
     [storeMemberProfile?.buyer],
   );
-  const buyerPrivateSaleConsent = useMemo(() => {
-    const profileConsent = resolveBuyerPrivateSaleConsentSnapshot(buyerProfile?.buyer);
-    if (
-      profileConsent.accepted
-      || profileConsent.acceptedAt
-      || profileConsent.consentMessage
-      || profileConsent.sourceSellerWalletAddress
-    ) {
-      return profileConsent;
-    }
-    return resolveBuyerPrivateSaleConsentSnapshot(storeMemberProfile?.buyer);
-  }, [buyerProfile?.buyer, storeMemberProfile?.buyer]);
-  const hasBuyerPrivateSaleConsent = buyerPrivateSaleConsent.accepted;
-  const buyerPrivateSaleConsentAcceptedAtLabel = useMemo(
-    () => (buyerPrivateSaleConsent.acceptedAt ? toDateTime(buyerPrivateSaleConsent.acceptedAt) : ''),
-    [buyerPrivateSaleConsent.acceptedAt],
-  );
-  const buyerPrivateSaleConsentSourceSellerLabel = useMemo(
-    () =>
-      buyerPrivateSaleConsent.sourceSellerWalletAddress
-        ? shortAddress(buyerPrivateSaleConsent.sourceSellerWalletAddress)
-        : '',
-    [buyerPrivateSaleConsent.sourceSellerWalletAddress],
-  );
-  const buyerPrivateSaleConsentSourceSellerNickname = useMemo(() => {
-    const sourceWallet = buyerPrivateSaleConsent.sourceSellerWalletAddress;
-    if (!sourceWallet) return '';
-    const loweredSourceWallet = sourceWallet.toLowerCase();
-    const matchedSeller =
-      sellers.find((seller) => seller.walletAddress.toLowerCase() === loweredSourceWallet)
-      || sellerPickerSellers.find((seller) => seller.walletAddress.toLowerCase() === loweredSourceWallet)
-      || null;
-    return matchedSeller ? toTrimmedString(matchedSeller.nickname) : '';
-  }, [
-    buyerPrivateSaleConsent.sourceSellerWalletAddress,
-    sellerPickerSellers,
-    sellers,
-  ]);
   const storeMemberAccountHolder = toTrimmedString(storeMemberBankSnapshot.accountHolder);
   const needsStoreMemberLinkForPurchase = isStoreScopedPurchase && !hasStoreMemberProfile;
   const shouldShowBuyerProfileNextStep = !loadingBuyerProfile && (
@@ -2169,35 +2109,6 @@ export default function BuyUsdtPage({
   useEffect(() => {
     connectSellerChat();
   }, [connectSellerChat, chatRefreshToken]);
-
-  useEffect(() => {
-    if (!activeAccount?.address || !chatChannelUrl || isSelectedSellerBuyer || hasBuyerPrivateSaleConsent) {
-      return;
-    }
-
-    void loadBuyerProfile({ silent: true });
-    if (isStoreScopedPurchase) {
-      void loadStoreMemberProfile({ silent: true });
-    }
-
-    const interval = setInterval(() => {
-      if (typeof document !== 'undefined' && document.hidden) return;
-      void loadBuyerProfile({ silent: true });
-      if (isStoreScopedPurchase) {
-        void loadStoreMemberProfile({ silent: true });
-      }
-    }, BUYER_CONSENT_REFRESH_POLLING_MS);
-
-    return () => clearInterval(interval);
-  }, [
-    activeAccount?.address,
-    chatChannelUrl,
-    hasBuyerPrivateSaleConsent,
-    isSelectedSellerBuyer,
-    isStoreScopedPurchase,
-    loadBuyerProfile,
-    loadStoreMemberProfile,
-  ]);
 
   useEffect(() => {
     if (activePrivateTradeOrder?.orderId) {
@@ -3824,31 +3735,6 @@ export default function BuyUsdtPage({
                         <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm">
                           <p className="font-semibold text-rose-700">현재 선택한 판매자는 구매자와 동일한 계정입니다.</p>
                           <p className="mt-1 text-xs text-rose-600">자기 자신과는 거래할 수 없습니다. 판매자를 다시 선택해 주세요.</p>
-                        </div>
-                      )}
-                      {activeAccount?.address && !isSelectedSellerBuyer && hasBuyerPrivateSaleConsent && (
-                        <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2.5">
-                          <p className="text-xs font-semibold text-cyan-700">이용동의 완료</p>
-                          <p className="mt-1 text-[11px] text-cyan-700">
-                            {buyerPrivateSaleConsentAcceptedAtLabel
-                              ? `${buyerPrivateSaleConsentAcceptedAtLabel}에 이용동의를 완료했습니다.`
-                              : '이용동의를 완료했습니다.'}
-                          </p>
-                          {buyerPrivateSaleConsentSourceSellerLabel && (
-                            <p className="mt-1 text-[10px] text-cyan-700">
-                              동의 판매자: {buyerPrivateSaleConsentSourceSellerNickname
-                                ? `${buyerPrivateSaleConsentSourceSellerNickname} (${buyerPrivateSaleConsentSourceSellerLabel})`
-                                : buyerPrivateSaleConsentSourceSellerLabel}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                      {activeAccount?.address && !isSelectedSellerBuyer && !hasBuyerPrivateSaleConsent && (
-                        <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5">
-                          <p className="text-xs font-semibold text-amber-800">이용동의 미완료</p>
-                          <p className="mt-1 text-[11px] text-amber-800">
-                            아직 이용동의가 완료되지 않았습니다. 판매자 채팅창에 정확히 &quot;동의함&quot;을 입력해 주세요.
-                          </p>
                         </div>
                       )}
                       {activeAccount?.address && !isSelectedSellerBuyer && !SENDBIRD_APP_ID && (
