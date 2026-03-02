@@ -2807,23 +2807,6 @@ export default function BuyOrderManagementPage() {
                               </span>
                             </>
                           )}
-                          {buyerConsentSnapshot.accepted && buyerConsentSnapshot.channelUrl ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedOrderChatChannelUrl(buyerConsentSnapshot.channelUrl);
-                                setSelectedOrderChatTradeId(String(order?.tradeId || '').trim());
-                                setIsOrderChatDrawerOpen(true);
-                              }}
-                              className="inline-flex w-fit items-center rounded-md border border-sky-300 bg-sky-50 px-2 py-0.5 text-[10px] font-extrabold text-sky-700 transition hover:border-sky-400 hover:bg-sky-100"
-                            >
-                              채팅 보기
-                            </button>
-                          ) : (
-                            <span className="text-[10px] text-slate-400">
-                              {buyerConsentSnapshot.accepted ? '채널 없음' : '동의 후 가능'}
-                            </span>
-                          )}
                         </div>
                       </td>
                       <td className="px-3 py-3 text-center">

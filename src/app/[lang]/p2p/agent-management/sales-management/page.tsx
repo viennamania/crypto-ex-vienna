@@ -2037,12 +2037,6 @@ export default function P2PAgentSalesManagementPage() {
                         ),
                       );
                       const buyerConsentSnapshot = getOrderBuyerConsentSnapshot(order);
-                      const buyerConsentAcceptedAtLabel = buyerConsentSnapshot.acceptedAt
-                        ? formatDateTime(buyerConsentSnapshot.acceptedAt)
-                        : '-';
-                      const buyerConsentRequestedAtLabel = buyerConsentSnapshot.requestedAt
-                        ? formatDateTime(buyerConsentSnapshot.requestedAt)
-                        : '-';
                       const orderCreatedDateLabel = formatDateOnly(order.createdAt);
                       const orderCreatedTimeLabel = formatTimeOnly(order.createdAt);
 
@@ -2578,41 +2572,14 @@ export default function P2PAgentSalesManagementPage() {
                         <td className="px-3 py-3">
                           <div className="flex flex-col gap-1">
                             {buyerConsentSnapshot.accepted ? (
-                              <>
-                                <span className="inline-flex w-fit items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
-                                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                  동의완료
-                                </span>
-                                <span className="text-[10px] text-slate-500">
-                                  {buyerConsentAcceptedAtLabel}
-                                </span>
-                              </>
+                              <span className="inline-flex w-fit items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
+                                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                동의완료
+                              </span>
                             ) : (
-                              <>
-                                <span className="inline-flex w-fit items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700">
-                                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
-                                  미완료
-                                </span>
-                                <span className="text-[10px] text-slate-500">
-                                  {buyerConsentRequestedAtLabel}
-                                </span>
-                              </>
-                            )}
-                            {buyerConsentSnapshot.accepted && buyerConsentSnapshot.channelUrl ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedOrderChatChannelUrl(buyerConsentSnapshot.channelUrl);
-                                  setSelectedOrderChatTradeId(String(order.tradeId || '').trim());
-                                  setIsOrderChatDrawerOpen(true);
-                                }}
-                                className="inline-flex w-fit items-center rounded-md border border-sky-300 bg-sky-50 px-2 py-0.5 text-[10px] font-extrabold text-sky-700 transition hover:border-sky-400 hover:bg-sky-100"
-                              >
-                                채팅 보기
-                              </button>
-                            ) : (
-                              <span className="text-[10px] text-slate-400">
-                                {buyerConsentSnapshot.accepted ? '채널 없음' : '동의 후 가능'}
+                              <span className="inline-flex w-fit items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700">
+                                <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                미완료
                               </span>
                             )}
                           </div>

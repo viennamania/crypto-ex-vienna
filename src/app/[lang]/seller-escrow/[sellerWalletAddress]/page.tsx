@@ -12383,7 +12383,7 @@ const fetchBuyOrders = async () => {
                     {isOwnerSeller && (
                       <th className="px-4 py-3 text-left font-semibold">플랫폼 수수료</th>
                     )}
-                    <th className="px-4 py-3 text-left font-semibold">채팅</th>
+                    <th className="px-4 py-3 text-left font-semibold">이용 동의</th>
                     <th className="px-4 py-3 text-left font-semibold">상태</th>
                   </tr>
                 </thead>
@@ -12436,7 +12436,7 @@ const fetchBuyOrders = async () => {
                     const platformFeeRate = getOrderPlatformFeeRate(item);
                     const platformFeeAmount = getOrderPlatformFeeAmount(item);
                     const platformFeeWalletAddress = getOrderPlatformFeeWalletAddress(item);
-                    const orderChatChannelUrl = String(item?.buyerConsent?.channelUrl || '').trim();
+                    const buyerConsentSnapshot = getBuyerConsentSnapshotForTradeList(item);
 
                     return (
                       <tr
@@ -12510,17 +12510,29 @@ const fetchBuyOrders = async () => {
                         )}
                         <td className="px-4 py-3">
                           {isOwnerSeller ? (
-                            orderChatChannelUrl ? (
-                              <button
-                                type="button"
-                                onClick={() => openSellerChatWidgetChannel(orderChatChannelUrl)}
-                                className="inline-flex items-center rounded-lg border border-sky-300 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700 transition hover:border-sky-400 hover:bg-sky-100"
-                              >
-                                채팅내용 보기
-                              </button>
-                            ) : (
-                              <span className="text-xs font-medium text-slate-400">채널 없음</span>
-                            )
+                            <div className="flex flex-col items-start gap-1">
+                              {buyerConsentSnapshot.accepted ? (
+                                <>
+                                  <span className="inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                    동의완료
+                                  </span>
+                                  <span className="text-[11px] text-slate-500">
+                                    동의시각 {formatTradeHistoryTime(buyerConsentSnapshot.acceptedAt)}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                    미완료
+                                  </span>
+                                  <span className="text-[11px] text-slate-500">
+                                    대기시각 {formatTradeHistoryTime(buyerConsentSnapshot.requestedAt)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-xs font-medium text-slate-400">비공개</span>
                           )}
