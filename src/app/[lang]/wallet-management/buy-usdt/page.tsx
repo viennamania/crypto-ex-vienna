@@ -679,6 +679,17 @@ const formatUsdtInputFromNumber = (value: number) => {
   return value.toFixed(6);
 };
 
+const formatUsdtDisplay = (value: number | string | null | undefined) => {
+  const numeric = Number(value ?? 0);
+  if (!Number.isFinite(numeric)) {
+    return '0.000000';
+  }
+  return numeric.toLocaleString(undefined, {
+    minimumFractionDigits: 6,
+    maximumFractionDigits: 6,
+  });
+};
+
 const toDateTime = (value: string) => {
   const normalized = String(value || '').trim();
   if (!normalized) return '-';
@@ -1281,7 +1292,7 @@ export default function BuyUsdtPage({
     if (!hasEnoughSellerBalance) {
       return '판매 가능 수량 초과';
     }
-    return `${usdtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT 구매 신청`;
+    return `${formatUsdtDisplay(usdtAmount)} USDT 구매 신청`;
   }, [
     submittingBuy,
     activeAccount?.address,
@@ -2897,7 +2908,7 @@ export default function BuyUsdtPage({
       if (transactionHash) return `Tx: ${transactionHash}`;
       if (transactionId) return `Queue: ${transactionId}`;
       if (Number.isFinite(rollbackUsdtAmount) && rollbackUsdtAmount > 0) {
-        return `회수 ${rollbackUsdtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT`;
+        return `회수 ${formatUsdtDisplay(rollbackUsdtAmount)} USDT`;
       }
       if (tradeId) return `TID: ${tradeId}`;
       return '';
@@ -3276,7 +3287,7 @@ export default function BuyUsdtPage({
           <WalletSummaryCard
             walletAddress={activeAccount.address}
             usdtBalanceDisplay={
-              `${balance.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })} USDT`
+              `${formatUsdtDisplay(balance)} USDT`
             }
             modeLabel={buyTabLabel}
             smartAccountEnabled={smartAccountEnabled}
@@ -3404,7 +3415,7 @@ export default function BuyUsdtPage({
                   </div>
                   <div className="mt-0.5 flex items-end justify-between gap-2">
                     <span className="text-base font-extrabold leading-none tracking-tight text-slate-900 tabular-nums">
-                      {latestBuyHistoryItem.usdtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT
+                      {formatUsdtDisplay(latestBuyHistoryItem.usdtAmount)} USDT
                     </span>
                     <span className="text-base font-bold leading-none text-slate-800 tabular-nums">
                       {latestBuyHistoryItem.krwAmount.toLocaleString()} KRW
@@ -3509,7 +3520,7 @@ export default function BuyUsdtPage({
                     <div className="rounded-xl border border-white/80 bg-white px-3 py-2">
                       <p className="text-slate-500">판매 가능 수량</p>
                       <p className="mt-1 text-right text-xl font-extrabold leading-tight text-emerald-700">
-                        {selectedSeller.currentUsdtBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} USDT
+                        {formatUsdtDisplay(selectedSeller.currentUsdtBalance)} USDT
                       </p>
                     </div>
                   </div>
@@ -3614,7 +3625,7 @@ export default function BuyUsdtPage({
                         <div className="mt-2 flex items-end justify-between">
                           <span className="text-slate-500">주문 수량</span>
                           <span className="text-2xl font-extrabold leading-none text-slate-900 tabular-nums">
-                            {activePrivateTradeOrder.usdtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT
+                            {formatUsdtDisplay(activePrivateTradeOrder.usdtAmount)} USDT
                           </span>
                         </div>
                         <div className="mt-1 flex items-center justify-between text-[11px]">
@@ -3985,7 +3996,7 @@ export default function BuyUsdtPage({
                           : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
                       } disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400`}
                     >
-                      {value} USDT
+                      {formatUsdtDisplay(value)} USDT
                     </button>
                   ))}
                 </div>
@@ -4081,7 +4092,7 @@ export default function BuyUsdtPage({
                             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                               <p className="text-slate-500">구매 수량</p>
                               <p className="mt-1 text-right text-lg font-bold tabular-nums text-slate-900">
-                                {item.usdtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT
+                                {formatUsdtDisplay(item.usdtAmount)} USDT
                               </p>
                             </div>
                             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
@@ -4172,7 +4183,7 @@ export default function BuyUsdtPage({
             </h3>
             <p className="mt-4 text-sm font-semibold text-slate-500">구매 수량</p>
             <p className="mt-1 text-4xl font-extrabold leading-none tracking-tight text-emerald-700 tabular-nums">
-              {purchaseCompleteJackpot.usdtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })}
+              {formatUsdtDisplay(purchaseCompleteJackpot.usdtAmount)}
               <span className="ml-1 text-xl font-bold text-emerald-600">USDT</span>
             </p>
             {purchaseCompleteJackpot.tradeId && (
@@ -4293,7 +4304,7 @@ export default function BuyUsdtPage({
                         <div className="inline-flex min-w-[92px] flex-col justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-1.5">
                           <span className="text-[10px] font-semibold text-emerald-700/90">보유량</span>
                           <span className="block w-full text-right text-sm font-extrabold leading-tight text-emerald-800 tabular-nums">
-                            {seller.currentUsdtBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} USDT
+                            {formatUsdtDisplay(seller.currentUsdtBalance)} USDT
                           </span>
                         </div>
                       </div>
@@ -4352,7 +4363,7 @@ export default function BuyUsdtPage({
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">구매 수량</span>
                 <span className="font-semibold text-slate-800">
-                  {activePrivateTradeOrder.usdtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT
+                  {formatUsdtDisplay(activePrivateTradeOrder.usdtAmount)} USDT
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -4698,7 +4709,7 @@ export default function BuyUsdtPage({
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">구매 수량</span>
                 <span className="font-semibold text-slate-800">
-                  {usdtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT
+                  {formatUsdtDisplay(usdtAmount)} USDT
                 </span>
               </div>
               <div className="flex items-center justify-between">
