@@ -1369,7 +1369,7 @@ export default function BuyUsdtPage({
     }
 
     return ESCROW_FLOW_STEP_DEFINITIONS.map((step, index) => {
-      let description = step.description;
+      let description: string = step.description;
       if (step.key === 'consent-check') {
         if (activePrivateTradeConsentAccepted) {
           const acceptedAtLabel = formatDateTime(activePrivateTradeConsentAcceptedAt);
