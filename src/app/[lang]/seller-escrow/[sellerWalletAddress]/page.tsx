@@ -766,6 +766,19 @@ const formatUsdtDisplay = (value: number | string | null | undefined) => {
   });
 };
 
+const roundDownUsdt6 = (value: number) => Math.floor(value * 1_000_000) / 1_000_000;
+
+const formatUsdtDisplay6 = (value: number | string | null | undefined) => {
+  const numeric = Number(value ?? 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return '0.000000';
+  }
+  return roundDownUsdt6(numeric).toLocaleString('en-US', {
+    minimumFractionDigits: 6,
+    maximumFractionDigits: 6,
+  });
+};
+
 const formatPercentDisplay = (value: number | string | null | undefined) => {
   const numeric = Number(value ?? 0);
   if (!Number.isFinite(numeric) || numeric <= 0) {
@@ -12105,11 +12118,11 @@ const fetchBuyOrders = async () => {
                       </div>
                     </div>
 
-                    <div className="mt-2 grid grid-cols-2 gap-2">
+                    <div className="mt-2 grid grid-cols-1 gap-2">
                       <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 px-2 py-1.5">
                         <p className="text-[10px] font-semibold text-slate-500">구매량</p>
                         <p className="text-right text-sm font-bold text-emerald-700">
-                          {formatUsdtDisplay(summaryItem.totalUsdtAmount)} USDT
+                          {formatUsdtDisplay6(summaryItem.totalUsdtAmount)} USDT
                         </p>
                       </div>
                       <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 px-2 py-1.5">
@@ -12296,9 +12309,7 @@ const fetchBuyOrders = async () => {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                          {typeof item?.usdtAmount === 'number'
-                            ? item.usdtAmount.toLocaleString()
-                            : '-'}
+                          {formatUsdtDisplay6(item?.usdtAmount)}
                         </td>
                         <td className="px-4 py-3 text-right font-semibold text-slate-900">
                           <div className="flex flex-col items-end">

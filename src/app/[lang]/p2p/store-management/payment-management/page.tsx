@@ -97,10 +97,17 @@ const formatKrw = (value: number) =>
   `${new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(Number(value) || 0)}원`;
 
 const formatUsdt = (value: number) =>
-  `${new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 6 }).format(Number(value) || 0)} USDT`;
+  `${new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(Number(value) || 0)} USDT`;
 
 const formatRate = (value: number) =>
   `${new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0)} KRW`;
+const resolvePolygonTxScanUrl = (transactionHash: string) => {
+  const normalized = String(transactionHash || '').trim();
+  if (!/^0x[a-fA-F0-9]{64}$/.test(normalized)) {
+    return '';
+  }
+  return `https://polygonscan.com/tx/${normalized}`;
+};
 const isOrderProcessingCompleted = (value: string | undefined) =>
   String(value || '').trim().toUpperCase() === 'COMPLETED';
 const resolveOrderProcessingLabel = (value: string | undefined) =>
@@ -979,6 +986,7 @@ export default function P2PStorePaymentManagementPage() {
                             const completed = isOrderProcessingCompleted(payment.orderProcessing);
                             const confirmedDateTime = toDateTimeLines(payment.confirmedAt || payment.createdAt);
                             const isChanged = changedPaymentIds.includes(payment.id);
+                            const txScanUrl = resolvePolygonTxScanUrl(payment.transactionHash);
                             const rowClass = isChanged
                               ? 'bg-cyan-50/70 animate-pulse'
                               : completed
@@ -1035,7 +1043,19 @@ export default function P2PStorePaymentManagementPage() {
                                 1 USDT = {formatRate(payment.exchangeRate)}
                               </td>
                               <td className="px-3 py-2.5 text-xs text-slate-500">
-                                {shortAddress(payment.transactionHash)}
+                                {txScanUrl ? (
+                                  <a
+                                    href={txScanUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex break-all underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                                    title={payment.transactionHash}
+                                  >
+                                    {shortAddress(payment.transactionHash)}
+                                  </a>
+                                ) : (
+                                  '-'
+                                )}
                               </td>
                               <td className="px-3 py-2.5">
                                 <p className="max-w-[280px] whitespace-pre-wrap break-words text-xs leading-relaxed text-slate-600">
