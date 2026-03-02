@@ -976,6 +976,11 @@ const SELLER_ESCROW_COMPLETE_STEP_DEFINITIONS = [
     description: '구매자 입금요청 상태 및 주문 정보를 검증합니다.',
   },
   {
+    key: 'buyer-consent-check',
+    title: '구매자 이용동의 확인',
+    description: '구매자 채팅에서 이용동의 여부를 확인합니다.',
+  },
+  {
     key: 'escrow-balance-check',
     title: '에스크로 검증',
     description: '에스크로 잔액과 플랫폼 수수료 전송 가능 여부를 확인합니다.',
@@ -3150,22 +3155,50 @@ export default function Index({ params }: any) {
     return '정산 확정하기를 누르면 에스크로 검증 후 지갑 전송과 완료 반영이 진행됩니다.';
   }, [activeOrderCompleteFlowPhase, activeOrderCompleteResult?.paymentConfirmedAt]);
 
+  const activeOrderCompleteBuyerConsentSnapshot = useMemo(
+    () => getBuyerConsentSnapshotForTradeList(selectedActivePaymentRequestedOrder),
+    [selectedActivePaymentRequestedOrder],
+  );
+  const activeOrderCompleteBuyerConsentDescription = useMemo(() => {
+    if (activeOrderCompleteBuyerConsentSnapshot.accepted) {
+      const acceptedAtLabel = formatTradeHistoryTime(activeOrderCompleteBuyerConsentSnapshot.acceptedAt);
+      if (acceptedAtLabel && acceptedAtLabel !== '-') {
+        return `구매자가 이용동의를 완료했습니다. (동의시각 ${acceptedAtLabel})`;
+      }
+      return '구매자가 이용동의를 완료했습니다.';
+    }
+
+    const requestedAtLabel = formatTradeHistoryTime(activeOrderCompleteBuyerConsentSnapshot.requestedAt);
+    if (requestedAtLabel && requestedAtLabel !== '-') {
+      return `구매자 이용동의 대기중입니다. (요청시각 ${requestedAtLabel})`;
+    }
+    return '구매자 이용동의 대기중입니다. 구매자 채팅에서 "동의함" 확인이 필요합니다.';
+  }, [activeOrderCompleteBuyerConsentSnapshot]);
+
   const activeOrderCompleteFlowSteps = useMemo<SellerEscrowCompleteFlowStepItem[]>(() => {
-    let stepStates: SellerEscrowCompleteFlowStepState[] = ['completed', 'active', 'pending', 'pending'];
+    let stepStates: SellerEscrowCompleteFlowStepState[] = ['completed', 'active', 'pending', 'pending', 'pending'];
 
     if (activeOrderCompleteFlowPhase === 'PROCESSING') {
-      stepStates = ['completed', 'completed', 'active', 'pending'];
+      stepStates = ['completed', 'completed', 'completed', 'active', 'pending'];
     } else if (activeOrderCompleteFlowPhase === 'COMPLETED') {
-      stepStates = ['completed', 'completed', 'completed', 'completed'];
+      stepStates = ['completed', 'completed', 'completed', 'completed', 'completed'];
+    } else if (activeOrderCompleteBuyerConsentSnapshot.accepted) {
+      stepStates = ['completed', 'completed', 'active', 'pending', 'pending'];
     }
 
     return SELLER_ESCROW_COMPLETE_STEP_DEFINITIONS.map((step, index) => ({
       key: step.key,
       title: step.title,
-      description: step.description,
+      description: step.key === 'buyer-consent-check'
+        ? activeOrderCompleteBuyerConsentDescription
+        : step.description,
       state: stepStates[index] || 'pending',
     }));
-  }, [activeOrderCompleteFlowPhase]);
+  }, [
+    activeOrderCompleteFlowPhase,
+    activeOrderCompleteBuyerConsentSnapshot.accepted,
+    activeOrderCompleteBuyerConsentDescription,
+  ]);
 
   const startNotificationLoop = useCallback(async () => {
     const audio = notificationAudioRef.current;
@@ -11090,32 +11123,39 @@ const fetchBuyOrders = async () => {
                                       return (
                                         <div
                                           key={order._id}
-                                          className="w-full rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2"
+                                          className="w-full rounded-lg border border-amber-200 bg-amber-50/70 px-2.5 py-2"
                                         >
-                                          <div className="w-full flex flex-row items-start justify-between gap-2">
-                                            <span className="text-sm font-semibold text-slate-900">
-                                              거래번호(TID) #{order.tradeId || '-'}
-                                            </span>
-                                            <div className="flex flex-col items-end gap-1">
-                                              <span className="text-xs text-slate-600">
-                                                {formatTradeHistoryTime(order.paymentRequestedAt || order.createdAt)}
-                                              </span>
-                                              <div className={`inline-flex w-[110px] items-center justify-between rounded-md border px-2 py-1 ${countdownBadgeClass}`}>
-                                                <span className="text-[10px] font-semibold tracking-[0.06em]">입금 제한</span>
-                                                <span className="text-xs font-extrabold tabular-nums">
-                                                  {paymentCountdown.display}
-                                                </span>
+                                          <div className="flex w-full flex-col gap-2">
+                                            <div className="flex items-start justify-between gap-2">
+                                              <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-slate-900">
+                                                  거래번호(TID) #{order.tradeId || '-'}
+                                                </p>
+                                                <p className="mt-0.5 text-[11px] text-slate-600">
+                                                  {formatTradeHistoryTime(order.paymentRequestedAt || order.createdAt)}
+                                                </p>
                                               </div>
-                                              <div className="h-1.5 w-[110px] overflow-hidden rounded-full bg-slate-200/70">
-                                                <div
-                                                  className="h-full rounded-full transition-all duration-1000 ease-linear"
-                                                  style={countdownProgressStyle}
-                                                />
+                                              <div className="flex shrink-0 flex-col items-end gap-1">
+                                                <div className={`inline-flex w-[108px] items-center justify-between rounded-md border px-2 py-1 ${countdownBadgeClass}`}>
+                                                  <span className="text-[10px] font-semibold tracking-[0.04em]">입금 제한</span>
+                                                  <span className="text-xs font-extrabold tabular-nums">
+                                                    {paymentCountdown.display}
+                                                  </span>
+                                                </div>
+                                                <div className="h-1.5 w-[108px] overflow-hidden rounded-full bg-slate-200/70">
+                                                  <div
+                                                    className="h-full rounded-full transition-all duration-1000 ease-linear"
+                                                    style={countdownProgressStyle}
+                                                  />
+                                                </div>
                                               </div>
+                                            </div>
+
+                                            <div className="flex flex-wrap items-center justify-end gap-1.5">
                                               {orderChatChannelUrl && (
                                                 <button
                                                   type="button"
-                                                  className="rounded-md border border-sky-300 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                                                  className="rounded-md border border-sky-300 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 hover:bg-sky-100"
                                                   onClick={() => openSellerChatWidgetChannel(orderChatChannelUrl)}
                                                 >
                                                   채팅 열기
@@ -11124,60 +11164,61 @@ const fetchBuyOrders = async () => {
                                               {isOwnerSeller && (
                                                 <button
                                                   type="button"
-                                                  className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                                                  className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100"
                                                   onClick={() => openActiveOrderCompleteModal(order)}
                                                 >
                                                   완료하기
                                                 </button>
                                               )}
                                             </div>
-                                          </div>
-                                          <div className="mt-1 w-full flex flex-row items-center justify-between gap-2 text-sm">
-                                            <div className="flex min-w-0 flex-col items-start">
-                                              <span className="text-slate-700">
-                                                구매자 {getBuyerDisplayNameForTradeList(order, isOwnerSeller)}
-                                              </span>
-                                              <span className="text-xs text-slate-500">
-                                                입금자명 {getBuyerDepositNameForTradeList(order, isOwnerSeller)}
-                                              </span>
-                                              <span className="text-xs text-slate-500">
-                                                결제방법 {getPaymentMethodLabel(order?.paymentMethod, order?.seller?.bankInfo?.bankName)}
-                                              </span>
-                                              {buyerConsentSnapshot.accepted ? (
-                                                <>
-                                                  <div className="mt-1 inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-700">
-                                                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                                    이용동의 완료
-                                                  </div>
-                                                  <span className="text-[11px] text-slate-500">
-                                                    동의시각 {formatTradeHistoryTime(buyerConsentSnapshot.acceptedAt)}
-                                                  </span>
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <div className="mt-1 inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-800">
-                                                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
-                                                    이용동의 미완료
-                                                  </div>
-                                                  <span className="text-[11px] text-slate-500">
-                                                    구매자 채팅창에 정확히 &quot;동의함&quot; 입력 필요
-                                                  </span>
-                                                </>
-                                              )}
-                                            </div>
-                                            <div className="flex flex-col items-end text-right">
-                                              <span className="font-semibold text-amber-700 sm:hidden" style={{ fontFamily: 'monospace' }}>
-                                                {formatKrwValue(order.krwAmount)}원
-                                              </span>
-                                              <span className="font-semibold text-amber-700 sm:hidden" style={{ fontFamily: 'monospace' }}>
-                                                {(Number(order.usdtAmount || 0)).toFixed(3)} USDT
-                                              </span>
-                                              <span className="hidden font-semibold text-amber-700 sm:inline" style={{ fontFamily: 'monospace' }}>
-                                                {formatKrwValue(order.krwAmount)}원 / {(Number(order.usdtAmount || 0)).toFixed(3)} USDT
-                                              </span>
-                                              <span className="text-xs text-amber-800/90" style={{ fontFamily: 'monospace' }}>
-                                                환율 {formatOrderRateLabel(order)}
-                                              </span>
+
+                                            <div className="flex w-full flex-col gap-2 text-sm sm:flex-row sm:items-start sm:justify-between">
+                                              <div className="flex min-w-0 flex-col items-start gap-0.5">
+                                                <span className="text-slate-700">
+                                                  구매자 {getBuyerDisplayNameForTradeList(order, isOwnerSeller)}
+                                                </span>
+                                                <span className="text-xs text-slate-500">
+                                                  입금자명 {getBuyerDepositNameForTradeList(order, isOwnerSeller)}
+                                                </span>
+                                                <span className="text-xs text-slate-500">
+                                                  결제방법 {getPaymentMethodLabel(order?.paymentMethod, order?.seller?.bankInfo?.bankName)}
+                                                </span>
+                                                {buyerConsentSnapshot.accepted ? (
+                                                  <>
+                                                    <div className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                                      이용동의 완료
+                                                    </div>
+                                                    <span className="text-[11px] text-slate-500">
+                                                      동의시각 {formatTradeHistoryTime(buyerConsentSnapshot.acceptedAt)}
+                                                    </span>
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    <div className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                                                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                                      이용동의 미완료
+                                                    </div>
+                                                    <span className="text-[11px] text-slate-500">
+                                                      구매자 채팅창에 정확히 &quot;동의함&quot; 입력 필요
+                                                    </span>
+                                                  </>
+                                                )}
+                                              </div>
+                                              <div className="flex shrink-0 flex-col items-start text-left sm:items-end sm:text-right">
+                                                <span className="font-semibold text-amber-700 sm:hidden" style={{ fontFamily: 'monospace' }}>
+                                                  {formatKrwValue(order.krwAmount)}원
+                                                </span>
+                                                <span className="font-semibold text-amber-700 sm:hidden" style={{ fontFamily: 'monospace' }}>
+                                                  {(Number(order.usdtAmount || 0)).toFixed(3)} USDT
+                                                </span>
+                                                <span className="hidden font-semibold text-amber-700 sm:inline" style={{ fontFamily: 'monospace' }}>
+                                                  {formatKrwValue(order.krwAmount)}원 / {(Number(order.usdtAmount || 0)).toFixed(3)} USDT
+                                                </span>
+                                                <span className="text-xs text-amber-800/90" style={{ fontFamily: 'monospace' }}>
+                                                  환율 {formatOrderRateLabel(order)}
+                                                </span>
+                                              </div>
                                             </div>
                                           </div>
                                         </div>

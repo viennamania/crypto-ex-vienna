@@ -212,7 +212,12 @@ const SellerSendbirdWidgetGlobal = () => {
     };
   }, [isMounted]);
 
-  const canShow = Boolean(address) && !isAdmin && !isCheckingRole && !isCheckingSeller && isSellerActive;
+  const canShow = Boolean(address)
+    && !isAdmin
+    && !isCheckingRole
+    && !isCheckingSeller
+    && isSellerActive
+    && !isSellerEscrowRoute;
 
   useEffect(() => {
     if (!isMounted) {
