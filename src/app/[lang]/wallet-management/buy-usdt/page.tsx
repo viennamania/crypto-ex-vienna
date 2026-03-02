@@ -3829,6 +3829,14 @@ export default function BuyUsdtPage({
                           )}
                         </div>
                       )}
+                      {activeAccount?.address && !isSelectedSellerBuyer && !hasBuyerPrivateSaleConsent && (
+                        <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5">
+                          <p className="text-xs font-semibold text-amber-800">이용동의 미완료</p>
+                          <p className="mt-1 text-[11px] text-amber-800">
+                            아직 이용동의가 완료되지 않았습니다. 판매자 채팅창에 정확히 &quot;동의함&quot;을 입력해 주세요.
+                          </p>
+                        </div>
+                      )}
                       {activeAccount?.address && !isSelectedSellerBuyer && !SENDBIRD_APP_ID && (
                         <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">
                           채팅 설정이 비어 있어 연결할 수 없습니다. NEXT_PUBLIC_SENDBIRD_APP_ID 설정을 확인해 주세요.
