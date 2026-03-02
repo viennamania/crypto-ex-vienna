@@ -3767,9 +3767,6 @@ export default function BuyUsdtPage({
                         <div>
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">판매자 채팅</p>
                           <p className="mt-1 text-sm font-semibold text-slate-900">실시간 채팅</p>
-                          <p className="mt-1 text-[11px] text-slate-500">
-                            구매신청 완료 후 생성된 주문 채팅에서 판매자와 거래 정보를 확인하세요.
-                          </p>
                         </div>
                         {!shouldShowSelfSellerChatAlert && hasActivePrivateTradeChatChannel && (
                           <button
@@ -3802,8 +3799,24 @@ export default function BuyUsdtPage({
                           {chatError ? (
                             <div className="px-4 py-4 text-xs font-semibold text-rose-600">{chatError}</div>
                           ) : !hasActivePrivateTradeOrder ? (
-                            <div className="px-4 py-4 text-xs text-slate-500">
-                              구매신청을 완료하면 주문 전용 채팅 채널이 생성됩니다.
+                            <div className="h-full px-4 py-5">
+                              <div className="rounded-xl border border-cyan-300 bg-cyan-50/90 px-4 py-3 shadow-[0_18px_35px_-26px_rgba(8,145,178,0.65)]">
+                                <div className="flex items-start gap-2.5">
+                                  <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-600 text-white">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                      <path d="M12 5v8m0 4h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                  </span>
+                                  <div>
+                                    <p className="text-[13px] font-extrabold leading-tight text-cyan-900">
+                                      구매신청을 완료하면 주문 전용 채팅 채널이 생성됩니다.
+                                    </p>
+                                    <p className="mt-1 text-[11px] font-medium text-cyan-700">
+                                      구매신청 완료 후 자동으로 주문 채팅이 연결됩니다.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           ) : !hasActivePrivateTradeChatChannel ? (
                             <div className="px-4 py-4 text-xs text-slate-500">
