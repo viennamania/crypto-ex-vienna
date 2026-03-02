@@ -405,6 +405,29 @@ const formatDateTime = (value?: string) => {
   });
 };
 
+const formatDateOnly = (value?: string) => {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+};
+
+const formatTimeOnly = (value?: string) => {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  });
+};
+
 const TX_EXPLORER_BASE_BY_CHAIN: Record<string, string> = {
   ethereum: 'https://etherscan.io/tx/',
   polygon: 'https://polygonscan.com/tx/',
@@ -1852,7 +1875,7 @@ export default function P2PAgentSalesManagementPage() {
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
                     <th className="w-[10%] px-3 py-3">상태</th>
-                    <th className="w-[15%] px-3 py-3">주문시각/거래번호(TID)</th>
+                    <th className="w-[13%] px-3 py-3">주문시각/거래번호(TID)</th>
                     <th className="w-[10%] px-3 py-3">구매자</th>
                     <th className="w-[9%] px-3 py-3 text-right">주문금액</th>
                     <th className="w-[14%] px-3 py-3">판매자/결제방법</th>
@@ -2020,6 +2043,8 @@ export default function P2PAgentSalesManagementPage() {
                       const buyerConsentRequestedAtLabel = buyerConsentSnapshot.requestedAt
                         ? formatDateTime(buyerConsentSnapshot.requestedAt)
                         : '-';
+                      const orderCreatedDateLabel = formatDateOnly(order.createdAt);
+                      const orderCreatedTimeLabel = formatTimeOnly(order.createdAt);
 
                       return (
                       <tr key={order.id || order.tradeId} className="bg-white text-sm text-slate-700">
@@ -2068,8 +2093,11 @@ export default function P2PAgentSalesManagementPage() {
                         </td>
                         <td className="px-3 py-3 text-slate-600">
                           <div className="flex flex-col leading-tight">
-                            <span className="whitespace-nowrap text-[13px] font-medium text-slate-700">
-                              {formatDateTime(order.createdAt)}
+                            <span className="text-[12px] font-semibold text-slate-700">
+                              {orderCreatedDateLabel}
+                            </span>
+                            <span className="text-[11px] font-medium text-slate-500">
+                              {orderCreatedTimeLabel}
                             </span>
                             {order.tradeId ? (
                               <button
@@ -2570,7 +2598,7 @@ export default function P2PAgentSalesManagementPage() {
                                 </span>
                               </>
                             )}
-                            {buyerConsentSnapshot.channelUrl ? (
+                            {buyerConsentSnapshot.accepted && buyerConsentSnapshot.channelUrl ? (
                               <button
                                 type="button"
                                 onClick={() => {
@@ -2583,7 +2611,9 @@ export default function P2PAgentSalesManagementPage() {
                                 채팅 보기
                               </button>
                             ) : (
-                              <span className="text-[10px] text-slate-400">채널 없음</span>
+                              <span className="text-[10px] text-slate-400">
+                                {buyerConsentSnapshot.accepted ? '채널 없음' : '동의 후 가능'}
+                              </span>
                             )}
                           </div>
                         </td>

@@ -2807,7 +2807,7 @@ export default function BuyOrderManagementPage() {
                               </span>
                             </>
                           )}
-                          {buyerConsentSnapshot.channelUrl ? (
+                          {buyerConsentSnapshot.accepted && buyerConsentSnapshot.channelUrl ? (
                             <button
                               type="button"
                               onClick={() => {
@@ -2820,7 +2820,9 @@ export default function BuyOrderManagementPage() {
                               채팅 보기
                             </button>
                           ) : (
-                            <span className="text-[10px] text-slate-400">채널 없음</span>
+                            <span className="text-[10px] text-slate-400">
+                              {buyerConsentSnapshot.accepted ? '채널 없음' : '동의 후 가능'}
+                            </span>
                           )}
                         </div>
                       </td>
