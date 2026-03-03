@@ -408,7 +408,7 @@ export default function P2PAgentStoreMemberManagementPage() {
                   setKeyword(event.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder="닉네임/입금자명/가맹점/지갑/role 검색"
+                placeholder="아이디/입금자명/지갑 검색"
                 className="h-9 w-full max-w-md rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
               />
             </div>
@@ -552,7 +552,7 @@ export default function P2PAgentStoreMemberManagementPage() {
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                   <tr>
-                    <th className="px-4 py-3">회원</th>
+                    <th className="px-4 py-3">아이디</th>
                     <th className="px-4 py-3">지갑주소</th>
                     <th className="px-4 py-3">가맹점</th>
                     <th className="px-4 py-3">역할</th>
