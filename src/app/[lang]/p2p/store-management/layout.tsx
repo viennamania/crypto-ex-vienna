@@ -53,6 +53,7 @@ type PendingAlertCardItem = PendingOrderProcessingItem & {
 
 const WALLET_AUTH_OPTIONS = ['email', 'google', 'phone'];
 const ORDER_PROCESSING_ALERT_POLLING_MS = 15000;
+const STORE_PAYMENT_WALLET_BALANCE_POLLING_MS = 10000;
 const ORDER_PROCESSING_ALERT_SOUND_INTERVAL_MS = 30000;
 const ORDER_PROCESSING_ALERT_SOUND_ENABLED_KEY = 'store-order-processing-alert-sound-enabled';
 const ORDER_PROCESSING_ALERT_EXPANDED_KEY = 'store-order-processing-alert-expanded';
@@ -74,6 +75,8 @@ const formatNumber = (value: number) =>
   new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(Number(value || 0));
 const formatUsdtAmount = (value: number) =>
   new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 6 }).format(Number(value || 0));
+const formatUsdtAmountFixed6 = (value: number) =>
+  new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(Number(value || 0));
 const toDateTimeLabel = (value: string) => {
   if (!value) return '-';
   const parsed = new Date(value);
@@ -184,8 +187,13 @@ export default function P2PStoreManagementLayout({ children }: { children: React
   const [loadingStoreAccess, setLoadingStoreAccess] = useState(false);
   const [storeAccessError, setStoreAccessError] = useState<string | null>(null);
   const [storeAdminWalletAddress, setStoreAdminWalletAddress] = useState('');
+  const [storePaymentWalletAddress, setStorePaymentWalletAddress] = useState('');
   const [storeName, setStoreName] = useState('');
   const [storeLogo, setStoreLogo] = useState('');
+  const [storePaymentWalletUsdtBalance, setStorePaymentWalletUsdtBalance] = useState(0);
+  const [storePaymentWalletBalanceLoading, setStorePaymentWalletBalanceLoading] = useState(false);
+  const [storePaymentWalletBalanceError, setStorePaymentWalletBalanceError] = useState<string | null>(null);
+  const [storePaymentWalletBalanceLastCheckedAt, setStorePaymentWalletBalanceLastCheckedAt] = useState('');
   const [disconnecting, setDisconnecting] = useState(false);
   const [disconnectModalOpen, setDisconnectModalOpen] = useState(false);
   const [pendingSummary, setPendingSummary] = useState<PendingOrderProcessingSummary>({
@@ -208,8 +216,13 @@ export default function P2PStoreManagementLayout({ children }: { children: React
     if (!normalizedConnectedWalletAddress || !storecode) {
       setStoreAccessError(null);
       setStoreAdminWalletAddress('');
+      setStorePaymentWalletAddress('');
       setStoreName('');
       setStoreLogo('');
+      setStorePaymentWalletUsdtBalance(0);
+      setStorePaymentWalletBalanceLoading(false);
+      setStorePaymentWalletBalanceError(null);
+      setStorePaymentWalletBalanceLastCheckedAt('');
       setLoadingStoreAccess(false);
       return;
     }
@@ -233,16 +246,23 @@ export default function P2PStoreManagementLayout({ children }: { children: React
 
         const result = payload.result || {};
         const nextAdminWalletAddress = String(result?.adminWalletAddress || '').trim();
+        const nextPaymentWalletAddress = String(result?.paymentWalletAddress || '').trim();
         const nextStoreName = String(result?.storeName || '').trim();
         const nextStoreLogo = String(result?.storeLogo || '').trim();
         setStoreAdminWalletAddress(nextAdminWalletAddress);
+        setStorePaymentWalletAddress(nextPaymentWalletAddress);
         setStoreName(nextStoreName);
         setStoreLogo(nextStoreLogo);
       } catch (error) {
         if (abortController.signal.aborted) return;
         setStoreAdminWalletAddress('');
+        setStorePaymentWalletAddress('');
         setStoreName('');
         setStoreLogo('');
+        setStorePaymentWalletUsdtBalance(0);
+        setStorePaymentWalletBalanceLoading(false);
+        setStorePaymentWalletBalanceError(null);
+        setStorePaymentWalletBalanceLastCheckedAt('');
         setStoreAccessError(
           error instanceof Error ? error.message : '가맹점 관리자 권한을 확인하지 못했습니다.',
         );
@@ -424,6 +444,48 @@ export default function P2PStoreManagementLayout({ children }: { children: React
     }
   }, [storecode]);
 
+  const loadStorePaymentWalletBalance = useCallback(async () => {
+    const normalizedPaymentWalletAddress = String(storePaymentWalletAddress || '').trim();
+    if (!normalizedPaymentWalletAddress) {
+      setStorePaymentWalletUsdtBalance(0);
+      setStorePaymentWalletBalanceError('결제 지갑주소가 설정되지 않았습니다.');
+      setStorePaymentWalletBalanceLastCheckedAt('');
+      return;
+    }
+
+    setStorePaymentWalletBalanceLoading(true);
+    try {
+      const response = await fetch('/api/user/getUSDTBalanceByWalletAddress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          walletAddress: normalizedPaymentWalletAddress,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String((payload as Record<string, unknown>)?.error || '결제 지갑 잔고를 불러오지 못했습니다.'));
+      }
+
+      const result = isRecord((payload as Record<string, unknown>)?.result)
+        ? ((payload as Record<string, unknown>).result as Record<string, unknown>)
+        : {};
+      const displayValue = Number(result.displayValue ?? result.balance ?? 0);
+
+      setStorePaymentWalletUsdtBalance(Number.isFinite(displayValue) ? displayValue : 0);
+      setStorePaymentWalletBalanceError(null);
+      setStorePaymentWalletBalanceLastCheckedAt(new Date().toISOString());
+    } catch (error) {
+      setStorePaymentWalletBalanceError(
+        error instanceof Error ? error.message : '결제 지갑 잔고를 불러오지 못했습니다.',
+      );
+    } finally {
+      setStorePaymentWalletBalanceLoading(false);
+    }
+  }, [storePaymentWalletAddress]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -476,6 +538,34 @@ export default function P2PStoreManagementLayout({ children }: { children: React
       window.clearInterval(intervalId);
     };
   }, [canAccessStorePages, loadPendingOrderProcessingSummary, storecode]);
+
+  useEffect(() => {
+    if (!canAccessStorePages || !storecode) {
+      setStorePaymentWalletUsdtBalance(0);
+      setStorePaymentWalletBalanceLoading(false);
+      setStorePaymentWalletBalanceError(null);
+      setStorePaymentWalletBalanceLastCheckedAt('');
+      return;
+    }
+
+    let isActive = true;
+    let loading = false;
+
+    const run = async () => {
+      if (loading || !isActive) return;
+      loading = true;
+      await loadStorePaymentWalletBalance();
+      loading = false;
+    };
+
+    run();
+    const intervalId = window.setInterval(run, STORE_PAYMENT_WALLET_BALANCE_POLLING_MS);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(intervalId);
+    };
+  }, [canAccessStorePages, loadStorePaymentWalletBalance, storecode]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -837,6 +927,37 @@ export default function P2PStoreManagementLayout({ children }: { children: React
               );
             })}
           </nav>
+
+          {storecode && (
+            <div className="relative px-3 pb-2">
+              {collapsed ? (
+                <div className="flex items-center justify-center">
+                  <span
+                    className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-cyan-200/50 bg-cyan-300/20 px-1 text-[9px] font-bold text-cyan-100"
+                    title={`결제지갑 ${shortAddress(storePaymentWalletAddress)} · USDT ${formatUsdtAmountFixed6(storePaymentWalletUsdtBalance)}`}
+                  >
+                    {storePaymentWalletBalanceLoading ? '...' : 'USDT'}
+                  </span>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-cyan-200/25 bg-cyan-400/5 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/90">Wallet Balance</p>
+                  <p className="mt-1 truncate text-xs font-semibold text-white/90">
+                    결제지갑: {shortAddress(storePaymentWalletAddress)}
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-cyan-100">
+                    {formatUsdtAmountFixed6(storePaymentWalletUsdtBalance)} USDT
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-slate-300">
+                    {storePaymentWalletBalanceLoading ? '잔고 조회 중...' : `갱신 ${toDateTimeLabel(storePaymentWalletBalanceLastCheckedAt)}`}
+                  </p>
+                  {storePaymentWalletBalanceError && (
+                    <p className="mt-0.5 text-[10px] text-rose-200">오류: {storePaymentWalletBalanceError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="relative border-t border-white/10 px-3 py-3">
             {collapsed ? (
