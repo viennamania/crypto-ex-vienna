@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import AdministrationSidebar from '@/components/AdministrationSidebar';
-import AdminSupportChatWidget from '@/components/AdminSupportChatWidget';
 
 type AdministrationLayoutShellProps = {
   lang: string;
@@ -623,7 +622,6 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
           </div>
         </div>
       </div>
-      <AdminSupportChatWidget />
       <style jsx global>{`
         @keyframes pendingOrderFlash {
           0%,
