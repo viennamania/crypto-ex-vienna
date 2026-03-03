@@ -54,6 +54,8 @@ const createInitialStoreForm = (): StoreCreateForm => ({
 });
 
 const toText = (value: unknown) => (typeof value === 'string' ? value : '');
+const STORE_WALLET_BALANCE_BATCH_SIZE = 500;
+const STORE_WALLET_BALANCE_COOLDOWN_MS = 10_000;
 
 export default function P2PAgentStoreManagementPage() {
   const params = useParams<{ lang: string }>();
@@ -83,6 +85,17 @@ export default function P2PAgentStoreManagementPage() {
   const [creatingStore, setCreatingStore] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [readingStoreWalletBalances, setReadingStoreWalletBalances] = useState(false);
+  const [storeWalletBalanceError, setStoreWalletBalanceError] = useState<string | null>(null);
+  const [storeWalletBalanceCooldownUntilMs, setStoreWalletBalanceCooldownUntilMs] = useState(0);
+  const [storeWalletBalanceNowMs, setStoreWalletBalanceNowMs] = useState(Date.now());
+  const [storeWalletBalanceSummary, setStoreWalletBalanceSummary] = useState<{
+    totalStores: number;
+    walletStores: number;
+    uniqueWalletCount: number;
+    totalUsdtAmount: number;
+    checkedAt: string;
+  } | null>(null);
 
   const loadData = useCallback(async () => {
     if (!agentcode) {
@@ -118,6 +131,33 @@ export default function P2PAgentStoreManagementPage() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (storeWalletBalanceCooldownUntilMs <= Date.now()) {
+      return;
+    }
+
+    const timerId = window.setInterval(() => {
+      setStoreWalletBalanceNowMs(() => {
+        const now = Date.now();
+        if (now >= storeWalletBalanceCooldownUntilMs) {
+          window.clearInterval(timerId);
+        }
+        return now;
+      });
+    }, 500);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [storeWalletBalanceCooldownUntilMs]);
+
+  useEffect(() => {
+    setStoreWalletBalanceSummary(null);
+    setStoreWalletBalanceError(null);
+    setStoreWalletBalanceCooldownUntilMs(0);
+    setStoreWalletBalanceNowMs(Date.now());
+  }, [agentcode]);
+
   const filteredStores = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
     if (!normalizedKeyword) {
@@ -132,6 +172,95 @@ export default function P2PAgentStoreManagementPage() {
       );
     });
   }, [stores, keyword]);
+
+  const formatUsdtFixed6 = useCallback((value: number) => {
+    const numeric = Number(value || 0);
+    return new Intl.NumberFormat('ko-KR', {
+      minimumFractionDigits: 6,
+      maximumFractionDigits: 6,
+    }).format(Number.isFinite(numeric) ? numeric : 0);
+  }, []);
+
+  const readStorePaymentWalletBalanceSummary = useCallback(async () => {
+    if (readingStoreWalletBalances) {
+      return;
+    }
+    if (storeWalletBalanceCooldownUntilMs > Date.now()) {
+      return;
+    }
+
+    setReadingStoreWalletBalances(true);
+    setStoreWalletBalanceError(null);
+
+    try {
+      const walletAddressMap = new Map<string, string>();
+      let walletStores = 0;
+
+      stores.forEach((store) => {
+        const paymentWalletAddress = String(store.paymentWalletAddress || '').trim();
+        if (!paymentWalletAddress) return;
+        walletStores += 1;
+        const normalizedWalletAddress = paymentWalletAddress.toLowerCase();
+        if (!walletAddressMap.has(normalizedWalletAddress)) {
+          walletAddressMap.set(normalizedWalletAddress, paymentWalletAddress);
+        }
+      });
+
+      const uniqueWalletAddresses = Array.from(walletAddressMap.values());
+      let totalUsdtAmount = 0;
+
+      for (let index = 0; index < uniqueWalletAddresses.length; index += STORE_WALLET_BALANCE_BATCH_SIZE) {
+        const walletAddressBatch = uniqueWalletAddresses.slice(index, index + STORE_WALLET_BALANCE_BATCH_SIZE);
+
+        const response = await fetch('/api/user/getUSDTBalancesByWalletAddresses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            walletAddresses: walletAddressBatch,
+          }),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(String(payload?.error || '가맹점 결제지갑 잔고를 읽어오지 못했습니다.'));
+        }
+
+        const balances = Array.isArray(payload?.result?.balances) ? payload.result.balances : [];
+        balances.forEach((balanceItem: unknown) => {
+          const source =
+            typeof balanceItem === 'object' && balanceItem !== null
+              ? (balanceItem as Record<string, unknown>)
+              : {};
+          const amount = Number(source.displayValue ?? source.balance ?? 0);
+          if (Number.isFinite(amount)) {
+            totalUsdtAmount += amount;
+          }
+        });
+      }
+
+      setStoreWalletBalanceSummary({
+        totalStores: stores.length,
+        walletStores,
+        uniqueWalletCount: uniqueWalletAddresses.length,
+        totalUsdtAmount,
+        checkedAt: new Date().toISOString(),
+      });
+      setStoreWalletBalanceCooldownUntilMs(Date.now() + STORE_WALLET_BALANCE_COOLDOWN_MS);
+      setStoreWalletBalanceNowMs(Date.now());
+    } catch (error) {
+      setStoreWalletBalanceError(
+        error instanceof Error ? error.message : '가맹점 결제지갑 잔고 합산 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setReadingStoreWalletBalances(false);
+    }
+  }, [readingStoreWalletBalances, storeWalletBalanceCooldownUntilMs, stores]);
+
+  const storeWalletBalanceCooldownSeconds = Math.max(
+    0,
+    Math.ceil((storeWalletBalanceCooldownUntilMs - storeWalletBalanceNowMs) / 1000),
+  );
+  const storeWalletBalanceReadBlocked = readingStoreWalletBalances || storeWalletBalanceCooldownSeconds > 0;
 
   const loadStoreRateHistory = useCallback(async (storecode: string) => {
     const normalizedStorecode = String(storecode || '').trim();
@@ -507,6 +636,59 @@ export default function P2PAgentStoreManagementPage() {
               <p className="text-xs font-semibold text-slate-500">표시 목록</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">{filteredStores.length.toLocaleString()}개</p>
             </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">결제지갑 USDT 합산</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  가맹점 전체 결제지갑(지갑주소가 있는 항목)의 USDT 잔고를 합산합니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  void readStorePaymentWalletBalanceSummary();
+                }}
+                disabled={storeWalletBalanceReadBlocked}
+                className="inline-flex h-9 items-center justify-center rounded-xl border border-cyan-300 bg-cyan-50 px-3 text-xs font-semibold text-cyan-800 transition hover:border-cyan-400 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-55"
+              >
+                {readingStoreWalletBalances
+                  ? '읽어오는 중...'
+                  : storeWalletBalanceCooldownSeconds > 0
+                    ? `${storeWalletBalanceCooldownSeconds}초 후 재조회`
+                    : '결제지갑 잔고 읽어오기'}
+              </button>
+            </div>
+
+            {storeWalletBalanceError && (
+              <p className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700">
+                {storeWalletBalanceError}
+              </p>
+            )}
+
+            {storeWalletBalanceSummary && (
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] text-slate-500">전체 가맹점</p>
+                  <p className="text-sm font-semibold text-slate-900">{storeWalletBalanceSummary.totalStores.toLocaleString()}개</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] text-slate-500">결제지갑 보유 가맹점</p>
+                  <p className="text-sm font-semibold text-slate-900">{storeWalletBalanceSummary.walletStores.toLocaleString()}개</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <p className="text-[11px] text-slate-500">고유 결제지갑 수</p>
+                  <p className="text-sm font-semibold text-slate-900">{storeWalletBalanceSummary.uniqueWalletCount.toLocaleString()}개</p>
+                </div>
+                <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2">
+                  <p className="text-[11px] text-cyan-700">USDT 합산</p>
+                  <p className="text-sm font-extrabold text-cyan-900">{formatUsdtFixed6(storeWalletBalanceSummary.totalUsdtAmount)} USDT</p>
+                  <p className="text-[10px] text-cyan-700">조회 {toDateTime(storeWalletBalanceSummary.checkedAt)}</p>
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3">

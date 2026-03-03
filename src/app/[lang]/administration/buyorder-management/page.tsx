@@ -144,6 +144,7 @@ type EscrowWalletBalanceState = {
 };
 
 const POLLING_INTERVAL_MS = 5000;
+const ACTIVE_BUY_ORDER_COUNT_POLLING_MS = 15000;
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
 const BALANCE_CHECK_COOLDOWN_MS = 10_000;
@@ -228,7 +229,6 @@ type BuyerConsentSnapshot = {
   channelUrl: string;
 };
 
-const ACTIVE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
 const PAYMENT_REQUEST_COUNTDOWN_LIMIT_MS = 30 * 60 * 1000;
 const CANCEL_ORDER_PROGRESS_STEP_DEFINITIONS: Array<{
   key: string;
@@ -870,6 +870,7 @@ export default function BuyOrderManagementPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string>('');
   const [totalCount, setTotalCount] = useState(0);
+  const [activeBuyOrderCount, setActiveBuyOrderCount] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [summary, setSummary] = useState({
@@ -1093,6 +1094,27 @@ export default function BuyOrderManagementPage() {
     };
   }, [adminWalletAddress, cancelActorNickname, isOrderChatDrawerOpen]);
 
+  const fetchActiveBuyOrderCount = useCallback(async () => {
+    try {
+      const response = await fetch('/api/order/getActiveBuyOrderCount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String(payload?.error || '진행중 구매주문 개수를 조회하지 못했습니다.'));
+      }
+      const nextCountRaw = Number(payload?.result?.count || 0);
+      const nextCount = Number.isFinite(nextCountRaw) ? Math.max(0, Math.floor(nextCountRaw)) : 0;
+      if (mountedRef.current) {
+        setActiveBuyOrderCount(nextCount);
+      }
+    } catch (fetchCountError) {
+      console.error('Failed to fetch active buy order count', fetchCountError);
+    }
+  }, []);
+
   const fetchLatestBuyOrders = useCallback(async (mode: 'initial' | 'query' | 'polling' = 'query') => {
     if (requestInFlightRef.current) return;
 
@@ -1186,6 +1208,20 @@ export default function BuyOrderManagementPage() {
     };
   }, [fetchLatestBuyOrders]);
 
+  useEffect(() => {
+    mountedRef.current = true;
+    void fetchActiveBuyOrderCount();
+
+    const intervalId = window.setInterval(() => {
+      void fetchActiveBuyOrderCount();
+    }, ACTIVE_BUY_ORDER_COUNT_POLLING_MS);
+
+    return () => {
+      mountedRef.current = false;
+      window.clearInterval(intervalId);
+    };
+  }, [fetchActiveBuyOrderCount]);
+
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalCount / pageSize)),
     [totalCount, pageSize],
@@ -1198,15 +1234,11 @@ export default function BuyOrderManagementPage() {
   }, [pageNumber, totalPages]);
 
   const dashboardStats = useMemo(() => {
-    let activeCount = 0;
     const statusCountMap = new Map<string, number>();
 
     orders.forEach((order) => {
       const status = String(order?.status || '').trim() || 'unknown';
       statusCountMap.set(status, (statusCountMap.get(status) || 0) + 1);
-      if (ACTIVE_STATUSES.has(status)) {
-        activeCount += 1;
-      }
     });
 
     const statusItems = [...statusCountMap.entries()].sort((a, b) => b[1] - a[1]);
@@ -1216,10 +1248,10 @@ export default function BuyOrderManagementPage() {
       totalKrwAmount: summary.totalKrwAmount,
       totalUsdtAmount: summary.totalUsdtAmount,
       totalFeeAmount: summary.totalFeeAmount,
-      activeCount,
+      activeCount: activeBuyOrderCount,
       statusItems,
     };
-  }, [orders, summary.totalFeeAmount, summary.totalKrwAmount, summary.totalUsdtAmount, totalCount]);
+  }, [orders, summary.totalFeeAmount, summary.totalKrwAmount, summary.totalUsdtAmount, totalCount, activeBuyOrderCount]);
 
   const sellerSalesSummarySorted = useMemo(
     () => [...sellerSalesSummary].sort((a, b) => (
