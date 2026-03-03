@@ -49,33 +49,52 @@ export default function P2PAgentStoreMemberManagementPage() {
     setLoading(true);
     setError(null);
     try {
-      const [agentData, storesResult, membersResult] = await Promise.all([
+      const [agentData, storesResult] = await Promise.all([
         fetchAgentSummary(agentcode),
         fetchStoresByAgent(agentcode, 1000, 1),
-        fetchUsersByAgent(agentcode, {
-          storecode: selectedStorecode,
-          userType: 'all',
-          requireProfile: false,
-          includeWalletless: true,
-          searchTerm: keyword.trim(),
-          sortField: 'createdAt',
-          limit: PAGE_SIZE,
-          page: currentPage,
-        }),
       ]);
+
+      const storesWithStorecode = storesResult.stores.filter(
+        (store) => String(store.storecode || '').trim().length > 0,
+      );
+      const hasSelectedStorecode = selectedStorecode
+        && storesWithStorecode.some((store) => store.storecode === selectedStorecode);
+      const fallbackStorecode = storesWithStorecode[0]?.storecode || '';
+      const effectiveStorecode = hasSelectedStorecode ? selectedStorecode : fallbackStorecode;
 
       setAgent(agentData);
       setStores(storesResult.stores);
+
+      if (!effectiveStorecode) {
+        if (selectedStorecode) {
+          setSelectedStorecode('');
+        }
+        setMembers([]);
+        setTotalCount(0);
+        return;
+      }
+
+      if (effectiveStorecode !== selectedStorecode) {
+        setSelectedStorecode(effectiveStorecode);
+        setCurrentPage(1);
+        setMembers([]);
+        setTotalCount(0);
+        return;
+      }
+
+      const membersResult = await fetchUsersByAgent(agentcode, {
+        storecode: effectiveStorecode,
+        userType: 'all',
+        requireProfile: false,
+        includeWalletless: true,
+        searchTerm: keyword.trim(),
+        sortField: 'createdAt',
+        limit: PAGE_SIZE,
+        page: currentPage,
+      });
+
       setMembers(membersResult.users);
       setTotalCount(membersResult.totalCount);
-
-      if (
-        selectedStorecode
-        && !storesResult.stores.some((store) => store.storecode === selectedStorecode)
-      ) {
-        setSelectedStorecode('');
-        setCurrentPage(1);
-      }
     } catch (loadError) {
       setAgent(null);
       setStores([]);
@@ -156,6 +175,10 @@ export default function P2PAgentStoreMemberManagementPage() {
     () => Math.max(1, Math.ceil(totalCount / PAGE_SIZE)),
     [PAGE_SIZE, totalCount],
   );
+  const selectableStores = useMemo(
+    () => stores.filter((store) => String(store.storecode || '').trim().length > 0),
+    [stores],
+  );
 
   const visiblePageNumbers = useMemo(() => {
     const windowSize = 5;
@@ -222,32 +245,7 @@ export default function P2PAgentStoreMemberManagementPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">가맹점 선택</p>
               <div className="mt-2 max-h-[280px] overflow-y-auto pr-1">
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedStorecode('');
-                      setCurrentPage(1);
-                    }}
-                    className={`flex min-h-[66px] items-center gap-3 rounded-xl border px-3 py-2 text-left transition ${
-                      selectedStorecode
-                        ? 'border-slate-200 bg-white hover:border-slate-300'
-                        : 'border-cyan-300 bg-cyan-50 shadow-[0_14px_30px_-22px_rgba(6,182,212,0.9)]'
-                    }`}
-                  >
-                    <span
-                      className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
-                        selectedStorecode ? 'bg-slate-100 text-slate-600' : 'bg-cyan-100 text-cyan-700'
-                      }`}
-                    >
-                      ALL
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold text-slate-900">전체 가맹점</span>
-                      <span className="block truncate text-xs text-slate-500">agentcode 소속 전체 회원 조회</span>
-                    </span>
-                  </button>
-
-                  {stores.map((store) => {
+                  {selectableStores.map((store) => {
                     const isActive = selectedStorecode === store.storecode;
                     const storeTitle = store.storeName || store.storecode || '-';
                     const storeCode = store.storecode || '-';
@@ -285,6 +283,11 @@ export default function P2PAgentStoreMemberManagementPage() {
                     );
                   })}
                 </div>
+                {selectableStores.length === 0 && (
+                  <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                    선택할 수 있는 가맹점이 없습니다.
+                  </p>
+                )}
               </div>
             </div>
           </section>
