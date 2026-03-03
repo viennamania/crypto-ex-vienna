@@ -52,11 +52,26 @@ type PendingAlertCardItem = PendingOrderProcessingItem & {
   cardState: 'entering' | 'stable' | 'exiting';
 };
 
+type AgentSellerEscrowWallet = {
+  id: string;
+  nickname: string;
+  escrowWalletAddress: string;
+};
+
+type AgentSellerEscrowBalanceItem = {
+  walletAddress: string;
+  displayValue: string;
+  rawBalance: string;
+  decimals: number;
+  error: string | null;
+};
+
 const WALLET_AUTH_OPTIONS = ['email', 'google', 'phone'];
 const WALLET_DEFAULT_SMS_COUNTRY_CODE: SupportedSmsCountry = 'KR';
 const WALLET_ALLOWED_SMS_COUNTRY_CODES: SupportedSmsCountry[] = ['KR'];
 const BUYORDER_BADGE_POLLING_MS = 15000;
 const ORDER_PROCESSING_ALERT_POLLING_MS = 15000;
+const AGENT_ESCROW_BALANCE_POLLING_MS = 10000;
 const ORDER_PROCESSING_ALERT_SOUND_INTERVAL_MS = 30000;
 const ORDER_PROCESSING_ALERT_SOUND_ENABLED_KEY = 'agent-order-processing-alert-sound-enabled';
 const ORDER_PROCESSING_ALERT_EXPANDED_KEY = 'agent-order-processing-alert-expanded';
@@ -71,6 +86,14 @@ const formatNumber = (value: number) =>
   new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(Number(value || 0));
 const formatUsdtAmount = (value: number) =>
   new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 6 }).format(Number(value || 0));
+const formatUsdtAmountFixed6 = (value: number) =>
+  new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(Number(value || 0));
+const shortAddress = (value: string) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '-';
+  if (normalized.length <= 14) return normalized;
+  return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
+};
 const toDateTimeLabel = (value: string) => {
   if (!value) return '-';
   const parsed = new Date(value);
@@ -165,6 +188,11 @@ export default function P2PAgentManagementLayout({ children }: { children: React
   const [pendingAlertSoundEnabled, setPendingAlertSoundEnabled] = useState(true);
   const [pendingAlertExpanded, setPendingAlertExpanded] = useState(true);
   const [pendingAlertCards, setPendingAlertCards] = useState<PendingAlertCardItem[]>([]);
+  const [agentEscrowSellers, setAgentEscrowSellers] = useState<AgentSellerEscrowWallet[]>([]);
+  const [agentEscrowBalancesByWallet, setAgentEscrowBalancesByWallet] = useState<Record<string, AgentSellerEscrowBalanceItem>>({});
+  const [agentEscrowBalancesLoading, setAgentEscrowBalancesLoading] = useState(false);
+  const [agentEscrowBalancesError, setAgentEscrowBalancesError] = useState<string | null>(null);
+  const [agentEscrowBalancesLastCheckedAt, setAgentEscrowBalancesLastCheckedAt] = useState('');
   const pendingAlertAudioRef = useRef<HTMLAudioElement | null>(null);
   const pendingAlertAudioUnlockedRef = useRef(false);
   const lastAlertSoundAtRef = useRef(0);
@@ -277,13 +305,48 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       && !checkingAgentAccess
       && !isAgentAccessVerified,
   );
+  const showPinnedEscrowBalance = isAgentAccessVerified;
   const showPinnedPendingAlert = isAgentAccessVerified && (pendingSummary.pendingCount > 0 || pendingAlertCards.length > 0);
-  const pendingAlertContainerClass = isMobileViewport
-    ? 'pointer-events-none sticky top-[calc(env(safe-area-inset-top)+0.45rem)] z-[120] px-2'
+  const pinnedTopContainerClass = isMobileViewport
+    ? 'pointer-events-none sticky top-[calc(env(safe-area-inset-top)+3.2rem)] z-[120] px-2'
     : `pointer-events-none fixed inset-x-0 top-12 z-[120] px-3 lg:top-3 ${desktopSidebarWidthClass}`;
-  const contentTopPaddingClass = showPinnedPendingAlert
-    ? (isMobileViewport ? (pendingAlertExpanded ? 'pt-4' : 'pt-3') : (pendingAlertExpanded ? 'pt-44 lg:pt-32' : 'pt-28 lg:pt-20'))
-    : 'pt-16 lg:pt-8';
+  const contentTopPaddingClass = (() => {
+    if (!showPinnedEscrowBalance && !showPinnedPendingAlert) {
+      return 'pt-16 lg:pt-8';
+    }
+
+    if (showPinnedEscrowBalance && !showPinnedPendingAlert) {
+      return isMobileViewport ? 'pt-36' : 'pt-40 lg:pt-28';
+    }
+
+    if (!showPinnedEscrowBalance && showPinnedPendingAlert) {
+      return isMobileViewport
+        ? (pendingAlertExpanded ? 'pt-4' : 'pt-3')
+        : (pendingAlertExpanded ? 'pt-44 lg:pt-32' : 'pt-28 lg:pt-20');
+    }
+
+    return isMobileViewport
+      ? (pendingAlertExpanded ? 'pt-60' : 'pt-44')
+      : (pendingAlertExpanded ? 'pt-72 lg:pt-60' : 'pt-52 lg:pt-40');
+  })();
+
+  const agentEscrowBalanceCards = useMemo(
+    () =>
+      agentEscrowSellers.map((seller) => {
+        const normalizedEscrowWalletAddress = normalizeAddress(seller.escrowWalletAddress);
+        const balanceInfo = agentEscrowBalancesByWallet[normalizedEscrowWalletAddress];
+        const numericBalance = Number(balanceInfo?.displayValue || 0);
+        const safeNumericBalance = Number.isFinite(numericBalance) ? numericBalance : 0;
+
+        return {
+          ...seller,
+          balanceLabel: formatUsdtAmountFixed6(safeNumericBalance),
+          hasBalanceError: Boolean(balanceInfo?.error),
+          balanceError: balanceInfo?.error || '',
+        };
+      }),
+    [agentEscrowBalancesByWallet, agentEscrowSellers],
+  );
 
   useEffect(() => {
     const updateViewport = () => {
@@ -446,6 +509,129 @@ export default function P2PAgentManagementLayout({ children }: { children: React
     }
   }, [agentcode]);
 
+  const loadAgentEscrowBalances = useCallback(async () => {
+    if (!agentcode) {
+      setAgentEscrowSellers([]);
+      setAgentEscrowBalancesByWallet({});
+      setAgentEscrowBalancesError(null);
+      setAgentEscrowBalancesLastCheckedAt('');
+      return;
+    }
+
+    setAgentEscrowBalancesLoading(true);
+
+    try {
+      const usersResponse = await fetch('/api/user/getAllUsersByStorecode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          storecode: '',
+          agentcode,
+          userType: 'seller',
+          requireProfile: true,
+          includeWalletless: true,
+          includeUnverified: true,
+          searchTerm: '',
+          limit: 1000,
+          page: 1,
+          sortField: 'createdAt',
+        }),
+      });
+      const usersPayload = await usersResponse.json().catch(() => ({}));
+      if (!usersResponse.ok) {
+        throw new Error(String((usersPayload as Record<string, unknown>)?.error || '판매자 목록을 불러오지 못했습니다.'));
+      }
+
+      const usersResult = isRecord((usersPayload as Record<string, unknown>)?.result)
+        ? ((usersPayload as Record<string, unknown>).result as Record<string, unknown>)
+        : {};
+      const usersRaw = Array.isArray(usersResult.users) ? usersResult.users : [];
+
+      const sellerByEscrowWallet = new Map<string, AgentSellerEscrowWallet>();
+      usersRaw.forEach((item) => {
+        const source = isRecord(item) ? item : {};
+        const seller = isRecord(source.seller) ? source.seller : {};
+        const escrowWalletAddress = String(seller.escrowWalletAddress || source.escrowWalletAddress || '').trim();
+        if (!escrowWalletAddress) return;
+
+        const normalizedEscrowWalletAddress = normalizeAddress(escrowWalletAddress);
+        if (!normalizedEscrowWalletAddress || sellerByEscrowWallet.has(normalizedEscrowWalletAddress)) return;
+
+        sellerByEscrowWallet.set(normalizedEscrowWalletAddress, {
+          id: String(source._id || source.id || normalizedEscrowWalletAddress),
+          nickname: String(source.nickname || '').trim() || '-',
+          escrowWalletAddress,
+        });
+      });
+
+      const sellersWithEscrow = Array.from(sellerByEscrowWallet.values());
+      setAgentEscrowSellers(sellersWithEscrow);
+
+      if (sellersWithEscrow.length === 0) {
+        setAgentEscrowBalancesByWallet({});
+        setAgentEscrowBalancesError(null);
+        setAgentEscrowBalancesLastCheckedAt(new Date().toISOString());
+        return;
+      }
+
+      const balanceResponse = await fetch('/api/user/getUSDTBalancesByWalletAddresses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          walletAddresses: sellersWithEscrow.map((seller) => seller.escrowWalletAddress),
+        }),
+      });
+      const balancePayload = await balanceResponse.json().catch(() => ({}));
+      if (!balanceResponse.ok) {
+        throw new Error(String((balancePayload as Record<string, unknown>)?.error || '에스크로 잔고를 불러오지 못했습니다.'));
+      }
+
+      const balanceResult = isRecord((balancePayload as Record<string, unknown>)?.result)
+        ? ((balancePayload as Record<string, unknown>).result as Record<string, unknown>)
+        : {};
+      const balancesRaw = Array.isArray(balanceResult.balances) ? balanceResult.balances : [];
+
+      const nextBalancesByWallet: Record<string, AgentSellerEscrowBalanceItem> = {};
+
+      balancesRaw.forEach((item) => {
+        const source = isRecord(item) ? item : {};
+        const walletAddress = String(source.walletAddress || '').trim();
+        if (!walletAddress) return;
+
+        nextBalancesByWallet[normalizeAddress(walletAddress)] = {
+          walletAddress,
+          displayValue: String(source.displayValue || source.balance || '0'),
+          rawBalance: String(source.rawBalance || '0'),
+          decimals: Number(source.decimals || 6),
+          error: source.error ? String(source.error) : null,
+        };
+      });
+
+      sellersWithEscrow.forEach((seller) => {
+        const normalizedEscrowWalletAddress = normalizeAddress(seller.escrowWalletAddress);
+        if (!nextBalancesByWallet[normalizedEscrowWalletAddress]) {
+          nextBalancesByWallet[normalizedEscrowWalletAddress] = {
+            walletAddress: seller.escrowWalletAddress,
+            displayValue: '0',
+            rawBalance: '0',
+            decimals: 6,
+            error: '잔고 응답이 없습니다.',
+          };
+        }
+      });
+
+      setAgentEscrowBalancesByWallet(nextBalancesByWallet);
+      setAgentEscrowBalancesError(null);
+      setAgentEscrowBalancesLastCheckedAt(new Date().toISOString());
+    } catch (error) {
+      setAgentEscrowBalancesError(error instanceof Error ? error.message : '에스크로 잔고를 불러오지 못했습니다.');
+    } finally {
+      setAgentEscrowBalancesLoading(false);
+    }
+  }, [agentcode]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -523,6 +709,34 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       window.clearInterval(intervalId);
     };
   }, [agentcode, isAgentAccessVerified, loadPaymentRequestedBuyOrderCount]);
+
+  useEffect(() => {
+    if (!isAgentAccessVerified || !agentcode) {
+      setAgentEscrowSellers([]);
+      setAgentEscrowBalancesByWallet({});
+      setAgentEscrowBalancesError(null);
+      setAgentEscrowBalancesLastCheckedAt('');
+      return;
+    }
+
+    let isActive = true;
+    let loading = false;
+
+    const run = async () => {
+      if (loading || !isActive) return;
+      loading = true;
+      await loadAgentEscrowBalances();
+      loading = false;
+    };
+
+    run();
+    const intervalId = window.setInterval(run, AGENT_ESCROW_BALANCE_POLLING_MS);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(intervalId);
+    };
+  }, [agentcode, isAgentAccessVerified, loadAgentEscrowBalances]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -997,107 +1211,159 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       </aside>
 
       <div className={`min-h-screen transition-all duration-300 ${desktopSidebarWidthClass}`}>
-        {showPinnedPendingAlert && (
-          <div className={pendingAlertContainerClass}>
-            <div className="mx-auto w-full max-w-6xl">
-              <section className="pointer-events-auto rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-700">Payment Processing Alert</p>
-                    <p className="mt-0.5 text-sm font-bold text-slate-900 sm:text-[15px]">
-                      결제처리 미완료 {formatNumber(pendingSummary.pendingCount)}건
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-slate-500">
-                      oldest {toTimeAgoLabel(pendingSummary.oldestPendingAt)} · checked {toDateTimeLabel(pendingAlertLastCheckedAt)}
-                    </p>
-                    {pendingAlertError && <p className="mt-0.5 text-[11px] text-rose-700">조회 오류: {pendingAlertError}</p>}
+        {(showPinnedEscrowBalance || showPinnedPendingAlert) && (
+          <div className={pinnedTopContainerClass}>
+            <div className="mx-auto w-full max-w-6xl space-y-2">
+              {showPinnedEscrowBalance && (
+                <section className="pointer-events-auto rounded-xl border border-cyan-200 bg-cyan-50/95 px-3 py-2.5 shadow-sm backdrop-blur">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-800">Seller Escrow Balance</p>
+                      <p className="mt-0.5 text-sm font-bold text-slate-900 sm:text-[15px]">
+                        에스크로 지갑 보유 판매자 {formatNumber(agentEscrowBalanceCards.length)}명
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-500">
+                        checked {toDateTimeLabel(agentEscrowBalancesLastCheckedAt)}
+                        {agentEscrowBalancesLoading ? ' · 조회 중...' : ''}
+                      </p>
+                      {agentEscrowBalancesError && (
+                        <p className="mt-0.5 text-[11px] text-rose-700">조회 오류: {agentEscrowBalancesError}</p>
+                      )}
+                    </div>
+
+                    <span className="inline-flex h-7 items-center justify-center rounded-lg border border-cyan-300 bg-white px-2 text-[10px] font-semibold text-cyan-800">
+                      {Math.floor(AGENT_ESCROW_BALANCE_POLLING_MS / 1000)}초 주기 자동 갱신
+                    </span>
                   </div>
 
-                  <div className="flex shrink-0 flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={togglePendingAlertExpanded}
-                      className="inline-flex h-7 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-[10px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                    >
-                      {pendingAlertExpanded ? '접기' : '펼치기'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={togglePendingAlertSound}
-                      className={`inline-flex h-7 items-center justify-center rounded-lg border px-2 text-[10px] font-semibold transition ${
-                        pendingAlertSoundEnabled
-                          ? 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300'
-                          : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
-                      }`}
-                    >
-                      {pendingAlertSoundEnabled ? '알림음 끄기' : '알림음 켜기'}
-                    </button>
-                    <Link
-                      href={paymentManagementHref}
-                      className="inline-flex h-7 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-[10px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                    >
-                      가맹점 결제 관리
-                    </Link>
-                  </div>
-                </div>
-
-                {pendingAlertExpanded && pendingAlertCards.length > 0 && (
-                  <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
-                    {pendingAlertCards.map((payment) => {
-                      const motionClass =
-                        payment.cardState === 'exiting'
-                          ? 'opacity-0 -translate-y-1 scale-[0.98]'
-                          : 'opacity-100 translate-y-0 scale-100';
-
-                      return (
+                  {agentEscrowBalanceCards.length === 0 ? (
+                    <p className="mt-2 text-[11px] text-slate-600">소속 판매자 중 에스크로 지갑 주소가 등록된 계정이 없습니다.</p>
+                  ) : (
+                    <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+                      {agentEscrowBalanceCards.map((seller) => (
                         <article
-                          key={payment.cardKey}
-                          className={`min-w-[160px] rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 transition-all duration-500 ease-out ${motionClass} ${
-                            payment.cardState === 'entering' ? 'pending-order-flash' : ''
-                          }`}
+                          key={`${seller.id}-${seller.escrowWalletAddress}`}
+                          className="min-w-[172px] rounded-lg border border-cyan-200 bg-white px-2 py-1.5"
                         >
-                        <div className="mb-1 flex items-center gap-1.5">
-                          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white text-[10px] font-bold text-slate-600">
-                            {payment.storeLogo ? (
-                              <span
-                                className="h-full w-full bg-cover bg-center"
-                                style={{ backgroundImage: `url(${encodeURI(payment.storeLogo)})` }}
-                                aria-label={payment.storeName || payment.storecode || 'store logo'}
-                              />
-                            ) : (
-                              (payment.storeName || payment.storecode || 'S').slice(0, 1)
-                            )}
-                          </span>
-                          <p className="truncate text-[11px] font-semibold text-slate-700">
-                            {payment.storeName || payment.storecode || '-'}
+                          <p className="truncate text-[11px] font-semibold text-slate-800">{seller.nickname || '-'}</p>
+                          <p className="truncate text-[10px] text-slate-500" title={seller.escrowWalletAddress}>
+                            {shortAddress(seller.escrowWalletAddress)}
                           </p>
-                        </div>
+                          <p className="mt-1 text-[13px] font-extrabold leading-tight text-cyan-800">
+                            {seller.balanceLabel} USDT
+                          </p>
+                          {seller.hasBalanceError && (
+                            <p className="mt-0.5 truncate text-[10px] text-rose-600" title={seller.balanceError}>
+                              조회 오류
+                            </p>
+                          )}
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
 
-                        <div className="flex items-end justify-between gap-2">
-                          <p className="truncate text-[13px] font-extrabold leading-tight text-slate-900">
-                            {payment.memberNickname || '-'}
-                          </p>
-                          <p className="shrink-0 text-[12px] font-extrabold leading-tight text-rose-700">
-                            {toTimeAgoLabel(payment.confirmedAt || payment.createdAt)}
-                          </p>
-                        </div>
+              {showPinnedPendingAlert && (
+                <section className="pointer-events-auto rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-700">Payment Processing Alert</p>
+                      <p className="mt-0.5 text-sm font-bold text-slate-900 sm:text-[15px]">
+                        결제처리 미완료 {formatNumber(pendingSummary.pendingCount)}건
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-500">
+                        oldest {toTimeAgoLabel(pendingSummary.oldestPendingAt)} · checked {toDateTimeLabel(pendingAlertLastCheckedAt)}
+                      </p>
+                      {pendingAlertError && <p className="mt-0.5 text-[11px] text-rose-700">조회 오류: {pendingAlertError}</p>}
+                    </div>
 
-                        <div className="mt-1 flex justify-end gap-1">
-                          <div className="w-[72px] rounded-md border border-slate-200 bg-white px-1.5 py-1">
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.02em] text-slate-500">USDT</p>
-                            <p className="text-right text-[12px] font-extrabold leading-tight text-slate-900">{formatUsdtAmount(payment.usdtAmount)}</p>
-                          </div>
-                          <div className="w-[72px] rounded-md border border-slate-200 bg-white px-1.5 py-1">
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.02em] text-slate-500">KRW</p>
-                            <p className="text-right text-[12px] font-extrabold leading-tight text-slate-900">{formatNumber(payment.krwAmount)}</p>
-                          </div>
-                        </div>
-                      </article>
-                      );
-                    })}
+                    <div className="flex shrink-0 flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={togglePendingAlertExpanded}
+                        className="inline-flex h-7 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-[10px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                      >
+                        {pendingAlertExpanded ? '접기' : '펼치기'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={togglePendingAlertSound}
+                        className={`inline-flex h-7 items-center justify-center rounded-lg border px-2 text-[10px] font-semibold transition ${
+                          pendingAlertSoundEnabled
+                            ? 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300'
+                            : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
+                        }`}
+                      >
+                        {pendingAlertSoundEnabled ? '알림음 끄기' : '알림음 켜기'}
+                      </button>
+                      <Link
+                        href={paymentManagementHref}
+                        className="inline-flex h-7 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-[10px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                      >
+                        가맹점 결제 관리
+                      </Link>
+                    </div>
                   </div>
-                )}
-              </section>
+
+                  {pendingAlertExpanded && pendingAlertCards.length > 0 && (
+                    <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+                      {pendingAlertCards.map((payment) => {
+                        const motionClass =
+                          payment.cardState === 'exiting'
+                            ? 'opacity-0 -translate-y-1 scale-[0.98]'
+                            : 'opacity-100 translate-y-0 scale-100';
+
+                        return (
+                          <article
+                            key={payment.cardKey}
+                            className={`min-w-[160px] rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 transition-all duration-500 ease-out ${motionClass} ${
+                              payment.cardState === 'entering' ? 'pending-order-flash' : ''
+                            }`}
+                          >
+                            <div className="mb-1 flex items-center gap-1.5">
+                              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white text-[10px] font-bold text-slate-600">
+                                {payment.storeLogo ? (
+                                  <span
+                                    className="h-full w-full bg-cover bg-center"
+                                    style={{ backgroundImage: `url(${encodeURI(payment.storeLogo)})` }}
+                                    aria-label={payment.storeName || payment.storecode || 'store logo'}
+                                  />
+                                ) : (
+                                  (payment.storeName || payment.storecode || 'S').slice(0, 1)
+                                )}
+                              </span>
+                              <p className="truncate text-[11px] font-semibold text-slate-700">
+                                {payment.storeName || payment.storecode || '-'}
+                              </p>
+                            </div>
+
+                            <div className="flex items-end justify-between gap-2">
+                              <p className="truncate text-[13px] font-extrabold leading-tight text-slate-900">
+                                {payment.memberNickname || '-'}
+                              </p>
+                              <p className="shrink-0 text-[12px] font-extrabold leading-tight text-rose-700">
+                                {toTimeAgoLabel(payment.confirmedAt || payment.createdAt)}
+                              </p>
+                            </div>
+
+                            <div className="mt-1 flex justify-end gap-1">
+                              <div className="w-[72px] rounded-md border border-slate-200 bg-white px-1.5 py-1">
+                                <p className="text-[9px] font-semibold uppercase tracking-[0.02em] text-slate-500">USDT</p>
+                                <p className="text-right text-[12px] font-extrabold leading-tight text-slate-900">{formatUsdtAmount(payment.usdtAmount)}</p>
+                              </div>
+                              <div className="w-[72px] rounded-md border border-slate-200 bg-white px-1.5 py-1">
+                                <p className="text-[9px] font-semibold uppercase tracking-[0.02em] text-slate-500">KRW</p>
+                                <p className="text-right text-[12px] font-extrabold leading-tight text-slate-900">{formatNumber(payment.krwAmount)}</p>
+                              </div>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              )}
             </div>
           </div>
         )}
