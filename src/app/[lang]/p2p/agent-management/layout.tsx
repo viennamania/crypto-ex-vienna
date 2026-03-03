@@ -193,7 +193,9 @@ export default function P2PAgentManagementLayout({ children }: { children: React
   const [agentEscrowBalancesLoading, setAgentEscrowBalancesLoading] = useState(false);
   const [agentEscrowBalancesError, setAgentEscrowBalancesError] = useState<string | null>(null);
   const [agentEscrowBalancesLastCheckedAt, setAgentEscrowBalancesLastCheckedAt] = useState('');
+  const [pinnedTopHeightPx, setPinnedTopHeightPx] = useState(0);
   const pendingAlertAudioRef = useRef<HTMLAudioElement | null>(null);
+  const pinnedTopContainerRef = useRef<HTMLDivElement | null>(null);
   const pendingAlertAudioUnlockedRef = useRef(false);
   const lastAlertSoundAtRef = useRef(0);
   const previousPendingCountRef = useRef(0);
@@ -307,28 +309,13 @@ export default function P2PAgentManagementLayout({ children }: { children: React
   );
   const showPinnedEscrowBalance = isAgentAccessVerified;
   const showPinnedPendingAlert = isAgentAccessVerified && (pendingSummary.pendingCount > 0 || pendingAlertCards.length > 0);
+  const hasPinnedTopSection = showPinnedEscrowBalance || showPinnedPendingAlert;
   const pinnedTopContainerClass = isMobileViewport
     ? 'pointer-events-none sticky top-[calc(env(safe-area-inset-top)+3.2rem)] z-[120] px-2'
     : `pointer-events-none fixed inset-x-0 top-12 z-[120] px-3 lg:top-3 ${desktopSidebarWidthClass}`;
-  const contentTopPaddingClass = (() => {
-    if (!showPinnedEscrowBalance && !showPinnedPendingAlert) {
-      return 'pt-16 lg:pt-8';
-    }
-
-    if (showPinnedEscrowBalance && !showPinnedPendingAlert) {
-      return isMobileViewport ? 'pt-36' : 'pt-40 lg:pt-28';
-    }
-
-    if (!showPinnedEscrowBalance && showPinnedPendingAlert) {
-      return isMobileViewport
-        ? (pendingAlertExpanded ? 'pt-4' : 'pt-3')
-        : (pendingAlertExpanded ? 'pt-44 lg:pt-32' : 'pt-28 lg:pt-20');
-    }
-
-    return isMobileViewport
-      ? (pendingAlertExpanded ? 'pt-60' : 'pt-44')
-      : (pendingAlertExpanded ? 'pt-72 lg:pt-60' : 'pt-52 lg:pt-40');
-  })();
+  const desktopPinnedContentPaddingPx = !isMobileViewport && hasPinnedTopSection
+    ? Math.max(32, pinnedTopHeightPx + 28)
+    : null;
 
   const agentEscrowBalanceCards = useMemo(
     () =>
@@ -381,6 +368,52 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       document.body.style.touchAction = previousTouchAction;
     };
   }, [isMobileViewport, mobileOpen]);
+
+  useEffect(() => {
+    if (isMobileViewport || !hasPinnedTopSection) {
+      setPinnedTopHeightPx(0);
+      return;
+    }
+
+    const updatePinnedTopHeight = () => {
+      const nextHeight = Math.ceil(pinnedTopContainerRef.current?.getBoundingClientRect().height || 0);
+      setPinnedTopHeightPx((prev) => (prev !== nextHeight ? nextHeight : prev));
+    };
+
+    updatePinnedTopHeight();
+
+    let frameId = window.requestAnimationFrame(updatePinnedTopHeight);
+    const handleResize = () => {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(updatePinnedTopHeight);
+    };
+
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && pinnedTopContainerRef.current) {
+      observer = new ResizeObserver(() => {
+        window.cancelAnimationFrame(frameId);
+        frameId = window.requestAnimationFrame(updatePinnedTopHeight);
+      });
+      observer.observe(pinnedTopContainerRef.current);
+    }
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener('resize', handleResize);
+      observer?.disconnect();
+    };
+  }, [
+    agentEscrowBalanceCards.length,
+    agentEscrowBalancesError,
+    agentEscrowBalancesLoading,
+    hasPinnedTopSection,
+    isMobileViewport,
+    pendingAlertCards.length,
+    pendingAlertError,
+    pendingAlertExpanded,
+  ]);
 
   const getPendingAlertAudio = useCallback(() => {
     if (typeof window === 'undefined') return null;
@@ -1211,8 +1244,8 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       </aside>
 
       <div className={`min-h-screen transition-all duration-300 ${desktopSidebarWidthClass}`}>
-        {(showPinnedEscrowBalance || showPinnedPendingAlert) && (
-          <div className={pinnedTopContainerClass}>
+        {hasPinnedTopSection && (
+          <div ref={pinnedTopContainerRef} className={pinnedTopContainerClass}>
             <div className="mx-auto w-full max-w-6xl space-y-2">
               {showPinnedEscrowBalance && (
                 <section className="pointer-events-auto rounded-xl border border-cyan-200 bg-cyan-50/95 px-3 py-2.5 shadow-sm backdrop-blur">
@@ -1368,7 +1401,10 @@ export default function P2PAgentManagementLayout({ children }: { children: React
           </div>
         )}
 
-        <div className={`p2p-agent-shell-content px-2 pb-[calc(8rem+env(safe-area-inset-bottom))] sm:px-3 lg:px-8 ${contentTopPaddingClass}`}>
+        <div
+          className="p2p-agent-shell-content px-2 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-16 sm:px-3 lg:px-8 lg:pt-8"
+          style={desktopPinnedContentPaddingPx ? { paddingTop: `${desktopPinnedContentPaddingPx}px` } : undefined}
+        >
           <div className="mx-auto w-full max-w-[1700px] space-y-4">
           {hasConnectedWallet && (
             <div className="flex justify-end">
