@@ -9594,6 +9594,16 @@ const fetchBuyOrders = async () => {
 
         <div className="mt-3 w-full flex flex-col items-start justify-center gap-3">
 
+          {sellerWalletAddressParam && (
+            <button
+              type="button"
+              onClick={() => router.push(`/${params.lang}/seller-escrow/${sellerWalletAddressParam}/today-orders-chat`)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
+            >
+              오늘 주문 + 다중 채팅 화면
+            </button>
+          )}
+
             {/* 돌아가기 버튼 */}
             {/* /ko/seller/buyorder */}
             {/*

@@ -106,7 +106,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'userId is required.' }, { status: 400 });
     }
 
-    const limit = Math.max(1, Math.min(20, body.limit ?? 10));
+    const limit = Math.max(1, Math.min(100, body.limit ?? 10));
     const url = new URL(`${API_BASE}/users/${encodeURIComponent(body.userId)}/my_group_channels`);
     url.searchParams.set('limit', String(limit));
     url.searchParams.set('order', 'latest_last_message');
