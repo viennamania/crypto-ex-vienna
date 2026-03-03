@@ -17,6 +17,10 @@ import {
 
 export default function P2PAgentStoreMemberManagementPage() {
   const PAGE_SIZE = 20;
+  const MEMBER_BALANCE_FETCH_LIMIT = 1000;
+  const MEMBER_BALANCE_FETCH_MAX_PAGES = 100;
+  const MEMBER_BALANCE_WALLET_BATCH_SIZE = 500;
+  const MEMBER_BALANCE_READ_COOLDOWN_MS = 10_000;
   const searchParams = useSearchParams();
   const agentcode = String(searchParams?.get('agentcode') || '').trim();
 
@@ -30,6 +34,17 @@ export default function P2PAgentStoreMemberManagementPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedWalletAddress, setCopiedWalletAddress] = useState('');
+  const [readingMemberBalances, setReadingMemberBalances] = useState(false);
+  const [memberBalanceError, setMemberBalanceError] = useState<string | null>(null);
+  const [memberBalanceCooldownUntilMs, setMemberBalanceCooldownUntilMs] = useState(0);
+  const [memberBalanceNowMs, setMemberBalanceNowMs] = useState(Date.now());
+  const [memberBalanceSummary, setMemberBalanceSummary] = useState<{
+    totalMembers: number;
+    walletMembers: number;
+    uniqueWalletCount: number;
+    totalUsdtAmount: number;
+    checkedAt: string;
+  } | null>(null);
   const [resettingConsentMemberId, setResettingConsentMemberId] = useState<string | null>(null);
   const [resetConsentError, setResetConsentError] = useState<string | null>(null);
   const [resetConsentSuccess, setResetConsentSuccess] = useState<string | null>(null);
@@ -110,6 +125,14 @@ export default function P2PAgentStoreMemberManagementPage() {
     loadData();
   }, [loadData]);
 
+  const formatUsdtFixed6 = useCallback((value: number) => {
+    const numericValue = Number(value || 0);
+    return new Intl.NumberFormat('ko-KR', {
+      minimumFractionDigits: 6,
+      maximumFractionDigits: 6,
+    }).format(Number.isFinite(numericValue) ? numericValue : 0);
+  }, []);
+
   const handleCopyWalletAddress = useCallback(async (walletAddress: string) => {
     const normalizedWalletAddress = String(walletAddress || '').trim();
     if (!normalizedWalletAddress) return;
@@ -124,6 +147,125 @@ export default function P2PAgentStoreMemberManagementPage() {
       console.error('Failed to copy wallet address', error);
     }
   }, []);
+
+  const readSelectedStoreMemberBalances = useCallback(async () => {
+    if (!agentcode || !selectedStorecode || readingMemberBalances) {
+      return;
+    }
+
+    if (memberBalanceCooldownUntilMs > Date.now()) {
+      return;
+    }
+
+    setReadingMemberBalances(true);
+    setMemberBalanceError(null);
+
+    try {
+      let page = 1;
+      let totalMembers = 0;
+      const allMembers: AgentUserItem[] = [];
+
+      while (page <= MEMBER_BALANCE_FETCH_MAX_PAGES) {
+        const result = await fetchUsersByAgent(agentcode, {
+          storecode: selectedStorecode,
+          userType: 'all',
+          requireProfile: false,
+          includeWalletless: true,
+          searchTerm: '',
+          sortField: 'createdAt',
+          limit: MEMBER_BALANCE_FETCH_LIMIT,
+          page,
+        });
+
+        if (page === 1) {
+          totalMembers = result.totalCount;
+        }
+
+        if (result.users.length === 0) {
+          break;
+        }
+
+        allMembers.push(...result.users);
+
+        if (allMembers.length >= totalMembers) {
+          break;
+        }
+
+        page += 1;
+      }
+
+      const memberWalletAddressMap = new Map<string, string>();
+      let walletMembers = 0;
+
+      allMembers.forEach((member) => {
+        const memberWalletAddress = String(member.walletAddress || '').trim();
+        if (!memberWalletAddress) return;
+
+        walletMembers += 1;
+        const normalizedWalletAddress = memberWalletAddress.toLowerCase();
+        if (!memberWalletAddressMap.has(normalizedWalletAddress)) {
+          memberWalletAddressMap.set(normalizedWalletAddress, memberWalletAddress);
+        }
+      });
+
+      const uniqueWalletAddresses = Array.from(memberWalletAddressMap.values());
+
+      let totalUsdtAmount = 0;
+      for (let index = 0; index < uniqueWalletAddresses.length; index += MEMBER_BALANCE_WALLET_BATCH_SIZE) {
+        const walletAddressBatch = uniqueWalletAddresses.slice(index, index + MEMBER_BALANCE_WALLET_BATCH_SIZE);
+
+        const response = await fetch('/api/user/getUSDTBalancesByWalletAddresses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            walletAddresses: walletAddressBatch,
+          }),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(String(payload?.error || '회원 지갑 잔고를 읽어오지 못했습니다.'));
+        }
+
+        const balances = Array.isArray(payload?.result?.balances) ? payload.result.balances : [];
+        balances.forEach((balanceItem: unknown) => {
+          const source =
+            typeof balanceItem === 'object' && balanceItem !== null
+              ? (balanceItem as Record<string, unknown>)
+              : {};
+          const amount = Number(source.displayValue ?? source.balance ?? 0);
+          if (Number.isFinite(amount)) {
+            totalUsdtAmount += amount;
+          }
+        });
+      }
+
+      setMemberBalanceSummary({
+        totalMembers: Math.max(totalMembers, allMembers.length),
+        walletMembers,
+        uniqueWalletCount: uniqueWalletAddresses.length,
+        totalUsdtAmount,
+        checkedAt: new Date().toISOString(),
+      });
+      setMemberBalanceCooldownUntilMs(Date.now() + MEMBER_BALANCE_READ_COOLDOWN_MS);
+      setMemberBalanceNowMs(Date.now());
+    } catch (fetchError) {
+      setMemberBalanceError(
+        fetchError instanceof Error ? fetchError.message : '회원 지갑 잔고 합산 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setReadingMemberBalances(false);
+    }
+  }, [
+    MEMBER_BALANCE_FETCH_LIMIT,
+    MEMBER_BALANCE_FETCH_MAX_PAGES,
+    MEMBER_BALANCE_READ_COOLDOWN_MS,
+    MEMBER_BALANCE_WALLET_BATCH_SIZE,
+    agentcode,
+    memberBalanceCooldownUntilMs,
+    readingMemberBalances,
+    selectedStorecode,
+  ]);
 
   const resetMemberConsent = useCallback(async (member: AgentUserItem) => {
     const memberWalletAddress = String(member.walletAddress || '').trim();
@@ -179,6 +321,15 @@ export default function P2PAgentStoreMemberManagementPage() {
     () => stores.filter((store) => String(store.storecode || '').trim().length > 0),
     [stores],
   );
+  const selectedStore = useMemo(
+    () => selectableStores.find((store) => store.storecode === selectedStorecode) || null,
+    [selectableStores, selectedStorecode],
+  );
+  const memberBalanceCooldownSeconds = Math.max(
+    0,
+    Math.ceil((memberBalanceCooldownUntilMs - memberBalanceNowMs) / 1000),
+  );
+  const memberBalanceReadBlocked = readingMemberBalances || memberBalanceCooldownSeconds > 0 || !selectedStorecode;
 
   const visiblePageNumbers = useMemo(() => {
     const windowSize = 5;
@@ -196,6 +347,27 @@ export default function P2PAgentStoreMemberManagementPage() {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    if (memberBalanceCooldownUntilMs <= Date.now()) {
+      return;
+    }
+
+    const timerId = window.setInterval(() => {
+      setMemberBalanceNowMs(Date.now());
+    }, 500);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [memberBalanceCooldownUntilMs]);
+
+  useEffect(() => {
+    setMemberBalanceSummary(null);
+    setMemberBalanceError(null);
+    setMemberBalanceCooldownUntilMs(0);
+    setMemberBalanceNowMs(Date.now());
+  }, [selectedStorecode]);
 
   return (
     <div className="space-y-4">
@@ -289,6 +461,67 @@ export default function P2PAgentStoreMemberManagementPage() {
                   </p>
                 )}
               </div>
+            </div>
+
+            <div className="mt-3 border-t border-slate-100 pt-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">USDT 잔고 합산</p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    선택된 가맹점 회원 중 지갑주소가 있는 회원의 USDT 잔고를 합산합니다.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void readSelectedStoreMemberBalances();
+                  }}
+                  disabled={memberBalanceReadBlocked}
+                  className="inline-flex h-9 items-center justify-center rounded-xl border border-cyan-300 bg-cyan-50 px-3 text-xs font-semibold text-cyan-800 transition hover:border-cyan-400 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-55"
+                >
+                  {readingMemberBalances
+                    ? '읽어오는 중...'
+                    : memberBalanceCooldownSeconds > 0
+                      ? `${memberBalanceCooldownSeconds}초 후 재조회`
+                      : '잔고 읽어오기'}
+                </button>
+              </div>
+
+              {!selectedStorecode && (
+                <p className="mt-2 text-xs text-amber-700">가맹점을 먼저 선택해 주세요.</p>
+              )}
+
+              {memberBalanceError && (
+                <p className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700">
+                  {memberBalanceError}
+                </p>
+              )}
+
+              {memberBalanceSummary && (
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <p className="text-[11px] text-slate-500">가맹점</p>
+                    <p className="truncate text-sm font-semibold text-slate-900">{selectedStore?.storeName || selectedStorecode}</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <p className="text-[11px] text-slate-500">전체 회원</p>
+                    <p className="text-sm font-semibold text-slate-900">{memberBalanceSummary.totalMembers.toLocaleString()}명</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <p className="text-[11px] text-slate-500">지갑 보유 회원</p>
+                    <p className="text-sm font-semibold text-slate-900">{memberBalanceSummary.walletMembers.toLocaleString()}명</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <p className="text-[11px] text-slate-500">고유 지갑 수</p>
+                    <p className="text-sm font-semibold text-slate-900">{memberBalanceSummary.uniqueWalletCount.toLocaleString()}개</p>
+                  </div>
+                  <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2">
+                    <p className="text-[11px] text-cyan-700">USDT 합산</p>
+                    <p className="text-sm font-extrabold text-cyan-900">{formatUsdtFixed6(memberBalanceSummary.totalUsdtAmount)} USDT</p>
+                    <p className="text-[10px] text-cyan-700">조회 {toDateTime(memberBalanceSummary.checkedAt)}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
