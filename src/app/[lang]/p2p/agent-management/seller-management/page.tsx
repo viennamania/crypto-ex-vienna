@@ -315,8 +315,8 @@ export default function P2PAgentSellerManagementPage() {
           )}
 
           {!loading && !error && (
-            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-              <table className="min-w-[1120px] w-full text-sm">
+            <div className="overflow-x-hidden rounded-2xl border border-slate-200 bg-white">
+              <table className="w-full table-fixed text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                   <tr>
                     <th className="px-4 py-3">판매자</th>
