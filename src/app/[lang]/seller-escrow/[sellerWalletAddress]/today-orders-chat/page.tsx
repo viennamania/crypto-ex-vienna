@@ -6,6 +6,8 @@ import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 import { toast } from 'react-hot-toast';
 import { useActiveAccount } from 'thirdweb/react';
+import { ConnectButton } from '@/components/WalletConnectButton';
+import { client } from '@/app/client';
 
 const SENDBIRD_APP_ID =
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
@@ -944,7 +946,22 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
               </div>
             ) : !isOwnerWallet ? (
               <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-5 text-sm text-amber-800">
-                판매자 본인 지갑({truncateWalletAddress(sellerWalletAddress)})을 연결하면 주문 채팅 입력이 가능합니다.
+                <p>
+                  판매자 본인 지갑({truncateWalletAddress(sellerWalletAddress)})을 연결하면 주문 채팅 입력이 가능합니다.
+                </p>
+                <p className="mt-1 text-xs text-amber-700">
+                  현재 연결 지갑: {connectedWalletAddress ? truncateWalletAddress(connectedWalletAddress) : '미연결'}
+                </p>
+                <div className="mt-3">
+                  <ConnectButton
+                    client={client}
+                    connectButton={{
+                      label: connectedWalletAddress ? '지갑 다시 연결' : '판매자 지갑 연결',
+                      className:
+                        'inline-flex h-10 items-center justify-center rounded-lg border border-amber-300 bg-white px-4 text-sm font-semibold text-amber-700 transition hover:bg-amber-100',
+                    }}
+                  />
+                </div>
               </div>
             ) : chatSessionError ? (
               <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-5 text-sm font-semibold text-rose-700">
