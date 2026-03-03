@@ -118,6 +118,7 @@ type SearchFilters = {
   searchBuyer: string;
   searchDepositName: string;
   searchStoreName: string;
+  selectedStorecode: string;
 };
 
 type CancelOrderProgressStepState = 'pending' | 'active' | 'completed' | 'error';
@@ -797,6 +798,7 @@ const createDefaultFilters = (): SearchFilters => {
     searchBuyer: '',
     searchDepositName: '',
     searchStoreName: '',
+    selectedStorecode: '',
   };
 };
 
@@ -1013,6 +1015,7 @@ export default function P2PAgentSalesManagementPage() {
     const normalizedBuyer = appliedFilters.searchBuyer.trim().toLowerCase();
     const normalizedDepositName = appliedFilters.searchDepositName.trim().toLowerCase();
     const normalizedStoreName = appliedFilters.searchStoreName.trim().toLowerCase();
+    const normalizedSelectedStorecode = appliedFilters.selectedStorecode.trim().toLowerCase();
 
     return orders.filter((order) => {
       const orderTradeId = String(order.tradeId || '').toLowerCase();
@@ -1024,6 +1027,7 @@ export default function P2PAgentSalesManagementPage() {
       if (normalizedTradeId && !orderTradeId.includes(normalizedTradeId)) return false;
       if (normalizedBuyer && !orderBuyerNickname.includes(normalizedBuyer)) return false;
       if (normalizedDepositName && !orderDepositName.includes(normalizedDepositName)) return false;
+      if (normalizedSelectedStorecode && orderStorecode !== normalizedSelectedStorecode) return false;
       if (normalizedStoreName && !orderStoreName.includes(normalizedStoreName) && !orderStorecode.includes(normalizedStoreName)) {
         return false;
       }
@@ -1033,10 +1037,29 @@ export default function P2PAgentSalesManagementPage() {
   }, [
     appliedFilters.searchBuyer,
     appliedFilters.searchDepositName,
+    appliedFilters.selectedStorecode,
     appliedFilters.searchStoreName,
     appliedFilters.searchTradeId,
     orders,
   ]);
+
+  const selectableStores = useMemo(() => {
+    const storeMap = new Map<string, { storecode: string; storeName: string }>();
+    orders.forEach((order) => {
+      const storecode = String(order.storecode || '').trim();
+      if (!storecode) return;
+      const normalizedStorecode = storecode.toLowerCase();
+      const storeName = String(order.storeName || '').trim() || storecode;
+      if (!storeMap.has(normalizedStorecode)) {
+        storeMap.set(normalizedStorecode, { storecode, storeName });
+      }
+    });
+
+    return Array.from(storeMap.values()).sort((a, b) => (
+      a.storeName.localeCompare(b.storeName, 'ko')
+      || a.storecode.localeCompare(b.storecode, 'ko')
+    ));
+  }, [orders]);
 
   const dashboardStats = useMemo(() => {
     let paymentRequestedCount = 0;
@@ -1153,6 +1176,7 @@ export default function P2PAgentSalesManagementPage() {
       searchBuyer: draftFilters.searchBuyer.trim(),
       searchDepositName: draftFilters.searchDepositName.trim(),
       searchStoreName: draftFilters.searchStoreName.trim(),
+      selectedStorecode: draftFilters.selectedStorecode.trim(),
     };
     setCurrentPage(1);
     setAppliedFilters(normalizedFilters);
@@ -1729,7 +1753,24 @@ export default function P2PAgentSalesManagementPage() {
                   className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
                 />
               </div>
-              <div className="lg:col-span-2 flex items-end justify-end gap-2">
+              <div className="lg:col-span-2">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  가맹점 선택
+                </label>
+                <select
+                  value={draftFilters.selectedStorecode}
+                  onChange={(event) => setDraftFilters((prev) => ({ ...prev, selectedStorecode: event.target.value }))}
+                  className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-cyan-500"
+                >
+                  <option value="">전체 가맹점</option>
+                  {selectableStores.map((store) => (
+                    <option key={store.storecode} value={store.storecode}>
+                      {store.storeName} ({store.storecode})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="lg:col-span-12 flex items-end justify-end gap-2">
                 <button
                   type="button"
                   onClick={handleSearchReset}
