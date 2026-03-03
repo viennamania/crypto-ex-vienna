@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 
 type WalletManagementBottomNavProps = {
   lang: string;
@@ -67,6 +68,59 @@ export default function WalletManagementBottomNav({
   const searchParams = useSearchParams();
   const storecode = String(searchParams?.get('storecode') || '').trim();
   const seller = String(searchParams?.get('seller') || '').trim();
+  const [hasValidStoreInfo, setHasValidStoreInfo] = useState(false);
+
+  useEffect(() => {
+    let activeRequest = true;
+
+    if (!storecode) {
+      setHasValidStoreInfo(false);
+      return () => {
+        activeRequest = false;
+      };
+    }
+
+    const checkStorecode = async () => {
+      try {
+        const response = await fetch('/api/store/getOneStore', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ storecode }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        const hasResult = Boolean(
+          response.ok &&
+            payload &&
+            typeof payload === 'object' &&
+            !Array.isArray(payload) &&
+            (payload as Record<string, unknown>).result &&
+            typeof (payload as Record<string, unknown>).result === 'object',
+        );
+
+        if (activeRequest) {
+          setHasValidStoreInfo(hasResult);
+        }
+      } catch (error) {
+        console.error('Failed to verify storecode for bottom nav', error);
+        if (activeRequest) {
+          setHasValidStoreInfo(false);
+        }
+      }
+    };
+
+    checkStorecode();
+
+    return () => {
+      activeRequest = false;
+    };
+  }, [storecode]);
+
+  const visibleNavItems = useMemo(
+    () => NAV_ITEMS.filter((item) => !(item.key === 'wallet' && hasValidStoreInfo)),
+    [hasValidStoreInfo],
+  );
 
   const withQuery = (href: string, navKey: 'home' | 'wallet' | 'payment' | 'buy') => {
     const query = new URLSearchParams();
@@ -84,7 +138,7 @@ export default function WalletManagementBottomNav({
   return (
     <nav className="fixed bottom-0 left-1/2 z-40 w-full max-w-[430px] -translate-x-1/2 border-t border-slate-200 bg-white/95 px-3 py-3 backdrop-blur">
       <div className="mx-auto flex w-full items-center gap-2">
-        {NAV_ITEMS.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = item.key === active;
           return (
             <Link

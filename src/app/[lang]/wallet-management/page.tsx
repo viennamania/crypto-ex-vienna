@@ -265,6 +265,7 @@ export default function WalletManagementHomePage() {
   );
   const isStoreSellerMode = Boolean(storecode);
   const hasSingleConfiguredStoreSeller = isStoreSellerMode && storeSellerWalletAddresses.length === 1;
+  const shouldHideWalletNavigation = Boolean(storecode && paymentStoreInfo);
   const isBalanceSyncWarning = balanceSyncFailureCount >= BALANCE_SYNC_WARNING_THRESHOLD;
   const balanceSyncStatusLabel = isBalanceSyncWarning
     ? '잔액 갱신 지연'
@@ -813,13 +814,15 @@ export default function WalletManagementHomePage() {
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                <Link
-                  href={walletPath}
-                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-2 text-xs font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
-                >
-                  지갑 관리
-                </Link>
+              <div className={`mt-4 grid gap-2 ${shouldHideWalletNavigation ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                {!shouldHideWalletNavigation && (
+                  <Link
+                    href={walletPath}
+                    className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-2 text-xs font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+                  >
+                    지갑 관리
+                  </Link>
+                )}
                 <Link
                   href={paymentPath}
                   className="inline-flex h-11 items-center justify-center rounded-2xl bg-cyan-600 px-2 text-xs font-semibold text-white transition hover:-translate-y-0.5 hover:opacity-95"
@@ -1009,31 +1012,33 @@ export default function WalletManagementHomePage() {
           </div>
         </section>
 
-        <div className="mt-5 grid gap-4">
-          <section className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.42)] backdrop-blur">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">USDT Wallet</p>
-                <h2 className="mt-1 text-xl font-semibold text-slate-900">USDT 지갑</h2>
+        {!shouldHideWalletNavigation && (
+          <div className="mt-5 grid gap-4">
+            <section className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.42)] backdrop-blur">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">USDT Wallet</p>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-900">USDT 지갑</h2>
+                </div>
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M12 5v14m0 0 4-4m-4 4-4-4" strokeLinecap="round" strokeLinejoin="round" />
+                    <rect x="4" y="3" width="16" height="6" rx="2" />
+                  </svg>
+                </span>
               </div>
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <path d="M12 5v14m0 0 4-4m-4 4-4-4" strokeLinecap="round" strokeLinejoin="round" />
-                  <rect x="4" y="3" width="16" height="6" rx="2" />
-                </svg>
-              </span>
-            </div>
-            <p className="mt-3 text-sm text-slate-600">
-              네트워크별 잔액 확인, 출금/입금, 전송내역을 한 화면에서 관리합니다.
-            </p>
-            <Link
-              href={walletPath}
-              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
-            >
-              USDT 지갑으로 이동
-            </Link>
-          </section>
-        </div>
+              <p className="mt-3 text-sm text-slate-600">
+                네트워크별 잔액 확인, 출금/입금, 전송내역을 한 화면에서 관리합니다.
+              </p>
+              <Link
+                href={walletPath}
+                className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+              >
+                USDT 지갑으로 이동
+              </Link>
+            </section>
+          </div>
+        )}
 
         <div className="mt-5 grid gap-4">
 

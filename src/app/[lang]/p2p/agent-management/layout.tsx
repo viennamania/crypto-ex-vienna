@@ -282,6 +282,13 @@ export default function P2PAgentManagementLayout({ children }: { children: React
           },
         ],
       },
+      {
+        key: 'wallet-management',
+        label: '내 지갑 관리',
+        compactLabel: '지갑',
+        description: 'USDT 지갑 관리',
+        basePath: `/${lang}/p2p/agent-management/wallet-management`,
+      },
     ],
     [lang],
   );

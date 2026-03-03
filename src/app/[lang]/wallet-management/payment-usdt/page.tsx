@@ -4,8 +4,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation';
 import { Manrope, Playfair_Display } from 'next/font/google';
 import { toast } from 'react-hot-toast';
-import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
-import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 import {
   getContract,
   sendAndConfirmTransaction,
@@ -120,10 +118,6 @@ const bodyFont = Manrope({
 const WALLET_AUTH_OPTIONS = ['phone'];
 const QUICK_USDT_AMOUNTS = [10, 30, 50, 100, 300, 500];
 const MEMBER_PROFILE_LOADING_MIN_MS = 5000;
-const SENDBIRD_APP_ID =
-  process.env.NEXT_PUBLIC_SENDBIRD_APP_ID ||
-  process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID ||
-  '';
 
 const NETWORK_BY_KEY: Record<NetworkKey, NetworkOption> = {
   ethereum: {
@@ -521,11 +515,6 @@ export default function PaymentUsdtPage({
   const [signupNickname, setSignupNickname] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signingUpMember, setSigningUpMember] = useState(false);
-  const [chatSessionToken, setChatSessionToken] = useState<string | null>(null);
-  const [chatChannelUrl, setChatChannelUrl] = useState<string | null>(null);
-  const [chatLoading, setChatLoading] = useState(false);
-  const [chatError, setChatError] = useState<string | null>(null);
-  const [chatRefreshToken, setChatRefreshToken] = useState(0);
   const memberProfileRequestIdRef = useRef(0);
   const flushingPendingConfirmRef = useRef(false);
   const submitPaymentLockRef = useRef(false);
@@ -566,7 +555,20 @@ export default function PaymentUsdtPage({
     });
   }, [merchants, searchKeyword]);
 
-  const usdtAmount = useMemo(() => toSafeUsdtAmount(amountInput), [amountInput]);
+  const fullBalanceAmountInput = useMemo(
+    () => formatUsdtInputFromBalance(balance),
+    [balance],
+  );
+  const shouldForceFullBalanceAmount = Boolean(hasStorecodeParam && selectedMerchant);
+  const usdtAmount = useMemo(() => {
+    if (shouldForceFullBalanceAmount) {
+      return toSafeUsdtAmount(fullBalanceAmountInput);
+    }
+    return toSafeUsdtAmount(amountInput);
+  }, [amountInput, fullBalanceAmountInput, shouldForceFullBalanceAmount]);
+  const amountInputDisplay = shouldForceFullBalanceAmount
+    ? fullBalanceAmountInput
+    : amountInput;
   const krwAmount = useMemo(() => {
     if (exchangeRate <= 0 || usdtAmount <= 0) {
       return 0;
@@ -582,24 +584,6 @@ export default function PaymentUsdtPage({
     () => resolveBuyerBankInfo(myMemberProfile?.buyer),
     [myMemberProfile?.buyer]
   );
-  const fallbackMemberDisplayName = useMemo(() => {
-    if (!activeAccount?.address) return '';
-    return `user_${activeAccount.address.replace(/^0x/i, '').slice(0, 6)}`;
-  }, [activeAccount?.address]);
-  const memberDisplayName = useMemo(() => {
-    const nickname = String(myMemberProfile?.nickname || '').trim();
-    return nickname || fallbackMemberDisplayName;
-  }, [myMemberProfile?.nickname, fallbackMemberDisplayName]);
-  const selectedMerchantAdminWalletAddress = String(selectedMerchant?.adminWalletAddress || '').trim();
-  const hasValidStoreAdminWallet = isWalletAddress(selectedMerchantAdminWalletAddress);
-  const isStoreAdminSameAsMember = Boolean(
-    activeAccount?.address &&
-      hasValidStoreAdminWallet &&
-      activeAccount.address.toLowerCase() === selectedMerchantAdminWalletAddress.toLowerCase(),
-  );
-  const shouldShowSelfMerchantChatAlert = Boolean(
-    activeAccount?.address && selectedMerchant && isStoreAdminSameAsMember,
-  );
   const hasMemberProfile = Boolean(myMemberProfile);
   const needsMerchantSelectionFirst = !hasStorecodeParam && !selectedMerchant;
   const needsMemberSignupFirst = Boolean(
@@ -610,6 +594,7 @@ export default function PaymentUsdtPage({
   );
   const shouldLockAmountInputs =
     !selectedMerchant || loadingMemberProfile || needsMemberSignupFirst;
+  const shouldDisableAmountEditing = shouldLockAmountInputs || shouldForceFullBalanceAmount;
   const isPaymentReady = Boolean(
     activeAccount?.address &&
       selectedMerchant &&
@@ -641,6 +626,9 @@ export default function PaymentUsdtPage({
       return '회원정보 연동하기';
     }
     if (usdtAmount <= 0) {
+      if (shouldForceFullBalanceAmount) {
+        return 'USDT 잔액이 필요합니다';
+      }
       return 'USDT 수량 입력하기';
     }
     if (exchangeRate <= 0) {
@@ -660,6 +648,7 @@ export default function PaymentUsdtPage({
     hasStorecodeParam,
     loadingMemberProfile,
     hasMemberProfile,
+    shouldForceFullBalanceAmount,
     usdtAmount,
     exchangeRate,
     krwAmount,
@@ -681,6 +670,9 @@ export default function PaymentUsdtPage({
       return '가맹점 회원 아이디와 비밀번호를 입력해 회원정보 연동을 완료해야 결제를 진행할 수 있습니다.';
     }
     if (usdtAmount <= 0) {
+      if (shouldForceFullBalanceAmount) {
+        return '현재 모드에서는 잔고 전체만 전송할 수 있습니다. 먼저 USDT 잔고를 충전해 주세요.';
+      }
       return '결제할 USDT 수량을 입력해 주세요.';
     }
     if (exchangeRate <= 0) {
@@ -699,6 +691,7 @@ export default function PaymentUsdtPage({
     hasStorecodeParam,
     loadingMemberProfile,
     hasMemberProfile,
+    shouldForceFullBalanceAmount,
     usdtAmount,
     exchangeRate,
     krwAmount,
@@ -1028,83 +1021,6 @@ export default function PaymentUsdtPage({
     }
   }, [activeAccount?.address, selectedStorecode]);
 
-  const connectStoreChat = useCallback(async () => {
-    if (
-      paymentTab !== 'pay' ||
-      !activeAccount?.address ||
-      !selectedMerchant ||
-      !SENDBIRD_APP_ID ||
-      !hasValidStoreAdminWallet ||
-      isStoreAdminSameAsMember
-    ) {
-      setChatSessionToken(null);
-      setChatChannelUrl(null);
-      setChatError(null);
-      return;
-    }
-
-    if (!memberDisplayName) {
-      return;
-    }
-
-    setChatLoading(true);
-    setChatError(null);
-    try {
-      await fetch('/api/sendbird/update-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: activeAccount.address,
-          nickname: memberDisplayName,
-        }),
-      }).catch(() => null);
-
-      const sessionResponse = await fetch('/api/sendbird/session-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: activeAccount.address,
-          nickname: memberDisplayName,
-        }),
-      });
-      const sessionData = await sessionResponse.json().catch(() => ({}));
-      if (!sessionResponse.ok || !sessionData?.sessionToken) {
-        throw new Error(sessionData?.error || '채팅 세션 토큰 발급에 실패했습니다.');
-      }
-
-      const channelResponse = await fetch('/api/sendbird/group-channel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          buyerId: activeAccount.address,
-          sellerId: selectedMerchantAdminWalletAddress,
-        }),
-      });
-      const channelData = await channelResponse.json().catch(() => ({}));
-      if (!channelResponse.ok || !channelData?.channelUrl) {
-        throw new Error(channelData?.error || '상점 채팅 채널 생성에 실패했습니다.');
-      }
-
-      setChatSessionToken(String(sessionData.sessionToken));
-      setChatChannelUrl(String(channelData.channelUrl));
-    } catch (error) {
-      console.error('Failed to connect store chat', error);
-      setChatSessionToken(null);
-      setChatChannelUrl(null);
-      setChatError(error instanceof Error ? error.message : '채팅을 연결하지 못했습니다.');
-    } finally {
-      setChatLoading(false);
-    }
-  }, [
-    paymentTab,
-    activeAccount?.address,
-    selectedMerchant,
-    selectedMerchantAdminWalletAddress,
-    hasValidStoreAdminWallet,
-    isStoreAdminSameAsMember,
-    memberDisplayName,
-  ]);
-
   useEffect(() => {
     loadMerchants();
   }, [loadMerchants]);
@@ -1150,10 +1066,6 @@ export default function PaymentUsdtPage({
   useEffect(() => {
     loadMemberProfile();
   }, [loadMemberProfile]);
-
-  useEffect(() => {
-    connectStoreChat();
-  }, [connectStoreChat, chatRefreshToken]);
 
   useEffect(() => {
     setSignupNickname('');
@@ -1241,7 +1153,11 @@ export default function PaymentUsdtPage({
       return;
     }
     if (usdtAmount <= 0) {
-      toast.error('결제 수량(USDT)을 입력해 주세요.');
+      toast.error(
+        shouldForceFullBalanceAmount
+          ? 'USDT 잔고가 없어 결제를 진행할 수 없습니다.'
+          : '결제 수량(USDT)을 입력해 주세요.',
+      );
       return;
     }
     if (exchangeRate <= 0) {
@@ -1287,8 +1203,14 @@ export default function PaymentUsdtPage({
       return;
     }
     if (usdtAmount <= 0) {
-      amountInputRef.current?.focus();
-      toast.error('결제 수량(USDT)을 입력해 주세요.');
+      if (!shouldForceFullBalanceAmount) {
+        amountInputRef.current?.focus();
+      }
+      toast.error(
+        shouldForceFullBalanceAmount
+          ? 'USDT 잔고가 없어 결제를 진행할 수 없습니다.'
+          : '결제 수량(USDT)을 입력해 주세요.',
+      );
       return;
     }
     if (exchangeRate <= 0) {
@@ -1839,41 +1761,51 @@ export default function PaymentUsdtPage({
                     회원정보 연동 완료 후 USDT 수량을 입력할 수 있습니다.
                   </p>
                 )}
+                {shouldForceFullBalanceAmount && (
+                  <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-800">
+                    지정 가맹점 결제는 USDT 잔고 전체만 전송할 수 있습니다. 결제 수량은 자동으로 잔고 전체가 적용됩니다.
+                  </div>
+                )}
 
-                <div className="mt-4 grid grid-cols-3 gap-2">
-                  {QUICK_USDT_AMOUNTS.map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      disabled={shouldLockAmountInputs}
-                      onClick={() => {
-                        const nextAmount = clampUsdtInputToBalance(String(value));
-                        const nextAmountNumeric = toSafeUsdtAmount(nextAmount);
-                        setAmountInput(nextAmountNumeric > 0 ? nextAmountNumeric.toFixed(6) : '');
-                        setSelectedPreset(nextAmountNumeric === value ? value : null);
-                      }}
-                      className={`h-10 rounded-xl border text-sm font-semibold transition ${
-                        selectedPreset === value
-                          ? 'border-slate-900 bg-slate-900 text-white'
-                          : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
-                      } disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400`}
-                    >
-                      {value.toLocaleString()} USDT
-                    </button>
-                  ))}
-                </div>
+                {!shouldForceFullBalanceAmount && (
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    {QUICK_USDT_AMOUNTS.map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        disabled={shouldDisableAmountEditing}
+                        onClick={() => {
+                          const nextAmount = clampUsdtInputToBalance(String(value));
+                          const nextAmountNumeric = toSafeUsdtAmount(nextAmount);
+                          setAmountInput(nextAmountNumeric > 0 ? nextAmountNumeric.toFixed(6) : '');
+                          setSelectedPreset(nextAmountNumeric === value ? value : null);
+                        }}
+                        className={`h-10 rounded-xl border text-sm font-semibold transition ${
+                          selectedPreset === value
+                            ? 'border-slate-900 bg-slate-900 text-white'
+                            : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+                        } disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400`}
+                      >
+                        {value.toLocaleString()} USDT
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 <div className="mt-4 rounded-2xl border border-slate-300 bg-white px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">직접 입력 (USDT)</p>
-                    <div className="flex items-center gap-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      {shouldForceFullBalanceAmount ? '자동 설정 (잔고 전체 전송)' : '직접 입력 (USDT)'}
+                    </p>
+                    {!shouldForceFullBalanceAmount && (
+                      <div className="flex items-center gap-3">
                       <button
                         type="button"
                         onClick={() => {
                           setAmountInput('');
                           setSelectedPreset(null);
                         }}
-                        disabled={shouldLockAmountInputs || !amountInput}
+                        disabled={shouldDisableAmountEditing || !amountInput}
                         className="text-xs font-semibold text-slate-500 underline decoration-slate-300 underline-offset-2 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:text-slate-400 disabled:no-underline"
                       >
                         초기화
@@ -1884,23 +1816,26 @@ export default function PaymentUsdtPage({
                           setAmountInput(formatUsdtInputFromBalance(balance));
                           setSelectedPreset(null);
                         }}
-                        disabled={shouldLockAmountInputs || balance <= 0}
+                        disabled={shouldDisableAmountEditing || balance <= 0}
                         className="text-xs font-semibold text-emerald-600 underline decoration-emerald-200 underline-offset-2 transition hover:text-emerald-700 disabled:cursor-not-allowed disabled:text-slate-400 disabled:no-underline"
                       >
                         최대
                       </button>
-                    </div>
+                      </div>
+                    )}
                   </div>
                   <div className="mt-2 flex items-end justify-between gap-3">
                     <input
                       ref={amountInputRef}
-                      disabled={shouldLockAmountInputs}
-                      value={amountInput}
+                      disabled={shouldDisableAmountEditing}
+                      value={amountInputDisplay}
                       onChange={(event) => {
+                        if (shouldForceFullBalanceAmount) return;
                         setAmountInput(clampUsdtInputToBalance(event.target.value));
                         setSelectedPreset(null);
                       }}
                       onBlur={() => {
+                        if (shouldForceFullBalanceAmount) return;
                         const normalized = toSafeUsdtAmount(clampUsdtInputToBalance(amountInput));
                         setAmountInput(normalized > 0 ? normalized.toFixed(6) : '');
                       }}
@@ -2071,79 +2006,6 @@ export default function PaymentUsdtPage({
             )}
           </section>
 
-          {paymentTab === 'pay' && (
-          <section className="rounded-3xl border border-white/70 bg-white/75 p-5 shadow-[0_26px_60px_-35px_rgba(15,23,42,0.45)] backdrop-blur">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">STEP 2</p>
-                <h2 className="mt-1 text-lg font-semibold text-slate-900">상점 채팅</h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  회원 지갑과 상점 관리자 간 채팅으로 결제 확인을 빠르게 진행하세요.
-                </p>
-              </div>
-              {!shouldShowSelfMerchantChatAlert && (
-                <button
-                  type="button"
-                  onClick={() => setChatRefreshToken((prev) => prev + 1)}
-                  disabled={chatLoading}
-                  className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {chatLoading ? '연결 중...' : '재연결'}
-                </button>
-              )}
-            </div>
-
-            {!activeAccount?.address && (
-              <p className="mt-3 text-sm text-slate-500">지갑 연결 후 상점 채팅을 사용할 수 있습니다.</p>
-            )}
-            {activeAccount?.address && !selectedMerchant && (
-              <p className="mt-3 text-sm text-slate-500">결제 상점을 선택하면 채팅이 자동으로 연결됩니다.</p>
-            )}
-            {shouldShowSelfMerchantChatAlert && (
-              <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm">
-                <p className="font-semibold text-rose-700">현재 상점 관리자가 회원 지갑과 동일한 계정입니다.</p>
-                <p className="mt-1 text-xs text-rose-600">채팅 연결 대상이 없어 상점을 다시 선택해 주세요.</p>
-              </div>
-            )}
-            {activeAccount?.address && selectedMerchant && !isStoreAdminSameAsMember && !SENDBIRD_APP_ID && (
-              <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">
-                채팅 설정이 비어 있어 연결할 수 없습니다. NEXT_PUBLIC_SENDBIRD_APP_ID 설정을 확인해 주세요.
-              </p>
-            )}
-            {activeAccount?.address && selectedMerchant && !isStoreAdminSameAsMember && SENDBIRD_APP_ID && !hasValidStoreAdminWallet && (
-              <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">
-                상점 관리자 지갑이 설정되지 않아 채팅을 연결할 수 없습니다.
-              </p>
-            )}
-            {activeAccount?.address && selectedMerchant && !isStoreAdminSameAsMember && SENDBIRD_APP_ID && hasValidStoreAdminWallet && (
-              <>
-                <p className="mt-3 text-xs font-semibold text-slate-500">
-                  관리자 지갑: {shortAddress(selectedMerchantAdminWalletAddress)}
-                </p>
-                <div className="mt-2 h-[420px] overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                {chatError ? (
-                  <div className="px-4 py-4 text-xs font-semibold text-rose-600">{chatError}</div>
-                ) : !memberDisplayName || loadingMemberProfile ? (
-                  <div className="px-4 py-4 text-xs text-slate-500">내 회원 정보를 불러오는 중입니다...</div>
-                ) : !chatSessionToken || !chatChannelUrl ? (
-                  <div className="px-4 py-4 text-xs text-slate-500">
-                    {chatLoading ? '채팅을 준비 중입니다...' : '채팅 채널을 연결하는 중입니다...'}
-                  </div>
-                ) : (
-                  <SendbirdProvider
-                    appId={SENDBIRD_APP_ID}
-                    userId={activeAccount.address}
-                    accessToken={chatSessionToken}
-                    theme="light"
-                  >
-                    <GroupChannel channelUrl={chatChannelUrl} />
-                  </SendbirdProvider>
-                )}
-                </div>
-              </>
-            )}
-          </section>
-          )}
         </div>
       </div>
 
