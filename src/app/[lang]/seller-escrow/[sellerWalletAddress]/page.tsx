@@ -787,6 +787,28 @@ const formatUsdtDisplay6 = (value: number | string | null | undefined) => {
   });
 };
 
+const resolveTxExplorerBaseUrl = (chainKey: string) => {
+  const normalized = String(chainKey || '').trim().toLowerCase();
+  if (normalized === 'ethereum') return 'https://etherscan.io/tx/';
+  if (normalized === 'arbitrum') return 'https://arbiscan.io/tx/';
+  if (normalized === 'bsc') return 'https://bscscan.com/tx/';
+  return 'https://polygonscan.com/tx/';
+};
+
+const resolveTxExplorerUrl = ({
+  transactionHash,
+  chainKey,
+}: {
+  transactionHash: string;
+  chainKey: string;
+}) => {
+  const normalizedHash = String(transactionHash || '').trim();
+  if (!/^0x[a-fA-F0-9]{64}$/.test(normalizedHash)) {
+    return '';
+  }
+  return `${resolveTxExplorerBaseUrl(chainKey)}${normalizedHash}`;
+};
+
 const formatPercentDisplay = (value: number | string | null | undefined) => {
   const numeric = Number(value ?? 0);
   if (!Number.isFinite(numeric) || numeric <= 0) {
@@ -3121,6 +3143,29 @@ export default function Index({ params }: any) {
       totalTransferUsdt,
     };
   }, [selectedActivePaymentRequestedOrder, sellerAgentPlatformFeeRatePercent]);
+  const activeOrderCompleteBuyerWalletAddress = useMemo(
+    () => String(
+      selectedActivePaymentRequestedOrder?.buyer?.walletAddress
+      || selectedActivePaymentRequestedOrder?.walletAddress
+      || '',
+    ).trim(),
+    [
+      selectedActivePaymentRequestedOrder?.buyer?.walletAddress,
+      selectedActivePaymentRequestedOrder?.walletAddress,
+    ],
+  );
+  const activeOrderCompleteEscrowWalletAddress = useMemo(
+    () => String(selectedActivePaymentRequestedOrder?.buyer?.escrowWalletAddress || '').trim(),
+    [selectedActivePaymentRequestedOrder?.buyer?.escrowWalletAddress],
+  );
+  const activeOrderCompleteTxExplorerUrl = useMemo(() => {
+    const transactionHash = String(activeOrderCompleteResult?.transactionHash || '').trim();
+    const orderChain = String((selectedActivePaymentRequestedOrder as any)?.chain || chain || '').trim().toLowerCase();
+    return resolveTxExplorerUrl({
+      transactionHash,
+      chainKey: orderChain || 'polygon',
+    });
+  }, [activeOrderCompleteResult?.transactionHash, selectedActivePaymentRequestedOrder]);
   const activeOrderCompleteFlowPhase = useMemo<SellerEscrowCompleteFlowPhase>(() => {
     if (completingActiveOrder) {
       return 'PROCESSING';
@@ -12524,19 +12569,6 @@ const fetchBuyOrders = async () => {
                                   <span className="text-[11px] text-slate-500">
                                     동의시각 {formatTradeHistoryTime(buyerConsentSnapshot.acceptedAt)}
                                   </span>
-                                  {buyerConsentSnapshot.channelUrl ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => openSellerChatWidgetChannel(buyerConsentSnapshot.channelUrl)}
-                                      className="inline-flex items-center rounded-md border border-sky-300 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 transition hover:bg-sky-100"
-                                    >
-                                      채팅 내용 보기
-                                    </button>
-                                  ) : (
-                                    <span className="text-[11px] text-slate-400">
-                                      채팅 채널 없음
-                                    </span>
-                                  )}
                                 </>
                               ) : (
                                 <>
@@ -12548,6 +12580,19 @@ const fetchBuyOrders = async () => {
                                     대기시각 {formatTradeHistoryTime(buyerConsentSnapshot.requestedAt)}
                                   </span>
                                 </>
+                              )}
+                              {buyerConsentSnapshot.channelUrl ? (
+                                <button
+                                  type="button"
+                                  onClick={() => openSellerChatWidgetChannel(buyerConsentSnapshot.channelUrl)}
+                                  className="inline-flex items-center rounded-md border border-sky-300 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 transition hover:bg-sky-100"
+                                >
+                                  채팅 내용 보기
+                                </button>
+                              ) : (
+                                <span className="text-[11px] text-slate-400">
+                                  채팅 채널 없음
+                                </span>
                               )}
                             </div>
                           ) : (
@@ -14375,7 +14420,7 @@ const fetchBuyOrders = async () => {
                       <div className="rounded-md border border-sky-200 bg-sky-50/60 px-2 py-1.5">
                         <span className="text-[11px] text-slate-500">주문 수량</span>
                         <div className="mt-1 text-xl font-extrabold leading-tight text-sky-800 tabular-nums sm:text-2xl">
-                          {(Number(selectedActivePaymentRequestedOrder.usdtAmount || 0)).toFixed(3)} USDT
+                          {formatUsdtDisplay6(selectedActivePaymentRequestedOrder.usdtAmount)} USDT
                         </div>
                       </div>
                       <div className="rounded-md border border-indigo-200 bg-indigo-50/60 px-2 py-1.5">
@@ -14384,7 +14429,7 @@ const fetchBuyOrders = async () => {
                           {formatPercentDisplay(activeOrderCompleteFeePreview?.feeRate || 0)}%
                         </div>
                         <div className="text-[11px] font-semibold text-indigo-700 tabular-nums">
-                          추가 전송: {formatUsdtDisplay(activeOrderCompleteFeePreview?.platformFeeUsdt || 0)} USDT
+                          추가 전송: {formatUsdtDisplay6(activeOrderCompleteFeePreview?.platformFeeUsdt || 0)} USDT
                         </div>
                       </div>
                       <div className="rounded-md border border-fuchsia-200 bg-fuchsia-50/60 px-2 py-1.5">
@@ -14393,7 +14438,7 @@ const fetchBuyOrders = async () => {
                           {formatPercentDisplay(activeOrderCompleteFeePreview?.agentFeeRate || 0)}%
                         </div>
                         <div className="text-[11px] font-semibold text-fuchsia-700 tabular-nums">
-                          예상 수수료: {formatUsdtDisplay(activeOrderCompleteFeePreview?.agentFeeUsdt || 0)} USDT
+                          예상 수수료: {formatUsdtDisplay6(activeOrderCompleteFeePreview?.agentFeeUsdt || 0)} USDT
                         </div>
                       </div>
                     </div>
@@ -14417,20 +14462,34 @@ const fetchBuyOrders = async () => {
                         </div>
                         <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
                           <span className="text-slate-500">구매자 지갑</span>
-                          <span className="font-semibold text-slate-800 tabular-nums">
-                            {formatShortWalletAddress(
-                              selectedActivePaymentRequestedOrder.buyer?.walletAddress
-                              || selectedActivePaymentRequestedOrder.walletAddress
-                              || '',
-                            )}
+                          <span className="flex items-center gap-2 text-right">
+                            <span className="font-semibold text-slate-800 tabular-nums">
+                              {formatShortWalletAddress(activeOrderCompleteBuyerWalletAddress)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => copyBuyerTradeField(activeOrderCompleteBuyerWalletAddress, '구매자 지갑')}
+                              disabled={!activeOrderCompleteBuyerWalletAddress}
+                              className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              복사
+                            </button>
                           </span>
                         </div>
                         <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
                           <span className="text-slate-500">에스크로 지갑</span>
-                          <span className="font-semibold text-slate-800 tabular-nums">
-                            {formatShortWalletAddress(
-                              selectedActivePaymentRequestedOrder.buyer?.escrowWalletAddress || '',
-                            )}
+                          <span className="flex items-center gap-2 text-right">
+                            <span className="font-semibold text-slate-800 tabular-nums">
+                              {formatShortWalletAddress(activeOrderCompleteEscrowWalletAddress)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => copyBuyerTradeField(activeOrderCompleteEscrowWalletAddress, '에스크로 지갑')}
+                              disabled={!activeOrderCompleteEscrowWalletAddress}
+                              className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              복사
+                            </button>
                           </span>
                         </div>
                       </div>
@@ -14443,7 +14502,7 @@ const fetchBuyOrders = async () => {
                         플랫폼 수수료 추가 전송
                       </div>
                       <div className="mt-0.5 text-lg font-extrabold leading-tight text-orange-800 tabular-nums sm:text-xl">
-                        +{formatUsdtDisplay(activeOrderCompleteFeePreview?.platformFeeUsdt || 0)} USDT
+                        +{formatUsdtDisplay6(activeOrderCompleteFeePreview?.platformFeeUsdt || 0)} USDT
                       </div>
                       <div className="mt-0.5 text-[11px] font-semibold text-orange-700">
                         수수료율 {formatPercentDisplay(activeOrderCompleteFeePreview?.feeRate || 0)}% 기준으로
@@ -14455,13 +14514,13 @@ const fetchBuyOrders = async () => {
                       <div className="flex items-center justify-between gap-2 rounded-md bg-white/70 px-2 py-1.5">
                         <span className="text-amber-700">구매자 지갑 전송</span>
                         <span className="text-base font-extrabold text-amber-900 tabular-nums">
-                          {formatUsdtDisplay(activeOrderCompleteFeePreview?.buyerTransferUsdt || 0)} USDT
+                          {formatUsdtDisplay6(activeOrderCompleteFeePreview?.buyerTransferUsdt || 0)} USDT
                         </span>
                       </div>
                       <div className="flex items-center justify-between gap-2 rounded-md bg-white/70 px-2 py-1.5">
                         <span className="text-amber-700">총 전송 예정 수량</span>
                         <span className="text-base font-extrabold text-amber-900 tabular-nums">
-                          {formatUsdtDisplay(activeOrderCompleteFeePreview?.totalTransferUsdt || 0)} USDT
+                          {formatUsdtDisplay6(activeOrderCompleteFeePreview?.totalTransferUsdt || 0)} USDT
                         </span>
                       </div>
                       <div className="col-span-2 flex items-center justify-between gap-2 rounded-md bg-white/70 px-2 py-1.5">
@@ -14469,7 +14528,7 @@ const fetchBuyOrders = async () => {
                         <span className="text-base font-extrabold text-amber-900 tabular-nums">
                           {formatPercentDisplay(activeOrderCompleteFeePreview?.agentFeeRate || 0)}%
                           {' / '}
-                          {formatUsdtDisplay(activeOrderCompleteFeePreview?.agentFeeUsdt || 0)} USDT
+                          {formatUsdtDisplay6(activeOrderCompleteFeePreview?.agentFeeUsdt || 0)} USDT
                         </span>
                       </div>
                     </div>
@@ -14487,13 +14546,13 @@ const fetchBuyOrders = async () => {
                         <div className="rounded-md border border-emerald-200 bg-white/80 px-2 py-1.5">
                           <div className="text-[11px] text-emerald-700">구매자 전송</div>
                           <div className="text-base font-extrabold tabular-nums">
-                            {formatUsdtDisplay(activeOrderCompleteResult.buyerTransferUsdt)} USDT
+                            {formatUsdtDisplay6(activeOrderCompleteResult.buyerTransferUsdt)} USDT
                           </div>
                         </div>
                         <div className="rounded-md border border-emerald-200 bg-white/80 px-2 py-1.5">
                           <div className="text-[11px] text-emerald-700">수수료 전송</div>
                           <div className="text-base font-extrabold tabular-nums">
-                            {formatUsdtDisplay(activeOrderCompleteResult.platformFeeUsdt)} USDT
+                            {formatUsdtDisplay6(activeOrderCompleteResult.platformFeeUsdt)} USDT
                           </div>
                         </div>
                       </div>
@@ -14510,10 +14569,22 @@ const fetchBuyOrders = async () => {
                           </button>
                         </div>
                         <div className="mt-0.5 break-all font-semibold tabular-nums text-emerald-900">
-                          {activeOrderCompleteResult.transactionHash || '-'}
+                          {activeOrderCompleteTxExplorerUrl ? (
+                            <a
+                              href={activeOrderCompleteTxExplorerUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline decoration-emerald-400 underline-offset-2 transition hover:text-emerald-700"
+                              title="스캔에서 확인하기"
+                            >
+                              {activeOrderCompleteResult.transactionHash}
+                            </a>
+                          ) : (
+                            activeOrderCompleteResult.transactionHash || '-'
+                          )}
                         </div>
                         <div className="mt-1 text-[11px] font-semibold text-emerald-700">
-                          총 {formatUsdtDisplay(activeOrderCompleteResult.totalTransferUsdt)} USDT / 전송 {Math.max(1, Number(activeOrderCompleteResult.transferCount || 0))}건
+                          총 {formatUsdtDisplay6(activeOrderCompleteResult.totalTransferUsdt)} USDT / 전송 {Math.max(1, Number(activeOrderCompleteResult.transferCount || 0))}건
                         </div>
                       </div>
                     </div>
