@@ -9597,7 +9597,10 @@ const fetchBuyOrders = async () => {
           {sellerWalletAddressParam && (
             <button
               type="button"
-              onClick={() => router.push(`/${params.lang}/seller-escrow/${sellerWalletAddressParam}/today-orders-chat`)}
+              onClick={() => {
+                const nextUrl = `/${params.lang}/seller-escrow/${sellerWalletAddressParam}/today-orders-chat`;
+                window.open(nextUrl, '_blank', 'noopener,noreferrer');
+              }}
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
             >
               오늘 주문 + 다중 채팅 화면
