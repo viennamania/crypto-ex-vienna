@@ -184,6 +184,14 @@ type MemberSearchResult = {
   storecode?: string;
 };
 
+type LinkedStoreInfo = {
+  storecode: string;
+  storeName: string;
+  storeLogo: string;
+  storeDescription: string;
+  paymentWalletAddress: string;
+};
+
 
 
 
@@ -423,6 +431,8 @@ export default function SendUsdt({ params }: any) {
   const [favoriteError, setFavoriteError] = useState<string | null>(null);
   const [favoriteLabel, setFavoriteLabel] = useState('');
   const [favoriteHit, setFavoriteHit] = useState<FavoriteWallet | null>(null);
+  const [linkedStoreInfo, setLinkedStoreInfo] = useState<LinkedStoreInfo | null>(null);
+  const [loadingLinkedStoreInfo, setLoadingLinkedStoreInfo] = useState(false);
   const [memberKeyword, setMemberKeyword] = useState('');
   const [memberResults, setMemberResults] = useState<MemberSearchResult[]>([]);
   const [memberLoading, setMemberLoading] = useState(false);
@@ -876,6 +886,78 @@ export default function SendUsdt({ params }: any) {
 
   }, [address]);
 
+  useEffect(() => {
+    let active = true;
+
+    if (!storecodeFromQuery) {
+      setLinkedStoreInfo(null);
+      setLoadingLinkedStoreInfo(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    const loadLinkedStoreInfo = async () => {
+      setLoadingLinkedStoreInfo(true);
+      try {
+        const response = await fetch('/api/store/getOneStore', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            storecode: storecodeFromQuery,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(String(data?.error || '가맹점 정보를 불러오지 못했습니다.'));
+        }
+
+        const storeResult = data?.result as Record<string, unknown> | null;
+        if (!storeResult || typeof storeResult !== 'object') {
+          if (active) {
+            setLinkedStoreInfo(null);
+          }
+          return;
+        }
+
+        const normalizedStorecode = String(storeResult.storecode || storecodeFromQuery).trim();
+        if (!normalizedStorecode) {
+          if (active) {
+            setLinkedStoreInfo(null);
+          }
+          return;
+        }
+
+        if (active) {
+          setLinkedStoreInfo({
+            storecode: normalizedStorecode,
+            storeName: String(storeResult.storeName || normalizedStorecode || '가맹점').trim() || '가맹점',
+            storeLogo: String(storeResult.storeLogo || storeResult.storeUrl || '').trim(),
+            storeDescription: String(storeResult.storeDescription || '').trim(),
+            paymentWalletAddress: String(storeResult.paymentWalletAddress || '').trim(),
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load linked store info', error);
+        if (active) {
+          setLinkedStoreInfo(null);
+        }
+      } finally {
+        if (active) {
+          setLoadingLinkedStoreInfo(false);
+        }
+      }
+    };
+
+    loadLinkedStoreInfo();
+
+    return () => {
+      active = false;
+    };
+  }, [storecodeFromQuery]);
+
 
 
   ///console.log("recipient", recipient);
@@ -1245,12 +1327,14 @@ export default function SendUsdt({ params }: any) {
       setMemberLoading(false);
     }
   };
-  
+
   const [recipientMode, setRecipientMode] = useState<'manual' | 'favorites' | 'member'>('manual');
 
 
 
   const [isWhateListedUser, setIsWhateListedUser] = useState(false);
+  const linkedStoreName = linkedStoreInfo?.storeName || '가맹점';
+  const isStoreLinkedWithdrawBlocked = Boolean(address && linkedStoreInfo);
   const isTrustedRecipient = useMemo(
     () => Boolean(favoriteHit) || isWhateListedUser,
     [favoriteHit, isWhateListedUser],
@@ -1285,11 +1369,15 @@ export default function SendUsdt({ params }: any) {
       !addressError &&
       verifiedOtp &&
       !needsRiskConsent &&
+      !isStoreLinkedWithdrawBlocked &&
       !sending
   );
   const withdrawPrimaryLabel = useMemo(() => {
     if (sending) {
       return '전송 처리 중...';
+    }
+    if (isStoreLinkedWithdrawBlocked) {
+      return '가맹점 소속 계정은 출금할 수 없습니다';
     }
     if (!hasAmountToSend) {
       return '출금 금액 입력하기';
@@ -1316,10 +1404,14 @@ export default function SendUsdt({ params }: any) {
     addressError,
     verifiedOtp,
     needsRiskConsent,
+    isStoreLinkedWithdrawBlocked,
     amount,
     selectedNetworkConfig.decimals,
   ]);
   const withdrawPrimaryGuide = useMemo(() => {
+    if (isStoreLinkedWithdrawBlocked) {
+      return `현재 지갑은 ${linkedStoreName} 소속 계정으로 출금이 제한됩니다. 사유는 가맹점에 문의해 주세요.`;
+    }
     if (!hasAmountToSend) {
       return '먼저 출금할 USDT 금액을 입력해 주세요.';
     }
@@ -1343,6 +1435,8 @@ export default function SendUsdt({ params }: any) {
     addressError,
     verifiedOtp,
     needsRiskConsent,
+    isStoreLinkedWithdrawBlocked,
+    linkedStoreName,
   ]);
 
   const openTransferConfirmWithCta = () => {
@@ -1351,6 +1445,10 @@ export default function SendUsdt({ params }: any) {
     }
     if (!address) {
       toast.error('지갑을 먼저 연결해 주세요.');
+      return;
+    }
+    if (isStoreLinkedWithdrawBlocked) {
+      toast.error(`${linkedStoreName} 소속 계정은 출금이 제한됩니다. 가맹점에 문의해 주세요.`);
       return;
     }
     if (!hasAmountToSend) {
@@ -1387,6 +1485,62 @@ export default function SendUsdt({ params }: any) {
     setTransferModalPhase('confirm');
     setTransferResult({ ok: false, message: '' });
     setShowTransferConfirm(true);
+  };
+
+  const renderLinkedStoreInfoCard = () => {
+    if (!storecodeFromQuery) {
+      return null;
+    }
+
+    if (loadingLinkedStoreInfo) {
+      return (
+        <section className="mb-5 rounded-3xl border border-cyan-100 bg-cyan-50/70 p-4">
+          <p className="text-sm font-semibold text-cyan-900">소속 가맹점 정보 확인 중...</p>
+        </section>
+      );
+    }
+
+    if (!linkedStoreInfo) {
+      return null;
+    }
+
+    return (
+      <section className="mb-5 rounded-3xl border border-cyan-200 bg-cyan-50/80 p-4 shadow-[0_20px_48px_-34px_rgba(8,145,178,0.45)] backdrop-blur">
+        <div className="flex items-center gap-3">
+          <span className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-cyan-200 bg-white">
+            {linkedStoreInfo.storeLogo ? (
+              <span
+                className="block h-full w-full bg-cover bg-center"
+                style={{ backgroundImage: `url(${encodeURI(linkedStoreInfo.storeLogo)})` }}
+                aria-label={linkedStoreInfo.storeName}
+              />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-cyan-700">
+                SHOP
+              </span>
+            )}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-base font-semibold text-slate-900">{linkedStoreInfo.storeName}</p>
+            <p className="truncate text-xs text-slate-600">가맹점 코드: {linkedStoreInfo.storecode}</p>
+          </div>
+          <span className="ml-auto inline-flex h-7 items-center rounded-full border border-cyan-300 bg-cyan-100 px-2.5 text-[11px] font-semibold text-cyan-800">
+            소속 가맹점
+          </span>
+        </div>
+        {linkedStoreInfo.storeDescription && (
+          <p className="mt-2 text-xs text-slate-600">{linkedStoreInfo.storeDescription}</p>
+        )}
+        {linkedStoreInfo.paymentWalletAddress && (
+          <p className="mt-2 text-xs font-medium text-slate-700">
+            가맹점 결제 지갑: {shortenValue(linkedStoreInfo.paymentWalletAddress, 8, 6)}
+          </p>
+        )}
+        <p className="mt-2 text-xs font-semibold text-cyan-900">
+          지갑 연결 상태에서는 출금이 제한됩니다. 사유는 가맹점에 문의해 주세요.
+        </p>
+      </section>
+    );
   };
 
   
@@ -1466,7 +1620,10 @@ export default function SendUsdt({ params }: any) {
         <AutoConnect client={client} wallets={wallets.length ? wallets : [wallet]} />
         <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-cyan-300/40 blur-3xl" />
         <div className="pointer-events-none absolute top-24 right-0 h-80 w-80 rounded-full bg-blue-300/30 blur-3xl" />
-        <div className="relative mx-auto flex min-h-[70vh] w-full max-w-[430px] items-center px-4">
+        <div className="relative mx-auto w-full max-w-[430px] px-4 pt-2">
+          {renderLinkedStoreInfoCard()}
+        </div>
+        <div className="relative mx-auto flex min-h-[65vh] w-full max-w-[430px] items-center px-4">
           <WalletConnectPrompt
             wallets={wallets}
             chain={selectedNetworkConfig.chain}
@@ -1539,6 +1696,8 @@ export default function SendUsdt({ params }: any) {
               내 지갑의 USDT를 관리하고 출금, 입금, 전송내역을 한 화면에서 확인할 수 있습니다.
             </p>
           </div>
+
+          {renderLinkedStoreInfoCard()}
 
           <WalletSummaryCard
             walletAddress={address}
@@ -1651,6 +1810,15 @@ export default function SendUsdt({ params }: any) {
               <p className="text-sm text-slate-500">{Enter_the_amount_and_recipient_address}</p>
             </div>
 
+            {isStoreLinkedWithdrawBlocked && (
+              <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm">
+                <p className="font-semibold text-amber-900">출금이 제한된 계정입니다.</p>
+                <p className="mt-1 text-xs text-amber-800">
+                  현재 계정은 {linkedStoreName} 소속으로 등록되어 있어 출금할 수 없습니다. 사유는 가맹점에 문의해 주세요.
+                </p>
+              </div>
+            )}
+
             <div
               className={`rounded-2xl border px-4 py-3 text-sm ${
                 canOpenTransferConfirm
@@ -1695,6 +1863,7 @@ export default function SendUsdt({ params }: any) {
                   <button
                     type="button"
                     onClick={handleMaxAmount}
+                    disabled={sending || isStoreLinkedWithdrawBlocked}
                     className="text-xs font-medium text-emerald-600 underline decoration-emerald-200 underline-offset-2 transition hover:text-emerald-700"
                   >
                     잔고 전체 선택
@@ -1703,7 +1872,7 @@ export default function SendUsdt({ params }: any) {
                 <div className="relative">
                   <input
                     ref={amountInputRef}
-                    disabled={sending}
+                    disabled={sending || isStoreLinkedWithdrawBlocked}
                     type="text"
                     inputMode="decimal"
                     placeholder="0.00"
@@ -2197,7 +2366,7 @@ export default function SendUsdt({ params }: any) {
 
 
                 <button
-                  disabled={sending}
+                  disabled={sending || isStoreLinkedWithdrawBlocked}
                   onClick={openTransferConfirmWithCta}
                   className={`mt-2 w-full rounded-xl border px-4 py-3 text-lg font-medium transition-all duration-200 ease-in-out
                       ${sending ? 'animate-pulse' : ''}
