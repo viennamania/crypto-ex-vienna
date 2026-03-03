@@ -11,7 +11,10 @@ const SENDBIRD_APP_ID =
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
 const POLLING_INTERVAL_MS = 5000;
 const UNREAD_POLLING_INTERVAL_MS = 4000;
-const MAX_OPEN_CHAT_PANELS = 4;
+const parsedMaxOpenChatPanels = Number(process.env.NEXT_PUBLIC_SELLER_MULTI_CHAT_MAX_OPEN ?? '20');
+const MAX_OPEN_CHAT_PANELS = Number.isFinite(parsedMaxOpenChatPanels)
+  ? Math.max(1, Math.min(100, Math.floor(parsedMaxOpenChatPanels)))
+  : 20;
 const CHAT_LAYOUT_STORAGE_VERSION = 1;
 
 const ACTIVE_ORDER_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
