@@ -11,7 +11,10 @@ import { client } from '@/app/client';
 
 const SENDBIRD_APP_ID =
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
-const POLLING_INTERVAL_MS = 5000;
+const parsedTodayOrdersPollingIntervalMs = Number(process.env.NEXT_PUBLIC_SELLER_TODAY_ORDERS_POLLING_MS ?? '3000');
+const POLLING_INTERVAL_MS = Number.isFinite(parsedTodayOrdersPollingIntervalMs)
+  ? Math.max(1000, Math.floor(parsedTodayOrdersPollingIntervalMs))
+  : 3000;
 const UNREAD_POLLING_INTERVAL_MS = 4000;
 const parsedMaxOpenChatPanels = Number(process.env.NEXT_PUBLIC_SELLER_MULTI_CHAT_MAX_OPEN ?? '20');
 const MAX_OPEN_CHAT_PANELS = Number.isFinite(parsedMaxOpenChatPanels)
@@ -361,6 +364,7 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
       const { startIso, endIso } = getTodayRange();
       const response = await fetch('/api/order/getAllBuyOrdersBySellerEscrowWallet', {
         method: 'POST',
+        cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           limit: 300,
@@ -414,6 +418,27 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
 
     return () => {
       window.clearInterval(intervalId);
+    };
+  }, [fetchOrders]);
+
+  useEffect(() => {
+    const handleVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchOrders('polling');
+      }
+    };
+    const handleFocus = () => {
+      void fetchOrders('polling');
+    };
+
+    document.addEventListener('visibilitychange', handleVisible);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('online', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisible);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('online', handleFocus);
     };
   }, [fetchOrders]);
 
