@@ -228,20 +228,40 @@ const parseOwnerWalletAddressFromPayload = (payload: unknown): string => {
   return toText(result.ownerWalletAddress);
 };
 
+const parseOwnerWalletAddressCandidatesFromPayload = (payload: unknown): string[] => {
+  if (!isRecord(payload)) return [];
+  const result = isRecord(payload.result) ? payload.result : {};
+  const source = Array.isArray(result.ownerWalletAddressCandidates) ? result.ownerWalletAddressCandidates : [];
+  return Array.from(new Set(
+    source
+      .map((item) => toText(item))
+      .filter((item) => /^0x[a-fA-F0-9]{40}$/.test(item))
+      .map((item) => item.toLowerCase()),
+  ));
+};
+
 export default function SellerTodayOrdersChatPage({ params }: PageProps) {
   const activeAccount = useActiveAccount();
   const sellerWalletAddress = toText(params.sellerWalletAddress);
   const lang = toText(params.lang) || 'ko';
   const connectedWalletAddress = toText(activeAccount?.address);
   const [resolvedOwnerWalletAddress, setResolvedOwnerWalletAddress] = useState('');
+  const [ownerWalletAddressCandidates, setOwnerWalletAddressCandidates] = useState<string[]>([]);
   const ownerWalletAddress = useMemo(
     () => resolvedOwnerWalletAddress || sellerWalletAddress,
     [resolvedOwnerWalletAddress, sellerWalletAddress],
   );
-  const isOwnerWallet =
-    Boolean(connectedWalletAddress)
-    && Boolean(ownerWalletAddress)
-    && connectedWalletAddress.toLowerCase() === ownerWalletAddress.toLowerCase();
+  const isOwnerWallet = useMemo(() => {
+    const normalizedConnectedWalletAddress = connectedWalletAddress.toLowerCase();
+    if (!normalizedConnectedWalletAddress) {
+      return false;
+    }
+    const candidates =
+      ownerWalletAddressCandidates.length > 0
+        ? ownerWalletAddressCandidates
+        : [ownerWalletAddress.toLowerCase()];
+    return candidates.includes(normalizedConnectedWalletAddress);
+  }, [connectedWalletAddress, ownerWalletAddress, ownerWalletAddressCandidates]);
 
   const [loading, setLoading] = useState(false);
   const [polling, setPolling] = useState(false);
@@ -384,7 +404,14 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
           || '오늘 주문 목록을 불러오지 못했습니다.',
         );
       }
-      setResolvedOwnerWalletAddress(parseOwnerWalletAddressFromPayload(payload) || sellerWalletAddress);
+      const resolvedOwnerWallet = parseOwnerWalletAddressFromPayload(payload) || sellerWalletAddress;
+      const resolvedOwnerWalletCandidates = parseOwnerWalletAddressCandidatesFromPayload(payload);
+      setResolvedOwnerWalletAddress(resolvedOwnerWallet);
+      setOwnerWalletAddressCandidates(
+        resolvedOwnerWalletCandidates.length > 0
+          ? resolvedOwnerWalletCandidates
+          : [resolvedOwnerWallet.toLowerCase()],
+      );
       setOrders(parseOrdersFromPayload(payload));
       setLastUpdatedAt(new Date().toISOString());
       setHasLoadedOrders(true);
@@ -408,6 +435,7 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
 
   useEffect(() => {
     setResolvedOwnerWalletAddress('');
+    setOwnerWalletAddressCandidates([]);
   }, [sellerWalletAddress]);
 
   useEffect(() => {

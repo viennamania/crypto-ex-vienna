@@ -8421,25 +8421,131 @@ export async function getAllBuyOrdersBySellerEscrowWallet(
     .skip((page - 1) * limit)
     .toArray();
 
-  const ownerCandidate = await usersCollection.findOne<{ walletAddress?: string }>(
+  const ownerCandidate = await usersCollection.findOne<{
+    walletAddress?: string;
+    smartAccountAddress?: string;
+    seller?: {
+      escrowWalletAddress?: string;
+      escrowWalletSignerAddress?: string;
+      escrowWallet?: {
+        signerAddress?: string;
+        smartAccountAddress?: string;
+      };
+    };
+    thirdweb?: {
+      walletAddress?: string;
+      smartAccountAddress?: string;
+    };
+  }>(
     {
-      'seller.escrowWalletAddress': {
-        $regex: `^${escapeRegex(walletAddress)}$`,
-        $options: 'i',
-      },
+      $or: [
+        { walletAddress: walletAddressRegex },
+        { 'seller.walletAddress': walletAddressRegex },
+        { 'seller.escrowWalletAddress': walletAddressRegex },
+        { 'seller.escrowWalletSignerAddress': walletAddressRegex },
+        { 'seller.escrowWallet.signerAddress': walletAddressRegex },
+        { 'seller.escrowWallet.smartAccountAddress': walletAddressRegex },
+      ],
     },
     {
       projection: {
         walletAddress: 1,
+        smartAccountAddress: 1,
+        'seller.escrowWalletAddress': 1,
+        'seller.escrowWalletSignerAddress': 1,
+        'seller.escrowWallet.signerAddress': 1,
+        'seller.escrowWallet.smartAccountAddress': 1,
+        'thirdweb.walletAddress': 1,
+        'thirdweb.smartAccountAddress': 1,
       },
     },
   );
 
-  const ownerWalletAddress = ownerCandidate?.walletAddress || walletAddress;
+  const ownerWalletAddress =
+    ownerCandidate?.walletAddress
+    || ownerCandidate?.thirdweb?.walletAddress
+    || walletAddress;
+  const ownerWalletAddressCandidates = Array.from(new Set(
+    [
+      ownerWalletAddress,
+      ownerCandidate?.smartAccountAddress,
+      ownerCandidate?.seller?.escrowWalletAddress,
+      ownerCandidate?.seller?.escrowWalletSignerAddress,
+      ownerCandidate?.seller?.escrowWallet?.signerAddress,
+      ownerCandidate?.seller?.escrowWallet?.smartAccountAddress,
+      ownerCandidate?.thirdweb?.walletAddress,
+      ownerCandidate?.thirdweb?.smartAccountAddress,
+      walletAddress,
+    ]
+      .map((value) => String(value || '').trim())
+      .filter((value) => isWalletAddress(value))
+      .map((value) => value.toLowerCase()),
+  ));
+  const normalizedRequesterWalletAddress = String(requesterWalletAddress || '').trim().toLowerCase();
+  let requesterLinkedWalletAddress = '';
+  if (normalizedRequesterWalletAddress && isWalletAddress(normalizedRequesterWalletAddress)) {
+    const requesterWalletAddressRegex = {
+      $regex: `^${escapeRegex(normalizedRequesterWalletAddress)}$`,
+      $options: 'i',
+    };
+    const requesterCandidate = await usersCollection.findOne<{
+      walletAddress?: string;
+      smartAccountAddress?: string;
+      seller?: {
+        escrowWalletAddress?: string;
+        escrowWalletSignerAddress?: string;
+        escrowWallet?: {
+          signerAddress?: string;
+          smartAccountAddress?: string;
+        };
+      };
+      thirdweb?: {
+        walletAddress?: string;
+        smartAccountAddress?: string;
+      };
+    }>(
+      {
+        $or: [
+          { walletAddress: requesterWalletAddressRegex },
+          { smartAccountAddress: requesterWalletAddressRegex },
+          { 'seller.escrowWalletAddress': requesterWalletAddressRegex },
+          { 'seller.escrowWalletSignerAddress': requesterWalletAddressRegex },
+          { 'seller.escrowWallet.signerAddress': requesterWalletAddressRegex },
+          { 'seller.escrowWallet.smartAccountAddress': requesterWalletAddressRegex },
+          { 'thirdweb.walletAddress': requesterWalletAddressRegex },
+          { 'thirdweb.smartAccountAddress': requesterWalletAddressRegex },
+        ],
+      },
+      {
+        projection: {
+          walletAddress: 1,
+          smartAccountAddress: 1,
+          'seller.escrowWalletAddress': 1,
+          'seller.escrowWalletSignerAddress': 1,
+          'seller.escrowWallet.signerAddress': 1,
+          'seller.escrowWallet.smartAccountAddress': 1,
+          'thirdweb.walletAddress': 1,
+          'thirdweb.smartAccountAddress': 1,
+        },
+      },
+    );
+    requesterLinkedWalletAddress = String(
+      requesterCandidate?.thirdweb?.walletAddress
+      || requesterCandidate?.walletAddress
+      || requesterCandidate?.seller?.escrowWalletSignerAddress
+      || requesterCandidate?.seller?.escrowWallet?.signerAddress
+      || '',
+    ).trim().toLowerCase();
+  }
   const isOwnerView = Boolean(
-    requesterWalletAddress &&
-    ownerWalletAddress &&
-    requesterWalletAddress.toLowerCase() === ownerWalletAddress.toLowerCase(),
+    normalizedRequesterWalletAddress &&
+    (
+      ownerWalletAddressCandidates.includes(normalizedRequesterWalletAddress)
+      || (
+        requesterLinkedWalletAddress &&
+        ownerWalletAddressCandidates.includes(requesterLinkedWalletAddress)
+      )
+    ),
   );
 
   const orders = isOwnerView
@@ -8469,6 +8575,7 @@ export async function getAllBuyOrdersBySellerEscrowWallet(
     orders,
     buyerInfoMasked: !isOwnerView,
     ownerWalletAddress,
+    ownerWalletAddressCandidates,
     isOwnerView,
   };
 }
