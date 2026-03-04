@@ -18,18 +18,13 @@ import {
 type MemberWalletBalanceItem = {
   loading: boolean;
   displayValue: string;
-  error: string | null;
+  error: string;
+  lastCheckedAt: string;
+  cooldownUntilMs: number;
 };
 
 const normalizeWalletAddress = (walletAddress: string) =>
   String(walletAddress || '').trim().toLowerCase();
-
-const parsedMemberWalletBalanceRequestTimeoutMs = Number(
-  process.env.NEXT_PUBLIC_MEMBER_WALLET_BALANCE_TIMEOUT_MS ?? '15000',
-);
-const MEMBER_WALLET_BALANCE_REQUEST_TIMEOUT_MS = Number.isFinite(parsedMemberWalletBalanceRequestTimeoutMs)
-  ? Math.max(3000, Math.floor(parsedMemberWalletBalanceRequestTimeoutMs))
-  : 15000;
 
 export default function P2PAgentStoreMemberManagementPage() {
   const PAGE_SIZE = 20;
@@ -37,6 +32,7 @@ export default function P2PAgentStoreMemberManagementPage() {
   const MEMBER_BALANCE_FETCH_MAX_PAGES = 100;
   const MEMBER_BALANCE_WALLET_BATCH_SIZE = 500;
   const MEMBER_BALANCE_READ_COOLDOWN_MS = 10_000;
+  const MEMBER_WALLET_BALANCE_COOLDOWN_MS = 10_000;
   const searchParams = useSearchParams();
   const agentcode = String(searchParams?.get('agentcode') || '').trim();
 
@@ -54,6 +50,7 @@ export default function P2PAgentStoreMemberManagementPage() {
   const [memberBalanceError, setMemberBalanceError] = useState<string | null>(null);
   const [memberBalanceCooldownUntilMs, setMemberBalanceCooldownUntilMs] = useState(0);
   const [memberBalanceNowMs, setMemberBalanceNowMs] = useState(Date.now());
+  const [memberWalletBalanceTickMs, setMemberWalletBalanceTickMs] = useState(() => Date.now());
   const [memberBalanceSummary, setMemberBalanceSummary] = useState<{
     totalMembers: number;
     walletMembers: number;
@@ -149,6 +146,15 @@ export default function P2PAgentStoreMemberManagementPage() {
       minimumFractionDigits: 6,
       maximumFractionDigits: 6,
     }).format(Number.isFinite(numericValue) ? numericValue : 0);
+  }, []);
+
+  const formatUsdtDisplayValue = useCallback((value: string) => {
+    const parsedValue = Number(value);
+    if (!Number.isFinite(parsedValue)) return value;
+    return new Intl.NumberFormat('ko-KR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 6,
+    }).format(parsedValue);
   }, []);
 
   const handleCopyWalletAddress = useCallback(async (walletAddress: string) => {
@@ -338,20 +344,28 @@ export default function P2PAgentStoreMemberManagementPage() {
     }
 
     const walletAddressKey = normalizeWalletAddress(normalizedWalletAddress);
+    const nowMs = Date.now();
     let shouldFetch = false;
+    let nextCooldownUntil = nowMs + MEMBER_WALLET_BALANCE_COOLDOWN_MS;
 
     setMemberWalletBalancesByAddress((prev) => {
       const current = prev[walletAddressKey];
       if (current?.loading) {
         return prev;
       }
+      if (Number(current?.cooldownUntilMs || 0) > nowMs) {
+        return prev;
+      }
       shouldFetch = true;
+      nextCooldownUntil = nowMs + MEMBER_WALLET_BALANCE_COOLDOWN_MS;
       return {
         ...prev,
         [walletAddressKey]: {
           loading: true,
           displayValue: current?.displayValue || '',
-          error: null,
+          error: '',
+          lastCheckedAt: current?.lastCheckedAt || '',
+          cooldownUntilMs: nextCooldownUntil,
         },
       };
     });
@@ -360,51 +374,52 @@ export default function P2PAgentStoreMemberManagementPage() {
       return;
     }
 
-    let nextDisplayValue = '0';
-    let nextErrorMessage: string | null = null;
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => {
-      controller.abort();
-    }, MEMBER_WALLET_BALANCE_REQUEST_TIMEOUT_MS);
-
     try {
       const response = await fetch('/api/user/getUSDTBalanceByWalletAddress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
         body: JSON.stringify({
           walletAddress: normalizedWalletAddress,
         }),
       });
 
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok || payload?.error) {
-        throw new Error(String(payload?.error || '회원 지갑 잔고를 읽어오지 못했습니다.'));
-      }
+      const rawDisplayValue = String(payload?.result?.displayValue || payload?.result?.balance || '0');
+      const displayValue = formatUsdtDisplayValue(rawDisplayValue);
+      const errorMessage = !response.ok
+        ? String(payload?.error || '회원 지갑 잔고 조회에 실패했습니다.')
+        : String(payload?.error || '');
 
-      nextDisplayValue = String(payload?.result?.displayValue ?? payload?.result?.balance ?? '0');
-    } catch (readError) {
-      nextErrorMessage =
-        readError instanceof DOMException && readError.name === 'AbortError'
-          ? `회원 지갑 잔고 조회가 ${Math.ceil(MEMBER_WALLET_BALANCE_REQUEST_TIMEOUT_MS / 1000)}초를 초과했습니다.`
-          : readError instanceof Error
-            ? readError.message
-            : '회원 지갑 잔고를 읽어오지 못했습니다.';
-    } finally {
-      window.clearTimeout(timeoutId);
       setMemberWalletBalancesByAddress((prev) => {
-        const previousItem = prev[walletAddressKey];
+        const existing = prev[walletAddressKey];
         return {
           ...prev,
           [walletAddressKey]: {
             loading: false,
-            displayValue: nextErrorMessage ? previousItem?.displayValue || '0' : nextDisplayValue,
-            error: nextErrorMessage,
+            displayValue,
+            error: errorMessage,
+            lastCheckedAt: new Date().toISOString(),
+            cooldownUntilMs: existing?.cooldownUntilMs || nextCooldownUntil,
+          },
+        };
+      });
+    } catch (readError) {
+      console.error('Failed to fetch member USDT balance', readError);
+      setMemberWalletBalancesByAddress((prev) => {
+        const existing = prev[walletAddressKey];
+        return {
+          ...prev,
+          [walletAddressKey]: {
+            loading: false,
+            displayValue: existing?.displayValue || '',
+            error: '잔고 조회 중 오류가 발생했습니다.',
+            lastCheckedAt: existing?.lastCheckedAt || '',
+            cooldownUntilMs: existing?.cooldownUntilMs || nextCooldownUntil,
           },
         };
       });
     }
-  }, []);
+  }, [MEMBER_WALLET_BALANCE_COOLDOWN_MS, formatUsdtDisplayValue]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalCount / PAGE_SIZE)),
@@ -423,6 +438,13 @@ export default function P2PAgentStoreMemberManagementPage() {
     Math.ceil((memberBalanceCooldownUntilMs - memberBalanceNowMs) / 1000),
   );
   const memberBalanceReadBlocked = readingMemberBalances || memberBalanceCooldownSeconds > 0 || !selectedStorecode;
+  const hasActiveMemberWalletBalanceCooldown = useMemo(
+    () =>
+      Object.values(memberWalletBalancesByAddress).some(
+        (item) => Number(item?.cooldownUntilMs || 0) > memberWalletBalanceTickMs,
+      ),
+    [memberWalletBalanceTickMs, memberWalletBalancesByAddress],
+  );
 
   const visiblePageNumbers = useMemo(() => {
     const windowSize = 5;
@@ -456,11 +478,23 @@ export default function P2PAgentStoreMemberManagementPage() {
   }, [memberBalanceCooldownUntilMs]);
 
   useEffect(() => {
+    if (!hasActiveMemberWalletBalanceCooldown) return;
+    const intervalId = window.setInterval(() => {
+      setMemberWalletBalanceTickMs(Date.now());
+    }, 200);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [hasActiveMemberWalletBalanceCooldown]);
+
+  useEffect(() => {
     setMemberWalletBalancesByAddress({});
     setMemberBalanceSummary(null);
     setMemberBalanceError(null);
     setMemberBalanceCooldownUntilMs(0);
     setMemberBalanceNowMs(Date.now());
+    setMemberWalletBalanceTickMs(Date.now());
   }, [selectedStorecode]);
 
   return (
@@ -669,10 +703,16 @@ export default function P2PAgentStoreMemberManagementPage() {
                       const memberWalletBalanceState = normalizedMemberWalletAddress
                         ? memberWalletBalancesByAddress[normalizedMemberWalletAddress]
                         : undefined;
-                      const memberWalletBalanceNumeric = Number(memberWalletBalanceState?.displayValue || 0);
-                      const memberWalletBalanceDisplay = Number.isFinite(memberWalletBalanceNumeric)
-                        ? formatUsdtFixed6(memberWalletBalanceNumeric)
-                        : '0.000000';
+                      const memberWalletCooldownRemainingMs = Math.max(
+                        0,
+                        Number(memberWalletBalanceState?.cooldownUntilMs || 0) - memberWalletBalanceTickMs,
+                      );
+                      const memberWalletCooldownRemainingSeconds =
+                        memberWalletCooldownRemainingMs > 0 ? Math.ceil(memberWalletCooldownRemainingMs / 1000) : 0;
+                      const memberWalletCooldownProgressPercent = Math.max(
+                        0,
+                        Math.min(100, (memberWalletCooldownRemainingMs / MEMBER_WALLET_BALANCE_COOLDOWN_MS) * 100),
+                      );
                       const memberResetKey = member.id || memberWalletAddress.toLowerCase();
 
                       return (
@@ -683,7 +723,7 @@ export default function P2PAgentStoreMemberManagementPage() {
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600">
                           {memberWalletAddress ? (
-                            <div className="space-y-1">
+                            <div className="space-y-1.5">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -711,24 +751,51 @@ export default function P2PAgentStoreMemberManagementPage() {
                                   ? 'USDT 잔고 조회 중...'
                                   : memberWalletBalanceState?.error
                                     ? 'USDT 잔고 조회 실패'
-                                    : memberWalletBalanceState
-                                      ? `${memberWalletBalanceDisplay} USDT`
+                                    : memberWalletBalanceState?.displayValue
+                                      ? `${memberWalletBalanceState.displayValue} USDT`
                                       : 'USDT 잔고 미조회'}
                               </p>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  void readMemberWalletBalance(memberWalletAddress);
-                                }}
-                                disabled={Boolean(memberWalletBalanceState?.loading)}
-                                className="inline-flex h-5 items-center rounded-md border border-cyan-300 bg-cyan-50 px-1.5 text-[10px] font-semibold text-cyan-700 transition hover:border-cyan-400 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {memberWalletBalanceState?.loading
-                                  ? '조회 중...'
-                                  : memberWalletBalanceState
-                                    ? '다시 조회'
-                                    : '잔고 읽어오기'}
-                              </button>
+                              {memberWalletCooldownRemainingMs <= 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void readMemberWalletBalance(memberWalletAddress);
+                                  }}
+                                  disabled={Boolean(memberWalletBalanceState?.loading)}
+                                  className={`inline-flex h-5 items-center rounded-md border px-1.5 text-[10px] font-semibold transition ${
+                                    memberWalletBalanceState?.loading
+                                      ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                                      : 'border-cyan-300 bg-cyan-50 text-cyan-700 hover:border-cyan-400 hover:bg-cyan-100'
+                                  }`}
+                                >
+                                  {memberWalletBalanceState?.loading
+                                    ? '조회 중...'
+                                    : memberWalletBalanceState
+                                      ? '다시 조회'
+                                      : '잔고 읽어오기'}
+                                </button>
+                              ) : (
+                                <div className="w-[108px] rounded-md border border-cyan-200 bg-cyan-50 px-1.5 py-1">
+                                  <div className="flex items-center justify-between text-[10px] font-semibold text-cyan-700">
+                                    <span>재조회 대기</span>
+                                    <span>{memberWalletCooldownRemainingSeconds}s</span>
+                                  </div>
+                                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/90">
+                                    <div
+                                      className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-sky-500 transition-[width] duration-200 ease-linear"
+                                      style={{ width: `${memberWalletCooldownProgressPercent.toFixed(2)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                              {memberWalletBalanceState?.lastCheckedAt && (
+                                <p className="text-[10px] text-slate-500">
+                                  조회시각 {new Date(memberWalletBalanceState.lastCheckedAt).toLocaleTimeString()}
+                                </p>
+                              )}
+                              {memberWalletBalanceState?.error && (
+                                <p className="text-[10px] text-rose-500">{memberWalletBalanceState.error}</p>
+                              )}
                             </div>
                           ) : (
                             '-'
