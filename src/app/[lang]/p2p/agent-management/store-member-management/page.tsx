@@ -28,6 +28,12 @@ const normalizeWalletAddress = (walletAddress: string) =>
 const isEvmWalletAddress = (walletAddress: string) =>
   /^0x[a-fA-F0-9]{40}$/.test(String(walletAddress || '').trim());
 const MEMBER_WALLET_BALANCE_CHAIN = String(process.env.NEXT_PUBLIC_CHAIN || 'polygon').trim() || 'polygon';
+const parsedMemberWalletBalanceRequestTimeoutMs = Number(
+  process.env.NEXT_PUBLIC_MEMBER_WALLET_BALANCE_TIMEOUT_MS ?? '15000',
+);
+const MEMBER_WALLET_BALANCE_REQUEST_TIMEOUT_MS = Number.isFinite(parsedMemberWalletBalanceRequestTimeoutMs)
+  ? Math.max(3000, Math.floor(parsedMemberWalletBalanceRequestTimeoutMs))
+  : 15000;
 
 export default function P2PAgentStoreMemberManagementPage() {
   const PAGE_SIZE = 20;
@@ -394,10 +400,17 @@ export default function P2PAgentStoreMemberManagementPage() {
       return;
     }
 
+    const controller = new AbortController();
+    let timeoutId: number | undefined;
+
     try {
+      timeoutId = window.setTimeout(() => {
+        controller.abort();
+      }, MEMBER_WALLET_BALANCE_REQUEST_TIMEOUT_MS);
       const response = await fetch('/api/user/getUSDTBalanceByWalletAddress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           walletAddress: normalizedWalletAddress,
           chain: MEMBER_WALLET_BALANCE_CHAIN,
@@ -426,6 +439,10 @@ export default function P2PAgentStoreMemberManagementPage() {
       });
     } catch (readError) {
       console.error('Failed to fetch member USDT balance', readError);
+      const timeoutErrorMessage =
+        readError instanceof DOMException && readError.name === 'AbortError'
+          ? `조회 시간이 초과되었습니다. (${Math.ceil(MEMBER_WALLET_BALANCE_REQUEST_TIMEOUT_MS / 1000)}초)`
+          : '잔고 조회 중 오류가 발생했습니다.';
       setMemberWalletBalancesByAddress((prev) => {
         const existing = prev[walletAddressKey];
         return {
@@ -433,14 +450,21 @@ export default function P2PAgentStoreMemberManagementPage() {
           [walletAddressKey]: {
             loading: false,
             displayValue: existing?.displayValue || '',
-            error: '잔고 조회 중 오류가 발생했습니다.',
+            error: timeoutErrorMessage,
             lastCheckedAt: existing?.lastCheckedAt || '',
             cooldownUntilMs: existing?.cooldownUntilMs || nextCooldownUntil,
           },
         };
       });
+    } finally {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
     }
-  }, [MEMBER_WALLET_BALANCE_COOLDOWN_MS, formatUsdtDisplayValue]);
+  }, [
+    MEMBER_WALLET_BALANCE_COOLDOWN_MS,
+    formatUsdtDisplayValue,
+  ]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalCount / PAGE_SIZE)),
