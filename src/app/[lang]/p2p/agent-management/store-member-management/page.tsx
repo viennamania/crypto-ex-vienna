@@ -395,26 +395,21 @@ export default function P2PAgentStoreMemberManagementPage() {
     }
 
     try {
-      const response = await fetch('/api/user/getUSDTBalancesByWalletAddresses', {
+      const response = await fetch('/api/user/getUSDTBalanceByWalletAddress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddresses: [normalizedWalletAddress],
+          walletAddress: normalizedWalletAddress,
           chain: MEMBER_WALLET_BALANCE_CHAIN,
         }),
       });
 
       const payload = await response.json().catch(() => ({}));
-      const balances = Array.isArray(payload?.result?.balances) ? payload.result.balances : [];
-      const firstBalanceItem =
-        balances.length > 0 && typeof balances[0] === 'object' && balances[0] !== null
-          ? (balances[0] as Record<string, unknown>)
-          : {};
-      const rawDisplayValue = String(firstBalanceItem.displayValue || firstBalanceItem.balance || '0');
+      const rawDisplayValue = String(payload?.result?.displayValue || payload?.result?.balance || '0');
       const displayValue = formatUsdtDisplayValue(rawDisplayValue);
       const errorMessage = !response.ok
         ? String(payload?.error || '회원 지갑 잔고 조회에 실패했습니다.')
-        : String(firstBalanceItem.error || payload?.error || '');
+        : String(payload?.error || '');
 
       setMemberWalletBalancesByAddress((prev) => {
         const existing = prev[walletAddressKey];
