@@ -11077,37 +11077,6 @@ const fetchBuyOrders = async () => {
                             </div>
                           </div>
 
-                          <div className="rounded-lg border border-rose-200 bg-white px-3 py-2.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                  <path
-                                    d="M12 9v4m0 4h.01M12 3l9 16H3L12 3z"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                                중재거래
-                              </span>
-                              <span className="whitespace-nowrap text-base font-bold leading-none text-slate-800 tabular-nums" style={{ fontFamily: 'monospace' }}>
-                                {seller.seller?.totalDisputeResolvedCount || 0}
-                              </span>
-                            </div>
-                            <div className="mt-2 flex flex-col items-end gap-0.5 text-right">
-                              <span className="whitespace-nowrap text-base font-semibold text-rose-700 tabular-nums" style={{ fontFamily: 'monospace' }}>
-                                {seller.seller?.totalDisputeResolvedUsdtAmount
-                                  ? seller.seller?.totalDisputeResolvedUsdtAmount.toLocaleString()
-                                  : '0'} USDT
-                              </span>
-                              <span className="whitespace-nowrap text-sm font-medium text-slate-600 tabular-nums" style={{ fontFamily: 'monospace' }}>
-                                {seller.seller?.totalDisputeResolvedKrwAmount != null
-                                  ? formatKrwValue(seller.seller?.totalDisputeResolvedKrwAmount)
-                                  : '0'} 원
-                              </span>
-                            </div>
-                          </div>
                         </div>
                           </div>
                         </div>
@@ -11129,14 +11098,6 @@ const fetchBuyOrders = async () => {
 
                             {isOwnerSeller && seller.walletAddress && isSameWalletAddress(seller.walletAddress, sellerWalletAddressParam) && (
                               <div className="w-full flex flex-col items-start justify-center gap-2 rounded-xl border border-slate-200 bg-white/90 p-3">
-                                <div className="w-full rounded-lg border border-sky-200 bg-sky-50/80 px-3 py-2">
-                                  <span className="text-[11px] font-bold tracking-[0.14em] text-sky-700">
-                                    나의 접속 아이피주소
-                                  </span>
-                                  <div className="mt-1 break-all text-base font-extrabold text-sky-900 sm:text-lg tabular-nums">
-                                    {loadingMyIpAddress ? '확인중...' : (myIpAddress || '-')}
-                                  </div>
-                                </div>
                                 <div className="w-full flex flex-row items-center justify-between gap-2">
                                   <span className="text-sm font-bold text-slate-800">
                                     거래중인 주문 목록
@@ -14385,7 +14346,7 @@ const fetchBuyOrders = async () => {
               {selectedActivePaymentRequestedOrder && (
                 <div className="space-y-2 lg:space-y-3">
                   <div className="space-y-2">
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-2">
                       <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2">
                         <span className="text-[11px] font-bold tracking-[0.12em] text-emerald-700">
                           완료 처리자
@@ -14397,14 +14358,6 @@ const fetchBuyOrders = async () => {
                           <span className="text-[11px] font-semibold text-emerald-800 tabular-nums">
                             {address ? formatShortWalletAddress(address) : '-'}
                           </span>
-                        </div>
-                      </div>
-                      <div className="rounded-lg border border-sky-200 bg-sky-50/80 px-3 py-2">
-                        <span className="text-[11px] font-bold tracking-[0.12em] text-sky-700">
-                          접속 아이피주소
-                        </span>
-                        <div className="mt-1 break-all text-sm font-extrabold text-sky-900 tabular-nums">
-                          {loadingMyIpAddress ? '확인중...' : (myIpAddress || '-')}
                         </div>
                       </div>
                     </div>
