@@ -1857,7 +1857,7 @@ export default function P2PAgentSalesManagementPage() {
             </form>
           </section>
 
-          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-7">
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-6">
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
               <p className="text-xs font-semibold text-slate-500">전체 거래</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">{totalCount.toLocaleString()}건</p>
