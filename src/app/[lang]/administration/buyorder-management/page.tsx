@@ -152,6 +152,7 @@ const walletAuthOptions = ['google', 'email', 'phone'];
 const SENDBIRD_APP_ID = process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID
   || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID
   || '';
+const SENDBIRD_MANAGER_CHAT_USER_ID = String(process.env.NEXT_PUBLIC_SENDBIRD_MANAGER_ID || '').trim();
 
 type SearchFilters = {
   date: string;
@@ -861,6 +862,10 @@ const createDefaultFilters = (): SearchFilters => {
 export default function BuyOrderManagementPage() {
   const activeAccount = useActiveAccount();
   const adminWalletAddress = String(activeAccount?.address || '').trim();
+  const orderChatUserId = useMemo(
+    () => SENDBIRD_MANAGER_CHAT_USER_ID || adminWalletAddress,
+    [adminWalletAddress],
+  );
   const isWalletConnected = Boolean(adminWalletAddress);
   const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
 
@@ -906,6 +911,7 @@ export default function BuyOrderManagementPage() {
   const [selectedOrderChatTradeId, setSelectedOrderChatTradeId] = useState('');
   const [orderChatSessionToken, setOrderChatSessionToken] = useState<string | null>(null);
   const [orderChatSessionLoading, setOrderChatSessionLoading] = useState(false);
+  const [orderChatChannelAccessLoading, setOrderChatChannelAccessLoading] = useState(false);
   const [orderChatSessionError, setOrderChatSessionError] = useState<string | null>(null);
 
   const mountedRef = useRef(true);
@@ -1055,6 +1061,11 @@ export default function BuyOrderManagementPage() {
       setOrderChatSessionError('관리자 지갑 연결이 필요합니다.');
       return;
     }
+    if (!orderChatUserId) {
+      setOrderChatSessionToken(null);
+      setOrderChatSessionError('관리자 채팅 사용자 ID가 없습니다.');
+      return;
+    }
 
     let cancelled = false;
     const issueSessionToken = async () => {
@@ -1065,8 +1076,8 @@ export default function BuyOrderManagementPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: adminWalletAddress,
-            nickname: cancelActorNickname || `admin_${adminWalletAddress.slice(0, 6)}`,
+            userId: orderChatUserId,
+            nickname: cancelActorNickname || `admin_${orderChatUserId.slice(0, 6)}`,
           }),
         });
         const payload = await response.json().catch(() => ({}));
@@ -1092,18 +1103,58 @@ export default function BuyOrderManagementPage() {
     return () => {
       cancelled = true;
     };
-  }, [adminWalletAddress, cancelActorNickname, isOrderChatDrawerOpen]);
+  }, [adminWalletAddress, cancelActorNickname, isOrderChatDrawerOpen, orderChatUserId]);
 
-  const openOrderChatDrawer = useCallback((order: BuyOrderItem, channelUrl: string) => {
+  useEffect(() => {
+    if (!isOrderChatDrawerOpen) {
+      setOrderChatChannelAccessLoading(false);
+    }
+  }, [isOrderChatDrawerOpen]);
+
+  const openOrderChatDrawer = useCallback(async (order: BuyOrderItem, channelUrl: string) => {
     const normalizedChannelUrl = String(channelUrl || '').trim();
     if (!normalizedChannelUrl) {
       toast.error('해당 주문의 채팅 채널 정보가 없습니다.');
       return;
     }
+    if (!adminWalletAddress) {
+      toast.error('관리자 지갑 연결이 필요합니다.');
+      return;
+    }
+    if (!orderChatUserId) {
+      toast.error('관리자 채팅 사용자 ID가 없습니다.');
+      return;
+    }
     setSelectedOrderChatChannelUrl(normalizedChannelUrl);
     setSelectedOrderChatTradeId(String(order?.tradeId || '').trim());
     setIsOrderChatDrawerOpen(true);
-  }, []);
+    setOrderChatSessionError(null);
+    setOrderChatChannelAccessLoading(true);
+
+    try {
+      const response = await fetch('/api/sendbird/ensure-group-channel-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channelUrl: normalizedChannelUrl,
+          userId: orderChatUserId,
+          nickname: cancelActorNickname || `admin_${orderChatUserId.slice(0, 6)}`,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          String(payload?.error || payload?.message || '채팅 채널 접근 권한을 준비하지 못했습니다.'),
+        );
+      }
+    } catch (error) {
+      setOrderChatSessionError(
+        error instanceof Error ? error.message : '채팅 채널 접근 권한을 준비하지 못했습니다.',
+      );
+    } finally {
+      setOrderChatChannelAccessLoading(false);
+    }
+  }, [adminWalletAddress, cancelActorNickname, orderChatUserId]);
 
   const fetchActiveBuyOrderCount = useCallback(async () => {
     try {
@@ -2852,7 +2903,9 @@ export default function BuyOrderManagementPage() {
                           )}
                           <button
                             type="button"
-                            onClick={() => openOrderChatDrawer(order, buyerConsentSnapshot.channelUrl)}
+                            onClick={() => {
+                              void openOrderChatDrawer(order, buyerConsentSnapshot.channelUrl);
+                            }}
                             disabled={!buyerConsentSnapshot.channelUrl}
                             className={`mt-0.5 inline-flex w-fit items-center justify-center rounded-md border px-2 py-0.5 text-[10px] font-semibold transition ${
                               buyerConsentSnapshot.channelUrl
@@ -2990,6 +3043,10 @@ export default function BuyOrderManagementPage() {
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
                   이용동의 컬럼의 `채팅 보기` 버튼을 눌러 채팅 내역을 열어주세요.
                 </div>
+              ) : orderChatChannelAccessLoading ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                  채팅 채널 접근 권한을 준비 중입니다...
+                </div>
               ) : orderChatSessionLoading || !orderChatSessionToken ? (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
                   채팅 세션을 준비 중입니다...
@@ -2998,7 +3055,7 @@ export default function BuyOrderManagementPage() {
                 <div className="h-full overflow-hidden rounded-xl border border-slate-200 bg-white">
                   <SendbirdProvider
                     appId={SENDBIRD_APP_ID}
-                    userId={adminWalletAddress}
+                    userId={orderChatUserId}
                     accessToken={orderChatSessionToken}
                     theme="light"
                   >
