@@ -829,6 +829,7 @@ export default function P2PAgentSalesManagementPage() {
   const [orderChatSessionToken, setOrderChatSessionToken] = useState<string | null>(null);
   const [orderChatSessionLoading, setOrderChatSessionLoading] = useState(false);
   const [orderChatSessionError, setOrderChatSessionError] = useState<string | null>(null);
+  const [orderChatChannelAccessLoading, setOrderChatChannelAccessLoading] = useState(false);
   const [cancelTargetOrder, setCancelTargetOrder] = useState<AgentSalesOrderItem | null>(null);
   const [cancelingOrder, setCancelingOrder] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -1009,6 +1010,54 @@ export default function P2PAgentSalesManagementPage() {
       cancelled = true;
     };
   }, [isOrderChatDrawerOpen, orderChatViewerNickname, orderChatViewerUserId]);
+
+  useEffect(() => {
+    if (!isOrderChatDrawerOpen) {
+      setOrderChatChannelAccessLoading(false);
+    }
+  }, [isOrderChatDrawerOpen]);
+
+  const openOrderChatDrawer = useCallback(async (order: AgentSalesOrderItem, channelUrl: string) => {
+    const normalizedChannelUrl = String(channelUrl || '').trim();
+    if (!normalizedChannelUrl) {
+      toast.error('해당 주문의 채팅 채널 정보가 없습니다.');
+      return;
+    }
+    if (!orderChatViewerUserId) {
+      toast.error('에이전트 지갑 정보 확인이 필요합니다.');
+      return;
+    }
+
+    setSelectedOrderChatChannelUrl(normalizedChannelUrl);
+    setSelectedOrderChatTradeId(String(order?.tradeId || '').trim());
+    setIsOrderChatDrawerOpen(true);
+    setOrderChatSessionError(null);
+    setOrderChatChannelAccessLoading(true);
+
+    try {
+      const response = await fetch('/api/sendbird/ensure-group-channel-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channelUrl: normalizedChannelUrl,
+          userId: orderChatViewerUserId,
+          nickname: orderChatViewerNickname || `agent_${orderChatViewerUserId.slice(0, 6)}`,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          String(payload?.error || payload?.message || '채팅 채널 접근 권한을 준비하지 못했습니다.'),
+        );
+      }
+    } catch (error) {
+      setOrderChatSessionError(
+        error instanceof Error ? error.message : '채팅 채널 접근 권한을 준비하지 못했습니다.',
+      );
+    } finally {
+      setOrderChatChannelAccessLoading(false);
+    }
+  }, [orderChatViewerNickname, orderChatViewerUserId]);
 
   const filteredOrders = useMemo(() => {
     const normalizedTradeId = appliedFilters.searchTradeId.trim().toLowerCase();
@@ -2087,6 +2136,12 @@ export default function P2PAgentSalesManagementPage() {
                         ),
                       );
                       const buyerConsentSnapshot = getOrderBuyerConsentSnapshot(order);
+                      const buyerConsentAcceptedAtLabel = buyerConsentSnapshot.acceptedAt
+                        ? formatDateTime(buyerConsentSnapshot.acceptedAt)
+                        : '-';
+                      const buyerConsentRequestedAtLabel = buyerConsentSnapshot.requestedAt
+                        ? formatDateTime(buyerConsentSnapshot.requestedAt)
+                        : '-';
                       const orderCreatedDateLabel = formatDateOnly(order.createdAt);
                       const orderCreatedTimeLabel = formatTimeOnly(order.createdAt);
 
@@ -2622,16 +2677,40 @@ export default function P2PAgentSalesManagementPage() {
                         <td className="px-3 py-3">
                           <div className="flex flex-col gap-1">
                             {buyerConsentSnapshot.accepted ? (
-                              <span className="inline-flex w-fit items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
-                                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                동의완료
-                              </span>
+                              <>
+                                <span className="inline-flex w-fit items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
+                                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                  동의완료
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                  {buyerConsentAcceptedAtLabel}
+                                </span>
+                              </>
                             ) : (
-                              <span className="inline-flex w-fit items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700">
-                                <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
-                                미완료
-                              </span>
+                              <>
+                                <span className="inline-flex w-fit items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700">
+                                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                  미완료
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                  {buyerConsentRequestedAtLabel}
+                                </span>
+                              </>
                             )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void openOrderChatDrawer(order, buyerConsentSnapshot.channelUrl);
+                              }}
+                              disabled={!buyerConsentSnapshot.channelUrl}
+                              className={`mt-0.5 inline-flex w-fit items-center justify-center rounded-md border px-2 py-0.5 text-[10px] font-semibold transition ${
+                                buyerConsentSnapshot.channelUrl
+                                  ? 'border-sky-300 bg-sky-50 text-sky-700 hover:border-sky-400 hover:bg-sky-100'
+                                  : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                              }`}
+                            >
+                              {buyerConsentSnapshot.channelUrl ? '채팅 보기' : '채널 없음'}
+                            </button>
                           </div>
                         </td>
                         <td className="px-3 py-3 text-center">
@@ -2757,6 +2836,10 @@ export default function P2PAgentSalesManagementPage() {
               ) : !selectedOrderChatChannelUrl ? (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
                   이용동의 컬럼의 `채팅 보기` 버튼을 눌러 채팅 내역을 열어주세요.
+                </div>
+              ) : orderChatChannelAccessLoading ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                  채팅 채널 접근 권한을 준비 중입니다...
                 </div>
               ) : orderChatSessionLoading || !orderChatSessionToken ? (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
