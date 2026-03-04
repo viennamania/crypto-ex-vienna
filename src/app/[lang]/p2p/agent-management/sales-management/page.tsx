@@ -510,6 +510,7 @@ const PAYMENT_REQUEST_COUNTDOWN_LIMIT_MS = 30 * 60 * 1000;
 const SENDBIRD_APP_ID = process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID
   || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID
   || '';
+const SENDBIRD_MANAGER_CHAT_USER_ID = String(process.env.NEXT_PUBLIC_SENDBIRD_MANAGER_ID || '').trim();
 const CANCEL_ORDER_PROGRESS_STEP_DEFINITIONS: Array<{
   key: string;
   title: string;
@@ -838,8 +839,14 @@ export default function P2PAgentSalesManagementPage() {
   const [cancelProgressSummary, setCancelProgressSummary] = useState('취소 요청 전입니다.');
   const [cancelProgressPhase, setCancelProgressPhase] = useState<'idle' | 'processing' | 'completed' | 'error'>('idle');
   const requestInFlightRef = useRef(false);
-  const orderChatViewerUserId = String(activeAccount?.address || agent?.adminWalletAddress || '').trim();
-  const orderChatViewerNickname = String(agent?.agentName || '').trim() || '에이전트';
+  const orderChatViewerUserId = useMemo(
+    () => SENDBIRD_MANAGER_CHAT_USER_ID || String(activeAccount?.address || agent?.adminWalletAddress || '').trim(),
+    [activeAccount?.address, agent?.adminWalletAddress],
+  );
+  const orderChatViewerNickname = useMemo(
+    () => (SENDBIRD_MANAGER_CHAT_USER_ID ? '관리자' : (String(agent?.agentName || '').trim() || '에이전트')),
+    [agent?.agentName],
+  );
 
   const loadData = useCallback(async (mode: 'manual' | 'polling' = 'manual') => {
     if (!agentcode) {
@@ -969,7 +976,7 @@ export default function P2PAgentSalesManagementPage() {
     }
     if (!orderChatViewerUserId) {
       setOrderChatSessionToken(null);
-      setOrderChatSessionError('에이전트 지갑 정보를 확인할 수 없습니다.');
+      setOrderChatSessionError('관리자 채팅 사용자 ID가 없습니다.');
       return;
     }
 
@@ -988,7 +995,7 @@ export default function P2PAgentSalesManagementPage() {
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload?.sessionToken) {
-          throw new Error(payload?.error || '에이전트 채팅 세션 토큰 발급에 실패했습니다.');
+          throw new Error(payload?.error || '관리자 채팅 세션 토큰 발급에 실패했습니다.');
         }
         if (!cancelled) {
           setOrderChatSessionToken(String(payload.sessionToken));
@@ -1024,7 +1031,7 @@ export default function P2PAgentSalesManagementPage() {
       return;
     }
     if (!orderChatViewerUserId) {
-      toast.error('에이전트 지갑 정보 확인이 필요합니다.');
+      toast.error('관리자 채팅 사용자 ID가 없습니다.');
       return;
     }
 
@@ -2827,7 +2834,7 @@ export default function P2PAgentSalesManagementPage() {
                 </div>
               ) : !orderChatViewerUserId ? (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-                  에이전트 지갑 정보 확인 후 채팅 내역을 확인할 수 있습니다.
+                  관리자 채팅 사용자 ID 확인 후 채팅 내역을 확인할 수 있습니다.
                 </div>
               ) : orderChatSessionError ? (
                 <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">

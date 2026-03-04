@@ -158,9 +158,9 @@ type SearchFilters = {
   date: string;
   searchTradeId: string;
   searchBuyer: string;
-  searchSellerId: string;
   searchDepositName: string;
-  searchStoreName: string;
+  selectedSellerKey: string;
+  selectedStatus: string;
 };
 
 type CancelActorInfo = {
@@ -853,9 +853,9 @@ const createDefaultFilters = (): SearchFilters => {
     date: today,
     searchTradeId: '',
     searchBuyer: '',
-    searchSellerId: '',
     searchDepositName: '',
-    searchStoreName: '',
+    selectedSellerKey: '',
+    selectedStatus: '',
   };
 };
 
@@ -1189,6 +1189,17 @@ export default function BuyOrderManagementPage() {
 
     try {
       const selectedDate = appliedFilters.date || getTodayDate();
+      const normalizedSelectedSellerKey = appliedFilters.selectedSellerKey.trim();
+      const normalizedSelectedSellerKeyLower = normalizedSelectedSellerKey.toLowerCase();
+      let searchSellerId = '';
+      let searchSellerWalletAddress = '';
+      if (normalizedSelectedSellerKeyLower.startsWith('wallet:')) {
+        searchSellerWalletAddress = normalizedSelectedSellerKey.slice(7).trim();
+      } else if (normalizedSelectedSellerKeyLower.startsWith('nickname:')) {
+        searchSellerId = normalizedSelectedSellerKey.slice(9).trim();
+      } else if (normalizedSelectedSellerKey) {
+        searchSellerId = normalizedSelectedSellerKey;
+      }
 
       const response = await fetch('/api/order/getBuyOrderDashboardList', {
         method: 'POST',
@@ -1197,11 +1208,12 @@ export default function BuyOrderManagementPage() {
           storecode: 'admin',
           limit: pageSize,
           page: pageNumber,
-          searchStoreName: appliedFilters.searchStoreName || '',
           searchTradeId: appliedFilters.searchTradeId || '',
           searchBuyer: appliedFilters.searchBuyer || '',
-          searchSellerId: appliedFilters.searchSellerId || '',
+          searchSellerId,
+          searchSellerWalletAddress,
           searchDepositName: appliedFilters.searchDepositName || '',
+          status: appliedFilters.selectedStatus || '',
           fromDate: selectedDate,
           toDate: selectedDate,
           privateSaleMode: 'all',
@@ -1324,6 +1336,31 @@ export default function BuyOrderManagementPage() {
     [sellerSalesSummary],
   );
 
+  const selectableSellers = useMemo(() => {
+    const sellerMap = new Map<string, { key: string; label: string }>();
+
+    sellerSalesSummarySorted.forEach((item) => {
+      const sellerWalletAddress = String(item.sellerWalletAddress || '').trim();
+      const sellerNickname = String(item.sellerNickname || '').trim();
+      const normalizedWalletAddress = sellerWalletAddress.toLowerCase();
+      const normalizedNickname = sellerNickname.toLowerCase();
+      const key = normalizedWalletAddress
+        ? `wallet:${normalizedWalletAddress}`
+        : `nickname:${normalizedNickname}`;
+      if (!key || sellerMap.has(key)) return;
+
+      const label = sellerNickname && sellerWalletAddress
+        ? `${sellerNickname} (${shortWallet(sellerWalletAddress)})`
+        : sellerNickname || shortWallet(sellerWalletAddress) || '-';
+      sellerMap.set(key, { key, label });
+    });
+
+    return Array.from(sellerMap.values()).sort((a, b) => (
+      a.label.localeCompare(b.label, 'ko')
+      || a.key.localeCompare(b.key, 'ko')
+    ));
+  }, [sellerSalesSummarySorted]);
+
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!isWalletConnected) {
@@ -1334,9 +1371,9 @@ export default function BuyOrderManagementPage() {
       date: draftFilters.date || getTodayDate(),
       searchTradeId: draftFilters.searchTradeId.trim(),
       searchBuyer: draftFilters.searchBuyer.trim(),
-      searchSellerId: draftFilters.searchSellerId.trim(),
       searchDepositName: draftFilters.searchDepositName.trim(),
-      searchStoreName: draftFilters.searchStoreName.trim(),
+      selectedSellerKey: draftFilters.selectedSellerKey.trim(),
+      selectedStatus: draftFilters.selectedStatus.trim(),
     };
     setPageNumber(1);
     setAppliedFilters(normalizedFilters);
@@ -1957,19 +1994,6 @@ export default function BuyOrderManagementPage() {
             </div>
             <div className="lg:col-span-2">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                판매자 아이디
-              </label>
-              <input
-                type="text"
-                value={draftFilters.searchSellerId}
-                onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchSellerId: event.target.value }))}
-                placeholder="판매자 아이디 검색"
-                disabled={!isWalletConnected}
-                className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500"
-              />
-            </div>
-            <div className="lg:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 입금자명
               </label>
               <input
@@ -1983,16 +2007,37 @@ export default function BuyOrderManagementPage() {
             </div>
             <div className="lg:col-span-2">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                가맹점명
+                판매자 선택
               </label>
-              <input
-                type="text"
-                value={draftFilters.searchStoreName}
-                onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchStoreName: event.target.value }))}
-                placeholder="가맹점명 검색"
+              <select
+                value={draftFilters.selectedSellerKey}
+                onChange={(event) => setDraftFilters((prev) => ({ ...prev, selectedSellerKey: event.target.value }))}
                 disabled={!isWalletConnected}
-                className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500"
-              />
+                className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-slate-500"
+              >
+                <option value="">전체 판매자</option>
+                {selectableSellers.map((seller) => (
+                  <option key={seller.key} value={seller.key}>
+                    {seller.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="lg:col-span-2">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                상태
+              </label>
+              <select
+                value={draftFilters.selectedStatus}
+                onChange={(event) => setDraftFilters((prev) => ({ ...prev, selectedStatus: event.target.value }))}
+                disabled={!isWalletConnected}
+                className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-slate-500"
+              >
+                <option value="">전체</option>
+                <option value="paymentconfirmed">입금확인</option>
+                <option value="cancelled">주문취소</option>
+                <option value="paymentrequested">입금요청</option>
+              </select>
             </div>
             <div className="lg:col-span-2">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">

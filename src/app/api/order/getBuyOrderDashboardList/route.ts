@@ -20,6 +20,17 @@ const toIsoDateBoundary = (value: unknown, isStart: boolean) => {
 
 const normalizeAgentcode = (value: unknown) => String(value || '').trim();
 const toAgentcodeKey = (value: unknown) => normalizeAgentcode(value).toLowerCase();
+const normalizeStatusFilter = (value: unknown) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return '';
+  if (normalized === 'ordered') return 'ordered';
+  if (normalized === 'accepted') return 'accepted';
+  if (normalized === 'paymentrequested') return 'paymentRequested';
+  if (normalized === 'paymentconfirmed') return 'paymentConfirmed';
+  if (normalized === 'completed') return 'completed';
+  if (normalized === 'cancelled') return 'cancelled';
+  return '';
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,8 +45,9 @@ export async function POST(request: NextRequest) {
     const searchTradeIdRegex = toRegexFilter(body?.searchTradeId);
     const searchBuyerRegex = toRegexFilter(body?.searchBuyer);
     const searchSellerIdRegex = toRegexFilter(body?.searchSellerId);
+    const searchSellerWalletAddressRegex = toRegexFilter(body?.searchSellerWalletAddress);
     const searchDepositNameRegex = toRegexFilter(body?.searchDepositName);
-    const searchStoreNameRegex = toRegexFilter(body?.searchStoreName);
+    const statusFilter = normalizeStatusFilter(body?.status);
     const privateSaleMode =
       body?.privateSaleMode === 'private' || body?.privateSaleMode === 'normal' || body?.privateSaleMode === 'all'
         ? body.privateSaleMode
@@ -44,28 +56,49 @@ export async function POST(request: NextRequest) {
     const fromDateIso = toIsoDateBoundary(body?.fromDate, true) || '1970-01-01T00:00:00.000Z';
     const toDateIso = toIsoDateBoundary(body?.toDate, false) || new Date().toISOString();
 
-    const filter: Record<string, any> = {
-      createdAt: { $gte: fromDateIso, $lte: toDateIso },
-      ...(storecodeRegex ? { storecode: storecodeRegex } : { storecode: { $ne: null } }),
-      ...(searchTradeIdRegex ? { tradeId: searchTradeIdRegex } : {}),
-      ...(searchBuyerRegex ? { nickname: searchBuyerRegex } : {}),
-      ...(searchSellerIdRegex ? { 'seller.nickname': searchSellerIdRegex } : {}),
-      ...(searchStoreNameRegex ? { 'store.storeName': searchStoreNameRegex } : {}),
-      ...(searchDepositNameRegex
-        ? {
-            $or: [
-              { 'buyer.depositName': searchDepositNameRegex },
-              { 'seller.bankInfo.accountHolder': searchDepositNameRegex },
-            ],
-          }
-        : {}),
-    };
+    const andFilters: Record<string, any>[] = [
+      { createdAt: { $gte: fromDateIso, $lte: toDateIso } },
+      storecodeRegex ? { storecode: storecodeRegex } : { storecode: { $ne: null } },
+    ];
+
+    if (searchTradeIdRegex) {
+      andFilters.push({ tradeId: searchTradeIdRegex });
+    }
+    if (searchBuyerRegex) {
+      andFilters.push({ nickname: searchBuyerRegex });
+    }
+    if (searchSellerIdRegex) {
+      andFilters.push({
+        $or: [
+          { 'seller.nickname': searchSellerIdRegex },
+          { 'seller.walletAddress': searchSellerIdRegex },
+        ],
+      });
+    }
+    if (searchSellerWalletAddressRegex) {
+      andFilters.push({ 'seller.walletAddress': searchSellerWalletAddressRegex });
+    }
+    if (searchDepositNameRegex) {
+      andFilters.push({
+        $or: [
+          { 'buyer.depositName': searchDepositNameRegex },
+          { 'seller.bankInfo.accountHolder': searchDepositNameRegex },
+        ],
+      });
+    }
+    if (statusFilter) {
+      andFilters.push({
+        status: { $regex: `^${escapeRegex(statusFilter)}$`, $options: 'i' },
+      });
+    }
 
     if (privateSaleMode === 'private') {
-      filter.privateSale = true;
+      andFilters.push({ privateSale: true });
     } else if (privateSaleMode === 'normal') {
-      filter.privateSale = { $ne: true };
+      andFilters.push({ privateSale: { $ne: true } });
     }
+
+    const filter: Record<string, any> = andFilters.length > 1 ? { $and: andFilters } : andFilters[0];
 
     const client = await clientPromise;
     const collection = client.db(dbName).collection('buyorders');
