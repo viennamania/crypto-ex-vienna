@@ -117,8 +117,8 @@ type SearchFilters = {
   searchTradeId: string;
   searchBuyer: string;
   searchDepositName: string;
-  searchStoreName: string;
-  selectedStorecode: string;
+  selectedSellerKey: string;
+  selectedStatus: string;
 };
 
 type CancelOrderProgressStepState = 'pending' | 'active' | 'completed' | 'error';
@@ -797,8 +797,8 @@ const createDefaultFilters = (): SearchFilters => {
     searchTradeId: '',
     searchBuyer: '',
     searchDepositName: '',
-    searchStoreName: '',
-    selectedStorecode: '',
+    selectedSellerKey: '',
+    selectedStatus: '',
   };
 };
 
@@ -1014,8 +1014,8 @@ export default function P2PAgentSalesManagementPage() {
     const normalizedTradeId = appliedFilters.searchTradeId.trim().toLowerCase();
     const normalizedBuyer = appliedFilters.searchBuyer.trim().toLowerCase();
     const normalizedDepositName = appliedFilters.searchDepositName.trim().toLowerCase();
-    const normalizedStoreName = appliedFilters.searchStoreName.trim().toLowerCase();
-    const normalizedSelectedStorecode = appliedFilters.selectedStorecode.trim().toLowerCase();
+    const normalizedSelectedSellerKey = appliedFilters.selectedSellerKey.trim().toLowerCase();
+    const normalizedSelectedStatus = appliedFilters.selectedStatus.trim().toLowerCase();
 
     return orders.filter((order) => {
       const orderTradeId = String(order.tradeId || '').toLowerCase();
@@ -1023,41 +1023,51 @@ export default function P2PAgentSalesManagementPage() {
       const orderDepositName = String(order.buyerDepositName || '').toLowerCase();
       const orderStoreName = String(order.storeName || '').toLowerCase();
       const orderStorecode = String(order.storecode || '').toLowerCase();
+      const orderSellerWalletAddress = String(order.sellerWalletAddress || '').trim().toLowerCase();
+      const orderSellerNickname = String(order.sellerNickname || '').trim().toLowerCase();
+      const orderSellerKey = orderSellerWalletAddress
+        ? `wallet:${orderSellerWalletAddress}`
+        : `nickname:${orderSellerNickname}`;
+      const orderStatus = normalizeOrderStatus(order.status);
 
       if (normalizedTradeId && !orderTradeId.includes(normalizedTradeId)) return false;
       if (normalizedBuyer && !orderBuyerNickname.includes(normalizedBuyer)) return false;
       if (normalizedDepositName && !orderDepositName.includes(normalizedDepositName)) return false;
-      if (normalizedSelectedStorecode && orderStorecode !== normalizedSelectedStorecode) return false;
-      if (normalizedStoreName && !orderStoreName.includes(normalizedStoreName) && !orderStorecode.includes(normalizedStoreName)) {
-        return false;
-      }
+      if (normalizedSelectedSellerKey && orderSellerKey !== normalizedSelectedSellerKey) return false;
+      if (normalizedSelectedStatus && orderStatus !== normalizedSelectedStatus) return false;
 
       return true;
     });
   }, [
     appliedFilters.searchBuyer,
     appliedFilters.searchDepositName,
-    appliedFilters.selectedStorecode,
-    appliedFilters.searchStoreName,
+    appliedFilters.selectedSellerKey,
+    appliedFilters.selectedStatus,
     appliedFilters.searchTradeId,
     orders,
   ]);
 
-  const selectableStores = useMemo(() => {
-    const storeMap = new Map<string, { storecode: string; storeName: string }>();
+  const selectableSellers = useMemo(() => {
+    const sellerMap = new Map<string, { key: string; label: string }>();
     orders.forEach((order) => {
-      const storecode = String(order.storecode || '').trim();
-      if (!storecode) return;
-      const normalizedStorecode = storecode.toLowerCase();
-      const storeName = String(order.storeName || '').trim() || storecode;
-      if (!storeMap.has(normalizedStorecode)) {
-        storeMap.set(normalizedStorecode, { storecode, storeName });
-      }
+      const sellerWalletAddress = String(order.sellerWalletAddress || '').trim();
+      const sellerNickname = String(order.sellerNickname || '').trim();
+      const normalizedWalletAddress = sellerWalletAddress.toLowerCase();
+      const normalizedNickname = sellerNickname.toLowerCase();
+      const key = normalizedWalletAddress
+        ? `wallet:${normalizedWalletAddress}`
+        : `nickname:${normalizedNickname}`;
+      if (!key || sellerMap.has(key)) return;
+
+      const label = sellerNickname && sellerWalletAddress
+        ? `${sellerNickname} (${shortWallet(sellerWalletAddress)})`
+        : sellerNickname || shortWallet(sellerWalletAddress) || '-';
+      sellerMap.set(key, { key, label });
     });
 
-    return Array.from(storeMap.values()).sort((a, b) => (
-      a.storeName.localeCompare(b.storeName, 'ko')
-      || a.storecode.localeCompare(b.storecode, 'ko')
+    return Array.from(sellerMap.values()).sort((a, b) => (
+      a.label.localeCompare(b.label, 'ko')
+      || a.key.localeCompare(b.key, 'ko')
     ));
   }, [orders]);
 
@@ -1175,8 +1185,8 @@ export default function P2PAgentSalesManagementPage() {
       searchTradeId: draftFilters.searchTradeId.trim(),
       searchBuyer: draftFilters.searchBuyer.trim(),
       searchDepositName: draftFilters.searchDepositName.trim(),
-      searchStoreName: draftFilters.searchStoreName.trim(),
-      selectedStorecode: draftFilters.selectedStorecode.trim(),
+      selectedSellerKey: draftFilters.selectedSellerKey.trim(),
+      selectedStatus: draftFilters.selectedStatus.trim(),
     };
     setCurrentPage(1);
     setAppliedFilters(normalizedFilters);
@@ -1743,31 +1753,34 @@ export default function P2PAgentSalesManagementPage() {
               </div>
               <div className="lg:col-span-2">
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  가맹점명
+                  판매자 선택
                 </label>
-                <input
-                  type="text"
-                  value={draftFilters.searchStoreName}
-                  onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchStoreName: event.target.value }))}
-                  placeholder="가맹점명 검색"
-                  className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500"
-                />
+                <select
+                  value={draftFilters.selectedSellerKey}
+                  onChange={(event) => setDraftFilters((prev) => ({ ...prev, selectedSellerKey: event.target.value }))}
+                  className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-cyan-500"
+                >
+                  <option value="">전체 판매자</option>
+                  {selectableSellers.map((seller) => (
+                    <option key={seller.key} value={seller.key}>
+                      {seller.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="lg:col-span-2">
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  가맹점 선택
+                  상태
                 </label>
                 <select
-                  value={draftFilters.selectedStorecode}
-                  onChange={(event) => setDraftFilters((prev) => ({ ...prev, selectedStorecode: event.target.value }))}
+                  value={draftFilters.selectedStatus}
+                  onChange={(event) => setDraftFilters((prev) => ({ ...prev, selectedStatus: event.target.value }))}
                   className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-cyan-500"
                 >
-                  <option value="">전체 가맹점</option>
-                  {selectableStores.map((store) => (
-                    <option key={store.storecode} value={store.storecode}>
-                      {store.storeName} ({store.storecode})
-                    </option>
-                  ))}
+                  <option value="">전체</option>
+                  <option value="paymentconfirmed">입금확인</option>
+                  <option value="cancelled">주문취소</option>
+                  <option value="paymentrequested">입금요청</option>
                 </select>
               </div>
               <div className="lg:col-span-12 flex items-end justify-end gap-2">
@@ -1792,10 +1805,6 @@ export default function P2PAgentSalesManagementPage() {
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
               <p className="text-xs font-semibold text-slate-500">전체 거래</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">{totalCount.toLocaleString()}건</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <p className="text-xs font-semibold text-slate-500">표시중</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">{filteredOrders.length.toLocaleString()}건</p>
             </div>
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 px-4 py-3">
               <p className="text-xs font-semibold text-emerald-700">입금확인</p>
