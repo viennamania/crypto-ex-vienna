@@ -1081,7 +1081,7 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
                     connectButton={{
                       label: connectedWalletAddress ? '지갑 다시 연결' : '판매자 지갑 연결',
                       className:
-                        'inline-flex h-10 items-center justify-center rounded-lg border border-amber-300 bg-white px-4 text-sm font-semibold text-amber-700 transition hover:bg-amber-100',
+                        'inline-flex h-10 items-center justify-center rounded-lg border border-slate-700 !bg-slate-900 px-4 text-sm font-semibold !text-white transition hover:border-slate-600 hover:!bg-slate-800 hover:!text-white',
                     }}
                     connectModal={{
                       size: 'wide',
