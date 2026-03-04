@@ -24,6 +24,13 @@ type MemberWalletBalanceItem = {
 const normalizeWalletAddress = (walletAddress: string) =>
   String(walletAddress || '').trim().toLowerCase();
 
+const parsedMemberWalletBalanceRequestTimeoutMs = Number(
+  process.env.NEXT_PUBLIC_MEMBER_WALLET_BALANCE_TIMEOUT_MS ?? '15000',
+);
+const MEMBER_WALLET_BALANCE_REQUEST_TIMEOUT_MS = Number.isFinite(parsedMemberWalletBalanceRequestTimeoutMs)
+  ? Math.max(3000, Math.floor(parsedMemberWalletBalanceRequestTimeoutMs))
+  : 15000;
+
 export default function P2PAgentStoreMemberManagementPage() {
   const PAGE_SIZE = 20;
   const MEMBER_BALANCE_FETCH_LIMIT = 1000;
@@ -353,40 +360,49 @@ export default function P2PAgentStoreMemberManagementPage() {
       return;
     }
 
+    let nextDisplayValue = '0';
+    let nextErrorMessage: string | null = null;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      controller.abort();
+    }, MEMBER_WALLET_BALANCE_REQUEST_TIMEOUT_MS);
+
     try {
       const response = await fetch('/api/user/getUSDTBalanceByWalletAddress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           walletAddress: normalizedWalletAddress,
         }),
       });
 
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
+      if (!response.ok || payload?.error) {
         throw new Error(String(payload?.error || '회원 지갑 잔고를 읽어오지 못했습니다.'));
       }
 
-      const displayValue = String(payload?.result?.displayValue ?? payload?.result?.balance ?? '0');
-      setMemberWalletBalancesByAddress((prev) => ({
-        ...prev,
-        [walletAddressKey]: {
-          loading: false,
-          displayValue,
-          error: null,
-        },
-      }));
+      nextDisplayValue = String(payload?.result?.displayValue ?? payload?.result?.balance ?? '0');
     } catch (readError) {
-      const message =
-        readError instanceof Error ? readError.message : '회원 지갑 잔고를 읽어오지 못했습니다.';
-      setMemberWalletBalancesByAddress((prev) => ({
-        ...prev,
-        [walletAddressKey]: {
-          loading: false,
-          displayValue: prev[walletAddressKey]?.displayValue || '0',
-          error: message,
-        },
-      }));
+      nextErrorMessage =
+        readError instanceof DOMException && readError.name === 'AbortError'
+          ? `회원 지갑 잔고 조회가 ${Math.ceil(MEMBER_WALLET_BALANCE_REQUEST_TIMEOUT_MS / 1000)}초를 초과했습니다.`
+          : readError instanceof Error
+            ? readError.message
+            : '회원 지갑 잔고를 읽어오지 못했습니다.';
+    } finally {
+      window.clearTimeout(timeoutId);
+      setMemberWalletBalancesByAddress((prev) => {
+        const previousItem = prev[walletAddressKey];
+        return {
+          ...prev,
+          [walletAddressKey]: {
+            loading: false,
+            displayValue: nextErrorMessage ? previousItem?.displayValue || '0' : nextDisplayValue,
+            error: nextErrorMessage,
+          },
+        };
+      });
     }
   }, []);
 

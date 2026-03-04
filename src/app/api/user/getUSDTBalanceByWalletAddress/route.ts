@@ -12,6 +12,11 @@ import {
   ethereumContractAddressUSDT,
 } from '@/app/config/contractAddresses';
 
+const parsedBalanceReadTimeoutMs = Number(process.env.USDT_BALANCE_READ_TIMEOUT_MS ?? '12000');
+const BALANCE_READ_TIMEOUT_MS = Number.isFinite(parsedBalanceReadTimeoutMs)
+  ? Math.max(3000, Math.floor(parsedBalanceReadTimeoutMs))
+  : 12000;
+
 const formatTokenDisplayValue = (rawValue: bigint, decimals: number) => {
   if (rawValue <= 0n) return '0';
   const denominator = BigInt(10) ** BigInt(decimals);
@@ -66,6 +71,23 @@ const resolveUsdtContractConfig = (chainKey: string) => {
   };
 };
 
+const withTimeout = async <T>(promise: Promise<T>, label: string): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`[${label}] timed out after ${BALANCE_READ_TIMEOUT_MS}ms`));
+    }, BALANCE_READ_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+};
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -117,10 +139,13 @@ export async function POST(request: NextRequest) {
       address: contractConfig.contractAddress,
     });
 
-    const rawBalanceResult = await balanceOf({
-      contract: usdtContract,
-      address: walletAddress,
-    });
+    const rawBalanceResult = await withTimeout(
+      balanceOf({
+        contract: usdtContract,
+        address: walletAddress,
+      }),
+      `balanceOf:${walletAddress}`,
+    );
     const rawBalanceBigInt = BigInt(rawBalanceResult.toString());
     const displayValue = formatTokenDisplayValue(rawBalanceBigInt, contractConfig.decimals);
 
@@ -139,6 +164,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error || 'unknown error');
     console.error('getUSDTBalanceByWalletAddress error', error);
+    const statusCode = message.toLowerCase().includes('timed out') ? 504 : 500;
     return NextResponse.json({
       result: {
         balance: '0',
@@ -147,6 +173,6 @@ export async function POST(request: NextRequest) {
         walletAddress: '',
       },
       error: message,
-    });
+    }, { status: statusCode });
   }
 }

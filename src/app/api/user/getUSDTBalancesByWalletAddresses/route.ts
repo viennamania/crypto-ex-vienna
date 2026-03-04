@@ -13,6 +13,10 @@ import {
 } from '@/app/config/contractAddresses';
 
 const MAX_WALLET_ADDRESSES = 500;
+const parsedBalanceReadTimeoutMs = Number(process.env.USDT_BALANCE_READ_TIMEOUT_MS ?? '12000');
+const BALANCE_READ_TIMEOUT_MS = Number.isFinite(parsedBalanceReadTimeoutMs)
+  ? Math.max(3000, Math.floor(parsedBalanceReadTimeoutMs))
+  : 12000;
 
 const formatTokenDisplayValue = (rawValue: bigint, decimals: number) => {
   if (rawValue <= 0n) return '0';
@@ -81,6 +85,23 @@ const normalizeWalletAddresses = (value: unknown) => {
   return Array.from(deduped.values()).slice(0, MAX_WALLET_ADDRESSES);
 };
 
+const withTimeout = async <T>(promise: Promise<T>, label: string): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`[${label}] timed out after ${BALANCE_READ_TIMEOUT_MS}ms`));
+    }, BALANCE_READ_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+};
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -140,10 +161,13 @@ export async function POST(request: NextRequest) {
     const balances = await Promise.all(
       walletAddresses.map(async (walletAddress) => {
         try {
-          const rawBalanceResult = await balanceOf({
-            contract: usdtContract,
-            address: walletAddress,
-          });
+          const rawBalanceResult = await withTimeout(
+            balanceOf({
+              contract: usdtContract,
+              address: walletAddress,
+            }),
+            `balanceOf:${walletAddress}`,
+          );
           const rawBalanceBigInt = BigInt(rawBalanceResult.toString());
           const displayValue = formatTokenDisplayValue(rawBalanceBigInt, contractConfig.decimals);
 
