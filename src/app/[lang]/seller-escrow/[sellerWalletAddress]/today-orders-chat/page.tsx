@@ -5,9 +5,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 import { toast } from 'react-hot-toast';
-import { useActiveAccount } from 'thirdweb/react';
+import { AutoConnect, useActiveAccount, useActiveWallet, useConnectedWallets } from 'thirdweb/react';
 import { ConnectButton } from '@/components/WalletConnectButton';
 import { client } from '@/app/client';
+import { useClientWallets } from '@/lib/useClientWallets';
 
 const SENDBIRD_APP_ID =
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
@@ -25,6 +26,7 @@ const CHAT_LAYOUT_STORAGE_VERSION = 1;
 const ACTIVE_ORDER_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
 const COMPLETED_ORDER_STATUSES = new Set(['paymentConfirmed']);
 const TODAY_ORDER_STATUSES = Array.from(new Set([...ACTIVE_ORDER_STATUSES, ...COMPLETED_ORDER_STATUSES]));
+const WALLET_AUTH_OPTIONS = ['google', 'email', 'phone'];
 
 type BuyerConsentSnapshot = {
   accepted: boolean;
@@ -77,6 +79,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
 const toText = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+const isWalletAddress = (value: string): boolean => /^0x[a-fA-F0-9]{40}$/.test(toText(value));
 
 const toNumber = (value: unknown): number => {
   const numericValue = Number(value);
@@ -241,27 +244,60 @@ const parseOwnerWalletAddressCandidatesFromPayload = (payload: unknown): string[
 };
 
 export default function SellerTodayOrdersChatPage({ params }: PageProps) {
+  const { wallet, wallets } = useClientWallets({ authOptions: WALLET_AUTH_OPTIONS });
   const activeAccount = useActiveAccount();
+  const activeWallet = useActiveWallet();
+  const connectedWallets = useConnectedWallets();
   const sellerWalletAddress = toText(params.sellerWalletAddress);
   const lang = toText(params.lang) || 'ko';
-  const connectedWalletAddress = toText(activeAccount?.address);
+  const activeWalletAddress = toText(activeAccount?.address);
+  const connectedWalletAddressCandidates = useMemo(() => {
+    const byLowerAddress = new Map<string, string>();
+    const appendCandidate = (value: unknown) => {
+      const normalized = toText(value);
+      if (!isWalletAddress(normalized)) return;
+      const key = normalized.toLowerCase();
+      if (!byLowerAddress.has(key)) {
+        byLowerAddress.set(key, normalized);
+      }
+    };
+
+    appendCandidate(activeWalletAddress);
+    appendCandidate(activeWallet?.getAccount?.()?.address);
+    appendCandidate(activeWallet?.getAdminAccount?.()?.address);
+    for (const walletItem of connectedWallets) {
+      appendCandidate(walletItem?.getAccount?.()?.address);
+      appendCandidate(walletItem?.getAdminAccount?.()?.address);
+    }
+    return Array.from(byLowerAddress.values());
+  }, [activeWallet, activeWalletAddress, connectedWallets]);
+  const connectedWalletAddress = connectedWalletAddressCandidates[0] || activeWalletAddress;
   const [resolvedOwnerWalletAddress, setResolvedOwnerWalletAddress] = useState('');
   const [ownerWalletAddressCandidates, setOwnerWalletAddressCandidates] = useState<string[]>([]);
   const ownerWalletAddress = useMemo(
     () => resolvedOwnerWalletAddress || sellerWalletAddress,
     [resolvedOwnerWalletAddress, sellerWalletAddress],
   );
-  const isOwnerWallet = useMemo(() => {
-    const normalizedConnectedWalletAddress = connectedWalletAddress.toLowerCase();
-    if (!normalizedConnectedWalletAddress) {
-      return false;
-    }
-    const candidates =
+  const matchedOwnerConnectedWalletAddress = useMemo(() => {
+    const ownerCandidates =
       ownerWalletAddressCandidates.length > 0
         ? ownerWalletAddressCandidates
         : [ownerWalletAddress.toLowerCase()];
-    return candidates.includes(normalizedConnectedWalletAddress);
-  }, [connectedWalletAddress, ownerWalletAddress, ownerWalletAddressCandidates]);
+    const ownerCandidateSet = new Set(
+      ownerCandidates
+        .map((value) => toText(value).toLowerCase())
+        .filter(Boolean),
+    );
+    if (ownerCandidateSet.size <= 0) {
+      return '';
+    }
+    return connectedWalletAddressCandidates.find((value) =>
+      ownerCandidateSet.has(value.toLowerCase()),
+    ) || '';
+  }, [connectedWalletAddressCandidates, ownerWalletAddress, ownerWalletAddressCandidates]);
+  const requesterWalletAddress = matchedOwnerConnectedWalletAddress || connectedWalletAddress;
+  const isOwnerWallet = Boolean(matchedOwnerConnectedWalletAddress);
+  const chatUserWalletAddress = matchedOwnerConnectedWalletAddress || connectedWalletAddress;
 
   const [loading, setLoading] = useState(false);
   const [polling, setPolling] = useState(false);
@@ -390,7 +426,7 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
           limit: 300,
           page: 1,
           walletAddress: sellerWalletAddress,
-          requesterWalletAddress: connectedWalletAddress,
+          requesterWalletAddress,
           startDate: startIso,
           endDate: endIso,
           status: TODAY_ORDER_STATUSES,
@@ -431,7 +467,7 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
         setPolling(false);
       }
     }
-  }, [connectedWalletAddress, sellerWalletAddress]);
+  }, [requesterWalletAddress, sellerWalletAddress]);
 
   useEffect(() => {
     setResolvedOwnerWalletAddress('');
@@ -471,7 +507,7 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
   }, [fetchOrders]);
 
   const refreshUnreadCounts = useCallback(async (mode: 'manual' | 'polling' = 'manual') => {
-    if (!SENDBIRD_APP_ID || !isOwnerWallet || !connectedWalletAddress) {
+    if (!SENDBIRD_APP_ID || !isOwnerWallet || !chatUserWalletAddress) {
       setUnreadByChannel({});
       chatUnreadInitializedRef.current = false;
       chatUnreadByChannelRef.current = {};
@@ -482,7 +518,7 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: connectedWalletAddress,
+          userId: chatUserWalletAddress,
           limit: 100,
         }),
       });
@@ -508,7 +544,7 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
         console.error('failed to load unread channels', error);
       }
     }
-  }, [connectedWalletAddress, isOwnerWallet]);
+  }, [chatUserWalletAddress, isOwnerWallet]);
 
   useEffect(() => {
     void refreshUnreadCounts('manual');
@@ -642,7 +678,7 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
       setChatSessionError('채팅 설정이 비어 있습니다. NEXT_PUBLIC_SENDBIRD_APP_ID 값을 확인해 주세요.');
       return;
     }
-    if (!isOwnerWallet || !connectedWalletAddress) {
+    if (!isOwnerWallet || !chatUserWalletAddress) {
       setChatSessionToken(null);
       setChatSessionError('판매자 본인 지갑을 연결하면 채팅을 사용할 수 있습니다.');
       return;
@@ -657,8 +693,8 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: connectedWalletAddress,
-            nickname: `seller_${connectedWalletAddress.slice(2, 8)}`,
+            userId: chatUserWalletAddress,
+            nickname: `seller_${chatUserWalletAddress.slice(2, 8)}`,
           }),
         });
         const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
@@ -691,7 +727,7 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
     return () => {
       cancelled = true;
     };
-  }, [connectedWalletAddress, isOwnerWallet]);
+  }, [chatUserWalletAddress, isOwnerWallet]);
 
   const openChatPanel = useCallback((order: SellerTodayOrder) => {
     const channelUrl = toText(order.buyerConsent.channelUrl);
@@ -852,8 +888,13 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
   const { dateLabel } = getTodayRange();
 
   return (
-    <div className="min-h-dvh bg-slate-100">
-      <div className="mx-auto w-full max-w-[1800px] px-3 py-4 sm:px-5 lg:px-7">
+    <>
+      <AutoConnect
+        client={client}
+        wallets={wallet ? [wallet] : []}
+      />
+      <div className="min-h-dvh bg-slate-100">
+        <div className="mx-auto w-full max-w-[1800px] px-3 py-4 sm:px-5 lg:px-7">
         <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-cyan-900 p-4 text-white shadow-[0_24px_60px_-40px_rgba(2,132,199,0.95)] sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
@@ -1035,11 +1076,18 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
                 <div className="mt-3">
                   <ConnectButton
                     client={client}
+                    wallets={wallets.length > 0 ? wallets : wallet ? [wallet] : []}
+                    theme="light"
                     connectButton={{
                       label: connectedWalletAddress ? '지갑 다시 연결' : '판매자 지갑 연결',
                       className:
                         'inline-flex h-10 items-center justify-center rounded-lg border border-amber-300 bg-white px-4 text-sm font-semibold text-amber-700 transition hover:bg-amber-100',
                     }}
+                    connectModal={{
+                      size: 'wide',
+                      showThirdwebBranding: false,
+                    }}
+                    locale="ko_KR"
                   />
                 </div>
               </div>
@@ -1082,7 +1130,7 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
                     <div className="h-[420px] overflow-hidden">
                       <SendbirdProvider
                         appId={SENDBIRD_APP_ID}
-                        userId={connectedWalletAddress}
+                        userId={chatUserWalletAddress}
                         accessToken={chatSessionToken}
                         theme="light"
                       >
@@ -1095,7 +1143,8 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
             )}
           </section>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
