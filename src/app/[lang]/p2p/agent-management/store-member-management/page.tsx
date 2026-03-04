@@ -25,15 +25,8 @@ type MemberWalletBalanceItem = {
 
 const normalizeWalletAddress = (walletAddress: string) =>
   String(walletAddress || '').trim().toLowerCase();
-const isEvmWalletAddress = (walletAddress: string) =>
+const isWalletAddress = (walletAddress: string) =>
   /^0x[a-fA-F0-9]{40}$/.test(String(walletAddress || '').trim());
-const MEMBER_WALLET_BALANCE_CHAIN = String(process.env.NEXT_PUBLIC_CHAIN || 'polygon').trim() || 'polygon';
-const parsedMemberWalletBalanceRequestTimeoutMs = Number(
-  process.env.NEXT_PUBLIC_MEMBER_WALLET_BALANCE_TIMEOUT_MS ?? '15000',
-);
-const MEMBER_WALLET_BALANCE_REQUEST_TIMEOUT_MS = Number.isFinite(parsedMemberWalletBalanceRequestTimeoutMs)
-  ? Math.max(3000, Math.floor(parsedMemberWalletBalanceRequestTimeoutMs))
-  : 15000;
 
 export default function P2PAgentStoreMemberManagementPage() {
   const PAGE_SIZE = 20;
@@ -348,72 +341,35 @@ export default function P2PAgentStoreMemberManagementPage() {
 
   const readMemberWalletBalance = useCallback(async (walletAddress: string) => {
     const normalizedWalletAddress = String(walletAddress || '').trim();
-    if (!normalizedWalletAddress) {
-      return;
-    }
+    if (!isWalletAddress(normalizedWalletAddress)) return;
 
     const walletAddressKey = normalizeWalletAddress(normalizedWalletAddress);
     const nowMs = Date.now();
-    let shouldFetch = false;
-    let nextCooldownUntil = nowMs + MEMBER_WALLET_BALANCE_COOLDOWN_MS;
+    const currentState = memberWalletBalancesByAddress[walletAddressKey];
+    if (currentState?.loading) return;
+    if (Number(currentState?.cooldownUntilMs || 0) > nowMs) return;
 
+    const nextCooldownUntil = nowMs + MEMBER_WALLET_BALANCE_COOLDOWN_MS;
     setMemberWalletBalancesByAddress((prev) => {
-      const current = prev[walletAddressKey];
-      if (current?.loading) {
-        return prev;
-      }
-      if (Number(current?.cooldownUntilMs || 0) > nowMs) {
-        return prev;
-      }
-      shouldFetch = true;
-      nextCooldownUntil = nowMs + MEMBER_WALLET_BALANCE_COOLDOWN_MS;
+      const existing = prev[walletAddressKey];
       return {
         ...prev,
         [walletAddressKey]: {
           loading: true,
-          displayValue: current?.displayValue || '',
+          displayValue: existing?.displayValue || '',
           error: '',
-          lastCheckedAt: current?.lastCheckedAt || '',
+          lastCheckedAt: existing?.lastCheckedAt || '',
           cooldownUntilMs: nextCooldownUntil,
         },
       };
     });
 
-    if (!shouldFetch) {
-      return;
-    }
-
-    if (!isEvmWalletAddress(normalizedWalletAddress)) {
-      setMemberWalletBalancesByAddress((prev) => {
-        const existing = prev[walletAddressKey];
-        return {
-          ...prev,
-          [walletAddressKey]: {
-            loading: false,
-            displayValue: existing?.displayValue || '',
-            error: '지갑주소 형식이 올바르지 않습니다.',
-            lastCheckedAt: existing?.lastCheckedAt || '',
-            cooldownUntilMs: existing?.cooldownUntilMs || nextCooldownUntil,
-          },
-        };
-      });
-      return;
-    }
-
-    const controller = new AbortController();
-    let timeoutId: number | undefined;
-
     try {
-      timeoutId = window.setTimeout(() => {
-        controller.abort();
-      }, MEMBER_WALLET_BALANCE_REQUEST_TIMEOUT_MS);
       const response = await fetch('/api/user/getUSDTBalanceByWalletAddress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
         body: JSON.stringify({
           walletAddress: normalizedWalletAddress,
-          chain: MEMBER_WALLET_BALANCE_CHAIN,
         }),
       });
 
@@ -421,7 +377,7 @@ export default function P2PAgentStoreMemberManagementPage() {
       const rawDisplayValue = String(payload?.result?.displayValue || payload?.result?.balance || '0');
       const displayValue = formatUsdtDisplayValue(rawDisplayValue);
       const errorMessage = !response.ok
-        ? String(payload?.error || '회원 지갑 잔고 조회에 실패했습니다.')
+        ? String(payload?.error || '잔고 조회에 실패했습니다.')
         : String(payload?.error || '');
 
       setMemberWalletBalancesByAddress((prev) => {
@@ -439,10 +395,6 @@ export default function P2PAgentStoreMemberManagementPage() {
       });
     } catch (readError) {
       console.error('Failed to fetch member USDT balance', readError);
-      const timeoutErrorMessage =
-        readError instanceof DOMException && readError.name === 'AbortError'
-          ? `조회 시간이 초과되었습니다. (${Math.ceil(MEMBER_WALLET_BALANCE_REQUEST_TIMEOUT_MS / 1000)}초)`
-          : '잔고 조회 중 오류가 발생했습니다.';
       setMemberWalletBalancesByAddress((prev) => {
         const existing = prev[walletAddressKey];
         return {
@@ -450,20 +402,17 @@ export default function P2PAgentStoreMemberManagementPage() {
           [walletAddressKey]: {
             loading: false,
             displayValue: existing?.displayValue || '',
-            error: timeoutErrorMessage,
+            error: '잔고 조회 중 오류가 발생했습니다.',
             lastCheckedAt: existing?.lastCheckedAt || '',
             cooldownUntilMs: existing?.cooldownUntilMs || nextCooldownUntil,
           },
         };
       });
-    } finally {
-      if (timeoutId) {
-        window.clearTimeout(timeoutId);
-      }
     }
   }, [
     MEMBER_WALLET_BALANCE_COOLDOWN_MS,
     formatUsdtDisplayValue,
+    memberWalletBalancesByAddress,
   ]);
 
   const totalPages = useMemo(
@@ -768,13 +717,13 @@ export default function P2PAgentStoreMemberManagementPage() {
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600">
                           {memberWalletAddress ? (
-                            <div className="space-y-1.5">
+                            <div className="flex flex-col">
                               <button
                                 type="button"
                                 onClick={() => {
                                   void handleCopyWalletAddress(memberWalletAddress);
                                 }}
-                                className="inline-flex items-center gap-1 font-semibold text-slate-600 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                                className="mt-0.5 inline-flex w-fit items-center gap-1 truncate text-xs text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-cyan-700 hover:decoration-cyan-300"
                                 title={memberWalletAddress}
                               >
                                 {shortAddress(memberWalletAddress)}
@@ -782,65 +731,45 @@ export default function P2PAgentStoreMemberManagementPage() {
                                   <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
                                 )}
                               </button>
-                              <p
-                                className={`text-[11px] font-semibold ${
-                                  memberWalletBalanceState?.error
-                                    ? 'text-rose-600'
-                                    : memberWalletBalanceState
-                                      ? 'text-cyan-700'
-                                      : 'text-slate-500'
-                                }`}
-                                title={memberWalletBalanceState?.error || ''}
-                              >
-                                {memberWalletBalanceState?.loading
-                                  ? 'USDT 잔고 조회 중...'
-                                  : memberWalletBalanceState?.error
-                                    ? 'USDT 잔고 조회 실패'
+                              <div className="mt-1 flex flex-col gap-1">
+                                {memberWalletCooldownRemainingMs <= 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      void readMemberWalletBalance(memberWalletAddress);
+                                    }}
+                                    disabled={Boolean(memberWalletBalanceState?.loading)}
+                                    className={`inline-flex h-6 w-fit items-center justify-center rounded-md border px-2 text-[10px] font-semibold transition ${
+                                      memberWalletBalanceState?.loading
+                                        ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                                        : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50'
+                                    }`}
+                                  >
+                                    {memberWalletBalanceState?.loading ? '조회중...' : '잔고확인'}
+                                  </button>
+                                ) : (
+                                  <div className="flex w-[84px] flex-col gap-1">
+                                    <span className="text-[10px] font-semibold text-amber-700">
+                                      <span>{memberWalletCooldownRemainingSeconds}s</span>
+                                    </span>
+                                    <span className="h-1.5 overflow-hidden rounded-full bg-amber-100">
+                                      <span
+                                        className="block h-full rounded-full bg-amber-500 transition-all duration-200"
+                                        style={{ width: `${memberWalletCooldownProgressPercent.toFixed(2)}%` }}
+                                      />
+                                    </span>
+                                  </div>
+                                )}
+                                <span className={`text-[10px] ${
+                                  memberWalletBalanceState?.error ? 'text-rose-600' : 'text-slate-600'
+                                }`}>
+                                  {memberWalletBalanceState?.error
+                                    ? memberWalletBalanceState.error
                                     : memberWalletBalanceState?.displayValue
                                       ? `${memberWalletBalanceState.displayValue} USDT`
-                                      : 'USDT 잔고 미조회'}
-                              </p>
-                              {memberWalletCooldownRemainingMs <= 0 ? (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    void readMemberWalletBalance(memberWalletAddress);
-                                  }}
-                                  disabled={Boolean(memberWalletBalanceState?.loading)}
-                                  className={`inline-flex h-5 items-center rounded-md border px-1.5 text-[10px] font-semibold transition ${
-                                    memberWalletBalanceState?.loading
-                                      ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
-                                      : 'border-cyan-300 bg-cyan-50 text-cyan-700 hover:border-cyan-400 hover:bg-cyan-100'
-                                  }`}
-                                >
-                                  {memberWalletBalanceState?.loading
-                                    ? '조회 중...'
-                                    : memberWalletBalanceState
-                                      ? '다시 조회'
-                                      : '잔고 읽어오기'}
-                                </button>
-                              ) : (
-                                <div className="w-[108px] rounded-md border border-cyan-200 bg-cyan-50 px-1.5 py-1">
-                                  <div className="flex items-center justify-between text-[10px] font-semibold text-cyan-700">
-                                    <span>재조회 대기</span>
-                                    <span>{memberWalletCooldownRemainingSeconds}s</span>
-                                  </div>
-                                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/90">
-                                    <div
-                                      className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-sky-500 transition-[width] duration-200 ease-linear"
-                                      style={{ width: `${memberWalletCooldownProgressPercent.toFixed(2)}%` }}
-                                    />
-                                  </div>
-                                </div>
-                              )}
-                              {memberWalletBalanceState?.lastCheckedAt && (
-                                <p className="text-[10px] text-slate-500">
-                                  조회시각 {new Date(memberWalletBalanceState.lastCheckedAt).toLocaleTimeString()}
-                                </p>
-                              )}
-                              {memberWalletBalanceState?.error && (
-                                <p className="text-[10px] text-rose-500">{memberWalletBalanceState.error}</p>
-                              )}
+                                      : '잔고 미조회'}
+                                </span>
+                              </div>
                             </div>
                           ) : (
                             '-'
