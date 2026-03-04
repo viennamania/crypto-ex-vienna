@@ -219,15 +219,26 @@ const parseOrdersFromPayload = (payload: unknown): SellerTodayOrder[] => {
     });
 };
 
+const parseOwnerWalletAddressFromPayload = (payload: unknown): string => {
+  if (!isRecord(payload)) return '';
+  const result = isRecord(payload.result) ? payload.result : {};
+  return toText(result.ownerWalletAddress);
+};
+
 export default function SellerTodayOrdersChatPage({ params }: PageProps) {
   const activeAccount = useActiveAccount();
   const sellerWalletAddress = toText(params.sellerWalletAddress);
   const lang = toText(params.lang) || 'ko';
   const connectedWalletAddress = toText(activeAccount?.address);
+  const [resolvedOwnerWalletAddress, setResolvedOwnerWalletAddress] = useState('');
+  const ownerWalletAddress = useMemo(
+    () => resolvedOwnerWalletAddress || sellerWalletAddress,
+    [resolvedOwnerWalletAddress, sellerWalletAddress],
+  );
   const isOwnerWallet =
     Boolean(connectedWalletAddress)
-    && Boolean(sellerWalletAddress)
-    && connectedWalletAddress.toLowerCase() === sellerWalletAddress.toLowerCase();
+    && Boolean(ownerWalletAddress)
+    && connectedWalletAddress.toLowerCase() === ownerWalletAddress.toLowerCase();
 
   const [loading, setLoading] = useState(false);
   const [polling, setPolling] = useState(false);
@@ -332,6 +343,7 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
   const fetchOrders = useCallback(async (mode: 'manual' | 'polling' = 'manual') => {
     if (!sellerWalletAddress) {
       setOrders([]);
+      setResolvedOwnerWalletAddress('');
       setError('판매자 지갑 주소가 없습니다.');
       return;
     }
@@ -368,6 +380,7 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
           || '오늘 주문 목록을 불러오지 못했습니다.',
         );
       }
+      setResolvedOwnerWalletAddress(parseOwnerWalletAddressFromPayload(payload) || sellerWalletAddress);
       setOrders(parseOrdersFromPayload(payload));
       setLastUpdatedAt(new Date().toISOString());
       setHasLoadedOrders(true);
@@ -388,6 +401,10 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
       }
     }
   }, [connectedWalletAddress, sellerWalletAddress]);
+
+  useEffect(() => {
+    setResolvedOwnerWalletAddress('');
+  }, [sellerWalletAddress]);
 
   useEffect(() => {
     void fetchOrders('manual');
@@ -797,8 +814,13 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
                 {dateLabel} 기준 진행중/완료 주문을 한 번에 보고, 여러 주문 채팅을 동시에 대응합니다.
               </p>
               <p className="text-xs text-cyan-100">
-                판매자 지갑 {truncateWalletAddress(sellerWalletAddress)}
+                판매자 지갑 {truncateWalletAddress(ownerWalletAddress || sellerWalletAddress)}
               </p>
+              {ownerWalletAddress && ownerWalletAddress.toLowerCase() !== sellerWalletAddress.toLowerCase() && (
+                <p className="text-xs text-cyan-100">
+                  페이지 주소 지갑 {truncateWalletAddress(sellerWalletAddress)}
+                </p>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -947,11 +969,16 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
             ) : !isOwnerWallet ? (
               <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-5 text-sm text-amber-800">
                 <p>
-                  판매자 본인 지갑({truncateWalletAddress(sellerWalletAddress)})을 연결하면 주문 채팅 입력이 가능합니다.
+                  판매자 본인 지갑({truncateWalletAddress(ownerWalletAddress || sellerWalletAddress)})을 연결하면 주문 채팅 입력이 가능합니다.
                 </p>
                 <p className="mt-1 text-xs text-amber-700">
                   현재 연결 지갑: {connectedWalletAddress ? truncateWalletAddress(connectedWalletAddress) : '미연결'}
                 </p>
+                {ownerWalletAddress && ownerWalletAddress.toLowerCase() !== sellerWalletAddress.toLowerCase() && (
+                  <p className="mt-1 text-xs text-amber-700">
+                    페이지 주소 지갑: {truncateWalletAddress(sellerWalletAddress)}
+                  </p>
+                )}
                 <div className="mt-3">
                   <ConnectButton
                     client={client}

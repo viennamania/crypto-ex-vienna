@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import AgentInfoCard from '../_components/AgentInfoCard';
@@ -56,7 +56,6 @@ export default function P2PAgentStoreMemberManagementPage() {
   } | null>(null);
   const [memberWalletBalancesByAddress, setMemberWalletBalancesByAddress] =
     useState<Record<string, MemberWalletBalanceItem>>({});
-  const memberWalletBalanceRequestIdRef = useRef(0);
   const [resettingConsentMemberId, setResettingConsentMemberId] = useState<string | null>(null);
   const [resetConsentError, setResetConsentError] = useState<string | null>(null);
   const [resetConsentSuccess, setResetConsentSuccess] = useState<string | null>(null);
@@ -325,25 +324,76 @@ export default function P2PAgentStoreMemberManagementPage() {
     }
   }, [loadData, resettingConsentMemberId, selectedStorecode]);
 
+  const readMemberWalletBalance = useCallback(async (walletAddress: string) => {
+    const normalizedWalletAddress = String(walletAddress || '').trim();
+    if (!normalizedWalletAddress) {
+      return;
+    }
+
+    const walletAddressKey = normalizeWalletAddress(normalizedWalletAddress);
+    let shouldFetch = false;
+
+    setMemberWalletBalancesByAddress((prev) => {
+      const current = prev[walletAddressKey];
+      if (current?.loading) {
+        return prev;
+      }
+      shouldFetch = true;
+      return {
+        ...prev,
+        [walletAddressKey]: {
+          loading: true,
+          displayValue: current?.displayValue || '',
+          error: null,
+        },
+      };
+    });
+
+    if (!shouldFetch) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/user/getUSDTBalanceByWalletAddress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: normalizedWalletAddress,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String(payload?.error || '회원 지갑 잔고를 읽어오지 못했습니다.'));
+      }
+
+      const displayValue = String(payload?.result?.displayValue ?? payload?.result?.balance ?? '0');
+      setMemberWalletBalancesByAddress((prev) => ({
+        ...prev,
+        [walletAddressKey]: {
+          loading: false,
+          displayValue,
+          error: null,
+        },
+      }));
+    } catch (readError) {
+      const message =
+        readError instanceof Error ? readError.message : '회원 지갑 잔고를 읽어오지 못했습니다.';
+      setMemberWalletBalancesByAddress((prev) => ({
+        ...prev,
+        [walletAddressKey]: {
+          loading: false,
+          displayValue: prev[walletAddressKey]?.displayValue || '0',
+          error: message,
+        },
+      }));
+    }
+  }, []);
+
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalCount / PAGE_SIZE)),
     [PAGE_SIZE, totalCount],
   );
-  const visibleMemberWalletAddresses = useMemo(() => {
-    const walletAddressMap = new Map<string, string>();
-
-    members.forEach((member) => {
-      const memberWalletAddress = String(member.walletAddress || '').trim();
-      if (!memberWalletAddress) return;
-
-      const normalizedWalletAddress = normalizeWalletAddress(memberWalletAddress);
-      if (walletAddressMap.has(normalizedWalletAddress)) return;
-
-      walletAddressMap.set(normalizedWalletAddress, memberWalletAddress);
-    });
-
-    return Array.from(walletAddressMap.values());
-  }, [members]);
   const selectableStores = useMemo(
     () => stores.filter((store) => String(store.storecode || '').trim().length > 0),
     [stores],
@@ -390,123 +440,6 @@ export default function P2PAgentStoreMemberManagementPage() {
   }, [memberBalanceCooldownUntilMs]);
 
   useEffect(() => {
-    if (visibleMemberWalletAddresses.length === 0) {
-      memberWalletBalanceRequestIdRef.current += 1;
-      setMemberWalletBalancesByAddress({});
-      return;
-    }
-
-    const requestId = memberWalletBalanceRequestIdRef.current + 1;
-    memberWalletBalanceRequestIdRef.current = requestId;
-
-    setMemberWalletBalancesByAddress((prev) => {
-      const nextBalancesByAddress: Record<string, MemberWalletBalanceItem> = {};
-
-      visibleMemberWalletAddresses.forEach((walletAddress) => {
-        const normalizedWalletAddress = normalizeWalletAddress(walletAddress);
-        const previous = prev[normalizedWalletAddress];
-
-        nextBalancesByAddress[normalizedWalletAddress] = {
-          loading: true,
-          displayValue: previous?.displayValue || '',
-          error: null,
-        };
-      });
-
-      return nextBalancesByAddress;
-    });
-
-    const readVisibleMemberWalletBalances = async () => {
-      try {
-        const balancesByAddress: Record<string, MemberWalletBalanceItem> = {};
-
-        for (
-          let index = 0;
-          index < visibleMemberWalletAddresses.length;
-          index += MEMBER_BALANCE_WALLET_BATCH_SIZE
-        ) {
-          const walletAddressBatch = visibleMemberWalletAddresses.slice(
-            index,
-            index + MEMBER_BALANCE_WALLET_BATCH_SIZE,
-          );
-          const response = await fetch('/api/user/getUSDTBalancesByWalletAddresses', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              walletAddresses: walletAddressBatch,
-            }),
-          });
-
-          const payload = await response.json().catch(() => ({}));
-          if (!response.ok) {
-            throw new Error(String(payload?.error || '회원 지갑 잔고를 읽어오지 못했습니다.'));
-          }
-
-          const balances = Array.isArray(payload?.result?.balances) ? payload.result.balances : [];
-          balances.forEach((item: unknown) => {
-            const source =
-              typeof item === 'object' && item !== null
-                ? (item as Record<string, unknown>)
-                : {};
-            const walletAddress = String(source.walletAddress || '').trim();
-            if (!walletAddress) return;
-
-            const normalizedWalletAddress = normalizeWalletAddress(walletAddress);
-            balancesByAddress[normalizedWalletAddress] = {
-              loading: false,
-              displayValue: String(source.displayValue ?? source.balance ?? '0'),
-              error: source.error ? String(source.error) : null,
-            };
-          });
-        }
-
-        visibleMemberWalletAddresses.forEach((walletAddress) => {
-          const normalizedWalletAddress = normalizeWalletAddress(walletAddress);
-          if (balancesByAddress[normalizedWalletAddress]) return;
-
-          balancesByAddress[normalizedWalletAddress] = {
-            loading: false,
-            displayValue: '0',
-            error: '잔고 응답이 없습니다.',
-          };
-        });
-
-        if (memberWalletBalanceRequestIdRef.current !== requestId) {
-          return;
-        }
-
-        setMemberWalletBalancesByAddress(balancesByAddress);
-      } catch (readError) {
-        if (memberWalletBalanceRequestIdRef.current !== requestId) {
-          return;
-        }
-
-        const message =
-          readError instanceof Error
-            ? readError.message
-            : '회원 지갑 잔고를 읽어오지 못했습니다.';
-        setMemberWalletBalancesByAddress((prev) => {
-          const nextBalancesByAddress: Record<string, MemberWalletBalanceItem> = {};
-
-          visibleMemberWalletAddresses.forEach((walletAddress) => {
-            const normalizedWalletAddress = normalizeWalletAddress(walletAddress);
-            nextBalancesByAddress[normalizedWalletAddress] = {
-              loading: false,
-              displayValue: prev[normalizedWalletAddress]?.displayValue || '0',
-              error: message,
-            };
-          });
-
-          return nextBalancesByAddress;
-        });
-      }
-    };
-
-    void readVisibleMemberWalletBalances();
-  }, [MEMBER_BALANCE_WALLET_BATCH_SIZE, visibleMemberWalletAddresses]);
-
-  useEffect(() => {
-    memberWalletBalanceRequestIdRef.current += 1;
     setMemberWalletBalancesByAddress({});
     setMemberBalanceSummary(null);
     setMemberBalanceError(null);
@@ -750,16 +683,36 @@ export default function P2PAgentStoreMemberManagementPage() {
                               </button>
                               <p
                                 className={`text-[11px] font-semibold ${
-                                  memberWalletBalanceState?.error ? 'text-rose-600' : 'text-cyan-700'
+                                  memberWalletBalanceState?.error
+                                    ? 'text-rose-600'
+                                    : memberWalletBalanceState
+                                      ? 'text-cyan-700'
+                                      : 'text-slate-500'
                                 }`}
                                 title={memberWalletBalanceState?.error || ''}
                               >
-                                {!memberWalletBalanceState || memberWalletBalanceState.loading
+                                {memberWalletBalanceState?.loading
                                   ? 'USDT 잔고 조회 중...'
                                   : memberWalletBalanceState.error
                                     ? 'USDT 잔고 조회 실패'
-                                    : `${memberWalletBalanceDisplay} USDT`}
+                                    : memberWalletBalanceState
+                                      ? `${memberWalletBalanceDisplay} USDT`
+                                      : 'USDT 잔고 미조회'}
                               </p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void readMemberWalletBalance(memberWalletAddress);
+                                }}
+                                disabled={Boolean(memberWalletBalanceState?.loading)}
+                                className="inline-flex h-5 items-center rounded-md border border-cyan-300 bg-cyan-50 px-1.5 text-[10px] font-semibold text-cyan-700 transition hover:border-cyan-400 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {memberWalletBalanceState?.loading
+                                  ? '조회 중...'
+                                  : memberWalletBalanceState
+                                    ? '다시 조회'
+                                    : '잔고 읽어오기'}
+                              </button>
                             </div>
                           ) : (
                             '-'
