@@ -25,6 +25,9 @@ type MemberWalletBalanceItem = {
 
 const normalizeWalletAddress = (walletAddress: string) =>
   String(walletAddress || '').trim().toLowerCase();
+const isEvmWalletAddress = (walletAddress: string) =>
+  /^0x[a-fA-F0-9]{40}$/.test(String(walletAddress || '').trim());
+const MEMBER_WALLET_BALANCE_CHAIN = String(process.env.NEXT_PUBLIC_CHAIN || 'polygon').trim() || 'polygon';
 
 export default function P2PAgentStoreMemberManagementPage() {
   const PAGE_SIZE = 20;
@@ -374,21 +377,44 @@ export default function P2PAgentStoreMemberManagementPage() {
       return;
     }
 
+    if (!isEvmWalletAddress(normalizedWalletAddress)) {
+      setMemberWalletBalancesByAddress((prev) => {
+        const existing = prev[walletAddressKey];
+        return {
+          ...prev,
+          [walletAddressKey]: {
+            loading: false,
+            displayValue: existing?.displayValue || '',
+            error: '지갑주소 형식이 올바르지 않습니다.',
+            lastCheckedAt: existing?.lastCheckedAt || '',
+            cooldownUntilMs: existing?.cooldownUntilMs || nextCooldownUntil,
+          },
+        };
+      });
+      return;
+    }
+
     try {
-      const response = await fetch('/api/user/getUSDTBalanceByWalletAddress', {
+      const response = await fetch('/api/user/getUSDTBalancesByWalletAddresses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddress: normalizedWalletAddress,
+          walletAddresses: [normalizedWalletAddress],
+          chain: MEMBER_WALLET_BALANCE_CHAIN,
         }),
       });
 
       const payload = await response.json().catch(() => ({}));
-      const rawDisplayValue = String(payload?.result?.displayValue || payload?.result?.balance || '0');
+      const balances = Array.isArray(payload?.result?.balances) ? payload.result.balances : [];
+      const firstBalanceItem =
+        balances.length > 0 && typeof balances[0] === 'object' && balances[0] !== null
+          ? (balances[0] as Record<string, unknown>)
+          : {};
+      const rawDisplayValue = String(firstBalanceItem.displayValue || firstBalanceItem.balance || '0');
       const displayValue = formatUsdtDisplayValue(rawDisplayValue);
       const errorMessage = !response.ok
         ? String(payload?.error || '회원 지갑 잔고 조회에 실패했습니다.')
-        : String(payload?.error || '');
+        : String(firstBalanceItem.error || payload?.error || '');
 
       setMemberWalletBalancesByAddress((prev) => {
         const existing = prev[walletAddressKey];
