@@ -693,7 +693,7 @@ export default function P2PAgentStoreMemberManagementPage() {
                               >
                                 {memberWalletBalanceState?.loading
                                   ? 'USDT 잔고 조회 중...'
-                                  : memberWalletBalanceState.error
+                                  : memberWalletBalanceState?.error
                                     ? 'USDT 잔고 조회 실패'
                                     : memberWalletBalanceState
                                       ? `${memberWalletBalanceDisplay} USDT`
