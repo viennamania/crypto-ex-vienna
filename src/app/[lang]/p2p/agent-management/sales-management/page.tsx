@@ -2860,7 +2860,10 @@ export default function P2PAgentSalesManagementPage() {
                     accessToken={orderChatSessionToken}
                     theme="light"
                   >
-                    <GroupChannel channelUrl={selectedOrderChatChannelUrl} />
+                    <GroupChannel
+                      channelUrl={selectedOrderChatChannelUrl}
+                      renderMessageInput={() => <></>}
+                    />
                   </SendbirdProvider>
                 </div>
               )}
