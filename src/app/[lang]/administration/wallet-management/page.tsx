@@ -2528,7 +2528,7 @@ export default function SendUsdt({ params }: any) {
       `}</style>
 
       <nav
-        className="fixed bottom-0 left-1/2 z-40 w-[calc(100%-1rem)] max-w-md -translate-x-1/2 border-t border-slate-200 bg-white/95 backdrop-blur sm:w-[calc(100%-1.5rem)] sm:max-w-lg md:max-w-xl lg:left-[calc(50%+var(--admin-shell-half-offset))]"
+        className="fixed bottom-0 left-1/2 z-40 w-[calc(100%-1rem)] max-w-md -translate-x-1/2 border-t border-slate-200 bg-white/95 backdrop-blur sm:w-[calc(100%-1.5rem)] sm:max-w-lg md:max-w-xl"
       >
         <div className="mx-auto flex w-full flex-nowrap items-center justify-center gap-2 overflow-x-auto whitespace-nowrap px-3 py-3">
           {[
