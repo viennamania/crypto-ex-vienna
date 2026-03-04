@@ -1094,6 +1094,17 @@ export default function BuyOrderManagementPage() {
     };
   }, [adminWalletAddress, cancelActorNickname, isOrderChatDrawerOpen]);
 
+  const openOrderChatDrawer = useCallback((order: BuyOrderItem, channelUrl: string) => {
+    const normalizedChannelUrl = String(channelUrl || '').trim();
+    if (!normalizedChannelUrl) {
+      toast.error('해당 주문의 채팅 채널 정보가 없습니다.');
+      return;
+    }
+    setSelectedOrderChatChannelUrl(normalizedChannelUrl);
+    setSelectedOrderChatTradeId(String(order?.tradeId || '').trim());
+    setIsOrderChatDrawerOpen(true);
+  }, []);
+
   const fetchActiveBuyOrderCount = useCallback(async () => {
     try {
       const response = await fetch('/api/order/getActiveBuyOrderCount', {
@@ -2839,6 +2850,18 @@ export default function BuyOrderManagementPage() {
                               </span>
                             </>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => openOrderChatDrawer(order, buyerConsentSnapshot.channelUrl)}
+                            disabled={!buyerConsentSnapshot.channelUrl}
+                            className={`mt-0.5 inline-flex w-fit items-center justify-center rounded-md border px-2 py-0.5 text-[10px] font-semibold transition ${
+                              buyerConsentSnapshot.channelUrl
+                                ? 'border-sky-300 bg-sky-50 text-sky-700 hover:border-sky-400 hover:bg-sky-100'
+                                : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                            }`}
+                          >
+                            {buyerConsentSnapshot.channelUrl ? '채팅 보기' : '채널 없음'}
+                          </button>
                         </div>
                       </td>
                       <td className="px-3 py-3 text-center">
