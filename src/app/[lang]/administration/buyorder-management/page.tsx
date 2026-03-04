@@ -3104,7 +3104,10 @@ export default function BuyOrderManagementPage() {
                     accessToken={orderChatSessionToken}
                     theme="light"
                   >
-                    <GroupChannel channelUrl={selectedOrderChatChannelUrl} />
+                    <GroupChannel
+                      channelUrl={selectedOrderChatChannelUrl}
+                      renderMessageInput={() => <></>}
+                    />
                   </SendbirdProvider>
                 </div>
               )}
