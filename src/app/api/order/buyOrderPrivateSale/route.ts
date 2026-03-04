@@ -115,6 +115,38 @@ const toCreationFailurePayload = (
 
 const toTrimmedString = (value: unknown) => String(value ?? '').trim();
 const isObjectIdHex = (value: string) => /^[a-fA-F0-9]{24}$/.test(value);
+const toNormalizedSendbirdUserIds = (values: string[]): string[] => {
+  const byLowerValue = new Map<string, string>();
+  for (const source of values) {
+    const normalized = toTrimmedString(source);
+    if (!normalized) continue;
+    const key = normalized.toLowerCase();
+    if (!byLowerValue.has(key)) {
+      byLowerValue.set(key, normalized);
+    }
+  }
+  return Array.from(byLowerValue.values());
+};
+
+const parseCenterAdminIdsFromEnv = () =>
+  toNormalizedSendbirdUserIds([
+    toTrimmedString(process.env.NEXT_PUBLIC_SENDBIRD_MANAGER_ID),
+    toTrimmedString(process.env.SENDBIRD_MANAGER_ID),
+    ...String(process.env.SENDBIRD_CENTER_ADMIN_USER_IDS || '')
+      .split(',')
+      .map((item) => toTrimmedString(item))
+      .filter(Boolean),
+  ]);
+
+const resolveCenterAdminChatUserIds = async (): Promise<string[]> => {
+  const centerAdminUserIds = parseCenterAdminIdsFromEnv();
+  if (!centerAdminUserIds.length) {
+    console.warn(
+      'buyOrderPrivateSale: center admin chat user id is not configured (NEXT_PUBLIC_SENDBIRD_MANAGER_ID)',
+    );
+  }
+  return centerAdminUserIds;
+};
 
 const updateBuyOrderConsentRequestState = async ({
   orderId,
@@ -257,14 +289,26 @@ const ensureSendbirdGroupChannel = async ({
   buyerWalletAddress,
   sellerWalletAddress,
   tradeId,
+  centerAdminUserIds = [],
 }: {
   headers: Record<string, string>;
   buyerWalletAddress: string;
   sellerWalletAddress: string;
   tradeId: string;
+  centerAdminUserIds?: string[];
 }) => {
-  await createSendbirdUserIfNeeded(headers, buyerWalletAddress);
-  await createSendbirdUserIfNeeded(headers, sellerWalletAddress);
+  const participantUserIds = toNormalizedSendbirdUserIds([
+    buyerWalletAddress,
+    sellerWalletAddress,
+    ...centerAdminUserIds,
+  ]);
+  if (participantUserIds.length < 2) {
+    throw new Error('At least two participant user ids are required');
+  }
+
+  for (const participantUserId of participantUserIds) {
+    await createSendbirdUserIfNeeded(headers, participantUserId);
+  }
 
   const preferredChannelUrl = buildPrivateSaleOrderChannelUrl({
     tradeId,
@@ -280,7 +324,7 @@ const ensureSendbirdGroupChannel = async ({
       headers,
       body: JSON.stringify({
         name: `escrow-order-${tradeId || Date.now()}`,
-        user_ids: [buyerWalletAddress, sellerWalletAddress],
+        user_ids: participantUserIds,
         is_distinct: false,
         channel_url: preferredChannelUrl,
         custom_type: 'escrow-private-sale-order',
@@ -327,10 +371,12 @@ const sendSellerConsentRequestMessage = async ({
   buyerWalletAddress,
   sellerWalletAddress,
   tradeId,
+  centerAdminUserIds = [],
 }: {
   buyerWalletAddress: string;
   sellerWalletAddress: string;
   tradeId: string;
+  centerAdminUserIds?: string[];
 }): Promise<SendSellerConsentRequestResult> => {
   const normalizedBuyerWalletAddress = toTrimmedString(buyerWalletAddress);
   const normalizedSellerWalletAddress = toTrimmedString(sellerWalletAddress);
@@ -355,6 +401,7 @@ const sendSellerConsentRequestMessage = async ({
     buyerWalletAddress: normalizedBuyerWalletAddress,
     sellerWalletAddress: normalizedSellerWalletAddress,
     tradeId,
+    centerAdminUserIds,
   });
 
   const requestMessage = buildBuyerConsentRequestMessage(tradeId);
@@ -574,12 +621,14 @@ const executeBuyOrderPrivateSale = async (
       || sellerWalletAddress;
     const tradeId = toTrimmedString(order?.tradeId);
     const orderId = toTrimmedString(order?.orderId || tradeStatus?.order?.orderId);
+    const centerAdminChatUserIds = await resolveCenterAdminChatUserIds();
 
     try {
       const sendResult = await sendSellerConsentRequestMessage({
         buyerWalletAddress: resolvedBuyerWalletAddress,
         sellerWalletAddress: resolvedSellerWalletAddress,
         tradeId,
+        centerAdminUserIds: centerAdminChatUserIds,
       });
 
       if (sendResult.sent) {
@@ -601,6 +650,7 @@ const executeBuyOrderPrivateSale = async (
           status: 'completed',
           data: {
             channelUrl: sendResult.channelUrl,
+            centerAdminMemberCount: centerAdminChatUserIds.length,
           },
         });
       } else {
