@@ -107,6 +107,65 @@ const walletAuthOptions = ['email', 'google', 'phone'];
 const isWalletAddress = (value: unknown) =>
     /^0x[a-fA-F0-9]{40}$/.test(String(value ?? '').trim());
 
+type EscrowRecoveryStatus = 'REQUESTING' | 'QUEUED' | 'SUBMITTED' | 'CONFIRMED' | 'FAILED';
+
+const normalizeEscrowRecoveryStatus = (value: unknown): EscrowRecoveryStatus => {
+    const normalized = String(value || '').trim().toUpperCase();
+    if (
+        normalized === 'REQUESTING'
+        || normalized === 'QUEUED'
+        || normalized === 'SUBMITTED'
+        || normalized === 'CONFIRMED'
+        || normalized === 'FAILED'
+    ) {
+        return normalized;
+    }
+    if (
+        normalized.includes('CONFIRM')
+        || normalized.includes('MINED')
+        || normalized.includes('COMPLETED')
+        || normalized.includes('SUCCESS')
+    ) {
+        return 'CONFIRMED';
+    }
+    if (
+        normalized.includes('FAIL')
+        || normalized.includes('REVERT')
+        || normalized.includes('DROPPED')
+        || normalized.includes('CANCEL')
+        || normalized.includes('REJECT')
+        || normalized.includes('ERROR')
+    ) {
+        return 'FAILED';
+    }
+    if (
+        normalized.includes('SUBMIT')
+        || normalized.includes('SENT')
+        || normalized.includes('PENDING')
+        || normalized.includes('BROADCAST')
+    ) {
+        return 'SUBMITTED';
+    }
+    if (normalized.includes('REQUEST')) return 'REQUESTING';
+    return 'QUEUED';
+};
+
+const isFinalEscrowRecoveryStatus = (status: EscrowRecoveryStatus) =>
+    status === 'CONFIRMED' || status === 'FAILED';
+
+const getEscrowRecoveryStatusLabel = (status: EscrowRecoveryStatus) => {
+    if (status === 'REQUESTING') return '요청 준비';
+    if (status === 'QUEUED') return '큐 등록 완료';
+    if (status === 'SUBMITTED') return '체인 전송 중';
+    if (status === 'CONFIRMED') return '정상 완료';
+    return '실패';
+};
+
+const waitForMs = (ms: number) =>
+    new Promise<void>((resolve) => {
+        window.setTimeout(resolve, ms);
+    });
+
 
 export default function SettingsPage({ params }: any) {
 
@@ -475,6 +534,12 @@ export default function SettingsPage({ params }: any) {
     const [chargeAmount, setChargeAmount] = useState('');
     const [charging, setCharging] = useState(false);
     const [withdrawing, setWithdrawing] = useState(false);
+    const [escrowRecoveryTransactionId, setEscrowRecoveryTransactionId] = useState('');
+    const [escrowRecoveryStatus, setEscrowRecoveryStatus] = useState<EscrowRecoveryStatus>('REQUESTING');
+    const [escrowRecoveryOnchainStatus, setEscrowRecoveryOnchainStatus] = useState('');
+    const [escrowRecoveryTransactionHash, setEscrowRecoveryTransactionHash] = useState('');
+    const [escrowRecoveryError, setEscrowRecoveryError] = useState('');
+    const [escrowRecoveryUpdatedAt, setEscrowRecoveryUpdatedAt] = useState('');
     const [userBalance, setUserBalance] = useState<number | null>(null);
     const [userBalanceLoading, setUserBalanceLoading] = useState(false);
 
@@ -1712,8 +1777,41 @@ export default function SettingsPage({ params }: any) {
     // call api /api/escrow/clearSellerEscrowWallet
     // 판매자 에스크로 지갑 잔고 회수하기
     const [clearingSellerEscrowWalletBalance, setClearingSellerEscrowWalletBalance] = useState(false);
+    const fetchEscrowRecoveryStatus = useCallback(async (transactionId: string) => {
+        const response = await fetch('/api/escrow/clearSellerEscrowWalletStatus', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                transactionId,
+            }),
+        });
+        const payload = await response.json().catch(() => ({} as Record<string, unknown>));
+        if (!response.ok) {
+            const detail = String(payload?.detail || '').trim();
+            const message = String(payload?.error || '에스크로 회수 상태 조회에 실패했습니다.');
+            throw new Error(detail ? `${message} (${detail})` : message);
+        }
+        const resultRaw =
+            payload && typeof payload === 'object' && !Array.isArray(payload)
+                ? ((payload as Record<string, unknown>).result as Record<string, unknown> | undefined)
+                : undefined;
+        const status = normalizeEscrowRecoveryStatus(resultRaw?.status || 'QUEUED');
+        return {
+            transactionId: String(resultRaw?.transactionId || transactionId).trim(),
+            status,
+            onchainStatus: String(resultRaw?.onchainStatus || '').trim(),
+            transactionHash: String(resultRaw?.transactionHash || '').trim(),
+            error: String(resultRaw?.error || '').trim(),
+            isFinal: isFinalEscrowRecoveryStatus(status),
+        };
+    }, []);
+
     const clearSellerEscrowWalletBalance = async () => {
-        if (clearingSellerEscrowWalletBalance) return;
+        if (clearingSellerEscrowWalletBalance) {
+            throw new Error('이미 회수 요청을 처리 중입니다.');
+        }
         if (!requesterWalletAddress) {
             throw new Error('지갑 연결을 확인해주세요.');
         }
@@ -1741,13 +1839,29 @@ export default function SettingsPage({ params }: any) {
                 },
                 body: JSON.stringify(requestBody),
             });
+            const payload = await response.json().catch(() => ({} as Record<string, unknown>));
             if (!response.ok) {
-                const payload = await response.json().catch(() => ({}));
                 const detail = String(payload?.detail || '').trim();
                 const message = String(payload?.error || '에스크로 잔고 회수 요청에 실패했습니다.');
                 throw new Error(detail ? `${message} (${detail})` : message);
             }
-            toast.success('판매자 에스크로 지갑 잔고 회수 요청이 완료되었습니다.');
+            const resultRaw =
+                payload && typeof payload === 'object' && !Array.isArray(payload)
+                    ? ((payload as Record<string, unknown>).result as Record<string, unknown> | undefined)
+                    : undefined;
+            const transactionId = String(resultRaw?.transactionId || '').trim();
+            if (!transactionId) {
+                throw new Error('회수 요청은 접수되었지만 transactionId를 받지 못했습니다.');
+            }
+            const status = normalizeEscrowRecoveryStatus(resultRaw?.status || 'QUEUED');
+            return {
+                transactionId,
+                status,
+                onchainStatus: String(resultRaw?.onchainStatus || '').trim(),
+                transactionHash: String(resultRaw?.transactionHash || '').trim(),
+                error: String(resultRaw?.error || '').trim(),
+                isFinal: isFinalEscrowRecoveryStatus(status),
+            };
         } finally {
             setClearingSellerEscrowWalletBalance(false);
         }
@@ -2608,12 +2722,12 @@ export default function SettingsPage({ params }: any) {
                                             <button
                                             onClick={() => setWithdrawModalOpen(true)}
                                             className={`
-                                                ${clearingSellerEscrowWalletBalance ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-500'}
+                                                ${clearingSellerEscrowWalletBalance || withdrawing ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-500'}
                                                 px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition
                                             `}
-                                            disabled={clearingSellerEscrowWalletBalance || escrowBalance <= 0}
+                                            disabled={clearingSellerEscrowWalletBalance || withdrawing || escrowBalance <= 0}
                                         >
-                                            {clearingSellerEscrowWalletBalance ? '회수중...' : '회수하기'}
+                                            {clearingSellerEscrowWalletBalance || withdrawing ? '회수중...' : '회수하기'}
                                         </button>
 
                                         </div>
@@ -3152,7 +3266,13 @@ export default function SettingsPage({ params }: any) {
                             <span className="text-sm font-semibold text-slate-800">에스크로 잔액 회수</span>
                             <button
                                 type="button"
-                                onClick={() => setWithdrawModalOpen(false)}
+                                onClick={() => {
+                                    if (withdrawing) {
+                                        toast.error('정상 처리 완료 전에는 모달을 닫지 마세요.');
+                                        return;
+                                    }
+                                    setWithdrawModalOpen(false);
+                                }}
                                 className="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-800"
                             >
                                 닫기
@@ -3199,16 +3319,61 @@ export default function SettingsPage({ params }: any) {
                                         toast.error('회수할 수 있는 금액이 없습니다.');
                                         return;
                                     }
+                                    setEscrowRecoveryTransactionId('');
+                                    setEscrowRecoveryStatus('REQUESTING');
+                                    setEscrowRecoveryOnchainStatus('');
+                                    setEscrowRecoveryTransactionHash('');
+                                    setEscrowRecoveryError('');
+                                    setEscrowRecoveryUpdatedAt(new Date().toISOString());
                                     setWithdrawing(true);
                                     try {
-                                        await clearSellerEscrowWalletBalance();
+                                        const requestedResult = await clearSellerEscrowWalletBalance();
+                                        setEscrowRecoveryTransactionId(requestedResult.transactionId);
+                                        setEscrowRecoveryStatus(requestedResult.status);
+                                        setEscrowRecoveryOnchainStatus(requestedResult.onchainStatus);
+                                        setEscrowRecoveryTransactionHash(requestedResult.transactionHash);
+                                        setEscrowRecoveryError(requestedResult.error);
+                                        setEscrowRecoveryUpdatedAt(new Date().toISOString());
+
+                                        toast.success('회수 요청이 접수되었습니다. 정상 완료될 때까지 모달을 닫지 마세요.');
+
+                                        let latestStatus = requestedResult.status;
+                                        let latestError = requestedResult.error;
+
+                                        const maxPollCount = 180;
+                                        for (let pollCount = 0; pollCount < maxPollCount; pollCount += 1) {
+                                            if (isFinalEscrowRecoveryStatus(latestStatus)) {
+                                                break;
+                                            }
+                                            await waitForMs(2000);
+                                            const polledStatus = await fetchEscrowRecoveryStatus(requestedResult.transactionId);
+                                            latestStatus = polledStatus.status;
+                                            latestError = polledStatus.error;
+                                            setEscrowRecoveryStatus(polledStatus.status);
+                                            setEscrowRecoveryOnchainStatus(polledStatus.onchainStatus);
+                                            setEscrowRecoveryTransactionHash(polledStatus.transactionHash);
+                                            setEscrowRecoveryError(polledStatus.error);
+                                            setEscrowRecoveryUpdatedAt(new Date().toISOString());
+                                        }
+
+                                        if (latestStatus === 'FAILED') {
+                                            throw new Error(latestError || '회수 트랜잭션이 실패했습니다.');
+                                        }
+                                        if (latestStatus !== 'CONFIRMED') {
+                                            throw new Error('회수 상태 확인 시간이 초과되었습니다. 잠시 후 입출금내역에서 상태를 확인해주세요.');
+                                        }
+
+                                        toast.success('판매자 에스크로 지갑 잔고 회수가 정상 완료되었습니다.');
                                         setWithdrawModalOpen(false);
-                                        await fetchEscrowBalance();
-                                        await fetchInTradeAmount();
+                                        await Promise.all([
+                                            fetchEscrowBalance(),
+                                            fetchInTradeAmount(),
+                                        ]);
                                     } catch (err) {
                                         console.error(err);
                                         const message =
                                             err instanceof Error ? err.message : '회수에 실패했습니다.';
+                                        setEscrowRecoveryError(message);
                                         toast.error(message);
                                     } finally {
                                         setWithdrawing(false);
@@ -3225,7 +3390,40 @@ export default function SettingsPage({ params }: any) {
                             </button>
                             {withdrawing && (
                                 <div className="text-xs text-amber-700 font-semibold text-center">
-                                    회수 중에는 창을 닫지 마세요.
+                                    정상 처리 완료 전에는 모달을 닫지 마세요.
+                                </div>
+                            )}
+                            {(withdrawing || escrowRecoveryTransactionId) && (
+                                <div className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-semibold">API 진행상태</span>
+                                        <span className="font-bold">{getEscrowRecoveryStatusLabel(escrowRecoveryStatus)}</span>
+                                    </div>
+                                    {escrowRecoveryTransactionId && (
+                                        <div className="mt-1 break-all text-[11px] text-slate-600">
+                                            transactionId: {escrowRecoveryTransactionId}
+                                        </div>
+                                    )}
+                                    {escrowRecoveryOnchainStatus && (
+                                        <div className="mt-1 text-[11px] text-slate-600">
+                                            onchain: {escrowRecoveryOnchainStatus}
+                                        </div>
+                                    )}
+                                    {escrowRecoveryTransactionHash && (
+                                        <div className="mt-1 break-all text-[11px] text-slate-600">
+                                            txHash: {escrowRecoveryTransactionHash}
+                                        </div>
+                                    )}
+                                    {escrowRecoveryUpdatedAt && (
+                                        <div className="mt-1 text-[11px] text-slate-500">
+                                            마지막 갱신: {new Date(escrowRecoveryUpdatedAt).toLocaleTimeString()}
+                                        </div>
+                                    )}
+                                    {escrowRecoveryError && (
+                                        <div className="mt-1 text-[11px] font-semibold text-rose-600">
+                                            오류: {escrowRecoveryError}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

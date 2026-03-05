@@ -18,6 +18,7 @@ import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSi
 
 import {
   createThirdwebClient,
+  Engine,
   getContract,
 } from "thirdweb";
 
@@ -74,6 +75,68 @@ const formatTokenAmount = (value: bigint, decimals: number) => {
     const fractionRaw = (value % base).toString().padStart(safeDecimals, '0');
     const fraction = fractionRaw.replace(/0+$/, '');
     return fraction ? `${whole.toString()}.${fraction}` : whole.toString();
+};
+
+type EscrowRecoveryStatus = 'REQUESTING' | 'QUEUED' | 'SUBMITTED' | 'CONFIRMED' | 'FAILED';
+
+const normalizeErrorText = (value: unknown): string => {
+    if (value == null) return '';
+    if (typeof value === 'string') return value.trim();
+    if (value instanceof Error) return String(value.message || '').trim();
+    if (typeof value === 'object') {
+        const valueRecord = value as Record<string, unknown>;
+        const message = typeof valueRecord.message === 'string' ? valueRecord.message.trim() : '';
+        if (message) return message;
+        const error = typeof valueRecord.error === 'string' ? valueRecord.error.trim() : '';
+        if (error) return error;
+        try {
+            return JSON.stringify(value);
+        } catch {
+            return String(value);
+        }
+    }
+    return String(value).trim();
+};
+
+const normalizeRecoveryStatus = (value: unknown): EscrowRecoveryStatus => {
+    const normalized = String(value || '').trim().toUpperCase();
+    if (
+        normalized === 'REQUESTING'
+        || normalized === 'QUEUED'
+        || normalized === 'SUBMITTED'
+        || normalized === 'CONFIRMED'
+        || normalized === 'FAILED'
+    ) {
+        return normalized;
+    }
+    if (
+        normalized.includes('CONFIRM')
+        || normalized.includes('MINED')
+        || normalized.includes('COMPLETED')
+        || normalized.includes('SUCCESS')
+    ) {
+        return 'CONFIRMED';
+    }
+    if (
+        normalized.includes('FAIL')
+        || normalized.includes('REVERT')
+        || normalized.includes('DROPPED')
+        || normalized.includes('CANCEL')
+        || normalized.includes('REJECT')
+        || normalized.includes('ERROR')
+    ) {
+        return 'FAILED';
+    }
+    if (
+        normalized.includes('SUBMIT')
+        || normalized.includes('SENT')
+        || normalized.includes('PENDING')
+        || normalized.includes('BROADCAST')
+    ) {
+        return 'SUBMITTED';
+    }
+    if (normalized.includes('REQUEST')) return 'REQUESTING';
+    return 'QUEUED';
 };
 
 export async function POST(request: NextRequest) {
@@ -276,6 +339,40 @@ export async function POST(request: NextRequest) {
             transaction,
         });
 
+        let status: EscrowRecoveryStatus = 'QUEUED';
+        let onchainStatus = '';
+        let transactionHash = '';
+        let executionError = '';
+        try {
+            const executionResult = await Engine.getTransactionStatus({
+                client,
+                transactionId,
+            });
+            status = normalizeRecoveryStatus(executionResult?.status || 'QUEUED');
+            onchainStatus =
+                executionResult && typeof executionResult === 'object' && 'onchainStatus' in executionResult
+                    ? String(executionResult.onchainStatus || '')
+                    : '';
+            transactionHash =
+                executionResult && typeof executionResult === 'object' && 'transactionHash' in executionResult
+                    ? String(executionResult.transactionHash || '').trim()
+                    : '';
+            executionError =
+                executionResult && typeof executionResult === 'object' && 'error' in executionResult
+                    ? normalizeErrorText(executionResult.error)
+                    : '';
+        } catch (executionStatusError) {
+            const statusErrorText = normalizeErrorText(executionStatusError).toLowerCase();
+            if (
+                statusErrorText.includes('not found')
+                || statusErrorText.includes('404')
+            ) {
+                status = 'QUEUED';
+                executionError = '';
+            } else {
+                executionError = normalizeErrorText(executionStatusError);
+            }
+        }
 
         return NextResponse.json({
             result: {
@@ -290,6 +387,10 @@ export async function POST(request: NextRequest) {
                     ? escrowWalletSmartAccountAddress
                     : '',
                 toWalletAddress: sellerMainWalletAddress,
+                status,
+                onchainStatus,
+                transactionHash,
+                error: executionError,
             },
             error: null,
         }, { status: 200 });
