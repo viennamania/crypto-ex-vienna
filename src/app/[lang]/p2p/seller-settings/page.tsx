@@ -302,6 +302,18 @@ export default function SettingsPage({ params }: any) {
 
         return Array.from(byLowerAddress.values());
     }, [activeWallet, address, connectedWallets]);
+    const walletAddressCandidateKey = useMemo(
+        () => walletAddressCandidates.map((candidate) => candidate.toLowerCase()).join('|'),
+        [walletAddressCandidates],
+    );
+    const stableWalletAddressCandidates = useMemo(
+        () =>
+            walletAddressCandidateKey
+                .split('|')
+                .map((candidate) => candidate.trim())
+                .filter((candidate) => isWalletAddress(candidate)),
+        [walletAddressCandidateKey],
+    );
     const rawRequesterWalletAddress = walletAddressCandidates[0] || '';
     const [resolvedWalletAddress, setResolvedWalletAddress] = useState('');
     const requesterWalletAddress = resolvedWalletAddress || rawRequesterWalletAddress;
@@ -310,13 +322,13 @@ export default function SettingsPage({ params }: any) {
         if (!resolvedWalletAddress) {
             return;
         }
-        const stillConnected = walletAddressCandidates.some(
+        const stillConnected = stableWalletAddressCandidates.some(
             (candidate) => candidate.toLowerCase() === resolvedWalletAddress.toLowerCase(),
         );
         if (!stillConnected) {
             setResolvedWalletAddress('');
         }
-    }, [walletAddressCandidates, resolvedWalletAddress]);
+    }, [stableWalletAddressCandidates, resolvedWalletAddress]);
 
     const signatureAccount = useMemo(() => {
         const candidates: Array<unknown> = [
@@ -644,6 +656,8 @@ export default function SettingsPage({ params }: any) {
 
     const [loadingUserData, setLoadingUserData] = useState(false);
     useEffect(() => {
+        let cancelled = false;
+
         const resetUserState = () => {
             setNickname('');
             setAvatar('/profile-default.png');
@@ -659,56 +673,76 @@ export default function SettingsPage({ params }: any) {
         };
 
         const fetchData = async () => {
-            if (walletAddressCandidates.length === 0) {
-                setResolvedWalletAddress('');
-                resetUserState();
+            if (stableWalletAddressCandidates.length === 0) {
+                if (!cancelled) {
+                    setResolvedWalletAddress('');
+                    resetUserState();
+                }
                 return;
             }
 
-            setLoadingUserData(true);
-            let matchedWalletAddress = '';
-            let matchedResult: any = null;
-            for (const candidateWalletAddress of walletAddressCandidates) {
-                const response = await fetch('/api/user/getUser', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        storecode: storecode,
-                        walletAddress: candidateWalletAddress,
-                    }),
-                });
-                if (!response.ok) {
-                    continue;
-                }
-
-                const data = await response.json().catch(() => ({}));
-                if (data?.result) {
-                    matchedWalletAddress = candidateWalletAddress;
-                    matchedResult = data.result;
-                    break;
-                }
+            if (!cancelled) {
+                setLoadingUserData(true);
             }
 
-            if (matchedResult) {
-                setResolvedWalletAddress(matchedWalletAddress);
-                setNickname(matchedResult.nickname || '');
-                matchedResult.avatar && setAvatar(matchedResult.avatar);
-                setUserCode(matchedResult.id || '');
-                setSeller(matchedResult.seller);
-                setKycImageUrl(matchedResult.seller?.kyc?.idImageUrl || null);
-                setKycPreview(matchedResult.seller?.kyc?.idImageUrl || null);
-            } else {
-                setResolvedWalletAddress('');
-                resetUserState();
+            try {
+                let matchedWalletAddress = '';
+                let matchedResult: any = null;
+                for (const candidateWalletAddress of stableWalletAddressCandidates) {
+                    if (cancelled) {
+                        return;
+                    }
+                    const response = await fetch('/api/user/getUser', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            storecode: storecode,
+                            walletAddress: candidateWalletAddress,
+                        }),
+                    });
+                    if (!response.ok) {
+                        continue;
+                    }
+
+                    const data = await response.json().catch(() => ({}));
+                    if (data?.result) {
+                        matchedWalletAddress = candidateWalletAddress;
+                        matchedResult = data.result;
+                        break;
+                    }
+                }
+
+                if (cancelled) {
+                    return;
+                }
+
+                if (matchedResult) {
+                    setResolvedWalletAddress(matchedWalletAddress);
+                    setNickname(matchedResult.nickname || '');
+                    matchedResult.avatar && setAvatar(matchedResult.avatar);
+                    setUserCode(matchedResult.id || '');
+                    setSeller(matchedResult.seller);
+                    setKycImageUrl(matchedResult.seller?.kyc?.idImageUrl || null);
+                    setKycPreview(matchedResult.seller?.kyc?.idImageUrl || null);
+                } else {
+                    setResolvedWalletAddress('');
+                    resetUserState();
+                }
+            } finally {
+                if (!cancelled) {
+                    setLoadingUserData(false);
+                }
             }
-            setLoadingUserData(false);
 
         };
 
         fetchData();
-    }, [walletAddressCandidates]);
+        return () => {
+            cancelled = true;
+        };
+    }, [stableWalletAddressCandidates]);
 
     useEffect(() => {
         if (escrowHistoryOpen) {

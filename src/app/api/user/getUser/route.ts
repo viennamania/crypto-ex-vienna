@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { getOneByWalletAddress } from '@lib/api/user';
 import { evaluateRateLimit } from '@/lib/security/rateLimit';
-import { getRequesterIpAddress, verifyWalletAuthFromBody } from '@/lib/security/requestAuth';
+import {
+  getRequesterIpAddress,
+  resolvePrimaryWalletAddress,
+  verifyWalletAuthFromBody,
+} from '@/lib/security/requestAuth';
 import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSignature';
 
 const toText = (value: unknown) => String(value ?? '').trim();
@@ -87,9 +91,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const result = await getOneByWalletAddress(storecode || undefined, walletAddress, {
+  let result = await getOneByWalletAddress(storecode || undefined, walletAddress, {
     projection: SAFE_USER_PROJECTION,
   });
+
+  if (!result) {
+    const primaryWalletAddress = await resolvePrimaryWalletAddress(walletAddress);
+    if (
+      isWalletAddress(primaryWalletAddress)
+      && primaryWalletAddress.toLowerCase() !== walletAddress.toLowerCase()
+    ) {
+      result = await getOneByWalletAddress(storecode || undefined, primaryWalletAddress, {
+        projection: SAFE_USER_PROJECTION,
+      });
+    }
+  }
 
   return NextResponse.json({
     result,
