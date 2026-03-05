@@ -1,10 +1,48 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { updatePromotionText } from '@lib/api/user';
-import { getRoleForWalletAddress, verifyWalletAuthFromBody } from '@/lib/security/requestAuth';
-import { isWalletAddress } from '@/lib/security/walletSignature';
+import { evaluateRateLimit } from '@/lib/security/rateLimit';
+import {
+  getRequesterIpAddress,
+  getRoleForWalletAddress,
+  isWalletAddressAuthorizedForExpectedWallet,
+  verifyWalletAuthFromBody,
+} from '@/lib/security/requestAuth';
+import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSignature';
 
 const toText = (value: unknown) => String(value ?? '').trim();
+const MAX_PROMOTION_TEXT_LENGTH = 300;
+
+const resolveTargetWalletAddress = async ({
+  storecode,
+  requestedWalletAddress,
+  signerWalletAddress,
+}: {
+  storecode: string;
+  requestedWalletAddress: string;
+  signerWalletAddress: string;
+}) => {
+  if (!isWalletAddress(signerWalletAddress)) {
+    return '';
+  }
+  if (!isWalletAddress(requestedWalletAddress) || requestedWalletAddress === signerWalletAddress) {
+    return signerWalletAddress;
+  }
+
+  const requester = await getRoleForWalletAddress({
+    storecode,
+    walletAddress: signerWalletAddress,
+  });
+  if (requester?.role === 'admin') {
+    return requestedWalletAddress;
+  }
+
+  const isAuthorized = await isWalletAddressAuthorizedForExpectedWallet({
+    expectedWalletAddress: requestedWalletAddress,
+    candidateWalletAddress: signerWalletAddress,
+  });
+  return isAuthorized ? requestedWalletAddress : '';
+};
 
 export async function POST(request: NextRequest) {
   const bodyRaw = await request.json().catch(() => ({}));
@@ -13,9 +51,39 @@ export async function POST(request: NextRequest) {
       ? (bodyRaw as Record<string, unknown>)
       : {};
 
-  const storecode = toText(body.storecode);
-  const requestedWalletAddress = toText(body.walletAddress);
+  const storecode = toText(body.storecode) || 'admin';
+  const requestedWalletAddress = normalizeWalletAddress(body.walletAddress);
   const promotionText = toText(body.promotionText);
+  if (promotionText.length > MAX_PROMOTION_TEXT_LENGTH) {
+    return NextResponse.json(
+      {
+        error: 'promotionText is invalid.',
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  const ipAddress = getRequesterIpAddress(request) || 'unknown';
+  const rate = evaluateRateLimit({
+    key: `api:user:updatePromotionText:${ipAddress}:${requestedWalletAddress || 'unknown'}`,
+    limit: 30,
+    windowMs: 60_000,
+  });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Too many requests',
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.max(Math.ceil(rate.retryAfterMs / 1000), 1)),
+        },
+      },
+    );
+  }
 
   const signatureAuth = await verifyWalletAuthFromBody({
     body,
@@ -29,22 +97,35 @@ export async function POST(request: NextRequest) {
     return signatureAuth.response;
   }
 
-  let walletAddress = requestedWalletAddress;
-  if (signatureAuth.ok === true) {
-    const requester = await getRoleForWalletAddress({
-      storecode,
-      walletAddress: signatureAuth.walletAddress,
-    });
-    walletAddress = toText(requester?.walletAddress) || signatureAuth.walletAddress;
+  if (signatureAuth.ok !== true) {
+    return NextResponse.json(
+      {
+        error: 'wallet signature is required.',
+      },
+      {
+        status: 401,
+      },
+    );
   }
 
+  const requester = await getRoleForWalletAddress({
+    storecode,
+    walletAddress: signatureAuth.walletAddress,
+  });
+  const signerWalletAddress = toText(requester?.walletAddress) || signatureAuth.walletAddress;
+
+  const walletAddress = await resolveTargetWalletAddress({
+    storecode,
+    requestedWalletAddress,
+    signerWalletAddress,
+  });
   if (!isWalletAddress(walletAddress)) {
     return NextResponse.json(
       {
-        error: 'walletAddress is invalid.',
+        error: 'walletAddress is not authorized.',
       },
       {
-        status: 400,
+        status: 403,
       },
     );
   }

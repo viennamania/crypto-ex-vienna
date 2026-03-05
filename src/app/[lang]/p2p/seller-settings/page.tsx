@@ -1263,17 +1263,22 @@ export default function SettingsPage({ params }: any) {
     }, [contract, seller?.escrowWalletAddress, tokenDecimals]);
 
     const fetchInTradeAmount = useCallback(async () => {
-        if (!seller?.escrowWalletAddress) return;
+        if (!seller?.escrowWalletAddress || !requesterWalletAddress) return;
         setInTradeLoading(true);
         setInTradeError(null);
         try {
+            const requestBody = await buildSignedRequestBody({
+                path: '/api/order/getEscrowInUseAmount',
+                payload: {
+                    walletAddress: requesterWalletAddress,
+                    escrowWalletAddress: seller.escrowWalletAddress,
+                    storecode,
+                },
+            });
             const res = await fetch('/api/order/getEscrowInUseAmount', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    walletAddress: seller.escrowWalletAddress,
-                    storecode,
-                }),
+                body: JSON.stringify(requestBody),
             });
             if (!res.ok) throw new Error(`status ${res.status}`);
             const data = await res.json();
@@ -1286,7 +1291,7 @@ export default function SettingsPage({ params }: any) {
         } finally {
             setInTradeLoading(false);
         }
-    }, [seller?.escrowWalletAddress, storecode]);
+    }, [buildSignedRequestBody, requesterWalletAddress, seller?.escrowWalletAddress]);
 
     const fetchUserBalance = useCallback(async () => {
         if (!address) return;
@@ -1619,16 +1624,20 @@ export default function SettingsPage({ params }: any) {
         setPromotionGenerateError('');
         setGeneratingPromotionText(true);
         try {
-            const response = await fetch('/api/user/generatePromotionText', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+            const requestBody = await buildSignedRequestBody({
+                path: '/api/user/generatePromotionText',
+                payload: {
                     storecode: storecode,
                     walletAddress: requesterWalletAddress,
                     market: seller?.market,
                     priceSettingMethod: seller?.priceSettingMethod,
                     price: seller?.price,
-                }),
+                },
+            });
+            const response = await fetch('/api/user/generatePromotionText', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody),
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok || !data?.text) {
@@ -1655,16 +1664,25 @@ export default function SettingsPage({ params }: any) {
         if (!requesterWalletAddress) return;
         setClearingSellerEscrowWalletBalance(true);
         try {
-            await fetch('/api/escrow/clearSellerEscrowWallet', {
+            const requestBody = await buildSignedRequestBody({
+                path: '/api/escrow/clearSellerEscrowWallet',
+                payload: {
+                    selectedChain: selectedChain,
+                    walletAddress: requesterWalletAddress,
+                    storecode,
+                },
+            });
+            const response = await fetch('/api/escrow/clearSellerEscrowWallet', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    selectedChain: selectedChain,
-                    walletAddress: requesterWalletAddress,
-                }),
+                body: JSON.stringify(requestBody),
             });
+            if (!response.ok) {
+                const payload = await response.json().catch(() => ({}));
+                throw new Error(String(payload?.error || '에스크로 잔고 회수 요청에 실패했습니다.'));
+            }
             toast.success('판매자 에스크로 지갑 잔고 회수 요청이 완료되었습니다.');
         } catch (error) {
             const message = error instanceof Error ? error.message : '에스크로 잔고 회수 요청에 실패했습니다.';

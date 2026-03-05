@@ -1,4 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { evaluateRateLimit } from '@/lib/security/rateLimit';
+import {
+  getRequesterIpAddress,
+  getRoleForWalletAddress,
+  isWalletAddressAuthorizedForExpectedWallet,
+  verifyWalletAuthFromBody,
+} from '@/lib/security/requestAuth';
+import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSignature';
 
 export const runtime = 'nodejs';
 
@@ -12,6 +20,39 @@ type GenerateBody = {
   market?: string;
   priceSettingMethod?: string;
   price?: number | string;
+};
+
+const toText = (value: unknown) => String(value ?? '').trim();
+
+const resolveTargetWalletAddress = async ({
+  storecode,
+  requestedWalletAddress,
+  signerWalletAddress,
+}: {
+  storecode: string;
+  requestedWalletAddress: string;
+  signerWalletAddress: string;
+}) => {
+  if (!isWalletAddress(signerWalletAddress)) {
+    return '';
+  }
+  if (!isWalletAddress(requestedWalletAddress) || requestedWalletAddress === signerWalletAddress) {
+    return signerWalletAddress;
+  }
+
+  const requester = await getRoleForWalletAddress({
+    storecode,
+    walletAddress: signerWalletAddress,
+  });
+  if (requester?.role === 'admin') {
+    return requestedWalletAddress;
+  }
+
+  const isAuthorized = await isWalletAddressAuthorizedForExpectedWallet({
+    expectedWalletAddress: requestedWalletAddress,
+    candidateWalletAddress: signerWalletAddress,
+  });
+  return isAuthorized ? requestedWalletAddress : '';
 };
 
 const sanitizeText = (value: string) => {
@@ -39,8 +80,88 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'OPENAI_API_KEY is missing' }, { status: 500 });
   }
 
-  const body = (await request.json()) as GenerateBody;
-  const prompt = buildPrompt(body);
+  const bodyRaw = await request.json().catch(() => ({}));
+  const body =
+    bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+      ? (bodyRaw as Record<string, unknown>)
+      : {};
+  const storecode = toText(body.storecode) || 'admin';
+  const requestedWalletAddress = normalizeWalletAddress(body.walletAddress);
+
+  const signatureAuth = await verifyWalletAuthFromBody({
+    body,
+    path: '/api/user/generatePromotionText',
+    method: 'POST',
+    storecode,
+    consumeNonceValue: true,
+  });
+  if (signatureAuth.ok === false) {
+    return signatureAuth.response;
+  }
+  if (signatureAuth.ok !== true) {
+    return NextResponse.json(
+      {
+        error: 'wallet signature is required.',
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  const requester = await getRoleForWalletAddress({
+    storecode,
+    walletAddress: signatureAuth.walletAddress,
+  });
+  const signerWalletAddress = toText(requester?.walletAddress) || signatureAuth.walletAddress;
+
+  const walletAddress = await resolveTargetWalletAddress({
+    storecode,
+    requestedWalletAddress,
+    signerWalletAddress,
+  });
+  if (!isWalletAddress(walletAddress)) {
+    return NextResponse.json(
+      {
+        error: 'walletAddress is not authorized.',
+      },
+      {
+        status: 403,
+      },
+    );
+  }
+
+  const ipAddress = getRequesterIpAddress(request) || 'unknown';
+  const rate = evaluateRateLimit({
+    key: `api:user:generatePromotionText:${ipAddress}:${walletAddress}`,
+    limit: 12,
+    windowMs: 60_000,
+  });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Too many requests',
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.max(Math.ceil(rate.retryAfterMs / 1000), 1)),
+        },
+      },
+    );
+  }
+
+  const generateBody: GenerateBody = {
+    storecode,
+    walletAddress,
+    market: toText(body.market),
+    priceSettingMethod: toText(body.priceSettingMethod),
+    price:
+      typeof body.price === 'number' || typeof body.price === 'string'
+        ? body.price
+        : undefined,
+  };
+  const prompt = buildPrompt(generateBody);
   const models = [OPENAI_TEXT_MODEL, ...OPENAI_TEXT_FALLBACK_MODELS.split(',')]
     .map((model) => model.trim())
     .filter(Boolean);
