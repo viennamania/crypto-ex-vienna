@@ -251,7 +251,13 @@ export async function POST(request: NextRequest) {
         || seller?.seller?.escrowWalletAddress
         || '',
     );
-    if (!isWalletAddress(escrowWalletAddress)) {
+    const transferSourceWalletAddress = normalizeWalletAddress(
+        (isWalletAddress(escrowWalletSmartAccountAddress) ? escrowWalletSmartAccountAddress : '')
+        || (isWalletAddress(escrowWalletAddress) ? escrowWalletAddress : '')
+        || (isWalletAddress(escrowWalletSignerAddress) ? escrowWalletSignerAddress : '')
+        || '',
+    );
+    if (!isWalletAddress(transferSourceWalletAddress)) {
         return NextResponse.json({ error: 'Seller escrow wallet address not found' }, { status: 400 });
     }
 
@@ -296,7 +302,7 @@ export async function POST(request: NextRequest) {
         // get balance of escrow wallet
         const escrowBalanceRaw = toBigIntSafe(await balanceOf({
             contract,
-            address: escrowWalletAddress,
+            address: transferSourceWalletAddress,
         }));
 
         if (escrowBalanceRaw <= 0n) {
@@ -318,9 +324,7 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        const engineWalletAddress = isWalletAddress(escrowWalletSignerAddress)
-            ? escrowWalletSignerAddress
-            : escrowWalletAddress;
+        const engineWalletAddress = transferSourceWalletAddress;
 
         const wallet = await createEngineServerWallet({
             client,
@@ -380,6 +384,7 @@ export async function POST(request: NextRequest) {
                 transferredAmount: transferAmount,
                 transferredAmountRaw: escrowBalanceRaw.toString(),
                 escrowWalletAddress,
+                sourceWalletAddress: transferSourceWalletAddress,
                 escrowWalletSignerAddress: isWalletAddress(escrowWalletSignerAddress)
                     ? escrowWalletSignerAddress
                     : '',
