@@ -9,6 +9,7 @@ import {
   getRequesterIpAddress,
   getRoleForWalletAddress,
   isWalletAddressAuthorizedForExpectedWallet,
+  resolvePrimaryWalletAddress,
   verifyWalletAuthFromBody,
 } from '@/lib/security/requestAuth';
 import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSignature';
@@ -147,8 +148,25 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    // get seller info
-    const seller = await getOneByWalletAddress(storecode, walletAddress);
+    // Resolve seller owner wallet from smart/wallet variants before DB lookup.
+    let resolvedSellerWalletAddress = walletAddress;
+    const requester = await getRoleForWalletAddress({
+        storecode,
+        walletAddress,
+    });
+    const requesterOwnerWalletAddress = normalizeWalletAddress(requester?.walletAddress || '');
+    if (isWalletAddress(requesterOwnerWalletAddress)) {
+        resolvedSellerWalletAddress = requesterOwnerWalletAddress;
+    }
+
+    let seller = await getOneByWalletAddress(storecode, resolvedSellerWalletAddress);
+    if (!seller) {
+        const primaryWalletAddress = normalizeWalletAddress(await resolvePrimaryWalletAddress(walletAddress));
+        if (isWalletAddress(primaryWalletAddress) && primaryWalletAddress !== resolvedSellerWalletAddress) {
+            resolvedSellerWalletAddress = primaryWalletAddress;
+            seller = await getOneByWalletAddress(storecode, primaryWalletAddress);
+        }
+    }
     if (!seller) {
         return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
     }
@@ -175,7 +193,9 @@ export async function POST(request: NextRequest) {
     }
 
     // transfer all balance from escrow wallet to seller main wallet
-    const sellerMainWalletAddress = normalizeWalletAddress(walletAddress || seller.walletAddress || '');
+    const sellerMainWalletAddress = normalizeWalletAddress(
+        seller.walletAddress || resolvedSellerWalletAddress || walletAddress || '',
+    );
     if (!isWalletAddress(sellerMainWalletAddress)) {
         return NextResponse.json({ error: 'Seller wallet address is invalid' }, { status: 400 });
     }

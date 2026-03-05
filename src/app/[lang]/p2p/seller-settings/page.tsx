@@ -719,7 +719,12 @@ export default function SettingsPage({ params }: any) {
                 }
 
                 if (matchedResult) {
-                    setResolvedWalletAddress(matchedWalletAddress);
+                    const canonicalWalletAddress = String(matchedResult?.walletAddress || '').trim();
+                    setResolvedWalletAddress(
+                        isWalletAddress(canonicalWalletAddress)
+                            ? canonicalWalletAddress
+                            : matchedWalletAddress,
+                    );
                     setNickname(matchedResult.nickname || '');
                     matchedResult.avatar && setAvatar(matchedResult.avatar);
                     setUserCode(matchedResult.id || '');
