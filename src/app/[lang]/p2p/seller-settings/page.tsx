@@ -277,7 +277,7 @@ export default function SettingsPage({ params }: any) {
     const activeWallet = useActiveWallet();
     const connectedWallets = useConnectedWallets();
     const address = activeAccount?.address;
-    const requesterWalletAddress = useMemo(() => {
+    const walletAddressCandidates = useMemo(() => {
         const byLowerAddress = new Map<string, string>();
         const appendCandidate = (value: unknown) => {
             const normalized = String(value || '').trim();
@@ -290,18 +290,34 @@ export default function SettingsPage({ params }: any) {
             }
         };
 
-        // Prefer admin/owner EOA first, then smart account address.
-        appendCandidate(activeWallet?.getAdminAccount?.()?.address);
-        appendCandidate(activeWallet?.getAccount?.()?.address);
+        // Prefer currently active account (often smart account), then fallback to admin EOA.
         appendCandidate(address);
+        appendCandidate(activeWallet?.getAccount?.()?.address);
+        appendCandidate(activeWallet?.getAdminAccount?.()?.address);
 
         for (const walletItem of connectedWallets) {
-            appendCandidate(walletItem?.getAdminAccount?.()?.address);
             appendCandidate(walletItem?.getAccount?.()?.address);
+            appendCandidate(walletItem?.getAdminAccount?.()?.address);
         }
 
-        return Array.from(byLowerAddress.values())[0] || '';
+        return Array.from(byLowerAddress.values());
     }, [activeWallet, address, connectedWallets]);
+    const rawRequesterWalletAddress = walletAddressCandidates[0] || '';
+    const [resolvedWalletAddress, setResolvedWalletAddress] = useState('');
+    const requesterWalletAddress = resolvedWalletAddress || rawRequesterWalletAddress;
+
+    useEffect(() => {
+        if (!resolvedWalletAddress) {
+            return;
+        }
+        const stillConnected = walletAddressCandidates.some(
+            (candidate) => candidate.toLowerCase() === resolvedWalletAddress.toLowerCase(),
+        );
+        if (!stillConnected) {
+            setResolvedWalletAddress('');
+        }
+    }, [walletAddressCandidates, resolvedWalletAddress]);
+
     const signatureAccount = useMemo(() => {
         const candidates: Array<unknown> = [
             activeAccount,
@@ -628,73 +644,71 @@ export default function SettingsPage({ params }: any) {
 
     const [loadingUserData, setLoadingUserData] = useState(false);
     useEffect(() => {
+        const resetUserState = () => {
+            setNickname('');
+            setAvatar('/profile-default.png');
+            setUserCode('');
+            setSeller(null);
+            setEditedNickname('');
+            setAccountHolder('');
+            setAccountNumber('');
+            setContactMemo('');
+            setKycImageUrl(null);
+            setKycPreview(null);
+            setKycFile(null);
+        };
+
         const fetchData = async () => {
-            if (!requesterWalletAddress) {
-                setNickname('');
-                setAvatar('/profile-default.png');
-                setUserCode('');
-                setSeller(null);
-                setEditedNickname('');
-                setAccountHolder('');
-                setAccountNumber('');
-                setContactMemo('');
-                setKycImageUrl(null);
-                setKycPreview(null);
-                setKycFile(null);
+            if (walletAddressCandidates.length === 0) {
+                setResolvedWalletAddress('');
+                resetUserState();
                 return;
             }
+
             setLoadingUserData(true);
-            const response = await fetch("/api/user/getUser", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    storecode: storecode,
-                    walletAddress: requesterWalletAddress,
-                }),
-            });
+            let matchedWalletAddress = '';
+            let matchedResult: any = null;
+            for (const candidateWalletAddress of walletAddressCandidates) {
+                const response = await fetch('/api/user/getUser', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        storecode: storecode,
+                        walletAddress: candidateWalletAddress,
+                    }),
+                });
+                if (!response.ok) {
+                    continue;
+                }
 
-            const data = await response.json();
+                const data = await response.json().catch(() => ({}));
+                if (data?.result) {
+                    matchedWalletAddress = candidateWalletAddress;
+                    matchedResult = data.result;
+                    break;
+                }
+            }
 
-            ////console.log("data", data);
-
-            if (data.result) {
-                setNickname(data.result.nickname);
-                
-                data.result.avatar && setAvatar(data.result.avatar);
-                
-
-                setUserCode(data.result.id);
-
-                setSeller(data.result.seller);
-                setKycImageUrl(data.result.seller?.kyc?.idImageUrl || null);
-                setKycPreview(data.result.seller?.kyc?.idImageUrl || null);
-
-                ////setEscrowWalletAddress(data.result.seller?.escrowWalletAddress || '');
+            if (matchedResult) {
+                setResolvedWalletAddress(matchedWalletAddress);
+                setNickname(matchedResult.nickname || '');
+                matchedResult.avatar && setAvatar(matchedResult.avatar);
+                setUserCode(matchedResult.id || '');
+                setSeller(matchedResult.seller);
+                setKycImageUrl(matchedResult.seller?.kyc?.idImageUrl || null);
+                setKycPreview(matchedResult.seller?.kyc?.idImageUrl || null);
             } else {
-                setNickname('');
-                setAvatar('/profile-default.png');
-                setUserCode('');
-                setSeller(null);
-                setEditedNickname('');
-                setAccountHolder('');
-                setAccountNumber('');
-                setContactMemo('');
-                setKycImageUrl(null);
-                setKycPreview(null);
-                setKycFile(null);
-
-                ///setEscrowWalletAddress('');
-
-                //setBankName('');
+                setResolvedWalletAddress('');
+                resetUserState();
             }
             setLoadingUserData(false);
 
         };
 
         fetchData();
-    }, [requesterWalletAddress]);
+    }, [walletAddressCandidates]);
 
     useEffect(() => {
         if (escrowHistoryOpen) {
@@ -1661,13 +1675,22 @@ export default function SettingsPage({ params }: any) {
     const [clearingSellerEscrowWalletBalance, setClearingSellerEscrowWalletBalance] = useState(false);
     const clearSellerEscrowWalletBalance = async () => {
         if (clearingSellerEscrowWalletBalance) return;
-        if (!requesterWalletAddress) return;
+        if (!requesterWalletAddress) {
+            throw new Error('지갑 연결을 확인해주세요.');
+        }
         setClearingSellerEscrowWalletBalance(true);
         try {
+            const safeSelectedChain =
+                selectedChain === 'ethereum'
+                || selectedChain === 'polygon'
+                || selectedChain === 'arbitrum'
+                || selectedChain === 'bsc'
+                    ? selectedChain
+                    : 'polygon';
             const requestBody = await buildSignedRequestBody({
                 path: '/api/escrow/clearSellerEscrowWallet',
                 payload: {
-                    selectedChain: selectedChain,
+                    selectedChain: safeSelectedChain,
                     walletAddress: requesterWalletAddress,
                     storecode,
                 },
@@ -1681,12 +1704,11 @@ export default function SettingsPage({ params }: any) {
             });
             if (!response.ok) {
                 const payload = await response.json().catch(() => ({}));
-                throw new Error(String(payload?.error || '에스크로 잔고 회수 요청에 실패했습니다.'));
+                const detail = String(payload?.detail || '').trim();
+                const message = String(payload?.error || '에스크로 잔고 회수 요청에 실패했습니다.');
+                throw new Error(detail ? `${message} (${detail})` : message);
             }
             toast.success('판매자 에스크로 지갑 잔고 회수 요청이 완료되었습니다.');
-        } catch (error) {
-            const message = error instanceof Error ? error.message : '에스크로 잔고 회수 요청에 실패했습니다.';
-            toast.error(message);
         } finally {
             setClearingSellerEscrowWalletBalance(false);
         }
@@ -3146,7 +3168,9 @@ export default function SettingsPage({ params }: any) {
                                         await fetchInTradeAmount();
                                     } catch (err) {
                                         console.error(err);
-                                        toast.error('회수에 실패했습니다.');
+                                        const message =
+                                            err instanceof Error ? err.message : '회수에 실패했습니다.';
+                                        toast.error(message);
                                     } finally {
                                         setWithdrawing(false);
                                     }

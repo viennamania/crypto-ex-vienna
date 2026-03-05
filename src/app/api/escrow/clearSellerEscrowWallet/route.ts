@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from 'next/server';
 
 
 import {
@@ -18,14 +18,7 @@ import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSi
 import {
   createThirdwebClient,
   getContract,
-  sendAndConfirmTransaction,
-  sendTransaction,
 } from "thirdweb";
-
-import {
-  privateKeyToAccount,
-  smartWallet,
-} from "thirdweb/wallets";
 
 import { balanceOf, transfer } from "thirdweb/extensions/erc20";
  
@@ -38,15 +31,12 @@ import {
 } from "thirdweb/chains";
 
 import {
-  chain,
   ethereumContractAddressUSDT,
   polygonContractAddressUSDT,
   arbitrumContractAddressUSDT,
   bscContractAddressUSDT,
-
-  bscContractAddressMKRW,
 } from "@/app/config/contractAddresses";
-import { createEngineServerWallet } from "@/lib/engineServerWallet";
+import { createEngineServerWallet, primeEngineServerWalletResolution } from "@/lib/engineServerWallet";
 
 
 
@@ -55,6 +45,35 @@ import { createEngineServerWallet } from "@/lib/engineServerWallet";
 
 const toText = (value: unknown) => String(value ?? '').trim();
 const ALLOWED_CHAINS = new Set(['ethereum', 'polygon', 'arbitrum', 'bsc']);
+const TOKEN_DECIMALS_BY_CHAIN: Record<string, number> = {
+    ethereum: 6,
+    polygon: 6,
+    arbitrum: 6,
+    bsc: 18,
+};
+
+const toBigIntSafe = (value: unknown) => {
+    if (typeof value === 'bigint') {
+        return value;
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return BigInt(Math.trunc(value));
+    }
+    try {
+        return BigInt(String(value ?? '0'));
+    } catch {
+        return 0n;
+    }
+};
+
+const formatTokenAmount = (value: bigint, decimals: number) => {
+    const safeDecimals = Number.isInteger(decimals) && decimals >= 0 ? decimals : 6;
+    const base = 10n ** BigInt(safeDecimals);
+    const whole = value / base;
+    const fractionRaw = (value % base).toString().padStart(safeDecimals, '0');
+    const fraction = fractionRaw.replace(/0+$/, '');
+    return fraction ? `${whole.toString()}.${fraction}` : whole.toString();
+};
 
 export async function POST(request: NextRequest) {
 
@@ -137,14 +156,26 @@ export async function POST(request: NextRequest) {
 
 
     const escrowWalletAddress = normalizeWalletAddress(
-        seller?.seller?.escrowWalletAddress || seller?.seller?.escrowWallet?.smartAccountAddress || '',
+        seller?.seller?.escrowWalletAddress
+        || seller?.seller?.escrowWallet?.smartAccountAddress
+        || '',
+    );
+    const escrowWalletSignerAddress = normalizeWalletAddress(
+        seller?.seller?.escrowWalletSignerAddress
+        || seller?.seller?.escrowWallet?.signerAddress
+        || '',
+    );
+    const escrowWalletSmartAccountAddress = normalizeWalletAddress(
+        seller?.seller?.escrowWallet?.smartAccountAddress
+        || seller?.seller?.escrowWalletAddress
+        || '',
     );
     if (!isWalletAddress(escrowWalletAddress)) {
         return NextResponse.json({ error: 'Seller escrow wallet address not found' }, { status: 400 });
     }
 
     // transfer all balance from escrow wallet to seller main wallet
-    const sellerMainWalletAddress = normalizeWalletAddress(seller.walletAddress || '');
+    const sellerMainWalletAddress = normalizeWalletAddress(walletAddress || seller.walletAddress || '');
     if (!isWalletAddress(sellerMainWalletAddress)) {
         return NextResponse.json({ error: 'Seller wallet address is invalid' }, { status: 400 });
     }
@@ -177,34 +208,47 @@ export async function POST(request: NextRequest) {
             address: usdtContractAddress,
         });
 
+        const tokenDecimals = TOKEN_DECIMALS_BY_CHAIN[selectedChain] || 6;
+
         // get balance of escrow wallet
-        const escrowBalance = await balanceOf({
+        const escrowBalanceRaw = toBigIntSafe(await balanceOf({
             contract,
             address: escrowWalletAddress,
-        });
+        }));
 
-        // Number(result) / 10 ** 6 )
-        let escrowBalanceFormatted = Number(escrowBalance) / (10 ** 6);
-        if (selectedChain === 'bsc') {
-            escrowBalanceFormatted = Number(escrowBalance) / (10 ** 18);
-        }
-
-        if (escrowBalanceFormatted <= 0) {
+        if (escrowBalanceRaw <= 0n) {
             return NextResponse.json({ error: 'Escrow wallet balance is zero' }, { status: 400 });
         }
 
-        // create server wallet for escrow wallet
+        const transferAmount = formatTokenAmount(escrowBalanceRaw, tokenDecimals);
+        if (!transferAmount || transferAmount === '0') {
+            return NextResponse.json({ error: 'Escrow wallet transfer amount is invalid' }, { status: 500 });
+        }
+
+        // Prefer explicit signer/smart mapping from DB to avoid wallet resolution miss in Engine list.
+        if (isWalletAddress(escrowWalletSignerAddress)) {
+            primeEngineServerWalletResolution({
+                signerAddress: escrowWalletSignerAddress,
+                ...(isWalletAddress(escrowWalletSmartAccountAddress)
+                    ? { smartAccountAddress: escrowWalletSmartAccountAddress }
+                    : {}),
+            });
+        }
+
+        const engineWalletAddress = isWalletAddress(escrowWalletSignerAddress)
+            ? escrowWalletSignerAddress
+            : escrowWalletAddress;
 
         const wallet = await createEngineServerWallet({
             client,
-            walletAddress: escrowWalletAddress,
+            walletAddress: engineWalletAddress,
             chain: chainInfo,
         });
 
         const transaction = transfer({
             contract,
             to: sellerMainWalletAddress,
-            amount: escrowBalanceFormatted,
+            amount: transferAmount,
         });
 
         // enqueue the transaction
@@ -216,14 +260,30 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             result: {
                 transactionId,
-                transferredAmount: escrowBalanceFormatted,
+                transferredAmount: transferAmount,
+                transferredAmountRaw: escrowBalanceRaw.toString(),
+                escrowWalletAddress,
+                escrowWalletSignerAddress: isWalletAddress(escrowWalletSignerAddress)
+                    ? escrowWalletSignerAddress
+                    : '',
+                escrowWalletSmartAccountAddress: isWalletAddress(escrowWalletSmartAccountAddress)
+                    ? escrowWalletSmartAccountAddress
+                    : '',
+                toWalletAddress: sellerMainWalletAddress,
             },
             error: null,
         }, { status: 200 });
 
     } catch (error) {
-        console.error("Error clearing escrow wallet:", error);
-        return NextResponse.json({ error: 'Error clearing escrow wallet' }, { status: 500 });
+        const detail = error instanceof Error ? error.message : String(error || '');
+        console.error('Error clearing escrow wallet:', error);
+        return NextResponse.json(
+            {
+                error: 'Error clearing escrow wallet',
+                detail,
+            },
+            { status: 500 },
+        );
     }
 
 }
