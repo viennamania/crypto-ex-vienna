@@ -1,14 +1,22 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from 'next/server';
 
 import {
   updateStorePaymentWalletAddress,
-	insertStore,
+  insertStore,
 } from '@lib/api/store';
+import clientPromise, { dbName } from '@/lib/mongodb';
+import {
+  isWalletAddressAuthorizedForExpectedWallet,
+  verifyWalletAuthFromBody,
+} from '@/lib/security/requestAuth';
 
 import {
   createThirdwebClient,
   Engine,
-} from "thirdweb";
+} from 'thirdweb';
+
+const toText = (value: unknown) => String(value ?? '').trim();
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const generateStoreCode = () => {
   const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -27,53 +35,94 @@ const resolveEngineWalletAddress = (createdWallet: any): string =>
       || createdWallet?.address
       || createdWallet?.walletAddress
       || createdWallet?.account?.address
-      || ''
+      || '',
   ).trim();
 
 export async function POST(request: NextRequest) {
+  const bodyRaw = await request.json().catch(() => ({}));
+  const body =
+    bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+      ? (bodyRaw as Record<string, unknown>)
+      : {};
 
-  const body = await request.json();
+  const walletAddress = toText(body.walletAddress || body.requesterWalletAddress);
+  const normalizedAgentcode = toText(body.agentcode || body.agetcode) || 'head';
+  const normalizedStoreName = toText(body.storeName);
 
-  const {
-    walletAddress,
-    agetcode,
-    agentcode,
-    storeName,
-    storeType,
-    storeUrl,
-    storeDescription,
-    storeLogo,
-    storeBanner,
-  } = body;
-
-  const normalizedAgentcode = String(agentcode || agetcode || '').trim() || 'head';
-
-
-
-  console.log("body", body);
-
-  const normalizedStoreName = String(storeName || '').trim();
   if (!normalizedStoreName) {
     return NextResponse.json({
       result: null,
     });
   }
 
+  const signatureAuth = await verifyWalletAuthFromBody({
+    body,
+    path: '/api/store/setStore',
+    method: 'POST',
+    storecode: normalizedAgentcode || 'admin',
+    consumeNonceValue: true,
+  });
+
+  if (signatureAuth.ok === false) {
+    return signatureAuth.response;
+  }
+
+  if (signatureAuth.ok === true) {
+    const client = await clientPromise;
+    const agentCollection = client.db(dbName).collection('agents');
+    const agent = await agentCollection.findOne<Record<string, unknown>>(
+      {
+        agentcode: {
+          $regex: `^${escapeRegex(normalizedAgentcode)}$`,
+          $options: 'i',
+        },
+      },
+      {
+        projection: {
+          _id: 0,
+          adminWalletAddress: 1,
+        },
+      },
+    );
+
+    if (!agent) {
+      return NextResponse.json({ error: 'agent not found' }, { status: 404 });
+    }
+
+    const adminWalletAddress = toText(agent.adminWalletAddress);
+    if (!isWalletAddress(adminWalletAddress)) {
+      return NextResponse.json({ error: 'agent admin wallet address is not configured' }, { status: 400 });
+    }
+
+    const isAuthorized = await isWalletAddressAuthorizedForExpectedWallet({
+      expectedWalletAddress: adminWalletAddress,
+      candidateWalletAddress: signatureAuth.walletAddress,
+    });
+
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Only agent admin wallet can create store' }, { status: 403 });
+    }
+  }
+
   let result = null;
+  const requesterWalletAddress =
+    signatureAuth.ok === true
+      ? signatureAuth.walletAddress
+      : walletAddress;
 
   // storecode is always generated server-side.
   for (let attempt = 0; attempt < 10; attempt += 1) {
     const generatedStoreCode = generateStoreCode();
     result = await insertStore({
-      walletAddress,
+      walletAddress: requesterWalletAddress,
       agentcode: normalizedAgentcode,
       storecode: generatedStoreCode,
       storeName: normalizedStoreName,
-      storeType,
-      storeUrl,
-      storeDescription,
-      storeLogo,
-      storeBanner,
+      storeType: body.storeType,
+      storeUrl: body.storeUrl,
+      storeDescription: body.storeDescription,
+      storeLogo: body.storeLogo,
+      storeBanner: body.storeBanner,
     });
     if (result) {
       break;
@@ -81,12 +130,12 @@ export async function POST(request: NextRequest) {
   }
 
   if (!result) {
-	  return NextResponse.json({
-	    result,
-	  });
+    return NextResponse.json({
+      result,
+    });
   }
 
-  const createdStorecode = String(result?.storecode || '').trim();
+  const createdStorecode = String((result as Record<string, unknown>)?.storecode || '').trim();
   let paymentWalletAddress = '';
   let paymentWalletCreated = false;
   let paymentWalletError = '';
@@ -141,5 +190,4 @@ export async function POST(request: NextRequest) {
       paymentWalletError,
     },
   });
-	  
 }

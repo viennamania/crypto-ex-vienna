@@ -7,6 +7,7 @@ import React, { use, useEffect, useState, useCallback, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 
 import { useClientWallets } from '@/lib/useClientWallets';
+import { createWalletSignatureAuthPayload } from '@/lib/security/walletSignature';
 import { client } from "@/app/client";
 
 
@@ -103,6 +104,8 @@ import {
 
 
 const walletAuthOptions = ['email', 'google', 'phone'];
+const isWalletAddress = (value: unknown) =>
+    /^0x[a-fA-F0-9]{40}$/.test(String(value ?? '').trim());
 
 
 export default function SettingsPage({ params }: any) {
@@ -272,7 +275,86 @@ export default function SettingsPage({ params }: any) {
 
     const activeAccount = useActiveAccount();
     const activeWallet = useActiveWallet();
+    const connectedWallets = useConnectedWallets();
     const address = activeAccount?.address;
+    const requesterWalletAddress = useMemo(() => {
+        const byLowerAddress = new Map<string, string>();
+        const appendCandidate = (value: unknown) => {
+            const normalized = String(value || '').trim();
+            if (!isWalletAddress(normalized)) {
+                return;
+            }
+            const key = normalized.toLowerCase();
+            if (!byLowerAddress.has(key)) {
+                byLowerAddress.set(key, normalized);
+            }
+        };
+
+        // Prefer admin/owner EOA first, then smart account address.
+        appendCandidate(activeWallet?.getAdminAccount?.()?.address);
+        appendCandidate(activeWallet?.getAccount?.()?.address);
+        appendCandidate(address);
+
+        for (const walletItem of connectedWallets) {
+            appendCandidate(walletItem?.getAdminAccount?.()?.address);
+            appendCandidate(walletItem?.getAccount?.()?.address);
+        }
+
+        return Array.from(byLowerAddress.values())[0] || '';
+    }, [activeWallet, address, connectedWallets]);
+    const signatureAccount = useMemo(() => {
+        const candidates: Array<unknown> = [
+            activeAccount,
+            activeWallet?.getAccount?.(),
+            activeWallet?.getAdminAccount?.(),
+        ];
+        for (const walletItem of connectedWallets) {
+            candidates.push(walletItem?.getAccount?.());
+            candidates.push(walletItem?.getAdminAccount?.());
+        }
+
+        for (const candidate of candidates) {
+            const account = candidate as {
+                address?: string;
+                signMessage?: (options: {
+                    message: string;
+                    originalMessage?: string;
+                    chainId?: number;
+                }) => Promise<string>;
+            } | null | undefined;
+            if (account?.address && typeof account.signMessage === 'function') {
+                return account;
+            }
+        }
+
+        return null;
+    }, [activeAccount, activeWallet, connectedWallets]);
+    const buildSignedRequestBody = useCallback(
+        async ({
+            path,
+            payload,
+        }: {
+            path: string;
+            payload: Record<string, unknown>;
+        }) => {
+            if (!signatureAccount?.address || typeof signatureAccount.signMessage !== 'function') {
+                throw new Error('서명 가능한 지갑 계정을 찾을 수 없습니다.');
+            }
+
+            const auth = await createWalletSignatureAuthPayload({
+                account: signatureAccount,
+                storecode,
+                path,
+                method: 'POST',
+            });
+
+            return {
+                ...payload,
+                auth,
+            };
+        },
+        [signatureAccount],
+    );
 
 
 
@@ -386,7 +468,7 @@ export default function SettingsPage({ params }: any) {
     const [usdtPrice, setUsdtPrice] = useState(0);
     useEffect(() => {
 
-        if (!address) {
+        if (!requesterWalletAddress) {
             return;
         }
 
@@ -400,7 +482,7 @@ export default function SettingsPage({ params }: any) {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    walletAddress: address,
+                    walletAddress: requesterWalletAddress,
                 }),
             });
 
@@ -418,7 +500,7 @@ export default function SettingsPage({ params }: any) {
         fetchData();
     }
 
-    , [address]);
+    , [requesterWalletAddress]);
 
 
     
@@ -547,6 +629,20 @@ export default function SettingsPage({ params }: any) {
     const [loadingUserData, setLoadingUserData] = useState(false);
     useEffect(() => {
         const fetchData = async () => {
+            if (!requesterWalletAddress) {
+                setNickname('');
+                setAvatar('/profile-default.png');
+                setUserCode('');
+                setSeller(null);
+                setEditedNickname('');
+                setAccountHolder('');
+                setAccountNumber('');
+                setContactMemo('');
+                setKycImageUrl(null);
+                setKycPreview(null);
+                setKycFile(null);
+                return;
+            }
             setLoadingUserData(true);
             const response = await fetch("/api/user/getUser", {
                 method: "POST",
@@ -555,7 +651,7 @@ export default function SettingsPage({ params }: any) {
                 },
                 body: JSON.stringify({
                     storecode: storecode,
-                    walletAddress: address,
+                    walletAddress: requesterWalletAddress,
                 }),
             });
 
@@ -598,7 +694,7 @@ export default function SettingsPage({ params }: any) {
         };
 
         fetchData();
-    }, [address]);
+    }, [requesterWalletAddress]);
 
     useEffect(() => {
         if (escrowHistoryOpen) {
@@ -618,6 +714,10 @@ export default function SettingsPage({ params }: any) {
 
     const setUserData = async () => {
 
+        if (!requesterWalletAddress) {
+            toast.error('지갑 연결을 확인해주세요.');
+            return;
+        }
 
         // check nickname length and alphanumeric
         //if (nickname.length < 5 || nickname.length > 10) {
@@ -634,80 +734,87 @@ export default function SettingsPage({ params }: any) {
             return;
         }
 
-        if (nicknameEdit) {
+        try {
+            if (nicknameEdit) {
 
+                const updateUserBody = await buildSignedRequestBody({
+                    path: '/api/user/updateUser',
+                    payload: {
+                        storecode: storecode,
+                        walletAddress: requesterWalletAddress,
+                        nickname: editedNickname,
+                    },
+                });
 
-            const response = await fetch("/api/user/updateUser", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    storecode: storecode,
-                    walletAddress: address,
-                    
-                    //nickname: nickname,
-                    nickname: editedNickname,
+                const response = await fetch("/api/user/updateUser", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(updateUserBody),
+                });
 
-                }),
-            });
+                const data = await response.json();
 
-            const data = await response.json();
+                ///console.log("updateUser data", data);
 
-            ///console.log("updateUser data", data);
+                if (data.result) {
 
-            if (data.result) {
+                    setUserCode(data.result.id);
+                    setNickname(data.result.nickname);
 
-                setUserCode(data.result.id);
-                setNickname(data.result.nickname);
+                    setNicknameEdit(false);
+                    setEditedNickname('');
 
-                setNicknameEdit(false);
-                setEditedNickname('');
+                    toast.success('아이디이 저장되었습니다');
 
-                toast.success('아이디이 저장되었습니다');
+                } else {
+
+                    toast.error('아이디 저장에 실패했습니다');
+                }
+
 
             } else {
+                const setUserVerifiedBody = await buildSignedRequestBody({
+                    path: '/api/user/setUserVerified',
+                    payload: {
+                        lang: params.lang,
+                        storecode: storecode,
+                        walletAddress: requesterWalletAddress,
+                        nickname: editedNickname,
+                        mobile: phoneNumber,
+                    },
+                });
 
-                toast.error('아이디 저장에 실패했습니다');
+                const response = await fetch("/api/user/setUserVerified", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(setUserVerifiedBody),
+                });
+
+                const data = await response.json();
+
+                console.log("data", data);
+
+                if (data.result) {
+
+                    setUserCode(data.result.id);
+                    setNickname(data.result.nickname);
+
+                    setNicknameEdit(false);
+                    setEditedNickname('');
+
+                    toast.success('아이디이 저장되었습니다');
+
+                } else {
+                    toast.error('아이디 저장에 실패했습니다');
+                }
             }
-
-
-        } else {
-
-            const response = await fetch("/api/user/setUserVerified", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    lang: params.lang,
-                    storecode: storecode,
-                    walletAddress: address,
-                    
-                    //nickname: nickname,
-                    nickname: editedNickname,
-
-                    mobile: phoneNumber,
-                }),
-            });
-
-            const data = await response.json();
-
-            console.log("data", data);
-
-            if (data.result) {
-
-                setUserCode(data.result.id);
-                setNickname(data.result.nickname);
-
-                setNicknameEdit(false);
-                setEditedNickname('');
-
-                toast.success('아이디이 저장되었습니다');
-
-            } else {
-                toast.error('아이디 저장에 실패했습니다');
-            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '아이디 저장에 실패했습니다.';
+            toast.error(message);
         }
 
 
@@ -754,6 +861,10 @@ export default function SettingsPage({ params }: any) {
         toast.error('Please enter bank name, account number, and account holder');
         return;
       }
+      if (!requesterWalletAddress) {
+        toast.error('지갑 연결을 확인해주세요.');
+        return;
+      }
 
       setApplying(true);
 
@@ -779,21 +890,25 @@ export default function SettingsPage({ params }: any) {
           bankInfo: nextBankInfo,
         };
 
-        const updateResponse = await fetch('/api/user/updateSellerInfo', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        const updateSellerInfoBody = await buildSignedRequestBody({
+          path: '/api/user/updateSellerInfo',
+          payload: {
             storecode: storecode,
-            walletAddress: address,
+            walletAddress: requesterWalletAddress,
             sellerStatus: nextSellerStatus,
             bankName: selectedBankName,
             accountNumber: selectedAccountNumber,
             accountHolder: selectedAccountHolder,
             contactMemo: selectedContactMemo,
             seller: updatedSeller,
-          }),
+          },
+        });
+        const updateResponse = await fetch('/api/user/updateSellerInfo', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateSellerInfoBody),
         });
         const updatePayload = await updateResponse.json().catch(() => ({}));
         const matchedCount = Number(updatePayload?.result?.matchedCount || 0);
@@ -808,7 +923,7 @@ export default function SettingsPage({ params }: any) {
           },
           body: JSON.stringify({
             storecode: storecode,
-            walletAddress: address,
+            walletAddress: requesterWalletAddress,
           }),
         });
         const data = await response.json();
@@ -842,7 +957,7 @@ export default function SettingsPage({ params }: any) {
     };
 
     const submitKyc = async () => {
-      if (!address || kycSubmitting) {
+      if (!requesterWalletAddress || kycSubmitting) {
         return;
       }
       if (!kycFile && !kycImageUrl) {
@@ -883,21 +998,25 @@ export default function SettingsPage({ params }: any) {
           },
         };
 
-        await fetch('/api/user/updateSellerInfo', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        const updateSellerInfoBody = await buildSignedRequestBody({
+          path: '/api/user/updateSellerInfo',
+          payload: {
             storecode: storecode,
-            walletAddress: address,
+            walletAddress: requesterWalletAddress,
             sellerStatus: nextSellerStatus,
             bankName: seller?.bankInfo?.bankName || (useContactTransfer ? '연락처송금' : bankName) || '',
             accountNumber: seller?.bankInfo?.accountNumber || (useContactTransfer ? '' : accountNumber) || '',
             accountHolder: seller?.bankInfo?.accountHolder || (useContactTransfer ? '' : accountHolder) || '',
             contactMemo: seller?.bankInfo?.contactMemo || (useContactTransfer ? contactMemo : '') || '',
             seller: updatedSeller,
-          }),
+          },
+        });
+        await fetch('/api/user/updateSellerInfo', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateSellerInfoBody),
         });
 
         const response = await fetch("/api/user/getUser", {
@@ -907,7 +1026,7 @@ export default function SettingsPage({ params }: any) {
           },
           body: JSON.stringify({
             storecode: storecode,
-            walletAddress: address,
+            walletAddress: requesterWalletAddress,
           }),
         });
         const data = await response.json();
@@ -930,57 +1049,76 @@ export default function SettingsPage({ params }: any) {
     // sellerEnabled
     // functon to toggle seller enabled
     const toggleSellerEnabled = async () => {
-        if (!seller) return;
+        if (!seller || !requesterWalletAddress) return;
         const newEnabled = !seller.enabled;
-        await fetch('/api/user/updateSellerEnabled', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                storecode: storecode,
-                walletAddress: address,
-                sellerEnabled: newEnabled,
-            }),
-        });
-        setSeller({
-            ...seller,
-            enabled: newEnabled,
-        });
+        try {
+            const updateSellerEnabledBody = await buildSignedRequestBody({
+                path: '/api/user/updateSellerEnabled',
+                payload: {
+                    storecode: storecode,
+                    walletAddress: requesterWalletAddress,
+                    sellerEnabled: newEnabled,
+                },
+            });
+            await fetch('/api/user/updateSellerEnabled', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updateSellerEnabledBody),
+            });
+            setSeller({
+                ...seller,
+                enabled: newEnabled,
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '판매 가능 상태 변경에 실패했습니다.';
+            toast.error(message);
+        }
     };
 
 
     // apply seller
     const [applyingSeller, setApplyingSeller] = useState(false);
     const applySeller = async () => {
-        if (applyingSeller) return;
+        if (applyingSeller || !requesterWalletAddress) return;
         setApplyingSeller(true);
-        await fetch('/api/user/applySeller', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                storecode: storecode,
-                walletAddress: address,
-            }),
-        });
-        // reload seller data
-        const response = await fetch("/api/user/getUser", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                storecode: storecode,
-                walletAddress: address,
-            }),
-        });
-        const data = await response.json();
-        if (data.result) {
-            setSeller(data.result.seller);
+        try {
+            const applySellerBody = await buildSignedRequestBody({
+                path: '/api/user/applySeller',
+                payload: {
+                    storecode: storecode,
+                    walletAddress: requesterWalletAddress,
+                },
+            });
+            await fetch('/api/user/applySeller', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(applySellerBody),
+            });
+            // reload seller data
+            const response = await fetch("/api/user/getUser", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    storecode: storecode,
+                    walletAddress: requesterWalletAddress,
+                }),
+            });
+            const data = await response.json();
+            if (data.result) {
+                setSeller(data.result.seller);
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '판매자 신청에 실패했습니다.';
+            toast.error(message);
+        } finally {
+            setApplyingSeller(false);
         }
-        setApplyingSeller(false);
     };
 
 
@@ -1016,7 +1154,7 @@ export default function SettingsPage({ params }: any) {
         body: JSON.stringify({
           lang: params.lang,
           chain: storecode,
-          walletAddress: address,
+          walletAddress: requesterWalletAddress || address,
           mobile: phoneNumber,
         }),
       });
@@ -1252,6 +1390,10 @@ export default function SettingsPage({ params }: any) {
         if (transferingEscrowBalance) {
         return;
         }
+        if (!requesterWalletAddress) {
+        toast.error('지갑 연결을 확인해주세요.');
+        return;
+        }
 
         setTransferingEscrowBalance(true);
 
@@ -1265,7 +1407,7 @@ export default function SettingsPage({ params }: any) {
             body: JSON.stringify({
             lang: params.lang,
             storecode: storecode,
-            walletAddress: address,
+            walletAddress: requesterWalletAddress,
             amount: amountOfEscrowBalance,
             ///escrowWalletAddress: escrowWalletAddress,
             //isSmartAccount: activeWallet === inAppConnectWallet ? false : true,
@@ -1301,73 +1443,103 @@ export default function SettingsPage({ params }: any) {
     const [usdtToKrwRate, setUsdtToKrwRate] = useState(0);
     const [updatingUsdtToKrw, setUpdatingUsdtToKrw] = useState(false);
     const updateUsdtToKrwRate = async () => {
-        if (!seller) return;
+        if (!seller || !requesterWalletAddress) return;
         setUpdatingUsdtToKrw(true);
-        await fetch('/api/user/updateSellerUsdtToKrwRate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                storecode: storecode,
-                walletAddress: address,
+        try {
+            const updateRateBody = await buildSignedRequestBody({
+                path: '/api/user/updateSellerUsdtToKrwRate',
+                payload: {
+                    storecode: storecode,
+                    walletAddress: requesterWalletAddress,
+                    usdtToKrwRate: usdtToKrwRate,
+                },
+            });
+            await fetch('/api/user/updateSellerUsdtToKrwRate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updateRateBody),
+            });
+            setSeller({
+                ...seller,
                 usdtToKrwRate: usdtToKrwRate,
-            }),
-        });
-        setUpdatingUsdtToKrw(false);
-        setSeller({
-            ...seller,
-            usdtToKrwRate: usdtToKrwRate,
-        });
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'USDT 환율 수정에 실패했습니다.';
+            toast.error(message);
+        } finally {
+            setUpdatingUsdtToKrw(false);
+        }
     };
 
 
     // toggleAutoProcessDeposit
     const [togglingAutoProcessDeposit, setTogglingAutoProcessDeposit] = useState(false);
     const toggleAutoProcessDeposit = async () => {
-        if (!seller) return;
+        if (!seller || !requesterWalletAddress) return;
         const newAutoProcessDeposit = !seller.autoProcessDeposit;
         setTogglingAutoProcessDeposit(true);
-        await fetch('/api/user/toggleAutoProcessDeposit', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                storecode: storecode,
-                walletAddress: address,
+        try {
+            const toggleAutoDepositBody = await buildSignedRequestBody({
+                path: '/api/user/toggleAutoProcessDeposit',
+                payload: {
+                    storecode: storecode,
+                    walletAddress: requesterWalletAddress,
+                    autoProcessDeposit: newAutoProcessDeposit,
+                },
+            });
+            await fetch('/api/user/toggleAutoProcessDeposit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(toggleAutoDepositBody),
+            });
+            setSeller({
+                ...seller,
                 autoProcessDeposit: newAutoProcessDeposit,
-            }),
-        });
-        setTogglingAutoProcessDeposit(false);
-        setSeller({
-            ...seller,
-            autoProcessDeposit: newAutoProcessDeposit,
-        });
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '자동 입금 설정 변경에 실패했습니다.';
+            toast.error(message);
+        } finally {
+            setTogglingAutoProcessDeposit(false);
+        }
     };
 
     // setPriceSettingMethod
     const [settingPriceSettingMethod, setSettingPriceSettingMethod] = useState(false);
     const [priceSettingMethod, setPriceSettingMethod] = useState('fixed');
     const setPriceSettingMethodFunc = async (method: string) => {
-        if (!seller) return;
+        if (!seller || !requesterWalletAddress) return;
         setSettingPriceSettingMethod(true);
-        await fetch('/api/user/setPriceSettingMethod', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                storecode: storecode,
-                walletAddress: address,
+        try {
+            const setPriceSettingMethodBody = await buildSignedRequestBody({
+                path: '/api/user/setPriceSettingMethod',
+                payload: {
+                    storecode: storecode,
+                    walletAddress: requesterWalletAddress,
+                    priceSettingMethod: method,
+                },
+            });
+            await fetch('/api/user/setPriceSettingMethod', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(setPriceSettingMethodBody),
+            });
+            setSeller({
+                ...seller,
                 priceSettingMethod: method,
-            }),
-        });
-        setSettingPriceSettingMethod(false);
-        setSeller({
-            ...seller,
-            priceSettingMethod: method,
-        });
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '가격 설정 방식 변경에 실패했습니다.';
+            toast.error(message);
+        } finally {
+            setSettingPriceSettingMethod(false);
+        }
     };
 
     // setMarket
@@ -1375,24 +1547,34 @@ export default function SettingsPage({ params }: any) {
     const [settingMarket, setSettingMarket] = useState(false);
     const [market, setMarket] = useState('upbit');
     const setMarketFunc = async (market: string) => {
-        if (!seller) return;
+        if (!seller || !requesterWalletAddress) return;
         setSettingMarket(true);
-        await fetch('/api/user/setMarket', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                storecode: storecode,
-                walletAddress: address,
+        try {
+            const setMarketBody = await buildSignedRequestBody({
+                path: '/api/user/setMarket',
+                payload: {
+                    storecode: storecode,
+                    walletAddress: requesterWalletAddress,
+                    market: market,
+                },
+            });
+            await fetch('/api/user/setMarket', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(setMarketBody),
+            });
+            setSeller({
+                ...seller,
                 market: market,
-            }),
-        });
-        setSettingMarket(false);
-        setSeller({
-            ...seller,
-            market: market,
-        });
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '마켓 설정 변경에 실패했습니다.';
+            toast.error(message);
+        } finally {
+            setSettingMarket(false);
+        }
     };
 
 
@@ -1402,28 +1584,38 @@ export default function SettingsPage({ params }: any) {
     const [generatingPromotionText, setGeneratingPromotionText] = useState(false);
     const [promotionGenerateError, setPromotionGenerateError] = useState('');
     const updatePromotionText = async () => {
-        if (!seller) return;
+        if (!seller || !requesterWalletAddress) return;
         setUpdatingPromotionText(true);
-        await fetch('/api/user/updatePromotionText', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                storecode: storecode,
-                walletAddress: address,
+        try {
+            const updatePromotionTextBody = await buildSignedRequestBody({
+                path: '/api/user/updatePromotionText',
+                payload: {
+                    storecode: storecode,
+                    walletAddress: requesterWalletAddress,
+                    promotionText: promotionText,
+                },
+            });
+            await fetch('/api/user/updatePromotionText', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatePromotionTextBody),
+            });
+            setSeller({
+                ...seller,
                 promotionText: promotionText,
-            }),
-        });
-        setUpdatingPromotionText(false);
-        setSeller({
-            ...seller,
-            promotionText: promotionText,
-        });
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '홍보 문구 저장에 실패했습니다.';
+            toast.error(message);
+        } finally {
+            setUpdatingPromotionText(false);
+        }
     };
 
     const generatePromotionText = async () => {
-        if (!seller || !address || generatingPromotionText) return;
+        if (!seller || !requesterWalletAddress || generatingPromotionText) return;
         setPromotionGenerateError('');
         setGeneratingPromotionText(true);
         try {
@@ -1432,7 +1624,7 @@ export default function SettingsPage({ params }: any) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     storecode: storecode,
-                    walletAddress: address,
+                    walletAddress: requesterWalletAddress,
                     market: seller?.market,
                     priceSettingMethod: seller?.priceSettingMethod,
                     price: seller?.price,
@@ -1460,19 +1652,26 @@ export default function SettingsPage({ params }: any) {
     const [clearingSellerEscrowWalletBalance, setClearingSellerEscrowWalletBalance] = useState(false);
     const clearSellerEscrowWalletBalance = async () => {
         if (clearingSellerEscrowWalletBalance) return;
+        if (!requesterWalletAddress) return;
         setClearingSellerEscrowWalletBalance(true);
-        await fetch('/api/escrow/clearSellerEscrowWallet', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                selectedChain: selectedChain,
-                walletAddress: address,
-            }),
-        });
-        setClearingSellerEscrowWalletBalance(false);
-        toast.success('판매자 에스크로 지갑 잔고 회수 요청이 완료되었습니다.');
+        try {
+            await fetch('/api/escrow/clearSellerEscrowWallet', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    selectedChain: selectedChain,
+                    walletAddress: requesterWalletAddress,
+                }),
+            });
+            toast.success('판매자 에스크로 지갑 잔고 회수 요청이 완료되었습니다.');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '에스크로 잔고 회수 요청에 실패했습니다.';
+            toast.error(message);
+        } finally {
+            setClearingSellerEscrowWalletBalance(false);
+        }
     };
 
 

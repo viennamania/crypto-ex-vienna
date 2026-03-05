@@ -1,185 +1,121 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from 'next/server';
 
+import { updateSellerStatus } from '@lib/api/user';
+import { evaluateRateLimit } from '@/lib/security/rateLimit';
 import {
-  
-	updateSellerStatus,
-  checkVaultWalletAddressExists,
-  updateSellerVaultWallet,
-} from '@lib/api/user';
+  getRequesterIpAddress,
+  getRoleForWalletAddress,
+  verifyWalletAuthFromBody,
+} from '@/lib/security/requestAuth';
+import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSignature';
 
-
-import {
-  createThirdwebClient,
-} from "thirdweb";
-
-import {
-  polygon,
- } from "thirdweb/chains";
-
-import {
-  privateKeyToAccount,
-  smartWallet,
- } from "thirdweb/wallets";
-
- import { ethers } from "ethers";
-
-
-
+const toText = (value: unknown) => String(value ?? '').trim();
+const isAdminStorecode = (storecode: string) => storecode.toLowerCase() === 'admin';
 
 export async function POST(request: NextRequest) {
+  const bodyRaw = await request.json().catch(() => ({}));
+  const body =
+    bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+      ? (bodyRaw as Record<string, unknown>)
+      : {};
 
-  const body = await request.json();
+  const storecode = toText(body.storecode);
+  const nickname = toText(body.nickname);
+  const sellerStatus = toText(body.sellerStatus);
+  const bankName = toText(body.bankName);
+  const accountNumber = toText(body.accountNumber);
+  const accountHolder = toText(body.accountHolder);
+  const requestedWalletAddress = normalizeWalletAddress(body.walletAddress);
 
-  const { storecode, walletAddress, nickname, sellerStatus, bankName, accountNumber, accountHolder } = body;
+  const ipAddress = getRequesterIpAddress(request) || 'unknown';
+  const rate = evaluateRateLimit({
+    key: `api:user:updateSeller:${ipAddress}:${requestedWalletAddress || 'unknown'}`,
+    limit: 20,
+    windowMs: 60_000,
+  });
 
-  //console.log("walletAddress", walletAddress);
-  //console.log("sellerStatus", sellerStatus);
-
-
-
-  // check vault wallet address, if not exist, create new smart wallet
-  /*
-  const vaultWalletExists = await checkVaultWalletAddressExists(storecode, walletAddress);
-
-  if (!vaultWalletExists) {
-    // create new smart wallet
-    console.log("Creating new smart wallet for seller...");
-
-
-    const userWalletPrivateKey = ethers.Wallet.createRandom().privateKey;
-
-    if (!userWalletPrivateKey) {
-
-      console.log("No userWalletPrivateKey");
-
-      return NextResponse.json({
-        result: null,
-      });
-    }
-
-
-    const client = createThirdwebClient({
-      secretKey: process.env.THIRDWEB_SECRET_KEY || "",
-    });
-
-    if (!client) {
-
-      console.log("No client");
-
-      return NextResponse.json({
-        result: null,
-      });
-    }
-
-
-    const personalAccount = privateKeyToAccount({
-      client,
-      privateKey: userWalletPrivateKey,
-    });
-
-
-    if (!personalAccount) {
-
-      console.log("No personalAccount");
-
-      return NextResponse.json({
-        result: null,
-      });
-    }
-
-    const wallet = smartWallet({
-      chain:  polygon ,
-      sponsorGas: true,
-    });
-
-
-    // Connect the smart wallet
-    const account = await wallet.connect({
-      client: client,
-      personalAccount: personalAccount,
-    });
-
-    if (!account) {
-
-      console.log("No account");
-      return NextResponse.json({
-        result: null,
-      });
-    }
-    
-
-
-    const userWalletAddress = account.address;
-
-    console.log("userWalletAddress", userWalletAddress);
-
-    if (!userWalletAddress) {
-
-      console.log("No userWalletAddress");
-
-      return NextResponse.json({
-        result: null,
-      });
-    }
-
-    const vaultWallet = {
-      address: userWalletAddress,
-      privateKey: userWalletPrivateKey,
-    }
-
-
-    const result = await updateSellerVaultWallet({
-      storecode: storecode,
-      walletAddress: walletAddress,
-      nickname: nickname,
-      sellerStatus: sellerStatus,
-      bankName: bankName,
-      accountNumber: accountNumber,
-      accountHolder: accountHolder,
-      vaultWallet: vaultWallet,
-    });
-
-    console.log("Vault wallet created and updated for seller.");
-
-    return NextResponse.json({
-
-      result,
-      
-    });
-
-
-  } else {
-
-
-    const result = await updateSellerStatus({
-      storecode: storecode,
-      walletAddress: walletAddress,
-      nickname: nickname,
-      sellerStatus: sellerStatus,
-      bankName: bankName,
-      accountNumber: accountNumber,
-      accountHolder: accountHolder,
-    });
-
-
-  
-    return NextResponse.json({
-
-      result,
-      
-    });
-
+  if (!rate.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Too many requests',
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.max(Math.ceil(rate.retryAfterMs / 1000), 1)),
+        },
+      },
+    );
   }
-  */
+
+  const signatureAuth = await verifyWalletAuthFromBody({
+    body,
+    path: '/api/user/updateSeller',
+    method: 'POST',
+    storecode,
+    consumeNonceValue: true,
+  });
+
+  if (signatureAuth.ok === false) {
+    return signatureAuth.response;
+  }
+
+  const walletAddress =
+    signatureAuth.ok === true
+      ? signatureAuth.walletAddress
+      : requestedWalletAddress;
+
+  if (!isWalletAddress(walletAddress)) {
+    return NextResponse.json(
+      {
+        error: 'walletAddress is invalid.',
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  if (isAdminStorecode(storecode)) {
+    if (signatureAuth.ok !== true) {
+      return NextResponse.json(
+        {
+          error: 'wallet signature is required for admin storecode.',
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+    const requester = await getRoleForWalletAddress({
+      storecode,
+      walletAddress,
+    });
+
+    if (!requester || requester.role !== 'admin') {
+      return NextResponse.json(
+        {
+          error: 'Only admin can update admin seller profile.',
+        },
+        {
+          status: 403,
+        },
+      );
+    }
+  }
 
   const result = await updateSellerStatus({
-    storecode: storecode,
-    walletAddress: walletAddress,
-    nickname: nickname,
-    sellerStatus: sellerStatus,
-    bankName: bankName,
-    accountNumber: accountNumber,
-    accountHolder: accountHolder,
+    storecode,
+    walletAddress,
+    nickname,
+    sellerStatus,
+    bankName,
+    accountNumber,
+    accountHolder,
   });
-  
+
+  return NextResponse.json({
+    result,
+  });
 }

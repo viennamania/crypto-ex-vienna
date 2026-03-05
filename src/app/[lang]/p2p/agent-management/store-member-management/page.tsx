@@ -14,6 +14,7 @@ import {
   type AgentSummary,
   type AgentUserItem,
 } from '../_shared';
+import { useSmartAccountAuth } from '../_useSmartAccountAuth';
 
 type MemberWalletBalanceItem = {
   loading: boolean;
@@ -37,6 +38,7 @@ export default function P2PAgentStoreMemberManagementPage() {
   const MEMBER_WALLET_BALANCE_COOLDOWN_MS = 10_000;
   const searchParams = useSearchParams();
   const agentcode = String(searchParams?.get('agentcode') || '').trim();
+  const { connectedWalletAddress, buildSignedRequestBody } = useSmartAccountAuth(agentcode || 'admin');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -313,14 +315,22 @@ export default function P2PAgentStoreMemberManagementPage() {
     setResetConsentSuccess(null);
     setResettingConsentMemberId(memberResetKey);
     try {
-      const response = await fetch('/api/user/resetPrivateSaleConsent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const storecodeForAuth = String(member.storecode || selectedStorecode || agentcode || '').trim() || 'admin';
+      const resetConsentRequestBody = await buildSignedRequestBody({
+        path: '/api/user/resetPrivateSaleConsent',
+        storecode: storecodeForAuth,
+        payload: {
           storecode: member.storecode || selectedStorecode,
           walletAddress: memberWalletAddress,
           memberId: member.id,
-        }),
+          requesterWalletAddress: connectedWalletAddress,
+        },
+      });
+
+      const response = await fetch('/api/user/resetPrivateSaleConsent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(resetConsentRequestBody),
       });
 
       const payload = await response.json().catch(() => ({}));
@@ -337,7 +347,14 @@ export default function P2PAgentStoreMemberManagementPage() {
     } finally {
       setResettingConsentMemberId(null);
     }
-  }, [loadData, resettingConsentMemberId, selectedStorecode]);
+  }, [
+    agentcode,
+    buildSignedRequestBody,
+    connectedWalletAddress,
+    loadData,
+    resettingConsentMemberId,
+    selectedStorecode,
+  ]);
 
   const readMemberWalletBalance = useCallback(async (walletAddress: string) => {
     const normalizedWalletAddress = String(walletAddress || '').trim();

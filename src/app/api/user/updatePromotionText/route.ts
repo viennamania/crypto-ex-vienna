@@ -1,43 +1,59 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from 'next/server';
 
-import {
-  updatePromotionText,
-} from '@lib/api/user';
+import { updatePromotionText } from '@lib/api/user';
+import { getRoleForWalletAddress, verifyWalletAuthFromBody } from '@/lib/security/requestAuth';
+import { isWalletAddress } from '@/lib/security/walletSignature';
 
-
-import {
-  createThirdwebClient,
-} from "thirdweb";
-
-import {
-  polygon,
- } from "thirdweb/chains";
-
-import {
-  privateKeyToAccount,
-  smartWallet,
- } from "thirdweb/wallets";
-
- import { ethers } from "ethers";
-
-
-
+const toText = (value: unknown) => String(value ?? '').trim();
 
 export async function POST(request: NextRequest) {
+  const bodyRaw = await request.json().catch(() => ({}));
+  const body =
+    bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+      ? (bodyRaw as Record<string, unknown>)
+      : {};
 
-  const body = await request.json();
+  const storecode = toText(body.storecode);
+  const requestedWalletAddress = toText(body.walletAddress);
+  const promotionText = toText(body.promotionText);
 
-  const { storecode, walletAddress, promotionText } = body;
-
-  //console.log('updateSellerUsdtToKrwRate body:', body);
-
-
-  const result = await updatePromotionText({
-    storecode: storecode,
-    walletAddress: walletAddress,
-    promotionText: promotionText,
+  const signatureAuth = await verifyWalletAuthFromBody({
+    body,
+    path: '/api/user/updatePromotionText',
+    method: 'POST',
+    storecode,
+    consumeNonceValue: true,
   });
 
+  if (signatureAuth.ok === false) {
+    return signatureAuth.response;
+  }
+
+  let walletAddress = requestedWalletAddress;
+  if (signatureAuth.ok === true) {
+    const requester = await getRoleForWalletAddress({
+      storecode,
+      walletAddress: signatureAuth.walletAddress,
+    });
+    walletAddress = toText(requester?.walletAddress) || signatureAuth.walletAddress;
+  }
+
+  if (!isWalletAddress(walletAddress)) {
+    return NextResponse.json(
+      {
+        error: 'walletAddress is invalid.',
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  const result = await updatePromotionText({
+    storecode,
+    walletAddress,
+    promotionText,
+  });
 
   return NextResponse.json({
     result,

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { ObjectId } from 'mongodb';
 import { pickFirstPublicIpAddress, normalizeIpAddress } from '@/lib/ip-address';
 import clientPromise, { dbName } from '@/lib/mongodb';
+import { verifyWalletAuthFromBody } from '@/lib/security/requestAuth';
 import {
   BUYER_CONSENT_KEYWORD,
   buildBuyerConsentRequestMessage,
@@ -742,8 +743,39 @@ const handleLiveProgressResponse = (
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json().catch(() => ({}));
+    const bodyRaw = await request.json().catch(() => ({}));
+    const body =
+      bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+        ? (bodyRaw as Record<string, unknown>)
+        : {};
     const payload = parseRequestPayload(body, request);
+
+    const signatureAuth = await verifyWalletAuthFromBody({
+      body,
+      path: '/api/order/buyOrderPrivateSale',
+      method: 'POST',
+      storecode: payload.storecode || 'admin',
+      consumeNonceValue: true,
+    });
+
+    if (signatureAuth.ok === false) {
+      return signatureAuth.response;
+    }
+
+    if (signatureAuth.ok === true) {
+      if (
+        payload.buyerWalletAddress &&
+        payload.buyerWalletAddress.toLowerCase() !== signatureAuth.walletAddress
+      ) {
+        return NextResponse.json(
+          {
+            error: 'buyerWalletAddress must match the signed wallet.',
+          },
+          { status: 403 },
+        );
+      }
+      payload.buyerWalletAddress = signatureAuth.walletAddress;
+    }
 
     if (payload.liveProgress) {
       return handleLiveProgressResponse(payload);

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useSmartAccountAuth } from '../../../_useSmartAccountAuth';
 
 type SellerCandidate = {
   id: string;
@@ -96,6 +97,7 @@ export default function AgentStoreSellerSettingsPage() {
     ? (storecodeParam[0] || '').trim()
     : String(storecodeParam || '').trim();
   const agentcode = String(searchParams?.get('agentcode') || '').trim();
+  const { connectedWalletAddress, buildSignedRequestBody } = useSmartAccountAuth(agentcode || 'admin');
   const backHref = `/${lang}/p2p/agent-management/store-management${agentcode ? `?agentcode=${encodeURIComponent(agentcode)}` : ''}`;
 
   const [storeName, setStoreName] = useState('');
@@ -186,17 +188,30 @@ export default function AgentStoreSellerSettingsPage() {
       setLoadingSelectedSellers(false);
       return;
     }
+    if (!connectedWalletAddress) {
+      setSelectedSellersError('스마트 지갑을 먼저 연결해 주세요.');
+      setSelectedSellerWallets([]);
+      setLoadingSelectedSellers(false);
+      return;
+    }
 
     setLoadingSelectedSellers(true);
     setSelectedSellersError(null);
     try {
+      const loadStoreSellersRequestBody = await buildSignedRequestBody({
+        path: '/api/store/manageStoreSellers',
+        storecode,
+        payload: {
+          action: 'get',
+          storecode,
+          requesterWalletAddress: connectedWalletAddress,
+        },
+      });
+
       const response = await fetch('/api/store/manageStoreSellers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'get',
-          storecode,
-        }),
+        body: JSON.stringify(loadStoreSellersRequestBody),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -212,7 +227,7 @@ export default function AgentStoreSellerSettingsPage() {
     } finally {
       setLoadingSelectedSellers(false);
     }
-  }, [storecode]);
+  }, [buildSignedRequestBody, connectedWalletAddress, storecode]);
 
   const loadCandidateSellers = useCallback(async () => {
     setLoadingCandidateSellers(true);
@@ -292,18 +307,29 @@ export default function AgentStoreSellerSettingsPage() {
 
   const addSellerToStore = useCallback(async (walletAddress: string) => {
     if (!storecode || !isWalletAddress(walletAddress)) return;
+    if (!connectedWalletAddress) {
+      toast.error('스마트 지갑을 먼저 연결해 주세요.');
+      return;
+    }
     const key = walletAddress.toLowerCase();
     setBusyWalletMap((prev) => ({ ...prev, [key]: true }));
 
     try {
-      const response = await fetch('/api/store/manageStoreSellers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const addStoreSellerRequestBody = await buildSignedRequestBody({
+        path: '/api/store/manageStoreSellers',
+        storecode,
+        payload: {
           action: 'add',
           storecode,
           walletAddress,
-        }),
+          requesterWalletAddress: connectedWalletAddress,
+        },
+      });
+
+      const response = await fetch('/api/store/manageStoreSellers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(addStoreSellerRequestBody),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -319,22 +345,33 @@ export default function AgentStoreSellerSettingsPage() {
     } finally {
       setBusyWalletMap((prev) => ({ ...prev, [key]: false }));
     }
-  }, [storecode]);
+  }, [buildSignedRequestBody, connectedWalletAddress, storecode]);
 
   const removeSellerFromStore = useCallback(async (walletAddress: string) => {
     if (!storecode || !isWalletAddress(walletAddress)) return;
+    if (!connectedWalletAddress) {
+      toast.error('스마트 지갑을 먼저 연결해 주세요.');
+      return;
+    }
     const key = walletAddress.toLowerCase();
     setBusyWalletMap((prev) => ({ ...prev, [key]: true }));
 
     try {
-      const response = await fetch('/api/store/manageStoreSellers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const removeStoreSellerRequestBody = await buildSignedRequestBody({
+        path: '/api/store/manageStoreSellers',
+        storecode,
+        payload: {
           action: 'remove',
           storecode,
           walletAddress,
-        }),
+          requesterWalletAddress: connectedWalletAddress,
+        },
+      });
+
+      const response = await fetch('/api/store/manageStoreSellers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(removeStoreSellerRequestBody),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -350,7 +387,7 @@ export default function AgentStoreSellerSettingsPage() {
     } finally {
       setBusyWalletMap((prev) => ({ ...prev, [key]: false }));
     }
-  }, [storecode]);
+  }, [buildSignedRequestBody, connectedWalletAddress, storecode]);
 
   const refreshAll = useCallback(async () => {
     setRefreshing(true);

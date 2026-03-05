@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { completePrivateBuyOrderBySeller } from '@lib/api/order';
+import { getRoleForWalletAddress, verifyWalletAuthFromBody } from '@/lib/security/requestAuth';
+import { isWalletAddress } from '@/lib/security/walletSignature';
 
 const toText = (value: unknown) => String(value ?? '').trim();
 
@@ -14,15 +16,43 @@ const getClientIp = (request: NextRequest) => {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json().catch(() => ({}));
+    const bodyRaw = await request.json().catch(() => ({}));
+    const body =
+      bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+        ? (bodyRaw as Record<string, unknown>)
+        : {};
+
+    const signatureAuth = await verifyWalletAuthFromBody({
+      body,
+      path: '/api/order/completePrivateBuyOrderBySeller',
+      method: 'POST',
+      storecode: 'admin',
+      consumeNonceValue: true,
+    });
+
+    if (signatureAuth.ok !== true) {
+      if (signatureAuth.ok === false) {
+        return signatureAuth.response;
+      }
+      return NextResponse.json(
+        { error: 'wallet signature is required.' },
+        { status: 401 },
+      );
+    }
+
+    const requester = await getRoleForWalletAddress({
+      storecode: 'admin',
+      walletAddress: signatureAuth.walletAddress,
+    });
+
+    const sellerWalletAddress =
+      toText(requester?.walletAddress) || signatureAuth.walletAddress;
     const orderId =
       typeof body?.orderId === 'string' ? body.orderId.trim() : '';
-    const sellerWalletAddress =
-      typeof body?.sellerWalletAddress === 'string' ? body.sellerWalletAddress.trim() : '';
     const publicIpAddress =
       typeof body?.publicIpAddress === 'string' ? body.publicIpAddress.trim() : '';
 
-    if (!orderId || !sellerWalletAddress) {
+    if (!orderId || !sellerWalletAddress || !isWalletAddress(sellerWalletAddress)) {
       return NextResponse.json(
         { error: 'orderId and sellerWalletAddress are required.' },
         { status: 400 },

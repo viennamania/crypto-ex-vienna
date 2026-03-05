@@ -9,6 +9,9 @@ import {
 	insertOne,
   updateOne,
 } from '@lib/api/user';
+import { evaluateRateLimit } from '@/lib/security/rateLimit';
+import { getRequesterIpAddress, verifyWalletAuthFromBody } from '@/lib/security/requestAuth';
+import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSignature';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +24,7 @@ const SENDBIRD_API_BASE = `https://api-${NEXT_PUBLIC_SENDBIRD_APP_ID}.sendbird.c
 const DEFAULT_AVATAR_SOURCE = '/profile-default.png';
 const DEFAULT_AVATAR_BLOB_URL = process.env.DEFAULT_AVATAR_BLOB_URL || '';
 let cachedDefaultAvatarUrl: string | null = DEFAULT_AVATAR_BLOB_URL || null;
+const toText = (value: unknown) => String(value ?? '').trim();
 
 const generateAvatarUrl = async () => {
   if (!OPENAI_API_KEY) {
@@ -182,10 +186,81 @@ const getDefaultAvatarUrl = async () => {
 };
 
 export async function POST(request: NextRequest) {
+  const bodyRaw = await request.json().catch(() => ({}));
+  const body =
+    bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+      ? (bodyRaw as Record<string, unknown>)
+      : {};
 
-  const body = await request.json();
+  const storecode = toText(body.storecode);
+  const requestedWalletAddress = normalizeWalletAddress(body.walletAddress);
+  const nickname = toText(body.nickname);
+  const mobile = toText(body.mobile);
+  const avatar = toText(body.avatar);
+  const ipAddress = getRequesterIpAddress(request) || 'unknown';
 
-  const { storecode, walletAddress, nickname, mobile, avatar } = body;
+  const rate = evaluateRateLimit({
+    key: `api:user:setUser:${ipAddress}:${requestedWalletAddress || 'unknown'}`,
+    limit: 20,
+    windowMs: 60_000,
+  });
+
+  if (!rate.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Too many requests',
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.max(Math.ceil(rate.retryAfterMs / 1000), 1)),
+        },
+      },
+    );
+  }
+
+  const signatureAuth = await verifyWalletAuthFromBody({
+    body,
+    path: '/api/user/setUser',
+    method: 'POST',
+    storecode,
+    consumeNonceValue: true,
+  });
+
+  if (signatureAuth.ok === false) {
+    return signatureAuth.response;
+  }
+
+  const walletAddress =
+    signatureAuth.ok === true
+      ? signatureAuth.walletAddress
+      : requestedWalletAddress;
+
+  if (!isWalletAddress(walletAddress)) {
+    return NextResponse.json(
+      {
+        error: 'walletAddress is invalid.',
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  if (
+    signatureAuth.ok === true &&
+    requestedWalletAddress &&
+    requestedWalletAddress !== signatureAuth.walletAddress
+  ) {
+    return NextResponse.json(
+      {
+        error: 'walletAddress must match the signed wallet.',
+      },
+      {
+        status: 403,
+      },
+    );
+  }
 
   console.log("storecode", storecode);
   console.log("walletAddress", walletAddress);
@@ -238,8 +313,8 @@ export async function POST(request: NextRequest) {
   };
 
   const avatarUrl =
-    typeof avatar === 'string' && avatar.trim()
-      ? avatar.trim()
+    avatar
+      ? avatar
       : await generateAvatarUrl();
   const finalAvatarUrl = avatarUrl || (await getDefaultAvatarUrl());
 

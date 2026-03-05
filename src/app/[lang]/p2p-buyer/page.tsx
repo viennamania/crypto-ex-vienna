@@ -59,7 +59,7 @@ export default function P2PBuyerPage() {
   const activeAccount = useActiveAccount();
   const activeWallet = useActiveWallet();
   const address =
-    activeAccount?.address ?? activeWallet?.getAccount?.()?.address ?? '';
+    activeWallet?.getAccount?.()?.address ?? activeAccount?.address ?? '';
   const isLoggedIn = Boolean(address);
   const { wallets } = useClientWallets();
 

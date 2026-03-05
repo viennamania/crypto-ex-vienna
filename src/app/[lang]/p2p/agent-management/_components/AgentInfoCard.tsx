@@ -4,6 +4,7 @@ import { type ChangeEvent, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 
 import { shortAddress, type AgentSummary } from '../_shared';
+import { useSmartAccountAuth } from '../_useSmartAccountAuth';
 
 type AgentInfoCardProps = {
   agent: AgentSummary | null;
@@ -34,6 +35,8 @@ export default function AgentInfoCard({
   editable = false,
   onUpdated,
 }: AgentInfoCardProps) {
+  const authStorecode = String(agent?.agentcode || fallbackAgentcode || '').trim() || 'admin';
+  const { connectedWalletAddress, buildSignedRequestBody } = useSmartAccountAuth(authStorecode);
   const displayName = agent?.agentName || fallbackAgentcode || '-';
   const displayCode = agent?.agentcode || fallbackAgentcode || '-';
   const displayDescription = String(agent?.agentDescription || '').trim() || '등록된 설명이 없습니다.';
@@ -140,26 +143,44 @@ export default function AgentInfoCard({
 
       let updated = false;
       if (nextName !== currentName) {
-        await postJson('/api/agent/setAgentName', {
-          agentcode: normalizedAgentcode,
-          agentName: nextName,
+        const setAgentNameRequestBody = await buildSignedRequestBody({
+          path: '/api/agent/setAgentName',
+          storecode: normalizedAgentcode,
+          payload: {
+            agentcode: normalizedAgentcode,
+            agentName: nextName,
+            requesterWalletAddress: connectedWalletAddress,
+          },
         });
+        await postJson('/api/agent/setAgentName', setAgentNameRequestBody);
         updated = true;
       }
 
       if (nextDescription !== currentDescription) {
-        await postJson('/api/agent/setAgentDescription', {
-          agentcode: normalizedAgentcode,
-          agentDescription: nextDescription,
+        const setAgentDescriptionRequestBody = await buildSignedRequestBody({
+          path: '/api/agent/setAgentDescription',
+          storecode: normalizedAgentcode,
+          payload: {
+            agentcode: normalizedAgentcode,
+            agentDescription: nextDescription,
+            requesterWalletAddress: connectedWalletAddress,
+          },
         });
+        await postJson('/api/agent/setAgentDescription', setAgentDescriptionRequestBody);
         updated = true;
       }
 
       if (nextLogo !== currentLogo) {
-        await postJson('/api/agent/setAgentLogo', {
-          agentcode: normalizedAgentcode,
-          agentLogo: nextLogo,
+        const setAgentLogoRequestBody = await buildSignedRequestBody({
+          path: '/api/agent/setAgentLogo',
+          storecode: normalizedAgentcode,
+          payload: {
+            agentcode: normalizedAgentcode,
+            agentLogo: nextLogo,
+            requesterWalletAddress: connectedWalletAddress,
+          },
         });
+        await postJson('/api/agent/setAgentLogo', setAgentLogoRequestBody);
         updated = true;
       }
 

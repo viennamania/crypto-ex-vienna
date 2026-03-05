@@ -36,6 +36,7 @@ import {
 } from "thirdweb/wallets";
 
 import { getUserPhoneNumber } from "thirdweb/wallets/in-app";
+import { createWalletSignatureAuthPayload } from "@/lib/security/walletSignature";
 
 
 import Image from 'next/image';
@@ -287,6 +288,33 @@ export default function SettingsPage({ params }: any) {
 
     const address = smartAccount?.address;
 
+    const buildSignedRequestBody = async ({
+      path,
+      payload,
+    }: {
+      path: string;
+      payload: Record<string, unknown>;
+    }) => {
+      const auth = await createWalletSignatureAuthPayload({
+        account: smartAccount as unknown as {
+          address?: string;
+          signMessage?: (options: {
+            message: string;
+            originalMessage?: string;
+            chainId?: number;
+          }) => Promise<string>;
+        },
+        storecode,
+        path,
+        method: 'POST',
+      });
+
+      return {
+        ...payload,
+        auth,
+      };
+    };
+
       
  
 
@@ -463,20 +491,27 @@ export default function SettingsPage({ params }: any) {
 
         if (nicknameEdit) {
 
+            let requestBody: Record<string, unknown>;
+            try {
+                requestBody = await buildSignedRequestBody({
+                    path: '/api/user/updateUser',
+                    payload: {
+                        storecode: storecode,
+                        walletAddress: address,
+                        nickname: editedNickname,
+                    },
+                });
+            } catch (error) {
+                toast.error('지갑 서명에 실패했습니다');
+                return;
+            }
 
             const response = await fetch("/api/user/updateUser", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({
-                    storecode: storecode,
-                    walletAddress: address,
-                    
-                    //nickname: nickname,
-                    nickname: editedNickname,
-
-                }),
+                body: JSON.stringify(requestBody),
             });
 
             const data = await response.json();
@@ -501,21 +536,29 @@ export default function SettingsPage({ params }: any) {
 
         } else {
 
+            let requestBody: Record<string, unknown>;
+            try {
+                requestBody = await buildSignedRequestBody({
+                    path: '/api/user/setUserVerified',
+                    payload: {
+                        lang: params.lang,
+                        storecode: storecode,
+                        walletAddress: address,
+                        nickname: editedNickname,
+                        mobile: phoneNumber,
+                    },
+                });
+            } catch (error) {
+                toast.error('지갑 서명에 실패했습니다');
+                return;
+            }
+
             const response = await fetch("/api/user/setUserVerified", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({
-                    lang: params.lang,
-                    storecode: storecode,
-                    walletAddress: address,
-                    
-                    //nickname: nickname,
-                    nickname: editedNickname,
-
-                    mobile: phoneNumber,
-                }),
+                body: JSON.stringify(requestBody),
             });
 
             const data = await response.json();
@@ -593,19 +636,24 @@ export default function SettingsPage({ params }: any) {
           console.log(transactionResult);
             */
   
-          await fetch('/api/user/updateSeller', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+          const updateSellerRequestBody = await buildSignedRequestBody({
+            path: '/api/user/updateSeller',
+            payload: {
                 storecode: storecode,
                 walletAddress: address,
                 sellerStatus: 'confirmed',
                 bankName: bankName,
                 accountNumber: accountNumber,
                 accountHolder: accountHolder,
-            }),
+            },
+          });
+
+          await fetch('/api/user/updateSeller', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updateSellerRequestBody),
           });
           
 

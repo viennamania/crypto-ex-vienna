@@ -1,12 +1,17 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from 'next/server';
 import { put } from '@vercel/blob';
 import { customAlphabet } from 'nanoid';
 import { readFile } from 'fs/promises';
 import path from 'path';
 
+import { insertOneVerified } from '@lib/api/user';
+import { evaluateRateLimit } from '@/lib/security/rateLimit';
 import {
-	insertOneVerified,
-} from '@lib/api/user';
+  getRequesterIpAddress,
+  getRoleForWalletAddress,
+  verifyWalletAuthFromBody,
+} from '@/lib/security/requestAuth';
+import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSignature';
 
 export const runtime = 'nodejs';
 
@@ -17,6 +22,9 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const DEFAULT_AVATAR_SOURCE = '/profile-default.png';
 const DEFAULT_AVATAR_BLOB_URL = process.env.DEFAULT_AVATAR_BLOB_URL || '';
 let cachedDefaultAvatarUrl: string | null = DEFAULT_AVATAR_BLOB_URL || null;
+
+const toText = (value: unknown) => String(value ?? '').trim();
+const isAdminStorecode = (storecode: string) => storecode.toLowerCase() === 'admin';
 
 const generateAvatarUrl = async () => {
   if (!OPENAI_API_KEY) {
@@ -122,35 +130,117 @@ const getDefaultAvatarUrl = async () => {
   }
 };
 
-
 export async function POST(request: NextRequest) {
+  const bodyRaw = await request.json().catch(() => ({}));
+  const body =
+    bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+      ? (bodyRaw as Record<string, unknown>)
+      : {};
 
-  const body = await request.json();
+  const storecode = toText(body.storecode);
+  const nickname = toText(body.nickname);
+  const mobile = toText(body.mobile);
+  const email = toText(body.email);
+  const telegramId = toText(body.telegramId);
+  const requestedWalletAddress = normalizeWalletAddress(body.walletAddress);
 
-  const { storecode, walletAddress, nickname, mobile, email, telegramId, avatar } = body;
+  const ipAddress = getRequesterIpAddress(request) || 'unknown';
+  const rate = evaluateRateLimit({
+    key: `api:user:setUserVerified:${ipAddress}:${requestedWalletAddress || 'unknown'}`,
+    limit: 8,
+    windowMs: 60_000,
+  });
+
+  if (!rate.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Too many requests',
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.max(Math.ceil(rate.retryAfterMs / 1000), 1)),
+        },
+      },
+    );
+  }
+
+  const signatureAuth = await verifyWalletAuthFromBody({
+    body,
+    path: '/api/user/setUserVerified',
+    method: 'POST',
+    storecode,
+    consumeNonceValue: true,
+  });
+
+  if (signatureAuth.ok === false) {
+    return signatureAuth.response;
+  }
+
+  const walletAddress =
+    signatureAuth.ok === true
+      ? signatureAuth.walletAddress
+      : requestedWalletAddress;
+
+  if (!isWalletAddress(walletAddress)) {
+    return NextResponse.json(
+      {
+        error: 'walletAddress is invalid.',
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  if (isAdminStorecode(storecode)) {
+    if (signatureAuth.ok !== true) {
+      return NextResponse.json(
+        {
+          error: 'wallet signature is required for admin storecode.',
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+    const requester = await getRoleForWalletAddress({
+      storecode,
+      walletAddress,
+    });
+
+    if (!requester || requester.role !== 'admin') {
+      return NextResponse.json(
+        {
+          error: 'Only admin can create admin profile.',
+        },
+        {
+          status: 403,
+        },
+      );
+    }
+  }
+
+  const avatarFromBody = typeof body.avatar === 'string' ? body.avatar : '';
 
   const avatarUrl =
-    typeof avatar === 'string' && avatar.trim()
-      ? avatar.trim()
+    avatarFromBody.trim()
+      ? avatarFromBody.trim()
       : await generateAvatarUrl();
   const finalAvatarUrl = avatarUrl || (await getDefaultAvatarUrl());
 
   const result = await insertOneVerified({
-    storecode: storecode,
-    walletAddress: walletAddress,
-    nickname: nickname,
-    mobile: mobile,
-    email: email,
-    telegramId: telegramId,
+    storecode,
+    walletAddress,
+    nickname,
+    mobile,
+    email,
+    telegramId,
     avatar: finalAvatarUrl,
   });
 
-
- 
   return NextResponse.json({
-    
     result,
-    
   });
-  
 }

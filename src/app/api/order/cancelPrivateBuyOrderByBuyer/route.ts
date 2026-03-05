@@ -3,6 +3,7 @@ import {
   cancelPrivateBuyOrderByBuyer,
   type CancelPrivateBuyOrderByBuyerProgressEvent,
 } from '@lib/api/order';
+import { verifyWalletAuthFromBody } from '@/lib/security/requestAuth';
 
 const toText = (value: unknown) => String(value ?? '').trim();
 
@@ -240,8 +241,41 @@ const handleLiveProgressResponse = (
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json().catch(() => ({}));
+    const bodyRaw = await request.json().catch(() => ({}));
+    const body =
+      bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+        ? (bodyRaw as Record<string, unknown>)
+        : {};
     const payload = parseRequestPayload(body, request);
+    const storecode =
+      typeof body?.storecode === 'string' ? body.storecode.trim() : 'admin';
+
+    const signatureAuth = await verifyWalletAuthFromBody({
+      body,
+      path: '/api/order/cancelPrivateBuyOrderByBuyer',
+      method: 'POST',
+      storecode: storecode || 'admin',
+      consumeNonceValue: true,
+    });
+
+    if (signatureAuth.ok === false) {
+      return signatureAuth.response;
+    }
+
+    if (signatureAuth.ok === true) {
+      if (
+        payload.buyerWalletAddress &&
+        payload.buyerWalletAddress.toLowerCase() !== signatureAuth.walletAddress
+      ) {
+        return NextResponse.json(
+          {
+            error: 'buyerWalletAddress must match the signed wallet.',
+          },
+          { status: 403 },
+        );
+      }
+      payload.buyerWalletAddress = signatureAuth.walletAddress;
+    }
 
     if (payload.liveProgress) {
       return handleLiveProgressResponse(payload);

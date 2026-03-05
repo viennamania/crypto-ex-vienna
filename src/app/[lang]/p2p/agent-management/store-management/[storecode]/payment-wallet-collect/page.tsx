@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { useActiveAccount } from 'thirdweb/react';
 
 import AgentInfoCard from '../../../_components/AgentInfoCard';
+import { useSmartAccountAuth } from '../../../_useSmartAccountAuth';
 import {
   fetchAgentSummary,
   shortAddress,
@@ -104,13 +104,12 @@ const normalizeCollectHistoryItem = (value: unknown): CollectHistoryItem => {
 const isFinalCollectStatus = (status: string) => status === 'CONFIRMED' || status === 'FAILED';
 
 export default function P2PAgentStorePaymentWalletCollectPage() {
-  const activeAccount = useActiveAccount();
   const params = useParams<{ lang: string; storecode: string }>();
   const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang || 'ko';
   const storecode = Array.isArray(params?.storecode) ? params.storecode[0] : params?.storecode || '';
   const searchParams = useSearchParams();
   const agentcode = String(searchParams?.get('agentcode') || '').trim();
-  const connectedWalletAddress = String(activeAccount?.address || '').trim();
+  const { connectedWalletAddress, buildSignedRequestBody } = useSmartAccountAuth(agentcode || 'admin');
 
   const [selectedChain, setSelectedChain] = useState<CollectChain>('polygon');
   const [loading, setLoading] = useState(false);
@@ -142,10 +141,16 @@ export default function P2PAgentStorePaymentWalletCollectPage() {
   }, [agentcode, lang]);
 
   const postPaymentWalletApi = useCallback(async (body: Record<string, unknown>) => {
+    const signedRequestBody = await buildSignedRequestBody({
+      path: '/api/wallet/payment-usdt',
+      storecode: storecode || agentcode || 'admin',
+      payload: body,
+    });
+
     const response = await fetch('/api/wallet/payment-usdt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(signedRequestBody),
     });
 
     const payload = await response.json().catch(() => ({}));
@@ -153,7 +158,7 @@ export default function P2PAgentStorePaymentWalletCollectPage() {
       throw new Error(String((payload as Record<string, unknown>)?.error || '요청에 실패했습니다.'));
     }
     return payload as Record<string, unknown>;
-  }, []);
+  }, [agentcode, buildSignedRequestBody, storecode]);
 
   const animateBalanceTo = useCallback((targetBalance: number) => {
     if (animationFrameRef.current !== null) {

@@ -4,10 +4,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { useActiveAccount } from 'thirdweb/react';
 import { toast } from 'react-hot-toast';
 
 import AgentInfoCard from '../_components/AgentInfoCard';
+import { useSmartAccountAuth } from '../_useSmartAccountAuth';
 import {
   fetchAgentSummary,
   fetchStoresByAgent,
@@ -62,7 +62,7 @@ export default function P2PAgentStoreManagementPage() {
   const lang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang || 'ko';
   const searchParams = useSearchParams();
   const agentcode = String(searchParams?.get('agentcode') || '').trim();
-  const activeAccount = useActiveAccount();
+  const { activeAccount, buildSignedRequestBody } = useSmartAccountAuth(agentcode || 'admin');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -447,10 +447,11 @@ export default function P2PAgentStoreManagementPage() {
     setStoreNotice(null);
 
     try {
-      const response = await fetch('/api/store/setStore', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const createStoreRequestBody = await buildSignedRequestBody({
+        path: '/api/store/setStore',
+        storecode: resolvedAgentcode,
+        payload: {
+          requesterWalletAddress: String(activeAccount?.address || '').trim(),
           agentcode: resolvedAgentcode,
           storeName,
           storeType: 'store',
@@ -458,7 +459,12 @@ export default function P2PAgentStoreManagementPage() {
           storeDescription,
           storeLogo,
           storeBanner,
-        }),
+        },
+      });
+      const response = await fetch('/api/store/setStore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createStoreRequestBody),
       });
 
       const payload = await response.json().catch(() => ({}));
@@ -487,6 +493,8 @@ export default function P2PAgentStoreManagementPage() {
       setCreatingStore(false);
     }
   }, [
+    activeAccount?.address,
+    buildSignedRequestBody,
     agent?.agentcode,
     agentcode,
     createForm.storeBanner,
@@ -536,17 +544,23 @@ export default function P2PAgentStoreManagementPage() {
     setRateError(null);
     setRateNotice(null);
     try {
-      const response = await fetch('/api/store/updateStoreUsdtToKrwRate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const updateRateRequestBody = await buildSignedRequestBody({
+        path: '/api/store/updateStoreUsdtToKrwRate',
+        storecode: rateModalStore.storecode,
+        payload: {
           storecode: rateModalStore.storecode,
           usdtToKrwRate: nextRate,
           changedByWalletAddress: String(
             activeAccount?.address || agent?.adminWalletAddress || '',
           ).trim(),
           changedByName: String(agent?.agentName || agent?.agentcode || '').trim(),
-        }),
+          requesterWalletAddress: String(activeAccount?.address || '').trim(),
+        },
+      });
+      const response = await fetch('/api/store/updateStoreUsdtToKrwRate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateRateRequestBody),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || payload?.result !== true) {
@@ -585,6 +599,7 @@ export default function P2PAgentStoreManagementPage() {
     agent?.adminWalletAddress,
     agent?.agentName,
     agent?.agentcode,
+    buildSignedRequestBody,
     rateInput,
     loadStoreRateHistory,
     rateModalStore,

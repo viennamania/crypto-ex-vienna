@@ -3,6 +3,9 @@ import { randomUUID } from "crypto";
 
 import clientPromise from "@/lib/mongodb";
 import { dbName } from "@/lib/mongodb";
+import { evaluateRateLimit } from '@/lib/security/rateLimit';
+import { getRequesterIpAddress, verifyWalletAuthFromBody } from '@/lib/security/requestAuth';
+import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSignature';
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const shortWallet = (value: string) => {
@@ -15,14 +18,75 @@ const makeRequestId = () => `linkWallet:${randomUUID().slice(0, 8)}`;
 
 export async function POST(request: NextRequest) {
   const requestId = makeRequestId();
-  const body = await request.json().catch(() => ({}));
+  const bodyRaw = await request.json().catch(() => ({}));
+  const body =
+    bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+      ? (bodyRaw as Record<string, unknown>)
+      : {};
 
   const storecode = String(body?.storecode || "").trim();
   const nickname = String(body?.nickname || "").trim();
   const password = String(body?.password || "").trim();
-  const walletAddress = String(body?.walletAddress || "").trim();
+  const requestedWalletAddress = normalizeWalletAddress(body?.walletAddress);
+  const ipAddress = getRequesterIpAddress(request) || 'unknown';
+  const rate = evaluateRateLimit({
+    key: `api:user:linkWalletByStorecodeNicknamePassword:${ipAddress}:${requestedWalletAddress || 'unknown'}`,
+    limit: 15,
+    windowMs: 60_000,
+  });
+
+  if (!rate.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Too many requests',
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.max(Math.ceil(rate.retryAfterMs / 1000), 1)),
+        },
+      },
+    );
+  }
+
+  const signatureAuth = await verifyWalletAuthFromBody({
+    body,
+    path: '/api/user/linkWalletByStorecodeNicknamePassword',
+    method: 'POST',
+    storecode,
+    consumeNonceValue: true,
+  });
+
+  if (signatureAuth.ok === false) {
+    return signatureAuth.response;
+  }
+
+  const walletAddress =
+    signatureAuth.ok === true
+      ? signatureAuth.walletAddress
+      : requestedWalletAddress;
   const mobile = String(body?.mobile || "").trim();
   const depositName = String(body?.depositName || "").trim();
+
+  if (!isWalletAddress(walletAddress)) {
+    return NextResponse.json(
+      { error: 'walletAddress is invalid.' },
+      { status: 400 },
+    );
+  }
+
+  if (
+    signatureAuth.ok === true &&
+    requestedWalletAddress &&
+    requestedWalletAddress !== signatureAuth.walletAddress
+  ) {
+    return NextResponse.json(
+      {
+        error: 'walletAddress must match the signed wallet.',
+      },
+      { status: 403 },
+    );
+  }
 
   console.log(`[${requestId}] request_received`, {
     storecode,

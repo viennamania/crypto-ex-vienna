@@ -28,7 +28,7 @@ export default function BuyerSettingsPage() {
   const activeAccount = useActiveAccount();
   const activeWallet = useActiveWallet();
   const address =
-    activeAccount?.address ?? activeWallet?.getAccount?.()?.address ?? '';
+    activeWallet?.getAccount?.()?.address ?? activeAccount?.address ?? '';
   const { wallets } = useClientWallets();
 
   const [loading, setLoading] = useState(false);

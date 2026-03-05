@@ -171,7 +171,9 @@ export default function P2PAgentManagementLayout({ children }: { children: React
   const agentQuery = agentcode ? `?agentcode=${encodeURIComponent(agentcode)}` : '';
   const p2pHomeHref = `/${lang}/p2p${agentQuery}`;
   const paymentManagementHref = `/${lang}/p2p/agent-management/payment-management${agentQuery}`;
-  const connectedWalletAddress = String(activeAccount?.address || '').trim();
+  const connectedWalletAddress = String(
+    activeWallet?.getAccount?.()?.address || activeAccount?.address || '',
+  ).trim();
   const [agentAdminWalletAddress, setAgentAdminWalletAddress] = useState('');
   const [checkingAgentAccess, setCheckingAgentAccess] = useState(false);
   const [agentAccessError, setAgentAccessError] = useState<string | null>(null);

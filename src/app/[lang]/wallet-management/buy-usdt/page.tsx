@@ -8,7 +8,7 @@ import { toast } from 'react-hot-toast';
 import { getContract } from 'thirdweb';
 import { balanceOf } from 'thirdweb/extensions/erc20';
 import { ethereum, polygon, arbitrum, bsc, type Chain } from 'thirdweb/chains';
-import { AutoConnect, useActiveAccount } from 'thirdweb/react';
+import { AutoConnect, useActiveAccount, useActiveWallet, useConnectedWallets } from 'thirdweb/react';
 import { getUserPhoneNumber } from 'thirdweb/wallets/in-app';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
@@ -16,6 +16,7 @@ import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 import { client } from '@/app/client';
 import { useClientWallets } from '@/lib/useClientWallets';
 import { useClientSettings } from '@/components/ClientSettingsProvider';
+import { createWalletSignatureAuthPayload } from '@/lib/security/walletSignature';
 import WalletConnectPrompt from '@/components/wallet-management/WalletConnectPrompt';
 import WalletSummaryCard from '@/components/wallet-management/WalletSummaryCard';
 import WalletManagementBottomNav from '@/components/wallet-management/WalletManagementBottomNav';
@@ -855,12 +856,69 @@ export default function BuyUsdtPage({
   }, [lang, storecode]);
 
   const { chain } = useClientSettings();
-  const activeAccount = useActiveAccount();
+  const rawActiveAccount = useActiveAccount();
+  const activeWallet = useActiveWallet();
+  const connectedWallets = useConnectedWallets();
+  const activeAccount = activeWallet?.getAccount?.() ?? rawActiveAccount;
   const { wallet, wallets, smartAccountEnabled } = useClientWallets({
     authOptions: WALLET_AUTH_OPTIONS,
     sponsorGas: true,
     defaultSmsCountryCode: 'KR',
   });
+  const signatureAccount = useMemo(() => {
+    const candidates: Array<unknown> = [
+      activeWallet?.getAccount?.(),
+      activeAccount,
+      activeWallet?.getAdminAccount?.(),
+    ];
+    for (const walletItem of connectedWallets) {
+      candidates.push(walletItem?.getAccount?.());
+      candidates.push(walletItem?.getAdminAccount?.());
+    }
+
+    for (const candidate of candidates) {
+      const account = candidate as {
+        address?: string;
+        signMessage?: (options: {
+          message: string;
+          originalMessage?: string;
+          chainId?: number;
+        }) => Promise<string>;
+      } | null | undefined;
+
+      if (account?.address && typeof account.signMessage === 'function') {
+        return account;
+      }
+    }
+
+    return null;
+  }, [activeAccount, activeWallet, connectedWallets]);
+  const buildSignedRequestBody = useCallback(
+    async ({
+      path,
+      payload,
+    }: {
+      path: string;
+      payload: Record<string, unknown>;
+    }) => {
+      if (!signatureAccount?.address || typeof signatureAccount?.signMessage !== 'function') {
+        throw new Error('서명 가능한 스마트 지갑을 먼저 연결해 주세요.');
+      }
+
+      const auth = await createWalletSignatureAuthPayload({
+        account: signatureAccount,
+        storecode: storecode || 'admin',
+        path,
+        method: 'POST',
+      });
+
+      return {
+        ...payload,
+        auth,
+      };
+    },
+    [signatureAccount, storecode],
+  );
 
   const activeNetwork = useMemo(
     () => NETWORK_BY_KEY[chain] ?? NETWORK_BY_KEY.polygon,
@@ -1790,15 +1848,19 @@ export default function BuyUsdtPage({
 
       const thirdwebMobile = toTrimmedString(mobileOverride);
 
-      const setUserResponse = await fetch('/api/user/setUser', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const setUserRequestBody = await buildSignedRequestBody({
+        path: '/api/user/setUser',
+        payload: {
           storecode: 'admin',
           walletAddress: activeAccount.address,
           nickname,
           ...(thirdwebMobile ? { mobile: thirdwebMobile } : {}),
-        }),
+        },
+      });
+      const setUserResponse = await fetch('/api/user/setUser', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(setUserRequestBody),
       });
       const setUserData = await setUserResponse.json().catch(() => ({}));
       if (!setUserResponse.ok || !setUserData?.result) {
@@ -1820,10 +1882,9 @@ export default function BuyUsdtPage({
           ? { ...(existingBankInfoRaw as Record<string, unknown>) }
           : {};
 
-      const updateBuyerResponse = await fetch('/api/user/updateBuyer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const updateBuyerRequestBody = await buildSignedRequestBody({
+        path: '/api/user/updateBuyer',
+        payload: {
           storecode: 'admin',
           walletAddress: activeAccount.address,
           bankName: bankName || undefined,
@@ -1843,14 +1904,25 @@ export default function BuyUsdtPage({
               ...(accountNumber ? { accountNumber } : {}),
             },
           },
-        }),
+        },
+      });
+      const updateBuyerResponse = await fetch('/api/user/updateBuyer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateBuyerRequestBody),
       });
       const updateBuyerData = await updateBuyerResponse.json().catch(() => ({}));
       if (!updateBuyerResponse.ok || !updateBuyerData?.result) {
         throw new Error(updateBuyerData?.error || '구매자 입금자명 저장에 실패했습니다.');
       }
     },
-    [activeAccount?.address, buyerProfile?.buyer, buyerProfileNickname, fallbackBuyerNickname],
+    [
+      activeAccount?.address,
+      buyerProfile?.buyer,
+      buyerProfileNickname,
+      fallbackBuyerNickname,
+      buildSignedRequestBody,
+    ],
   );
 
   const loadBuyHistory = useCallback(async () => {
@@ -2299,17 +2371,21 @@ export default function BuyUsdtPage({
         console.warn('Failed to read thirdweb phone number for store member link', phoneError);
       }
 
-      const response = await fetch('/api/user/linkWalletByStorecodeNicknamePassword', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const linkMemberRequestBody = await buildSignedRequestBody({
+        path: '/api/user/linkWalletByStorecodeNicknamePassword',
+        payload: {
           storecode,
           walletAddress: activeAccount.address,
           mobile: thirdwebMobile,
           ...(depositNameInput ? { depositName: depositNameInput } : {}),
           nickname,
           password,
-        }),
+        },
+      });
+      const response = await fetch('/api/user/linkWalletByStorecodeNicknamePassword', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(linkMemberRequestBody),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data?.error) {
@@ -2482,17 +2558,21 @@ export default function BuyUsdtPage({
     setBuyOrderProgressPhase('processing');
     setBuyOrderProgressSummary('요청 검증 단계를 처리중입니다.');
     try {
-      const response = await fetch('/api/order/buyOrderPrivateSale', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const buyOrderRequestBody = await buildSignedRequestBody({
+        path: '/api/order/buyOrderPrivateSale',
+        payload: {
           buyerWalletAddress: activeAccount.address,
           sellerWalletAddress: selectedSeller.walletAddress,
           usdtAmount: normalizedSubmitUsdtAmount,
           krwAmount: normalizedSubmitKrwAmount,
           liveProgress: true,
           ...(storecode ? { storecode } : {}),
-        }),
+        },
+      });
+      const response = await fetch('/api/order/buyOrderPrivateSale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buyOrderRequestBody),
       });
 
       let resultPayload: BuyOrderProgressResultPayload | null = null;
@@ -3111,17 +3191,22 @@ export default function BuyUsdtPage({
       const cancelledByUserAgent =
         typeof window !== 'undefined' ? String(window.navigator.userAgent || '').trim() : '';
 
-      const response = await fetch('/api/order/cancelPrivateBuyOrderByBuyer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const cancelOrderRequestBody = await buildSignedRequestBody({
+        path: '/api/order/cancelPrivateBuyOrderByBuyer',
+        payload: {
           orderId: activePrivateTradeOrder.orderId,
           buyerWalletAddress: activeAccount.address,
           sellerWalletAddress: selectedSeller.walletAddress,
           cancelledByIpAddress,
           cancelledByUserAgent,
           liveProgress: true,
-        }),
+          ...(storecode ? { storecode } : {}),
+        },
+      });
+      const response = await fetch('/api/order/cancelPrivateBuyOrderByBuyer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cancelOrderRequestBody),
       });
 
       let resultPayload: { result?: boolean } | null = null;

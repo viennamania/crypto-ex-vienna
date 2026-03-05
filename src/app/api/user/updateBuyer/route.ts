@@ -3,21 +3,92 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
     updateBuyer,
 } from '@lib/api/user';
+import { evaluateRateLimit } from '@/lib/security/rateLimit';
+import { getRequesterIpAddress, verifyWalletAuthFromBody } from '@/lib/security/requestAuth';
+import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSignature';
 
-
+const toText = (value: unknown) => String(value ?? '').trim();
 
 export async function POST(request: NextRequest) {
-
-  const body = await request.json();
+  const bodyRaw = await request.json().catch(() => ({}));
+  const body =
+    bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+      ? (bodyRaw as any)
+      : ({} as any);
 
   const {
-    storecode,
-    walletAddress,
+    storecode: rawStorecode,
     buyerStatus,
     bankName,
     accountNumber,
     accountHolder
   } = body;
+  const storecode = toText(rawStorecode);
+  const requestedWalletAddress = normalizeWalletAddress(body.walletAddress);
+  const ipAddress = getRequesterIpAddress(request) || 'unknown';
+
+  const rate = evaluateRateLimit({
+    key: `api:user:updateBuyer:${ipAddress}:${requestedWalletAddress || 'unknown'}`,
+    limit: 20,
+    windowMs: 60_000,
+  });
+
+  if (!rate.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Too many requests',
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.max(Math.ceil(rate.retryAfterMs / 1000), 1)),
+        },
+      },
+    );
+  }
+
+  const signatureAuth = await verifyWalletAuthFromBody({
+    body,
+    path: '/api/user/updateBuyer',
+    method: 'POST',
+    storecode,
+    consumeNonceValue: true,
+  });
+
+  if (signatureAuth.ok === false) {
+    return signatureAuth.response;
+  }
+
+  const walletAddress =
+    signatureAuth.ok === true
+      ? signatureAuth.walletAddress
+      : requestedWalletAddress;
+
+  if (!isWalletAddress(walletAddress)) {
+    return NextResponse.json(
+      {
+        error: 'walletAddress is invalid.',
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  if (
+    signatureAuth.ok === true &&
+    requestedWalletAddress &&
+    requestedWalletAddress !== signatureAuth.walletAddress
+  ) {
+    return NextResponse.json(
+      {
+        error: 'walletAddress must match the signed wallet.',
+      },
+      {
+        status: 403,
+      },
+    );
+  }
 
   const nowIso = new Date().toISOString();
   const bankNameValue = bankName ?? body?.buyer?.bankInfo?.bankName ?? body?.buyer?.depositBankName;

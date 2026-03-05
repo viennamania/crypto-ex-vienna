@@ -17,6 +17,7 @@ import {
   bscContractAddressUSDT,
 } from "@/app/config/contractAddresses";
 import { createEngineServerWallet } from "@/lib/engineServerWallet";
+import { verifyWalletAuthFromBody } from '@/lib/security/requestAuth';
 
 type ChainKey = "ethereum" | "polygon" | "arbitrum" | "bsc";
 type PaymentStatus = "prepared" | "confirmed";
@@ -881,7 +882,7 @@ export async function POST(request: NextRequest) {
 
   if (action === "prepare") {
     const storecode = String(body?.storecode || "").trim();
-    const fromWalletAddress = normalizeAddress(body?.fromWalletAddress);
+    let fromWalletAddress = normalizeAddress(body?.fromWalletAddress);
     const usdtAmount = normalizeAmount(body?.usdtAmount);
     const chain = normalizeChain(body?.chain);
     const prepareRequestKey = String(
@@ -916,6 +917,28 @@ export async function POST(request: NextRequest) {
       platformFeeRate > 0
         ? Number((((usdtAmount ?? 0) * platformFeeRate) / 100).toFixed(6))
         : 0;
+
+    const signatureAuth = await verifyWalletAuthFromBody({
+      body,
+      path: '/api/wallet/payment-usdt',
+      method: 'POST',
+      storecode: storecode || 'admin',
+      consumeNonceValue: true,
+    });
+
+    if (signatureAuth.ok === false) {
+      return signatureAuth.response;
+    }
+
+    if (signatureAuth.ok === true) {
+      if (fromWalletAddress && fromWalletAddress !== signatureAuth.walletAddress) {
+        return NextResponse.json(
+          { error: 'fromWalletAddress must match the signed wallet.' },
+          { status: 403 },
+        );
+      }
+      fromWalletAddress = signatureAuth.walletAddress;
+    }
 
     if (!storecode) {
       return NextResponse.json({ error: "storecode is required" }, { status: 400 });
@@ -1070,8 +1093,31 @@ export async function POST(request: NextRequest) {
 
   if (action === "confirm") {
     const paymentRequestId = String(body?.paymentRequestId || "").trim();
-    const fromWalletAddress = normalizeAddress(body?.fromWalletAddress);
+    let fromWalletAddress = normalizeAddress(body?.fromWalletAddress);
     const transactionHash = normalizeHash(body?.transactionHash);
+    const storecode = String(body?.storecode || "").trim();
+
+    const signatureAuth = await verifyWalletAuthFromBody({
+      body,
+      path: '/api/wallet/payment-usdt',
+      method: 'POST',
+      storecode: storecode || 'admin',
+      consumeNonceValue: true,
+    });
+
+    if (signatureAuth.ok === false) {
+      return signatureAuth.response;
+    }
+
+    if (signatureAuth.ok === true) {
+      if (fromWalletAddress && fromWalletAddress !== signatureAuth.walletAddress) {
+        return NextResponse.json(
+          { error: 'fromWalletAddress must match the signed wallet.' },
+          { status: 403 },
+        );
+      }
+      fromWalletAddress = signatureAuth.walletAddress;
+    }
 
     if (!ObjectId.isValid(paymentRequestId)) {
       return NextResponse.json({ error: "invalid paymentRequestId" }, { status: 400 });
@@ -1164,9 +1210,32 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "list") {
-    const fromWalletAddress = normalizeAddress(body?.fromWalletAddress);
+    let fromWalletAddress = normalizeAddress(body?.fromWalletAddress);
     const storecode = String(body?.storecode || "").trim();
     const limit = Math.min(Math.max(Number(body?.limit || 10), 1), 50);
+
+    const signatureAuth = await verifyWalletAuthFromBody({
+      body,
+      path: '/api/wallet/payment-usdt',
+      method: 'POST',
+      storecode: storecode || 'admin',
+      consumeNonceValue: false,
+      maxAgeMs: 2 * 60 * 1000,
+    });
+
+    if (signatureAuth.ok === false) {
+      return signatureAuth.response;
+    }
+
+    if (signatureAuth.ok === true) {
+      if (fromWalletAddress && fromWalletAddress !== signatureAuth.walletAddress) {
+        return NextResponse.json(
+          { error: 'fromWalletAddress must match the signed wallet.' },
+          { status: 403 },
+        );
+      }
+      fromWalletAddress = signatureAuth.walletAddress;
+    }
 
     if (!isWalletAddress(fromWalletAddress)) {
       return NextResponse.json({ error: "invalid wallet address" }, { status: 400 });

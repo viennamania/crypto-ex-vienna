@@ -180,7 +180,7 @@ export default function SellerChatPage() {
   const activeAccount = useActiveAccount();
   const activeWallet = useActiveWallet();
   const address =
-    activeAccount?.address ?? activeWallet?.getAccount?.()?.address ?? '';
+    activeWallet?.getAccount?.()?.address ?? activeAccount?.address ?? '';
   const isLoggedIn = Boolean(address);
   const { wallets } = useClientWallets();
 

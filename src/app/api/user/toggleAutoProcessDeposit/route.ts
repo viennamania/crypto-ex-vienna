@@ -1,33 +1,61 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from 'next/server';
 
-import {
-    toggleAutoProcessDeposit,
-} from '@lib/api/user';
+import { toggleAutoProcessDeposit } from '@lib/api/user';
+import { getRoleForWalletAddress, verifyWalletAuthFromBody } from '@/lib/security/requestAuth';
+import { isWalletAddress } from '@/lib/security/walletSignature';
 
-
+const toText = (value: unknown) => String(value ?? '').trim();
 
 export async function POST(request: NextRequest) {
+  const bodyRaw = await request.json().catch(() => ({}));
+  const body =
+    bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+      ? (bodyRaw as Record<string, unknown>)
+      : {};
 
-    const body = await request.json();
+  const storecode = toText(body.storecode);
+  const requestedWalletAddress = toText(body.walletAddress);
+  const autoProcessDeposit = Boolean(body.autoProcessDeposit);
 
-    const {
-        storecode,
-        walletAddress,
-        autoProcessDeposit,
-    } = body;
+  const signatureAuth = await verifyWalletAuthFromBody({
+    body,
+    path: '/api/user/toggleAutoProcessDeposit',
+    method: 'POST',
+    storecode,
+    consumeNonceValue: true,
+  });
 
-    //console.log("toggleAutoProcessDeposit body:", body);
+  if (signatureAuth.ok === false) {
+    return signatureAuth.response;
+  }
 
-    const result = await toggleAutoProcessDeposit({
-        storecode: storecode,
-        walletAddress: walletAddress,
-        autoProcessDeposit: autoProcessDeposit,
+  let walletAddress = requestedWalletAddress;
+  if (signatureAuth.ok === true) {
+    const requester = await getRoleForWalletAddress({
+      storecode,
+      walletAddress: signatureAuth.walletAddress,
     });
+    walletAddress = toText(requester?.walletAddress) || signatureAuth.walletAddress;
+  }
 
-    return NextResponse.json({
+  if (!isWalletAddress(walletAddress)) {
+    return NextResponse.json(
+      {
+        error: 'walletAddress is invalid.',
+      },
+      {
+        status: 400,
+      },
+    );
+  }
 
-        result,
-        
-    });
-    
+  const result = await toggleAutoProcessDeposit({
+    storecode,
+    walletAddress,
+    autoProcessDeposit,
+  });
+
+  return NextResponse.json({
+    result,
+  });
 }

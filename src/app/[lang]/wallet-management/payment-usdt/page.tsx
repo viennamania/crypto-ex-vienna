@@ -22,12 +22,15 @@ import {
 import {
   AutoConnect,
   useActiveAccount,
+  useActiveWallet,
+  useConnectedWallets,
 } from 'thirdweb/react';
 import { getUserPhoneNumber } from 'thirdweb/wallets/in-app';
 
 import { client } from '@/app/client';
 import { useClientWallets } from '@/lib/useClientWallets';
 import { useClientSettings } from '@/components/ClientSettingsProvider';
+import { createWalletSignatureAuthPayload } from '@/lib/security/walletSignature';
 import WalletManagementBottomNav from '@/components/wallet-management/WalletManagementBottomNav';
 import WalletConnectPrompt from '@/components/wallet-management/WalletConnectPrompt';
 import WalletSummaryCard from '@/components/wallet-management/WalletSummaryCard';
@@ -465,12 +468,43 @@ export default function PaymentUsdtPage({
     return `/${lang}/wallet-management${queryString ? `?${queryString}` : ''}`;
   }, [lang, storecodeFromQuery]);
   const { chain } = useClientSettings();
-  const activeAccount = useActiveAccount();
+  const rawActiveAccount = useActiveAccount();
+  const activeWallet = useActiveWallet();
+  const connectedWallets = useConnectedWallets();
+  const activeAccount = activeWallet?.getAccount?.() ?? rawActiveAccount;
   const { wallet, wallets, smartAccountEnabled } = useClientWallets({
     authOptions: WALLET_AUTH_OPTIONS,
     sponsorGas: true,
     defaultSmsCountryCode: 'KR',
   });
+  const signatureAccount = useMemo(() => {
+    const candidates: Array<unknown> = [
+      activeWallet?.getAccount?.(),
+      activeAccount,
+      activeWallet?.getAdminAccount?.(),
+    ];
+    for (const walletItem of connectedWallets) {
+      candidates.push(walletItem?.getAccount?.());
+      candidates.push(walletItem?.getAdminAccount?.());
+    }
+
+    for (const candidate of candidates) {
+      const account = candidate as {
+        address?: string;
+        signMessage?: (options: {
+          message: string;
+          originalMessage?: string;
+          chainId?: number;
+        }) => Promise<string>;
+      } | null | undefined;
+
+      if (account?.address && typeof account.signMessage === 'function') {
+        return account;
+      }
+    }
+
+    return null;
+  }, [activeAccount, activeWallet, connectedWallets]);
 
   const activeNetwork = useMemo(
     () => NETWORK_BY_KEY[chain] ?? NETWORK_BY_KEY.polygon,
@@ -491,6 +525,34 @@ export default function PaymentUsdtPage({
   const [loadingMerchants, setLoadingMerchants] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedStorecode, setSelectedStorecode] = useState('');
+  const buildSignedRequestBody = useCallback(
+    async ({
+      path,
+      payload,
+      requestStorecode,
+    }: {
+      path: string;
+      payload: Record<string, unknown>;
+      requestStorecode?: string;
+    }) => {
+      if (!signatureAccount?.address || typeof signatureAccount?.signMessage !== 'function') {
+        throw new Error('서명 가능한 스마트 지갑을 먼저 연결해 주세요.');
+      }
+
+      const auth = await createWalletSignatureAuthPayload({
+        account: signatureAccount,
+        storecode: requestStorecode || selectedStorecode || storecodeFromQuery || 'admin',
+        path,
+        method: 'POST',
+      });
+
+      return {
+        ...payload,
+        auth,
+      };
+    },
+    [signatureAccount, selectedStorecode, storecodeFromQuery],
+  );
 
   const [balance, setBalance] = useState(0);
 
@@ -818,15 +880,22 @@ export default function PaymentUsdtPage({
 
     setLoadingHistory(true);
     try {
+      const listHistoryRequestBody = await buildSignedRequestBody({
+        path: '/api/wallet/payment-usdt',
+        requestStorecode: selectedStorecode || storecodeFromQuery || 'admin',
+        payload: {
+          action: 'list',
+          fromWalletAddress: activeAccount.address,
+          ...((selectedStorecode || storecodeFromQuery)
+            ? { storecode: selectedStorecode || storecodeFromQuery }
+            : {}),
+          limit: 8,
+        },
+      });
       const response = await fetch('/api/wallet/payment-usdt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'list',
-          fromWalletAddress: activeAccount.address,
-          ...(selectedStorecode ? { storecode: selectedStorecode } : {}),
-          limit: 8,
-        }),
+        body: JSON.stringify(listHistoryRequestBody),
       });
       const data = await response.json();
 
@@ -845,17 +914,19 @@ export default function PaymentUsdtPage({
     } finally {
       setLoadingHistory(false);
     }
-  }, [activeAccount?.address, selectedStorecode]);
+  }, [activeAccount?.address, buildSignedRequestBody, selectedStorecode, storecodeFromQuery]);
 
   const confirmPreparedPayment = useCallback(async ({
     paymentRequestId,
     fromWalletAddress,
     transactionHash,
+    requestStorecode,
     retryDelaysMs = PENDING_PAYMENT_CONFIRM_RETRY_DELAYS_MS,
   }: {
     paymentRequestId: string;
     fromWalletAddress: string;
     transactionHash: string;
+    requestStorecode?: string;
     retryDelaysMs?: readonly number[];
   }) => {
     let latestError: Error | null = null;
@@ -870,15 +941,21 @@ export default function PaymentUsdtPage({
       }
 
       try {
-        const response = await fetch('/api/wallet/payment-usdt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        const confirmRequestBody = await buildSignedRequestBody({
+          path: '/api/wallet/payment-usdt',
+          requestStorecode,
+          payload: {
             action: 'confirm',
             paymentRequestId,
             fromWalletAddress,
             transactionHash,
-          }),
+            ...(requestStorecode ? { storecode: requestStorecode } : {}),
+          },
+        });
+        const response = await fetch('/api/wallet/payment-usdt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(confirmRequestBody),
         });
 
         const payload = await response.json().catch(() => ({}));
@@ -900,7 +977,7 @@ export default function PaymentUsdtPage({
     }
 
     throw latestError || new Error('결제 확정 요청에 실패했습니다.');
-  }, []);
+  }, [buildSignedRequestBody]);
 
   const flushPendingPaymentConfirms = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent === true;
@@ -930,6 +1007,7 @@ export default function PaymentUsdtPage({
             paymentRequestId: item.paymentRequestId,
             fromWalletAddress: item.fromWalletAddress,
             transactionHash: item.transactionHash,
+            requestStorecode: item.storecode,
             retryDelaysMs: [0, 1000],
           });
           recoveredCount += 1;
@@ -971,13 +1049,18 @@ export default function PaymentUsdtPage({
 
     setLoadingMemberProfile(true);
     try {
+      const getUserRequestBody = await buildSignedRequestBody({
+        path: '/api/user/getUser',
+        requestStorecode: selectedStorecode,
+        payload: {
+          storecode: selectedStorecode,
+          walletAddress: activeAccount.address,
+        },
+      });
       const response = await fetch('/api/user/getUser', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storecode: selectedStorecode,
-          walletAddress: activeAccount.address,
-        }),
+        body: JSON.stringify(getUserRequestBody),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -1019,7 +1102,7 @@ export default function PaymentUsdtPage({
         setLoadingMemberProfile(false);
       }
     }
-  }, [activeAccount?.address, selectedStorecode]);
+  }, [activeAccount?.address, buildSignedRequestBody, selectedStorecode]);
 
   useEffect(() => {
     loadMerchants();
@@ -1107,16 +1190,21 @@ export default function PaymentUsdtPage({
 
       ///console.log('thirdwebMobile=', thirdwebMobile);
 
-      const response = await fetch('/api/user/linkWalletByStorecodeNicknamePassword', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const linkMemberRequestBody = await buildSignedRequestBody({
+        path: '/api/user/linkWalletByStorecodeNicknamePassword',
+        requestStorecode: selectedStorecode,
+        payload: {
           storecode: selectedStorecode,
           walletAddress: activeAccount.address,
           mobile: thirdwebMobile,
           nickname,
           password,
-        }),
+        },
+      });
+      const response = await fetch('/api/user/linkWalletByStorecodeNicknamePassword', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(linkMemberRequestBody),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data?.error) {
@@ -1252,10 +1340,10 @@ export default function PaymentUsdtPage({
     submitPaymentLockRef.current = true;
     setPaying(true);
     try {
-      const prepareResponse = await fetch('/api/wallet/payment-usdt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const prepareRequestBody = await buildSignedRequestBody({
+        path: '/api/wallet/payment-usdt',
+        requestStorecode: selectedMerchant.storecode,
+        payload: {
           action: 'prepare',
           chain: activeNetwork.id,
           storecode: selectedMerchant.storecode,
@@ -1267,7 +1355,12 @@ export default function PaymentUsdtPage({
           memberNickname: myMemberProfile?.nickname || '',
           memberStorecode: myMemberProfile?.storecode || '',
           memberBuyerBankInfo: memberBankInfoSnapshot,
-        }),
+        },
+      });
+      const prepareResponse = await fetch('/api/wallet/payment-usdt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prepareRequestBody),
       });
       const prepareData = await prepareResponse.json();
 
@@ -1318,6 +1411,7 @@ export default function PaymentUsdtPage({
         paymentRequestId,
         fromWalletAddress: payerWalletAddress,
         transactionHash,
+        requestStorecode: selectedStoreCode,
       });
 
       removePendingPaymentConfirm(paymentRequestId);

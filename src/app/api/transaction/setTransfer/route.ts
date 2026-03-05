@@ -3,17 +3,94 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
 	insertOne,
 } from '@lib/api/transaction';
+import { evaluateRateLimit } from '@/lib/security/rateLimit';
+import { getRequesterIpAddress, verifyWalletAuthFromBody } from '@/lib/security/requestAuth';
+import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSignature';
 
 
 // Download the helper library from https://www.twilio.com/docs/node/install
 import twilio from "twilio";
 
+const toText = (value: unknown) => String(value ?? '').trim();
 
 export async function POST(request: NextRequest) {
+  const bodyRaw = await request.json().catch(() => ({}));
+  const body =
+    bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+      ? (bodyRaw as Record<string, unknown>)
+      : {};
 
-  const body = await request.json();
+  const lang = toText(body.lang);
+  const chain = toText(body.chain);
+  const amount = Number(body.amount ?? 0);
+  const requestedWalletAddress = normalizeWalletAddress(body.walletAddress);
+  const toWalletAddress = normalizeWalletAddress(body.toWalletAddress);
+  const storecode = toText(body.storecode);
+  const ipAddress = getRequesterIpAddress(request) || 'unknown';
 
-  const { lang, chain, walletAddress, amount, toWalletAddress } = body;
+  const rate = evaluateRateLimit({
+    key: `api:transaction:setTransfer:${ipAddress}:${requestedWalletAddress || 'unknown'}`,
+    limit: 20,
+    windowMs: 60_000,
+  });
+
+  if (!rate.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Too many requests',
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.max(Math.ceil(rate.retryAfterMs / 1000), 1)),
+        },
+      },
+    );
+  }
+
+  const signatureAuth = await verifyWalletAuthFromBody({
+    body,
+    path: '/api/transaction/setTransfer',
+    method: 'POST',
+    storecode: storecode || 'admin',
+    consumeNonceValue: true,
+  });
+
+  if (signatureAuth.ok === false) {
+    return signatureAuth.response;
+  }
+
+  const walletAddress =
+    signatureAuth.ok === true
+      ? signatureAuth.walletAddress
+      : requestedWalletAddress;
+
+  if (!isWalletAddress(walletAddress) || !isWalletAddress(toWalletAddress)) {
+    return NextResponse.json(
+      { error: 'walletAddress and toWalletAddress must be valid EVM addresses.' },
+      { status: 400 },
+    );
+  }
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return NextResponse.json(
+      { error: 'amount must be greater than 0.' },
+      { status: 400 },
+    );
+  }
+
+  if (
+    signatureAuth.ok === true &&
+    requestedWalletAddress &&
+    requestedWalletAddress !== signatureAuth.walletAddress
+  ) {
+    return NextResponse.json(
+      {
+        error: 'walletAddress must match the signed wallet.',
+      },
+      { status: 403 },
+    );
+  }
 
   console.log("lang", lang);
   console.log("chain", chain);

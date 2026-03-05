@@ -14,6 +14,10 @@ import clientPromise, { dbName } from '@/lib/mongodb';
 import {
   createEngineServerWallet,
 } from '@/lib/engineServerWallet';
+import {
+  isWalletAddressAuthorizedForExpectedWallet,
+  verifyWalletAuthFromBody,
+} from '@/lib/security/requestAuth';
 
 type AgentDoc = {
   agentcode?: string;
@@ -221,10 +225,29 @@ const resolveFeeWallet = (agent: AgentDoc) => {
 };
 
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => ({}));
+  const bodyRaw = await request.json().catch(() => ({}));
+  const body =
+    bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+      ? (bodyRaw as Record<string, unknown>)
+      : {};
   const agentcode = String(body?.agentcode || '').trim();
-  const requesterWalletAddress = String(body?.requesterWalletAddress || '').trim();
+  const requestedRequesterWalletAddress = String(body?.requesterWalletAddress || '').trim();
   const requestedToWalletAddress = String(body?.toWalletAddress || '').trim();
+
+  const signatureAuth = await verifyWalletAuthFromBody({
+    body,
+    path: '/api/agent/clearFeeWalletBalance',
+    method: 'POST',
+    storecode: agentcode || 'admin',
+    consumeNonceValue: true,
+  });
+  if (signatureAuth.ok === false) {
+    return signatureAuth.response;
+  }
+
+  const requesterWalletAddress = signatureAuth.ok === true
+    ? signatureAuth.walletAddress
+    : requestedRequesterWalletAddress;
   const toWalletAddress = requestedToWalletAddress || requesterWalletAddress;
 
   if (!agentcode) {
@@ -255,7 +278,12 @@ export async function POST(request: NextRequest) {
   if (!isWalletAddress(adminWalletAddress)) {
     return NextResponse.json({ error: 'Agent admin wallet address is not configured' }, { status: 400 });
   }
-  if (normalizeAddress(adminWalletAddress) !== normalizeAddress(requesterWalletAddress)) {
+
+  const isAuthorized = await isWalletAddressAuthorizedForExpectedWallet({
+    expectedWalletAddress: adminWalletAddress,
+    candidateWalletAddress: requesterWalletAddress,
+  });
+  if (!isAuthorized) {
     return NextResponse.json({ error: 'Only agent admin wallet can recover the fee wallet balance' }, { status: 403 });
   }
 

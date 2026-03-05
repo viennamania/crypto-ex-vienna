@@ -1497,24 +1497,36 @@ export async function getOneByVirtualAccount(
 export async function getOneByWalletAddress(
   storecode: string | undefined,
   walletAddress: string,
+  options?: {
+    projection?: Record<string, number>;
+  },
 ): Promise<UserProps | null> {
   if (!walletAddress) return null;
 
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
 
-  //const normalized = walletAddress.toLowerCase();
   const normalized = walletAddress.trim();
 
-  const filter: any = {
-    walletAddress: { $regex: `^${normalized}$`, $options: 'i' },
+  const filter: Record<string, unknown> = {
+    walletAddress: {
+      $regex: `^${escapeRegExp(normalized)}$`,
+      $options: 'i',
+    },
   };
 
   if (storecode) {
     filter.storecode = storecode;
   }
 
-  const results = await collection.findOne<UserProps>(filter);
+  const results = await collection.findOne<UserProps>(
+    filter,
+    options?.projection
+      ? {
+          projection: options.projection,
+        }
+      : undefined,
+  );
   return results;
 }
 

@@ -4,11 +4,11 @@ import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { useActiveAccount } from 'thirdweb/react';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
 import GroupChannel from '@sendbird/uikit-react/GroupChannel';
 
 import AgentInfoCard from '../_components/AgentInfoCard';
+import { useSmartAccountAuth } from '../_useSmartAccountAuth';
 import {
   fetchAgentSummary,
   formatKrw,
@@ -805,8 +805,8 @@ const createDefaultFilters = (): SearchFilters => {
 
 export default function P2PAgentSalesManagementPage() {
   const searchParams = useSearchParams();
-  const activeAccount = useActiveAccount();
   const agentcode = String(searchParams?.get('agentcode') || '').trim();
+  const { activeAccount, buildSignedRequestBody } = useSmartAccountAuth(agentcode || 'admin');
 
   const [loading, setLoading] = useState(false);
   const [polling, setPolling] = useState(false);
@@ -1560,16 +1560,23 @@ export default function P2PAgentSalesManagementPage() {
         || payload?.error
         || '주문 취소 처리에 실패했습니다.';
 
-      const response = await fetch('/api/order/cancelPrivateBuyOrderByAdminToBuyer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const cancelOrderRequestBody = await buildSignedRequestBody({
+        path: '/api/order/cancelPrivateBuyOrderByAdminToBuyer',
+        storecode: agentcode || 'admin',
+        payload: {
+          agentcode: agentcode || 'admin',
           orderId: targetOrderId,
           adminWalletAddress: actorWalletAddress,
           cancelledByRole: 'agent',
           cancelledByNickname: actorNickname,
           liveProgress: true,
-        }),
+        },
+      });
+
+      const response = await fetch('/api/order/cancelPrivateBuyOrderByAdminToBuyer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cancelOrderRequestBody),
       });
 
       let payload: CancelApiPayload | null = null;
@@ -1671,9 +1678,11 @@ export default function P2PAgentSalesManagementPage() {
     activeAccount?.address,
     agent?.adminWalletAddress,
     agent?.agentName,
+    buildSignedRequestBody,
     applyCancelProgressEvent,
     cancelTargetOrder?.id,
     cancelingOrder,
+    agentcode,
     loadData,
     markCancelProgressAsError,
   ]);

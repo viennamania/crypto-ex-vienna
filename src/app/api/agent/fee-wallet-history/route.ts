@@ -3,6 +3,10 @@ import { ObjectId, type Collection } from 'mongodb';
 import { createThirdwebClient, Engine } from 'thirdweb';
 
 import clientPromise, { dbName } from '@/lib/mongodb';
+import {
+  isWalletAddressAuthorizedForExpectedWallet,
+  verifyWalletAuthFromBody,
+} from '@/lib/security/requestAuth';
 
 type FeeWalletHistoryActionType = 'CHARGE' | 'RECOVER';
 type FeeWalletHistoryStatus = 'REQUESTING' | 'QUEUED' | 'SUBMITTED' | 'CONFIRMED' | 'FAILED';
@@ -287,12 +291,16 @@ const validateAgentAdmin = async (agentcode: string, requesterWalletAddress: str
     return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
   }
 
-  const adminWalletAddress = normalizeAddress(agent.adminWalletAddress);
+  const adminWalletAddress = String(agent.adminWalletAddress || '').trim();
   if (!isWalletAddress(adminWalletAddress)) {
     return NextResponse.json({ error: 'Agent admin wallet address is not configured' }, { status: 400 });
   }
 
-  if (adminWalletAddress !== normalizedRequester) {
+  const isAuthorized = await isWalletAddressAuthorizedForExpectedWallet({
+    expectedWalletAddress: adminWalletAddress,
+    candidateWalletAddress: requesterWalletAddress,
+  });
+  if (!isAuthorized) {
     return NextResponse.json({ error: 'Only agent admin wallet can access fee wallet history' }, { status: 403 });
   }
 
@@ -303,10 +311,29 @@ const validateAgentAdmin = async (agentcode: string, requesterWalletAddress: str
 };
 
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => ({}));
+  const bodyRaw = await request.json().catch(() => ({}));
+  const body =
+    bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+      ? (bodyRaw as Record<string, unknown>)
+      : {};
   const action = String(body?.action || '').trim().toLowerCase();
   const agentcode = String(body?.agentcode || '').trim();
-  const requesterWalletAddress = String(body?.requesterWalletAddress || '').trim();
+  const requestedRequesterWalletAddress = String(body?.requesterWalletAddress || '').trim();
+
+  const signatureAuth = await verifyWalletAuthFromBody({
+    body,
+    path: '/api/agent/fee-wallet-history',
+    method: 'POST',
+    storecode: agentcode || 'admin',
+    consumeNonceValue: true,
+  });
+  if (signatureAuth.ok === false) {
+    return signatureAuth.response;
+  }
+
+  const requesterWalletAddress = signatureAuth.ok === true
+    ? signatureAuth.walletAddress
+    : requestedRequesterWalletAddress;
 
   const validation = await validateAgentAdmin(agentcode, requesterWalletAddress);
   if (validation instanceof NextResponse) {

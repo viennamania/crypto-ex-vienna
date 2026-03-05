@@ -53,6 +53,7 @@ import AppBarComponent from "@/components/Appbar/AppBar";
 import { getDictionary } from "../../../dictionaries";
 import { useClientWallets } from "@/lib/useClientWallets";
 import { useClientSettings } from "@/components/ClientSettingsProvider";
+import { createWalletSignatureAuthPayload } from "@/lib/security/walletSignature";
 import ClientFooterCopyright from "@/components/ClientFooterCopyright";
 import WalletManagementBottomNav from "@/components/wallet-management/WalletManagementBottomNav";
 import WalletConnectPrompt from "@/components/wallet-management/WalletConnectPrompt";
@@ -408,6 +409,36 @@ export default function SendUsdt({ params }: any) {
   const activeWallet = useActiveWallet();
   const account = activeWallet?.getAccount?.() ?? activeAccount;
   const address = account?.address;
+  const buildSignedRequestBody = async ({
+    path,
+    payload,
+  }: {
+    path: string;
+    payload: Record<string, unknown>;
+  }) => {
+    if (!account?.address || typeof account?.signMessage !== 'function') {
+      throw new Error('서명 가능한 스마트 지갑을 먼저 연결해 주세요.');
+    }
+
+    const auth = await createWalletSignatureAuthPayload({
+      account: account as unknown as {
+        address?: string;
+        signMessage?: (options: {
+          message: string;
+          originalMessage?: string;
+          chainId?: number;
+        }) => Promise<string>;
+      },
+      storecode: storecodeFromQuery || 'admin',
+      path,
+      method: 'POST',
+    });
+
+    return {
+      ...payload,
+      auth,
+    };
+  };
 
 
   const [balance, setBalance] = useState(0);
@@ -1073,18 +1104,22 @@ export default function SendUsdt({ params }: any) {
         if (transactionHash) {
 
 
-          await fetch('/api/transaction/setTransfer', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+          const setTransferRequestBody = await buildSignedRequestBody({
+            path: '/api/transaction/setTransfer',
+            payload: {
               lang: params.lang,
               chain: selectedNetwork,
               walletAddress: address,
               amount: amount,
               toWalletAddress: recipient.walletAddress,
-            }),
+            },
+          });
+          await fetch('/api/transaction/setTransfer', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(setTransferRequestBody),
           });
 
 
@@ -1185,14 +1220,18 @@ export default function SendUsdt({ params }: any) {
     setFavoriteLoading(true);
     setFavoriteError(null);
     try {
+      const listFavoriteRequestBody = await buildSignedRequestBody({
+        path: '/api/favorite-wallets/list',
+        payload: {
+          ownerWalletAddress: address,
+        },
+      });
       const response = await fetch('/api/favorite-wallets/list', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ownerWalletAddress: address,
-        }),
+        body: JSON.stringify(listFavoriteRequestBody),
       });
 
       if (!response.ok) {
@@ -1231,17 +1270,21 @@ export default function SendUsdt({ params }: any) {
 
     setFavoriteSaving(true);
     try {
+      const addFavoriteRequestBody = await buildSignedRequestBody({
+        path: '/api/favorite-wallets/add',
+        payload: {
+          ownerWalletAddress: address,
+          walletAddress: recipient.walletAddress,
+          label: favoriteLabel.trim() || recipient.nickname || '즐겨찾기 지갑',
+          chainId: selectedNetworkConfig.chain.id,
+        },
+      });
       const response = await fetch('/api/favorite-wallets/add', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ownerWalletAddress: address,
-          walletAddress: recipient.walletAddress,
-          label: favoriteLabel.trim() || recipient.nickname || '즐겨찾기 지갑',
-          chainId: selectedNetworkConfig.chain.id,
-        }),
+        body: JSON.stringify(addFavoriteRequestBody),
       });
 
       if (!response.ok) {
@@ -1268,15 +1311,19 @@ export default function SendUsdt({ params }: any) {
     if (!address) return;
     setFavoriteSaving(true);
     try {
+      const removeFavoriteRequestBody = await buildSignedRequestBody({
+        path: '/api/favorite-wallets/remove',
+        payload: {
+          ownerWalletAddress: address,
+          walletAddress,
+        },
+      });
       const response = await fetch('/api/favorite-wallets/remove', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ownerWalletAddress: address,
-          walletAddress,
-        }),
+        body: JSON.stringify(removeFavoriteRequestBody),
       });
 
       if (!response.ok) {

@@ -3,11 +3,16 @@ import { createThirdwebClient, Engine } from 'thirdweb';
 import { ObjectId } from 'mongodb';
 
 import clientPromise, { dbName } from '@/lib/mongodb';
+import {
+  isWalletAddressAuthorizedForExpectedWallet,
+  verifyWalletAuthFromBody,
+} from '@/lib/security/requestAuth';
 
 type AgentDoc = {
   _id?: ObjectId;
   agentcode?: string;
   agentName?: string;
+  adminWalletAddress?: string;
   creditWallet?: {
     signerAddress?: string;
     smartAccountAddress?: string;
@@ -71,16 +76,55 @@ const resolveAgentUpdateFilter = (agent: AgentDoc, fallbackAgentcode: string) =>
 };
 
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => ({}));
+  const bodyRaw = await request.json().catch(() => ({}));
+  const body =
+    bodyRaw && typeof bodyRaw === 'object' && !Array.isArray(bodyRaw)
+      ? (bodyRaw as Record<string, unknown>)
+      : {};
   const agentcode = String(body?.agentcode || '').trim();
+  const requestedRequesterWalletAddress = String(body?.requesterWalletAddress || body?.walletAddress || '').trim();
 
   if (!agentcode) {
     return NextResponse.json({ error: 'agentcode is required' }, { status: 400 });
   }
 
+  const signatureAuth = await verifyWalletAuthFromBody({
+    body,
+    path: '/api/agent/createFeeWalletAddress',
+    method: 'POST',
+    storecode: agentcode || 'admin',
+    consumeNonceValue: true,
+  });
+  if (signatureAuth.ok === false) {
+    return signatureAuth.response;
+  }
+
   const agent = await findAgentByCode(agentcode);
   if (!agent) {
     return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+  }
+
+  const adminWalletAddress = String(agent?.adminWalletAddress || '').trim();
+  if (signatureAuth.ok === true) {
+    if (!isWalletAddress(adminWalletAddress)) {
+      return NextResponse.json({ error: 'Agent admin wallet address is not configured' }, { status: 400 });
+    }
+
+    const isAuthorized = await isWalletAddressAuthorizedForExpectedWallet({
+      expectedWalletAddress: adminWalletAddress,
+      candidateWalletAddress: signatureAuth.walletAddress,
+    });
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Only agent admin wallet can create fee wallet address' }, { status: 403 });
+    }
+  } else if (isWalletAddress(requestedRequesterWalletAddress) && isWalletAddress(adminWalletAddress)) {
+    const isAuthorized = await isWalletAddressAuthorizedForExpectedWallet({
+      expectedWalletAddress: adminWalletAddress,
+      candidateWalletAddress: requestedRequesterWalletAddress,
+    });
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Only agent admin wallet can create fee wallet address' }, { status: 403 });
+    }
   }
 
   const normalizedExistingSmartAccountAddress = String(

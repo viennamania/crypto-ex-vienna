@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useActiveAccount } from 'thirdweb/react';
 import { getContract, sendAndConfirmTransaction } from 'thirdweb';
 import { balanceOf, transfer } from 'thirdweb/extensions/erc20';
 import { ethereum, polygon, arbitrum, bsc } from 'thirdweb/chains';
@@ -15,6 +14,7 @@ import {
   bscContractAddressUSDT,
 } from '@/app/config/contractAddresses';
 import AgentInfoCard from '../_components/AgentInfoCard';
+import { useSmartAccountAuth } from '../_useSmartAccountAuth';
 import {
   fetchAgentSummary,
   shortAddress,
@@ -205,9 +205,8 @@ const parseHistoryItem = (source: unknown): FeeWalletHistoryItem => {
 
 export default function P2PAgentFeeWalletManagementPage() {
   const searchParams = useSearchParams();
-  const activeAccount = useActiveAccount();
   const agentcode = String(searchParams?.get('agentcode') || '').trim();
-  const connectedWalletAddress = String(activeAccount?.address || '').trim();
+  const { activeAccount, connectedWalletAddress, buildSignedRequestBody } = useSmartAccountAuth(agentcode || 'admin');
 
   const [loading, setLoading] = useState(false);
   const [creatingWallet, setCreatingWallet] = useState(false);
@@ -287,10 +286,10 @@ export default function P2PAgentFeeWalletManagementPage() {
     }
 
     try {
-      const response = await fetch('/api/agent/fee-wallet-history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const listHistoryRequestBody = await buildSignedRequestBody({
+        path: '/api/agent/fee-wallet-history',
+        storecode: agentcode,
+        payload: {
           action: 'list',
           agentcode,
           requesterWalletAddress: connectedWalletAddress,
@@ -298,7 +297,12 @@ export default function P2PAgentFeeWalletManagementPage() {
           limit: HISTORY_PAGE_SIZE,
           periodDays: historyPeriodDays,
           refreshPending: true,
-        }),
+        },
+      });
+      const response = await fetch('/api/agent/fee-wallet-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(listHistoryRequestBody),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -327,7 +331,7 @@ export default function P2PAgentFeeWalletManagementPage() {
         setHistoryLoading(false);
       }
     }
-  }, [agentcode, connectedWalletAddress, historyPage, historyPeriodDays]);
+  }, [agentcode, buildSignedRequestBody, connectedWalletAddress, historyPage, historyPeriodDays]);
 
   const refreshBalances = useCallback(
     async (walletAddressOverride?: string) => {
@@ -467,10 +471,18 @@ export default function P2PAgentFeeWalletManagementPage() {
     setError(null);
     setNotice(null);
     try {
+      const createWalletRequestBody = await buildSignedRequestBody({
+        path: '/api/agent/createFeeWalletAddress',
+        storecode: agentcode,
+        payload: {
+          agentcode,
+          requesterWalletAddress: connectedWalletAddress,
+        },
+      });
       const response = await fetch('/api/agent/createFeeWalletAddress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentcode }),
+        body: JSON.stringify(createWalletRequestBody),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -484,7 +496,7 @@ export default function P2PAgentFeeWalletManagementPage() {
     } finally {
       setCreatingWallet(false);
     }
-  }, [agentcode, creatingWallet, loadData]);
+  }, [agentcode, buildSignedRequestBody, connectedWalletAddress, creatingWallet, loadData]);
 
   const handleChargeWallet = useCallback(async () => {
     if (charging) return;
@@ -525,10 +537,10 @@ export default function P2PAgentFeeWalletManagementPage() {
       const transactionHash = String((txResult as { transactionHash?: string })?.transactionHash || '').trim();
       if (transactionHash && isWalletAddress(connectedWalletAddress)) {
         try {
-          const historyResponse = await fetch('/api/agent/fee-wallet-history', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+          const recordChargeRequestBody = await buildSignedRequestBody({
+            path: '/api/agent/fee-wallet-history',
+            storecode: agentcode,
+            payload: {
               action: 'record-charge',
               agentcode,
               requesterWalletAddress: connectedWalletAddress,
@@ -538,7 +550,12 @@ export default function P2PAgentFeeWalletManagementPage() {
               transactionHash,
               status: 'CONFIRMED',
               chain: chainConfig.chainKey,
-            }),
+            },
+          });
+          const historyResponse = await fetch('/api/agent/fee-wallet-history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(recordChargeRequestBody),
           });
           if (!historyResponse.ok) {
             const historyPayload = await historyResponse.json().catch(() => ({}));
@@ -566,6 +583,7 @@ export default function P2PAgentFeeWalletManagementPage() {
     }
   }, [
     activeAccount,
+    buildSignedRequestBody,
     chargeAmount,
     charging,
     contract,
@@ -600,14 +618,19 @@ export default function P2PAgentFeeWalletManagementPage() {
     setError(null);
     setNotice(null);
     try {
-      const response = await fetch('/api/agent/clearFeeWalletBalance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const clearWalletRequestBody = await buildSignedRequestBody({
+        path: '/api/agent/clearFeeWalletBalance',
+        storecode: agentcode,
+        payload: {
           agentcode,
           requesterWalletAddress: connectedWalletAddress,
           toWalletAddress: connectedWalletAddress,
-        }),
+        },
+      });
+      const response = await fetch('/api/agent/clearFeeWalletBalance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(clearWalletRequestBody),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -641,6 +664,7 @@ export default function P2PAgentFeeWalletManagementPage() {
     }
   }, [
     agentcode,
+    buildSignedRequestBody,
     connectedWalletAddress,
     feeWalletBalance,
     feeWalletMeta.walletAddress,
@@ -677,16 +701,21 @@ export default function P2PAgentFeeWalletManagementPage() {
     setRefreshingHistoryKey(refreshKey);
     setError(null);
     try {
-      const response = await fetch('/api/agent/fee-wallet-history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const refreshHistoryRequestBody = await buildSignedRequestBody({
+        path: '/api/agent/fee-wallet-history',
+        storecode: agentcode,
+        payload: {
           action: 'refresh-status',
           agentcode,
           requesterWalletAddress: connectedWalletAddress,
           historyId: normalizedHistoryId,
           transactionId: normalizedTransactionId,
-        }),
+        },
+      });
+      const response = await fetch('/api/agent/fee-wallet-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(refreshHistoryRequestBody),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -700,7 +729,7 @@ export default function P2PAgentFeeWalletManagementPage() {
     } finally {
       setRefreshingHistoryKey('');
     }
-  }, [agentcode, connectedWalletAddress, feeWalletMeta.walletAddress, loadHistory, refreshBalances]);
+  }, [agentcode, buildSignedRequestBody, connectedWalletAddress, feeWalletMeta.walletAddress, loadHistory, refreshBalances]);
 
   useEffect(() => {
     void loadData();

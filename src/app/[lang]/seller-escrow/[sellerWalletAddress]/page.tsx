@@ -81,6 +81,7 @@ import useSound from 'use-sound';
 
 import { useSearchParams } from 'next/navigation';
 import { useClientWallets } from "@/lib/useClientWallets";
+import { createWalletSignatureAuthPayload } from "@/lib/security/walletSignature";
 
 import { getAllUsersForSettlementOfStore } from "@/lib/api/user";
 
@@ -389,6 +390,8 @@ const BUYER_CANCEL_REPUTATION_PENALTY_POINTS = 1;
 const SELLER_ESCROW_BALANCE_POLLING_MS = 5000;
 const SELLER_ESCROW_ORDER_POLLING_MS = 5000;
 const BUYER_CONSENT_KEYWORD = '동의함';
+const isWalletAddress = (value: unknown) =>
+  /^0x[a-fA-F0-9]{40}$/.test(String(value ?? '').trim());
 const BUY_ORDER_PROGRESS_STEP_DEFINITIONS: Array<{
   key: string;
   title: string;
@@ -1822,18 +1825,8 @@ export default function Index({ params }: any) {
 
 
 
-  /*
-  const setActiveAccount = useSetActiveWallet();
- 
-
-  const connectWallets = useConnectedWallets();
-
-  const smartConnectWallet = connectWallets?.[0];
-  const inAppConnectWallet = connectWallets?.[1];
-  */
-
-
   const activeAccount = useActiveAccount();
+  const connectedWallets = useConnectedWallets();
 
   const address = activeAccount?.address;
 
@@ -1932,16 +1925,92 @@ export default function Index({ params }: any) {
 
 
   const [ownerWalletAddress, setOwnerWalletAddress] = useState('');
+  const [ownerWalletAddressCandidates, setOwnerWalletAddressCandidates] = useState<string[]>([]);
   const [targetSellerEscrowWalletAddress, setTargetSellerEscrowWalletAddress] = useState('');
+  const connectedWalletAddressCandidates = useMemo(() => {
+    const byLowerAddress = new Map<string, string>();
+    const appendCandidate = (value: unknown) => {
+      const normalized = String(value || '').trim();
+      if (!isWalletAddress(normalized)) {
+        return;
+      }
+      const key = normalized.toLowerCase();
+      if (!byLowerAddress.has(key)) {
+        byLowerAddress.set(key, normalized);
+      }
+    };
+
+    appendCandidate(address);
+    appendCandidate(activeWallet?.getAccount?.()?.address);
+    appendCandidate(activeWallet?.getAdminAccount?.()?.address);
+
+    for (const walletItem of connectedWallets) {
+      appendCandidate(walletItem?.getAccount?.()?.address);
+      appendCandidate(walletItem?.getAdminAccount?.()?.address);
+    }
+
+    return Array.from(byLowerAddress.values());
+  }, [activeWallet, address, connectedWallets]);
+
   useEffect(() => {
     setOwnerWalletAddress(sellerWalletAddressParam);
+    setOwnerWalletAddressCandidates(
+      isWalletAddress(sellerWalletAddressParam)
+        ? [sellerWalletAddressParam.toLowerCase()]
+        : [],
+    );
     setTargetSellerEscrowWalletAddress('');
   }, [sellerWalletAddressParam]);
 
-  const isOwnerSeller = Boolean(
-    address &&
-    ownerWalletAddress &&
-    address.toLowerCase() === ownerWalletAddress.toLowerCase()
+  const matchedOwnerConnectedWalletAddress = useMemo(() => {
+    const ownerCandidates =
+      ownerWalletAddressCandidates.length > 0
+        ? ownerWalletAddressCandidates
+        : [String(ownerWalletAddress || '').trim().toLowerCase()];
+    const ownerCandidateSet = new Set(ownerCandidates.filter(Boolean));
+    if (ownerCandidateSet.size <= 0) {
+      return '';
+    }
+    return connectedWalletAddressCandidates.find((value) =>
+      ownerCandidateSet.has(value.toLowerCase()),
+    ) || '';
+  }, [connectedWalletAddressCandidates, ownerWalletAddress, ownerWalletAddressCandidates]);
+
+  const requesterWalletAddress = matchedOwnerConnectedWalletAddress || (address || '');
+  const isOwnerSeller = Boolean(matchedOwnerConnectedWalletAddress);
+
+  const buildSignedRequestBody = useCallback(
+    async ({
+      path,
+      payload,
+    }: {
+      path: string;
+      payload: Record<string, unknown>;
+    }) => {
+      if (!activeAccount?.address || typeof activeAccount?.signMessage !== 'function') {
+        throw new Error('판매자 지갑 서명을 위해 지갑을 다시 연결해주세요.');
+      }
+
+      const auth = await createWalletSignatureAuthPayload({
+        account: activeAccount as unknown as {
+          address?: string;
+          signMessage?: (options: {
+            message: string;
+            originalMessage?: string;
+            chainId?: number;
+          }) => Promise<string>;
+        },
+        storecode: 'admin',
+        path,
+        method: 'POST',
+      });
+
+      return {
+        ...payload,
+        auth,
+      };
+    },
+    [activeAccount],
   );
 
   useEffect(() => {
@@ -2869,7 +2938,8 @@ export default function Index({ params }: any) {
 
   const isSameWalletAddress = (walletA?: string, walletB?: string) =>
     Boolean(walletA && walletB && walletA.toLowerCase() === walletB.toLowerCase());
-  const isMySellerCard = (walletAddress?: string) => isSameWalletAddress(walletAddress, address);
+  const isMySellerCard = (walletAddress?: string) =>
+    Boolean(isOwnerSeller && isSameWalletAddress(walletAddress, ownerWalletAddress));
   const sellerAgentcodeForFeePreview = useMemo(() => {
     const matchedSeller = sellersBalance.find((seller: any) =>
       isSameWalletAddress(seller?.walletAddress, sellerWalletAddressParam),
@@ -2980,15 +3050,15 @@ export default function Index({ params }: any) {
     return status.loading && !status.loaded;
   };
   const privateTradeTargetSellerWallets = useMemo(() => {
-    if (!address) {
+    if (!ownerWalletAddress) {
       return [] as string[];
     }
     return Array.from(new Set(
       sellersBalance
         .map((item) => String(item?.walletAddress || '').trim())
-        .filter((walletAddress) => walletAddress && !isSameWalletAddress(walletAddress, address)),
+        .filter((walletAddress) => walletAddress && !isSameWalletAddress(walletAddress, ownerWalletAddress)),
     ));
-  }, [address, sellersBalance]);
+  }, [ownerWalletAddress, sellersBalance]);
   const privateTradeTargetSellerWalletsKey = useMemo(
     () => privateTradeTargetSellerWallets.map((walletAddress) => walletAddress.toLowerCase()).sort().join('|'),
     [privateTradeTargetSellerWallets],
@@ -3001,14 +3071,14 @@ export default function Index({ params }: any) {
   );
   const myActiveTradingOrders = useMemo(
     () => {
-      if (!address || !isOwnerSeller) {
+      if (!ownerWalletAddress || !isOwnerSeller) {
         return [] as BuyOrder[];
       }
       return activeTradingOrders.filter((item) =>
-        isSameWalletAddress(getBuyOrderSellerWalletAddress(item), address),
+        isSameWalletAddress(getBuyOrderSellerWalletAddress(item), ownerWalletAddress),
       );
     },
-    [activeTradingOrders, address, isOwnerSeller],
+    [activeTradingOrders, ownerWalletAddress, isOwnerSeller],
   );
   const activeTradingAudioEnabledOrders = useMemo(
     () => myActiveTradingOrders.filter((item) => item?.audioOn !== false),
@@ -5528,7 +5598,7 @@ setAgreementForCancelTrade(
             limit: Number(limitValue),
             page: Number(pageValue),
             walletAddress: sellerEscrowWalletForHistory,
-            requesterWalletAddress: address,
+            requesterWalletAddress: requesterWalletAddress || undefined,
             startDate: searchFromDate,
             endDate: searchToDate,
           }
@@ -5560,6 +5630,27 @@ setAgreementForCancelTrade(
 
 
       const data = await response.json();
+
+      if (isSellerHistory) {
+        const ownerWalletFromApi = String(data?.result?.ownerWalletAddress || '').trim();
+        const ownerWalletCandidatesFromApi = Array.isArray(data?.result?.ownerWalletAddressCandidates)
+          ? data.result.ownerWalletAddressCandidates
+          : [];
+        const normalizedOwnerWalletCandidates: string[] = Array.from(new Set(
+          ownerWalletCandidatesFromApi
+            .map((item: unknown) => String(item || '').trim().toLowerCase())
+            .filter((item: string) => isWalletAddress(item)),
+        ));
+
+        if (isWalletAddress(ownerWalletFromApi)) {
+          setOwnerWalletAddress(ownerWalletFromApi);
+        }
+        if (normalizedOwnerWalletCandidates.length > 0) {
+          setOwnerWalletAddressCandidates(normalizedOwnerWalletCandidates);
+        } else if (isWalletAddress(ownerWalletFromApi)) {
+          setOwnerWalletAddressCandidates([ownerWalletFromApi.toLowerCase()]);
+        }
+      }
 
       //console.log('data', data);
 
@@ -5662,6 +5753,7 @@ setAgreementForCancelTrade(
   } , [
 
     address,
+    requesterWalletAddress,
     searchMyOrders,
     agreementForTrade,
     acceptingBuyOrder,
@@ -6413,7 +6505,7 @@ const fetchBuyOrders = async () => {
             limit: 50,
             page: 1,
             walletAddress: targetSellerEscrowWalletAddress,
-            requesterWalletAddress: address || undefined,
+            requesterWalletAddress: requesterWalletAddress || undefined,
             status: 'paymentRequested',
           }),
         });
@@ -6460,7 +6552,7 @@ const fetchBuyOrders = async () => {
       clearInterval(interval);
     };
   }, [
-    address,
+    requesterWalletAddress,
     sellerWalletAddressParam,
     targetSellerEscrowWalletAddress,
     activePaymentRequestedOrdersRefreshNonce,
@@ -7240,23 +7332,27 @@ const fetchBuyOrders = async () => {
       return;
     }
 
-    if (!isOwnerSeller || !selectedActivePaymentRequestedOrder?._id || !address) {
+    if (!isOwnerSeller || !selectedActivePaymentRequestedOrder?._id || !requesterWalletAddress) {
       return;
     }
 
     setActiveOrderCompleteResult(null);
     setCompletingActiveOrder(true);
     try {
+      const requestBody = await buildSignedRequestBody({
+        path: '/api/order/completePrivateBuyOrderBySeller',
+        payload: {
+          orderId: selectedActivePaymentRequestedOrder._id,
+          sellerWalletAddress: requesterWalletAddress,
+          publicIpAddress: myIpAddress && myIpAddress !== '-' ? myIpAddress : '',
+        },
+      });
       const response = await fetch('/api/order/completePrivateBuyOrderBySeller', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          orderId: selectedActivePaymentRequestedOrder._id,
-          sellerWalletAddress: address,
-          publicIpAddress: myIpAddress && myIpAddress !== '-' ? myIpAddress : '',
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -7510,24 +7606,28 @@ const fetchBuyOrders = async () => {
 
   const updateUsdtToKrwRate = async (index: number, sellerId: string, newRate: number) => {
     try {
+      if (!requesterWalletAddress) {
+        throw new Error('판매자 지갑을 연결해주세요.');
+      }
 
       updatingUsdtToKrwRateArray[index] = true;
       setUpdatingUsdtToKrwRateArray([...updatingUsdtToKrwRateArray]);
+
+      const requestBody = await buildSignedRequestBody({
+        path: '/api/user/updateSellerUsdtToKrwRate',
+        payload: {
+          storecode: "admin",
+          walletAddress: requesterWalletAddress,
+          usdtToKrwRate: newRate,
+        },
+      });
 
       const response = await fetch('/api/user/updateSellerUsdtToKrwRate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-
-          storecode: "admin",
-          walletAddress: address,
-          usdtToKrwRate: newRate,
-
-          //sellerId,
-          //newRate,
-        }),
+        body: JSON.stringify(requestBody),
       });
       const data = await response.json();
       //console.log('updateUsdtToKrwRate data', data);
@@ -7605,16 +7705,23 @@ const fetchBuyOrders = async () => {
     }
     setTogglingAutoProcessDeposit(true);
     try {
+      if (!requesterWalletAddress) {
+        throw new Error('판매자 지갑을 연결해주세요.');
+      }
+      const requestBody = await buildSignedRequestBody({
+        path: '/api/user/toggleAutoProcessDeposit',
+        payload: {
+          storecode: "admin",
+          walletAddress: requesterWalletAddress,
+          autoProcessDeposit: !currentValue,
+        },
+      });
       const response = await fetch('/api/user/toggleAutoProcessDeposit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          storecode: "admin",
-          walletAddress: address,
-          autoProcessDeposit: !currentValue,
-        }),
+        body: JSON.stringify(requestBody),
       });
       const data = await response.json();
       //console.log('toggleAutoProcessDeposit data', data);
@@ -7622,7 +7729,7 @@ const fetchBuyOrders = async () => {
         // update local state
         setSellersBalance((prev) =>
           prev.map((seller) =>
-            seller.walletAddress === address
+            isSameWalletAddress(seller.walletAddress, ownerWalletAddress)
               ? { ...seller, seller: { ...seller.seller, autoProcessDeposit: !currentValue } }
               : seller
           )
@@ -7648,16 +7755,23 @@ const fetchBuyOrders = async () => {
       
       setUpdatingPromotionText(true);
       try {
+          if (!requesterWalletAddress) {
+              throw new Error('판매자 지갑을 연결해주세요.');
+          }
+          const requestBody = await buildSignedRequestBody({
+              path: '/api/user/updatePromotionText',
+              payload: {
+                  storecode: "admin",
+                  walletAddress: requesterWalletAddress,
+                  promotionText: promotionText,
+              },
+          });
           const response = await fetch('/api/user/updatePromotionText', {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json',
               },
-              body: JSON.stringify({
-                  storecode: "admin",
-                  walletAddress: address,
-                  promotionText: promotionText,
-              }),
+              body: JSON.stringify(requestBody),
           });
           const data = await response.json();
           //console.log('updatePromotionText data', data);
@@ -7667,7 +7781,7 @@ const fetchBuyOrders = async () => {
               // update local state for seller
               setSellersBalance((prev) =>
                 prev.map((seller) =>
-                  seller.walletAddress === address
+                  isSameWalletAddress(seller.walletAddress, ownerWalletAddress)
                     ? { ...seller, seller: { ...seller.seller, promotionText: promotionText } }
                     : seller
                 )
@@ -10574,7 +10688,7 @@ const fetchBuyOrders = async () => {
                                 </div>
                               ) : (
                                 <div className="flex flex-col items-center justify-center gap-1">
-                                  {seller.walletAddress === address ? (
+                                  {isMySellerCard(seller.walletAddress) ? (
                                     <>
 
                                       {
