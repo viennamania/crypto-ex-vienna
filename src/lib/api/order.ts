@@ -6360,6 +6360,15 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
     if (!trimmed) return [];
     return Array.from(new Set([trimmed, trimmed.toLowerCase(), trimmed.toUpperCase()]));
   };
+  const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const toWalletAddressRegexQuery = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    return {
+      $regex: `^${escapeRegex(trimmed)}$`,
+      $options: 'i',
+    };
+  };
 
   try {
     const client = await clientPromise;
@@ -6367,12 +6376,14 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
     const buyordersCollection = client.db(dbName).collection('buyorders');
 
     const buyerWalletCandidates = toWalletCandidates(buyerWalletAddress);
+    const buyerWalletRegexQuery = toWalletAddressRegexQuery(buyerWalletAddress);
     const inputSellerWalletCandidates = toWalletCandidates(sellerWalletAddress);
+    const sellerWalletRegexQuery = toWalletAddressRegexQuery(sellerWalletAddress);
 
     const sellerUser = await usersCollection.findOne<any>(
       {
         storecode: 'admin',
-        walletAddress: { $in: inputSellerWalletCandidates },
+        walletAddress: sellerWalletRegexQuery || { $in: inputSellerWalletCandidates },
       },
       {
         projection: {
@@ -6416,14 +6427,14 @@ export async function getPrivateTradeStatusByBuyerAndSeller(
       $and: [
         {
           $or: [
-            { walletAddress: { $in: buyerWalletCandidates } },
-            { 'buyer.walletAddress': { $in: buyerWalletCandidates } },
+            { walletAddress: buyerWalletRegexQuery || { $in: buyerWalletCandidates } },
+            { 'buyer.walletAddress': buyerWalletRegexQuery || { $in: buyerWalletCandidates } },
           ],
         },
         {
           $or: [
-            { 'seller.walletAddress': { $in: sellerWalletInOrder } },
-            { sellerWalletAddress: { $in: sellerWalletInOrder } },
+            { 'seller.walletAddress': sellerWalletRegexQuery || { $in: sellerWalletInOrder } },
+            { sellerWalletAddress: sellerWalletRegexQuery || { $in: sellerWalletInOrder } },
           ],
         },
       ],
