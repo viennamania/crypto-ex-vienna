@@ -713,11 +713,16 @@ const getOrderBuyerConsentSnapshot = (order: BuyOrderItem): BuyerConsentSnapshot
   const consent = order?.buyerConsent && typeof order.buyerConsent === 'object'
     ? order.buyerConsent
     : null;
+  const normalizedOrderStatus = String(order?.status || '').trim().toLowerCase();
   const status = String(consent?.status || '').trim().toLowerCase();
   const accepted = consent?.accepted === true || status === 'accepted';
   const acceptedAt = String(consent?.acceptedAt || '').trim();
   const requestedAt = String(consent?.requestedAt || consent?.requestMessageSentAt || '').trim();
-  const channelUrl = String(consent?.channelUrl || '').trim();
+  const fallbackChannelUrl =
+    normalizedOrderStatus && normalizedOrderStatus !== 'ordered'
+      ? String(order?._id || '').trim()
+      : '';
+  const channelUrl = String(consent?.channelUrl || fallbackChannelUrl).trim();
 
   return {
     accepted,

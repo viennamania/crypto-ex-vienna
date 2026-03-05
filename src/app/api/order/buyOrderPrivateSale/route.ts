@@ -597,78 +597,134 @@ const executeBuyOrderPrivateSale = async (
     },
   });
 
-  if (createdNewOrder) {
+  const order = tradeStatus.order as Record<string, unknown>;
+  const orderBuyer = order?.buyer && typeof order.buyer === 'object'
+    ? (order.buyer as Record<string, unknown>)
+    : null;
+  const orderSeller = order?.seller && typeof order.seller === 'object'
+    ? (order.seller as Record<string, unknown>)
+    : null;
+
+  const resolvedBuyerWalletAddress =
+    toTrimmedString(orderBuyer?.walletAddress)
+    || toTrimmedString(order?.walletAddress)
+    || buyerWalletAddress;
+  const resolvedSellerWalletAddress =
+    toTrimmedString(orderSeller?.walletAddress)
+    || sellerWalletAddress;
+  const tradeId = toTrimmedString(order?.tradeId);
+  const orderId = toTrimmedString(order?.orderId || tradeStatus?.order?.orderId);
+  const currentConsentChannelUrl = toTrimmedString(order?.consentChannelUrl);
+  const centerAdminChatUserIds = await resolveCenterAdminChatUserIds();
+
+  if (createdNewOrder || !currentConsentChannelUrl) {
     await emitProgress({
       step: 'CONSENT_REQUEST_MESSAGE',
       title: '동의 요청 메시지 발송',
-      description: '판매자 명의로 주문 이용동의 요청 메시지를 채팅에 전송합니다.',
+      description: createdNewOrder
+        ? '판매자 명의로 주문 이용동의 요청 메시지를 채팅에 전송합니다.'
+        : '누락된 주문 채팅 채널 정보를 복구합니다.',
       status: 'processing',
     });
 
-    const order = tradeStatus.order as Record<string, unknown>;
-    const orderBuyer = order?.buyer && typeof order.buyer === 'object'
-      ? (order.buyer as Record<string, unknown>)
-      : null;
-    const orderSeller = order?.seller && typeof order.seller === 'object'
-      ? (order.seller as Record<string, unknown>)
-      : null;
-
-    const resolvedBuyerWalletAddress =
-      toTrimmedString(orderBuyer?.walletAddress)
-      || toTrimmedString(order?.walletAddress)
-      || buyerWalletAddress;
-    const resolvedSellerWalletAddress =
-      toTrimmedString(orderSeller?.walletAddress)
-      || sellerWalletAddress;
-    const tradeId = toTrimmedString(order?.tradeId);
-    const orderId = toTrimmedString(order?.orderId || tradeStatus?.order?.orderId);
-    const centerAdminChatUserIds = await resolveCenterAdminChatUserIds();
-
     try {
-      const sendResult = await sendSellerConsentRequestMessage({
-        buyerWalletAddress: resolvedBuyerWalletAddress,
-        sellerWalletAddress: resolvedSellerWalletAddress,
-        tradeId,
-        centerAdminUserIds: centerAdminChatUserIds,
-      });
+      if (createdNewOrder) {
+        const sendResult = await sendSellerConsentRequestMessage({
+          buyerWalletAddress: resolvedBuyerWalletAddress,
+          sellerWalletAddress: resolvedSellerWalletAddress,
+          tradeId,
+          centerAdminUserIds: centerAdminChatUserIds,
+        });
 
-      if (sendResult.sent) {
-        try {
-          await updateBuyOrderConsentRequestState({
-            orderId,
-            channelUrl: sendResult.channelUrl,
-            requestMessage: sendResult.requestMessage,
-            sellerWalletAddress: resolvedSellerWalletAddress,
+        if (sendResult.sent) {
+          try {
+            await updateBuyOrderConsentRequestState({
+              orderId,
+              channelUrl: sendResult.channelUrl,
+              requestMessage: sendResult.requestMessage,
+              sellerWalletAddress: resolvedSellerWalletAddress,
+            });
+          } catch (consentUpdateError) {
+            console.error('buyOrderPrivateSale: failed to update buyerConsent request state', consentUpdateError);
+          }
+
+          await emitProgress({
+            step: 'CONSENT_REQUEST_MESSAGE',
+            title: '동의 요청 메시지 발송',
+            description: '동의 요청 메시지를 채팅에 전송했습니다.',
+            status: 'completed',
+            data: {
+              channelUrl: sendResult.channelUrl,
+              centerAdminMemberCount: centerAdminChatUserIds.length,
+            },
           });
-        } catch (consentUpdateError) {
-          console.error('buyOrderPrivateSale: failed to update buyerConsent request state', consentUpdateError);
+        } else {
+          await emitProgress({
+            step: 'CONSENT_REQUEST_MESSAGE',
+            title: '동의 요청 메시지 발송',
+            description: '동의 요청 메시지 전송을 건너뛰었습니다.',
+            status: 'completed',
+            detail: sendResult.reason,
+          });
         }
-
-        await emitProgress({
-          step: 'CONSENT_REQUEST_MESSAGE',
-          title: '동의 요청 메시지 발송',
-          description: '동의 요청 메시지를 채팅에 전송했습니다.',
-          status: 'completed',
-          data: {
-            channelUrl: sendResult.channelUrl,
-            centerAdminMemberCount: centerAdminChatUserIds.length,
-          },
-        });
       } else {
-        await emitProgress({
-          step: 'CONSENT_REQUEST_MESSAGE',
-          title: '동의 요청 메시지 발송',
-          description: '동의 요청 메시지 전송을 건너뛰었습니다.',
-          status: 'completed',
-          detail: sendResult.reason,
-        });
+        if (!SENDBIRD_API_BASE) {
+          await emitProgress({
+            step: 'CONSENT_REQUEST_MESSAGE',
+            title: '주문 채팅 채널 복구',
+            description: 'Sendbird 설정이 없어 채널 복구를 건너뛰었습니다.',
+            status: 'completed',
+            detail: 'Sendbird application id is missing',
+          });
+        } else {
+          const headers = buildSendbirdHeaders();
+          if (!headers) {
+            await emitProgress({
+              step: 'CONSENT_REQUEST_MESSAGE',
+              title: '주문 채팅 채널 복구',
+              description: 'Sendbird 토큰이 없어 채널 복구를 건너뛰었습니다.',
+              status: 'completed',
+              detail: 'Sendbird API token is missing',
+            });
+          } else {
+            const repairedChannelUrl = await ensureSendbirdGroupChannel({
+              headers,
+              buyerWalletAddress: resolvedBuyerWalletAddress,
+              sellerWalletAddress: resolvedSellerWalletAddress,
+              tradeId,
+              centerAdminUserIds: centerAdminChatUserIds,
+            });
+            try {
+              await updateBuyOrderConsentRequestState({
+                orderId,
+                channelUrl: repairedChannelUrl,
+                requestMessage: '',
+                sellerWalletAddress: resolvedSellerWalletAddress,
+              });
+            } catch (consentUpdateError) {
+              console.error('buyOrderPrivateSale: failed to persist repaired buyerConsent channel', consentUpdateError);
+            }
+            await emitProgress({
+              step: 'CONSENT_REQUEST_MESSAGE',
+              title: '주문 채팅 채널 복구',
+              description: '누락된 주문 채팅 채널 정보를 복구했습니다.',
+              status: 'completed',
+              data: {
+                channelUrl: repairedChannelUrl,
+                centerAdminMemberCount: centerAdminChatUserIds.length,
+              },
+            });
+          }
+        }
       }
     } catch (sendError) {
       console.error('buyOrderPrivateSale: failed to send consent request message', sendError);
       await emitProgress({
         step: 'CONSENT_REQUEST_MESSAGE',
-        title: '동의 요청 메시지 발송',
-        description: '동의 요청 메시지 전송에 실패했습니다.',
+        title: createdNewOrder ? '동의 요청 메시지 발송' : '주문 채팅 채널 복구',
+        description: createdNewOrder
+          ? '동의 요청 메시지 전송에 실패했습니다.'
+          : '주문 채팅 채널 복구에 실패했습니다.',
         status: 'error',
         detail: toErrorDetailMessage(sendError),
       });
