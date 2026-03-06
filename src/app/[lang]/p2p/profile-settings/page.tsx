@@ -974,7 +974,7 @@ export default function SettingsPage({ params }: any) {
 
     return (
 
-        <main className="p-4 pb-28 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+        <main className="w-full max-w-[560px] p-4 pb-28 min-h-[100vh] flex items-start justify-center mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
             <AutoConnect client={client} wallets={[wallet]} />
 
             <div className="py-0 w-full">

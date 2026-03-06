@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
     const searchBuyerWalletAddressRegex = toRegexFilter(body?.searchBuyerWalletAddress);
     const searchAgentcodeRegex = toRegexFilter(body?.searchAgentcode);
     const searchPaymentMethodRegex = toRegexFilter(body?.searchPaymentMethod);
+    const searchBuyerStoreReferralStorecodeRegex = toRegexFilter(body?.searchBuyerStoreReferralStorecode);
 
     const fromDateIso = toIsoDateBoundary(body?.fromDate, true) || '1970-01-01T00:00:00.000Z';
     const toDateIso = toIsoDateBoundary(body?.toDate, false) || new Date().toISOString();
@@ -161,12 +162,24 @@ export async function POST(request: NextRequest) {
       andFilters.push({ privateSale: { $ne: true } });
     }
 
+    const groupingAndFilters = [...andFilters];
+
+    if (searchBuyerStoreReferralStorecodeRegex) {
+      andFilters.push({
+        'buyer.storeReferral.storecode': searchBuyerStoreReferralStorecodeRegex,
+      });
+    }
+
     const filter: Record<string, any> = andFilters.length > 1 ? { $and: andFilters } : andFilters[0];
+    const groupingFilter: Record<string, any> =
+      groupingAndFilters.length > 1
+        ? { $and: groupingAndFilters }
+        : groupingAndFilters[0];
 
     const client = await clientPromise;
     const collection = client.db(dbName).collection('buyorders');
 
-    const [orders, totalCount, totalAmountRows, sellerSalesRows] = await Promise.all([
+    const [orders, totalCount, totalAmountRows, sellerSalesRows, buyerStoreReferralGroupRows] = await Promise.all([
       collection
         .find(filter)
         .sort({ createdAt: -1 })
@@ -374,6 +387,71 @@ export async function POST(request: NextRequest) {
           { $sort: { totalKrwAmount: -1, totalUsdtAmount: -1, paymentConfirmedCount: -1 } },
         ])
         .toArray(),
+      collection
+        .aggregate([
+          { $match: groupingFilter },
+          {
+            $addFields: {
+              normalizedBuyerStoreReferralStorecode: {
+                $trim: {
+                  input: {
+                    $toString: {
+                      $ifNull: ['$buyer.storeReferral.storecode', ''],
+                    },
+                  },
+                },
+              },
+              normalizedBuyerStoreReferralStoreName: {
+                $trim: {
+                  input: {
+                    $toString: {
+                      $ifNull: ['$buyer.storeReferral.storeName', ''],
+                    },
+                  },
+                },
+              },
+              normalizedBuyerStoreReferralStoreLogo: {
+                $trim: {
+                  input: {
+                    $toString: {
+                      $ifNull: ['$buyer.storeReferral.storeLogo', ''],
+                    },
+                  },
+                },
+              },
+            },
+          },
+          {
+            $match: {
+              normalizedBuyerStoreReferralStorecode: { $ne: '' },
+            },
+          },
+          { $sort: { createdAt: -1 } },
+          {
+            $group: {
+              _id: {
+                storecodeKey: {
+                  $toLower: '$normalizedBuyerStoreReferralStorecode',
+                },
+              },
+              storecode: { $first: '$normalizedBuyerStoreReferralStorecode' },
+              storeName: { $first: '$normalizedBuyerStoreReferralStoreName' },
+              storeLogo: { $first: '$normalizedBuyerStoreReferralStoreLogo' },
+              count: { $sum: 1 },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              storecode: 1,
+              storeName: 1,
+              storeLogo: 1,
+              count: 1,
+            },
+          },
+          { $sort: { count: -1, storeName: 1, storecode: 1 } },
+        ])
+        .toArray(),
     ]);
 
     const pageAgentcodeKeys = Array.from(
@@ -494,6 +572,9 @@ export async function POST(request: NextRequest) {
 
     const totalAmount = totalAmountRows?.[0] || {};
     const sellerSalesSummary = Array.isArray(sellerSalesRows) ? sellerSalesRows : [];
+    const buyerStoreReferralGroups = Array.isArray(buyerStoreReferralGroupRows)
+      ? buyerStoreReferralGroupRows
+      : [];
 
     return NextResponse.json({
       result: {
@@ -510,6 +591,12 @@ export async function POST(request: NextRequest) {
           totalUsdtAmount: Number(item?.totalUsdtAmount || 0),
           paymentConfirmedCount: Number(item?.paymentConfirmedCount || item?.orderCount || 0),
           latestCreatedAt: String(item?.latestCreatedAt || ''),
+        })),
+        buyerStoreReferralGroups: buyerStoreReferralGroups.map((item: any) => ({
+          storecode: String(item?.storecode || '').trim(),
+          storeName: String(item?.storeName || '').trim(),
+          storeLogo: String(item?.storeLogo || '').trim(),
+          count: Number(item?.count || 0),
         })),
       },
     });

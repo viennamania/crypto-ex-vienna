@@ -75,12 +75,20 @@ type SearchFilters = {
   searchTradeId: string;
   searchBuyer: string;
   searchBuyerWalletAddress: string;
+  searchBuyerStoreReferralStorecode: string;
   searchSellerId: string;
   searchSellerWalletAddress: string;
   searchDepositName: string;
   searchPaymentMethod: string;
   searchStorecode: string;
   searchAgentcode: string;
+};
+
+type BuyerStoreReferralGroup = {
+  storecode: string;
+  storeName: string;
+  storeLogo: string;
+  count: number;
 };
 
 const DEFAULT_PAGE_SIZE = 30;
@@ -123,6 +131,7 @@ const createDefaultFilters = (): SearchFilters => {
     searchTradeId: '',
     searchBuyer: '',
     searchBuyerWalletAddress: '',
+    searchBuyerStoreReferralStorecode: '',
     searchSellerId: '',
     searchSellerWalletAddress: '',
     searchDepositName: '',
@@ -321,6 +330,19 @@ const getBuyerStoreReferralLabel = (storeReferral: ReturnType<typeof getBuyerSto
   return storeReferral.storeName || storeReferral.storecode || '-';
 };
 
+const normalizeStoreReferralKey = (value: unknown) =>
+  String(value || '').trim().toLowerCase();
+
+const formatBuyerStoreReferralGroupLabel = (item: BuyerStoreReferralGroup | null) => {
+  if (!item) return '전체';
+  const normalizedStoreName = String(item.storeName || '').trim();
+  const normalizedStorecode = String(item.storecode || '').trim();
+  if (normalizedStoreName && normalizedStorecode) {
+    return `${normalizedStoreName} (${normalizedStorecode})`;
+  }
+  return normalizedStoreName || normalizedStorecode || '-';
+};
+
 const getSellerDisplayName = (order: BuyOrderItem) =>
   String(order?.seller?.nickname || '').trim() || shortWallet(order?.seller?.walletAddress) || '-';
 
@@ -343,6 +365,8 @@ export default function BuyOrderTradeHistoryPage() {
     totalUsdtAmount: 0,
     totalFeeAmount: 0,
   });
+  const [buyerStoreReferralGroups, setBuyerStoreReferralGroups] = useState<BuyerStoreReferralGroup[]>([]);
+  const [buyerStoreReferralMenuOpen, setBuyerStoreReferralMenuOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState<SearchFilters>(() => createDefaultFilters());
   const [appliedFilters, setAppliedFilters] = useState<SearchFilters>(() => createDefaultFilters());
 
@@ -368,6 +392,16 @@ export default function BuyOrderTradeHistoryPage() {
     return [...statusCountMap.entries()].sort((a, b) => b[1] - a[1]);
   }, [orders]);
 
+  const selectedBuyerStoreReferralGroup = useMemo(() => {
+    const selectedKey = normalizeStoreReferralKey(draftFilters.searchBuyerStoreReferralStorecode);
+    if (!selectedKey) return null;
+    return (
+      buyerStoreReferralGroups.find(
+        (item) => normalizeStoreReferralKey(item.storecode) === selectedKey,
+      ) || null
+    );
+  }, [draftFilters.searchBuyerStoreReferralStorecode, buyerStoreReferralGroups]);
+
   const fetchTradeHistory = useCallback(async () => {
     setLoading(true);
     try {
@@ -381,6 +415,7 @@ export default function BuyOrderTradeHistoryPage() {
           searchTradeId: appliedFilters.searchTradeId,
           searchBuyer: appliedFilters.searchBuyer,
           searchBuyerWalletAddress: appliedFilters.searchBuyerWalletAddress,
+          searchBuyerStoreReferralStorecode: appliedFilters.searchBuyerStoreReferralStorecode,
           searchSellerId: appliedFilters.searchSellerId,
           searchSellerWalletAddress: appliedFilters.searchSellerWalletAddress,
           searchDepositName: appliedFilters.searchDepositName,
@@ -409,11 +444,23 @@ export default function BuyOrderTradeHistoryPage() {
         totalUsdtAmount: Number(payload?.result?.totalUsdtAmount || 0) || 0,
         totalFeeAmount: Number(payload?.result?.totalPlatformFeeAmount || 0) || 0,
       });
+      const groupedStoreReferrals = Array.isArray(payload?.result?.buyerStoreReferralGroups)
+        ? payload.result.buyerStoreReferralGroups
+            .map((item: any) => ({
+              storecode: String(item?.storecode || '').trim(),
+              storeName: String(item?.storeName || '').trim(),
+              storeLogo: String(item?.storeLogo || '').trim(),
+              count: Number(item?.count || 0),
+            }))
+            .filter((item: BuyerStoreReferralGroup) => Boolean(item.storecode))
+        : [];
+      setBuyerStoreReferralGroups(groupedStoreReferrals);
       setLastUpdatedAt(new Date().toISOString());
       setError(null);
     } catch (fetchError: any) {
       const message = String(fetchError?.message || '거래내역 조회 중 오류가 발생했습니다.');
       setError(message);
+      setBuyerStoreReferralGroups([]);
       toast.error(message);
     } finally {
       setLoading(false);
@@ -438,6 +485,7 @@ export default function BuyOrderTradeHistoryPage() {
       searchTradeId: draftFilters.searchTradeId.trim(),
       searchBuyer: draftFilters.searchBuyer.trim(),
       searchBuyerWalletAddress: draftFilters.searchBuyerWalletAddress.trim(),
+      searchBuyerStoreReferralStorecode: draftFilters.searchBuyerStoreReferralStorecode.trim(),
       searchSellerId: draftFilters.searchSellerId.trim(),
       searchSellerWalletAddress: draftFilters.searchSellerWalletAddress.trim(),
       searchDepositName: draftFilters.searchDepositName.trim(),
@@ -455,6 +503,7 @@ export default function BuyOrderTradeHistoryPage() {
     setDraftFilters(defaults);
     setAppliedFilters(defaults);
     setPageNumber(1);
+    setBuyerStoreReferralMenuOpen(false);
   };
 
   return (
@@ -533,6 +582,98 @@ export default function BuyOrderTradeHistoryPage() {
                   <option key={item.value || 'all'} value={item.value}>{item.label}</option>
                 ))}
               </select>
+            </div>
+            <div className="lg:col-span-2">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">구매자 소속 가맹점</label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setBuyerStoreReferralMenuOpen((prev) => !prev)}
+                  className="inline-flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition hover:border-slate-400"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    {selectedBuyerStoreReferralGroup?.storeLogo ? (
+                      <span
+                        className="h-5 w-5 shrink-0 rounded-full border border-slate-200 bg-cover bg-center bg-no-repeat"
+                        style={{ backgroundImage: `url(${encodeURI(selectedBuyerStoreReferralGroup.storeLogo)})` }}
+                        aria-label={selectedBuyerStoreReferralGroup.storeName || selectedBuyerStoreReferralGroup.storecode || '가맹점'}
+                      />
+                    ) : (
+                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-slate-100 text-[10px] font-semibold text-slate-600">
+                        전
+                      </span>
+                    )}
+                    <span className="truncate">{formatBuyerStoreReferralGroupLabel(selectedBuyerStoreReferralGroup)}</span>
+                  </span>
+                  <span className="text-xs text-slate-500">{buyerStoreReferralMenuOpen ? '▲' : '▼'}</span>
+                </button>
+
+                {buyerStoreReferralMenuOpen ? (
+                  <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                    <div className="max-h-60 overflow-y-auto p-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDraftFilters((prev) => ({ ...prev, searchBuyerStoreReferralStorecode: '' }));
+                          setBuyerStoreReferralMenuOpen(false);
+                        }}
+                        className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition ${
+                          !draftFilters.searchBuyerStoreReferralStorecode
+                            ? 'bg-slate-900 text-white'
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 bg-slate-100 text-[10px] font-semibold text-slate-600">전</span>
+                          전체
+                        </span>
+                        <span className={`text-xs ${!draftFilters.searchBuyerStoreReferralStorecode ? 'text-slate-200' : 'text-slate-400'}`}>
+                          ALL
+                        </span>
+                      </button>
+
+                      {buyerStoreReferralGroups.map((item) => {
+                        const groupLabel = formatBuyerStoreReferralGroupLabel(item);
+                        const isActive =
+                          normalizeStoreReferralKey(draftFilters.searchBuyerStoreReferralStorecode)
+                          === normalizeStoreReferralKey(item.storecode);
+
+                        return (
+                          <button
+                            key={item.storecode}
+                            type="button"
+                            onClick={() => {
+                              setDraftFilters((prev) => ({ ...prev, searchBuyerStoreReferralStorecode: item.storecode }));
+                              setBuyerStoreReferralMenuOpen(false);
+                            }}
+                            className={`mt-0.5 flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition ${
+                              isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className="flex min-w-0 items-center gap-2">
+                              {item.storeLogo ? (
+                                <span
+                                  className="h-5 w-5 shrink-0 rounded-full border border-slate-200 bg-cover bg-center bg-no-repeat"
+                                  style={{ backgroundImage: `url(${encodeURI(item.storeLogo)})` }}
+                                  aria-label={item.storeName || item.storecode}
+                                />
+                              ) : (
+                                <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-slate-100 text-[10px] font-semibold text-slate-600">
+                                  점
+                                </span>
+                              )}
+                              <span className="truncate">{groupLabel}</span>
+                            </span>
+                            <span className={`text-xs ${isActive ? 'text-slate-200' : 'text-slate-400'}`}>
+                              {item.count.toLocaleString()}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
             <div className="lg:col-span-2">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">페이지 크기</label>
@@ -722,11 +863,11 @@ export default function BuyOrderTradeHistoryPage() {
               <table className="w-full min-w-[1120px] table-fixed lg:min-w-0">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
-                    <th className="w-[6%] px-3 py-3">상태</th>
+                    <th className="w-[10%] px-3 py-3">상태</th>
                     <th className="w-[12%] px-3 py-3">주문시각/완료시각</th>
                     <th className="w-[10%] px-3 py-3">거래번호</th>
-                    <th className="w-[16%] px-3 py-3">구매자 정보</th>
-                    <th className="w-[14%] px-3 py-3">판매자 정보</th>
+                    <th className="w-[14%] px-3 py-3">구매자 정보</th>
+                    <th className="w-[12%] px-3 py-3">판매자 정보</th>
                     <th className="w-[10%] px-3 py-3 text-right">거래금액</th>
                     <th className="w-[9%] px-3 py-3">결제정보</th>
                     <th className="w-[8%] px-3 py-3">에이전트</th>
