@@ -67,7 +67,6 @@ type BuyOrderItem = {
 type SearchFilters = {
   fromDate: string;
   toDate: string;
-  privateSaleMode: 'all' | 'private' | 'normal';
   searchTradeId: string;
   searchBuyer: string;
   searchBuyerWalletAddress: string;
@@ -82,12 +81,6 @@ type SearchFilters = {
 const DEFAULT_PAGE_SIZE = 30;
 const PAGE_SIZE_OPTIONS = [20, 30, 50, 100];
 const FIXED_STATUS = 'paymentconfirmed';
-
-const PRIVATE_SALE_OPTIONS = [
-  { value: 'all', label: '전체' },
-  { value: 'private', label: '프라이빗만' },
-  { value: 'normal', label: '일반주문만' },
-] as const;
 
 const PAYMENT_METHOD_OPTIONS = [
   { value: '', label: '전체' },
@@ -122,7 +115,6 @@ const createDefaultFilters = (): SearchFilters => {
   return {
     fromDate: today,
     toDate: today,
-    privateSaleMode: 'all',
     searchTradeId: '',
     searchBuyer: '',
     searchBuyerWalletAddress: '',
@@ -369,7 +361,7 @@ export default function BuyOrderTradeHistoryPage() {
           status: FIXED_STATUS,
           fromDate: appliedFilters.fromDate,
           toDate: appliedFilters.toDate,
-          privateSaleMode: appliedFilters.privateSaleMode,
+          privateSaleMode: 'private',
         }),
       });
 
@@ -415,7 +407,6 @@ export default function BuyOrderTradeHistoryPage() {
     const normalizedFilters: SearchFilters = {
       fromDate: draftFilters.fromDate || getTodayDate(),
       toDate: draftFilters.toDate || draftFilters.fromDate || getTodayDate(),
-      privateSaleMode: draftFilters.privateSaleMode,
       searchTradeId: draftFilters.searchTradeId.trim(),
       searchBuyer: draftFilters.searchBuyer.trim(),
       searchBuyerWalletAddress: draftFilters.searchBuyerWalletAddress.trim(),
@@ -502,21 +493,6 @@ export default function BuyOrderTradeHistoryPage() {
               <div className="inline-flex h-10 w-full items-center rounded-xl border border-emerald-300 bg-emerald-50 px-3 text-sm font-semibold text-emerald-700">
                 입금확인 (고정)
               </div>
-            </div>
-            <div className="lg:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">주문 유형</label>
-              <select
-                value={draftFilters.privateSaleMode}
-                onChange={(event) => setDraftFilters((prev) => ({
-                  ...prev,
-                  privateSaleMode: event.target.value as SearchFilters['privateSaleMode'],
-                }))}
-                className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-slate-500"
-              >
-                {PRIVATE_SALE_OPTIONS.map((item) => (
-                  <option key={item.value} value={item.value}>{item.label}</option>
-                ))}
-              </select>
             </div>
             <div className="lg:col-span-2">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">결제수단</label>
