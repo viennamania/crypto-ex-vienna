@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { toast } from 'react-hot-toast';
 
@@ -304,6 +305,12 @@ const getSellerDisplayName = (order: BuyOrderItem) =>
   String(order?.seller?.nickname || '').trim() || shortWallet(order?.seller?.walletAddress) || '-';
 
 export default function BuyOrderTradeHistoryPage() {
+  const params = useParams<{ lang?: string }>();
+  const lang = String(params?.lang || '').trim();
+  const buyOrderManagementPath = lang
+    ? `/${lang}/administration/buyorder-management`
+    : '/administration/buyorder-management';
+
   const [orders, setOrders] = useState<BuyOrderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -448,7 +455,7 @@ export default function BuyOrderTradeHistoryPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Link
-                href="../"
+                href={buyOrderManagementPath}
                 className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 구매주문 관리

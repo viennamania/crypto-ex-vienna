@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { useActiveAccount } from 'thirdweb/react';
 import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
@@ -888,6 +889,12 @@ const createDefaultFilters = (): SearchFilters => {
 };
 
 export default function BuyOrderManagementPage() {
+  const params = useParams<{ lang?: string }>();
+  const lang = String(params?.lang || '').trim();
+  const paymentConfirmedHistoryPath = lang
+    ? `/${lang}/administration/buyorder-management/trade-history`
+    : '/administration/buyorder-management/trade-history';
+
   const activeAccount = useActiveAccount();
   const adminWalletAddress = String(activeAccount?.address || '').trim();
   const orderChatUserId = useMemo(
@@ -1969,7 +1976,7 @@ export default function BuyOrderManagementPage() {
                 {polling ? '갱신 중' : '실시간 모니터링'}
               </span>
               <Link
-                href="../buyorder-management/trade-history"
+                href={paymentConfirmedHistoryPath}
                 className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 입금확인 내역
