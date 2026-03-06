@@ -12663,6 +12663,7 @@ export async function acceptBuyOrderPrivateSale(
     const normalizedBuyerWalletAddress = String(buyerWalletAddress || '').trim();
     const normalizedBuyerStorecode = String(buyerStorecode || '').trim();
     const resolvedBuyerStorecode = normalizedBuyerStorecode || 'admin';
+    const buyerRequestStorecode = normalizedBuyerStorecode;
     const sellerWalletRegex = {
       $regex: `^${escapeRegex(normalizedSellerWalletAddress)}$`,
       $options: 'i',
@@ -13294,6 +13295,7 @@ export async function acceptBuyOrderPrivateSale(
         nickname: buyer.nickname || '',
         avatar: buyer.avatar || '',
         walletAddress: matchedBuyerWalletAddress,
+        ...(buyerRequestStorecode ? { storecode: buyerRequestStorecode } : {}),
         ipAddress: normalizedRequesterIpAddress,
         publicIpAddress: normalizedRequesterIpAddress,
         escrowWalletAddress: buyerEscrowWalletAddress,

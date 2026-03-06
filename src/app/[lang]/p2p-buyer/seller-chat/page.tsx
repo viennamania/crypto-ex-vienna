@@ -186,6 +186,7 @@ export default function SellerChatPage() {
 
   const sellerId = searchParams?.get('sellerId') || '';
   const sellerName = searchParams?.get('sellerName') || sellerId || '판매자';
+  const storecode = String(searchParams?.get('storecode') || '').trim();
 
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [channelUrl, setChannelUrl] = useState<string | null>(null);
@@ -420,6 +421,7 @@ export default function SellerChatPage() {
           sellerWalletAddress: sellerId,
           usdtAmount: derivedUsdt,
           krwAmount: derivedKrw,
+          ...(storecode ? { storecode } : {}),
         }),
       });
 

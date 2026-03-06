@@ -2017,7 +2017,7 @@ export default function PaymentUsdtPage({
                 )}
 
                 {!loadingHistory && history.length > 0 && (
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {history.map((item) => {
                       const isJustPaid =
                         Boolean(justPaidRecordId) &&
@@ -2026,54 +2026,54 @@ export default function PaymentUsdtPage({
                       return (
                         <div
                           key={item.id || item.transactionHash}
-                          className={`rounded-2xl border px-4 py-3 ${
+                          className={`rounded-xl border px-3 py-2.5 ${
                             isJustPaid ? 'border-emerald-300 bg-emerald-50/80' : 'border-slate-200 bg-white'
                           }`}
                         >
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">가맹점 정보</p>
-                              <p className="text-sm font-semibold text-slate-900">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">가맹점 정보</p>
+                              <p className="text-xs font-semibold text-slate-900 sm:text-sm">
                                 {item.storeName || '-'} ({item.storecode || '-'})
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-2xl font-extrabold leading-none tabular-nums text-slate-900">
+                              <p className="text-xl font-extrabold leading-none tabular-nums text-slate-900 sm:text-2xl">
                                 {Number(item.usdtAmount).toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT
                               </p>
-                              <p className="text-sm font-semibold tabular-nums text-slate-600">
+                              <p className="text-[11px] font-semibold tabular-nums text-slate-600 sm:text-xs">
                                 {item.krwAmount > 0 ? `${Number(item.krwAmount).toLocaleString()}원 · ` : ''}
                                 {formatDateTime(item.confirmedAt || item.createdAt)}
                               </p>
                             </div>
                           </div>
 
-                          <div className="mt-2 grid gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 text-xs">
-                            <div>
+                          <div className="mt-1.5 grid gap-1.5 rounded-lg border border-slate-100 bg-slate-50/70 p-2 text-[11px] sm:grid-cols-2">
+                            <div className="flex items-center justify-between gap-2">
                               <p className="font-semibold text-slate-500">결제번호</p>
-                              <p className="mt-0.5 text-slate-800">{item.paymentId || '-'}</p>
+                              <p className="truncate text-right text-slate-800">{item.paymentId || '-'}</p>
                             </div>
-                            <div>
+                            <div className="flex items-center justify-between gap-2">
                               <p className="font-semibold text-slate-500">적용 환율</p>
-                              <p className="mt-0.5 text-slate-800">
+                              <p className="text-right text-slate-800">
                                 {item.exchangeRate > 0 ? formatRate(item.exchangeRate) : '-'}
                               </p>
                             </div>
-                            <div>
+                            <div className="flex items-center justify-between gap-2">
                               <p className="font-semibold text-slate-500">가맹점 결제지갑</p>
-                              <p className="mt-0.5 font-mono text-slate-700">{shortAddress(item.toWalletAddress)}</p>
+                              <p className="font-mono text-right text-slate-700">{shortAddress(item.toWalletAddress)}</p>
                             </div>
-                            <div>
+                            <div className="flex items-center justify-between gap-2">
                               <p className="font-semibold text-slate-500">결제 회원</p>
-                              <p className="mt-0.5 text-slate-800">{formatPaymentMemberName(item.member)}</p>
+                              <p className="truncate text-right text-slate-800">{formatPaymentMemberName(item.member)}</p>
                             </div>
-                            <div>
+                            <div className="flex items-center justify-between gap-2 sm:col-span-2">
                               <p className="font-semibold text-slate-500">회원 지갑</p>
-                              <p className="mt-0.5 font-mono text-slate-700">{shortAddress(item.fromWalletAddress)}</p>
+                              <p className="font-mono text-right text-slate-700">{shortAddress(item.fromWalletAddress)}</p>
                             </div>
                           </div>
 
-                          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px]">
                             <span className="text-slate-500">네트워크: {NETWORK_BY_KEY[item.chain]?.label || item.chain}</span>
                             <div className="flex items-center gap-2">
                               {isJustPaid && (

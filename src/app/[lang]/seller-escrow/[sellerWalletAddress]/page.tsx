@@ -8210,6 +8210,7 @@ const fetchBuyOrders = async () => {
           usdtAmount: derivedUsdt,
           krwAmount: derivedKrw,
           liveProgress: true,
+          ...(searchParamsStorecode ? { storecode: searchParamsStorecode } : {}),
         }),
       });
 

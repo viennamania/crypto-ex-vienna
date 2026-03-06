@@ -4257,6 +4257,7 @@ const fetchBuyOrders = async () => {
         buyerWalletAddress: address,
         sellerWalletAddress: sellerWalletAddress,
         usdtAmount: normalizedBuyUsdtAmount,
+        ...(searchParamsStorecode ? { storecode: searchParamsStorecode } : {}),
       }),
     })
 

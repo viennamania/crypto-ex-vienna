@@ -4098,6 +4098,7 @@ const fetchBuyOrders = async () => {
         buyerWalletAddress: address,
         sellerWalletAddress: sellerWalletAddress,
         usdtAmount: buyAmountInputs[index],
+        ...(searchParamsStorecode ? { storecode: searchParamsStorecode } : {}),
       }),
     })
 
@@ -12226,4 +12227,3 @@ const TradeDetail = (
       </div>
     );
   };
-
