@@ -209,6 +209,8 @@ interface BuyOrder {
     accepted?: boolean;
     acceptedAt?: string;
     channelUrl?: string;
+    ratingScore?: number;
+    ratingCount?: number;
   };
 
 }
@@ -1404,12 +1406,24 @@ const getBuyerConsentSnapshotForTradeList = (orderLike: any) => {
   const channelUrl = pickFirstNonEmptyText(
     orderConsent?.channelUrl,
   );
+  const ratingScoreRaw =
+    Number(orderConsent?.ratingScore ?? orderLike?.buyer?.privateSaleConsent?.ratingScore);
+  const ratingCountRaw =
+    Number(orderConsent?.ratingCount ?? orderLike?.buyer?.privateSaleConsent?.acceptedCount);
+  const ratingScore = Number.isFinite(ratingScoreRaw) && ratingScoreRaw > 0
+    ? Math.floor(ratingScoreRaw)
+    : 0;
+  const ratingCount = Number.isFinite(ratingCountRaw) && ratingCountRaw > 0
+    ? Math.floor(ratingCountRaw)
+    : 0;
 
   return {
     accepted,
     acceptedAt,
     requestedAt,
     channelUrl,
+    ratingScore,
+    ratingCount,
   };
 };
 
@@ -11344,6 +11358,12 @@ const fetchBuyOrders = async () => {
                                                     </span>
                                                   </>
                                                 )}
+                                                <span className="text-[11px] font-semibold text-slate-600">
+                                                  이용동의 평점 {buyerConsentSnapshot.ratingScore}점
+                                                  {buyerConsentSnapshot.ratingCount > 0
+                                                    ? ` (누적 ${buyerConsentSnapshot.ratingCount}회)`
+                                                    : ''}
+                                                </span>
                                               </div>
                                               <div className="flex shrink-0 flex-col items-start text-left sm:items-end sm:text-right">
                                                 <span className="font-semibold text-amber-700 sm:hidden" style={{ fontFamily: 'monospace' }}>
@@ -12672,6 +12692,12 @@ const fetchBuyOrders = async () => {
                                   </span>
                                 </>
                               )}
+                              <span className="text-[11px] font-semibold text-slate-600">
+                                이용동의 평점 {buyerConsentSnapshot.ratingScore}점
+                                {buyerConsentSnapshot.ratingCount > 0
+                                  ? ` (누적 ${buyerConsentSnapshot.ratingCount}회)`
+                                  : ''}
+                              </span>
                               {buyerConsentSnapshot.channelUrl ? (
                                 <button
                                   type="button"

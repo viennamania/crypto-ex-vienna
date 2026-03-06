@@ -21,9 +21,14 @@ type SendbirdActiveBuyOrder = {
   _id: unknown;
   tradeId?: unknown;
   status?: unknown;
+  storecode?: unknown;
   walletAddress?: unknown;
   buyer?: {
     walletAddress?: unknown;
+    storecode?: unknown;
+    storeReferral?: {
+      storecode?: unknown;
+    };
   };
   seller?: {
     walletAddress?: unknown;
@@ -42,6 +47,13 @@ type SendbirdActiveBuyOrder = {
 };
 
 const toTrimmedString = (value: unknown) => String(value ?? '').trim();
+const toNonNegativeInteger = (value: unknown) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 0;
+  }
+  return Math.floor(numeric);
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -393,6 +405,140 @@ const resolveOrderBuyerWalletAddress = (order: SendbirdActiveBuyOrder) =>
 const resolveOrderSellerWalletAddress = (order: SendbirdActiveBuyOrder) =>
   normalizeWalletAddress(order?.seller?.walletAddress || '');
 
+const resolveOrderBuyerStorecode = (order: SendbirdActiveBuyOrder) => {
+  const buyerRecord = isRecord(order?.buyer) ? order.buyer : null;
+  const buyerStoreReferral = isRecord(buyerRecord?.storeReferral)
+    ? buyerRecord.storeReferral
+    : null;
+
+  return toTrimmedString(
+    buyerStoreReferral?.storecode
+    || buyerRecord?.storecode
+    || '',
+  );
+};
+
+const updateBuyerConsentRating = async ({
+  usersCollection,
+  buyerWalletAddress,
+  buyerStorecode,
+  tradeId,
+  channelUrl,
+  sellerWalletAddress,
+  buyerMessage,
+  buyerMessageCreatedAtIso,
+  buyerMessageId,
+  consentMessage,
+  consentMessageSentAt,
+  nowIso,
+}: {
+  usersCollection: any;
+  buyerWalletAddress: string;
+  buyerStorecode: string;
+  tradeId: string;
+  channelUrl: string;
+  sellerWalletAddress: string;
+  buyerMessage: string;
+  buyerMessageCreatedAtIso: string;
+  buyerMessageId: string;
+  consentMessage: string;
+  consentMessageSentAt: string;
+  nowIso: string;
+}) => {
+  const normalizedBuyerWalletAddress = normalizeWalletAddress(buyerWalletAddress);
+  if (!normalizedBuyerWalletAddress) {
+    return {
+      updated: false,
+      ratingScore: 0,
+      ratingCount: 0,
+      storecode: '',
+    };
+  }
+
+  const walletAddressRegex = toWalletAddressRegexQuery(normalizedBuyerWalletAddress);
+  const normalizedBuyerStorecode = toTrimmedString(buyerStorecode);
+  const updateFilters: Record<string, unknown>[] = [];
+
+  if (normalizedBuyerStorecode) {
+    updateFilters.push({
+      storecode: {
+        $regex: `^${escapeRegex(normalizedBuyerStorecode)}$`,
+        $options: 'i',
+      },
+      walletAddress: walletAddressRegex,
+    });
+  }
+
+  updateFilters.push({
+    walletAddress: walletAddressRegex,
+  });
+
+  const updateSet: Record<string, unknown> = {
+    'buyer.privateSaleConsent.required': true,
+    'buyer.privateSaleConsent.keyword': BUYER_CONSENT_KEYWORD,
+    'buyer.privateSaleConsent.status': 'accepted',
+    'buyer.privateSaleConsent.accepted': true,
+    'buyer.privateSaleConsent.acceptedAt': nowIso,
+    'buyer.privateSaleConsent.acceptedByMessage': buyerMessage,
+    'buyer.privateSaleConsent.acceptedMessageAt': buyerMessageCreatedAtIso,
+    'buyer.privateSaleConsent.lastTradeId': tradeId,
+    'buyer.privateSaleConsent.lastChannelUrl': channelUrl,
+    'buyer.privateSaleConsent.sourceSellerWalletAddress': sellerWalletAddress,
+    'buyer.privateSaleConsent.consentMessage': consentMessage,
+    'buyer.privateSaleConsent.consentMessageSentAt': consentMessageSentAt,
+    'buyer.privateSaleConsent.ratingUpdatedAt': nowIso,
+    updatedAt: nowIso,
+  };
+  if (buyerMessageId) {
+    updateSet['buyer.privateSaleConsent.acceptedMessageId'] = buyerMessageId;
+  }
+
+  for (const filter of updateFilters) {
+    const updateResult = await usersCollection.findOneAndUpdate(
+      filter,
+      {
+        $set: updateSet,
+        $inc: {
+          'buyer.privateSaleConsent.ratingScore': 1,
+          'buyer.privateSaleConsent.acceptedCount': 1,
+        },
+      },
+      {
+        returnDocument: 'after',
+        projection: {
+          _id: 0,
+          storecode: 1,
+          walletAddress: 1,
+          'buyer.privateSaleConsent': 1,
+        },
+      },
+    );
+
+    const updatedUser = (updateResult as any)?.value || updateResult || null;
+    if (!updatedUser) {
+      continue;
+    }
+
+    const privateSaleConsent = isRecord(updatedUser?.buyer?.privateSaleConsent)
+      ? updatedUser.buyer.privateSaleConsent
+      : {};
+
+    return {
+      updated: true,
+      ratingScore: toNonNegativeInteger(privateSaleConsent?.ratingScore),
+      ratingCount: toNonNegativeInteger(privateSaleConsent?.acceptedCount),
+      storecode: toTrimmedString(updatedUser?.storecode),
+    };
+  }
+
+  return {
+    updated: false,
+    ratingScore: 0,
+    ratingCount: 0,
+    storecode: '',
+  };
+};
+
 const logWebhook = (
   stage: string,
   details: Record<string, unknown>,
@@ -420,6 +566,7 @@ const BUY_ORDER_PROJECTION = {
   _id: 1,
   tradeId: 1,
   status: 1,
+  storecode: 1,
   walletAddress: 1,
   buyer: 1,
   seller: 1,
@@ -496,6 +643,7 @@ export async function POST(request: Request) {
   try {
     const client = await clientPromise;
     const buyordersCollection = client.db(dbName).collection('buyorders');
+    const usersCollection = client.db(dbName).collection('users');
 
     const senderWalletRegexQuery = toWalletAddressRegexQuery(senderWalletAddress);
     const counterPartyWalletAddress =
@@ -597,6 +745,7 @@ export async function POST(request: Request) {
 
     const orderBuyerWalletAddress = resolveOrderBuyerWalletAddress(activeOrder);
     const orderSellerWalletAddress = resolveOrderSellerWalletAddress(activeOrder);
+    const orderBuyerStorecode = resolveOrderBuyerStorecode(activeOrder);
     const tradeId = toTrimmedString(activeOrder.tradeId);
     const orderConsent = isRecord(activeOrder.buyerConsent) ? activeOrder.buyerConsent : null;
     const orderConsentStatus = toTrimmedString(orderConsent?.status).toLowerCase();
@@ -664,6 +813,54 @@ export async function POST(request: Request) {
       const consentAcceptedNow = acceptResult.matchedCount > 0;
 
       if (consentAcceptedNow) {
+        try {
+          const buyerConsentRating = await updateBuyerConsentRating({
+            usersCollection,
+            buyerWalletAddress: orderBuyerWalletAddress,
+            buyerStorecode: orderBuyerStorecode,
+            tradeId,
+            channelUrl: resolvedChannelUrl,
+            sellerWalletAddress: orderConsentRequestSellerWalletAddress,
+            buyerMessage,
+            buyerMessageCreatedAtIso,
+            buyerMessageId,
+            consentMessage: toTrimmedString(orderConsent?.requestMessage),
+            consentMessageSentAt: toTrimmedString(orderConsent?.requestMessageSentAt),
+            nowIso,
+          });
+
+          if (buyerConsentRating.updated) {
+            await buyordersCollection.updateOne(
+              { _id: activeOrder._id },
+              {
+                $set: {
+                  'buyerConsent.ratingScore': buyerConsentRating.ratingScore,
+                  'buyerConsent.ratingCount': buyerConsentRating.ratingCount,
+                  'buyerConsent.ratingUpdatedAt': nowIso,
+                },
+              },
+            );
+          }
+
+          logWebhook('processed_consent_rating', {
+            requestId,
+            tradeId,
+            buyerWalletAddress: orderBuyerWalletAddress,
+            buyerStorecode: orderBuyerStorecode || null,
+            ratingUpdated: buyerConsentRating.updated,
+            ratingScore: buyerConsentRating.ratingScore,
+            ratingCount: buyerConsentRating.ratingCount,
+          });
+        } catch (ratingError) {
+          logWebhook('failed_consent_rating_update', {
+            requestId,
+            tradeId,
+            buyerWalletAddress: orderBuyerWalletAddress,
+            buyerStorecode: orderBuyerStorecode || null,
+            errorMessage: toTrimmedString((ratingError as Error)?.message),
+          }, 'error');
+        }
+
         try {
           const followUpResult = await sendAcceptedFollowUpMessageToBuyer({
             channelUrl: resolvedChannelUrl,

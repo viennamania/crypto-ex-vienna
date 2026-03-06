@@ -32,6 +32,7 @@ export const BUYER_CONSENT_REQUEST_MESSAGE = [
   '',
   '',
   '동의하지 않으시면 취소 하시면 됩니다.',
+  '원활한 거래 진행을 위해 반드시 안내 문구를 확인 후 동의해 주세요.',
   `동의하시면  [[${BUYER_CONSENT_KEYWORD}]] 이라고 적어주십시요.`,
 ].join('\n');
 

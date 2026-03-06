@@ -12842,6 +12842,29 @@ export async function acceptBuyOrderPrivateSale(
       }
     }
 
+    const toNonNegativeInteger = (value: unknown) => {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric) || numeric <= 0) {
+        return 0;
+      }
+      return Math.floor(numeric);
+    };
+    const buyerPrivateSaleConsent =
+      buyer?.buyer?.privateSaleConsent && typeof buyer.buyer.privateSaleConsent === 'object'
+        ? buyer.buyer.privateSaleConsent
+        : {};
+    const buyerConsentRatingScoreSnapshot = toNonNegativeInteger(
+      (buyerPrivateSaleConsent as any)?.ratingScore,
+    );
+    const buyerConsentAcceptedCountSnapshot = toNonNegativeInteger(
+      (buyerPrivateSaleConsent as any)?.acceptedCount,
+    );
+    const buyerConsentRatingUpdatedAtSnapshot = String(
+      (buyerPrivateSaleConsent as any)?.ratingUpdatedAt
+      || (buyerPrivateSaleConsent as any)?.acceptedAt
+      || '',
+    ).trim();
+
     await emitProgress({
       step: 'BUYER_VALIDATED',
       title: '구매자 확인',
@@ -13340,6 +13363,9 @@ export async function acceptBuyOrderPrivateSale(
         accepted: false,
         requestedAt: nowIso,
         reminderCount: 0,
+        ratingScore: buyerConsentRatingScoreSnapshot,
+        ratingCount: buyerConsentAcceptedCountSnapshot,
+        ...(buyerConsentRatingUpdatedAtSnapshot ? { ratingUpdatedAt: buyerConsentRatingUpdatedAtSnapshot } : {}),
       },
       buyer: {
         nickname: buyer.nickname || '',
