@@ -326,6 +326,7 @@ const waitMs = async (ms: number) =>
 
 const USDT_AMOUNT_PRECISION = 6;
 const USDT_AMOUNT_SCALE = 10 ** USDT_AMOUNT_PRECISION;
+const PLATFORM_FEE_RATE_MAX = 5;
 
 const roundDownUsdtAmount = (value: number) => Math.floor(value * USDT_AMOUNT_SCALE) / USDT_AMOUNT_SCALE;
 
@@ -459,6 +460,14 @@ const toFeeRateOrNull = (value: unknown) => {
     return null;
   }
   return Math.round(numeric * 10000) / 10000;
+};
+
+const toPlatformFeeRateOrZero = (value: unknown) => {
+  const rate = toFeeRateOrNull(value);
+  if (rate === null || rate <= 0) {
+    return 0;
+  }
+  return Math.min(rate, PLATFORM_FEE_RATE_MAX);
 };
 
 const resolveCreditWalletSmartAccountAddress = (source: any): string => {
@@ -618,7 +627,6 @@ const resolvePrivateOrderPlatformFee = (
     { source: 'order.seller.platformFee.percentage', value: order?.seller?.platformFee?.percentage },
     { source: 'order.tradeFeeRate', value: order?.tradeFeeRate },
     { source: 'order.centerFeeRate', value: order?.centerFeeRate },
-    { source: 'env.NEXT_PUBLIC_PLATFORM_FEE_PERCENTAGE', value: process.env.NEXT_PUBLIC_PLATFORM_FEE_PERCENTAGE },
   ];
 
   const walletCandidates: Array<{ source: string; value: unknown }> = [
@@ -628,22 +636,22 @@ const resolvePrivateOrderPlatformFee = (
     { source: 'order.platformFee.address', value: order?.platformFee?.address },
     { source: 'order.seller.platformFee.walletAddress', value: order?.seller?.platformFee?.walletAddress },
     { source: 'order.seller.platformFee.address', value: order?.seller?.platformFee?.address },
-    { source: 'env.NEXT_PUBLIC_PLATFORM_FEE_ADDRESS', value: process.env.NEXT_PUBLIC_PLATFORM_FEE_ADDRESS },
   ];
 
-  const matchedRateCandidate = rateCandidates.find((candidate) => toFeeRateOrNull(candidate.value) !== null);
+  const matchedRateCandidate = rateCandidates.find((candidate) => toPlatformFeeRateOrZero(candidate.value) > 0);
   const matchedWalletCandidate = walletCandidates.find((candidate) =>
     isWalletAddress(String(candidate.value || '').trim()),
   );
 
-  const resolvedFeeRate = matchedRateCandidate ? (toFeeRateOrNull(matchedRateCandidate.value) || 0) : 0;
+  const resolvedFeeRate = matchedRateCandidate ? toPlatformFeeRateOrZero(matchedRateCandidate.value) : 0;
   const resolvedFeeWalletAddress = matchedWalletCandidate
     ? String(matchedWalletCandidate.value || '').trim()
     : '';
+  const hasActivePlatformFee = resolvedFeeRate > 0 && isWalletAddress(resolvedFeeWalletAddress);
 
   return {
-    feeRatePercent: resolvedFeeRate,
-    feeWalletAddress: resolvedFeeWalletAddress,
+    feeRatePercent: hasActivePlatformFee ? resolvedFeeRate : 0,
+    feeWalletAddress: hasActivePlatformFee ? resolvedFeeWalletAddress : '',
     source: [
       matchedRateCandidate?.source || '',
       matchedWalletCandidate?.source || '',
@@ -684,15 +692,16 @@ const resolveStoredPrivateOrderTransferPlan = (orderLike: any) => {
     { source: 'order.settlement.transferTotalAmount', value: orderLike?.settlement?.transferTotalAmount },
   ];
 
-  const matchedFeeRate = feeRateCandidates.find((candidate) => toFeeRateOrNull(candidate.value) !== null);
+  const matchedFeeRate = feeRateCandidates.find((candidate) => toPlatformFeeRateOrZero(candidate.value) > 0);
   const matchedFeeWallet = feeWalletCandidates.find((candidate) =>
     isWalletAddress(String(candidate.value || '').trim()),
   );
   const matchedFeeAmount = feeAmountCandidates.find((candidate) => toNonNegativeUsdtAmountOrNull(candidate.value) !== null);
   const matchedEscrowLock = escrowLockCandidates.find((candidate) => toUsdtAmountOrZero(candidate.value) > 0);
 
-  const feeRatePercent = matchedFeeRate ? (toFeeRateOrNull(matchedFeeRate.value) || 0) : 0;
+  const feeRatePercent = matchedFeeRate ? toPlatformFeeRateOrZero(matchedFeeRate.value) : 0;
   const feeWalletAddress = matchedFeeWallet ? String(matchedFeeWallet.value || '').trim() : '';
+  const hasActivePlatformFeeConfig = feeRatePercent > 0 && isWalletAddress(feeWalletAddress);
 
   let platformFeeUsdtAmount = matchedFeeAmount
     ? (toNonNegativeUsdtAmountOrNull(matchedFeeAmount.value) || 0)
@@ -706,8 +715,23 @@ const resolveStoredPrivateOrderTransferPlan = (orderLike: any) => {
     totalTransferUsdtAmount = roundDownUsdtAmount(buyerTransferUsdtAmount + platformFeeUsdtAmount);
   }
 
-  if (platformFeeUsdtAmount <= 0 && totalTransferUsdtAmount > buyerTransferUsdtAmount) {
+  if (
+    hasActivePlatformFeeConfig
+    && platformFeeUsdtAmount <= 0
+    && totalTransferUsdtAmount > buyerTransferUsdtAmount
+  ) {
     platformFeeUsdtAmount = roundDownUsdtAmount(totalTransferUsdtAmount - buyerTransferUsdtAmount);
+  }
+
+  if (hasActivePlatformFeeConfig && platformFeeUsdtAmount > 0 && buyerTransferUsdtAmount > 0) {
+    const maxPlatformFeeUsdtAmount = roundDownUsdtAmount((buyerTransferUsdtAmount * feeRatePercent) / 100);
+    if (platformFeeUsdtAmount > maxPlatformFeeUsdtAmount) {
+      platformFeeUsdtAmount = maxPlatformFeeUsdtAmount;
+    }
+  }
+
+  if (!hasActivePlatformFeeConfig) {
+    platformFeeUsdtAmount = 0;
   }
 
   if (totalTransferUsdtAmount <= 0) {
@@ -720,14 +744,16 @@ const resolveStoredPrivateOrderTransferPlan = (orderLike: any) => {
   }
 
   const shouldTransferPlatformFee =
-    platformFeeUsdtAmount > 0 && totalTransferUsdtAmount > buyerTransferUsdtAmount;
+    hasActivePlatformFeeConfig
+    && platformFeeUsdtAmount > 0
+    && totalTransferUsdtAmount > buyerTransferUsdtAmount;
 
   return {
     buyerTransferUsdtAmount,
     platformFeeUsdtAmount: shouldTransferPlatformFee ? platformFeeUsdtAmount : 0,
     totalTransferUsdtAmount,
-    feeRatePercent,
-    feeWalletAddress,
+    feeRatePercent: hasActivePlatformFeeConfig ? feeRatePercent : 0,
+    feeWalletAddress: hasActivePlatformFeeConfig ? feeWalletAddress : '',
     shouldTransferPlatformFee,
     transferCount: shouldTransferPlatformFee ? 2 : 1,
     source: [

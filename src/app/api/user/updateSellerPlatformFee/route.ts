@@ -13,6 +13,7 @@ const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$
 const toText = (value: unknown) => String(value ?? '').trim();
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
+const PLATFORM_FEE_RATE_MAX = 5;
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,8 +31,11 @@ export async function POST(request: NextRequest) {
     if (!isWalletAddress(normalizedFeeWalletAddress)) {
       return NextResponse.json({ error: 'feeWalletAddress must be a valid wallet address' }, { status: 400 });
     }
-    if (!Number.isFinite(normalizedFeeRate) || normalizedFeeRate < 0 || normalizedFeeRate > 100) {
-      return NextResponse.json({ error: 'feeRate must be a number between 0 and 100' }, { status: 400 });
+    if (!Number.isFinite(normalizedFeeRate) || normalizedFeeRate < 0 || normalizedFeeRate > PLATFORM_FEE_RATE_MAX) {
+      return NextResponse.json(
+        { error: `feeRate must be a number between 0 and ${PLATFORM_FEE_RATE_MAX}` },
+        { status: 400 },
+      );
     }
 
     const ipAddress = getRequesterIpAddress(request) || 'unknown';
@@ -82,6 +86,10 @@ export async function POST(request: NextRequest) {
       $regex: `^${escapeRegex(normalizedWalletAddress)}$`,
       $options: 'i',
     };
+    const feeWalletRegex = {
+      $regex: `^${escapeRegex(normalizedFeeWalletAddress)}$`,
+      $options: 'i',
+    };
 
     const primaryFilter: Record<string, unknown> = {
       storecode: normalizedStorecode,
@@ -96,8 +104,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'user not found' }, { status: 404 });
     }
 
+    const feeWalletProjection = { projection: { _id: 1, walletAddress: 1, storecode: 1 } };
+    const registeredFeeWalletUser =
+      (await usersCollection.findOne<any>(
+        {
+          storecode: normalizedStorecode,
+          walletAddress: feeWalletRegex,
+        },
+        feeWalletProjection,
+      ))
+      || (await usersCollection.findOne<any>(
+        {
+          walletAddress: feeWalletRegex,
+        },
+        feeWalletProjection,
+      ));
+
+    if (!registeredFeeWalletUser?._id) {
+      return NextResponse.json(
+        { error: 'feeWalletAddress must be a registered member wallet address' },
+        { status: 400 },
+      );
+    }
+
+    const feeWalletAddressForSave =
+      normalizeWalletAddress(registeredFeeWalletUser.walletAddress)
+      || normalizedFeeWalletAddress;
+
     const nextFee = {
-      walletAddress: normalizedFeeWalletAddress,
+      walletAddress: feeWalletAddressForSave,
       rate: normalizedFeeRate,
     };
     const prevFee = user?.seller?.platformFee || null;

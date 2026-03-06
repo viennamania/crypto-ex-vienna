@@ -8,6 +8,25 @@ import { toast } from 'react-hot-toast';
 type SellerStatus = 'pending' | 'confirmed' | 'rejected' | undefined;
 type SellerStatusValue = 'pending' | 'confirmed';
 type KycStatus = 'pending' | 'approved' | 'rejected' | 'none' | undefined;
+const PLATFORM_FEE_RATE_MAX = 5;
+const isWalletAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(value.trim());
+
+const resolvePlatformFeeSaveErrorMessage = (message: string) => {
+  const normalizedMessage = String(message || '').trim();
+  if (!normalizedMessage) {
+    return '수수료 정보를 저장하지 못했습니다.';
+  }
+  if (normalizedMessage.includes('registered member wallet')) {
+    return '수수료 수취 지갑주소는 회원 등록된 지갑주소만 가능합니다.';
+  }
+  if (normalizedMessage.includes('between 0 and')) {
+    return `수수료율은 0 ~ ${PLATFORM_FEE_RATE_MAX}% 범위만 가능합니다.`;
+  }
+  if (normalizedMessage.includes('valid wallet address')) {
+    return '지갑주소 형식이 올바르지 않습니다.';
+  }
+  return normalizedMessage;
+};
 
 export default function SellerDetailPage() {
   const params = useParams<{ lang?: string; walletAddress?: string }>();
@@ -239,13 +258,22 @@ export default function SellerDetailPage() {
 
   const handleSavePlatformFee = async () => {
     if (!walletAddress || !seller) return;
+    const normalizedFeeWalletAddress = feeWalletAddress.trim();
     const rateNum = Number(feeRate);
     if (Number.isNaN(rateNum) || rateNum < 0) {
       toast.error('수수료율을 0 이상 숫자로 입력하세요.');
       return;
     }
-    if (!feeWalletAddress.trim()) {
+    if (rateNum > PLATFORM_FEE_RATE_MAX) {
+      toast.error(`수수료율은 ${PLATFORM_FEE_RATE_MAX}%를 넘길 수 없습니다.`);
+      return;
+    }
+    if (!normalizedFeeWalletAddress) {
       toast.error('수수료를 받을 지갑주소를 입력하세요.');
+      return;
+    }
+    if (!isWalletAddress(normalizedFeeWalletAddress)) {
+      toast.error('올바른 지갑주소(0x...) 형식으로 입력하세요.');
       return;
     }
     setSavingFee(true);
@@ -258,7 +286,7 @@ export default function SellerDetailPage() {
         body: JSON.stringify({
           storecode: user?.storecode || storecode,
           walletAddress,
-          feeWalletAddress: feeWalletAddress.trim(),
+          feeWalletAddress: normalizedFeeWalletAddress,
           feeRate: rateNum,
           changedBy: 'admin',
         }),
@@ -277,12 +305,16 @@ export default function SellerDetailPage() {
       await fetchUser();
       await fetchFeeLogs();
       setInitialFee({
-        walletAddress: feeWalletAddress.trim(),
+        walletAddress: normalizedFeeWalletAddress,
         rate: rateNum,
       });
     } catch (error) {
       console.error('Save platform fee failed', error);
-      toast.error('수수료 정보를 저장하지 못했습니다.');
+      toast.error(
+        resolvePlatformFeeSaveErrorMessage(
+          error instanceof Error ? error.message : '',
+        ),
+      );
     }
     setSavingFee(false);
   };
@@ -1084,20 +1116,27 @@ export default function SellerDetailPage() {
                   <input
                     type="number"
                     min="0"
+                    max={PLATFORM_FEE_RATE_MAX}
                     step="0.01"
                     value={feeRate}
                     onChange={(e) => setFeeRate(e.target.value)}
                     className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
-                    placeholder="예: 0.50"
+                    placeholder={`예: 0.50 (최대 ${PLATFORM_FEE_RATE_MAX})`}
                   />
                 </div>
               </div>
+              <p className="mt-2 text-xs text-amber-700">
+                수수료 수취 지갑주소는 회원 등록된 지갑주소만 설정할 수 있으며, 수수료율은 최대 {PLATFORM_FEE_RATE_MAX}%입니다.
+              </p>
               <div className="mt-3 flex justify-end">
                 <button
                   type="button"
                   onClick={handleSavePlatformFee}
                   disabled={
                     savingFee ||
+                    Number(feeRate) > PLATFORM_FEE_RATE_MAX ||
+                    Number(feeRate) < 0 ||
+                    Number.isNaN(Number(feeRate)) ||
                     (!feeWalletAddress.trim() && initialFee.walletAddress === '') ||
                     (feeWalletAddress.trim() === initialFee.walletAddress &&
                       (initialFee.rate === '' ? feeRate === '' : Number(feeRate) === initialFee.rate))
