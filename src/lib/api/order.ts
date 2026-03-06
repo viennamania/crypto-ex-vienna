@@ -8370,6 +8370,10 @@ export async function getAllBuyOrdersBySellerEscrowWallet(
     walletAddress,
     requesterWalletAddress,
     status,
+    searchTradeId,
+    searchBuyer,
+    searchDepositName,
+    searchBuyerWalletAddress,
   }: {
     limit: number;
     page: number;
@@ -8378,6 +8382,10 @@ export async function getAllBuyOrdersBySellerEscrowWallet(
     walletAddress: string;
     requesterWalletAddress?: string;
     status?: string | string[];
+    searchTradeId?: string;
+    searchBuyer?: string;
+    searchDepositName?: string;
+    searchBuyerWalletAddress?: string;
   }
 ): Promise<any> {
   const client = await clientPromise;
@@ -8398,8 +8406,12 @@ export async function getAllBuyOrdersBySellerEscrowWallet(
   if (endDate) {
     const endDateTime = new Date(endDate);
     if (!Number.isNaN(endDateTime.getTime())) {
-      endDateTime.setDate(endDateTime.getDate() + 1);
-      createdAtFilter.$lt = endDateTime.toISOString();
+      if (String(endDate).includes('T')) {
+        createdAtFilter.$lte = endDateTime.toISOString();
+      } else {
+        endDateTime.setDate(endDateTime.getDate() + 1);
+        createdAtFilter.$lt = endDateTime.toISOString();
+      }
     }
   }
 
@@ -8407,23 +8419,83 @@ export async function getAllBuyOrdersBySellerEscrowWallet(
     $regex: `^${escapeRegex(walletAddress)}$`,
     $options: 'i',
   };
-  const matchQuery: Record<string, any> = {
+  const sellerWalletMatchQuery: Record<string, any> = {
     $or: [
       { 'seller.walletAddress': walletAddressRegex },
       { 'seller.escrowWalletAddress': walletAddressRegex },
     ],
   };
+  const matchConditions: Record<string, any>[] = [sellerWalletMatchQuery];
+
   if (Array.isArray(status) && status.length > 0) {
     const validStatuses = status.filter((item) => typeof item === 'string' && item.trim());
     if (validStatuses.length > 0) {
-      matchQuery.status = { $in: validStatuses };
+      matchConditions.push({ status: { $in: validStatuses } });
     }
   } else if (typeof status === 'string' && status.trim()) {
-    matchQuery.status = status.trim();
+    matchConditions.push({ status: status.trim() });
   }
   if (Object.keys(createdAtFilter).length > 0) {
-    matchQuery.createdAt = createdAtFilter;
+    matchConditions.push({ createdAt: createdAtFilter });
   }
+
+  const normalizedSearchTradeId = String(searchTradeId || '').trim();
+  if (normalizedSearchTradeId) {
+    matchConditions.push({
+      tradeId: {
+        $regex: escapeRegex(normalizedSearchTradeId),
+        $options: 'i',
+      },
+    });
+  }
+
+  const normalizedSearchBuyer = String(searchBuyer || '').trim();
+  if (normalizedSearchBuyer) {
+    const buyerRegex = {
+      $regex: escapeRegex(normalizedSearchBuyer),
+      $options: 'i',
+    };
+    matchConditions.push({
+      $or: [
+        { nickname: buyerRegex },
+        { 'buyer.nickname': buyerRegex },
+      ],
+    });
+  }
+
+  const normalizedSearchDepositName = String(searchDepositName || '').trim();
+  if (normalizedSearchDepositName) {
+    const depositNameRegex = {
+      $regex: escapeRegex(normalizedSearchDepositName),
+      $options: 'i',
+    };
+    matchConditions.push({
+      $or: [
+        { 'buyer.depositName': depositNameRegex },
+        { 'buyer.bankInfo.depositName': depositNameRegex },
+        { 'buyer.bankInfo.accountHolder': depositNameRegex },
+      ],
+    });
+  }
+
+  const normalizedSearchBuyerWalletAddress = String(searchBuyerWalletAddress || '').trim();
+  if (normalizedSearchBuyerWalletAddress) {
+    const buyerWalletRegex = {
+      $regex: escapeRegex(normalizedSearchBuyerWalletAddress),
+      $options: 'i',
+    };
+    matchConditions.push({
+      $or: [
+        { walletAddress: buyerWalletRegex },
+        { 'buyer.walletAddress': buyerWalletRegex },
+      ],
+    });
+  }
+
+  const matchQuery: Record<string, any> =
+    matchConditions.length === 1
+      ? matchConditions[0]
+      : { $and: matchConditions };
 
   const rawOrders = await collection
     .find<UserProps>(matchQuery)

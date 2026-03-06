@@ -1000,6 +1000,12 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
               >
                 기존 페이지로 이동
               </Link>
+              <Link
+                href={`/${lang}/seller-escrow/${sellerWalletAddress}/trade-history`}
+                className="inline-flex items-center justify-center rounded-lg border border-emerald-300/70 bg-emerald-400/20 px-3 py-1.5 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-400/30"
+              >
+                판매자 거래내역
+              </Link>
               <button
                 type="button"
                 onClick={resetChatLayout}

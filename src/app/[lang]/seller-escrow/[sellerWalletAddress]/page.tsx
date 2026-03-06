@@ -9709,16 +9709,31 @@ const fetchBuyOrders = async () => {
         <div className="mt-3 w-full flex flex-col items-start justify-center gap-3">
 
           {sellerWalletAddressParam && (
-            <button
-              type="button"
-              onClick={() => {
-                const nextUrl = `/${params.lang}/seller-escrow/${sellerWalletAddressParam}/today-orders-chat`;
-                window.open(nextUrl, '_blank', 'noopener,noreferrer');
-              }}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
-            >
-              오늘 주문 + 다중 채팅 화면
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const nextUrl = `/${params.lang}/seller-escrow/${sellerWalletAddressParam}/today-orders-chat`;
+                  window.open(nextUrl, '_blank', 'noopener,noreferrer');
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
+              >
+                오늘 주문 + 다중 채팅 화면
+              </button>
+
+              {isOwnerSeller && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextUrl = `/${params.lang}/seller-escrow/${sellerWalletAddressParam}/trade-history`;
+                    window.open(nextUrl, '_blank', 'noopener,noreferrer');
+                  }}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                >
+                  판매자 거래내역 페이지
+                </button>
+              )}
+            </div>
           )}
 
             {/* 돌아가기 버튼 */}
