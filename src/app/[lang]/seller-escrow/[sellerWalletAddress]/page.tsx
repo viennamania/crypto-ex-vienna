@@ -11124,7 +11124,7 @@ const fetchBuyOrders = async () => {
                             isMySellerCard(seller.walletAddress) && ownerHasActivePaymentRequestedOrders
                           ) && (
                             <>
-                              {currentUsdtBalanceArray[index] >= 10 ? (
+                              {currentUsdtBalanceArray[index] >= 10 && (
                                 <div className="w-full flex flex-col items-start justify-center gap-2">
                                   <div className="w-full flex flex-row items-start justify-start gap-2">
                                     <Image
@@ -11152,19 +11152,6 @@ const fetchBuyOrders = async () => {
                                     </span>
                                     )}
                                   </div>
-                                </div>
-                              ) : (
-                                <div className="flex flex-row items-center gap-2 bg-red-500 text-white px-3 py-1 rounded-lg">
-                                  <Image
-                                    src="/icon-sale.png"
-                                    alt="Off Sale"
-                                    width={30}
-                                    height={30}
-                                    className="w-12 h-12 object-contain grayscale"
-                                  />
-                                  <span className="text-xs font-semibold">
-                                    에스크로 잔액 부족
-                                  </span>
                                 </div>
                               )}
                             </>
