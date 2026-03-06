@@ -9,6 +9,7 @@ import { evaluateRateLimit } from '@/lib/security/rateLimit';
 import {
   getRequesterIpAddress,
   getRoleForWalletAddress,
+  isWalletAddressAuthorizedForExpectedWallet,
   verifyWalletAuthFromBody,
 } from '@/lib/security/requestAuth';
 import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSignature';
@@ -25,6 +26,40 @@ let cachedDefaultAvatarUrl: string | null = DEFAULT_AVATAR_BLOB_URL || null;
 
 const toText = (value: unknown) => String(value ?? '').trim();
 const isAdminStorecode = (storecode: string) => storecode.toLowerCase() === 'admin';
+const normalizeRole = (value: unknown) => toText(value).toLowerCase();
+
+const resolveTargetWalletAddress = async ({
+  requestedWalletAddress,
+  signerWalletAddress,
+  isSignerAdmin,
+}: {
+  requestedWalletAddress: string;
+  signerWalletAddress: string;
+  isSignerAdmin: boolean;
+}) => {
+  if (!isWalletAddress(signerWalletAddress)) {
+    return '';
+  }
+
+  if (!isWalletAddress(requestedWalletAddress) || requestedWalletAddress === signerWalletAddress) {
+    return signerWalletAddress;
+  }
+
+  if (isSignerAdmin) {
+    return requestedWalletAddress;
+  }
+
+  const isAuthorized = await isWalletAddressAuthorizedForExpectedWallet({
+    expectedWalletAddress: requestedWalletAddress,
+    candidateWalletAddress: signerWalletAddress,
+  });
+
+  if (isAuthorized) {
+    return requestedWalletAddress;
+  }
+
+  return '';
+};
 
 const generateAvatarUrl = async () => {
   if (!OPENAI_API_KEY) {
@@ -177,12 +212,12 @@ export async function POST(request: NextRequest) {
     return signatureAuth.response;
   }
 
-  const walletAddress =
+  const signedWalletAddress =
     signatureAuth.ok === true
       ? signatureAuth.walletAddress
       : requestedWalletAddress;
 
-  if (!isWalletAddress(walletAddress)) {
+  if (!isWalletAddress(signedWalletAddress)) {
     return NextResponse.json(
       {
         error: 'walletAddress is invalid.',
@@ -193,33 +228,41 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (isAdminStorecode(storecode)) {
-    if (signatureAuth.ok !== true) {
-      return NextResponse.json(
-        {
-          error: 'wallet signature is required for admin storecode.',
-        },
-        {
-          status: 401,
-        },
-      );
-    }
+  if (isAdminStorecode(storecode) && signatureAuth.ok !== true) {
+    return NextResponse.json(
+      {
+        error: 'wallet signature is required for admin storecode.',
+      },
+      {
+        status: 401,
+      },
+    );
+  }
 
-    const requester = await getRoleForWalletAddress({
-      storecode,
-      walletAddress,
-    });
+  const requester = await getRoleForWalletAddress({
+    storecode,
+    walletAddress: signedWalletAddress,
+  });
+  const signerWalletAddress = toText(requester?.walletAddress) || signedWalletAddress;
+  const requesterRole = normalizeRole(requester?.role);
+  const isRequesterAdmin = requesterRole === 'admin';
+  const effectiveStorecode = toText(requester?.storecode) || storecode;
 
-    if (!requester || requester.role !== 'admin') {
-      return NextResponse.json(
-        {
-          error: 'Only admin can create admin profile.',
-        },
-        {
-          status: 403,
-        },
-      );
-    }
+  const walletAddress = await resolveTargetWalletAddress({
+    requestedWalletAddress,
+    signerWalletAddress,
+    isSignerAdmin: isRequesterAdmin,
+  });
+
+  if (!isWalletAddress(walletAddress)) {
+    return NextResponse.json(
+      {
+        error: 'walletAddress is not authorized.',
+      },
+      {
+        status: 403,
+      },
+    );
   }
 
   const avatarFromBody = typeof body.avatar === 'string' ? body.avatar : '';
@@ -231,7 +274,7 @@ export async function POST(request: NextRequest) {
   const finalAvatarUrl = avatarUrl || (await getDefaultAvatarUrl());
 
   const result = await insertOneVerified({
-    storecode,
+    storecode: effectiveStorecode || storecode,
     walletAddress,
     nickname,
     mobile,

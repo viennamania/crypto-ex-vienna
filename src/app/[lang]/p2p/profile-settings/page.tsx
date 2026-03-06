@@ -1,6 +1,6 @@
 // nickname settings
 'use client';
-import React, { use, useEffect, useState } from 'react';
+import React, { use, useEffect, useState, useMemo, useCallback } from 'react';
 
 
 
@@ -51,6 +51,7 @@ import { balanceOf, transfer } from "thirdweb/extensions/erc20";
  
 import { useClientWallets } from '@/lib/useClientWallets';
 import { WALLET_CONNECT_OPTIONS, WALLET_CONNECT_WELCOME_SCREEN } from "@/lib/walletConnectModal";
+import { createWalletSignatureAuthPayload } from '@/lib/security/walletSignature';
 
 
 import AppBarComponent from "@/components/Appbar/AppBar";
@@ -334,9 +335,66 @@ export default function SettingsPage({ params }: any) {
 
 
 
-    const smartAccount = useActiveAccount();
+  const smartAccount = useActiveAccount();
 
-    const address = smartAccount?.address;
+  const address = smartAccount?.address;
+
+    const signatureAccount = useMemo(() => {
+        const candidates: Array<unknown> = [
+            smartAccount,
+            activeWallet?.getAccount?.(),
+            activeWallet?.getAdminAccount?.(),
+        ];
+
+        for (const walletItem of connectWallets) {
+            candidates.push(walletItem?.getAccount?.());
+            candidates.push(walletItem?.getAdminAccount?.());
+        }
+
+        for (const candidate of candidates) {
+            const account = candidate as {
+                address?: string;
+                signMessage?: (options: {
+                    message: string;
+                    originalMessage?: string;
+                    chainId?: number;
+                }) => Promise<string>;
+            } | null | undefined;
+
+            if (account?.address && typeof account.signMessage === 'function') {
+                return account;
+            }
+        }
+
+        return null;
+    }, [activeWallet, connectWallets, smartAccount]);
+
+    const buildSignedRequestBody = useCallback(
+        async ({
+            path,
+            payload,
+        }: {
+            path: string;
+            payload: Record<string, unknown>;
+        }) => {
+            if (!signatureAccount?.address || typeof signatureAccount.signMessage !== 'function') {
+                throw new Error('서명 가능한 지갑 계정을 찾을 수 없습니다.');
+            }
+
+            const auth = await createWalletSignatureAuthPayload({
+                account: signatureAccount,
+                storecode,
+                path,
+                method: 'POST',
+            });
+
+            return {
+                ...payload,
+                auth,
+            };
+        },
+        [signatureAccount],
+    );
 
       
  
@@ -518,12 +576,9 @@ export default function SettingsPage({ params }: any) {
 
                 for (let attempt = 0; attempt < 5; attempt += 1) {
                     const nicknameCandidate = getDefaultNicknameCandidate(address, attempt);
-                    const createResponse = await fetch("/api/user/setUserVerified", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
+                    const createPayload = await buildSignedRequestBody({
+                        path: '/api/user/setUserVerified',
+                        payload: {
                             lang: params.lang,
                             storecode,
                             walletAddress: address,
@@ -531,7 +586,14 @@ export default function SettingsPage({ params }: any) {
                             mobile: fallbackMobile,
                             email: fallbackEmail,
                             avatar: '/profile-default.png',
-                        }),
+                        },
+                    });
+                    const createResponse = await fetch("/api/user/setUserVerified", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(createPayload),
                     });
 
                     const createData = await createResponse.json().catch(() => ({})) as any;
@@ -586,7 +648,7 @@ export default function SettingsPage({ params }: any) {
         };
 
         fetchData();
-    }, [address, email, params.lang, phoneNumber]);
+    }, [address, buildSignedRequestBody, email, params.lang, phoneNumber]);
 
     useEffect(() => {
         if (!avatarFile) {
@@ -730,72 +792,31 @@ export default function SettingsPage({ params }: any) {
             return;
         }
 
-        if (nicknameEdit) {
+        try {
+            if (nicknameEdit) {
+                const updateUserBody = await buildSignedRequestBody({
+                    path: '/api/user/updateUser',
+                    payload: {
+                        storecode,
+                        walletAddress: address,
+                        nickname: nextNickname,
+                        mobile: String(phoneNumber || '').trim(),
+                        email: String(email || '').trim(),
+                    },
+                });
+                const response = await fetch("/api/user/updateUser", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(updateUserBody),
+                });
 
+                const data = await response.json().catch(() => ({}));
 
-            const response = await fetch("/api/user/updateUser", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    storecode: storecode,
-                    walletAddress: address,
-                    
-                    //nickname: nickname,
-                    nickname: nextNickname,
-                    mobile: String(phoneNumber || '').trim(),
-                    email: String(email || '').trim(),
-
-                }),
-            });
-
-            const data = await response.json();
-
-            ///console.log("updateUser data", data);
-
-            if (data.result) {
-
-                setUserCode(data.result.id);
-                setNickname(data.result.nickname);
-                await updateSendbirdNickname(data.result.nickname);
-
-                setNicknameEdit(false);
-                setEditedNickname('');
-
-                toast.success('채팅 닉네임도 변경됨');
-
-            } else {
-
-                toast.error('아이디 저장에 실패했습니다');
-            }
-
-
-        } else {
-
-            const response = await fetch("/api/user/setUserVerified", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    lang: params.lang,
-                    storecode: storecode,
-                    walletAddress: address,
-                    
-                    //nickname: nickname,
-                    nickname: nextNickname,
-
-                    mobile: phoneNumber,
-                    email: email,
-                }),
-            });
-
-            const data = await response.json();
-
-            console.log("data", data);
-
-            if (data.result) {
+                if (!response.ok || !data?.result) {
+                    throw new Error(String(data?.error || data?.message || '아이디 저장에 실패했습니다.'));
+                }
 
                 setUserCode(data.result.id);
                 setNickname(data.result.nickname);
@@ -805,10 +826,44 @@ export default function SettingsPage({ params }: any) {
                 setEditedNickname('');
 
                 toast.success('채팅 닉네임도 변경됨');
-
             } else {
-                toast.error('아이디 저장에 실패했습니다');
+                const setUserVerifiedBody = await buildSignedRequestBody({
+                    path: '/api/user/setUserVerified',
+                    payload: {
+                        lang: params.lang,
+                        storecode,
+                        walletAddress: address,
+                        nickname: nextNickname,
+                        mobile: phoneNumber,
+                        email: email,
+                    },
+                });
+                const response = await fetch("/api/user/setUserVerified", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(setUserVerifiedBody),
+                });
+
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok || !data?.result) {
+                    throw new Error(String(data?.error || data?.message || '아이디 저장에 실패했습니다.'));
+                }
+
+                setUserCode(data.result.id);
+                setNickname(data.result.nickname);
+                await updateSendbirdNickname(data.result.nickname);
+
+                setNicknameEdit(false);
+                setEditedNickname('');
+
+                toast.success('채팅 닉네임도 변경됨');
             }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '아이디 저장에 실패했습니다.';
+            toast.error(message);
         }
 
 
