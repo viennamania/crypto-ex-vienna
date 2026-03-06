@@ -346,7 +346,6 @@ export default function SellerEscrowTradeHistoryPage({ params }: PageProps) {
 
     const payload = await createWalletSignatureAuthPayload({
       account,
-      storecode: 'admin',
       path: OWNER_ONLY_API_PATH,
       method: 'POST',
     });
