@@ -152,7 +152,7 @@ export async function POST(request: Request) {
     await createUserIfNeeded(headers, userId, nickname);
 
     const memberIds = await getChannelMemberIds(headers, channelUrl);
-    const isAlreadyMember = memberIds.some((memberId: string) => memberId.toLowerCase() === userId.toLowerCase());
+    const isAlreadyMember = memberIds.some((memberId: string) => memberId === userId);
 
     if (isAlreadyMember) {
       return NextResponse.json({
