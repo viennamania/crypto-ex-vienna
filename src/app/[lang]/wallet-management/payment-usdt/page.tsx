@@ -2060,11 +2060,11 @@ export default function PaymentUsdtPage({
                               </p>
                             </div>
                             <div className="flex items-center justify-between gap-2">
-                              <p className="font-semibold text-slate-500">가맹점 결제지갑</p>
+                              <p className="whitespace-nowrap font-semibold text-slate-500">결제 지갑</p>
                               <p className="font-mono text-right text-slate-700">{shortAddress(item.toWalletAddress)}</p>
                             </div>
                             <div className="flex items-center justify-between gap-2">
-                              <p className="font-semibold text-slate-500">결제 회원</p>
+                              <p className="whitespace-nowrap font-semibold text-slate-500">결제 회원</p>
                               <p className="truncate text-right text-slate-800">{formatPaymentMemberName(item.member)}</p>
                             </div>
                             <div className="flex items-center justify-between gap-2 sm:col-span-2">
