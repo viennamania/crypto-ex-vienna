@@ -33,6 +33,11 @@ type BuyOrderItem = {
     walletAddress?: string;
     nickname?: string;
     depositName?: string;
+    storeReferral?: {
+      storecode?: string;
+      storeName?: string;
+      storeLogo?: string;
+    };
     bankInfo?: {
       accountHolder?: string;
       depositName?: string;
@@ -158,6 +163,9 @@ const formatKrw = (value?: number) =>
 
 const formatUsdt = (value?: number) =>
   new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 3, maximumFractionDigits: 6 }).format(Number(value || 0));
+
+const formatUsdtFixed6 = (value?: number) =>
+  new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(Number(value || 0));
 
 const formatPercent = (value?: number) => {
   const numeric = toFiniteNumber(value);
@@ -292,6 +300,26 @@ const getBuyerDepositName = (order: BuyOrderItem) =>
     || order?.buyer?.bankInfo?.depositName
     || '',
   ).trim() || '-';
+
+const getBuyerStoreReferral = (order: BuyOrderItem) => {
+  const storeReferral = order?.buyer?.storeReferral;
+  const storecode = String(storeReferral?.storecode || '').trim();
+  const storeName = String(storeReferral?.storeName || '').trim();
+  const storeLogo = String(storeReferral?.storeLogo || '').trim();
+  return {
+    storecode,
+    storeName,
+    storeLogo,
+    hasValue: Boolean(storecode || storeName || storeLogo),
+  };
+};
+
+const getBuyerStoreReferralLabel = (storeReferral: ReturnType<typeof getBuyerStoreReferral>) => {
+  if (storeReferral.storeName && storeReferral.storecode) {
+    return `${storeReferral.storeName} (${storeReferral.storecode})`;
+  }
+  return storeReferral.storeName || storeReferral.storecode || '-';
+};
 
 const getSellerDisplayName = (order: BuyOrderItem) =>
   String(order?.seller?.nickname || '').trim() || shortWallet(order?.seller?.walletAddress) || '-';
@@ -641,12 +669,12 @@ export default function BuyOrderTradeHistoryPage() {
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_38px_-32px_rgba(15,23,42,0.55)]">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">합산 판매수량</p>
-            <p className="mt-2 text-right text-3xl font-bold tabular-nums text-slate-900">{formatUsdt(summary.totalUsdtAmount)}</p>
+            <p className="mt-2 text-right text-3xl font-bold tabular-nums text-slate-900">{formatUsdtFixed6(summary.totalUsdtAmount)}</p>
             <p className="mt-1 text-xs text-slate-500">USDT</p>
           </div>
           <div className="rounded-2xl border border-indigo-200 bg-indigo-50/55 p-4 shadow-[0_18px_38px_-32px_rgba(79,70,229,0.35)]">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700">합산 플랫폼 수수료</p>
-            <p className="mt-2 text-right text-3xl font-bold tabular-nums text-indigo-900">{formatUsdt(summary.totalFeeAmount)}</p>
+            <p className="mt-2 text-right text-3xl font-bold tabular-nums text-indigo-900">{formatUsdtFixed6(summary.totalFeeAmount)}</p>
             <p className="mt-1 text-xs text-indigo-700/80">USDT</p>
           </div>
         </section>
@@ -690,20 +718,20 @@ export default function BuyOrderTradeHistoryPage() {
           ) : orders.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-slate-500">검색된 거래내역이 없습니다.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-[1400px] w-full table-fixed">
+            <div className="overflow-x-auto lg:overflow-x-visible">
+              <table className="w-full min-w-[1120px] table-fixed lg:min-w-0">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
-                    <th className="w-[8%] px-3 py-3">상태</th>
-                    <th className="w-[13%] px-3 py-3">주문시각/완료시각</th>
-                    <th className="w-[12%] px-3 py-3">거래번호</th>
-                    <th className="w-[15%] px-3 py-3">구매자 정보</th>
-                    <th className="w-[15%] px-3 py-3">판매자 정보</th>
-                    <th className="w-[12%] px-3 py-3 text-right">거래금액</th>
-                    <th className="w-[11%] px-3 py-3">결제정보</th>
-                    <th className="w-[8%] px-3 py-3">스토어/에이전트</th>
-                    <th className="w-[10%] px-3 py-3">플랫폼 수수료</th>
-                    <th className="w-[8%] px-3 py-3">전송 Tx</th>
+                    <th className="w-[6%] px-3 py-3">상태</th>
+                    <th className="w-[12%] px-3 py-3">주문시각/완료시각</th>
+                    <th className="w-[10%] px-3 py-3">거래번호</th>
+                    <th className="w-[16%] px-3 py-3">구매자 정보</th>
+                    <th className="w-[14%] px-3 py-3">판매자 정보</th>
+                    <th className="w-[10%] px-3 py-3 text-right">거래금액</th>
+                    <th className="w-[9%] px-3 py-3">결제정보</th>
+                    <th className="w-[8%] px-3 py-3">에이전트</th>
+                    <th className="w-[9%] px-3 py-3">플랫폼 수수료</th>
+                    <th className="w-[6%] px-3 py-3">전송 Tx</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -718,6 +746,7 @@ export default function BuyOrderTradeHistoryPage() {
                     const sellerWalletAddress = String(order?.seller?.walletAddress || '').trim();
                     const agentcode = String(order?.agent?.agentcode || order?.agentcode || order?.seller?.agentcode || '').trim();
                     const agentName = String(order?.agent?.agentName || order?.agentName || '').trim();
+                    const buyerStoreReferral = getBuyerStoreReferral(order);
 
                     return (
                       <tr key={order._id || order.tradeId || `row-${index}`} className="align-top text-sm text-slate-700">
@@ -740,6 +769,24 @@ export default function BuyOrderTradeHistoryPage() {
                             <p className="font-semibold text-slate-900">{getBuyerDisplayName(order)}</p>
                             <p className="text-slate-500">{shortWallet(buyerWalletAddress)}</p>
                             <p className="text-slate-500">입금자명 {getBuyerDepositName(order)}</p>
+                            {buyerStoreReferral.hasValue ? (
+                              <div className="mt-1 flex items-center gap-1.5">
+                                {buyerStoreReferral.storeLogo ? (
+                                  <span
+                                    className="h-4 w-4 shrink-0 rounded-full border border-slate-200 bg-cover bg-center bg-no-repeat"
+                                    style={{ backgroundImage: `url(${encodeURI(buyerStoreReferral.storeLogo)})` }}
+                                    aria-label={buyerStoreReferral.storeName || buyerStoreReferral.storecode || '가맹점'}
+                                  />
+                                ) : (
+                                  <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-slate-100 text-[9px] font-semibold text-slate-600">
+                                    점
+                                  </span>
+                                )}
+                                <p className="min-w-0 truncate text-slate-500">
+                                  {getBuyerStoreReferralLabel(buyerStoreReferral)}
+                                </p>
+                              </div>
+                            ) : null}
                           </div>
                         </td>
                         <td className="px-3 py-3">
@@ -763,9 +810,9 @@ export default function BuyOrderTradeHistoryPage() {
                         </td>
                         <td className="px-3 py-3">
                           <div className="space-y-0.5 text-xs">
-                            <p className="font-semibold text-slate-900">{String(order?.storecode || '-')}</p>
-                            <p className="text-slate-500">{agentcode || '-'}</p>
-                            {agentName ? <p className="text-slate-500">{agentName}</p> : null}
+                            <p className="font-semibold text-slate-900">
+                              {agentName && agentcode ? `${agentName} (${agentcode})` : (agentName || agentcode || '-')}
+                            </p>
                           </div>
                         </td>
                         <td className="px-3 py-3">
