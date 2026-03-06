@@ -80,7 +80,6 @@ type SearchFilters = {
   searchSellerWalletAddress: string;
   searchDepositName: string;
   searchPaymentMethod: string;
-  searchStorecode: string;
   searchAgentcode: string;
 };
 
@@ -136,7 +135,6 @@ const createDefaultFilters = (): SearchFilters => {
     searchSellerWalletAddress: '',
     searchDepositName: '',
     searchPaymentMethod: '',
-    searchStorecode: '',
     searchAgentcode: '',
   };
 };
@@ -411,7 +409,6 @@ export default function BuyOrderTradeHistoryPage() {
         body: JSON.stringify({
           limit: pageSize,
           page: pageNumber,
-          storecode: appliedFilters.searchStorecode,
           searchTradeId: appliedFilters.searchTradeId,
           searchBuyer: appliedFilters.searchBuyer,
           searchBuyerWalletAddress: appliedFilters.searchBuyerWalletAddress,
@@ -490,7 +487,6 @@ export default function BuyOrderTradeHistoryPage() {
       searchSellerWalletAddress: draftFilters.searchSellerWalletAddress.trim(),
       searchDepositName: draftFilters.searchDepositName.trim(),
       searchPaymentMethod: draftFilters.searchPaymentMethod.trim(),
-      searchStorecode: draftFilters.searchStorecode.trim(),
       searchAgentcode: draftFilters.searchAgentcode.trim(),
     };
 
@@ -754,16 +750,6 @@ export default function BuyOrderTradeHistoryPage() {
               />
             </div>
             <div className="lg:col-span-3">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">스토어코드</label>
-              <input
-                type="text"
-                value={draftFilters.searchStorecode}
-                onChange={(event) => setDraftFilters((prev) => ({ ...prev, searchStorecode: event.target.value }))}
-                placeholder="예: r1mmtgzp"
-                className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500"
-              />
-            </div>
-            <div className="lg:col-span-3">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">에이전트코드</label>
               <input
                 type="text"
@@ -865,11 +851,11 @@ export default function BuyOrderTradeHistoryPage() {
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
                     <th className="w-[10%] px-3 py-3">상태</th>
                     <th className="w-[12%] px-3 py-3">주문시각/완료시각</th>
-                    <th className="w-[10%] px-3 py-3">거래번호</th>
-                    <th className="w-[14%] px-3 py-3">구매자 정보</th>
-                    <th className="w-[12%] px-3 py-3">판매자 정보</th>
-                    <th className="w-[10%] px-3 py-3 text-right">거래금액</th>
-                    <th className="w-[9%] px-3 py-3">결제정보</th>
+                    <th className="w-[9%] px-3 py-3">거래번호</th>
+                    <th className="w-[13%] px-3 py-3">구매자 정보</th>
+                    <th className="w-[11%] px-3 py-3">판매자 정보</th>
+                    <th className="w-[11%] px-3 py-3 text-right">거래금액</th>
+                    <th className="w-[11%] px-3 py-3">결제정보</th>
                     <th className="w-[8%] px-3 py-3">에이전트</th>
                     <th className="w-[9%] px-3 py-3">플랫폼 수수료</th>
                     <th className="w-[6%] px-3 py-3">전송 Tx</th>
