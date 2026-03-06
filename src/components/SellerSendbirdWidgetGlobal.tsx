@@ -166,7 +166,10 @@ const SellerSendbirdWidgetGlobal = () => {
   const [isCheckingSeller, setIsCheckingSeller] = useState(false);
   const effectiveWalletAddress = address || ownerWalletAddress;
   const normalizedPathname = (pathname || '').replace(/\/+$/, '');
-  const isSellerEscrowRoute = normalizedPathname.split('/').filter(Boolean).includes('seller-escrow');
+  const pathSegments = normalizedPathname.split('/').filter(Boolean);
+  const p2pIndex = pathSegments.indexOf('p2p');
+  const isP2pSellerSettingsRoute = p2pIndex >= 0 && pathSegments[p2pIndex + 1] === 'seller-settings';
+  const isSellerEscrowRoute = pathSegments.includes('seller-escrow');
   const widgetZIndexClass = isSellerEscrowRoute && isOpen ? 'z-[110]' : 'z-40';
   const widgetBottomClass = isSellerEscrowRoute ? 'bottom-24 sm:bottom-28' : 'bottom-6 sm:bottom-8';
   const widgetPanelMaxHeight = isSellerEscrowRoute
@@ -217,7 +220,8 @@ const SellerSendbirdWidgetGlobal = () => {
     && !isCheckingRole
     && !isCheckingSeller
     && isSellerActive
-    && !isSellerEscrowRoute;
+    && !isSellerEscrowRoute
+    && !isP2pSellerSettingsRoute;
 
   useEffect(() => {
     if (!isMounted) {

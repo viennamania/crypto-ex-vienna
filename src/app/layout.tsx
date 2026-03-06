@@ -86,12 +86,14 @@ const WalletConsoleShell = () => {
   const sellerEscrowIndex = pathSegments.indexOf('seller-escrow');
   const isAgentManagementRoute = p2pIndex >= 0 && pathSegments[p2pIndex + 1] === 'agent-management';
   const isStoreManagementRoute = p2pIndex >= 0 && pathSegments[p2pIndex + 1] === 'store-management';
+  const isP2pSellerSettingsRoute = p2pIndex >= 0 && pathSegments[p2pIndex + 1] === 'seller-settings';
   const isAdministrationRoute = administrationIndex >= 0;
   const isSellerEscrowRoute = sellerEscrowIndex >= 0;
   const shouldHideWalletConsole =
     walletManagementIndex >= 0
     || isAgentManagementRoute
     || isStoreManagementRoute
+    || isP2pSellerSettingsRoute
     || isAdministrationRoute
     || isSellerEscrowRoute;
 

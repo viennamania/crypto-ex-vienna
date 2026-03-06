@@ -1872,7 +1872,7 @@ export default function SettingsPage({ params }: any) {
 
     return (
 
-        <main className="w-full max-w-screen-sm lg:max-w-7xl px-4 lg:px-5 pb-28 pt-4 lg:pb-10 min-h-[100vh] flex items-start justify-center mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+        <main className="w-full max-w-screen-sm lg:max-w-6xl xl:max-w-[1180px] px-4 lg:px-4 pb-28 pt-4 lg:pt-3 lg:pb-8 min-h-[100vh] flex items-start justify-center mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
 
             <AutoConnect client={client} wallets={[wallet]} />
 
@@ -2019,14 +2019,14 @@ export default function SettingsPage({ params }: any) {
                         </div>
                     </div>
                 ) : (
-                    <div className="w-full flex flex-col gap-4 lg:gap-4">
+                    <div className="w-full flex flex-col gap-3 lg:gap-3">
 
                         {loadingUserData && (
                             <div className="text-sm text-slate-500">Loading user data...</div>
                         )}
 
                         {!loadingUserData && !nickname && (
-                            <div className='w-full flex flex-col gap-2 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-6 lg:p-5 shadow-sm'>
+                            <div className='w-full flex flex-col gap-2 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-5 lg:p-4 shadow-sm'>
 
                                 <span className="text-base font-semibold text-slate-800">
                                     회원이 아닙니다.
@@ -2045,7 +2045,7 @@ export default function SettingsPage({ params }: any) {
                         )}
 
                         {!loadingUserData && nickname && !seller && (
-                            <div className='w-full flex flex-col gap-3 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-6 lg:p-5 shadow-sm'>
+                            <div className='w-full flex flex-col gap-3 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 p-5 lg:p-4 shadow-sm'>
 
                                 {/* nickname */}
                                 <div className='w-full flex flex-row gap-2 items-center justify-between'>
@@ -2056,7 +2056,7 @@ export default function SettingsPage({ params }: any) {
                                             회원아이디
                                         </span>
                                     </div>
-                                    <span className="text-2xl font-semibold text-emerald-700">
+                                    <span className="text-xl font-semibold text-emerald-700">
                                         {nickname}
                                     </span>
                                 </div>
@@ -2084,7 +2084,7 @@ export default function SettingsPage({ params }: any) {
 
                         {!loadingUserData && seller && (
                             <div className="w-full grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-3">
-                            <div className='w-full flex flex-col gap-4 lg:gap-2 items-center justify-between rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-3 shadow-sm lg:col-span-12'>
+                            <div className='w-full flex flex-col gap-3 lg:gap-2 items-center justify-between rounded-2xl border border-slate-200/80 bg-white/95 p-4 lg:p-3 shadow-sm lg:col-span-12'>
 
                                 {/* image and title */}
                                 <div className='w-full flex flex-row gap-2 items-center justify-start'>
@@ -2095,7 +2095,7 @@ export default function SettingsPage({ params }: any) {
                                         height={50}
                                         className='w-10 h-10'
                                     />
-                                    <span className="text-xl font-semibold text-slate-900">
+                                    <span className="text-lg font-semibold text-slate-900">
                                         {Seller} 설정
                                     </span>
                                 </div>
@@ -2110,7 +2110,7 @@ export default function SettingsPage({ params }: any) {
                                             회원아이디
                                         </span>
                                     </div>
-                                    <span className="text-2xl font-semibold text-emerald-700">
+                                    <span className="text-xl font-semibold text-emerald-700">
                                         {nickname}
                                     </span>
                                 </div>
@@ -2172,7 +2172,7 @@ export default function SettingsPage({ params }: any) {
                                 
 
 
-                                <div className='mt-3 lg:mt-2 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-3 shadow-sm'>
+                                <div className='mt-3 lg:mt-2 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-4 lg:p-3 shadow-sm'>
                                     <div className="flex w-full flex-row items-center justify-between gap-3">
                                         <div className="flex items-center gap-3">
                                             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
@@ -2475,7 +2475,7 @@ export default function SettingsPage({ params }: any) {
                                 </div>
                             </div>
 
-                            <div className="mt-3 lg:mt-0 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-3 shadow-sm lg:col-span-5">
+                            <div className="mt-3 lg:mt-0 w-full rounded-2xl border border-slate-200/80 bg-white/95 p-4 lg:p-3 shadow-sm lg:col-span-5">
                                 <div className="flex w-full flex-row items-center justify-between gap-3">
                                     <div className="flex items-center gap-3">
                                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
@@ -2602,7 +2602,7 @@ export default function SettingsPage({ params }: any) {
 
                         {!loadingUserData && seller?.escrowWalletAddress && (
                             
-                            <div className='w-full flex flex-col gap-3 lg:gap-2 items-start justify-between mt-4 lg:mt-3 rounded-2xl border border-slate-200/80 bg-white/95 p-5 lg:p-3 shadow-sm'>
+                            <div className='w-full flex flex-col gap-3 lg:gap-2 items-start justify-between mt-3 lg:mt-2 rounded-2xl border border-slate-200/80 bg-white/95 p-4 lg:p-3 shadow-sm'>
 
                                 <div className='w-full flex flex-row gap-2 items-center justify-start mb-2'>
                                     <Image
@@ -2612,7 +2612,7 @@ export default function SettingsPage({ params }: any) {
                                         height={50}
                                         className='w-10 h-10'
                                     />
-                                    <span className="text-xl font-semibold text-slate-900">
+                                    <span className="text-lg font-semibold text-slate-900">
                                         에스크로 지갑 정보
                                     </span>
                                 </div>
@@ -2669,7 +2669,7 @@ export default function SettingsPage({ params }: any) {
                                                 </span>
                                             </div>
                                             <div className='flex flex-row items-center gap-2'>
-                                                <span className="text-2xl xl:text-4xl font-semibold text-emerald-700 tabular-nums tracking-tight"
+                                                <span className="text-xl lg:text-2xl font-semibold text-emerald-700 tabular-nums tracking-tight"
                                                     style={{ fontFamily: 'monospace' }}
                                                 >
                                                     {escrowBalance.toFixed(2)}
