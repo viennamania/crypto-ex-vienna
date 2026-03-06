@@ -15241,6 +15241,24 @@ const SendbirdChatEmbed = ({
       setErrorMessage(null);
 
       try {
+        const ensureChannelAccess = async (targetChannelUrl: string) => {
+          const response = await fetch('/api/sendbird/ensure-group-channel-member', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              channelUrl: targetChannelUrl,
+              userId: buyerWalletAddress,
+              nickname: `${buyerWalletAddress.slice(0, 6)}...`,
+            }),
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(
+              String(payload?.error || payload?.message || '채팅 채널 접근 권한을 준비하지 못했습니다.'),
+            );
+          }
+        };
+
         const sessionResponse = await fetch('/api/sendbird/session-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -15263,6 +15281,7 @@ const SendbirdChatEmbed = ({
         if (isMounted) {
           setSessionToken(sessionData.sessionToken || null);
           if (selectedChannelUrl) {
+            await ensureChannelAccess(selectedChannelUrl);
             setChannelUrl(selectedChannelUrl);
             return;
           }
@@ -15283,9 +15302,15 @@ const SendbirdChatEmbed = ({
         }
 
         const channelData = (await channelResponse.json()) as { channelUrl?: string };
+        const resolvedChannelUrl = String(channelData.channelUrl || '').trim();
+        if (!resolvedChannelUrl) {
+          throw new Error('채널 URL이 비어 있습니다.');
+        }
+
+        await ensureChannelAccess(resolvedChannelUrl);
 
         if (isMounted) {
-          setChannelUrl(channelData.channelUrl || null);
+          setChannelUrl(resolvedChannelUrl);
         }
       } catch (error) {
         if (isMounted) {

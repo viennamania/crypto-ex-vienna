@@ -729,10 +729,50 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
     };
   }, [chatUserWalletAddress, isOwnerWallet]);
 
-  const openChatPanel = useCallback((order: SellerTodayOrder) => {
+  const ensureSellerChannelAccess = useCallback(async (targetChannelUrl: string) => {
+    const normalizedChannelUrl = toText(targetChannelUrl);
+    if (!normalizedChannelUrl) {
+      throw new Error('채팅 채널 정보가 없습니다.');
+    }
+    if (!chatUserWalletAddress) {
+      throw new Error('판매자 지갑 연결이 필요합니다.');
+    }
+
+    const response = await fetch('/api/sendbird/ensure-group-channel-member', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        channelUrl: normalizedChannelUrl,
+        userId: chatUserWalletAddress,
+        nickname: `seller_${chatUserWalletAddress.slice(2, 8)}`,
+      }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!response.ok) {
+      throw new Error(
+        toText(payload.error)
+        || toText(payload.message)
+        || '채팅 채널 접근 권한을 준비하지 못했습니다.',
+      );
+    }
+  }, [chatUserWalletAddress]);
+
+  const openChatPanel = useCallback(async (order: SellerTodayOrder) => {
     const channelUrl = toText(order.buyerConsent.channelUrl);
     if (!channelUrl) {
       toast.error('해당 주문의 채팅 채널 정보가 없습니다.');
+      return;
+    }
+
+    if (!chatUserWalletAddress) {
+      toast.error('판매자 지갑을 연결하면 채팅을 열 수 있습니다.');
+      return;
+    }
+
+    try {
+      await ensureSellerChannelAccess(channelUrl);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '채팅 채널 접근 권한을 준비하지 못했습니다.');
       return;
     }
 
@@ -760,7 +800,7 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
     if (blockedByLimit) {
       toast.error(`동시에 최대 ${MAX_OPEN_CHAT_PANELS}개 채팅만 열 수 있습니다.`);
     }
-  }, []);
+  }, [chatUserWalletAddress, ensureSellerChannelAccess]);
 
   const closeChatPanel = useCallback((channelUrl: string) => {
     setOpenChats((previous) => previous.filter((item) => item.channelUrl !== channelUrl));
@@ -774,27 +814,49 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
     toast.success('채팅 레이아웃을 초기화했습니다.');
   }, [chatLayoutStorageKey]);
 
-  const openTopActiveChats = useCallback(() => {
+  const openTopActiveChats = useCallback(async () => {
+    if (!chatUserWalletAddress) {
+      toast.error('판매자 지갑을 연결하면 채팅을 열 수 있습니다.');
+      return;
+    }
+
     let blockedByLimit = false;
     let addedCount = 0;
+    let skippedByAccess = 0;
+    const nextPanelCandidates: OpenChatPanel[] = [];
+    const seenChannelUrls = new Set(openChats.map((chat) => chat.channelUrl));
+
+    for (const order of activeOrders) {
+      const channelUrl = toText(order.buyerConsent.channelUrl);
+      if (!channelUrl) continue;
+      if (seenChannelUrls.has(channelUrl)) continue;
+      if (openChats.length + nextPanelCandidates.length >= MAX_OPEN_CHAT_PANELS) {
+        blockedByLimit = true;
+        break;
+      }
+      try {
+        await ensureSellerChannelAccess(channelUrl);
+      } catch {
+        skippedByAccess += 1;
+        continue;
+      }
+
+      seenChannelUrls.add(channelUrl);
+      nextPanelCandidates.push({
+        channelUrl,
+        tradeId: order.tradeId,
+        buyerLabel: getOrderBuyerLabel(order),
+        status: order.status,
+        consentAccepted: order.buyerConsent.accepted,
+      });
+    }
 
     setOpenChats((previous) => {
       const next = [...previous];
-      for (const order of activeOrders) {
-        const channelUrl = toText(order.buyerConsent.channelUrl);
-        if (!channelUrl) continue;
-        if (next.some((item) => item.channelUrl === channelUrl)) continue;
-        if (next.length >= MAX_OPEN_CHAT_PANELS) {
-          blockedByLimit = true;
-          break;
-        }
-        next.push({
-          channelUrl,
-          tradeId: order.tradeId,
-          buyerLabel: getOrderBuyerLabel(order),
-          status: order.status,
-          consentAccepted: order.buyerConsent.accepted,
-        });
+      for (const panel of nextPanelCandidates) {
+        if (next.some((item) => item.channelUrl === panel.channelUrl)) continue;
+        if (next.length >= MAX_OPEN_CHAT_PANELS) break;
+        next.push(panel);
         addedCount += 1;
       }
       return next;
@@ -807,7 +869,10 @@ export default function SellerTodayOrdersChatPage({ params }: PageProps) {
     if (blockedByLimit) {
       toast(`최대 ${MAX_OPEN_CHAT_PANELS}개까지만 열렸습니다.`);
     }
-  }, [activeOrders]);
+    if (skippedByAccess > 0) {
+      toast.error(`접근 권한 확인에 실패한 채팅 ${skippedByAccess}건은 제외했습니다.`);
+    }
+  }, [activeOrders, chatUserWalletAddress, ensureSellerChannelAccess, openChats]);
 
   const renderOrderCard = (order: SellerTodayOrder) => {
     const isActive = ACTIVE_ORDER_STATUSES.has(order.status);

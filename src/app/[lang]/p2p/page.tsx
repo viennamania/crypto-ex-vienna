@@ -720,6 +720,29 @@ export default function P2PPage() {
             };
 
             try {
+                const ensureChannelAccess = async (targetChannelUrl: string) => {
+                    const response = await fetch('/api/sendbird/ensure-group-channel-member', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            channelUrl: targetChannelUrl,
+                            userId: supportUserId,
+                            nickname: supportNickname,
+                        }),
+                        signal: activeController?.signal,
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(
+                            payload?.error
+                                ? `Failed to ensure channel member: ${payload.error}`
+                                : payload?.message
+                                ? `Failed to ensure channel member: ${payload.message}`
+                                : `Failed to ensure channel member (status ${response.status})`,
+                        );
+                    }
+                };
+
                 activeController = new AbortController();
                 setSupportPhase('session');
                 startTimeout();
@@ -775,6 +798,7 @@ export default function P2PPage() {
                 startTimeout();
                 const existingChannel = await findExistingSupportChannel();
                 if (existingChannel && isMounted) {
+                    await ensureChannelAccess(existingChannel);
                     setSupportChannelUrl(existingChannel);
                     setSupportPhase('ready');
                     return;
@@ -813,8 +837,13 @@ export default function P2PPage() {
                 });
 
                 const channelData = (await channelResponse.json()) as { channelUrl?: string };
+                const resolvedChannelUrl = String(channelData.channelUrl || '').trim();
+                if (!resolvedChannelUrl) {
+                    throw new Error('Support channel URL is empty.');
+                }
+                await ensureChannelAccess(resolvedChannelUrl);
                 if (isMounted) {
-                    setSupportChannelUrl(channelData.channelUrl || null);
+                    setSupportChannelUrl(resolvedChannelUrl);
                     setSupportPhase('ready');
                 }
             } catch (error) {

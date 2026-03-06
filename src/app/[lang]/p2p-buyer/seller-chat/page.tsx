@@ -1061,6 +1061,28 @@ export default function SellerChatPage() {
       setErrorMessage(null);
 
       try {
+        const ensureChannelAccess = async (targetChannelUrl: string) => {
+          const response = await fetch('/api/sendbird/ensure-group-channel-member', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              channelUrl: targetChannelUrl,
+              userId: address,
+              nickname: buyerNickname.trim(),
+            }),
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(
+              payload?.error
+                ? `채널 멤버 오류: ${payload.error}`
+                : payload?.message
+                ? `채널 멤버 오류: ${payload.message}`
+                : `채널 멤버 보장 실패 (status ${response.status})`,
+            );
+          }
+        };
+
         const sessionUrl =
           typeof window !== 'undefined'
             ? new URL('/api/sendbird/session-token', window.location.origin)
@@ -1107,10 +1129,16 @@ export default function SellerChatPage() {
           );
         }
         const channelData = (await channelResponse.json()) as { channelUrl?: string };
+        const resolvedChannelUrl = String(channelData.channelUrl || '').trim();
+        if (!resolvedChannelUrl) {
+          throw new Error('채팅 채널 URL이 비어 있습니다.');
+        }
+
+        await ensureChannelAccess(resolvedChannelUrl);
 
         if (active) {
           setSessionToken(sessionData.sessionToken);
-          setChannelUrl(channelData.channelUrl || null);
+          setChannelUrl(resolvedChannelUrl);
         }
       } catch (error) {
         if (active) {
