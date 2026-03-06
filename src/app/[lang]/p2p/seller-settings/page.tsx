@@ -1872,7 +1872,7 @@ export default function SettingsPage({ params }: any) {
 
     return (
 
-        <main className="w-full max-w-screen-sm lg:max-w-6xl xl:max-w-[1180px] px-4 lg:px-4 pb-28 pt-4 lg:pt-3 lg:pb-8 min-h-[100vh] flex items-start justify-center mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+        <main className="w-full max-w-screen-sm lg:max-w-5xl xl:max-w-[1040px] px-4 lg:px-4 pb-28 pt-4 lg:pt-3 lg:pb-8 min-h-[100vh] flex items-start justify-center mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
 
             <AutoConnect client={client} wallets={[wallet]} />
 

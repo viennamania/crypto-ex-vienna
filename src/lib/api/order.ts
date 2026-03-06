@@ -5828,6 +5828,12 @@ export async function completePrivateBuyOrderBySeller(
   buyerTransferUsdtAmount?: number;
   totalTransferUsdtAmount?: number;
   transferCount?: number;
+  tradeId?: string;
+  krwAmount?: number;
+  buyerWalletAddress?: string;
+  sellerWalletAddress?: string;
+  sellerNickname?: string;
+  consentChannelUrl?: string;
   error?: string;
 }> {
   if (!ObjectId.isValid(orderId)) {
@@ -5865,13 +5871,16 @@ export async function completePrivateBuyOrderBySeller(
     {
       projection: {
         privateSale: 1,
+        tradeId: 1,
         status: 1,
         escrowWallet: 1,
+        krwAmount: 1,
         usdtAmount: 1,
         escrowLockUsdtAmount: 1,
         walletAddress: 1,
         buyer: 1,
         seller: 1,
+        buyerConsent: 1,
         platformFee: 1,
         platformFeeRate: 1,
         platformFeeAmount: 1,
@@ -6330,6 +6339,15 @@ export async function completePrivateBuyOrderBySeller(
     buyerTransferUsdtAmount,
     totalTransferUsdtAmount: actualTotalTransferUsdtAmount,
     transferCount,
+    tradeId: typeof order?.tradeId === 'string' ? order.tradeId : '',
+    krwAmount: Number(order?.krwAmount || 0) || 0,
+    buyerWalletAddress: orderBuyerWalletAddress,
+    sellerWalletAddress: sellerWalletForAudit,
+    sellerNickname: sellerNicknameForAudit,
+    consentChannelUrl:
+      typeof order?.buyerConsent?.channelUrl === 'string'
+        ? order.buyerConsent.channelUrl
+        : '',
   };
 }
 
