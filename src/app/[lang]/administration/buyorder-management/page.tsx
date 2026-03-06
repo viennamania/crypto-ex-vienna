@@ -1972,7 +1972,7 @@ export default function BuyOrderManagementPage() {
                 href="../buyorder-management/trade-history"
                 className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
               >
-                거래내역
+                입금확인 내역
               </Link>
               <button
                 type="button"

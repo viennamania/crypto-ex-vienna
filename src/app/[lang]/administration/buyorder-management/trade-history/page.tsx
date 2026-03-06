@@ -66,7 +66,6 @@ type BuyOrderItem = {
 type SearchFilters = {
   fromDate: string;
   toDate: string;
-  status: string;
   privateSaleMode: 'all' | 'private' | 'normal';
   searchTradeId: string;
   searchBuyer: string;
@@ -81,14 +80,7 @@ type SearchFilters = {
 
 const DEFAULT_PAGE_SIZE = 30;
 const PAGE_SIZE_OPTIONS = [20, 30, 50, 100];
-const STATUS_OPTIONS = [
-  { value: 'completedlike', label: '완료계열(입금확인+거래완료)' },
-  { value: 'paymentconfirmed', label: '입금확인' },
-  { value: 'completed', label: '거래완료' },
-  { value: 'cancelled', label: '주문취소' },
-  { value: 'paymentrequested', label: '입금요청' },
-  { value: '', label: '전체' },
-] as const;
+const FIXED_STATUS = 'paymentconfirmed';
 
 const PRIVATE_SALE_OPTIONS = [
   { value: 'all', label: '전체' },
@@ -129,7 +121,6 @@ const createDefaultFilters = (): SearchFilters => {
   return {
     fromDate: today,
     toDate: today,
-    status: 'completedlike',
     privateSaleMode: 'all',
     searchTradeId: '',
     searchBuyer: '',
@@ -368,7 +359,7 @@ export default function BuyOrderTradeHistoryPage() {
           searchDepositName: appliedFilters.searchDepositName,
           searchPaymentMethod: appliedFilters.searchPaymentMethod,
           searchAgentcode: appliedFilters.searchAgentcode,
-          status: appliedFilters.status,
+          status: FIXED_STATUS,
           fromDate: appliedFilters.fromDate,
           toDate: appliedFilters.toDate,
           privateSaleMode: appliedFilters.privateSaleMode,
@@ -417,7 +408,6 @@ export default function BuyOrderTradeHistoryPage() {
     const normalizedFilters: SearchFilters = {
       fromDate: draftFilters.fromDate || getTodayDate(),
       toDate: draftFilters.toDate || draftFilters.fromDate || getTodayDate(),
-      status: draftFilters.status.trim(),
       privateSaleMode: draftFilters.privateSaleMode,
       searchTradeId: draftFilters.searchTradeId.trim(),
       searchBuyer: draftFilters.searchBuyer.trim(),
@@ -452,8 +442,8 @@ export default function BuyOrderTradeHistoryPage() {
               </span>
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-500">Buy Order Trade History</p>
-                <h1 className="text-xl font-bold text-slate-900">구매주문 거래내역</h1>
-                <p className="text-sm text-slate-500">완료된 구매주문 중심으로 다양한 검색 조건을 적용해 거래내역을 조회합니다.</p>
+                <h1 className="text-xl font-bold text-slate-900">입금확인 거래내역</h1>
+                <p className="text-sm text-slate-500">입금확인 상태의 구매주문만 대상으로 상세 검색과 페이지네이션 조회를 제공합니다.</p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -501,16 +491,10 @@ export default function BuyOrderTradeHistoryPage() {
               />
             </div>
             <div className="lg:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">상태</label>
-              <select
-                value={draftFilters.status}
-                onChange={(event) => setDraftFilters((prev) => ({ ...prev, status: event.target.value }))}
-                className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-slate-500"
-              >
-                {STATUS_OPTIONS.map((item) => (
-                  <option key={item.value || 'all'} value={item.value}>{item.label}</option>
-                ))}
-              </select>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">조회 상태</label>
+              <div className="inline-flex h-10 w-full items-center rounded-xl border border-emerald-300 bg-emerald-50 px-3 text-sm font-semibold text-emerald-700">
+                입금확인 (고정)
+              </div>
             </div>
             <div className="lg:col-span-2">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">주문 유형</label>
@@ -706,7 +690,7 @@ export default function BuyOrderTradeHistoryPage() {
         <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_26px_56px_-46px_rgba(15,23,42,0.45)]">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-slate-900">구매주문 거래내역 목록</p>
+              <p className="text-sm font-semibold text-slate-900">입금확인 거래내역 목록</p>
               <p className="text-xs text-slate-500">
                 기간 {appliedFilters.fromDate || '-'} ~ {appliedFilters.toDate || '-'} · 페이지 {pageNumber.toLocaleString()} / {totalPages.toLocaleString()}
               </p>
