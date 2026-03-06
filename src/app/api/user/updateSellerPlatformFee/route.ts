@@ -1,27 +1,77 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import clientPromise, { dbName } from '@/lib/mongodb';
+import { evaluateRateLimit } from '@/lib/security/rateLimit';
+import {
+  getRequesterIpAddress,
+  getRoleForWalletAddress,
+  verifyWalletAuthFromBody,
+} from '@/lib/security/requestAuth';
+import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSignature';
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const toText = (value: unknown) => String(value ?? '').trim();
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json().catch(() => ({}));
+    const bodyRaw = await request.json().catch(() => ({}));
+    const body = isRecord(bodyRaw) ? bodyRaw : {};
 
-    const normalizedStorecode = String(body?.storecode || '').trim();
-    const normalizedWalletAddress = String(body?.walletAddress || '').trim();
-    const normalizedFeeWalletAddress = String(body?.feeWalletAddress || '').trim();
-    const normalizedFeeRate = Number(body?.feeRate);
-    const normalizedChangedBy = String(body?.changedBy || 'admin').trim() || 'admin';
+    const normalizedStorecode = toText(body.storecode) || 'admin';
+    const normalizedWalletAddress = normalizeWalletAddress(body.walletAddress);
+    const normalizedFeeWalletAddress = normalizeWalletAddress(body.feeWalletAddress);
+    const normalizedFeeRate = Number(body.feeRate);
 
-    if (!normalizedWalletAddress) {
+    if (!isWalletAddress(normalizedWalletAddress)) {
       return NextResponse.json({ error: 'walletAddress is required' }, { status: 400 });
     }
-    if (!normalizedFeeWalletAddress) {
-      return NextResponse.json({ error: 'feeWalletAddress is required' }, { status: 400 });
+    if (!isWalletAddress(normalizedFeeWalletAddress)) {
+      return NextResponse.json({ error: 'feeWalletAddress must be a valid wallet address' }, { status: 400 });
     }
-    if (!Number.isFinite(normalizedFeeRate) || normalizedFeeRate < 0) {
-      return NextResponse.json({ error: 'feeRate must be a number greater than or equal to 0' }, { status: 400 });
+    if (!Number.isFinite(normalizedFeeRate) || normalizedFeeRate < 0 || normalizedFeeRate > 100) {
+      return NextResponse.json({ error: 'feeRate must be a number between 0 and 100' }, { status: 400 });
+    }
+
+    const ipAddress = getRequesterIpAddress(request) || 'unknown';
+    const rate = evaluateRateLimit({
+      key: `api:user:updateSellerPlatformFee:${ipAddress}:${normalizedWalletAddress}`,
+      limit: 30,
+      windowMs: 60_000,
+    });
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.max(Math.ceil(rate.retryAfterMs / 1000), 1)),
+          },
+        },
+      );
+    }
+
+    const signatureAuth = await verifyWalletAuthFromBody({
+      body,
+      path: '/api/user/updateSellerPlatformFee',
+      method: 'POST',
+      storecode: normalizedStorecode,
+      consumeNonceValue: true,
+    });
+    if (signatureAuth.ok === false) {
+      return signatureAuth.response;
+    }
+    if (signatureAuth.ok !== true) {
+      return NextResponse.json({ error: 'wallet signature is required.' }, { status: 401 });
+    }
+
+    const requester = await getRoleForWalletAddress({
+      storecode: normalizedStorecode,
+      walletAddress: signatureAuth.walletAddress,
+    });
+    if (toText(requester?.role) !== 'admin') {
+      return NextResponse.json({ error: 'Only admin can update seller platform fee.' }, { status: 403 });
     }
 
     const client = await clientPromise;
@@ -34,22 +84,13 @@ export async function POST(request: NextRequest) {
     };
 
     const primaryFilter: Record<string, unknown> = {
+      storecode: normalizedStorecode,
       walletAddress: walletRegex,
     };
-    if (normalizedStorecode) {
-      primaryFilter.storecode = normalizedStorecode;
-    }
 
     let user = await usersCollection.findOne<any>(primaryFilter, {
       projection: { walletAddress: 1, storecode: 1, seller: 1 },
     });
-
-    if (!user && normalizedStorecode) {
-      user = await usersCollection.findOne<any>(
-        { walletAddress: walletRegex },
-        { projection: { walletAddress: 1, storecode: 1, seller: 1 } },
-      );
-    }
 
     if (!user?._id) {
       return NextResponse.json({ error: 'user not found' }, { status: 404 });
@@ -78,7 +119,8 @@ export async function POST(request: NextRequest) {
       prev: prevFee,
       next: nextFee,
       changedAt,
-      changedBy: normalizedChangedBy,
+      changedBy: toText(requester?.nickname) || toText(requester?.walletAddress) || 'admin',
+      changedByWalletAddress: toText(requester?.walletAddress) || signatureAuth.walletAddress,
     });
 
     return NextResponse.json({

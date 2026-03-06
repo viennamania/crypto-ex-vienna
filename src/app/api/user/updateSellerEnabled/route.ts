@@ -11,6 +11,7 @@ import {
 import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSignature';
 
 const toText = (value: unknown) => String(value ?? '').trim();
+const normalizeRole = (value: unknown) => toText(value).toLowerCase();
 
 const resolveTargetWalletAddress = async ({
   storecode,
@@ -115,6 +116,9 @@ export async function POST(request: NextRequest) {
     storecode,
     walletAddress: signatureAuth.walletAddress,
   });
+  const requesterRole = normalizeRole(requester?.role);
+  const isRequesterAdmin = requesterRole === 'admin';
+  const requesterStorecode = toText(requester?.storecode);
   const signerWalletAddress = toText(requester?.walletAddress) || signatureAuth.walletAddress;
 
   const walletAddress = await resolveTargetWalletAddress({
@@ -134,7 +138,7 @@ export async function POST(request: NextRequest) {
   }
 
   const result = await updateSellerEnabledByWallet({
-    storecode,
+    storecode: isRequesterAdmin ? storecode : requesterStorecode || storecode,
     walletAddress,
     sellerEnabled: enabled,
   });

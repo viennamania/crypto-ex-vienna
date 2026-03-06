@@ -13,6 +13,48 @@ import { isWalletAddress, normalizeWalletAddress } from '@/lib/security/walletSi
 const toText = (value: unknown) => String(value ?? '').trim();
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+const normalizeRole = (value: unknown) => toText(value).toLowerCase();
+const normalizeStatus = (value: unknown) => toText(value).toLowerCase();
+
+const sanitizeSellerPayloadForNonAdmin = (sellerPayload: Record<string, unknown>) => {
+  const sanitizedSellerPayload: Record<string, unknown> = {
+    ...sellerPayload,
+  };
+
+  // Admin-only fields
+  delete sanitizedSellerPayload.status;
+  delete sanitizedSellerPayload.statusHistory;
+  delete sanitizedSellerPayload.enabled;
+  delete sanitizedSellerPayload.platformFee;
+  delete sanitizedSellerPayload.agentcode;
+
+  if (isObjectRecord(sanitizedSellerPayload.kyc)) {
+    const sanitizedKyc: Record<string, unknown> = {
+      ...sanitizedSellerPayload.kyc,
+    };
+    const kycStatus = normalizeStatus(sanitizedKyc.status);
+    if (kycStatus && kycStatus !== 'pending') {
+      delete sanitizedKyc.status;
+    }
+    delete sanitizedKyc.reviewedAt;
+    delete sanitizedKyc.approvedAt;
+    delete sanitizedKyc.rejectionReason;
+    sanitizedSellerPayload.kyc = sanitizedKyc;
+  }
+
+  if (isObjectRecord(sanitizedSellerPayload.bankInfo)) {
+    const sanitizedBankInfo: Record<string, unknown> = {
+      ...sanitizedSellerPayload.bankInfo,
+      status: 'pending',
+    };
+    delete sanitizedBankInfo.reviewedAt;
+    delete sanitizedBankInfo.approvedAt;
+    delete sanitizedBankInfo.rejectionReason;
+    sanitizedSellerPayload.bankInfo = sanitizedBankInfo;
+  }
+
+  return sanitizedSellerPayload;
+};
 
 const resolveTargetWalletAddress = async ({
   storecode,
@@ -106,6 +148,9 @@ export async function POST(request: NextRequest) {
     storecode,
     walletAddress: signatureAuth.walletAddress,
   });
+  const requesterRole = normalizeRole(requester?.role);
+  const isRequesterAdmin = requesterRole === 'admin';
+  const requesterStorecode = toText(requester?.storecode);
   const signerWalletAddress = toText(requester?.walletAddress) || signatureAuth.walletAddress;
 
   const walletAddress = await resolveTargetWalletAddress({
@@ -124,19 +169,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const sellerBankInfo = isObjectRecord(sellerPayload.bankInfo) ? sellerPayload.bankInfo : {};
+  const effectiveStorecode = isRequesterAdmin
+    ? storecode
+    : requesterStorecode || storecode;
+  const effectiveSellerStatus = isRequesterAdmin ? sellerStatus : '';
+  const effectiveSellerPayload = isRequesterAdmin
+    ? sellerPayload
+    : sanitizeSellerPayloadForNonAdmin(sellerPayload);
+  const sellerBankInfo = isObjectRecord(effectiveSellerPayload.bankInfo) ? effectiveSellerPayload.bankInfo : {};
+  const bankInfoStatusForNonAdmin = !isRequesterAdmin && (bankName || accountNumber || accountHolder || contactMemo)
+    ? 'pending'
+    : undefined;
   const result = await updateSeller({
-    storecode,
+    storecode: effectiveStorecode,
     walletAddress,
     seller: {
-      ...sellerPayload,
-      ...(sellerStatus ? { status: sellerStatus } : {}),
+      ...effectiveSellerPayload,
+      ...(effectiveSellerStatus ? { status: effectiveSellerStatus } : {}),
       bankInfo: {
         ...sellerBankInfo,
         bankName,
         accountNumber,
         accountHolder,
         contactMemo,
+        ...(bankInfoStatusForNonAdmin ? { status: bankInfoStatusForNonAdmin } : {}),
       },
     },
   });
