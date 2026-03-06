@@ -135,11 +135,13 @@ export async function POST(request: Request) {
     channelUrl?: string;
     userId?: string;
     nickname?: string;
+    allowInvite?: boolean;
   } | null;
 
   const channelUrl = toText(body?.channelUrl);
   const userId = toText(body?.userId);
   const nickname = toText(body?.nickname);
+  const allowInvite = body?.allowInvite !== false;
 
   if (!channelUrl || !userId) {
     return NextResponse.json(
@@ -159,8 +161,21 @@ export async function POST(request: Request) {
         ok: true,
         channelUrl,
         userId,
+        resolvedUserId: userId,
         invited: false,
         alreadyMember: true,
+      });
+    }
+
+    if (!allowInvite) {
+      return NextResponse.json({
+        ok: true,
+        channelUrl,
+        userId,
+        resolvedUserId: userId,
+        invited: false,
+        alreadyMember: false,
+        skippedInvite: true,
       });
     }
 
@@ -170,6 +185,7 @@ export async function POST(request: Request) {
       ok: true,
       channelUrl,
       userId,
+      resolvedUserId: userId,
       invited: true,
       alreadyMember: false,
     });

@@ -984,6 +984,7 @@ export default function BuyUsdtPage({
 
   const [chatSessionToken, setChatSessionToken] = useState<string | null>(null);
   const [chatChannelUrl, setChatChannelUrl] = useState<string | null>(null);
+  const [chatUserId, setChatUserId] = useState<string | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [chatRefreshToken, setChatRefreshToken] = useState(0);
@@ -2008,6 +2009,7 @@ export default function BuyUsdtPage({
     if (!activeAccount?.address || !selectedSeller?.walletAddress || !SENDBIRD_APP_ID || isSelectedSellerBuyer) {
       setChatSessionToken(null);
       setChatChannelUrl(null);
+      setChatUserId(null);
       setChatError(null);
       return;
     }
@@ -2016,6 +2018,21 @@ export default function BuyUsdtPage({
     }
 
     const activeOrderId = toTrimmedString(activePrivateTradeOrder?.orderId);
+    const buyerWalletFromOrder = toTrimmedString(activePrivateTradeOrder?.buyerWalletAddress);
+    const activeWalletAddress = toTrimmedString(activeAccount.address);
+    const candidateChatUserIds = Array.from(
+      new Set(
+        [
+          buyerWalletFromOrder,
+          buyerWalletFromOrder.toLowerCase(),
+          activeWalletAddress,
+          activeWalletAddress.toLowerCase(),
+        ]
+          .map((value) => toTrimmedString(value))
+          .filter((value) => WALLET_ADDRESS_REGEX.test(value)),
+      ),
+    );
+    const preferredChatUserId = candidateChatUserIds[0] || activeWalletAddress;
 
     const requestChannelRepair = async (targetOrderId: string) => {
       const normalizedOrderId = toTrimmedString(targetOrderId);
@@ -2057,14 +2074,19 @@ export default function BuyUsdtPage({
       return repairedChannelUrl;
     };
 
-    const ensureChannelAccess = async (targetChannelUrl: string) => {
+    const ensureChannelAccess = async (
+      targetChannelUrl: string,
+      targetUserId: string,
+      allowInvite: boolean,
+    ) => {
       const response = await fetch('/api/sendbird/ensure-group-channel-member', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           channelUrl: targetChannelUrl,
-          userId: activeAccount.address,
+          userId: targetUserId,
           nickname: buyerDisplayName,
+          allowInvite,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -2073,6 +2095,26 @@ export default function BuyUsdtPage({
           toTrimmedString(payload?.error || payload?.message || '채팅 채널 접근 권한을 준비하지 못했습니다.'),
         );
       }
+      return {
+        alreadyMember: payload?.alreadyMember === true,
+        resolvedUserId: toTrimmedString(payload?.resolvedUserId || targetUserId),
+      };
+    };
+
+    const resolveChatUserIdForChannel = async (targetChannelUrl: string) => {
+      if (!candidateChatUserIds.length && !preferredChatUserId) {
+        throw new Error('유효한 채팅 사용자 ID를 확인하지 못했습니다.');
+      }
+
+      for (const candidateUserId of candidateChatUserIds) {
+        const probe = await ensureChannelAccess(targetChannelUrl, candidateUserId, false);
+        if (probe.alreadyMember) {
+          return probe.resolvedUserId || candidateUserId;
+        }
+      }
+
+      const ensured = await ensureChannelAccess(targetChannelUrl, preferredChatUserId, true);
+      return ensured.resolvedUserId || preferredChatUserId;
     };
 
     setChatLoading(true);
@@ -2085,12 +2127,14 @@ export default function BuyUsdtPage({
       if (!resolvedChannelUrl) {
         setChatSessionToken(null);
         setChatChannelUrl(null);
+        setChatUserId(null);
         setChatError(null);
         return;
       }
 
+      let resolvedChatUserId = preferredChatUserId;
       try {
-        await ensureChannelAccess(resolvedChannelUrl);
+        resolvedChatUserId = await resolveChatUserIdForChannel(resolvedChannelUrl);
       } catch (firstAccessError) {
         const firstMessage = firstAccessError instanceof Error
           ? firstAccessError.message
@@ -2103,14 +2147,14 @@ export default function BuyUsdtPage({
         if (!resolvedChannelUrl) {
           throw new Error('주문 채팅 채널 복구 결과가 비어 있습니다.');
         }
-        await ensureChannelAccess(resolvedChannelUrl);
+        resolvedChatUserId = await resolveChatUserIdForChannel(resolvedChannelUrl);
       }
 
       await fetch('/api/sendbird/update-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: activeAccount.address,
+          userId: resolvedChatUserId,
           nickname: buyerDisplayName,
           ...(buyerProfile?.avatar ? { profileUrl: buyerProfile.avatar } : {}),
         }),
@@ -2120,7 +2164,7 @@ export default function BuyUsdtPage({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: activeAccount.address,
+          userId: resolvedChatUserId,
           nickname: buyerDisplayName,
           ...(buyerProfile?.avatar ? { profileUrl: buyerProfile.avatar } : {}),
         }),
@@ -2132,10 +2176,12 @@ export default function BuyUsdtPage({
 
       setChatSessionToken(String(sessionData.sessionToken));
       setChatChannelUrl(resolvedChannelUrl);
+      setChatUserId(resolvedChatUserId);
     } catch (error) {
       console.error('Failed to connect seller chat', error);
       setChatSessionToken(null);
       setChatChannelUrl(null);
+      setChatUserId(null);
       setChatError(error instanceof Error ? error.message : '채팅을 연결하지 못했습니다.');
     } finally {
       setChatLoading(false);
@@ -2148,6 +2194,7 @@ export default function BuyUsdtPage({
     buyerProfile?.avatar,
     activePrivateTradeChannelUrl,
     activePrivateTradeOrder?.orderId,
+    activePrivateTradeOrder?.buyerWalletAddress,
   ]);
 
   useEffect(() => {
@@ -3992,14 +4039,14 @@ export default function BuyUsdtPage({
                             </div>
                           ) : !buyerDisplayName || loadingBuyerProfile ? (
                             <div className="px-4 py-4 text-xs text-slate-500">내 회원 정보를 불러오는 중입니다...</div>
-                          ) : !chatSessionToken || !chatChannelUrl ? (
+                          ) : !chatSessionToken || !chatChannelUrl || !chatUserId ? (
                             <div className="px-4 py-4 text-xs text-slate-500">
                               {chatLoading ? '채팅을 준비 중입니다...' : '주문 채팅 채널을 연결하는 중입니다...'}
                             </div>
                           ) : (
                             <SendbirdProvider
                               appId={SENDBIRD_APP_ID}
-                              userId={activeAccount.address}
+                              userId={chatUserId}
                               accessToken={chatSessionToken}
                               theme="light"
                             >
