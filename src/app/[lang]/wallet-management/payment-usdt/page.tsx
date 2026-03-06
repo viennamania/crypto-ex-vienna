@@ -2050,7 +2050,7 @@ export default function PaymentUsdtPage({
 
                           <div className="mt-1.5 grid gap-1.5 rounded-lg border border-slate-100 bg-slate-50/70 p-2 text-[11px] sm:grid-cols-2">
                             <div className="flex items-center justify-between gap-2">
-                              <p className="font-semibold text-slate-500">결제번호</p>
+                              <p className="font-semibold text-slate-500">결제 번호</p>
                               <p className="truncate text-right text-slate-800">{item.paymentId || '-'}</p>
                             </div>
                             <div className="flex items-center justify-between gap-2">
