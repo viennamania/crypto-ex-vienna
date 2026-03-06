@@ -1158,12 +1158,12 @@ export default function BuyOrderManagementPage() {
     setOrderChatSessionError(null);
     setOrderChatChannelAccessLoading(true);
 
-    try {
+    const ensureChannelAccess = async (targetChannelUrl: string) => {
       const response = await fetch('/api/sendbird/ensure-group-channel-member', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          channelUrl: normalizedChannelUrl,
+          channelUrl: targetChannelUrl,
           userId: orderChatUserId,
           nickname: cancelActorNickname || `admin_${orderChatUserId.slice(0, 6)}`,
         }),
@@ -1174,10 +1174,55 @@ export default function BuyOrderManagementPage() {
           String(payload?.error || payload?.message || '채팅 채널 접근 권한을 준비하지 못했습니다.'),
         );
       }
-    } catch (error) {
-      setOrderChatSessionError(
-        error instanceof Error ? error.message : '채팅 채널 접근 권한을 준비하지 못했습니다.',
+    };
+
+    try {
+      await ensureChannelAccess(normalizedChannelUrl);
+    } catch (firstAccessError) {
+      const firstMessage = String(
+        firstAccessError instanceof Error
+          ? firstAccessError.message
+          : '채팅 채널 접근 권한을 준비하지 못했습니다.',
       );
+      const isChannelNotFound =
+        /channel/i.test(firstMessage)
+        && /not found/i.test(firstMessage);
+      const targetOrderId = String(order?._id || '').trim();
+      if (!isChannelNotFound || !targetOrderId) {
+        setOrderChatSessionError(firstMessage);
+        setOrderChatChannelAccessLoading(false);
+        return;
+      }
+
+      try {
+        const repairResponse = await fetch('/api/sendbird/repair-buyorder-channel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: targetOrderId,
+          }),
+        });
+        const repairPayload = await repairResponse.json().catch(() => ({}));
+        if (!repairResponse.ok) {
+          throw new Error(
+            String(repairPayload?.error || repairPayload?.message || '주문 채팅 채널 복구에 실패했습니다.'),
+          );
+        }
+
+        const repairedChannelUrl = String(repairPayload?.channelUrl || '').trim();
+        if (!repairedChannelUrl) {
+          throw new Error('주문 채팅 채널 복구 결과가 비어 있습니다.');
+        }
+
+        setSelectedOrderChatChannelUrl(repairedChannelUrl);
+        await ensureChannelAccess(repairedChannelUrl);
+      } catch (repairError) {
+        setOrderChatSessionError(
+          repairError instanceof Error
+            ? repairError.message
+            : '채팅 채널 접근 권한을 준비하지 못했습니다.',
+        );
+      }
     } finally {
       setOrderChatChannelAccessLoading(false);
     }

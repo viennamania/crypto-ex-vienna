@@ -21,6 +21,7 @@ const SENDBIRD_APPLICATION_ID =
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
 const SENDBIRD_API_BASE = SENDBIRD_APPLICATION_ID ? `https://api-${SENDBIRD_APPLICATION_ID}.sendbird.com/v3` : '';
 const SENDBIRD_REQUEST_TIMEOUT_MS = Number(process.env.SENDBIRD_REQUEST_TIMEOUT_MS ?? 8000);
+const SENDBIRD_DEFAULT_PROFILE_URL = 'https://crypto-ex-vienna.vercel.app/logo.png';
 
 const FAILURE_MESSAGE_BY_REASON: Record<string, string> = {
   SELLER_NOT_FOUND: '판매자 정보를 찾을 수 없습니다.',
@@ -200,6 +201,51 @@ const updateBuyOrderConsentRequestState = async ({
   );
 };
 
+const getSendbirdHeadersOrThrow = () => {
+  if (!SENDBIRD_API_BASE) {
+    throw new Error('Sendbird application id is missing');
+  }
+  const headers = buildSendbirdHeaders();
+  if (!headers) {
+    throw new Error('Sendbird API token is missing');
+  }
+  return headers;
+};
+
+const ensureAndPersistOrderConsentChannel = async ({
+  orderId,
+  buyerWalletAddress,
+  sellerWalletAddress,
+  tradeId,
+  centerAdminUserIds,
+}: {
+  orderId: string;
+  buyerWalletAddress: string;
+  sellerWalletAddress: string;
+  tradeId: string;
+  centerAdminUserIds: string[];
+}) => {
+  const headers = getSendbirdHeadersOrThrow();
+  const channelUrl = await ensureSendbirdGroupChannel({
+    headers,
+    buyerWalletAddress,
+    sellerWalletAddress,
+    tradeId,
+    centerAdminUserIds,
+  });
+  try {
+    await updateBuyOrderConsentRequestState({
+      orderId,
+      channelUrl,
+      requestMessage: '',
+      sellerWalletAddress,
+    });
+  } catch (consentUpdateError) {
+    console.error('buyOrderPrivateSale: failed to persist repaired buyerConsent channel', consentUpdateError);
+  }
+  return channelUrl;
+};
+
 const buildSendbirdHeaders = () => {
   const apiToken = process.env.SENDBIRD_API_TOKEN;
   if (!apiToken) {
@@ -241,6 +287,7 @@ const createSendbirdUserIfNeeded = async (
       body: JSON.stringify({
         user_id: userId,
         nickname: userId,
+        profile_url: SENDBIRD_DEFAULT_PROFILE_URL,
       }),
     },
   );
@@ -298,18 +345,39 @@ const ensureSendbirdGroupChannel = async ({
   tradeId: string;
   centerAdminUserIds?: string[];
 }) => {
-  const participantUserIds = toNormalizedSendbirdUserIds([
+  const coreParticipantUserIds = toNormalizedSendbirdUserIds([
     buyerWalletAddress,
     sellerWalletAddress,
-    ...centerAdminUserIds,
   ]);
-  if (participantUserIds.length < 2) {
+
+  if (coreParticipantUserIds.length < 2) {
     throw new Error('At least two participant user ids are required');
   }
 
-  for (const participantUserId of participantUserIds) {
+  for (const participantUserId of coreParticipantUserIds) {
     await createSendbirdUserIfNeeded(headers, participantUserId);
   }
+
+  const coreParticipantIdSet = new Set(coreParticipantUserIds.map((item) => item.toLowerCase()));
+  const optionalCenterAdminUserIds = toNormalizedSendbirdUserIds(centerAdminUserIds)
+    .filter((item) => !coreParticipantIdSet.has(item.toLowerCase()));
+  const activeCenterAdminUserIds: string[] = [];
+  for (const centerAdminUserId of optionalCenterAdminUserIds) {
+    try {
+      await createSendbirdUserIfNeeded(headers, centerAdminUserId);
+      activeCenterAdminUserIds.push(centerAdminUserId);
+    } catch (centerAdminError) {
+      console.warn('buyOrderPrivateSale: failed to register center admin Sendbird user, skipping participant', {
+        centerAdminUserId,
+        detail: toErrorDetailMessage(centerAdminError),
+      });
+    }
+  }
+
+  const participantUserIds = [
+    ...coreParticipantUserIds,
+    ...activeCenterAdminUserIds,
+  ];
 
   const preferredChannelUrl = buildPrivateSaleOrderChannelUrl({
     tradeId,
@@ -616,6 +684,14 @@ const executeBuyOrderPrivateSale = async (
   const orderId = toTrimmedString(order?.orderId || tradeStatus?.order?.orderId);
   const currentConsentChannelUrl = toTrimmedString(order?.consentChannelUrl);
   const centerAdminChatUserIds = await resolveCenterAdminChatUserIds();
+  const ensureAndPersistChannel = async () =>
+    ensureAndPersistOrderConsentChannel({
+      orderId,
+      buyerWalletAddress: resolvedBuyerWalletAddress,
+      sellerWalletAddress: resolvedSellerWalletAddress,
+      tradeId,
+      centerAdminUserIds: centerAdminChatUserIds,
+    });
 
   if (createdNewOrder || !currentConsentChannelUrl) {
     await emitProgress({
@@ -659,75 +735,64 @@ const executeBuyOrderPrivateSale = async (
             },
           });
         } else {
-          await emitProgress({
-            step: 'CONSENT_REQUEST_MESSAGE',
-            title: '동의 요청 메시지 발송',
-            description: '동의 요청 메시지 전송을 건너뛰었습니다.',
-            status: 'completed',
-            detail: sendResult.reason,
-          });
-        }
-      } else {
-        if (!SENDBIRD_API_BASE) {
+          const repairedChannelUrl = await ensureAndPersistChannel();
           await emitProgress({
             step: 'CONSENT_REQUEST_MESSAGE',
             title: '주문 채팅 채널 복구',
-            description: 'Sendbird 설정이 없어 채널 복구를 건너뛰었습니다.',
+            description: '동의 요청 메시지는 전송되지 않았지만 주문 채팅 채널은 생성했습니다.',
             status: 'completed',
-            detail: 'Sendbird application id is missing',
+            detail: sendResult.reason,
+            data: {
+              channelUrl: repairedChannelUrl,
+              centerAdminMemberCount: centerAdminChatUserIds.length,
+            },
           });
-        } else {
-          const headers = buildSendbirdHeaders();
-          if (!headers) {
-            await emitProgress({
-              step: 'CONSENT_REQUEST_MESSAGE',
-              title: '주문 채팅 채널 복구',
-              description: 'Sendbird 토큰이 없어 채널 복구를 건너뛰었습니다.',
-              status: 'completed',
-              detail: 'Sendbird API token is missing',
-            });
-          } else {
-            const repairedChannelUrl = await ensureSendbirdGroupChannel({
-              headers,
-              buyerWalletAddress: resolvedBuyerWalletAddress,
-              sellerWalletAddress: resolvedSellerWalletAddress,
-              tradeId,
-              centerAdminUserIds: centerAdminChatUserIds,
-            });
-            try {
-              await updateBuyOrderConsentRequestState({
-                orderId,
-                channelUrl: repairedChannelUrl,
-                requestMessage: '',
-                sellerWalletAddress: resolvedSellerWalletAddress,
-              });
-            } catch (consentUpdateError) {
-              console.error('buyOrderPrivateSale: failed to persist repaired buyerConsent channel', consentUpdateError);
-            }
-            await emitProgress({
-              step: 'CONSENT_REQUEST_MESSAGE',
-              title: '주문 채팅 채널 복구',
-              description: '누락된 주문 채팅 채널 정보를 복구했습니다.',
-              status: 'completed',
-              data: {
-                channelUrl: repairedChannelUrl,
-                centerAdminMemberCount: centerAdminChatUserIds.length,
-              },
-            });
-          }
         }
+      } else {
+        const repairedChannelUrl = await ensureAndPersistChannel();
+        await emitProgress({
+          step: 'CONSENT_REQUEST_MESSAGE',
+          title: '주문 채팅 채널 복구',
+          description: '누락된 주문 채팅 채널 정보를 복구했습니다.',
+          status: 'completed',
+          data: {
+            channelUrl: repairedChannelUrl,
+            centerAdminMemberCount: centerAdminChatUserIds.length,
+          },
+        });
       }
     } catch (sendError) {
       console.error('buyOrderPrivateSale: failed to send consent request message', sendError);
-      await emitProgress({
-        step: 'CONSENT_REQUEST_MESSAGE',
-        title: createdNewOrder ? '동의 요청 메시지 발송' : '주문 채팅 채널 복구',
-        description: createdNewOrder
-          ? '동의 요청 메시지 전송에 실패했습니다.'
-          : '주문 채팅 채널 복구에 실패했습니다.',
-        status: 'error',
-        detail: toErrorDetailMessage(sendError),
-      });
+      let repairedChannelUrl = '';
+      if (createdNewOrder) {
+        try {
+          repairedChannelUrl = await ensureAndPersistChannel();
+          await emitProgress({
+            step: 'CONSENT_REQUEST_MESSAGE',
+            title: '주문 채팅 채널 복구',
+            description: '동의 요청 메시지 전송 실패 후 채널 정보 복구를 완료했습니다.',
+            status: 'completed',
+            data: {
+              channelUrl: repairedChannelUrl,
+              centerAdminMemberCount: centerAdminChatUserIds.length,
+            },
+          });
+        } catch (repairError) {
+          console.error('buyOrderPrivateSale: failed to repair channel after consent send failure', repairError);
+        }
+      }
+
+      if (!repairedChannelUrl) {
+        await emitProgress({
+          step: 'CONSENT_REQUEST_MESSAGE',
+          title: createdNewOrder ? '동의 요청 메시지 발송' : '주문 채팅 채널 복구',
+          description: createdNewOrder
+            ? '동의 요청 메시지 전송에 실패했습니다.'
+            : '주문 채팅 채널 복구에 실패했습니다.',
+          status: 'error',
+          detail: toErrorDetailMessage(sendError),
+        });
+      }
     }
   }
 

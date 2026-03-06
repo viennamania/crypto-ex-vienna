@@ -2014,16 +2014,98 @@ export default function BuyUsdtPage({
     if (!buyerDisplayName) {
       return;
     }
-    if (!activePrivateTradeChannelUrl) {
-      setChatSessionToken(null);
-      setChatChannelUrl(null);
-      setChatError(null);
-      return;
-    }
+
+    const activeOrderId = toTrimmedString(activePrivateTradeOrder?.orderId);
+
+    const requestChannelRepair = async (targetOrderId: string) => {
+      const normalizedOrderId = toTrimmedString(targetOrderId);
+      if (!normalizedOrderId) {
+        return '';
+      }
+
+      const repairResponse = await fetch('/api/sendbird/repair-buyorder-channel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: normalizedOrderId,
+        }),
+      });
+      const repairPayload = await repairResponse.json().catch(() => ({}));
+      if (!repairResponse.ok) {
+        throw new Error(
+          toTrimmedString(repairPayload?.error || repairPayload?.message || '주문 채팅 채널 복구에 실패했습니다.'),
+        );
+      }
+
+      const repairedChannelUrl = toTrimmedString(repairPayload?.channelUrl);
+      if (!repairedChannelUrl) {
+        throw new Error('주문 채팅 채널 복구 결과가 비어 있습니다.');
+      }
+
+      setPrivateTradeStatus((previous) => {
+        if (!previous?.order) return previous;
+        if (toTrimmedString(previous.order.orderId) !== normalizedOrderId) return previous;
+        return {
+          ...previous,
+          order: {
+            ...previous.order,
+            consentChannelUrl: repairedChannelUrl,
+          },
+        };
+      });
+
+      return repairedChannelUrl;
+    };
+
+    const ensureChannelAccess = async (targetChannelUrl: string) => {
+      const response = await fetch('/api/sendbird/ensure-group-channel-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channelUrl: targetChannelUrl,
+          userId: activeAccount.address,
+          nickname: buyerDisplayName,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          toTrimmedString(payload?.error || payload?.message || '채팅 채널 접근 권한을 준비하지 못했습니다.'),
+        );
+      }
+    };
 
     setChatLoading(true);
     setChatError(null);
     try {
+      let resolvedChannelUrl = activePrivateTradeChannelUrl;
+      if (!resolvedChannelUrl && activeOrderId) {
+        resolvedChannelUrl = await requestChannelRepair(activeOrderId);
+      }
+      if (!resolvedChannelUrl) {
+        setChatSessionToken(null);
+        setChatChannelUrl(null);
+        setChatError(null);
+        return;
+      }
+
+      try {
+        await ensureChannelAccess(resolvedChannelUrl);
+      } catch (firstAccessError) {
+        const firstMessage = firstAccessError instanceof Error
+          ? firstAccessError.message
+          : '채팅 채널 접근 권한을 준비하지 못했습니다.';
+        const isChannelNotFound = /channel/i.test(firstMessage) && /not found/i.test(firstMessage);
+        if (!isChannelNotFound || !activeOrderId) {
+          throw firstAccessError;
+        }
+        resolvedChannelUrl = await requestChannelRepair(activeOrderId);
+        if (!resolvedChannelUrl) {
+          throw new Error('주문 채팅 채널 복구 결과가 비어 있습니다.');
+        }
+        await ensureChannelAccess(resolvedChannelUrl);
+      }
+
       await fetch('/api/sendbird/update-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2049,7 +2131,7 @@ export default function BuyUsdtPage({
       }
 
       setChatSessionToken(String(sessionData.sessionToken));
-      setChatChannelUrl(activePrivateTradeChannelUrl);
+      setChatChannelUrl(resolvedChannelUrl);
     } catch (error) {
       console.error('Failed to connect seller chat', error);
       setChatSessionToken(null);
@@ -2065,6 +2147,7 @@ export default function BuyUsdtPage({
     buyerDisplayName,
     buyerProfile?.avatar,
     activePrivateTradeChannelUrl,
+    activePrivateTradeOrder?.orderId,
   ]);
 
   useEffect(() => {

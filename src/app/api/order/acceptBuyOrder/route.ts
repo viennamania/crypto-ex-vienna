@@ -10,6 +10,7 @@ const APPLICATION_ID =
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID || '';
 const API_BASE = APPLICATION_ID ? `https://api-${APPLICATION_ID}.sendbird.com/v3` : '';
 const REQUEST_TIMEOUT_MS = Number(process.env.SENDBIRD_REQUEST_TIMEOUT_MS ?? 8000);
+const SENDBIRD_DEFAULT_PROFILE_URL = 'https://crypto-ex-vienna.vercel.app/logo.png';
 
 const toTrimmedString = (value: unknown) => String(value ?? '').trim();
 
@@ -70,6 +71,7 @@ const createSendbirdUserIfNeeded = async (
       body: JSON.stringify({
         user_id: userId,
         nickname: userId,
+        profile_url: SENDBIRD_DEFAULT_PROFILE_URL,
       }),
     },
   );
