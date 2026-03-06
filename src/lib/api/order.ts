@@ -12791,6 +12791,56 @@ export async function acceptBuyOrderPrivateSale(
       typeof buyer.walletAddress === 'string' && buyer.walletAddress.trim()
         ? buyer.walletAddress.trim()
         : normalizedBuyerWalletAddress;
+    const buyerStoreReferral = (() => {
+      if (!buyerRequestStorecode) {
+        return null;
+      }
+      return {
+        storecode: buyerRequestStorecode,
+        storeName: '',
+        storeLogo: '',
+      };
+    })();
+
+    if (buyerStoreReferral) {
+      try {
+        const storesCollection = client.db(dbName).collection('stores');
+        const buyerStoreDoc = await storesCollection.findOne<any>(
+          {
+            storecode: {
+              $regex: `^${escapeRegex(buyerRequestStorecode)}$`,
+              $options: 'i',
+            },
+          },
+          {
+            projection: {
+              storecode: 1,
+              storeName: 1,
+              storeLogo: 1,
+            },
+          },
+        );
+        if (buyerStoreDoc) {
+          const normalizedStorecodeFromDb = String(buyerStoreDoc?.storecode || '').trim();
+          const normalizedStoreNameFromDb = String(buyerStoreDoc?.storeName || '').trim();
+          const normalizedStoreLogoFromDb = String(buyerStoreDoc?.storeLogo || '').trim();
+          if (normalizedStorecodeFromDb) {
+            buyerStoreReferral.storecode = normalizedStorecodeFromDb;
+          }
+          if (normalizedStoreNameFromDb) {
+            buyerStoreReferral.storeName = normalizedStoreNameFromDb;
+          }
+          if (normalizedStoreLogoFromDb) {
+            buyerStoreReferral.storeLogo = normalizedStoreLogoFromDb;
+          }
+        }
+      } catch (buyerStoreLookupError) {
+        console.warn('acceptBuyOrderPrivateSale: failed to resolve buyer store referral', {
+          buyerStorecode: buyerRequestStorecode,
+          error: buyerStoreLookupError,
+        });
+      }
+    }
 
     await emitProgress({
       step: 'BUYER_VALIDATED',
@@ -13295,7 +13345,7 @@ export async function acceptBuyOrderPrivateSale(
         nickname: buyer.nickname || '',
         avatar: buyer.avatar || '',
         walletAddress: matchedBuyerWalletAddress,
-        ...(buyerRequestStorecode ? { storecode: buyerRequestStorecode } : {}),
+        ...(buyerStoreReferral ? { storeReferral: buyerStoreReferral } : {}),
         ipAddress: normalizedRequesterIpAddress,
         publicIpAddress: normalizedRequesterIpAddress,
         escrowWalletAddress: buyerEscrowWalletAddress,
