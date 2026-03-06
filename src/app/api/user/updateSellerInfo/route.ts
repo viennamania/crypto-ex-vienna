@@ -152,6 +152,7 @@ export async function POST(request: NextRequest) {
   const isRequesterAdmin = requesterRole === 'admin';
   const requesterStorecode = toText(requester?.storecode);
   const signerWalletAddress = toText(requester?.walletAddress) || signatureAuth.walletAddress;
+  const normalizedSignerWalletAddress = normalizeWalletAddress(signerWalletAddress);
 
   const walletAddress = await resolveTargetWalletAddress({
     storecode,
@@ -172,6 +173,10 @@ export async function POST(request: NextRequest) {
   const effectiveStorecode = isRequesterAdmin
     ? storecode
     : requesterStorecode || storecode;
+  const isAdminUpdatingAnotherWallet =
+    isRequesterAdmin
+    && isWalletAddress(normalizedSignerWalletAddress)
+    && walletAddress !== normalizedSignerWalletAddress;
   const effectiveSellerStatus = isRequesterAdmin ? sellerStatus : '';
   const effectiveSellerPayload = isRequesterAdmin
     ? sellerPayload
@@ -183,6 +188,7 @@ export async function POST(request: NextRequest) {
   const result = await updateSeller({
     storecode: effectiveStorecode,
     walletAddress,
+    allowWalletOnlyFallback: !isAdminUpdatingAnotherWallet,
     seller: {
       ...effectiveSellerPayload,
       ...(effectiveSellerStatus ? { status: effectiveSellerStatus } : {}),

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useActiveAccount } from 'thirdweb/react';
+import { createWalletSignatureAuthPayload } from '@/lib/security/walletSignature';
 
 type SellerDashboardMetrics = {
   totalSellers: number;
@@ -33,8 +35,43 @@ export default function SellerManagementPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const activeAccount = useActiveAccount();
   const langParam = params?.lang;
   const lang = Array.isArray(langParam) ? langParam[0] : langParam || 'ko';
+  const authStorecode = 'admin';
+
+  const buildSignedRequestBody = async ({
+    path,
+    payload,
+  }: {
+    path: string;
+    payload: Record<string, unknown>;
+  }) => {
+    const signatureAccount = activeAccount as unknown as {
+      address?: string;
+      signMessage?: (options: {
+        message: string;
+        originalMessage?: string;
+        chainId?: number;
+      }) => Promise<string>;
+    };
+
+    if (!signatureAccount?.address || typeof signatureAccount?.signMessage !== 'function') {
+      throw new Error('관리자 지갑 연결 후 다시 시도해 주세요.');
+    }
+
+    const auth = await createWalletSignatureAuthPayload({
+      account: signatureAccount,
+      storecode: authStorecode,
+      path,
+      method: 'POST',
+    });
+
+    return {
+      ...payload,
+      auth,
+    };
+  };
 
   const [sellers, setSellers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -305,11 +342,24 @@ export default function SellerManagementPage() {
     if (enabledHistoryLoading) return;
     setEnabledHistoryLoading(true);
     try {
+      const requestBody = await buildSignedRequestBody({
+        path: '/api/user/getSellerEnabledHistory',
+        payload: {
+          storecode: authStorecode,
+          walletAddress: wallet,
+          limit: ENABLED_HISTORY_PAGE_SIZE,
+          page,
+        },
+      });
       const res = await fetch('/api/user/getSellerEnabledHistory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: wallet, limit: ENABLED_HISTORY_PAGE_SIZE, page }),
+        body: JSON.stringify(requestBody),
       });
+      if (!res.ok) {
+        const errorPayload = await res.json().catch(() => ({}));
+        throw new Error(String(errorPayload?.error || '사용여부 이력 조회에 실패했습니다.'));
+      }
       const data = await res.json();
       const items = data?.result?.items || [];
       const totalCount = data?.result?.totalCount ?? items.length;
@@ -1667,10 +1717,18 @@ export default function SellerManagementPage() {
                 onClick={async () => {
                   if (!enabledModalTarget?.wallet || selectedEnabled === null) return;
                   try {
+                    const requestBody = await buildSignedRequestBody({
+                      path: '/api/user/updateSellerEnabled',
+                      payload: {
+                        storecode: authStorecode,
+                        walletAddress: enabledModalTarget.wallet,
+                        enabled: selectedEnabled,
+                      },
+                    });
                     const res = await fetch('/api/user/updateSellerEnabled', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ walletAddress: enabledModalTarget.wallet, enabled: selectedEnabled }),
+                      body: JSON.stringify(requestBody),
                     });
                     if (!res.ok) {
                       const msg = (await res.json())?.error || '변경에 실패했습니다';

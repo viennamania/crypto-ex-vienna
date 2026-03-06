@@ -1377,10 +1377,12 @@ export async function updateSeller({
   storecode,
   walletAddress,
   seller,
+  allowWalletOnlyFallback = true,
 }: {
   storecode: string;
   walletAddress: string;
   seller: any;
+  allowWalletOnlyFallback?: boolean;
 }) {
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
@@ -1405,6 +1407,9 @@ export async function updateSeller({
   const fallbackFilter: Record<string, unknown> = {
     walletAddress: walletRegex,
   };
+
+  const useWalletOnlyFallback = Boolean(storecode) && allowWalletOnlyFallback;
+
   const existingUser =
     (await collection.findOne(primaryFilter, {
       projection: {
@@ -1415,7 +1420,7 @@ export async function updateSeller({
         storeInfo: 1,
       },
     })) ||
-    (storecode
+    (useWalletOnlyFallback
       ? await collection.findOne(fallbackFilter, {
           projection: {
             _id: 0,
@@ -1448,8 +1453,7 @@ export async function updateSeller({
     },
   );
 
-  // Fallback: if storecode-scoped match fails, retry with wallet-only scope.
-  if (result.matchedCount === 0 && storecode) {
+  if (useWalletOnlyFallback && result.matchedCount === 0) {
     result = await collection.updateOne(
       fallbackFilter,
       {

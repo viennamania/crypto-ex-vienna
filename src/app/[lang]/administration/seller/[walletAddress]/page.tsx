@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import { useActiveAccount } from 'thirdweb/react';
+import { createWalletSignatureAuthPayload } from '@/lib/security/walletSignature';
 
 type SellerStatus = 'pending' | 'confirmed' | 'rejected' | undefined;
 type SellerStatusValue = 'pending' | 'confirmed';
@@ -32,6 +34,7 @@ export default function SellerDetailPage() {
   const params = useParams<{ lang?: string; walletAddress?: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const activeAccount = useActiveAccount();
   const storecode = searchParams.get('storecode') || 'admin';
   const walletAddressParam = Array.isArray(params?.walletAddress)
     ? params?.walletAddress?.[0]
@@ -80,6 +83,75 @@ export default function SellerDetailPage() {
   const [enabledHistoryTotal, setEnabledHistoryTotal] = useState(0);
   const [enabledHistoryPage, setEnabledHistoryPage] = useState(1);
   const [enabledHistoryHasMore, setEnabledHistoryHasMore] = useState(false);
+
+  const buildSignedRequestBody = useCallback(
+    async ({
+      path,
+      payload,
+    }: {
+      path: string;
+      payload: Record<string, unknown>;
+    }) => {
+      const signatureAccount = activeAccount as unknown as {
+        address?: string;
+        signMessage?: (options: {
+          message: string;
+          originalMessage?: string;
+          chainId?: number;
+        }) => Promise<string>;
+      };
+
+      if (!signatureAccount?.address || typeof signatureAccount?.signMessage !== 'function') {
+        throw new Error('관리자 지갑 연결 후 다시 시도해 주세요.');
+      }
+
+      const auth = await createWalletSignatureAuthPayload({
+        account: signatureAccount,
+        storecode,
+        path,
+        method: 'POST',
+      });
+
+      return {
+        ...payload,
+        auth,
+      };
+    },
+    [activeAccount, storecode],
+  );
+
+  const postSignedRequest = useCallback(
+    async ({
+      path,
+      payload,
+      fallbackErrorMessage,
+    }: {
+      path: string;
+      payload: Record<string, unknown>;
+      fallbackErrorMessage: string;
+    }) => {
+      const requestBody = await buildSignedRequestBody({ path, payload });
+      const response = await fetch(path, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+      const responsePayload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          typeof responsePayload?.error === 'string'
+            ? responsePayload.error
+            : fallbackErrorMessage,
+        );
+      }
+
+      return responsePayload;
+    },
+    [buildSignedRequestBody],
+  );
 
   const fetchUser = async () => {
     if (!walletAddress) {
@@ -147,28 +219,28 @@ export default function SellerDetailPage() {
     }
   }, [user]);
 
-  const fetchFeeLogs = async () => {
+  const fetchFeeLogs = useCallback(async () => {
     if (!walletAddress) return;
     try {
-      const res = await fetch('/api/user/getPlatformFeeLogs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const payload = await postSignedRequest({
+        path: '/api/user/getPlatformFeeLogs',
+        payload: {
           storecode: user?.storecode || storecode,
           walletAddress,
           limit: 50,
-        }),
+        },
+        fallbackErrorMessage: '플랫폼 수수료 변경 이력을 불러오지 못했습니다.',
       });
-      const data = await res.json();
-      setFeeLogs(Array.isArray(data?.result) ? data.result : []);
+      setFeeLogs(Array.isArray(payload?.result) ? payload.result : []);
     } catch (error) {
       console.error('Failed to load platform fee logs', error);
+      setFeeLogs([]);
     }
-  };
+  }, [walletAddress, user?.storecode, storecode, postSignedRequest]);
 
   useEffect(() => {
-    fetchFeeLogs();
-  }, [walletAddress, user?.storecode]);
+    void fetchFeeLogs();
+  }, [fetchFeeLogs]);
 
   const fetchEnabledHistory = useCallback(
     async (targetWalletAddress: string, page = 1, append = false) => {
@@ -182,16 +254,16 @@ export default function SellerDetailPage() {
 
       setEnabledHistoryLoading(true);
       try {
-        const res = await fetch('/api/user/getSellerEnabledHistory', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        const data = await postSignedRequest({
+          path: '/api/user/getSellerEnabledHistory',
+          payload: {
+            storecode: user?.storecode || storecode,
             walletAddress: targetWalletAddress,
             limit: 10,
             page,
-          }),
+          },
+          fallbackErrorMessage: '판매자 사용여부 이력을 불러오지 못했습니다.',
         });
-        const data = await res.json();
         const items = Array.isArray(data?.result?.items) ? data.result.items : [];
         const totalCount = Number(data?.result?.totalCount || 0);
         setEnabledHistoryTotal(totalCount);
@@ -210,7 +282,7 @@ export default function SellerDetailPage() {
         setEnabledHistoryLoading(false);
       }
     },
-    [],
+    [postSignedRequest, user?.storecode, storecode],
   );
 
   useEffect(() => {
@@ -278,28 +350,17 @@ export default function SellerDetailPage() {
     }
     setSavingFee(true);
     try {
-      const response = await fetch('/api/user/updateSellerPlatformFee', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      await postSignedRequest({
+        path: '/api/user/updateSellerPlatformFee',
+        payload: {
           storecode: user?.storecode || storecode,
           walletAddress,
           feeWalletAddress: normalizedFeeWalletAddress,
           feeRate: rateNum,
           changedBy: 'admin',
-        }),
+        },
+        fallbackErrorMessage: '수수료 정보를 저장하지 못했습니다.',
       });
-
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(
-          typeof payload?.error === 'string'
-            ? payload.error
-            : '수수료 정보를 저장하지 못했습니다.',
-        );
-      }
 
       toast.success('플랫폼 수수료 정보가 저장되었습니다.');
       await fetchUser();
@@ -357,12 +418,9 @@ export default function SellerDetailPage() {
         },
       };
 
-      await fetch('/api/user/updateSellerInfo', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      await postSignedRequest({
+        path: '/api/user/updateSellerInfo',
+        payload: {
           storecode: user?.storecode || storecode,
           walletAddress,
           sellerStatus: nextSellerStatus,
@@ -371,14 +429,15 @@ export default function SellerDetailPage() {
           accountHolder: seller?.bankInfo?.accountHolder || '',
           contactMemo: seller?.bankInfo?.contactMemo || '',
           seller: updatedSeller,
-        }),
+        },
+        fallbackErrorMessage: '신분증 심사 처리에 실패했습니다.',
       });
 
       toast.success(decision === 'approved' ? '승인 완료되었습니다.' : '거절 처리되었습니다.');
       await fetchUser();
     } catch (error) {
       console.error('Decision failed', error);
-      toast.error('처리에 실패했습니다.');
+      toast.error(error instanceof Error ? error.message : '처리에 실패했습니다.');
     }
     setDecisionLoading(null);
   };
@@ -422,12 +481,9 @@ export default function SellerDetailPage() {
         },
       };
 
-      await fetch('/api/user/updateSellerInfo', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      await postSignedRequest({
+        path: '/api/user/updateSellerInfo',
+        payload: {
           storecode: user?.storecode || storecode,
           walletAddress,
           sellerStatus: nextSellerStatus,
@@ -436,14 +492,15 @@ export default function SellerDetailPage() {
           accountHolder: seller?.bankInfo?.accountHolder || '',
           contactMemo: seller?.bankInfo?.contactMemo || '',
           seller: updatedSeller,
-        }),
+        },
+        fallbackErrorMessage: '계좌 심사 처리에 실패했습니다.',
       });
 
       toast.success(decision === 'approved' ? '계좌 승인 완료되었습니다.' : '계좌 거절 처리되었습니다.');
       await fetchUser();
     } catch (error) {
       console.error('Bank decision failed', error);
-      toast.error('처리에 실패했습니다.');
+      toast.error(error instanceof Error ? error.message : '처리에 실패했습니다.');
     }
     setBankDecisionLoading(null);
   };
@@ -460,12 +517,9 @@ export default function SellerDetailPage() {
         status: nextStatus,
         statusHistory: buildStatusHistory(nextStatus, '관리자 수동 변경'),
       };
-      await fetch('/api/user/updateSellerInfo', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      await postSignedRequest({
+        path: '/api/user/updateSellerInfo',
+        payload: {
           storecode: user?.storecode || storecode,
           walletAddress,
           sellerStatus: nextStatus,
@@ -474,13 +528,14 @@ export default function SellerDetailPage() {
           accountHolder: seller?.bankInfo?.accountHolder || '',
           contactMemo: seller?.bankInfo?.contactMemo || '',
           seller: updatedSeller,
-        }),
+        },
+        fallbackErrorMessage: '판매자 상태 변경에 실패했습니다.',
       });
       toast.success('판매자 상태가 변경되었습니다.');
       await fetchUser();
     } catch (error) {
       console.error('Status update failed', error);
-      toast.error('상태 변경에 실패했습니다.');
+      toast.error(error instanceof Error ? error.message : '상태 변경에 실패했습니다.');
     }
     setStatusUpdating(false);
   };
@@ -496,22 +551,15 @@ export default function SellerDetailPage() {
 
     setEnabledUpdating(true);
     try {
-      const response = await fetch('/api/user/updateSellerEnabled', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      await postSignedRequest({
+        path: '/api/user/updateSellerEnabled',
+        payload: {
+          storecode: user?.storecode || storecode,
           walletAddress: targetWalletAddress,
           enabled: nextEnabled,
-        }),
+        },
+        fallbackErrorMessage: '판매자 사용여부 변경에 실패했습니다.',
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(
-          typeof payload?.error === 'string' ? payload.error : '판매자 사용여부 변경에 실패했습니다.',
-        );
-      }
 
       setUser((prev: any) => {
         if (!prev) return prev;
