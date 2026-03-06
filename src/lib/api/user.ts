@@ -3492,10 +3492,12 @@ export async function updateSellerEnabled(
     storecode,
     walletAddress,
     sellerEnabled,
+    allowWalletOnlyFallback = true,
   }: {
     storecode: string;
     walletAddress: string;
     sellerEnabled: boolean;
+    allowWalletOnlyFallback?: boolean;
   }
 ) {
 
@@ -3503,17 +3505,46 @@ export async function updateSellerEnabled(
   const client = await clientPromise;
   const collection = client.db(dbName).collection('users');
 
-  return await collection.updateOne(
-    {
-      storecode: storecode,
-      walletAddress: walletAddress
-    },
+  const normalizedWalletAddress = String(walletAddress || '').trim();
+  if (!normalizedWalletAddress) {
+    return null;
+  }
+
+  const walletRegex = {
+    $regex: `^${escapeRegExp(normalizedWalletAddress)}$`,
+    $options: 'i',
+  };
+
+  const primaryFilter: Record<string, unknown> = {
+    walletAddress: walletRegex,
+  };
+  if (storecode) {
+    primaryFilter.storecode = storecode;
+  }
+
+  let result = await collection.updateOne(
+    primaryFilter,
     {
       $set: {
         'seller.enabled': sellerEnabled,
-      }
-    }
+      },
+    },
   );
+
+  if (allowWalletOnlyFallback && storecode && result.matchedCount === 0) {
+    result = await collection.updateOne(
+      {
+        walletAddress: walletRegex,
+      },
+      {
+        $set: {
+          'seller.enabled': sellerEnabled,
+        },
+      },
+    );
+  }
+
+  return result;
   
 }
 
