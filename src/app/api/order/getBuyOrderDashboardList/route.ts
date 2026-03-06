@@ -20,7 +20,7 @@ const toIsoDateBoundary = (value: unknown, isStart: boolean) => {
 
 const normalizeAgentcode = (value: unknown) => String(value || '').trim();
 const toAgentcodeKey = (value: unknown) => normalizeAgentcode(value).toLowerCase();
-const normalizeStatusFilter = (value: unknown) => {
+const normalizeStatusValue = (value: unknown) => {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return '';
   if (normalized === 'ordered') return 'ordered';
@@ -30,6 +30,27 @@ const normalizeStatusFilter = (value: unknown) => {
   if (normalized === 'completed') return 'completed';
   if (normalized === 'cancelled') return 'cancelled';
   return '';
+};
+
+const parseStatusFilters = (value: unknown) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return [] as string[];
+
+  if (normalized === 'completedlike' || normalized === 'tradecompleted') {
+    return ['paymentConfirmed', 'completed'];
+  }
+
+  const segments = normalized.includes(',') ? normalized.split(',') : [normalized];
+  const uniqueValues = new Set<string>();
+
+  segments.forEach((segment) => {
+    const statusValue = normalizeStatusValue(segment);
+    if (statusValue) {
+      uniqueValues.add(statusValue);
+    }
+  });
+
+  return Array.from(uniqueValues);
 };
 
 export async function POST(request: NextRequest) {
@@ -47,14 +68,22 @@ export async function POST(request: NextRequest) {
     const searchSellerIdRegex = toRegexFilter(body?.searchSellerId);
     const searchSellerWalletAddressRegex = toRegexFilter(body?.searchSellerWalletAddress);
     const searchDepositNameRegex = toRegexFilter(body?.searchDepositName);
-    const statusFilter = normalizeStatusFilter(body?.status);
+    const statusFilters = parseStatusFilters(body?.status);
     const privateSaleMode =
       body?.privateSaleMode === 'private' || body?.privateSaleMode === 'normal' || body?.privateSaleMode === 'all'
         ? body.privateSaleMode
         : 'all';
+    const searchBuyerWalletAddressRegex = toRegexFilter(body?.searchBuyerWalletAddress);
+    const searchAgentcodeRegex = toRegexFilter(body?.searchAgentcode);
+    const searchPaymentMethodRegex = toRegexFilter(body?.searchPaymentMethod);
 
     const fromDateIso = toIsoDateBoundary(body?.fromDate, true) || '1970-01-01T00:00:00.000Z';
     const toDateIso = toIsoDateBoundary(body?.toDate, false) || new Date().toISOString();
+    const summaryStatusKeys = (
+      statusFilters.length > 0
+        ? statusFilters.map((value) => value.toLowerCase())
+        : ['paymentconfirmed']
+    ).filter(Boolean);
 
     const andFilters: Record<string, any>[] = [
       { createdAt: { $gte: fromDateIso, $lte: toDateIso } },
@@ -86,9 +115,43 @@ export async function POST(request: NextRequest) {
         ],
       });
     }
-    if (statusFilter) {
+    if (statusFilters.length === 1) {
       andFilters.push({
-        status: { $regex: `^${escapeRegex(statusFilter)}$`, $options: 'i' },
+        status: { $regex: `^${escapeRegex(statusFilters[0])}$`, $options: 'i' },
+      });
+    } else if (statusFilters.length > 1) {
+      andFilters.push({
+        $or: statusFilters.map((statusValue) => ({
+          status: { $regex: `^${escapeRegex(statusValue)}$`, $options: 'i' },
+        })),
+      });
+    }
+
+    if (searchBuyerWalletAddressRegex) {
+      andFilters.push({
+        $or: [
+          { walletAddress: searchBuyerWalletAddressRegex },
+          { 'buyer.walletAddress': searchBuyerWalletAddressRegex },
+        ],
+      });
+    }
+
+    if (searchAgentcodeRegex) {
+      andFilters.push({
+        $or: [
+          { agentcode: searchAgentcodeRegex },
+          { 'agent.agentcode': searchAgentcodeRegex },
+          { 'seller.agentcode': searchAgentcodeRegex },
+        ],
+      });
+    }
+
+    if (searchPaymentMethodRegex) {
+      andFilters.push({
+        $or: [
+          { paymentMethod: searchPaymentMethodRegex },
+          { 'seller.bankInfo.bankName': searchPaymentMethodRegex },
+        ],
       });
     }
 
@@ -171,12 +234,12 @@ export async function POST(request: NextRequest) {
               _id: null,
               totalKrwAmount: {
                 $sum: {
-                  $cond: [{ $eq: ['$normalizedStatus', 'paymentconfirmed'] }, '$normalizedKrwAmount', 0],
+                  $cond: [{ $in: ['$normalizedStatus', summaryStatusKeys] }, '$normalizedKrwAmount', 0],
                 },
               },
               totalUsdtAmount: {
                 $sum: {
-                  $cond: [{ $eq: ['$normalizedStatus', 'paymentconfirmed'] }, '$normalizedUsdtAmount', 0],
+                  $cond: [{ $in: ['$normalizedStatus', summaryStatusKeys] }, '$normalizedUsdtAmount', 0],
                 },
               },
               totalPlatformFeeAmount: { $sum: '$normalizedPlatformFeeAmount' },
