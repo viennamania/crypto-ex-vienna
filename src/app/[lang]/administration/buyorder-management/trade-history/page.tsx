@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { toast } from 'react-hot-toast';
+import SendbirdProvider from '@sendbird/uikit-react/SendbirdProvider';
+import GroupChannel from '@sendbird/uikit-react/GroupChannel';
+import { useActiveAccount } from 'thirdweb/react';
 
 type BuyOrderItem = {
   _id?: string;
@@ -12,6 +15,7 @@ type BuyOrderItem = {
   createdAt?: string;
   paymentConfirmedAt?: string;
   status?: string;
+  privateSale?: boolean;
   storecode?: string;
   krwAmount?: number;
   usdtAmount?: number;
@@ -77,6 +81,14 @@ type BuyOrderItem = {
     agentFeeAmountUSDT?: number | string;
     agentFeeWalletAddress?: string;
   };
+  buyerConsent?: {
+    status?: string;
+    accepted?: boolean;
+    acceptedAt?: string;
+    requestedAt?: string;
+    requestMessageSentAt?: string;
+    channelUrl?: string;
+  };
   transactionHash?: string;
   chain?: string;
 };
@@ -102,9 +114,20 @@ type BuyerStoreReferralGroup = {
   count: number;
 };
 
+type BuyerConsentSnapshot = {
+  accepted: boolean;
+  acceptedAt: string;
+  requestedAt: string;
+  channelUrl: string;
+};
+
 const DEFAULT_PAGE_SIZE = 30;
 const PAGE_SIZE_OPTIONS = [20, 30, 50, 100];
 const FIXED_STATUS = 'paymentconfirmed';
+const SENDBIRD_APP_ID = process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID
+  || process.env.NEXT_PUBLIC_SENDBIRD_APP_ID
+  || '';
+const SENDBIRD_MANAGER_CHAT_USER_ID = String(process.env.NEXT_PUBLIC_SENDBIRD_MANAGER_ID || '').trim();
 
 const PAYMENT_METHOD_OPTIONS = [
   { value: '', label: '전체' },
@@ -357,12 +380,63 @@ const formatBuyerStoreReferralGroupLabel = (item: BuyerStoreReferralGroup | null
 const getSellerDisplayName = (order: BuyOrderItem) =>
   String(order?.seller?.nickname || '').trim() || shortWallet(order?.seller?.walletAddress) || '-';
 
+const toChannelToken = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+const getOrderBuyerConsentSnapshot = (order: BuyOrderItem): BuyerConsentSnapshot => {
+  const consent = order?.buyerConsent && typeof order.buyerConsent === 'object'
+    ? order.buyerConsent
+    : null;
+  const normalizedOrderStatus = String(order?.status || '').trim().toLowerCase();
+  const normalizedConsentStatus = String(consent?.status || '').trim().toLowerCase();
+  const accepted = consent?.accepted === true || normalizedConsentStatus === 'accepted';
+  const acceptedAt = String(consent?.acceptedAt || '').trim();
+  const requestedAt = String(consent?.requestedAt || consent?.requestMessageSentAt || '').trim();
+  const fallbackPrivateSaleChannelUrl = (() => {
+    if (order?.privateSale !== true) {
+      return '';
+    }
+    const tradeToken = toChannelToken(String(order?.tradeId || ''));
+    if (!tradeToken) {
+      return '';
+    }
+    return `private-sale-order-${tradeToken}`;
+  })();
+  const fallbackChannelUrl = fallbackPrivateSaleChannelUrl || (
+    normalizedOrderStatus && normalizedOrderStatus !== 'ordered'
+      ? String(order?._id || '').trim()
+      : ''
+  );
+
+  return {
+    accepted,
+    acceptedAt,
+    requestedAt,
+    channelUrl: String(consent?.channelUrl || fallbackChannelUrl).trim(),
+  };
+};
+
 export default function BuyOrderTradeHistoryPage() {
   const params = useParams<{ lang?: string }>();
   const lang = String(params?.lang || '').trim();
   const buyOrderManagementPath = lang
     ? `/${lang}/administration/buyorder-management`
     : '/administration/buyorder-management';
+  const activeAccount = useActiveAccount();
+  const adminWalletAddress = String(activeAccount?.address || '').trim();
+  const orderChatUserId = useMemo(
+    () => SENDBIRD_MANAGER_CHAT_USER_ID || adminWalletAddress,
+    [adminWalletAddress],
+  );
+  const orderChatNickname = useMemo(() => {
+    const baseToken = String(orderChatUserId || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 8);
+    return baseToken ? `admin_${baseToken}` : '관리자';
+  }, [orderChatUserId]);
 
   const [orders, setOrders] = useState<BuyOrderItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -380,6 +454,13 @@ export default function BuyOrderTradeHistoryPage() {
   const [buyerStoreReferralMenuOpen, setBuyerStoreReferralMenuOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState<SearchFilters>(() => createDefaultFilters());
   const [appliedFilters, setAppliedFilters] = useState<SearchFilters>(() => createDefaultFilters());
+  const [isOrderChatDrawerOpen, setIsOrderChatDrawerOpen] = useState(false);
+  const [selectedOrderChatChannelUrl, setSelectedOrderChatChannelUrl] = useState('');
+  const [selectedOrderChatTradeId, setSelectedOrderChatTradeId] = useState('');
+  const [orderChatSessionToken, setOrderChatSessionToken] = useState<string | null>(null);
+  const [orderChatSessionLoading, setOrderChatSessionLoading] = useState(false);
+  const [orderChatChannelAccessLoading, setOrderChatChannelAccessLoading] = useState(false);
+  const [orderChatSessionError, setOrderChatSessionError] = useState<string | null>(null);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalCount / pageSize)),
@@ -446,13 +527,16 @@ export default function BuyOrderTradeHistoryPage() {
       const fetchedOrders = Array.isArray(payload?.result?.orders)
         ? (payload.result.orders as BuyOrderItem[])
         : [];
+      const totalFeeAmount = Number(
+        payload?.result?.totalAgentFeeAmount ?? payload?.result?.totalPlatformFeeAmount ?? 0,
+      ) || 0;
 
       setOrders(fetchedOrders);
       setTotalCount(Number(payload?.result?.totalCount || 0) || 0);
       setSummary({
         totalKrwAmount: Number(payload?.result?.totalKrwAmount || 0) || 0,
         totalUsdtAmount: Number(payload?.result?.totalUsdtAmount || 0) || 0,
-        totalFeeAmount: Number(payload?.result?.totalPlatformFeeAmount || 0) || 0,
+        totalFeeAmount,
       });
       const groupedStoreReferrals = Array.isArray(payload?.result?.buyerStoreReferralGroups)
         ? payload.result.buyerStoreReferralGroups
@@ -515,8 +599,179 @@ export default function BuyOrderTradeHistoryPage() {
     setBuyerStoreReferralMenuOpen(false);
   };
 
+  useEffect(() => {
+    if (!isOrderChatDrawerOpen) {
+      setOrderChatChannelAccessLoading(false);
+    }
+  }, [isOrderChatDrawerOpen]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!isOrderChatDrawerOpen) {
+      setOrderChatSessionLoading(false);
+      setOrderChatSessionError(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (!orderChatUserId) {
+      setOrderChatSessionToken(null);
+      setOrderChatSessionLoading(false);
+      setOrderChatSessionError('관리자 채팅 사용자 ID가 없습니다.');
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const issueSessionToken = async () => {
+      setOrderChatSessionLoading(true);
+      setOrderChatSessionError(null);
+      try {
+        const response = await fetch('/api/sendbird/session-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: orderChatUserId,
+            nickname: orderChatNickname,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.sessionToken) {
+          throw new Error(payload?.error || '관리자 채팅 세션 토큰 발급에 실패했습니다.');
+        }
+        if (!cancelled) {
+          setOrderChatSessionToken(String(payload.sessionToken));
+        }
+      } catch (sessionError: any) {
+        if (!cancelled) {
+          setOrderChatSessionToken(null);
+          setOrderChatSessionError(String(sessionError?.message || '채팅 세션 발급에 실패했습니다.'));
+        }
+      } finally {
+        if (!cancelled) {
+          setOrderChatSessionLoading(false);
+        }
+      }
+    };
+
+    void issueSessionToken();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOrderChatDrawerOpen, orderChatNickname, orderChatUserId]);
+
+  const handleCopyTradeId = useCallback(async (tradeIdValue: string) => {
+    const normalizedTradeId = String(tradeIdValue || '').trim();
+    if (!normalizedTradeId) {
+      toast.error('복사할 거래번호가 없습니다.');
+      return;
+    }
+
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+      toast.error('현재 환경에서 클립보드 복사를 지원하지 않습니다.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(normalizedTradeId);
+      toast.success(`거래번호가 복사되었습니다. (${normalizedTradeId})`);
+    } catch (copyError) {
+      console.error('Failed to copy trade id', copyError);
+      toast.error('거래번호 복사에 실패했습니다.');
+    }
+  }, []);
+
+  const openOrderChatDrawer = useCallback(async (order: BuyOrderItem, channelUrl: string) => {
+    const normalizedChannelUrl = String(channelUrl || '').trim();
+    if (!normalizedChannelUrl) {
+      toast.error('해당 주문의 채팅 채널 정보가 없습니다.');
+      return;
+    }
+    if (!orderChatUserId) {
+      toast.error('관리자 채팅 사용자 ID가 없습니다.');
+      return;
+    }
+
+    setSelectedOrderChatChannelUrl(normalizedChannelUrl);
+    setSelectedOrderChatTradeId(String(order?.tradeId || '').trim());
+    setIsOrderChatDrawerOpen(true);
+    setOrderChatSessionError(null);
+    setOrderChatChannelAccessLoading(true);
+
+    const ensureChannelAccess = async (targetChannelUrl: string) => {
+      const response = await fetch('/api/sendbird/ensure-group-channel-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channelUrl: targetChannelUrl,
+          userId: orderChatUserId,
+          nickname: orderChatNickname,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          String(payload?.error || payload?.message || '채팅 채널 접근 권한을 준비하지 못했습니다.'),
+        );
+      }
+    };
+
+    try {
+      await ensureChannelAccess(normalizedChannelUrl);
+    } catch (firstAccessError) {
+      const firstMessage = String(
+        firstAccessError instanceof Error
+          ? firstAccessError.message
+          : '채팅 채널 접근 권한을 준비하지 못했습니다.',
+      );
+      const isChannelNotFound = /channel/i.test(firstMessage) && /not found/i.test(firstMessage);
+      const targetOrderId = String(order?._id || '').trim();
+
+      if (!isChannelNotFound || !targetOrderId) {
+        setOrderChatSessionError(firstMessage);
+        setOrderChatChannelAccessLoading(false);
+        return;
+      }
+
+      try {
+        const repairResponse = await fetch('/api/sendbird/repair-buyorder-channel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: targetOrderId,
+          }),
+        });
+        const repairPayload = await repairResponse.json().catch(() => ({}));
+        if (!repairResponse.ok) {
+          throw new Error(
+            String(repairPayload?.error || repairPayload?.message || '주문 채팅 채널 복구에 실패했습니다.'),
+          );
+        }
+
+        const repairedChannelUrl = String(repairPayload?.channelUrl || '').trim();
+        if (!repairedChannelUrl) {
+          throw new Error('주문 채팅 채널 복구 결과가 비어 있습니다.');
+        }
+
+        setSelectedOrderChatChannelUrl(repairedChannelUrl);
+        await ensureChannelAccess(repairedChannelUrl);
+      } catch (repairError) {
+        setOrderChatSessionError(
+          repairError instanceof Error
+            ? repairError.message
+            : '채팅 채널 접근 권한을 준비하지 못했습니다.',
+        );
+      }
+    } finally {
+      setOrderChatChannelAccessLoading(false);
+    }
+  }, [orderChatNickname, orderChatUserId]);
+
   return (
-    <main className="min-h-screen bg-transparent">
+    <>
+      <main className="min-h-screen bg-transparent">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 pb-20 pt-6 lg:px-6 lg:pt-8">
         <section className="rounded-3xl border border-slate-200/80 bg-white/95 p-5 shadow-[0_28px_60px_-42px_rgba(15,23,42,0.38)] backdrop-blur">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -813,7 +1068,7 @@ export default function BuyOrderTradeHistoryPage() {
             <p className="mt-1 text-xs text-slate-500">USDT</p>
           </div>
           <div className="rounded-2xl border border-indigo-200 bg-indigo-50/55 p-4 shadow-[0_18px_38px_-32px_rgba(79,70,229,0.35)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700">합산 플랫폼 수수료</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700">합산 에이전트 수수료</p>
             <p className="mt-2 text-right text-3xl font-bold tabular-nums text-indigo-900">{formatUsdtFixed6(summary.totalFeeAmount)}</p>
             <p className="mt-1 text-xs text-indigo-700/80">USDT</p>
           </div>
@@ -859,17 +1114,16 @@ export default function BuyOrderTradeHistoryPage() {
             <div className="px-4 py-12 text-center text-sm text-slate-500">검색된 거래내역이 없습니다.</div>
           ) : (
             <div className="overflow-x-auto lg:overflow-x-visible">
-              <table className="w-full min-w-[1120px] table-fixed lg:min-w-0">
+              <table className="w-full min-w-[1080px] table-fixed lg:min-w-0">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
-                    <th className="w-[15%] px-3 py-3">상태/거래번호</th>
-                    <th className="w-[12%] px-3 py-3">주문시각/완료시각</th>
-                    <th className="w-[14%] px-3 py-3">구매자 정보</th>
-                    <th className="w-[10%] px-3 py-3">판매자 정보</th>
+                    <th className="w-[14%] px-3 py-3">상태/거래번호/이용동의</th>
+                    <th className="w-[16%] px-3 py-3">주문시각/완료시각</th>
+                    <th className="w-[13%] px-3 py-3">구매자 정보</th>
+                    <th className="w-[16%] px-3 py-3">판매자/에이전트 정보</th>
                     <th className="w-[11%] px-3 py-3 text-right">거래금액</th>
-                    <th className="w-[10%] px-3 py-3">결제정보</th>
-                    <th className="w-[8%] px-3 py-3">에이전트</th>
-                    <th className="w-[12%] px-3 py-3">에이전트 수수료</th>
+                    <th className="w-[9%] px-3 py-3">결제정보</th>
+                    <th className="w-[13%] px-3 py-3">에이전트 수수료</th>
                     <th className="w-[8%] px-3 py-3">전송 Tx</th>
                   </tr>
                 </thead>
@@ -885,6 +1139,14 @@ export default function BuyOrderTradeHistoryPage() {
                     const agentcode = String(order?.agent?.agentcode || order?.agentcode || order?.seller?.agentcode || '').trim();
                     const agentName = String(order?.agent?.agentName || order?.agentName || '').trim();
                     const buyerStoreReferral = getBuyerStoreReferral(order);
+                    const buyerConsentSnapshot = getOrderBuyerConsentSnapshot(order);
+                    const buyerConsentAcceptedAtLabel = buyerConsentSnapshot.acceptedAt
+                      ? `동의 ${formatDateTime(buyerConsentSnapshot.acceptedAt)}`
+                      : '동의 시각 없음';
+                    const buyerConsentRequestedAtLabel = buyerConsentSnapshot.requestedAt
+                      ? `요청 ${formatDateTime(buyerConsentSnapshot.requestedAt)}`
+                      : '요청 이력 없음';
+                    const tradeId = String(order?.tradeId || '').trim();
 
                     return (
                       <tr key={order._id || order.tradeId || `row-${index}`} className="align-top text-sm text-slate-700">
@@ -893,9 +1155,54 @@ export default function BuyOrderTradeHistoryPage() {
                             <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusBadgeClassName(order?.status)}`}>
                               {getStatusLabel(order?.status)}
                             </span>
-                            <p className="break-all font-semibold text-slate-900">
-                              {String(order?.tradeId || '-')}
-                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void handleCopyTradeId(tradeId);
+                              }}
+                              className="break-all text-left font-semibold text-sky-700 underline-offset-2 transition hover:text-sky-800 hover:underline"
+                            >
+                              {tradeId || '-'}
+                            </button>
+                            <div className="flex flex-col gap-1">
+                              {buyerConsentSnapshot.accepted ? (
+                                <>
+                                  <span className="inline-flex w-fit items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
+                                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                    동의완료
+                                  </span>
+                                  <span className="text-[10px] text-slate-500">
+                                    {buyerConsentAcceptedAtLabel}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="inline-flex w-fit items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700">
+                                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                    미완료
+                                  </span>
+                                  <span className="text-[10px] text-slate-500">
+                                    {buyerConsentRequestedAtLabel}
+                                  </span>
+                                </>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void openOrderChatDrawer(order, buyerConsentSnapshot.channelUrl);
+                                }}
+                                disabled={!buyerConsentSnapshot.accepted || !buyerConsentSnapshot.channelUrl}
+                                className={`mt-0.5 inline-flex w-fit items-center justify-center rounded-md border px-2 py-0.5 text-[10px] font-semibold transition ${
+                                  buyerConsentSnapshot.accepted && buyerConsentSnapshot.channelUrl
+                                    ? 'border-sky-300 bg-sky-50 text-sky-700 hover:border-sky-400 hover:bg-sky-100'
+                                    : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                                }`}
+                              >
+                                {buyerConsentSnapshot.accepted
+                                  ? (buyerConsentSnapshot.channelUrl ? '채팅 보기' : '채널 없음')
+                                  : '미동의'}
+                              </button>
+                            </div>
                           </div>
                         </td>
                         <td className="px-3 py-3">
@@ -933,6 +1240,9 @@ export default function BuyOrderTradeHistoryPage() {
                           <div className="space-y-0.5 text-xs">
                             <p className="font-semibold text-slate-900">{getSellerDisplayName(order)}</p>
                             <p className="text-slate-500">{shortWallet(sellerWalletAddress)}</p>
+                            <p className="text-slate-500">
+                              에이전트 {agentName && agentcode ? `${agentName} (${agentcode})` : (agentName || agentcode || '-')}
+                            </p>
                           </div>
                         </td>
                         <td className="px-3 py-3 text-right">
@@ -946,13 +1256,6 @@ export default function BuyOrderTradeHistoryPage() {
                           <div className="space-y-0.5 text-xs">
                             <p className="font-semibold text-slate-900">{getPaymentMethodLabel(order)}</p>
                             <p className="break-all text-slate-500">{getPaymentMethodDetail(order)}</p>
-                          </div>
-                        </td>
-                        <td className="px-3 py-3">
-                          <div className="space-y-0.5 text-xs">
-                            <p className="font-semibold text-slate-900">
-                              {agentName && agentcode ? `${agentName} (${agentcode})` : (agentName || agentcode || '-')}
-                            </p>
                           </div>
                         </td>
                         <td className="px-3 py-3">
@@ -1030,6 +1333,84 @@ export default function BuyOrderTradeHistoryPage() {
           </div>
         </section>
       </div>
-    </main>
+      </main>
+
+      <>
+        <button
+          type="button"
+          aria-label="주문 채팅 패널 닫기"
+          onClick={() => setIsOrderChatDrawerOpen(false)}
+          className={`fixed inset-0 z-[104] bg-slate-900/45 transition-opacity duration-200 ${
+            isOrderChatDrawerOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+        />
+        <aside
+          className={`fixed right-0 top-0 z-[105] h-dvh w-[min(94vw,460px)] border-l border-slate-200 bg-white shadow-[-6px_35px_80px_-45px_rgba(15,23,42,0.75)] transition-transform duration-200 ${
+            isOrderChatDrawerOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          <div className="flex h-full flex-col">
+            <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">주문 채팅</p>
+                <p className="text-sm font-bold text-slate-900">구매자 ↔ 판매자 대화 내역</p>
+                <p className="text-[11px] text-slate-500">
+                  TID: {selectedOrderChatTradeId || '-'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOrderChatDrawerOpen(false)}
+                className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-hidden p-3">
+              {!SENDBIRD_APP_ID ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+                  채팅 설정이 비어 있습니다. `NEXT_PUBLIC_SENDBIRD_APP_ID` 값을 확인해 주세요.
+                </div>
+              ) : !orderChatUserId ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                  관리자 채팅 사용자 ID를 확인할 수 없습니다.
+                </div>
+              ) : orderChatSessionError ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+                  {orderChatSessionError}
+                </div>
+              ) : !selectedOrderChatChannelUrl ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                  이용동의 완료 주문의 `채팅 보기` 버튼을 눌러 채팅 내역을 열어주세요.
+                </div>
+              ) : orderChatChannelAccessLoading ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                  채팅 채널 접근 권한을 준비 중입니다...
+                </div>
+              ) : orderChatSessionLoading || !orderChatSessionToken ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                  채팅 세션을 준비 중입니다...
+                </div>
+              ) : (
+                <div className="h-full overflow-hidden rounded-xl border border-slate-200 bg-white">
+                  <SendbirdProvider
+                    appId={SENDBIRD_APP_ID}
+                    userId={orderChatUserId}
+                    accessToken={orderChatSessionToken}
+                    theme="light"
+                  >
+                    <GroupChannel
+                      channelUrl={selectedOrderChatChannelUrl}
+                      renderMessageInput={() => <></>}
+                    />
+                  </SendbirdProvider>
+                </div>
+              )}
+            </div>
+          </div>
+        </aside>
+      </>
+    </>
   );
 }

@@ -240,6 +240,166 @@ export async function POST(request: NextRequest) {
                   onNull: 0,
                 },
               },
+              normalizedAgentFeeRate: {
+                $let: {
+                  vars: {
+                    candidateRates: [
+                      {
+                        $convert: {
+                          input: { $ifNull: ['$agentFeeRate', 0] },
+                          to: 'double',
+                          onError: 0,
+                          onNull: 0,
+                        },
+                      },
+                      {
+                        $convert: {
+                          input: { $ifNull: ['$agentFeePercent', 0] },
+                          to: 'double',
+                          onError: 0,
+                          onNull: 0,
+                        },
+                      },
+                      {
+                        $convert: {
+                          input: { $ifNull: ['$settlement.agentFeePercent', 0] },
+                          to: 'double',
+                          onError: 0,
+                          onNull: 0,
+                        },
+                      },
+                      {
+                        $convert: {
+                          input: { $ifNull: ['$store.agentFeePercent', 0] },
+                          to: 'double',
+                          onError: 0,
+                          onNull: 0,
+                        },
+                      },
+                      {
+                        $convert: {
+                          input: { $ifNull: ['$agent.agentFeePercent', 0] },
+                          to: 'double',
+                          onError: 0,
+                          onNull: 0,
+                        },
+                      },
+                      {
+                        $convert: {
+                          input: { $ifNull: ['$agent.platformFeePercent', 0] },
+                          to: 'double',
+                          onError: 0,
+                          onNull: 0,
+                        },
+                      },
+                      {
+                        $convert: {
+                          input: { $ifNull: ['$seller.agentFeePercent', 0] },
+                          to: 'double',
+                          onError: 0,
+                          onNull: 0,
+                        },
+                      },
+                    ],
+                  },
+                  in: {
+                    $ifNull: [
+                      {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: '$$candidateRates',
+                              as: 'rate',
+                              cond: { $gt: ['$$rate', 0] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                      0,
+                    ],
+                  },
+                },
+              },
+              normalizedStoredAgentFeeAmount: {
+                $let: {
+                  vars: {
+                    candidateAmounts: [
+                      {
+                        $convert: {
+                          input: { $ifNull: ['$agentFeeAmount', 0] },
+                          to: 'double',
+                          onError: 0,
+                          onNull: 0,
+                        },
+                      },
+                      {
+                        $convert: {
+                          input: { $ifNull: ['$agentFeeUsdtAmount', 0] },
+                          to: 'double',
+                          onError: 0,
+                          onNull: 0,
+                        },
+                      },
+                      {
+                        $convert: {
+                          input: { $ifNull: ['$settlement.agentFeeAmount', 0] },
+                          to: 'double',
+                          onError: 0,
+                          onNull: 0,
+                        },
+                      },
+                      {
+                        $convert: {
+                          input: { $ifNull: ['$settlement.agentFeeAmountUSDT', 0] },
+                          to: 'double',
+                          onError: 0,
+                          onNull: 0,
+                        },
+                      },
+                    ],
+                  },
+                  in: {
+                    $ifNull: [
+                      {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: '$$candidateAmounts',
+                              as: 'amount',
+                              cond: { $gt: ['$$amount', 0] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                      0,
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          {
+            $addFields: {
+              normalizedAgentFeeAmount: {
+                $cond: [
+                  { $gt: ['$normalizedStoredAgentFeeAmount', 0] },
+                  '$normalizedStoredAgentFeeAmount',
+                  {
+                    $cond: [
+                      {
+                        $and: [
+                          { $gt: ['$normalizedAgentFeeRate', 0] },
+                          { $gt: ['$normalizedUsdtAmount', 0] },
+                        ],
+                      },
+                      { $divide: [{ $multiply: ['$normalizedUsdtAmount', '$normalizedAgentFeeRate'] }, 100] },
+                      0,
+                    ],
+                  },
+                ],
+              },
             },
           },
           {
@@ -253,6 +413,11 @@ export async function POST(request: NextRequest) {
               totalUsdtAmount: {
                 $sum: {
                   $cond: [{ $in: ['$normalizedStatus', summaryStatusKeys] }, '$normalizedUsdtAmount', 0],
+                },
+              },
+              totalAgentFeeAmount: {
+                $sum: {
+                  $cond: [{ $in: ['$normalizedStatus', summaryStatusKeys] }, '$normalizedAgentFeeAmount', 0],
                 },
               },
               totalPlatformFeeAmount: { $sum: '$normalizedPlatformFeeAmount' },
@@ -593,6 +758,7 @@ export async function POST(request: NextRequest) {
         totalCount,
         totalKrwAmount: Number(totalAmount?.totalKrwAmount || 0),
         totalUsdtAmount: Number(totalAmount?.totalUsdtAmount || 0),
+        totalAgentFeeAmount: Number(totalAmount?.totalAgentFeeAmount || 0),
         totalPlatformFeeAmount: Number(totalAmount?.totalPlatformFeeAmount || 0),
         sellerSalesSummary: sellerSalesSummary.map((item: any) => ({
           sellerWalletAddress: String(item?.sellerWalletAddress || ''),
