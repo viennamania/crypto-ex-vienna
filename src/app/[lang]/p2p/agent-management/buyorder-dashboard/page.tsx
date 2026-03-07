@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 
 import AgentInfoCard from '../_components/AgentInfoCard';
 import {
@@ -77,8 +78,14 @@ const statusLabelMap: Record<string, string> = {
 };
 
 export default function P2PAgentBuyorderDashboardPage() {
+  const params = useParams<{ lang?: string }>();
+  const lang = String(params?.lang || '').trim();
   const searchParams = useSearchParams();
   const agentcode = String(searchParams?.get('agentcode') || '').trim();
+  const tradeHistoryPath = lang
+    ? `/${lang}/p2p/agent-management/buyorder-dashboard/trade-history`
+    : '/p2p/agent-management/buyorder-dashboard/trade-history';
+  const tradeHistoryHref = `${tradeHistoryPath}${agentcode ? `?agentcode=${encodeURIComponent(agentcode)}` : ''}`;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -198,6 +205,12 @@ export default function P2PAgentBuyorderDashboardPage() {
       {agentcode && (
         <>
           <div className="flex items-center justify-end">
+            <Link
+              href={tradeHistoryHref}
+              className="mr-2 inline-flex h-9 items-center justify-center rounded-xl border border-cyan-300 bg-cyan-50 px-3 text-xs font-semibold text-cyan-700 transition hover:border-cyan-400 hover:bg-cyan-100 hover:text-cyan-800"
+            >
+              입금확인 거래내역
+            </Link>
             <button
               type="button"
               onClick={() => {

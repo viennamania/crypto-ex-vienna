@@ -269,6 +269,13 @@ export default function P2PAgentManagementLayout({ children }: { children: React
             basePath: `/${lang}/p2p/agent-management/sales-management`,
           },
           {
+            key: 'sales-paymentconfirmed-trade-history',
+            label: '입금확인 거래내역',
+            compactLabel: '입금확인',
+            description: '입금확인 주문 이력',
+            basePath: `/${lang}/p2p/agent-management/buyorder-dashboard/trade-history`,
+          },
+          {
             key: 'sales-fee-wallet-management',
             label: '수수료 지급용 지갑 관리',
             compactLabel: '수수료',
