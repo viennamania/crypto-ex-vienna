@@ -235,9 +235,9 @@ const bodyFont = Manrope({
 
 const WALLET_AUTH_OPTIONS = ['phone'];
 const QUICK_BUY_AMOUNTS = [10, 30, 50, 100, 300, 500];
-const BUYER_CONSENT_REQUIRED_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
+const BUYER_CONSENT_REQUIRED_STATUSES = new Set(['ordered', 'accepted', 'paymentrequested']);
 const BUYER_CONSENT_TRIGGER_MESSAGE = '동의함';
-const TRADABLE_STATUSES = new Set(['ordered', 'accepted', 'paymentRequested']);
+const TRADABLE_STATUSES = new Set(['ordered', 'accepted', 'paymentrequested']);
 const PRIVATE_TRADE_PAYMENT_WINDOW_MS = 30 * 60 * 1000;
 const BUYER_PROFILE_LOADING_MIN_MS = 5000;
 const STORE_MEMBER_LINKING_MIN_MS = 5000;
@@ -245,13 +245,13 @@ const JACKPOT_AUTO_HIDE_MS = 5200;
 const PRIVATE_TRADE_STATUS_LABEL: Record<string, string> = {
   ordered: '주문 대기',
   accepted: '주문 수락됨',
-  paymentRequested: '입금 요청',
+  paymentrequested: '입금 요청',
 };
 const BUY_HISTORY_STATUS_LABEL: Record<string, string> = {
   ordered: '주문 대기',
   accepted: '주문 수락됨',
-  paymentRequested: '입금 요청',
-  paymentConfirmed: '구매완료',
+  paymentrequested: '입금 요청',
+  paymentconfirmed: '구매완료',
   cancelled: '취소됨',
 };
 const ESCROW_FLOW_STEP_DEFINITIONS = [
@@ -718,6 +718,11 @@ const formatCountdownClock = (remainingMs: number) => {
 };
 
 const toTrimmedString = (value: unknown) => String(value ?? '').trim();
+const normalizeOrderStatusKey = (value: unknown) => toTrimmedString(value).toLowerCase();
+const getPrivateTradeStatusLabel = (status: unknown) =>
+  PRIVATE_TRADE_STATUS_LABEL[normalizeOrderStatusKey(status)] || toTrimmedString(status) || '-';
+const getBuyHistoryStatusLabel = (status: unknown) =>
+  BUY_HISTORY_STATUS_LABEL[normalizeOrderStatusKey(status)] || toTrimmedString(status) || '-';
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 const waitFor = (ms: number) =>
@@ -1192,7 +1197,7 @@ export default function BuyUsdtPage({
   );
   const shouldHideSellerReselectControls = configuredSellerWalletCount === 1;
   const canCancelActiveTrade = Boolean(
-    activePrivateTradeOrder?.orderId && activePrivateTradeOrder.status === 'paymentRequested',
+    activePrivateTradeOrder?.orderId && activePrivateTradeStatus === 'paymentrequested',
   );
   const cancelTradeProgressPhaseMeta = useMemo(() => {
     if (cancelTradeProgressPhase === 'completed') {
@@ -1259,7 +1264,7 @@ export default function BuyUsdtPage({
     };
   }, [buyOrderProgressPhase]);
   const paymentRequestCountdown = useMemo(() => {
-    if (!activePrivateTradeOrder || activePrivateTradeOrder.status !== 'paymentRequested') {
+    if (!activePrivateTradeOrder || activePrivateTradeStatus !== 'paymentrequested') {
       return null;
     }
 
@@ -1285,7 +1290,7 @@ export default function BuyUsdtPage({
       remainingRatio,
       isExpired: remainingMs <= 0,
     };
-  }, [activePrivateTradeOrder, countdownNowMs]);
+  }, [activePrivateTradeOrder, activePrivateTradeStatus, countdownNowMs]);
   const scrollToChatPanel = useCallback(() => {
     chatPanelRef.current?.scrollIntoView({
       behavior: 'smooth',
@@ -1328,7 +1333,7 @@ export default function BuyUsdtPage({
   );
   const isLatestBuyJustNow = latestBuyHistoryTimeAgo === '방금';
   const latestBuyHistoryItemId = latestBuyHistoryItem?.id || '';
-  const latestHistoryPollingMs = activePrivateTradeOrder?.status === 'paymentRequested' ? 4000 : 15000;
+  const latestHistoryPollingMs = activePrivateTradeStatus === 'paymentrequested' ? 4000 : 15000;
 
   const primaryLabel = useMemo(() => {
     if (submittingBuy) {
@@ -1378,22 +1383,22 @@ export default function BuyUsdtPage({
       return 'SUBMITTING';
     }
 
-    const activeStatus = String(activePrivateTradeOrder?.status || '').trim();
+    const activeStatus = normalizeOrderStatusKey(activePrivateTradeOrder?.status);
     if (activeStatus === 'ordered') {
       return 'ORDERED';
     }
     if (activeStatus === 'accepted') {
       return 'ACCEPTED';
     }
-    if (activeStatus === 'paymentRequested') {
+    if (activeStatus === 'paymentrequested') {
       return 'PAYMENT_REQUESTED';
     }
 
     const latestTradeId = String(latestBuyHistoryItem?.tradeId || '').trim();
-    const latestStatus = String(latestBuyHistoryItem?.status || '').trim();
+    const latestStatus = normalizeOrderStatusKey(latestBuyHistoryItem?.status);
     if (
       recentEscrowCompletedTradeId
-      && latestStatus === 'paymentConfirmed'
+      && latestStatus === 'paymentconfirmed'
       && latestTradeId
       && latestTradeId === recentEscrowCompletedTradeId
     ) {
@@ -1689,13 +1694,18 @@ export default function BuyUsdtPage({
       const result = data?.result && typeof data.result === 'object'
         ? (data.result as PrivateTradeStatusResult)
         : null;
-      const status = String(result?.order?.status || result?.status || '');
+      const rawStatus = toTrimmedString(result?.order?.status || result?.status || '');
+      const normalizedStatus = normalizeOrderStatusKey(rawStatus);
 
-      if (result?.isTrading && result?.order && TRADABLE_STATUSES.has(status)) {
+      if (result?.isTrading && result?.order && TRADABLE_STATUSES.has(normalizedStatus)) {
+        const normalizedOrder: PrivateTradeOrder = {
+          ...result.order,
+          status: normalizedStatus || toTrimmedString(result.order.status),
+        };
         setPrivateTradeStatus({
           isTrading: true,
-          status: status || null,
-          order: result.order,
+          status: normalizedStatus || null,
+          order: normalizedOrder,
         });
       } else {
         setPrivateTradeStatus(null);
@@ -2303,7 +2313,7 @@ export default function BuyUsdtPage({
 
   useEffect(() => {
     if (!activePrivateTradeOrder?.orderId) return;
-    if (activePrivateTradeOrder.status !== 'paymentRequested') return;
+    if (activePrivateTradeStatus !== 'paymentrequested') return;
 
     paymentRequestedWatchRef.current = {
       orderId: activePrivateTradeOrder.orderId,
@@ -2313,12 +2323,13 @@ export default function BuyUsdtPage({
   }, [
     activePrivateTradeOrder?.orderId,
     activePrivateTradeOrder?.status,
+    activePrivateTradeStatus,
     activePrivateTradeOrder?.tradeId,
     activePrivateTradeOrder?.usdtAmount,
   ]);
 
   useEffect(() => {
-    if (!latestBuyHistoryItem || latestBuyHistoryItem.status !== 'paymentConfirmed') return;
+    if (!latestBuyHistoryItem || normalizeOrderStatusKey(latestBuyHistoryItem.status) !== 'paymentconfirmed') return;
 
     const watchingOrder = paymentRequestedWatchRef.current;
     if (!watchingOrder?.orderId && !watchingOrder?.tradeId) return;
@@ -2636,7 +2647,7 @@ export default function BuyUsdtPage({
       return;
     }
     if (activePrivateTradeOrder?.orderId) {
-      const statusLabel = PRIVATE_TRADE_STATUS_LABEL[activePrivateTradeOrder.status] || '진행중';
+      const statusLabel = getPrivateTradeStatusLabel(activePrivateTradeOrder.status) || '진행중';
       toast.error(`${statusLabel} 거래가 진행중입니다. 기존 거래를 완료한 뒤 새 주문을 신청해 주세요.`);
       return;
     }
@@ -2833,13 +2844,17 @@ export default function BuyUsdtPage({
       const order = resultPayload?.order && typeof resultPayload.order === 'object'
         ? resultPayload.order
         : null;
-      const orderStatus = String(order?.status || '');
+      const orderStatus = normalizeOrderStatusKey(order?.status);
 
       if (order && TRADABLE_STATUSES.has(orderStatus)) {
+        const normalizedOrder = {
+          ...(order as PrivateTradeOrder),
+          status: orderStatus || toTrimmedString((order as PrivateTradeOrder).status),
+        };
         setPrivateTradeStatus({
           isTrading: true,
           status: orderStatus || null,
-          order: order as PrivateTradeOrder,
+          order: normalizedOrder,
         });
       } else {
         setPrivateTradeStatus(null);
@@ -3827,7 +3842,7 @@ export default function BuyUsdtPage({
                       <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-slate-800">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-sm font-semibold text-slate-900">
-                            {PRIVATE_TRADE_STATUS_LABEL[activePrivateTradeOrder.status] || activePrivateTradeOrder.status}
+                            {getPrivateTradeStatusLabel(activePrivateTradeOrder.status)}
                           </p>
                           {(activePrivateTradeOrder.tradeId || activePrivateTradeOrder.orderId) && (
                             <span className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600">
@@ -4335,7 +4350,7 @@ export default function BuyUsdtPage({
                 {!loadingBuyHistory && buyHistory.length > 0 && (
                   <div className="space-y-3">
                     {buyHistory.map((item) => {
-                      const statusLabel = BUY_HISTORY_STATUS_LABEL[item.status] || item.status || '-';
+                      const statusLabel = getBuyHistoryStatusLabel(item.status);
                       const displayAt =
                         item.paymentConfirmedAt || item.cancelledAt || item.paymentRequestedAt || item.createdAt;
                       return (
@@ -4619,7 +4634,7 @@ export default function BuyUsdtPage({
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">거래 상태</span>
                 <span className="font-semibold text-slate-800">
-                  {PRIVATE_TRADE_STATUS_LABEL[activePrivateTradeOrder.status] || activePrivateTradeOrder.status}
+                  {getPrivateTradeStatusLabel(activePrivateTradeOrder.status)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
