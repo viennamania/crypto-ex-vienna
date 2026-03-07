@@ -115,6 +115,7 @@ import { useAnimatedNumber } from "@/components/useAnimatedNumber";
 
 
 import { ConnectButton } from '@/components/WalletConnectButton';
+import styles from './sellerEscrowBright.module.css';
 
 interface BuyOrder {
   _id: string;
@@ -8630,6 +8631,28 @@ const fetchBuyOrders = async () => {
     history: `/${params.lang}/wallet-management/wallet-usdt?tab=history`,
   };
   const sellerWalletPanelSrc = sellerWalletPanelPathByTab[sellerWalletPanelTab];
+  const weeklyTradeCount = dailyTradeHistory.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
+  const weeklyTradeUsdt = dailyTradeHistory.reduce((sum, item) => sum + (Number(item.usdtAmount) || 0), 0);
+  const financeSummaryCards = [
+    {
+      key: 'rate',
+      label: '현재 판매가',
+      value: `${formatKrwValue(saleRateValue || 0)} KRW`,
+      hint: 'USDT 1개 기준',
+    },
+    {
+      key: 'count',
+      label: '최근 7일 거래',
+      value: `${Math.round(weeklyTradeCount).toLocaleString('ko-KR')}건`,
+      hint: '일별 거래 건수 집계',
+    },
+    {
+      key: 'volume',
+      label: '최근 7일 거래량',
+      value: `${formatUsdtDisplay6(weeklyTradeUsdt)} USDT`,
+      hint: '판매자 기준 누적 거래량',
+    },
+  ];
 
 
 
@@ -8638,7 +8661,7 @@ const fetchBuyOrders = async () => {
   return (
 
     <main
-      className={`escrow-detail-page relative min-h-[100vh] w-full bg-slate-100 px-4 pb-12 ${mainTopPaddingClass} text-slate-800 sm:px-6 lg:px-8`}
+      className={`${styles.brightFinanceRoot} escrow-detail-page relative min-h-[100vh] w-full bg-slate-100 px-4 pb-12 ${mainTopPaddingClass} text-slate-800 sm:px-6 lg:px-8`}
       style={{ fontFamily: '"SUIT Variable", "Pretendard", "Noto Sans KR", sans-serif' }}
     >
 
@@ -8646,8 +8669,8 @@ const fetchBuyOrders = async () => {
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[340px] overflow-hidden"
       >
-        <div className="absolute -left-20 -top-24 h-72 w-72 rounded-full bg-orange-300/30 blur-3xl" />
-        <div className="absolute right-0 top-2 h-72 w-72 rounded-full bg-sky-300/25 blur-3xl" />
+        <div className="absolute -left-20 -top-24 h-72 w-72 rounded-full bg-cyan-300/30 blur-3xl" />
+        <div className="absolute right-0 top-2 h-72 w-72 rounded-full bg-emerald-300/25 blur-3xl" />
       </div>
 
       <AutoConnect
@@ -8841,13 +8864,40 @@ const fetchBuyOrders = async () => {
       )}
 
       <div className="relative z-10 mx-auto w-full max-w-5xl">
-        <header className="mb-6 rounded-3xl border border-slate-200/80 bg-white/85 px-5 py-5 shadow-[0_28px_75px_-45px_rgba(15,23,42,0.55)] backdrop-blur-sm sm:px-6">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">
+        <header className={`${styles.heroCard} mb-4 rounded-3xl border border-slate-200/80 bg-white/85 px-5 py-5 shadow-[0_28px_75px_-45px_rgba(15,23,42,0.55)] backdrop-blur-sm sm:px-6`}>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-cyan-700/70">
             Escrow
           </span>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">판매자 상세</h1>
-          <p className="text-sm text-slate-500">판매자 정보와 에스크로 진행 상태를 확인합니다.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-[30px]">판매자 상세</h1>
+          <p className="text-sm text-slate-600">밝은 금융 대시보드 스타일로 판매자 정보와 에스크로 진행 상태를 확인합니다.</p>
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
+            <span className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-cyan-700">
+              판매자 {formatShortWalletAddress(sellerWalletAddressParam)}
+            </span>
+            <span
+              className={`inline-flex items-center rounded-full border px-2.5 py-1 ${
+                isSellerVerified
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'border-amber-200 bg-amber-50 text-amber-700'
+              }`}
+            >
+              {isSellerVerified ? '검증 완료' : '검증 대기'}
+            </span>
+            <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-600">
+              활성 주문 {myActiveTradingOrders.length.toLocaleString('ko-KR')}건
+            </span>
+          </div>
         </header>
+
+        <section className={`${styles.metricGrid} mb-6`}>
+          {financeSummaryCards.map((item) => (
+            <article key={item.key} className={styles.metricCard}>
+              <p className={styles.metricLabel}>{item.label}</p>
+              <p className={styles.metricValue}>{item.value}</p>
+              <p className={styles.metricHint}>{item.hint}</p>
+            </article>
+          ))}
+        </section>
 
         {!address && (
           <section
@@ -8878,9 +8928,9 @@ const fetchBuyOrders = async () => {
                     connectButton={{
                       label: '지갑 연결하고 거래 시작',
                       style: {
-                        background: 'linear-gradient(135deg, #0f172a 0%, #0369a1 55%, #0284c7 100%)',
-                        color: '#ffffff',
-                        border: '1px solid rgba(2,132,199,0.35)',
+                        background: 'linear-gradient(135deg, #ecfeff 0%, #dbeafe 45%, #dcfce7 100%)',
+                        color: '#0f172a',
+                        border: '1px solid rgba(34,211,238,0.45)',
                         width: '100%',
                         minWidth: '280px',
                         height: '52px',
@@ -8888,7 +8938,7 @@ const fetchBuyOrders = async () => {
                         fontWeight: 800,
                         fontSize: '15px',
                         letterSpacing: '0.01em',
-                        boxShadow: '0 20px 45px -24px rgba(2,132,199,0.7)',
+                        boxShadow: '0 16px 36px -24px rgba(14,116,144,0.65)',
                       },
                     }}
                     connectModal={{
@@ -8904,7 +8954,7 @@ const fetchBuyOrders = async () => {
         )}
 
         {address && (
-          <section className="mb-6 rounded-2xl border border-sky-200/80 bg-sky-50/80 px-4 py-3 shadow-[0_18px_45px_-36px_rgba(14,116,144,0.65)]">
+          <section className={`${styles.surfaceCard} mb-6 rounded-2xl border border-sky-200/80 bg-sky-50/80 px-4 py-3 shadow-[0_18px_45px_-36px_rgba(14,116,144,0.65)]`}>
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full border border-sky-200 bg-white">
@@ -9090,7 +9140,7 @@ const fetchBuyOrders = async () => {
           </button>
         </div>
 
-        <div className="w-full flex flex-col items-center justify-center gap-3 rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-[0_26px_65px_-46px_rgba(15,23,42,0.58)] sm:p-5">
+        <div className={`${styles.surfaceCard} w-full flex flex-col items-center justify-center gap-3 rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-[0_26px_65px_-46px_rgba(15,23,42,0.58)] sm:p-5`}>
 
           <div className="w-full flex flex-row items-center justify-center gap-2">
             {/* 홈으로 가기 svg icon button */}
@@ -12473,7 +12523,7 @@ const fetchBuyOrders = async () => {
           )}
 
 
-          <div className="mt-6 w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-[0_28px_70px_-44px_rgba(15,23,42,0.6)]">
+          <div className={`${styles.tablePanel} mt-6 w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-[0_28px_70px_-44px_rgba(15,23,42,0.6)]`}>
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 px-4 py-3 text-white">
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/15">
