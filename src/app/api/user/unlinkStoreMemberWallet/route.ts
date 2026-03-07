@@ -75,6 +75,9 @@ export async function POST(request: NextRequest) {
         walletUnlinkedAt: new Date().toISOString(),
         walletUnlinkedByWalletAddress: unlinkedByWalletAddress,
       },
+      $unset: {
+        walletAddressNormalized: '',
+      },
     });
 
     if (updateResult.matchedCount !== 1) {

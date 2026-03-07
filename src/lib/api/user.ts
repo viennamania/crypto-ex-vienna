@@ -96,6 +96,13 @@ type ThirdwebUserProfile = {
 };
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const normalizeStorecodeText = (value: unknown) => String(value || '').trim();
+const normalizeWalletAddressText = (value: unknown) => String(value || '').trim().toLowerCase();
+const buildWalletAddressRegex = (walletAddress: string) => ({
+  $regex: `^${escapeRegExp(walletAddress)}$`,
+  $options: 'i',
+});
+const isMongoDuplicateKeyError = (error: any) => Number(error?.code) === 11000;
 
 const extractThirdwebProfileField = (
   profiles: ThirdwebProfile[],
@@ -308,7 +315,11 @@ export async function insertOne(data: any) {
 
 
 
-  if (!data.storecode || !data.walletAddress || !data.nickname) {
+  const normalizedStorecode = normalizeStorecodeText(data?.storecode);
+  const normalizedWalletAddress = normalizeWalletAddressText(data?.walletAddress);
+  const normalizedNickname = String(data?.nickname || '').trim();
+
+  if (!normalizedStorecode || !normalizedWalletAddress || !normalizedNickname) {
     return null;
   }
 
@@ -362,14 +373,15 @@ export async function insertOne(data: any) {
 
   // check same walletAddress or smae nickname
 
+  const walletRegex = buildWalletAddressRegex(normalizedWalletAddress);
+
   const checkUser = await collection.findOne<UserProps>(
     {
-
-      storecode: data.storecode,
+      storecode: normalizedStorecode,
 
       $or: [
-        { walletAddress: data.walletAddress },
-        { nickname: data.nickname },
+        { walletAddress: walletRegex },
+        { nickname: normalizedNickname },
       ]
     },
     { projection: { _id: 0, emailVerified: 0 } }
@@ -397,10 +409,10 @@ export async function insertOne(data: any) {
   // check storecode from stores collection
   const storeCollection = client.db(dbName).collection('stores');
   const store = await storeCollection.findOne(
-    { storecode: data.storecode }
+    { storecode: normalizedStorecode }
   );
   if (!store) {
-    console.log('store not found: ' + data.storecode);
+    console.log('store not found: ' + normalizedStorecode);
     return null;
   }
 
@@ -414,38 +426,62 @@ export async function insertOne(data: any) {
   const id = Math.floor(Math.random() * 9000000) + 100000;
 
 
-  const result = await collection.insertOne(
+  let result: any = null;
+  try {
+    result = await collection.insertOne(
+      {
+        id: id,
+        email: data.email,
+        nickname: normalizedNickname,
+        avatar: data.avatar || '',
+        mobile: data.mobile,
 
-    {
-      id: id,
-      email: data.email,
-      nickname: data.nickname,
-      avatar: data.avatar || '',
-      mobile: data.mobile,
+        storecode: normalizedStorecode,
+        store: store,
+        
+        walletAddress: normalizedWalletAddress,
+        walletAddressNormalized: normalizedWalletAddress,
+        walletPrivateKey: data.walletPrivateKey,
 
-      storecode: data.storecode,
-      store: store,
-      
-      walletAddress: data.walletAddress,
-      walletPrivateKey: data.walletPrivateKey,
+        createdAt: new Date().toISOString(),
 
+        settlementAmountOfFee: "0",
 
+        password: password,
 
-      createdAt: new Date().toISOString(),
+        buyer: {
+          depositBankAccountNumber: depositBankAccountNumber,
+          depositBankName: depositBankName,
+          depositName: depositName,
+        },
 
-      settlementAmountOfFee: "0",
-
-      password: password,
-
-      buyer: {
-        depositBankAccountNumber: depositBankAccountNumber,
-        depositBankName: depositBankName,
-        depositName: depositName,
-      },
-
-      telegramId: data.telegramId,
+        telegramId: data.telegramId,
+      }
+    );
+  } catch (error: any) {
+    if (!isMongoDuplicateKeyError(error)) {
+      throw error;
     }
-  );
+
+    const existingByWallet = await collection.findOne<UserProps>(
+      {
+        storecode: normalizedStorecode,
+        walletAddress: walletRegex,
+      },
+      { projection: { _id: 0, emailVerified: 0 } },
+    );
+    if (existingByWallet) {
+      return {
+        id: (existingByWallet as any).id,
+        email: (existingByWallet as any).email,
+        nickname: (existingByWallet as any).nickname,
+        storecode: (existingByWallet as any).storecode,
+        walletAddress: (existingByWallet as any).walletAddress,
+        mobile: (existingByWallet as any).mobile,
+      };
+    }
+    return null;
+  }
 
 
   if (result) {
@@ -480,7 +516,7 @@ export async function insertOne(data: any) {
 
     const totalMemberCount = await collection.countDocuments(
       {
-        storecode: data.storecode,
+        storecode: normalizedStorecode,
         walletAddress: { $exists: true, $ne: null },
         buyer: { $exists: true, $ne: null },
       }
@@ -488,7 +524,7 @@ export async function insertOne(data: any) {
     // update store collection
     const storeCollection = client.db(dbName).collection('stores');
     const store = await storeCollection.updateOne(
-      { storecode: data.storecode },
+      { storecode: normalizedStorecode },
       { $set: { totalBuyerCount: totalMemberCount } }
     );
 
@@ -498,9 +534,9 @@ export async function insertOne(data: any) {
     return {
       id: id,
       email: data.email,
-      nickname: data.nickname,
-      storecode: data.storecode,
-      walletAddress: data.walletAddress,
+      nickname: normalizedNickname,
+      storecode: normalizedStorecode,
+      walletAddress: normalizedWalletAddress,
       mobile: data.mobile,
     };
   } else {
@@ -646,7 +682,11 @@ export async function insertOneVerified(data: any) {
   //console.log('insertOne data: ' + JSON.stringify(data));
 
 
-  if (!data.storecode || !data.walletAddress || !data.nickname ) {
+  const normalizedStorecode = normalizeStorecodeText(data?.storecode);
+  const normalizedWalletAddress = normalizeWalletAddressText(data?.walletAddress);
+  const normalizedNickname = String(data?.nickname || '').trim();
+
+  if (!normalizedStorecode || !normalizedWalletAddress || !normalizedNickname) {
 
     console.log('insertOneVerified data: ' + JSON.stringify(data));
 
@@ -663,22 +703,37 @@ export async function insertOneVerified(data: any) {
   // check storecode from stores collection
   const storeCollection = client.db(dbName).collection('stores');
   const store = await storeCollection.findOne(
-    { storecode: data.storecode }
+    { storecode: normalizedStorecode }
   );
   if (!store) {
-    console.log('store not found: ' + data.storecode);
+    console.log('store not found: ' + normalizedStorecode);
     return null;
   }
 
 
   const collection = client.db(dbName).collection('users');
 
+  const walletRegex = buildWalletAddressRegex(normalizedWalletAddress);
+
+  // If already registered by wallet, return existing user to make retries idempotent.
+  const existingByWallet = await collection.findOne<UserProps>(
+    {
+      storecode: normalizedStorecode,
+      walletAddress: walletRegex,
+    },
+    { projection: { _id: 0, emailVerified: 0 } }
+  );
+
+  if (existingByWallet) {
+    return existingByWallet;
+  }
+
 
   // if telegramId is exist, check same telegramId
   if (data.telegramId) {
     const checkTelegramId = await collection.findOne<UserProps>(
       {
-        storecode: data.storecode,
+        storecode: normalizedStorecode,
         telegramId: data.telegramId,
       },
     );
@@ -693,8 +748,8 @@ export async function insertOneVerified(data: any) {
   // check same nickname and storecode
   const checkNickname = await collection.findOne<UserProps>(
     {
-      storecode: data.storecode,
-      nickname: data.nickname,
+      storecode: normalizedStorecode,
+      nickname: normalizedNickname,
     },
     { projection: { _id: 0, emailVerified: 0 } }
   );
@@ -702,23 +757,6 @@ export async function insertOneVerified(data: any) {
     ////console.log('insertOneVerified nickname exists: ' + JSON.stringify(checkNickname));
     return null;
   }
-
-  // check same walletAddress and storecode  
-  const checkUser = await collection.findOne<UserProps>(
-    {
-      storecode: data.storecode,
-      walletAddress: data.walletAddress,
-    },
-    { projection: { _id: 0, emailVerified: 0 } }
-  );
-
-  if (checkUser) {
-
-    ///console.log('insertOneVerified exists: ' + JSON.stringify(checkUser));
-    
-    return null;
-  }
-
 
   // generate id 1000000 ~ 9999999
 
@@ -728,36 +766,50 @@ export async function insertOneVerified(data: any) {
 
 
 
-  const result = await collection.insertOne(
+  let result: any = null;
+  try {
+    result = await collection.insertOne(
+      {
+        id: id,
+        email: data.email,
+        nickname: normalizedNickname,
+        mobile: data.mobile,
+        avatar: data.avatar || '',
 
-    {
-      id: id,
-      email: data.email,
-      nickname: data.nickname,
-      mobile: data.mobile,
-      avatar: data.avatar || '',
+        storecode: normalizedStorecode,
+        store: store,
+        walletAddress: normalizedWalletAddress,
+        walletAddressNormalized: normalizedWalletAddress,
 
-      storecode: data.storecode,
-      store: store,
-      walletAddress: data.walletAddress,
+        createdAt: new Date().toISOString(),
 
+        settlementAmountOfFee: "0",
 
-      createdAt: new Date().toISOString(),
-
-      settlementAmountOfFee: "0",
-
-      verified: true,
+        verified: true,
+      }
+    );
+  } catch (error: any) {
+    if (!isMongoDuplicateKeyError(error)) {
+      throw error;
     }
-  );
+    const duplicatedUser = await collection.findOne<UserProps>(
+      {
+        storecode: normalizedStorecode,
+        walletAddress: walletRegex,
+      },
+      { projection: { _id: 0, emailVerified: 0 } }
+    );
+    return duplicatedUser || null;
+  }
 
 
   if (result) {
     return {
       id: id,
       email: data.email,
-      nickname: data.nickname,
-      storecode: data.storecode,
-      walletAddress: data.walletAddress,
+      nickname: normalizedNickname,
+      storecode: normalizedStorecode,
+      walletAddress: normalizedWalletAddress,
       mobile: data.mobile,
       avatar: data.avatar || '',
     };

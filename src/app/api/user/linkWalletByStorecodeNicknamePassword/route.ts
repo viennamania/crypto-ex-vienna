@@ -230,6 +230,7 @@ export async function POST(request: NextRequest) {
 
   if (!existingMemberWalletAddress) {
     updateSet.walletAddress = walletAddress;
+    updateSet.walletAddressNormalized = walletAddress.toLowerCase();
   }
 
   if (mobile) {

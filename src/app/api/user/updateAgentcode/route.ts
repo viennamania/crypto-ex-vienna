@@ -35,12 +35,18 @@ export async function POST(request: NextRequest) {
     { projection: { agentcode: 1, seller: 1, nickname: 1, store: 1, storeInfo: 1, walletAddress: 1 } }
   );
 
-  const updateResult = await collection.updateMany(walletQuery, {
+  if (!existing?._id) {
+    return NextResponse.json({ error: "user not found", debug: { walletAddress } }, { status: 404 });
+  }
+
+  const normalizedWalletAddress = walletAddress.toLowerCase();
+  const updateResult = await collection.updateOne({ _id: existing._id }, {
     $set: {
-      walletAddress,
-      'seller.walletAddress': walletAddress,
-      'store.walletAddress': walletAddress,
-      'storeInfo.walletAddress': walletAddress,
+      walletAddress: normalizedWalletAddress,
+      walletAddressNormalized: normalizedWalletAddress,
+      'seller.walletAddress': normalizedWalletAddress,
+      'store.walletAddress': normalizedWalletAddress,
+      'storeInfo.walletAddress': normalizedWalletAddress,
       agentcode,
       'seller.agentcode': agentcode,
       'store.agentcode': agentcode,
@@ -55,7 +61,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "update failed", debug: { walletAddress } }, { status: 500 });
   }
 
-  const updated = await collection.findOne(walletQuery, {
+  const updated = await collection.findOne({ _id: existing._id }, {
     projection: {
       agentcode: 1,
       seller: 1,
@@ -85,7 +91,7 @@ export async function POST(request: NextRequest) {
   ]);
 
   await historyCollection.insertOne({
-    walletAddress,
+    walletAddress: normalizedWalletAddress,
     prevAgent: prevAgent
       ? {
           agentcode: prevAgent.agentcode,

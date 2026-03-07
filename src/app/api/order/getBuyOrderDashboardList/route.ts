@@ -469,6 +469,7 @@ export async function POST(request: NextRequest) {
         agentName: string;
         agentLogo: string;
         creditWalletSmartAccountAddress: string;
+        agentFeePercent: number;
       }
     >();
     if (pageAgentcodeKeys.length > 0) {
@@ -529,6 +530,14 @@ export async function POST(request: NextRequest) {
                   },
                 },
               },
+              agentFeePercent: {
+                $convert: {
+                  input: { $ifNull: ['$agentFeePercent', 0] },
+                  to: 'double',
+                  onError: 0,
+                  onNull: 0,
+                },
+              },
               normalizedAgentcode: 1,
             },
           },
@@ -543,6 +552,7 @@ export async function POST(request: NextRequest) {
           agentName: String(item?.agentName || '').trim(),
           agentLogo: String(item?.agentLogo || '').trim(),
           creditWalletSmartAccountAddress: String(item?.creditWalletSmartAccountAddress || '').trim(),
+          agentFeePercent: Number(item?.agentFeePercent || 0) || 0,
         });
       });
     }
@@ -563,6 +573,7 @@ export async function POST(request: NextRequest) {
                 smartAccountAddress: agentInfo.creditWalletSmartAccountAddress || '',
               },
               smartAccountAddress: agentInfo.creditWalletSmartAccountAddress || '',
+              agentFeePercent: Number(agentInfo.agentFeePercent || 0) || 0,
             }
           : undefined,
         agentName: agentInfo?.agentName || '',
