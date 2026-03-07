@@ -1313,7 +1313,12 @@ export default function BuyOrderManagementPage() {
       setSummary({
         totalKrwAmount: Number(payload?.result?.totalKrwAmount || 0) || 0,
         totalUsdtAmount: Number(payload?.result?.totalUsdtAmount || 0) || 0,
-        totalFeeAmount: Number(payload?.result?.totalPlatformFeeAmount || 0) || 0,
+        totalFeeAmount: Number(
+          payload?.result?.totalFeeAmount
+          ?? payload?.result?.totalAgentFeeAmount
+          ?? payload?.result?.totalPlatformFeeAmount
+          ?? 0,
+        ) || 0,
       });
       const nextSellerSalesSummary = Array.isArray(payload?.result?.sellerSalesSummary)
         ? payload.result.sellerSalesSummary

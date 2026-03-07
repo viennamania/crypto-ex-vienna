@@ -690,6 +690,7 @@ export async function POST(request: NextRequest) {
         totalCount,
         totalKrwAmount: Number(totalAmount?.totalKrwAmount || 0),
         totalUsdtAmount: Number(totalAmount?.totalUsdtAmount || 0),
+        totalFeeAmount: Number(computedTotalAgentFeeAmount || 0),
         totalAgentFeeAmount: Number(computedTotalAgentFeeAmount || 0),
         totalPlatformFeeAmount: Number(totalAmount?.totalPlatformFeeAmount || 0),
         sellerSalesSummary: sellerSalesSummary.map((item: any) => ({
