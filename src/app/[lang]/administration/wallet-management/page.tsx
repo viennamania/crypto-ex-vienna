@@ -189,7 +189,8 @@ const smartAccount = await smartWallet.connect({
 
 import {
   useRouter,
-  useSearchParams
+  useSearchParams,
+  usePathname,
 } from "next//navigation";
 
 import { Select } from '@mui/material';
@@ -208,6 +209,7 @@ import path from 'path';
 export default function SendUsdt({ params }: any) {
 
   const lang = params?.lang ?? 'ko';
+  const pathname = usePathname();
   const { loading: clientSettingsLoading } = useClientSettings();
   const { wallet, wallets, smartAccountEnabled } = useClientWallets({
     authOptions: walletAuthOptions,
@@ -227,6 +229,28 @@ export default function SendUsdt({ params }: any) {
   //console.log("params", params);
 
   const searchParams = useSearchParams();
+  const isAgentWalletManagementRoute = useMemo(() => {
+    const normalizedPath = String(pathname || '').replace(/\/+$/, '');
+    return /\/(?:p2p\/)?agent-management\/wallet-management$/.test(normalizedPath);
+  }, [pathname]);
+  const pageMainClass = isAgentWalletManagementRoute
+    ? 'min-h-[100vh] bg-white px-3 py-5 pb-24'
+    : 'min-h-[100vh] bg-white px-4 py-8 pb-28';
+  const supportContainerClass = isAgentWalletManagementRoute
+    ? 'mx-auto flex min-h-[70vh] max-w-[420px] items-center justify-center text-center'
+    : 'mx-auto flex min-h-[70vh] max-w-screen-sm items-center justify-center text-center';
+  const contentContainerClass = isAgentWalletManagementRoute
+    ? 'w-full max-w-[420px] mx-auto'
+    : 'w-full max-w-md mx-auto';
+  const compactRecipientInputClass = isAgentWalletManagementRoute
+    ? 'w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800'
+    : 'w-80 xl:w-96 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800';
+  const confirmCardClass = isAgentWalletManagementRoute
+    ? 'relative w-full max-w-[420px] overflow-hidden rounded-3xl border border-slate-200/90 bg-white/95 p-5 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.7)]'
+    : 'relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200/90 bg-white/95 p-6 shadow-[0_34px_90px_-46px_rgba(15,23,42,0.75)]';
+  const footerTabsClass = isAgentWalletManagementRoute
+    ? 'fixed bottom-0 left-1/2 z-40 w-[calc(100%-1rem)] max-w-[420px] -translate-x-1/2 border-t border-slate-200 bg-white/95 backdrop-blur'
+    : 'fixed bottom-0 left-1/2 z-40 w-[calc(100%-1rem)] max-w-md -translate-x-1/2 border-t border-slate-200 bg-white/95 backdrop-blur sm:w-[calc(100%-1.5rem)] sm:max-w-lg md:max-w-xl';
  
   ///const wallet = searchParams.get('wallet');
   
@@ -1275,8 +1299,8 @@ export default function SendUsdt({ params }: any) {
 
   if (clientSettingsLoading) {
     return (
-      <main className="min-h-[100vh] bg-white px-4 py-8">
-        <div className="mx-auto flex min-h-[70vh] max-w-screen-sm items-center justify-center text-center">
+      <main className={pageMainClass}>
+        <div className={supportContainerClass}>
           <p className="text-lg font-semibold text-slate-600 sm:text-2xl">
             클라이언트 설정을 확인 중입니다...
           </p>
@@ -1287,8 +1311,8 @@ export default function SendUsdt({ params }: any) {
 
   if (!smartAccountEnabled) {
     return (
-      <main className="min-h-[100vh] bg-white px-4 py-8">
-        <div className="mx-auto flex min-h-[70vh] max-w-screen-sm items-center justify-center text-center">
+      <main className={pageMainClass}>
+        <div className={supportContainerClass}>
           <p className="text-lg font-semibold text-rose-600 sm:text-2xl">
             스마트 어카운트가 비활성화되어 있습니다. 관리자에게 문의해주세요.
           </p>
@@ -1299,10 +1323,10 @@ export default function SendUsdt({ params }: any) {
 
   if (!address) {
     return (
-      <main className="min-h-[100vh] bg-white px-4 py-8">
+      <main className={pageMainClass}>
         <AutoConnect client={client} wallets={wallets.length ? wallets : [wallet]} />
-        <div className="mx-auto flex min-h-[70vh] max-w-screen-sm items-center justify-center">
-        <div className="w-full max-w-md mx-auto p-6 text-center">
+        <div className={supportContainerClass}>
+        <div className={`${contentContainerClass} p-6 text-center`}>
             <div className="flex flex-col items-center gap-3">
               <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">플랫폼</span>
               <Image
@@ -1357,7 +1381,7 @@ export default function SendUsdt({ params }: any) {
           </div>
         </div>
         <footer className="relative mt-10 border-t border-slate-200 bg-white px-6 py-12 text-center text-slate-600">
-          <div className="mx-auto flex max-w-3xl flex-col items-center gap-6">
+          <div className={`${contentContainerClass} flex flex-col items-center gap-6`}>
             <Image
               src="/api/client/logo"
               alt="Platform"
@@ -1395,13 +1419,13 @@ export default function SendUsdt({ params }: any) {
 
   return (
 
-    <main className="min-h-[100vh] bg-white px-4 py-8 pb-28">
+    <main className={pageMainClass}>
 
 
       <AutoConnect client={client} wallets={[wallet]} />
 
 
-      <div className="w-full max-w-md mx-auto">
+      <div className={contentContainerClass}>
         
         <div className="py-2">
 
@@ -1599,7 +1623,7 @@ export default function SendUsdt({ params }: any) {
                         disabled={sending}
                         type="text"
                         placeholder={User_wallet_address}
-                        className="w-80 xl:w-96 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800"
+                        className={compactRecipientInputClass}
                         value={recipient.walletAddress}
                           onChange={(e) => {
                             const next = e.target.value.trim();
@@ -2282,7 +2306,7 @@ export default function SendUsdt({ params }: any) {
             }
           }}
         >
-          <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200/90 bg-white/95 p-6 shadow-[0_34px_90px_-46px_rgba(15,23,42,0.75)]">
+          <div className={confirmCardClass}>
             <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-28 overflow-hidden">
               <div className="absolute -left-10 -top-12 h-24 w-24 rounded-full bg-emerald-200/50 blur-2xl" />
               <div className="absolute right-0 top-0 h-24 w-24 rounded-full bg-sky-200/50 blur-2xl" />
@@ -2528,7 +2552,7 @@ export default function SendUsdt({ params }: any) {
       `}</style>
 
       <nav
-        className="fixed bottom-0 left-1/2 z-40 w-[calc(100%-1rem)] max-w-md -translate-x-1/2 border-t border-slate-200 bg-white/95 backdrop-blur sm:w-[calc(100%-1.5rem)] sm:max-w-lg md:max-w-xl"
+        className={footerTabsClass}
       >
         <div className="mx-auto flex w-full flex-nowrap items-center justify-center gap-2 overflow-x-auto whitespace-nowrap px-3 py-3">
           {[
