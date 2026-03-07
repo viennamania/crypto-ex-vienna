@@ -473,17 +473,6 @@ export default function BuyOrderTradeHistoryPage() {
     }
   }, [pageNumber, totalPages]);
 
-  const statusMix = useMemo(() => {
-    const statusCountMap = new Map<string, number>();
-
-    orders.forEach((order) => {
-      const status = String(order?.status || '').trim() || 'unknown';
-      statusCountMap.set(status, (statusCountMap.get(status) || 0) + 1);
-    });
-
-    return [...statusCountMap.entries()].sort((a, b) => b[1] - a[1]);
-  }, [orders]);
-
   const selectedBuyerStoreReferralGroup = useMemo(() => {
     const selectedKey = normalizeStoreReferralKey(draftFilters.searchBuyerStoreReferralStorecode);
     if (!selectedKey) return null;
@@ -1074,25 +1063,6 @@ export default function BuyOrderTradeHistoryPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.52)]">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="mr-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Status Mix</p>
-            {statusMix.length > 0 ? (
-              statusMix.map(([status, count]) => (
-                <span
-                  key={status}
-                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(status)}`}
-                >
-                  {getStatusLabel(status)}
-                  <span className="font-bold">{count.toLocaleString()}</span>
-                </span>
-              ))
-            ) : (
-              <span className="text-sm text-slate-500">표시할 주문이 없습니다.</span>
-            )}
-          </div>
-        </section>
-
         <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_26px_56px_-46px_rgba(15,23,42,0.45)]">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
             <div>
@@ -1241,7 +1211,7 @@ export default function BuyOrderTradeHistoryPage() {
                             <p className="font-semibold text-slate-900">{getSellerDisplayName(order)}</p>
                             <p className="text-slate-500">{shortWallet(sellerWalletAddress)}</p>
                             <p className="text-slate-500">
-                              에이전트 {agentName && agentcode ? `${agentName} (${agentcode})` : (agentName || agentcode || '-')}
+                              {agentName && agentcode ? `${agentName} (${agentcode})` : (agentName || agentcode || '-')}
                             </p>
                           </div>
                         </td>

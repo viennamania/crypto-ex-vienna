@@ -378,21 +378,133 @@ export async function POST(request: NextRequest) {
                   },
                 },
               },
+              normalizedAgentcodeKey: {
+                $toLower: {
+                  $trim: {
+                    input: {
+                      $toString: {
+                        $ifNull: [
+                          '$agentcode',
+                          { $ifNull: ['$seller.agentcode', ''] },
+                        ],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: 'agents',
+              let: {
+                agentcodeKey: '$normalizedAgentcodeKey',
+              },
+              pipeline: [
+                {
+                  $addFields: {
+                    normalizedAgentcode: {
+                      $toLower: {
+                        $trim: {
+                          input: {
+                            $toString: {
+                              $ifNull: ['$agentcode', ''],
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $ne: ['$$agentcodeKey', ''] },
+                        { $eq: ['$normalizedAgentcode', '$$agentcodeKey'] },
+                      ],
+                    },
+                  },
+                },
+                {
+                  $project: {
+                    _id: 0,
+                    agentFeePercent: {
+                      $convert: {
+                        input: { $ifNull: ['$agentFeePercent', 0] },
+                        to: 'double',
+                        onError: 0,
+                        onNull: 0,
+                      },
+                    },
+                  },
+                },
+                { $limit: 1 },
+              ],
+              as: 'matchedAgentRows',
             },
           },
           {
             $addFields: {
+              normalizedResolvedAgentFeeRate: {
+                $let: {
+                  vars: {
+                    candidateRates: [
+                      {
+                        $convert: {
+                          input: { $ifNull: ['$normalizedAgentFeeRate', 0] },
+                          to: 'double',
+                          onError: 0,
+                          onNull: 0,
+                        },
+                      },
+                      {
+                        $convert: {
+                          input: {
+                            $ifNull: [{ $arrayElemAt: ['$matchedAgentRows.agentFeePercent', 0] }, 0],
+                          },
+                          to: 'double',
+                          onError: 0,
+                          onNull: 0,
+                        },
+                      },
+                    ],
+                  },
+                  in: {
+                    $ifNull: [
+                      {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: '$$candidateRates',
+                              as: 'rate',
+                              cond: { $gt: ['$$rate', 0] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                      0,
+                    ],
+                  },
+                },
+              },
               normalizedAgentFeeAmount: {
                 $cond: [
                   {
                     $and: [
-                      { $gt: ['$normalizedAgentFeeRate', 0] },
+                      { $gt: ['$normalizedResolvedAgentFeeRate', 0] },
                       { $gt: ['$normalizedUsdtAmount', 0] },
                     ],
                   },
                   {
                     $trunc: [
-                      { $divide: [{ $multiply: ['$normalizedUsdtAmount', '$normalizedAgentFeeRate'] }, 100] },
+                      {
+                        $divide: [
+                          { $multiply: ['$normalizedUsdtAmount', '$normalizedResolvedAgentFeeRate'] },
+                          100,
+                        ],
+                      },
                       6,
                     ],
                   },
