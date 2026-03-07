@@ -314,6 +314,11 @@ const getOrderAgentFeeRate = (order: BuyOrderItem) => {
 };
 
 const getOrderAgentFeeAmount = (order: BuyOrderItem, resolvedAgentFeeRate = 0) => {
+  const usdtAmount = toFiniteNumber(order?.usdtAmount);
+  if (resolvedAgentFeeRate > 0 && usdtAmount > 0) {
+    return roundDownUsdt6((usdtAmount * resolvedAgentFeeRate) / 100);
+  }
+
   const candidates = [
     order?.agentFeeAmount,
     order?.agentFeeUsdtAmount,
@@ -323,11 +328,6 @@ const getOrderAgentFeeAmount = (order: BuyOrderItem, resolvedAgentFeeRate = 0) =
   for (const candidate of candidates) {
     const numeric = toFiniteNumber(candidate);
     if (numeric > 0) return roundDownUsdt6(numeric);
-  }
-
-  const usdtAmount = toFiniteNumber(order?.usdtAmount);
-  if (resolvedAgentFeeRate > 0 && usdtAmount > 0) {
-    return roundDownUsdt6((usdtAmount * resolvedAgentFeeRate) / 100);
   }
 
   return 0;
@@ -1119,7 +1119,7 @@ export default function BuyOrderTradeHistoryPage() {
                   <tr className="text-left text-xs uppercase tracking-[0.14em] text-slate-500">
                     <th className="w-[14%] px-3 py-3">상태/거래번호/이용동의</th>
                     <th className="w-[16%] px-3 py-3">주문시각/완료시각</th>
-                    <th className="w-[13%] px-3 py-3">구매자 정보</th>
+                    <th className="w-[13%] px-3 py-3">구매자/가맹점 정보</th>
                     <th className="w-[16%] px-3 py-3">판매자/에이전트 정보</th>
                     <th className="w-[11%] px-3 py-3 text-right">거래금액</th>
                     <th className="w-[9%] px-3 py-3">결제정보</th>

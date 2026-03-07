@@ -384,19 +384,20 @@ export async function POST(request: NextRequest) {
             $addFields: {
               normalizedAgentFeeAmount: {
                 $cond: [
-                  { $gt: ['$normalizedStoredAgentFeeAmount', 0] },
-                  '$normalizedStoredAgentFeeAmount',
                   {
-                    $cond: [
-                      {
-                        $and: [
-                          { $gt: ['$normalizedAgentFeeRate', 0] },
-                          { $gt: ['$normalizedUsdtAmount', 0] },
-                        ],
-                      },
-                      { $divide: [{ $multiply: ['$normalizedUsdtAmount', '$normalizedAgentFeeRate'] }, 100] },
-                      0,
+                    $and: [
+                      { $gt: ['$normalizedAgentFeeRate', 0] },
+                      { $gt: ['$normalizedUsdtAmount', 0] },
                     ],
+                  },
+                  {
+                    $trunc: [
+                      { $divide: [{ $multiply: ['$normalizedUsdtAmount', '$normalizedAgentFeeRate'] }, 100] },
+                      6,
+                    ],
+                  },
+                  {
+                    $trunc: ['$normalizedStoredAgentFeeAmount', 6],
                   },
                 ],
               },
