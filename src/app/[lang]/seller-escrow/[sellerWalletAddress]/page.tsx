@@ -1166,6 +1166,22 @@ const formatShortWalletAddress = (value?: string | null) => {
   return `${wallet.substring(0, 6)}...${wallet.substring(wallet.length - 4)}`;
 };
 
+const resolveBuyOrderDocumentId = (orderLike: any): string => {
+  const candidates = [
+    orderLike?._id,
+    orderLike?.id,
+    orderLike?.orderId,
+    orderLike?._id?.$oid,
+  ];
+  for (const candidate of candidates) {
+    const resolved = String(candidate ?? '').trim();
+    if (resolved) {
+      return resolved;
+    }
+  }
+  return '';
+};
+
 const maskWalletAddressPartial = (value?: string | null) => {
   if (!value) {
     return '-';
@@ -7317,10 +7333,19 @@ const fetchBuyOrders = async () => {
 
   const openActiveOrderCompleteModal = (order: BuyOrder) => {
     if (!isOwnerSeller) {
+      toast.error('판매자 권한이 확인되지 않아 완료 처리를 열 수 없습니다.');
+      return;
+    }
+    const orderId = resolveBuyOrderDocumentId(order);
+    if (!orderId) {
+      toast.error('주문 ID를 확인할 수 없어 완료 처리를 시작할 수 없습니다.');
       return;
     }
     setActiveOrderCompleteResult(null);
-    setSelectedActivePaymentRequestedOrder(order);
+    setSelectedActivePaymentRequestedOrder({
+      ...order,
+      _id: orderId,
+    });
     setIsActiveOrderCompleteModalOpen(true);
   };
 
@@ -7347,7 +7372,17 @@ const fetchBuyOrders = async () => {
       return;
     }
 
-    if (!isOwnerSeller || !selectedActivePaymentRequestedOrder?._id || !requesterWalletAddress) {
+    const selectedOrderId = resolveBuyOrderDocumentId(selectedActivePaymentRequestedOrder);
+    if (!isOwnerSeller) {
+      toast.error('판매자 권한이 확인되지 않아 완료 처리를 진행할 수 없습니다.');
+      return;
+    }
+    if (!selectedOrderId) {
+      toast.error('완료 처리 대상 주문 ID를 확인할 수 없습니다. 페이지를 새로고침 후 다시 시도해주세요.');
+      return;
+    }
+    if (!requesterWalletAddress) {
+      toast.error('서명용 지갑 주소를 찾을 수 없습니다. 지갑을 다시 연결해주세요.');
       return;
     }
 
@@ -7357,7 +7392,7 @@ const fetchBuyOrders = async () => {
       const requestBody = await buildSignedRequestBody({
         path: '/api/order/completePrivateBuyOrderBySeller',
         payload: {
-          orderId: selectedActivePaymentRequestedOrder._id,
+          orderId: selectedOrderId,
           sellerWalletAddress: requesterWalletAddress,
           publicIpAddress: myIpAddress && myIpAddress !== '-' ? myIpAddress : '',
         },
@@ -7402,7 +7437,7 @@ const fetchBuyOrders = async () => {
       const transferCount = Number(data?.transferCount || 0);
 
       setActivePaymentRequestedOrders((prev) =>
-        prev.filter((item) => item._id !== selectedActivePaymentRequestedOrder._id),
+        prev.filter((item) => resolveBuyOrderDocumentId(item) !== selectedOrderId),
       );
 
       setSellersBalance((prev) =>
@@ -7411,7 +7446,7 @@ const fetchBuyOrders = async () => {
             return seller;
           }
 
-          if (seller?.seller?.buyOrder?._id !== selectedActivePaymentRequestedOrder._id) {
+          if (resolveBuyOrderDocumentId(seller?.seller?.buyOrder) !== selectedOrderId) {
             return seller;
           }
 
@@ -11293,7 +11328,8 @@ const fetchBuyOrders = async () => {
                                   </div>
                                 ) : activePaymentRequestedOrders.length > 0 ? (
                                   <div className="w-full flex flex-col items-start justify-center gap-2">
-                                    {activePaymentRequestedOrders.map((order) => {
+                                    {activePaymentRequestedOrders.map((order, orderIndex) => {
+                                      const orderDocumentId = resolveBuyOrderDocumentId(order);
                                       const paymentCountdown = getPaymentRequestCountdown(order, countdownNowMs);
                                       const isCountdownUrgent =
                                         !paymentCountdown.expired && paymentCountdown.remainingMs <= (5 * 60 * 1000);
@@ -11326,7 +11362,7 @@ const fetchBuyOrders = async () => {
 
                                       return (
                                         <div
-                                          key={order._id}
+                                          key={orderDocumentId || `${order.tradeId || 'order'}-${orderIndex}`}
                                           className="w-full rounded-lg border border-amber-200 bg-amber-50/70 px-2 py-2"
                                         >
                                           <div className="grid w-full grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_190px] md:items-start">
@@ -11425,7 +11461,8 @@ const fetchBuyOrders = async () => {
                                                 {isOwnerSeller && (
                                                   <button
                                                     type="button"
-                                                    className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100"
+                                                    className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    disabled={!orderDocumentId}
                                                     onClick={() => openActiveOrderCompleteModal(order)}
                                                   >
                                                     완료하기
