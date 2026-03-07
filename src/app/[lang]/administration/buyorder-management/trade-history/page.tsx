@@ -19,6 +19,10 @@ type BuyOrderItem = {
   platformFeeRate?: number;
   platformFeeAmount?: number;
   platformFeeWalletAddress?: string;
+  agentFeeRate?: number;
+  agentFeePercent?: number;
+  agentFeeAmount?: number;
+  agentFeeUsdtAmount?: number;
   walletAddress?: string;
   nickname?: string;
   platformFee?: {
@@ -59,11 +63,19 @@ type BuyOrderItem = {
   agent?: {
     agentcode?: string;
     agentName?: string;
+    agentFeePercent?: number;
+  };
+  store?: {
+    agentFeePercent?: number;
   };
   settlement?: {
     platformFeePercent?: number;
     platformFeeAmount?: number | string;
     platformFeeWalletAddress?: string;
+    agentFeePercent?: number | string;
+    agentFeeAmount?: number | string;
+    agentFeeAmountUSDT?: number | string;
+    agentFeeWalletAddress?: string;
   };
   transactionHash?: string;
   chain?: string;
@@ -260,12 +272,13 @@ const getOrderExchangeRate = (order: BuyOrderItem) => {
   return 0;
 };
 
-const getOrderPlatformFeeRate = (order: BuyOrderItem) => {
+const getOrderAgentFeeRate = (order: BuyOrderItem) => {
   const candidates = [
-    order?.platformFeeRate,
-    order?.platformFee?.rate,
-    order?.platformFee?.percentage,
-    order?.settlement?.platformFeePercent,
+    order?.agentFeeRate,
+    order?.agentFeePercent,
+    order?.settlement?.agentFeePercent,
+    order?.store?.agentFeePercent,
+    order?.agent?.agentFeePercent,
   ];
   for (const candidate of candidates) {
     const numeric = toFiniteNumber(candidate);
@@ -274,12 +287,12 @@ const getOrderPlatformFeeRate = (order: BuyOrderItem) => {
   return 0;
 };
 
-const getOrderPlatformFeeAmount = (order: BuyOrderItem) => {
+const getOrderAgentFeeAmount = (order: BuyOrderItem) => {
   const candidates = [
-    order?.platformFeeAmount,
-    order?.platformFee?.amountUsdt,
-    order?.platformFee?.amount,
-    order?.settlement?.platformFeeAmount,
+    order?.agentFeeAmount,
+    order?.agentFeeUsdtAmount,
+    order?.settlement?.agentFeeAmount,
+    order?.settlement?.agentFeeAmountUSDT,
   ];
   for (const candidate of candidates) {
     const numeric = toFiniteNumber(candidate);
@@ -287,15 +300,6 @@ const getOrderPlatformFeeAmount = (order: BuyOrderItem) => {
   }
   return 0;
 };
-
-const getOrderPlatformFeeWalletAddress = (order: BuyOrderItem) =>
-  String(
-    order?.platformFeeWalletAddress
-    || order?.platformFee?.walletAddress
-    || order?.platformFee?.address
-    || order?.settlement?.platformFeeWalletAddress
-    || '',
-  ).trim();
 
 const getBuyerDisplayName = (order: BuyOrderItem) =>
   String(order?.buyer?.nickname || order?.nickname || '').trim() || '-';
@@ -857,16 +861,15 @@ export default function BuyOrderTradeHistoryPage() {
                     <th className="w-[11%] px-3 py-3 text-right">거래금액</th>
                     <th className="w-[11%] px-3 py-3">결제정보</th>
                     <th className="w-[8%] px-3 py-3">에이전트</th>
-                    <th className="w-[9%] px-3 py-3">플랫폼 수수료</th>
+                    <th className="w-[9%] px-3 py-3">에이전트 수수료</th>
                     <th className="w-[6%] px-3 py-3">전송 Tx</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {orders.map((order, index) => {
                     const exchangeRate = getOrderExchangeRate(order);
-                    const platformFeeRate = getOrderPlatformFeeRate(order);
-                    const platformFeeAmount = getOrderPlatformFeeAmount(order);
-                    const platformFeeWalletAddress = getOrderPlatformFeeWalletAddress(order);
+                    const agentFeeRate = getOrderAgentFeeRate(order);
+                    const agentFeeAmount = getOrderAgentFeeAmount(order);
                     const transactionHash = String(order?.transactionHash || '').trim();
                     const transactionHashUrl = getExplorerUrlByHash(order, transactionHash);
                     const buyerWalletAddress = String(order?.buyer?.walletAddress || order?.walletAddress || '').trim();
@@ -944,9 +947,8 @@ export default function BuyOrderTradeHistoryPage() {
                         </td>
                         <td className="px-3 py-3">
                           <div className="space-y-0.5 text-xs">
-                            <p className="font-semibold text-slate-900">{formatPercent(platformFeeRate)}%</p>
-                            <p className="text-slate-500">{formatUsdt(platformFeeAmount)} USDT</p>
-                            <p className="break-all text-[10px] text-slate-400">{platformFeeWalletAddress || '-'}</p>
+                            <p className="font-semibold text-slate-900">{formatPercent(agentFeeRate)}%</p>
+                            <p className="text-slate-500">{formatUsdtFixed6(agentFeeAmount)} USDT</p>
                           </div>
                         </td>
                         <td className="px-3 py-3">
