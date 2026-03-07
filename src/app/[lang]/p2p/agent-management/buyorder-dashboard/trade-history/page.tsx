@@ -90,10 +90,18 @@ type SearchFilters = {
   searchTradeId: string;
   searchBuyer: string;
   searchBuyerWalletAddress: string;
+  searchBuyerStoreReferralStorecode: string;
   searchSellerId: string;
   searchSellerWalletAddress: string;
   searchDepositName: string;
   searchPaymentMethod: string;
+};
+
+type BuyerStoreReferralGroup = {
+  storecode: string;
+  storeName: string;
+  storeLogo: string;
+  count: number;
 };
 
 type BuyerConsentSnapshot = {
@@ -147,6 +155,7 @@ const createDefaultFilters = (): SearchFilters => {
     searchTradeId: '',
     searchBuyer: '',
     searchBuyerWalletAddress: '',
+    searchBuyerStoreReferralStorecode: '',
     searchSellerId: '',
     searchSellerWalletAddress: '',
     searchDepositName: '',
@@ -347,6 +356,16 @@ const getBuyerStoreReferralLabel = (storeReferral: ReturnType<typeof getBuyerSto
   return storeReferral.storeName || storeReferral.storecode || '-';
 };
 
+const formatBuyerStoreReferralGroupLabel = (item: BuyerStoreReferralGroup | null) => {
+  if (!item) return '전체 가맹점';
+  const normalizedStoreName = String(item.storeName || '').trim();
+  const normalizedStorecode = String(item.storecode || '').trim();
+  if (normalizedStoreName && normalizedStorecode) {
+    return `${normalizedStoreName} (${normalizedStorecode})`;
+  }
+  return normalizedStoreName || normalizedStorecode || '-';
+};
+
 const getSellerDisplayName = (order: BuyOrderItem) =>
   String(order?.seller?.nickname || '').trim() || shortWallet(order?.seller?.walletAddress) || '-';
 
@@ -416,6 +435,7 @@ export default function P2PAgentBuyorderTradeHistoryPage() {
     totalUsdtAmount: 0,
     totalFeeAmount: 0,
   });
+  const [buyerStoreReferralGroups, setBuyerStoreReferralGroups] = useState<BuyerStoreReferralGroup[]>([]);
   const [draftFilters, setDraftFilters] = useState<SearchFilters>(() => createDefaultFilters());
   const [appliedFilters, setAppliedFilters] = useState<SearchFilters>(() => createDefaultFilters());
   const [isOrderChatDrawerOpen, setIsOrderChatDrawerOpen] = useState(false);
@@ -453,6 +473,7 @@ export default function P2PAgentBuyorderTradeHistoryPage() {
       setAgent(null);
       setOrders([]);
       setTotalCount(0);
+      setBuyerStoreReferralGroups([]);
       setSummary({
         totalKrwAmount: 0,
         totalUsdtAmount: 0,
@@ -477,6 +498,7 @@ export default function P2PAgentBuyorderTradeHistoryPage() {
             searchTradeId: appliedFilters.searchTradeId,
             searchBuyer: appliedFilters.searchBuyer,
             searchBuyerWalletAddress: appliedFilters.searchBuyerWalletAddress,
+            searchBuyerStoreReferralStorecode: appliedFilters.searchBuyerStoreReferralStorecode,
             searchSellerId: appliedFilters.searchSellerId,
             searchSellerWalletAddress: appliedFilters.searchSellerWalletAddress,
             searchDepositName: appliedFilters.searchDepositName,
@@ -510,6 +532,17 @@ export default function P2PAgentBuyorderTradeHistoryPage() {
         totalUsdtAmount: Number(payload?.result?.totalUsdtAmount || 0) || 0,
         totalFeeAmount,
       });
+      const groupedStoreReferrals = Array.isArray(payload?.result?.buyerStoreReferralGroups)
+        ? payload.result.buyerStoreReferralGroups
+            .map((item: any) => ({
+              storecode: String(item?.storecode || '').trim(),
+              storeName: String(item?.storeName || '').trim(),
+              storeLogo: String(item?.storeLogo || '').trim(),
+              count: Number(item?.count || 0),
+            }))
+            .filter((item: BuyerStoreReferralGroup) => Boolean(item.storecode))
+        : [];
+      setBuyerStoreReferralGroups(groupedStoreReferrals);
       setLastUpdatedAt(new Date().toISOString());
       setError(null);
     } catch (fetchError: any) {
@@ -517,6 +550,7 @@ export default function P2PAgentBuyorderTradeHistoryPage() {
       setAgent(null);
       setOrders([]);
       setTotalCount(0);
+      setBuyerStoreReferralGroups([]);
       setSummary({
         totalKrwAmount: 0,
         totalUsdtAmount: 0,
@@ -547,6 +581,7 @@ export default function P2PAgentBuyorderTradeHistoryPage() {
       searchTradeId: draftFilters.searchTradeId.trim(),
       searchBuyer: draftFilters.searchBuyer.trim(),
       searchBuyerWalletAddress: draftFilters.searchBuyerWalletAddress.trim(),
+      searchBuyerStoreReferralStorecode: draftFilters.searchBuyerStoreReferralStorecode.trim(),
       searchSellerId: draftFilters.searchSellerId.trim(),
       searchSellerWalletAddress: draftFilters.searchSellerWalletAddress.trim(),
       searchDepositName: draftFilters.searchDepositName.trim(),
@@ -883,6 +918,22 @@ export default function P2PAgentBuyorderTradeHistoryPage() {
                     placeholder="0x..."
                     className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500"
                   />
+                </div>
+                <div className="lg:col-span-3">
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">구매자 소속 가맹점</label>
+                  <select
+                    value={draftFilters.searchBuyerStoreReferralStorecode}
+                    onChange={(event) =>
+                      setDraftFilters((prev) => ({ ...prev, searchBuyerStoreReferralStorecode: event.target.value }))}
+                    className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-slate-500"
+                  >
+                    <option value="">{formatBuyerStoreReferralGroupLabel(null)}</option>
+                    {buyerStoreReferralGroups.map((item) => (
+                      <option key={item.storecode} value={item.storecode}>
+                        {formatBuyerStoreReferralGroupLabel(item)} ({item.count.toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="lg:col-span-3">
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">입금자명</label>
