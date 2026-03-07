@@ -53,6 +53,63 @@ const parseStatusFilters = (value: unknown) => {
   return Array.from(uniqueValues);
 };
 
+const toFiniteNumber = (value: unknown) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const roundDownUsdt6 = (value: unknown) =>
+  Math.floor(toFiniteNumber(value) * 1_000_000) / 1_000_000;
+
+const normalizeStatusKey = (value: unknown) =>
+  String(value || '').trim().toLowerCase();
+
+const getOrderAgentFeeRateForSummary = (
+  order: any,
+  fallbackAgentFeePercent: number,
+) => {
+  const candidates = [
+    order?.agentFeeRate,
+    order?.agentFeePercent,
+    order?.settlement?.agentFeePercent,
+    order?.store?.agentFeePercent,
+    order?.agent?.agentFeePercent,
+    order?.agent?.platformFeePercent,
+    order?.seller?.agentFeePercent,
+    fallbackAgentFeePercent,
+  ];
+
+  for (const candidate of candidates) {
+    const numeric = toFiniteNumber(candidate);
+    if (numeric > 0) return numeric;
+  }
+
+  return 0;
+};
+
+const getOrderAgentFeeAmountForSummary = (
+  order: any,
+  resolvedAgentFeeRate = 0,
+) => {
+  const usdtAmount = toFiniteNumber(order?.usdtAmount);
+  if (resolvedAgentFeeRate > 0 && usdtAmount > 0) {
+    return roundDownUsdt6((usdtAmount * resolvedAgentFeeRate) / 100);
+  }
+
+  const candidates = [
+    order?.agentFeeAmount,
+    order?.agentFeeUsdtAmount,
+    order?.settlement?.agentFeeAmount,
+    order?.settlement?.agentFeeAmountUSDT,
+  ];
+  for (const candidate of candidates) {
+    const numeric = toFiniteNumber(candidate);
+    if (numeric > 0) return roundDownUsdt6(numeric);
+  }
+
+  return 0;
+};
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -179,7 +236,7 @@ export async function POST(request: NextRequest) {
     const client = await clientPromise;
     const collection = client.db(dbName).collection('buyorders');
 
-    const [orders, totalCount, totalAmountRows, sellerSalesRows, buyerStoreReferralGroupRows] = await Promise.all([
+    const [orders, totalCount, totalAmountRows, sellerSalesRows, buyerStoreReferralGroupRows, feeSummaryOrders] = await Promise.all([
       collection
         .find(filter)
         .sort({ createdAt: -1 })
@@ -240,279 +297,6 @@ export async function POST(request: NextRequest) {
                   onNull: 0,
                 },
               },
-              normalizedAgentFeeRate: {
-                $let: {
-                  vars: {
-                    candidateRates: [
-                      {
-                        $convert: {
-                          input: { $ifNull: ['$agentFeeRate', 0] },
-                          to: 'double',
-                          onError: 0,
-                          onNull: 0,
-                        },
-                      },
-                      {
-                        $convert: {
-                          input: { $ifNull: ['$agentFeePercent', 0] },
-                          to: 'double',
-                          onError: 0,
-                          onNull: 0,
-                        },
-                      },
-                      {
-                        $convert: {
-                          input: { $ifNull: ['$settlement.agentFeePercent', 0] },
-                          to: 'double',
-                          onError: 0,
-                          onNull: 0,
-                        },
-                      },
-                      {
-                        $convert: {
-                          input: { $ifNull: ['$store.agentFeePercent', 0] },
-                          to: 'double',
-                          onError: 0,
-                          onNull: 0,
-                        },
-                      },
-                      {
-                        $convert: {
-                          input: { $ifNull: ['$agent.agentFeePercent', 0] },
-                          to: 'double',
-                          onError: 0,
-                          onNull: 0,
-                        },
-                      },
-                      {
-                        $convert: {
-                          input: { $ifNull: ['$agent.platformFeePercent', 0] },
-                          to: 'double',
-                          onError: 0,
-                          onNull: 0,
-                        },
-                      },
-                      {
-                        $convert: {
-                          input: { $ifNull: ['$seller.agentFeePercent', 0] },
-                          to: 'double',
-                          onError: 0,
-                          onNull: 0,
-                        },
-                      },
-                    ],
-                  },
-                  in: {
-                    $ifNull: [
-                      {
-                        $arrayElemAt: [
-                          {
-                            $filter: {
-                              input: '$$candidateRates',
-                              as: 'rate',
-                              cond: { $gt: ['$$rate', 0] },
-                            },
-                          },
-                          0,
-                        ],
-                      },
-                      0,
-                    ],
-                  },
-                },
-              },
-              normalizedStoredAgentFeeAmount: {
-                $let: {
-                  vars: {
-                    candidateAmounts: [
-                      {
-                        $convert: {
-                          input: { $ifNull: ['$agentFeeAmount', 0] },
-                          to: 'double',
-                          onError: 0,
-                          onNull: 0,
-                        },
-                      },
-                      {
-                        $convert: {
-                          input: { $ifNull: ['$agentFeeUsdtAmount', 0] },
-                          to: 'double',
-                          onError: 0,
-                          onNull: 0,
-                        },
-                      },
-                      {
-                        $convert: {
-                          input: { $ifNull: ['$settlement.agentFeeAmount', 0] },
-                          to: 'double',
-                          onError: 0,
-                          onNull: 0,
-                        },
-                      },
-                      {
-                        $convert: {
-                          input: { $ifNull: ['$settlement.agentFeeAmountUSDT', 0] },
-                          to: 'double',
-                          onError: 0,
-                          onNull: 0,
-                        },
-                      },
-                    ],
-                  },
-                  in: {
-                    $ifNull: [
-                      {
-                        $arrayElemAt: [
-                          {
-                            $filter: {
-                              input: '$$candidateAmounts',
-                              as: 'amount',
-                              cond: { $gt: ['$$amount', 0] },
-                            },
-                          },
-                          0,
-                        ],
-                      },
-                      0,
-                    ],
-                  },
-                },
-              },
-              normalizedAgentcodeKey: {
-                $toLower: {
-                  $trim: {
-                    input: {
-                      $toString: {
-                        $ifNull: [
-                          '$agentcode',
-                          { $ifNull: ['$seller.agentcode', ''] },
-                        ],
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          {
-            $lookup: {
-              from: 'agents',
-              let: {
-                agentcodeKey: '$normalizedAgentcodeKey',
-              },
-              pipeline: [
-                {
-                  $addFields: {
-                    normalizedAgentcode: {
-                      $toLower: {
-                        $trim: {
-                          input: {
-                            $toString: {
-                              $ifNull: ['$agentcode', ''],
-                            },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-                {
-                  $match: {
-                    $expr: {
-                      $and: [
-                        { $ne: ['$$agentcodeKey', ''] },
-                        { $eq: ['$normalizedAgentcode', '$$agentcodeKey'] },
-                      ],
-                    },
-                  },
-                },
-                {
-                  $project: {
-                    _id: 0,
-                    agentFeePercent: {
-                      $convert: {
-                        input: { $ifNull: ['$agentFeePercent', 0] },
-                        to: 'double',
-                        onError: 0,
-                        onNull: 0,
-                      },
-                    },
-                  },
-                },
-                { $limit: 1 },
-              ],
-              as: 'matchedAgentRows',
-            },
-          },
-          {
-            $addFields: {
-              normalizedResolvedAgentFeeRate: {
-                $let: {
-                  vars: {
-                    candidateRates: [
-                      {
-                        $convert: {
-                          input: { $ifNull: ['$normalizedAgentFeeRate', 0] },
-                          to: 'double',
-                          onError: 0,
-                          onNull: 0,
-                        },
-                      },
-                      {
-                        $convert: {
-                          input: {
-                            $ifNull: [{ $arrayElemAt: ['$matchedAgentRows.agentFeePercent', 0] }, 0],
-                          },
-                          to: 'double',
-                          onError: 0,
-                          onNull: 0,
-                        },
-                      },
-                    ],
-                  },
-                  in: {
-                    $ifNull: [
-                      {
-                        $arrayElemAt: [
-                          {
-                            $filter: {
-                              input: '$$candidateRates',
-                              as: 'rate',
-                              cond: { $gt: ['$$rate', 0] },
-                            },
-                          },
-                          0,
-                        ],
-                      },
-                      0,
-                    ],
-                  },
-                },
-              },
-              normalizedAgentFeeAmount: {
-                $cond: [
-                  {
-                    $and: [
-                      { $gt: ['$normalizedResolvedAgentFeeRate', 0] },
-                      { $gt: ['$normalizedUsdtAmount', 0] },
-                    ],
-                  },
-                  {
-                    $trunc: [
-                      {
-                        $divide: [
-                          { $multiply: ['$normalizedUsdtAmount', '$normalizedResolvedAgentFeeRate'] },
-                          100,
-                        ],
-                      },
-                      6,
-                    ],
-                  },
-                  {
-                    $trunc: ['$normalizedStoredAgentFeeAmount', 6],
-                  },
-                ],
-              },
             },
           },
           {
@@ -526,11 +310,6 @@ export async function POST(request: NextRequest) {
               totalUsdtAmount: {
                 $sum: {
                   $cond: [{ $in: ['$normalizedStatus', summaryStatusKeys] }, '$normalizedUsdtAmount', 0],
-                },
-              },
-              totalAgentFeeAmount: {
-                $sum: {
-                  $cond: [{ $in: ['$normalizedStatus', summaryStatusKeys] }, '$normalizedAgentFeeAmount', 0],
                 },
               },
               totalPlatformFeeAmount: { $sum: '$normalizedPlatformFeeAmount' },
@@ -730,11 +509,33 @@ export async function POST(request: NextRequest) {
           { $sort: { count: -1, storeName: 1, storecode: 1 } },
         ])
         .toArray(),
+      collection
+        .find(filter, {
+          projection: {
+            status: 1,
+            usdtAmount: 1,
+            agentFeeRate: 1,
+            agentFeePercent: 1,
+            agentFeeAmount: 1,
+            agentFeeUsdtAmount: 1,
+            agentcode: 1,
+            'settlement.agentFeePercent': 1,
+            'settlement.agentFeeAmount': 1,
+            'settlement.agentFeeAmountUSDT': 1,
+            'store.agentFeePercent': 1,
+            'agent.agentFeePercent': 1,
+            'agent.platformFeePercent': 1,
+            'seller.agentFeePercent': 1,
+            'seller.agentcode': 1,
+          },
+        })
+        .toArray(),
     ]);
 
-    const pageAgentcodeKeys = Array.from(
+    const feeSummaryRows = Array.isArray(feeSummaryOrders) ? feeSummaryOrders : [];
+    const agentcodeKeys = Array.from(
       new Set(
-        orders
+        [...orders, ...feeSummaryRows]
           .map((order: any) => toAgentcodeKey(order?.agentcode || order?.seller?.agentcode))
           .filter(Boolean),
       ),
@@ -750,7 +551,7 @@ export async function POST(request: NextRequest) {
         agentFeePercent: number;
       }
     >();
-    if (pageAgentcodeKeys.length > 0) {
+    if (agentcodeKeys.length > 0) {
       const agentsCollection = client.db(dbName).collection('agents');
       const agentRows = await agentsCollection
         .aggregate([
@@ -769,7 +570,7 @@ export async function POST(request: NextRequest) {
           },
           {
             $match: {
-              normalizedAgentcode: { $in: pageAgentcodeKeys },
+              normalizedAgentcode: { $in: agentcodeKeys },
             },
           },
           {
@@ -864,6 +665,24 @@ export async function POST(request: NextRequest) {
     const buyerStoreReferralGroups = Array.isArray(buyerStoreReferralGroupRows)
       ? buyerStoreReferralGroupRows
       : [];
+    const summaryStatusKeySet = new Set(
+      summaryStatusKeys.map((value) => normalizeStatusKey(value)).filter(Boolean),
+    );
+    const computedTotalAgentFeeAmount = roundDownUsdt6(
+      feeSummaryRows.reduce((sum, order: any) => {
+        const normalizedOrderStatus = normalizeStatusKey(order?.status);
+        if (summaryStatusKeySet.size > 0 && !summaryStatusKeySet.has(normalizedOrderStatus)) {
+          return sum;
+        }
+
+        const agentcode = normalizeAgentcode(order?.agentcode || order?.seller?.agentcode);
+        const fallbackAgentFeePercent =
+          Number(agentByCode.get(toAgentcodeKey(agentcode))?.agentFeePercent || 0) || 0;
+        const resolvedAgentFeeRate = getOrderAgentFeeRateForSummary(order, fallbackAgentFeePercent);
+        const agentFeeAmount = getOrderAgentFeeAmountForSummary(order, resolvedAgentFeeRate);
+        return sum + agentFeeAmount;
+      }, 0),
+    );
 
     return NextResponse.json({
       result: {
@@ -871,7 +690,7 @@ export async function POST(request: NextRequest) {
         totalCount,
         totalKrwAmount: Number(totalAmount?.totalKrwAmount || 0),
         totalUsdtAmount: Number(totalAmount?.totalUsdtAmount || 0),
-        totalAgentFeeAmount: Number(totalAmount?.totalAgentFeeAmount || 0),
+        totalAgentFeeAmount: Number(computedTotalAgentFeeAmount || 0),
         totalPlatformFeeAmount: Number(totalAmount?.totalPlatformFeeAmount || 0),
         sellerSalesSummary: sellerSalesSummary.map((item: any) => ({
           sellerWalletAddress: String(item?.sellerWalletAddress || ''),
