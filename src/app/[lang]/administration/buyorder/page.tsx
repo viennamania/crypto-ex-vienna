@@ -3630,8 +3630,9 @@ const fetchBuyOrders = async () => {
     );
   }
 
+  const requireAdminRole = false;
 
-  if (address && !loadingUser && !isAdmin) {
+  if (requireAdminRole && address && !loadingUser && !isAdmin) {
     return (
       <main className="p-4 pb-10 min-h-[100vh] flex items-center justify-center container max-w-screen-2xl mx-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
         <div className="flex flex-col items-center justify-center">
@@ -3659,6 +3660,8 @@ const fetchBuyOrders = async () => {
 
 
 
+
+  const showHeaderWalletPanel = false;
 
   return (
 
@@ -3692,7 +3695,7 @@ const fetchBuyOrders = async () => {
           </div>
 
 
-          {address && !loadingUser && (
+          {showHeaderWalletPanel && address && !loadingUser && (
 
 
             <div className="w-full flex flex-row items-center justify-end gap-2">

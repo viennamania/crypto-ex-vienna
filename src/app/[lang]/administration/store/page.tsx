@@ -1737,8 +1737,9 @@ export default function Index({ params }: any) {
     );
   }
 
+  const requireAdminRole = false;
 
-  if (address && !loadingUser && !isAdmin) {
+  if (requireAdminRole && address && !loadingUser && !isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center">
 
@@ -1754,6 +1755,8 @@ export default function Index({ params }: any) {
 
 
 
+
+  const showHeaderWalletPanel = false;
 
   return (
 
@@ -1781,7 +1784,7 @@ export default function Index({ params }: any) {
            </div>
 
 
-          {address && !loadingUser && (
+          {showHeaderWalletPanel && address && !loadingUser && (
 
 
             <div className="w-full flex flex-row items-center justify-end gap-2">
@@ -1820,7 +1823,7 @@ export default function Index({ params }: any) {
           )}
 
 
-          {!address && (
+          {showHeaderWalletPanel && !address && (
             <ConnectButton
               client={client}
               wallets={wallets}

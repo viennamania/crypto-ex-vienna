@@ -2436,8 +2436,9 @@ const fetchBuyOrders = async () => {
     );
   }
 
+  const requireAdminRole = false;
 
-  if (address && !loadingUser && !isAdmin) {
+  if (requireAdminRole && address && !loadingUser && !isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center">
 
@@ -2454,6 +2455,8 @@ const fetchBuyOrders = async () => {
 
 
 
+
+  const showHeaderWalletPanel = false;
 
   return (
 
@@ -2481,7 +2484,7 @@ const fetchBuyOrders = async () => {
           </div>
 
 
-          {address && !loadingUser && (
+          {showHeaderWalletPanel && address && !loadingUser && (
 
 
             <div className="w-full flex flex-row items-center justify-end gap-2">
@@ -2522,7 +2525,7 @@ const fetchBuyOrders = async () => {
           )}
 
 
-          {!address && (
+          {showHeaderWalletPanel && !address && (
             <ConnectButton
               client={client}
               wallets={wallets}

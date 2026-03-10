@@ -94,10 +94,24 @@ const isActiveRoute = (pathname: string, href: string) => {
   return pathname === href || pathname.startsWith(`${href}/`);
 };
 
+const shouldUseCenterManagementMenu = (pathname: string, lang: string) => {
+  const root = `/${lang}/administration`;
+
+  if (pathname === `${root}/center-management` || pathname.startsWith(`${root}/center-management/`)) {
+    return true;
+  }
+
+  return pathname === `${root}/store`
+    || pathname === `${root}/agent`
+    || pathname === `${root}/member`
+    || pathname === `${root}/buyorder`
+    || pathname === `${root}/trade-history`;
+};
+
 export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: AdministrationSidebarProps) {
   const pathname = usePathname() || '';
   const normalizedPathname = pathname.replace(/\/+$/, '');
-  const isCenterManagementRoute = /\/administration\/center-management(?:\/|$)/.test(normalizedPathname);
+  const isCenterManagementRoute = shouldUseCenterManagementMenu(normalizedPathname, lang);
   const menuItems = isCenterManagementRoute ? buildCenterManagementMenuItems(lang) : buildMenuItems(lang);
   const buyOrderManagementHref = isCenterManagementRoute
     ? `/${lang}/administration/buyorder`

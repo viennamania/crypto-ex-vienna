@@ -51,6 +51,9 @@ const resolveChain = (chain: string) => {
   return polygon;
 };
 
+const isWalletOnlyAdministrationRoute = (pathname: string) =>
+  /\/administration\/(store|agent|member|buyorder|trade-history)$/.test(pathname);
+
 export default function AdministrationSubpageAccessGate({
   lang,
   children,
@@ -89,6 +92,7 @@ export default function AdministrationSubpageAccessGate({
 
   const normalizedPathname = pathname.replace(/\/+$/, '');
   const isCenterManagementRoute = /\/administration\/center-management(?:\/|$)/.test(normalizedPathname);
+  const isWalletOnlyRoute = isWalletOnlyAdministrationRoute(normalizedPathname);
   const walletAddress = String(resolvedActiveAccount?.address || signatureAccount?.address || '').trim();
   const hasConnectedWallet = Boolean(activeWallet) || connectedWallets.length > 0;
 
@@ -133,6 +137,14 @@ export default function AdministrationSubpageAccessGate({
     let cancelled = false;
 
     const checkRole = async () => {
+      if (isWalletOnlyRoute) {
+        setIsCheckingRole(false);
+        setHasCheckedRole(true);
+        setIsAdmin(true);
+        setMemberInfo(null);
+        return;
+      }
+
       if (!walletAddress) {
         setIsCheckingRole(false);
         setHasCheckedRole(false);
@@ -205,7 +217,7 @@ export default function AdministrationSubpageAccessGate({
     return () => {
       cancelled = true;
     };
-  }, [buildSignedRequestBody, signatureAccount, walletAddress]);
+  }, [buildSignedRequestBody, isWalletOnlyRoute, signatureAccount, walletAddress]);
 
   useEffect(() => {
     if (!signatureAccount?.address || typeof signatureAccount.signMessage !== 'function') {
@@ -376,7 +388,7 @@ export default function AdministrationSubpageAccessGate({
   };
 
   if (!walletAddress) {
-    if (isCenterManagementRoute) {
+    if (isCenterManagementRoute || isWalletOnlyRoute) {
       return (
         <div className="min-h-[60vh] w-full flex flex-col items-center justify-center gap-4 p-6">
           <AutoConnect client={client} wallets={[wallet]} />
@@ -385,7 +397,7 @@ export default function AdministrationSubpageAccessGate({
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200">Center Management</p>
               <h1 className="mt-2 text-2xl font-black tracking-tight">접근이 제한되었습니다</h1>
               <p className="mt-2 text-sm text-slate-200">
-                thirdweb AutoConnect만 활성화되어 있으며, 연결된 관리자 지갑이 없으면 이 페이지에 진입할 수 없습니다.
+                thirdweb AutoConnect만 활성화되어 있으며, 연결된 지갑이 없으면 이 페이지에 진입할 수 없습니다.
               </p>
             </div>
             <div className="space-y-4 px-6 py-5">
@@ -397,7 +409,7 @@ export default function AdministrationSubpageAccessGate({
               </div>
               <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
                 <p>허용 방식: AutoConnect only</p>
-                <p>필수 조건: 관리자 권한 지갑 연결</p>
+                <p>필수 조건: 지갑 연결</p>
                 <p>상태: Access denied</p>
               </div>
             </div>
@@ -438,6 +450,15 @@ export default function AdministrationSubpageAccessGate({
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (isWalletOnlyRoute) {
+    return (
+      <>
+        <AutoConnect client={client} wallets={[wallet]} />
+        <AdministrationLayoutShell lang={lang}>{children}</AdministrationLayoutShell>
+      </>
     );
   }
 
