@@ -838,15 +838,13 @@ export default function Index({ params }: any) {
     })
     .then(response => response.json())
     .then(data => {
-        
+        const adminUser = data?.result ?? null;
+
         //console.log('data.result', data.result);
 
-
-        setUser(data.result);
-
-        setEscrowWalletAddress(data.result.escrowWalletAddress);
-
-        setIsAdmin(data.result?.role === "admin");
+        setUser(adminUser);
+        setEscrowWalletAddress(adminUser?.escrowWalletAddress || '');
+        setIsAdmin(adminUser?.role === "admin");
 
     })
     .catch((error) => {
@@ -854,9 +852,10 @@ export default function Index({ params }: any) {
         setUser(null);
         setEscrowWalletAddress('');
         setIsAdmin(false);
+    })
+    .finally(() => {
+        setLoadingUser(false);
     });
-
-    setLoadingUser(false);
 
 
   } , [address]);

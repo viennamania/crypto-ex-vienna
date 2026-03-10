@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { buildCenterManagementMenuItems } from '@/components/administration/centerManagementMenu';
+
 type AdministrationSidebarProps = {
   lang: string;
   isOpen: boolean;
@@ -68,18 +70,6 @@ const buildMenuItems = (lang: string): MenuItem[] => {
     { label: '정책 관리', hint: 'Policy', href: `${root}/policy` },
     { label: '공지 관리', hint: 'Notice', href: `${root}/notice` },
     { label: '배너 관리', hint: 'Banner', href: `${root}/banner` },
-  ];
-};
-
-const buildCenterManagementMenuItems = (lang: string): MenuItem[] => {
-  const root = `/${lang}/administration`;
-  return [
-    { label: '지갑 관리', hint: 'Wallet', href: `${root}/center-management/wallet-management` },
-    { label: '가맹점 관리', hint: 'Store', href: `${root}/store` },
-    { label: '에이전트 관리', hint: 'Agent', href: `${root}/agent` },
-    { label: '회원 관리', hint: 'Member', href: `${root}/member` },
-    { label: 'P2P구매 관리', hint: 'Buy Order', href: `${root}/buyorder` },
-    { label: '거래내역', hint: 'Trade History', href: `${root}/trade-history` },
   ];
 };
 
