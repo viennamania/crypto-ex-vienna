@@ -52,7 +52,7 @@ const resolveChain = (chain: string) => {
 };
 
 const isWalletOnlyAdministrationRoute = (pathname: string) =>
-  /\/administration\/(store|agent|member|buyorder|trade-history)$/.test(pathname);
+  /\/administration\/(store|agent|member|buyorder|trade-history)(\/|$)/.test(pathname);
 
 export default function AdministrationSubpageAccessGate({
   lang,
