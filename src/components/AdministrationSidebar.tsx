@@ -22,6 +22,7 @@ const buildMenuItems = (lang: string): MenuItem[] => {
   const root = `/${lang}/administration`;
   return [
     { label: '관리자 홈', hint: 'Dashboard', href: root },
+    { label: '센터 관리', hint: 'Center Ops', href: `${root}/center-management` },
     { label: '내 지갑 관리', hint: 'Wallet', href: `${root}/wallet-management` },
     {
       label: '구매주문 관리',

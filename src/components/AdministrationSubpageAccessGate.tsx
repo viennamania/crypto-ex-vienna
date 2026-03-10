@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import {
   AutoConnect,
   useActiveAccount,
@@ -54,6 +55,7 @@ export default function AdministrationSubpageAccessGate({
   lang,
   children,
 }: AdministrationSubpageAccessGateProps) {
+  const pathname = usePathname() || '';
   const { wallet, wallets, chain } = useClientWallets({
     authOptions: WALLET_AUTH_OPTIONS,
   });
@@ -85,6 +87,8 @@ export default function AdministrationSubpageAccessGate({
     return null;
   }, [activeWallet, connectedWallets, resolvedActiveAccount]);
 
+  const normalizedPathname = pathname.replace(/\/+$/, '');
+  const isCenterManagementRoute = normalizedPathname.endsWith('/administration/center-management');
   const walletAddress = String(resolvedActiveAccount?.address || signatureAccount?.address || '').trim();
   const hasConnectedWallet = Boolean(activeWallet) || connectedWallets.length > 0;
 
@@ -372,6 +376,36 @@ export default function AdministrationSubpageAccessGate({
   };
 
   if (!walletAddress) {
+    if (isCenterManagementRoute) {
+      return (
+        <div className="min-h-[60vh] w-full flex flex-col items-center justify-center gap-4 p-6">
+          <AutoConnect client={client} wallets={[wallet]} />
+          <div className="w-full max-w-lg overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)]">
+            <div className="bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_55%,#334155_100%)] px-6 py-5 text-white">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200">Center Management</p>
+              <h1 className="mt-2 text-2xl font-black tracking-tight">접근이 제한되었습니다</h1>
+              <p className="mt-2 text-sm text-slate-200">
+                thirdweb AutoConnect만 활성화되어 있으며, 연결된 관리자 지갑이 없으면 이 페이지에 진입할 수 없습니다.
+              </p>
+            </div>
+            <div className="space-y-4 px-6 py-5">
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+                <p className="text-sm font-semibold text-rose-700">지갑 연결이 확인되지 않았습니다.</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  기존 로그인 세션이 있으면 자동으로 복구되며, 그렇지 않으면 접근이 차단됩니다.
+                </p>
+              </div>
+              <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                <p>허용 방식: AutoConnect only</p>
+                <p>필수 조건: 관리자 권한 지갑 연결</p>
+                <p>상태: Access denied</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-[60vh] w-full flex flex-col items-center justify-center gap-4 p-6">
         <AutoConnect client={client} wallets={[wallet]} />
