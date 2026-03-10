@@ -96,9 +96,9 @@ export default function CenterManagementPage() {
 
   const quickLinks = [
     {
-      href: `/${lang}/administration/wallet-management`,
-      label: '내 지갑 관리',
-      description: '잔액, 전송, 즐겨찾기 지갑을 바로 관리합니다.',
+      href: `/${lang}/administration/center-management/wallet-management`,
+      label: '지갑 관리',
+      description: '센터 관리자 전용 지갑 상태와 운영 지갑 주소를 확인합니다.',
     },
     {
       href: `/${lang}/administration/payment-management`,
@@ -145,6 +145,12 @@ export default function CenterManagementPage() {
                 >
                   지갑주소 복사
                 </button>
+                <Link
+                  href={`/${lang}/administration/center-management/wallet-management`}
+                  className="inline-flex h-11 items-center rounded-2xl border border-slate-300 bg-white/90 px-4 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-white"
+                >
+                  지갑 관리 메뉴 이동
+                </Link>
                 <div className="inline-flex h-11 items-center rounded-2xl border border-white/70 bg-white/80 px-4 text-sm font-semibold text-slate-700">
                   Welcome back to center operations
                 </div>

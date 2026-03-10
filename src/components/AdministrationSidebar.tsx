@@ -74,6 +74,7 @@ const buildMenuItems = (lang: string): MenuItem[] => {
 const buildCenterManagementMenuItems = (lang: string): MenuItem[] => {
   const root = `/${lang}/administration`;
   return [
+    { label: '지갑 관리', hint: 'Wallet', href: `${root}/center-management/wallet-management` },
     { label: '가맹점 관리', hint: 'Store', href: `${root}/store` },
     { label: '에이전트 관리', hint: 'Agent', href: `${root}/agent` },
     { label: '회원 관리', hint: 'Member', href: `${root}/member` },
@@ -96,7 +97,7 @@ const isActiveRoute = (pathname: string, href: string) => {
 export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: AdministrationSidebarProps) {
   const pathname = usePathname() || '';
   const normalizedPathname = pathname.replace(/\/+$/, '');
-  const isCenterManagementRoute = normalizedPathname.endsWith('/administration/center-management');
+  const isCenterManagementRoute = /\/administration\/center-management(?:\/|$)/.test(normalizedPathname);
   const menuItems = isCenterManagementRoute ? buildCenterManagementMenuItems(lang) : buildMenuItems(lang);
   const buyOrderManagementHref = isCenterManagementRoute
     ? `/${lang}/administration/buyorder`

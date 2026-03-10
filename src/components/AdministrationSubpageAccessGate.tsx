@@ -88,7 +88,7 @@ export default function AdministrationSubpageAccessGate({
   }, [activeWallet, connectedWallets, resolvedActiveAccount]);
 
   const normalizedPathname = pathname.replace(/\/+$/, '');
-  const isCenterManagementRoute = normalizedPathname.endsWith('/administration/center-management');
+  const isCenterManagementRoute = /\/administration\/center-management(?:\/|$)/.test(normalizedPathname);
   const walletAddress = String(resolvedActiveAccount?.address || signatureAccount?.address || '').trim();
   const hasConnectedWallet = Boolean(activeWallet) || connectedWallets.length > 0;
 
