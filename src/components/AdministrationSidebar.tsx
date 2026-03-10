@@ -104,7 +104,7 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
   const pathname = usePathname() || '';
   const normalizedPathname = pathname.replace(/\/+$/, '');
   const isCenterManagementRoute = shouldUseCenterManagementMenu(normalizedPathname, lang);
-  const menuItems = isCenterManagementRoute ? buildCenterManagementMenuItems(lang) : buildMenuItems(lang);
+  const menuItems: MenuItem[] = isCenterManagementRoute ? buildCenterManagementMenuItems(lang) : buildMenuItems(lang);
   const buyOrderManagementHref = isCenterManagementRoute
     ? `/${lang}/administration/buyorder`
     : `/${lang}/administration/buyorder-management`;

@@ -338,7 +338,7 @@ export default function CenterManagementWalletManagementPage() {
 
         const response = await fetch(url.toString(), {
           headers: {
-            'x-client-id': clientId,
+            'x-client-id': String(clientId),
           },
           signal: controller.signal,
         });
