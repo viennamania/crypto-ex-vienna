@@ -189,6 +189,79 @@ interface BuyOrder {
 
 const walletAuthOptions = ["google", "email"];
 
+const createEmptyBuyOrderStats = () => ({
+  totalCount: 0,
+  totalKrwAmount: 0,
+  totalUsdtAmount: 0,
+  totalSettlementCount: 0,
+  totalSettlementAmount: 0,
+  totalSettlementAmountKRW: 0,
+  totalFeeAmount: 0,
+  totalFeeAmountKRW: 0,
+  totalAgentFeeAmount: 0,
+  totalAgentFeeAmountKRW: 0,
+  totalByBuyerDepositName: [] as Array<{
+    _id: string;
+    totalCount: number;
+    totalKrwAmount: number;
+    totalUsdtAmount: number;
+  }>,
+  totalReaultGroupByBuyerDepositNameCount: 0,
+});
+
+const normalizeBuyOrdersResult = (result: any) => {
+  const nextStats = createEmptyBuyOrderStats();
+  const source = result && typeof result === 'object' ? result : {};
+
+  return {
+    orders: Array.isArray(source.orders) ? source.orders : ([] as BuyOrder[]),
+    stats: {
+      ...nextStats,
+      totalCount: Number(source.totalCount || 0),
+      totalKrwAmount: Number(source.totalKrwAmount || 0),
+      totalUsdtAmount: Number(source.totalUsdtAmount || 0),
+      totalSettlementCount: Number(source.totalSettlementCount || 0),
+      totalSettlementAmount: Number(source.totalSettlementAmount || 0),
+      totalSettlementAmountKRW: Number(source.totalSettlementAmountKRW || 0),
+      totalFeeAmount: Number(source.totalFeeAmount || 0),
+      totalFeeAmountKRW: Number(source.totalFeeAmountKRW || 0),
+      totalAgentFeeAmount: Number(source.totalAgentFeeAmount || 0),
+      totalAgentFeeAmountKRW: Number(source.totalAgentFeeAmountKRW || 0),
+      totalByBuyerDepositName: Array.isArray(source.totalByBuyerDepositName)
+        ? source.totalByBuyerDepositName
+        : nextStats.totalByBuyerDepositName,
+      totalReaultGroupByBuyerDepositNameCount: Number(source.totalReaultGroupByBuyerDepositNameCount || 0),
+    },
+  };
+};
+
+const formatShortWallet = (value?: string | null) => {
+  const normalizedValue = String(value || '').trim();
+  if (!normalizedValue) {
+    return '-';
+  }
+  if (normalizedValue.length <= 10) {
+    return normalizedValue;
+  }
+  return `${normalizedValue.slice(0, 6)}...${normalizedValue.slice(-4)}`;
+};
+
+const formatShortText = (value?: string | null, maxLength = 5) => {
+  const normalizedValue = String(value || '');
+  if (!normalizedValue) {
+    return '';
+  }
+  return normalizedValue.length > maxLength ? `${normalizedValue.slice(0, maxLength)}...` : normalizedValue;
+};
+
+const formatLeadingPreview = (value?: string | null, visibleLength = 3) => {
+  const normalizedValue = String(value || '');
+  if (!normalizedValue) {
+    return '';
+  }
+  return `${normalizedValue.slice(0, Math.min(visibleLength, normalizedValue.length))}...`;
+};
+
 
 
 export default function Index({ params }: any) {
@@ -1034,26 +1107,13 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
       bankUserInfo: any;
     }>;
     */
-  }>({
-    totalCount: 0,
-    totalKrwAmount: 0,
-    totalUsdtAmount: 0,
-    totalSettlementCount: 0,
-    totalSettlementAmount: 0,
-    totalSettlementAmountKRW: 0,
-    totalFeeAmount: 0,
-    totalFeeAmountKRW: 0,
-    totalAgentFeeAmount: 0,
-    totalAgentFeeAmountKRW: 0,
+  }>(createEmptyBuyOrderStats());
 
-    //totalByUserType: [],
-    
-    totalByBuyerDepositName: [],
-    totalReaultGroupByBuyerDepositNameCount: 0,
-
-    
-    //totalBySellerBankAccountNumber: [],
-  });
+  const applyBuyOrdersResult = (result: any) => {
+    const normalizedBuyOrders = normalizeBuyOrdersResult(result);
+    setBuyOrders(normalizedBuyOrders.orders);
+    setBuyOrderStats(normalizedBuyOrders.stats);
+  };
 
 
 
@@ -1262,25 +1322,7 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
             .then(response => response.json())
             .then(data => {
                 ///console.log('data', data);
-                setBuyOrders(data.result.orders);
-
-                //setTotalCount(data.result.totalCount);
-
-                setBuyOrderStats({
-                  totalCount: data.result.totalCount,
-                  totalKrwAmount: data.result.totalKrwAmount,
-                  totalUsdtAmount: data.result.totalUsdtAmount,
-                  totalSettlementCount: data.result.totalSettlementCount,
-                  totalSettlementAmount: data.result.totalSettlementAmount,
-                  totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-                  totalFeeAmount: data.result.totalFeeAmount,
-                  totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-                  totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-                  totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
-
-                  totalByBuyerDepositName: data.result.totalByBuyerDepositName,
-                  totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
-                });
+                applyBuyOrdersResult(data?.result);
 
             })
 
@@ -1422,25 +1464,7 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
           const data = await response.json();
           //console.log('data', data);
           if (data.result) {
-            setBuyOrders(data.result.orders);
-
-            ////setTotalCount(data.result.totalCount);
-
-            setBuyOrderStats({
-              totalCount: data.result.totalCount,
-              totalKrwAmount: data.result.totalKrwAmount,
-              totalUsdtAmount: data.result.totalUsdtAmount,
-              totalSettlementCount: data.result.totalSettlementCount,
-              totalSettlementAmount: data.result.totalSettlementAmount,
-              totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-              totalFeeAmount: data.result.totalFeeAmount,
-              totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-              totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-              totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
-
-              totalByBuyerDepositName: data.result.totalByBuyerDepositName,
-              totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
-            });
+            applyBuyOrdersResult(data?.result);
 
           }
         });
@@ -1521,25 +1545,7 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
           const data = await response.json();
           //console.log('data', data);
           if (data.result) {
-            setBuyOrders(data.result.orders);
-
-            //setTotalCount(data.result.totalCount);
-
-            setBuyOrderStats({
-              totalCount: data.result.totalCount,
-              totalKrwAmount: data.result.totalKrwAmount,
-              totalUsdtAmount: data.result.totalUsdtAmount,
-              totalSettlementCount: data.result.totalSettlementCount,
-              totalSettlementAmount: data.result.totalSettlementAmount,
-              totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-              totalFeeAmount: data.result.totalFeeAmount,
-              totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-              totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-              totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
-
-              totalByBuyerDepositName: data.result.totalByBuyerDepositName,
-              totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
-            });
+            applyBuyOrdersResult(data?.result);
 
 
           }
@@ -1828,25 +1834,7 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
               const data = await response.json();
               //console.log('data', data);
               if (data.result) {
-                setBuyOrders(data.result.orders);
-    
-                //setTotalCount(data.result.totalCount);
-
-                setBuyOrderStats({
-                  totalCount: data.result.totalCount,
-                  totalKrwAmount: data.result.totalKrwAmount,
-                  totalUsdtAmount: data.result.totalUsdtAmount,
-                  totalSettlementCount: data.result.totalSettlementCount,
-                  totalSettlementAmount: data.result.totalSettlementAmount,
-                  totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-                  totalFeeAmount: data.result.totalFeeAmount,
-                  totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-                  totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-                  totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
-
-                  totalByBuyerDepositName: data.result.totalByBuyerDepositName,
-                  totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
-                });
+                applyBuyOrdersResult(data?.result);
 
               }
             });
@@ -1960,25 +1948,7 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
             const data = await response.json();
             //console.log('data', data);
             if (data.result) {
-              setBuyOrders(data.result.orders);
-  
-              //setTotalCount(data.result.totalCount);
-
-              setBuyOrderStats({
-                totalCount: data.result.totalCount,
-                totalKrwAmount: data.result.totalKrwAmount,
-                totalUsdtAmount: data.result.totalUsdtAmount,
-                totalSettlementCount: data.result.totalSettlementCount,
-                totalSettlementAmount: data.result.totalSettlementAmount,
-                totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-                totalFeeAmount: data.result.totalFeeAmount,
-                totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-                totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-                totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
-
-                totalByBuyerDepositName: data.result.totalByBuyerDepositName,
-                totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
-              });
+              applyBuyOrdersResult(data?.result);
 
             }
           });
@@ -2242,25 +2212,7 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
             const data = await response.json();
             //console.log('data', data);
             if (data.result) {
-              setBuyOrders(data.result.orders);
-  
-              //setTotalCount(data.result.totalCount);
-
-              setBuyOrderStats({
-                totalCount: data.result.totalCount,
-                totalKrwAmount: data.result.totalKrwAmount,
-                totalUsdtAmount: data.result.totalUsdtAmount,
-                totalSettlementCount: data.result.totalSettlementCount,
-                totalSettlementAmount: data.result.totalSettlementAmount,
-                totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-                totalFeeAmount: data.result.totalFeeAmount,
-                totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-                totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-                totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
-
-                totalByBuyerDepositName: data.result.totalByBuyerDepositName,
-                totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
-              });
+              applyBuyOrdersResult(data?.result);
 
 
             }
@@ -2417,26 +2369,7 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
             const data = await response.json();
             //console.log('data', data);
             if (data.result) {
-              setBuyOrders(data.result.orders);
-  
-              //setTotalCount(data.result.totalCount);
-
-
-              setBuyOrderStats({
-                totalCount: data.result.totalCount,
-                totalKrwAmount: data.result.totalKrwAmount,
-                totalUsdtAmount: data.result.totalUsdtAmount,
-                totalSettlementCount: data.result.totalSettlementCount,
-                totalSettlementAmount: data.result.totalSettlementAmount,
-                totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-                totalFeeAmount: data.result.totalFeeAmount,
-                totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-                totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-                totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
-
-                totalByBuyerDepositName: data.result.totalByBuyerDepositName,
-                totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
-              });
+              applyBuyOrdersResult(data?.result);
 
             }
           });
@@ -2600,25 +2533,7 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
         .then(response => response.json())
         .then(data => {
             ///console.log('data', data);
-            setBuyOrders(data.result.orders);
-
-            //setTotalCount(data.result.totalCount);
-
-            setBuyOrderStats({
-              totalCount: data.result.totalCount,
-              totalKrwAmount: data.result.totalKrwAmount,
-              totalUsdtAmount: data.result.totalUsdtAmount,
-              totalSettlementCount: data.result.totalSettlementCount,
-              totalSettlementAmount: data.result.totalSettlementAmount,
-              totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-              totalFeeAmount: data.result.totalFeeAmount,
-              totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-              totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-              totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
-
-              totalByBuyerDepositName: data.result.totalByBuyerDepositName,
-              totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
-            });
+            applyBuyOrdersResult(data?.result);
 
         })
 
@@ -2718,25 +2633,7 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
         .then(response => response.json())
         .then(data => {
             ///console.log('data', data);
-            setBuyOrders(data.result.orders);
-
-            //setTotalCount(data.result.totalCount);
-
-            setBuyOrderStats({
-              totalCount: data.result.totalCount,
-              totalKrwAmount: data.result.totalKrwAmount,
-              totalUsdtAmount: data.result.totalUsdtAmount,
-              totalSettlementCount: data.result.totalSettlementCount,
-              totalSettlementAmount: data.result.totalSettlementAmount,
-              totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-              totalFeeAmount: data.result.totalFeeAmount,
-              totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-              totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-              totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
-
-              totalByBuyerDepositName: data.result.totalByBuyerDepositName,
-              totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
-            });
+            applyBuyOrdersResult(data?.result);
 
         })
 
@@ -2953,25 +2850,7 @@ getAllBuyOrders result totalAgentFeeAmountKRW 0
 
 
 
-      setBuyOrders(data.result.orders);
-
-      //setTotalCount(data.result.totalCount);
-
-      setBuyOrderStats({
-        totalCount: data.result.totalCount,
-        totalKrwAmount: data.result.totalKrwAmount,
-        totalUsdtAmount: data.result.totalUsdtAmount,
-        totalSettlementCount: data.result.totalSettlementCount,
-        totalSettlementAmount: data.result.totalSettlementAmount,
-        totalSettlementAmountKRW: data.result.totalSettlementAmountKRW,
-        totalFeeAmount: data.result.totalFeeAmount,
-        totalFeeAmountKRW: data.result.totalFeeAmountKRW,
-        totalAgentFeeAmount: data.result.totalAgentFeeAmount,
-        totalAgentFeeAmountKRW: data.result.totalAgentFeeAmountKRW,
-
-        totalByBuyerDepositName: data.result.totalByBuyerDepositName,
-        totalReaultGroupByBuyerDepositNameCount: data.result.totalReaultGroupByBuyerDepositNameCount,
-      });
+      applyBuyOrdersResult(data?.result);
 
 
     }
@@ -3063,11 +2942,10 @@ const fetchBuyOrders = async () => {
   const data = await response.json();
   //console.log('data', data);
 
-  setBuyOrders(data.result.orders);
-  //setTotalCount(data.result.totalCount);
+  applyBuyOrdersResult(data?.result);
   setFetchingBuyOrders(false);
 
-  return data.result.orders;
+  return normalizeBuyOrdersResult(data?.result).orders;
 }
 
 
@@ -3291,10 +3169,10 @@ const fetchBuyOrders = async () => {
 
 
 
-    setAllStores(data.result.stores);
-    setStoreTotalCount(data.result.totalCount);
+    setAllStores(Array.isArray(data?.result?.stores) ? data.result.stores : []);
+    setStoreTotalCount(Number(data?.result?.totalCount || 0));
     setFetchingAllStores(false);
-    return data.result.stores;
+    return Array.isArray(data?.result?.stores) ? data.result.stores : [];
   }
   useEffect(() => {
     if (!address) {
@@ -3330,8 +3208,8 @@ const fetchBuyOrders = async () => {
     }
     const data = await response.json();
     //console.log('getTotalNumberOfBuyOrders data', data);
-    setTotalNumberOfBuyOrders(data.result.totalCount);
-    setTotalNumberOfAudioOnBuyOrders(data.result.audioOnCount);
+    setTotalNumberOfBuyOrders(Number(data?.result?.totalCount || 0));
+    setTotalNumberOfAudioOnBuyOrders(Number(data?.result?.audioOnCount || 0));
 
     setLoadingTotalNumberOfBuyOrders(false);
   };
@@ -3398,7 +3276,7 @@ const fetchBuyOrders = async () => {
       }
       const data = await response.json();
       //console.log('getTotalNumberOfClearanceOrders data', data);
-      setTotalNumberOfClearanceOrders(data.result.totalCount);
+      setTotalNumberOfClearanceOrders(Number(data?.result?.totalCount || 0));
 
       setLoadingTotalNumberOfClearanceOrders(false);
     };
@@ -3495,10 +3373,11 @@ const fetchBuyOrders = async () => {
 
     ///console.log('getAllSellersForBalance data', data);
 
-    if (data.result) {
-      setSellersBalance(data.result.users);
+    if (data?.result) {
+      setSellersBalance(Array.isArray(data?.result?.users) ? data.result.users : []);
     } else {
       console.error('Error fetching sellers balance');
+      setSellersBalance([]);
     }
   };
   useEffect(() => {
@@ -3816,103 +3695,6 @@ const fetchBuyOrders = async () => {
             //data-disclaimer="Disclaimer"
           ></div>
           */}
-          
-
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 items-center justify-start mb-4">
-
-
-              <button
-                  onClick={() => router.push('/' + params.lang + '/administration/store')}
-                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
-                  >
-                  가맹점관리
-              </button>
-
-              <button
-                  onClick={() => router.push('/' + params.lang + '/administration/agent')}
-                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
-                  >
-                  에이전트관리
-              </button>
-
-
-              <button
-                  onClick={() => router.push('/' + params.lang + '/administration/member')}
-                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
-                  >
-                  회원관리
-              </button>
-
-              <div className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-900/80 bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-[0_16px_40px_-28px_rgba(15,23,42,0.6)]">
-                <Image
-                  src="/icon-buyorder.png"
-                  alt="Trade"
-                  width={35}
-                  height={35}
-                  className="w-4 h-4"
-                />
-                <div className="text-xs font-semibold">
-                  P2P구매관리
-                </div>
-              </div>
-
-              <button
-                  onClick={() => router.push('/' + params.lang + '/administration/trade-history')}
-                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
-                  >
-                  거래내역
-              </button>
-
-              {/*
-              {version !== 'bangbang' && (
-                <button
-                  onClick={() => router.push('/' + params.lang + '/administration/clearance-history')}
-                  className="flex w-32 bg-slate-900 text-white text-sm rounded-lg p-2 items-center justify-center
-                  hover:bg-slate-900/80
-                  hover:cursor-pointer
-                  hover:scale-105
-                  transition-transform duration-200 ease-in-out
-                  ">
-                  청산관리
-              </button>
-              )}
-              */}
-
-              <button
-                  onClick={() => router.push('/' + params.lang + '/administration/trade-history-daily')}
-                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
-                  >
-                  통계(가맹)
-              </button>
-
-              <button
-                  onClick={() => router.push('/' + params.lang + '/administration/trade-history-daily-agent')}
-                  className="flex w-full items-center justify-center rounded-full border border-slate-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900"
-                  >
-                  통계(AG)
-              </button>
-
-              {/*
-              {version !== 'bangbang' && (
-                <button
-                    onClick={() => router.push('/' + params.lang + '/administration/escrow-history')}
-                    className="flex w-32 bg-slate-900 text-white text-sm rounded-lg p-2 items-center justify-center
-                    hover:bg-slate-900/80
-                    hover:cursor-pointer
-                  hover:scale-105
-                  transition-transform duration-200 ease-in-out
-                  ">
-                  보유량내역
-                </button>
-              )}
-              */}
-
-          </div>
-
-
-
-
           
 
 
@@ -4587,11 +4369,11 @@ const fetchBuyOrders = async () => {
                           <button
                             className="text-sm text-slate-700 font-semibold underline decoration-slate-300 hover:text-slate-900"
                             onClick={() => {
-                              navigator.clipboard.writeText(seller.walletAddress);
+                              navigator.clipboard.writeText(seller?.walletAddress || '');
                               toast.success(Copied_Wallet_Address);
                             } }
                           >
-                            {seller.walletAddress.substring(0, 6)}...{seller.walletAddress.substring(seller.walletAddress.length - 4)}
+                            {formatShortWallet(seller?.walletAddress)}
                           </button>
                       </div>
 
@@ -4608,13 +4390,11 @@ const fetchBuyOrders = async () => {
                           <button
                             className="text-sm text-slate-700 font-semibold underline decoration-slate-300 hover:text-slate-900"
                             onClick={() => {
-                              navigator.clipboard.writeText(seller.seller.escrowWalletAddress);
+                              navigator.clipboard.writeText(seller?.seller?.escrowWalletAddress || '');
                               toast.success(Copied_Wallet_Address);
                             } }
                           >
-                            {
-                              seller.seller.escrowWalletAddress.substring(0, 6)}...{seller.seller.escrowWalletAddress.substring(seller.seller.escrowWalletAddress.length - 4)
-                            }
+                            {formatShortWallet(seller?.seller?.escrowWalletAddress)}
                           </button>
                         </div>
 
@@ -4650,14 +4430,14 @@ const fetchBuyOrders = async () => {
                           />
                           <span className="text-sm text-slate-900 font-medium">
                             {seller.seller?.bankInfo?.bankName}{' '}
-                            {seller.seller?.bankInfo?.accountNumber.length > 10
-                              ? seller.seller?.bankInfo?.accountNumber.substring(0, 4) +'****'+
-                                seller.seller?.bankInfo?.accountNumber.substring(seller.seller?.bankInfo?.accountNumber.length - 4)
-                              : seller.seller?.bankInfo?.accountNumber
+                            {seller.seller?.bankInfo?.accountNumber && seller.seller.bankInfo.accountNumber.length > 10
+                              ? seller.seller.bankInfo.accountNumber.substring(0, 4) +'****'+
+                                seller.seller.bankInfo.accountNumber.substring(seller.seller.bankInfo.accountNumber.length - 4)
+                              : seller.seller?.bankInfo?.accountNumber || ''
                             }{' '}
-                            {seller.seller?.bankInfo?.accountHolder.length > 2
-                              ? seller.seller?.bankInfo?.accountHolder.substring(0, 1) +'**'
-                              : seller.seller?.bankInfo?.accountHolder
+                            {seller.seller?.bankInfo?.accountHolder && seller.seller.bankInfo.accountHolder.length > 2
+                              ? seller.seller.bankInfo.accountHolder.substring(0, 1) +'**'
+                              : seller.seller?.bankInfo?.accountHolder || ''
                             }
                           </span>
                         </div>
@@ -4679,7 +4459,7 @@ const fetchBuyOrders = async () => {
                             </span>
                             <span className="text-2xl font-semibold text-amber-600"
                               style={{ fontFamily: 'monospace' }}>
-                              {seller.seller?.usdtToKrwRate.toLocaleString()}
+                              {Number(seller.seller?.usdtToKrwRate || 0).toLocaleString()}
                             </span>
                           </div>
                         </div>
@@ -4710,7 +4490,7 @@ const fetchBuyOrders = async () => {
                             height={20}
                             className="w-5 h-5 animate-spin"
                           />
-                          <span className="font-semibold">{seller.seller?.buyOrder.krwAmount.toLocaleString()} 원 입금 확인중</span>
+                          <span className="font-semibold">{Number(seller.seller?.buyOrder?.krwAmount || 0).toLocaleString()} 원 입금 확인중</span>
                         </div>
                       ) : seller.seller?.buyOrder?.status === 'paymentConfirmed' &&
                           (!seller.seller?.buyOrder?.transactionHash || seller.seller?.buyOrder?.transactionHash === '0x') ? (
@@ -4723,7 +4503,7 @@ const fetchBuyOrders = async () => {
                             height={20}
                             className="w-5 h-5 animate-spin"
                           />
-                          <span className="font-semibold">{seller.seller?.buyOrder.usdtAmount.toLocaleString()} USDT 전송중</span>
+                          <span className="font-semibold">{Number(seller.seller?.buyOrder?.usdtAmount || 0).toLocaleString()} USDT 전송중</span>
                         </div>
                       ) : (
                         <div className="flex flex-row items-center gap-2
@@ -4749,11 +4529,11 @@ const fetchBuyOrders = async () => {
                           <button
                             className="text-sm text-slate-700 font-semibold underline decoration-slate-300 hover:text-slate-900"
                             onClick={() => {
-                              navigator.clipboard.writeText(seller.seller?.buyOrder?.walletAddress);
+                              navigator.clipboard.writeText(seller?.seller?.buyOrder?.walletAddress || '');
                               toast.success(Copied_Wallet_Address);
                             } }
                           >
-                            {seller.seller?.buyOrder?.walletAddress.substring(0, 6)}...{seller.seller?.buyOrder?.walletAddress.substring(seller.seller?.buyOrder?.walletAddress.length - 4)}
+                            {formatShortWallet(seller?.seller?.buyOrder?.walletAddress)}
                           </button>
                         </div>
                         {/* 구매주문번호 */}
@@ -4775,10 +4555,10 @@ const fetchBuyOrders = async () => {
                           {Buy_Amount}(USDT): {seller.seller?.buyOrder?.usdtAmount}
                         </span>
                         <span className="text-sm text-slate-900 font-semibold">
-                          {Payment_Amount}(원): {seller.seller?.buyOrder?.krwAmount.toLocaleString()}
+                          {Payment_Amount}(원): {Number(seller.seller?.buyOrder?.krwAmount || 0).toLocaleString()}
                         </span>
                         <span className="text-sm text-slate-900 font-semibold">
-                          {Rate}(원): {seller.seller?.buyOrder?.rate.toLocaleString()} 
+                          {Rate}(원): {Number(seller.seller?.buyOrder?.rate || 0).toLocaleString()} 
                         </span>
 
                       </div>
@@ -5093,9 +4873,7 @@ const fetchBuyOrders = async () => {
                               </span>
                               <span className="text-xs text-slate-600 font-medium">
                                 {
-                                  item?.agent.agentName?.length > 5 ?
-                                  item?.agent.agentName?.substring(0, 5) + '...' :
-                                  item?.agent.agentName
+                                  formatShortText(item?.agent?.agentName, 5)
                                 }
                               </span>
                             </div>
@@ -5251,11 +5029,11 @@ const fetchBuyOrders = async () => {
                                 className="text-sm text-slate-700 font-semibold underline decoration-slate-300 hover:text-slate-900
                                 "
                                 onClick={() => {
-                                  navigator.clipboard.writeText(item.walletAddress);
+                                  navigator.clipboard.writeText(item?.walletAddress || '');
                                   toast.success(Copied_Wallet_Address);
                                 }}
                               >
-                                {item.walletAddress.substring(0, 6)}...{item.walletAddress.substring(item.walletAddress.length - 4)}
+                                {formatShortWallet(item?.walletAddress)}
                               </button>
                             </div>
 
@@ -5280,8 +5058,7 @@ const fetchBuyOrders = async () => {
                                 <span className="
                                   text-sm text-slate-700 font-medium">
                                   {
-                                    item?.buyer?.depositBanktAccountNumber &&
-                                    item?.buyer?.depositBanktAccountNumber.substring(0, 3) + '...'
+                                    formatLeadingPreview(item?.buyer?.depositBanktAccountNumber, 3)
                                   }
                                 </span>
                               </div>
@@ -5407,11 +5184,11 @@ const fetchBuyOrders = async () => {
                                   <button
                                     className="text-sm text-slate-700 font-semibold underline decoration-slate-300 hover:text-slate-900"
                                     onClick={() => {
-                                      navigator.clipboard.writeText(item?.escrowWallet.address);
+                                      navigator.clipboard.writeText(item?.escrowWallet?.address || '');
                                       toast.success(Copied_Wallet_Address);
                                     }}
                                   >
-                                      {item?.escrowWallet.address.substring(0, 6)}...{item?.escrowWallet.address.substring(item?.escrowWallet.address.length - 4)}
+                                      {formatShortWallet(item?.escrowWallet?.address)}
                                   </button>
                                 </div>
 
