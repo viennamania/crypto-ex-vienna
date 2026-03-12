@@ -105,6 +105,9 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
   const normalizedPathname = pathname.replace(/\/+$/, '');
   const isCenterManagementRoute = shouldUseCenterManagementMenu(normalizedPathname, lang);
   const menuItems: MenuItem[] = isCenterManagementRoute ? buildCenterManagementMenuItems(lang) : buildMenuItems(lang);
+  const homeHref = isCenterManagementRoute
+    ? `/${lang}/administration/center-management`
+    : `/${lang}/administration`;
   const buyOrderManagementHref = isCenterManagementRoute
     ? `/${lang}/administration/buyorder`
     : `/${lang}/administration/buyorder-management`;
@@ -266,7 +269,7 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
   const menuContent = (
     <>
       <Link
-        href={`/${lang}/administration`}
+        href={homeHref}
         className="group rounded-2xl border border-slate-200/70 bg-white px-4 py-3 shadow-[0_16px_36px_-28px_rgba(15,23,42,0.55)] transition hover:-translate-y-0.5"
       >
         <div className="flex items-center gap-3">
