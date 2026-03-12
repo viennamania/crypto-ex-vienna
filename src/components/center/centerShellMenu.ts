@@ -64,18 +64,12 @@ export const buildCenterShellMenuItems = (lang: string, center: string): CenterS
   const root = `/${lang}/${center}`;
 
   return [
-    { key: 'home', label: '센터 홈', hint: 'Market', href: root, accessLevel: 'member' },
+    { key: 'wallet-management', label: '지갑 관리', hint: 'Wallet', href: `${root}/wallet-management`, accessLevel: 'member' },
     { key: 'center', label: '센터 대시보드', hint: 'Ops', href: `${root}/center`, accessLevel: 'center_admin' },
-    { key: 'buy', label: 'USDT 구매', hint: 'Buy', href: `${root}/buy-usdt`, accessLevel: 'member' },
-    { key: 'sell', label: 'USDT 판매', hint: 'Sell', href: `${root}/sell-usdt`, accessLevel: 'seller' },
-    { key: 'trade', label: '실시간 거래', hint: 'Trade', href: `${root}/trade`, accessLevel: 'member' },
-    { key: 'profile', label: '회원 등록', hint: 'Profile', href: `${root}/profiles`, accessLevel: 'registration' },
     { key: 'profile-settings', label: '회원 정보', hint: 'Account', href: `${root}/profile-settings`, accessLevel: 'member' },
     { key: 'member', label: '회원 관리', hint: 'Member', href: `${root}/member`, accessLevel: 'center_admin' },
     { key: 'buyorder', label: '구매주문 관리', hint: 'Orders', href: `${root}/buyorder`, accessLevel: 'center_admin' },
     { key: 'trade-history', label: '거래내역', hint: 'History', href: `${root}/trade-history`, accessLevel: 'center_admin' },
-    { key: 'clearance-request', label: '정산 요청', hint: 'Request', href: `${root}/clearance-request`, accessLevel: 'center_admin' },
-    { key: 'clearance-history', label: '정산 이력', hint: 'Clearance', href: `${root}/clearance-history`, accessLevel: 'center_admin' },
     { key: 'daily-close', label: '일 마감', hint: 'Close', href: `${root}/daily-close`, accessLevel: 'center_admin' },
     { key: 'settings', label: '센터 설정', hint: 'Settings', href: `${root}/settings`, accessLevel: 'center_admin' },
   ];

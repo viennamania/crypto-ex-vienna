@@ -69,6 +69,26 @@ export const metadata: Metadata = {
 
 const queryClient = new QueryClient();
 
+const KNOWN_LANG_ROOT_SEGMENTS = new Set([
+  'administration',
+  'buyer',
+  'buyerGuide',
+  'contact',
+  'home',
+  'notice',
+  'p2p',
+  'p2p-buyer',
+  'privacy-policy',
+  'refund-policy',
+  'seller',
+  'seller-escrow',
+  'sellerGuide',
+  'telegram-profile-settings',
+  'terms-of-service',
+  'wallet-management',
+  'web3login',
+]);
+
 
 
 const WalletConsoleShell = () => {
@@ -84,18 +104,21 @@ const WalletConsoleShell = () => {
   const p2pIndex = pathSegments.indexOf('p2p');
   const administrationIndex = pathSegments.indexOf('administration');
   const sellerEscrowIndex = pathSegments.indexOf('seller-escrow');
+  const langScopedRootSegment = pathSegments[1] || '';
   const isAgentManagementRoute = p2pIndex >= 0 && pathSegments[p2pIndex + 1] === 'agent-management';
   const isStoreManagementRoute = p2pIndex >= 0 && pathSegments[p2pIndex + 1] === 'store-management';
   const isP2pSellerSettingsRoute = p2pIndex >= 0 && pathSegments[p2pIndex + 1] === 'seller-settings';
   const isAdministrationRoute = administrationIndex >= 0;
   const isSellerEscrowRoute = sellerEscrowIndex >= 0;
+  const isCenterDynamicRoute = pathSegments.length >= 2 && !KNOWN_LANG_ROOT_SEGMENTS.has(langScopedRootSegment);
   const shouldHideWalletConsole =
     walletManagementIndex >= 0
     || isAgentManagementRoute
     || isStoreManagementRoute
     || isP2pSellerSettingsRoute
     || isAdministrationRoute
-    || isSellerEscrowRoute;
+    || isSellerEscrowRoute
+    || isCenterDynamicRoute;
 
   useEffect(() => {
     const prevAddress = previousAddressRef.current;

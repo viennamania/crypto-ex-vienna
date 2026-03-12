@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { useQRCode } from 'next-qrcode';
 import { getContract, sendAndConfirmTransaction } from 'thirdweb';
@@ -202,7 +202,8 @@ const shortenValue = (value?: string, leading = 6, trailing = 4) => {
 };
 
 export default function CenterManagementWalletManagementPage() {
-  const params = useParams<{ lang?: string }>();
+  const params = useParams<{ lang?: string; center?: string }>();
+  const pathname = usePathname() || '';
   const activeAccount = useActiveAccount();
   const activeWallet = useActiveWallet();
   const { chain } = useClientWallets({ authOptions: ['google', 'email'] });
@@ -214,8 +215,20 @@ export default function CenterManagementWalletManagementPage() {
 
   const langParam = params?.lang;
   const lang = Array.isArray(langParam) ? langParam[0] : langParam || 'ko';
+  const centerParam = params?.center;
+  const center = Array.isArray(centerParam) ? centerParam[0] : centerParam || '';
   const networkKey: NetworkKey = isNetworkKey(String(chain || '')) ? String(chain) as NetworkKey : 'polygon';
   const networkConfig = NETWORK_CONFIGS[networkKey];
+  const isAdministrationCenterWalletRoute = pathname.includes('/administration/center-management');
+  const badgeText = isAdministrationCenterWalletRoute ? 'Center Wallet Management' : 'Wallet Management';
+  const title = isAdministrationCenterWalletRoute ? '센터 관리자 지갑 관리' : '센터 지갑 관리';
+  const description = isAdministrationCenterWalletRoute
+    ? '연결된 관리자 지갑의 USDT 잔고를 공통으로 확인하고, 받기·보내기·내역 탭에서 바로 작업할 수 있습니다.'
+    : '연결된 센터 지갑에서 입금 주소 확인, USDT 출금, 최신 전송내역 조회를 한 화면에서 처리할 수 있습니다.';
+  const homeHref = isAdministrationCenterWalletRoute
+    ? `/${lang}/administration/center-management`
+    : `/${lang}/${center}`;
+  const homeLabel = isAdministrationCenterWalletRoute ? '센터 관리 홈으로' : '센터 홈으로';
 
   const contract = useMemo(() => (
     getContract({
@@ -550,13 +563,13 @@ export default function CenterManagementWalletManagementPage() {
             <div className="absolute left-0 top-0 h-24 w-24 rounded-full bg-sky-300/30 blur-3xl" />
             <div className="relative">
               <p className="inline-flex items-center rounded-full border border-slate-300/70 bg-white/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-700">
-                Center Wallet Management
+                {badgeText}
               </p>
               <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                센터 관리자 지갑 관리
+                {title}
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-                연결된 관리자 지갑의 USDT 잔고를 공통으로 확인하고, 받기·보내기·내역 탭에서 바로 작업할 수 있습니다.
+                {description}
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <button
@@ -574,10 +587,10 @@ export default function CenterManagementWalletManagementPage() {
                   잔고 새로고침
                 </button>
                 <Link
-                  href={`/${lang}/administration/center-management`}
+                  href={homeHref}
                   className="inline-flex h-11 items-center rounded-2xl border border-slate-300 bg-white/90 px-4 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-white"
                 >
-                  센터 관리 홈으로
+                  {homeLabel}
                 </Link>
               </div>
             </div>

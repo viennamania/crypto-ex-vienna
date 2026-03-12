@@ -3174,7 +3174,7 @@ const fetchBuyOrders = async () => {
 
 
 
-            <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 mb-4">
+            <div className="hidden grid grid-cols-2 xl:grid-cols-4 gap-2 mb-4">
 
 
 
@@ -5875,6 +5875,5 @@ const TradeDetail = (
       </div>
     );
   };
-
 
 

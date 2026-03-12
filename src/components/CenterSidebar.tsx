@@ -28,6 +28,7 @@ const isActiveRoute = (pathname: string, href: string) => {
 
 const iconByKey: Record<string, string> = {
   home: 'M3.5 12 12 4l8.5 8M6.5 10.8V20h11v-9.2',
+  'wallet-management': 'M6.5 6.5h11v11h-11z M9.2 10.2h5.6M9.2 13.8h3.2',
   center: 'M4.5 5.5h15v13h-15z M9 9.2h6M9 12h6M9 14.8h6',
   buy: 'M5 12h14M12 5l7 7-7 7',
   sell: 'M19 12H5m7 7-7-7 7-7',

@@ -1237,7 +1237,7 @@ export default function Index({ params }: any) {
 
 
 
-            <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 mb-4">
+            <div className="hidden grid grid-cols-2 xl:grid-cols-4 gap-2 mb-4">
 
                 <button
                     onClick={() => router.push('/' + params.lang + '/' + params.center + '/member')}
@@ -1964,6 +1964,5 @@ const TradeDetail = (
       </div>
     );
   };
-
 
 
