@@ -179,7 +179,11 @@ const walletAuthOptions = ["google"];
 
 
 export default function Index({ params }: any) {
-  const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
+  const { wallet, wallets } = useClientWallets({
+    authOptions: walletAuthOptions,
+    sponsorGas: true,
+    forceSmartAccount: true,
+  });
 
 
 

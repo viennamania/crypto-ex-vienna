@@ -87,7 +87,11 @@ import { useClientWallets } from "@/lib/useClientWallets";
 
 
 function ProfilePage() {
-    const { wallet } = useClientWallets();
+    const { wallet } = useClientWallets({
+        authOptions: ['google', 'email'],
+        sponsorGas: true,
+        forceSmartAccount: true,
+    });
 
     const searchParams = useSearchParams();
 

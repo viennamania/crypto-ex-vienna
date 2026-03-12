@@ -160,7 +160,11 @@ const walletAuthOptions = ["google", "email"];
 
 
 export default function Index({ params }: any) {
-  const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
+  const { wallet, wallets } = useClientWallets({
+    authOptions: walletAuthOptions,
+    sponsorGas: true,
+    forceSmartAccount: true,
+  });
 
 
 
@@ -2876,6 +2880,5 @@ export default function Index({ params }: any) {
 
 
 };
-
 
 

@@ -37,6 +37,7 @@ export type SupportedSmsCountry = Exclude<
 type UseClientWalletsOptions = {
   authOptions?: string[];
   sponsorGas?: boolean;
+  forceSmartAccount?: boolean;
   defaultSmsCountryCode?: SupportedSmsCountry;
   allowedSmsCountryCodes?: SupportedSmsCountry[];
 };
@@ -80,17 +81,17 @@ export function useClientWallets(options: UseClientWalletsOptions = {}) {
   const {
     authOptions = [],
     sponsorGas = true,
+    forceSmartAccount = false,
     defaultSmsCountryCode,
     allowedSmsCountryCodes,
   } = options;
   const { chain, smartAccountEnabled } = useClientSettings();
+  const shouldUseSmartAccount = forceSmartAccount || smartAccountEnabled;
   const activeChain = resolveChain(chain);
   const normalizedAuthOptions = useMemo(
     () => authOptions.filter(isInAppAuthOption),
     [authOptions]
   );
-  const authKey = normalizedAuthOptions.join('|');
-
   const wallet = useMemo(() => {
     const authConfig =
       normalizedAuthOptions.length > 0
@@ -102,7 +103,7 @@ export function useClientWallets(options: UseClientWalletsOptions = {}) {
             },
           }
         : {};
-    if (!smartAccountEnabled) {
+    if (!shouldUseSmartAccount) {
       return inAppWallet(authConfig);
     }
 
@@ -138,7 +139,7 @@ export function useClientWallets(options: UseClientWalletsOptions = {}) {
     });
 
   }, [
-    smartAccountEnabled,
+    shouldUseSmartAccount,
     sponsorGas,
     activeChain,
     normalizedAuthOptions,
@@ -155,7 +156,7 @@ export function useClientWallets(options: UseClientWalletsOptions = {}) {
         ...(allowedSmsCountryCodes ? { allowedSmsCountryCodes } : {}),
       };
     }
-    if (smartAccountEnabled) {
+    if (shouldUseSmartAccount) {
       config.smartAccount = {
         sponsorGas,
         chain: activeChain,
@@ -163,9 +164,8 @@ export function useClientWallets(options: UseClientWalletsOptions = {}) {
     }
     return [inAppWallet(config)];
   }, [
-    authKey,
     normalizedAuthOptions,
-    smartAccountEnabled,
+    shouldUseSmartAccount,
     sponsorGas,
     activeChain,
     defaultSmsCountryCode,
@@ -175,7 +175,7 @@ export function useClientWallets(options: UseClientWalletsOptions = {}) {
   return {
     wallet,
     wallets,
-    smartAccountEnabled,
+    smartAccountEnabled: shouldUseSmartAccount,
     chain,
   };
 }

@@ -200,7 +200,11 @@ const walletAuthOptions = ["google", "email"];
 export default function Index({ params }: any) {
 
   const searchParams = useSearchParams();
-  const { wallet, wallets } = useClientWallets({ authOptions: walletAuthOptions });
+  const { wallet, wallets } = useClientWallets({
+    authOptions: walletAuthOptions,
+    sponsorGas: true,
+    forceSmartAccount: true,
+  });
  
   ////////const wallet = searchParams.get('wallet');
 
@@ -9253,5 +9257,4 @@ const TradeDetail = (
       </div>
     );
   };
-
 

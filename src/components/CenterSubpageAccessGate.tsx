@@ -50,6 +50,8 @@ export default function CenterSubpageAccessGate({
   const pathname = usePathname() || '';
   const { wallet } = useClientWallets({
     authOptions: WALLET_AUTH_OPTIONS,
+    sponsorGas: true,
+    forceSmartAccount: true,
   });
   const activeAccount = useActiveAccount();
   const activeWallet = useActiveWallet();

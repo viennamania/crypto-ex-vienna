@@ -55,15 +55,8 @@ import {
 import AppBarComponent from "@/components/Appbar/AppBar";
 import { getDictionary } from "../../../dictionaries";
 
-
-
-
-
-
-
-
-
 import { ConnectButton } from '@/components/WalletConnectButton';
+import { useClientWallets } from '@/lib/useClientWallets';
 
 export default function SettingsPage({ params }: any) {
 
@@ -73,6 +66,11 @@ export default function SettingsPage({ params }: any) {
     const searchParams = useSearchParams();
  
     const wallet = searchParams.get('wallet');
+    const { wallets: centerWallets } = useClientWallets({
+        authOptions: ['google', 'email'],
+        sponsorGas: true,
+        forceSmartAccount: true,
+    });
     
     
     
@@ -185,7 +183,7 @@ export default function SettingsPage({ params }: any) {
       await connect({
         chain: arbitrum,
         client,
-        wallets,
+        wallets: centerWallets,
         ...WALLET_CONNECT_OPTIONS,
       });
     };
