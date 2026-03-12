@@ -32,6 +32,9 @@ const KNOWN_LANG_ROOT_SEGMENTS = new Set([
   'web3login',
 ]);
 
+const ADMIN_SMART_ACCOUNT_PATH_PATTERN =
+  /\/[^/]+\/administration\/(?:center-management|store|agent|member|buyorder|trade-history)(?:\/|$)/;
+
 export function ConnectButton(props: ConnectButtonProps) {
   const {
     connectButton,
@@ -43,12 +46,14 @@ export function ConnectButton(props: ConnectButtonProps) {
   const pathname = usePathname() || '';
   const pathSegments = pathname.replace(/\/+$/, '').split('/').filter(Boolean);
   const isCenterRoute = pathSegments.length >= 2 && !KNOWN_LANG_ROOT_SEGMENTS.has(pathSegments[1] || '');
+  const isAdminSmartAccountRoute = ADMIN_SMART_ACCOUNT_PATH_PATTERN.test(pathname);
+  const forceSmartAccount = isCenterRoute || isAdminSmartAccountRoute;
   const { wallets: centerWallets } = useClientWallets({
     authOptions: ['google', 'email'],
     sponsorGas: true,
-    forceSmartAccount: isCenterRoute,
+    forceSmartAccount,
   });
-  const wallets = isCenterRoute ? centerWallets : rest.wallets;
+  const wallets = forceSmartAccount ? centerWallets : rest.wallets;
 
   const mergedConnectButton = {
     label: connectButton?.label ?? 'Connect Wallet',

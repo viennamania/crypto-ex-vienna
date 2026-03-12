@@ -54,13 +54,22 @@ const resolveChain = (chain: string) => {
 const isWalletOnlyAdministrationRoute = (pathname: string) =>
   /\/administration\/(store|agent|member|buyorder|trade-history)(\/|$)/.test(pathname);
 
+const isAdministrationSmartAccountRoute = (pathname: string) =>
+  /\/administration\/(center-management|store|agent|member|buyorder|trade-history)(\/|$)/.test(pathname);
+
 export default function AdministrationSubpageAccessGate({
   lang,
   children,
 }: AdministrationSubpageAccessGateProps) {
   const pathname = usePathname() || '';
+  const normalizedPathname = pathname.replace(/\/+$/, '');
+  const isCenterManagementRoute = /\/administration\/center-management(?:\/|$)/.test(normalizedPathname);
+  const isWalletOnlyRoute = isWalletOnlyAdministrationRoute(normalizedPathname);
+  const forceSmartAccount = isAdministrationSmartAccountRoute(normalizedPathname);
   const { wallet, wallets, chain } = useClientWallets({
     authOptions: WALLET_AUTH_OPTIONS,
+    sponsorGas: true,
+    forceSmartAccount,
   });
   const activeAccount = useActiveAccount();
   const activeWallet = useActiveWallet();
@@ -90,9 +99,6 @@ export default function AdministrationSubpageAccessGate({
     return null;
   }, [activeWallet, connectedWallets, resolvedActiveAccount]);
 
-  const normalizedPathname = pathname.replace(/\/+$/, '');
-  const isCenterManagementRoute = /\/administration\/center-management(?:\/|$)/.test(normalizedPathname);
-  const isWalletOnlyRoute = isWalletOnlyAdministrationRoute(normalizedPathname);
   const walletAddress = String(resolvedActiveAccount?.address || signatureAccount?.address || '').trim();
   const hasConnectedWallet = Boolean(activeWallet) || connectedWallets.length > 0;
 

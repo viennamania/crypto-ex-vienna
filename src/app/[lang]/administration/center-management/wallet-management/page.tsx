@@ -206,7 +206,11 @@ export default function CenterManagementWalletManagementPage() {
   const pathname = usePathname() || '';
   const activeAccount = useActiveAccount();
   const activeWallet = useActiveWallet();
-  const { chain } = useClientWallets({ authOptions: ['google', 'email'] });
+  const { chain } = useClientWallets({
+    authOptions: ['google', 'email'],
+    sponsorGas: true,
+    forceSmartAccount: true,
+  });
   const { Canvas } = useQRCode();
 
   const account = activeWallet?.getAccount?.() ?? activeAccount;
