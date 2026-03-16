@@ -229,26 +229,26 @@ export default function SendUsdt({ params }: any) {
   //console.log("params", params);
 
   const searchParams = useSearchParams();
-  const isAgentWalletManagementRoute = useMemo(() => {
+  const isCompactWalletManagementRoute = useMemo(() => {
     const normalizedPath = String(pathname || '').replace(/\/+$/, '');
-    return /\/(?:p2p\/)?agent-management\/wallet-management$/.test(normalizedPath);
+    return /\/(?:(?:p2p\/)?agent-management|p2p\/store-management)\/wallet-management$/.test(normalizedPath);
   }, [pathname]);
-  const pageMainClass = isAgentWalletManagementRoute
+  const pageMainClass = isCompactWalletManagementRoute
     ? 'min-h-[100vh] bg-white px-3 py-5 pb-24'
     : 'min-h-[100vh] bg-white px-4 py-8 pb-28';
-  const supportContainerClass = isAgentWalletManagementRoute
+  const supportContainerClass = isCompactWalletManagementRoute
     ? 'mx-auto flex min-h-[70vh] max-w-[420px] items-center justify-center text-center'
     : 'mx-auto flex min-h-[70vh] max-w-screen-sm items-center justify-center text-center';
-  const contentContainerClass = isAgentWalletManagementRoute
+  const contentContainerClass = isCompactWalletManagementRoute
     ? 'w-full max-w-[420px] mx-auto'
     : 'w-full max-w-md mx-auto';
-  const compactRecipientInputClass = isAgentWalletManagementRoute
+  const compactRecipientInputClass = isCompactWalletManagementRoute
     ? 'w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800'
     : 'w-80 xl:w-96 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800';
-  const confirmCardClass = isAgentWalletManagementRoute
+  const confirmCardClass = isCompactWalletManagementRoute
     ? 'relative w-full max-w-[420px] overflow-hidden rounded-3xl border border-slate-200/90 bg-white/95 p-5 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.7)]'
     : 'relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200/90 bg-white/95 p-6 shadow-[0_34px_90px_-46px_rgba(15,23,42,0.75)]';
-  const footerTabsClass = isAgentWalletManagementRoute
+  const footerTabsClass = isCompactWalletManagementRoute
     ? 'fixed bottom-0 left-1/2 z-40 w-[calc(100%-1rem)] max-w-[420px] -translate-x-1/2 border-t border-slate-200 bg-white/95 backdrop-blur'
     : 'fixed bottom-0 left-1/2 z-40 w-[calc(100%-1rem)] max-w-md -translate-x-1/2 border-t border-slate-200 bg-white/95 backdrop-blur sm:w-[calc(100%-1.5rem)] sm:max-w-lg md:max-w-xl';
  
