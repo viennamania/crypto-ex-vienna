@@ -656,7 +656,6 @@ export default function StoreManagementPage() {
 
   const loadAdminWalletMembers = useCallback(async (store: StoreItem) => {
     const normalizedStorecode = store.storecode.trim();
-    const adminStorecode = 'admin';
     if (!normalizedStorecode) {
       setAdminWalletMembers([]);
       return;
@@ -664,6 +663,7 @@ export default function StoreManagementPage() {
 
     setLoadingAdminWalletMembers(true);
     try {
+      const adminStorecode = 'admin';
       const response = await fetch('/api/user/getAllUsersByStorecode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

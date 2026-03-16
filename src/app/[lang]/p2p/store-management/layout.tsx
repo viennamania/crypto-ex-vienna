@@ -13,7 +13,6 @@ import {
 
 import { client } from '@/app/client';
 import ClientBrandTitleSync from '@/components/ClientBrandTitleSync';
-import { getCenterRegistrationHref } from '@/components/center/centerShellMenu';
 import { ConnectButton } from '@/components/WalletConnectButton';
 import { clearWalletConnectionState } from '@/lib/clearWalletConnectionState';
 import { useClientWallets } from '@/lib/useClientWallets';
@@ -142,6 +141,15 @@ const MenuIcon = ({ itemKey, active }: { itemKey: string; active: boolean }) => 
       </svg>
     );
   }
+  if (itemKey === 'registration') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={`h-[18px] w-[18px] ${iconClass}`} aria-hidden="true">
+        <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M7.5 10h5.5M7.5 13.5h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M17.2 9.2v4.6M14.9 11.5h4.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
   if (itemKey === 'wallet') {
     return (
       <svg viewBox="0 0 24 24" fill="none" className={`h-[18px] w-[18px] ${iconClass}`} aria-hidden="true">
@@ -201,7 +209,8 @@ export default function P2PStoreManagementLayout({ children }: { children: React
   const normalizedConnectedWalletAddress = normalizeAddress(connectedWalletAddress);
   const storeQuery = storecode ? `?storecode=${encodeURIComponent(storecode)}` : '';
   const paymentManagementHref = `/${lang}/p2p/store-management/payment-management${storeQuery}`;
-  const memberRegistrationHref = storecode ? getCenterRegistrationHref(lang, storecode) : `/${lang}/p2p`;
+  const memberRegistrationBasePath = `/${lang}/p2p/store-management/member-registration`;
+  const memberRegistrationHref = storecode ? `${memberRegistrationBasePath}${storeQuery}` : `/${lang}/p2p`;
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -319,12 +328,15 @@ export default function P2PStoreManagementLayout({ children }: { children: React
   const showWalletConnectRequired = !normalizedConnectedWalletAddress;
   const hasConnectedWallet = Boolean(connectedWalletAddress);
   const showStoreAccessChecking = Boolean(normalizedConnectedWalletAddress && storecode && loadingStoreAccess);
+  const isMemberRegistrationPage = pathname === memberRegistrationBasePath || pathname.startsWith(`${memberRegistrationBasePath}/`);
   const showStoreAccessDenied = Boolean(
-    normalizedConnectedWalletAddress
+    !isMemberRegistrationPage
+      && normalizedConnectedWalletAddress
       && storecode
       && !loadingStoreAccess
       && !canAccessStorePages,
   );
+  const showStoreRegistrationStatus = Boolean(storecode && !canAccessStorePages);
   const desktopSidebarWidthClass = collapsed ? 'lg:pl-[98px]' : 'lg:pl-[292px]';
   const showPinnedPendingAlert = canAccessStorePages
     && Boolean(storecode)
@@ -819,6 +831,13 @@ export default function P2PStoreManagementLayout({ children }: { children: React
         basePath: `/${lang}/p2p/store-management`,
       },
       {
+        key: 'registration',
+        label: '회원등록',
+        compactLabel: '등록',
+        description: '관리자 후보 등록',
+        basePath: memberRegistrationBasePath,
+      },
+      {
         key: 'wallet',
         label: '지갑관리',
         compactLabel: '지갑',
@@ -847,7 +866,7 @@ export default function P2PStoreManagementLayout({ children }: { children: React
         basePath: `/${lang}/p2p/store-management/stats-management`,
       },
     ],
-    [lang],
+    [lang, memberRegistrationBasePath],
   );
 
   const desktopSidebarClass = collapsed ? 'lg:w-[98px]' : 'lg:w-[292px]';
@@ -1001,6 +1020,11 @@ export default function P2PStoreManagementLayout({ children }: { children: React
                 <p className="mt-1 truncate text-xs font-semibold text-white/90">
                   {storecode ? `storecode: ${storecode}` : 'storecode 파라미터 없음'}
                 </p>
+                {showStoreRegistrationStatus && (
+                  <p className="mt-1 text-[10px] text-cyan-100/80">
+                    회원등록 서브페이지는 접근 차단 상태에서도 이용할 수 있습니다.
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -1172,7 +1196,7 @@ export default function P2PStoreManagementLayout({ children }: { children: React
                 현재 연결된 지갑이 해당 가맹점의 관리자 지갑(`store.adminWalletAddress`)과 일치하지 않습니다.
               </p>
               <p className="mt-1 text-sm text-rose-700">
-                회원 아이디 등록이 필요하면 아래 버튼으로 가맹점 회원 등록 페이지로 이동할 수 있습니다.
+                회원 아이디 등록이 필요하면 아래 버튼으로 가맹점 관리 하위 회원 등록 페이지로 이동할 수 있습니다.
               </p>
 
               <div className="mt-4 rounded-2xl border border-rose-200 bg-white px-4 py-4 shadow-[0_14px_28px_-20px_rgba(190,24,93,0.4)]">
