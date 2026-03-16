@@ -232,6 +232,7 @@ export default function CenterSubpageAccessGate({
       lang={lang}
       center={center}
       storeName={storeInfo?.storeName || center}
+      storeLogo={storeInfo?.storeLogo || ''}
       memberNickname={memberInfo?.nickname || ''}
       walletAddress={walletAddress}
       roleLabel={roleLabel}

@@ -16,6 +16,7 @@ type CenterSidebarProps = {
   onOpenChange: (open: boolean) => void;
   isMobileViewport: boolean;
   storeName?: string;
+  storeLogo?: string;
   memberNickname?: string;
   walletAddress?: string;
   roleLabel?: string;
@@ -68,12 +69,16 @@ export default function CenterSidebar({
   onOpenChange,
   isMobileViewport,
   storeName,
+  storeLogo,
   memberNickname,
   walletAddress,
   roleLabel,
 }: CenterSidebarProps) {
   const pathname = (usePathname() || '').replace(/\/+$/, '');
   const menuItems = buildCenterShellMenuItems(lang, center);
+  const brandTitle = (storeName || center || 'Center').trim();
+  const brandInitial = brandTitle.slice(0, 1).toUpperCase() || 'C';
+  const normalizedStoreLogo = String(storeLogo || '').trim();
 
   return (
     <>
@@ -98,10 +103,33 @@ export default function CenterSidebar({
         </div>
 
         <div className="relative flex min-h-full flex-col px-3 pb-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] lg:pt-5">
-          <div className="rounded-3xl border border-white/10 bg-white/5 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-200/90">Center Console</p>
-            <h2 className="mt-2 text-xl font-semibold text-white">{storeName || center}</h2>
-            <p className="mt-1 text-xs text-slate-300">센터 전용 운영 패널</p>
+          <div className="overflow-hidden rounded-[30px] border border-cyan-200/12 bg-[linear-gradient(160deg,rgba(255,255,255,0.1)_0%,rgba(15,23,42,0.32)_100%)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_28px_60px_-38px_rgba(8,145,178,0.6)] backdrop-blur">
+            <div className="flex items-start gap-3">
+              <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] border border-white/15 bg-[radial-gradient(circle_at_top,#ecfeff_0%,#67e8f9_38%,#0f172a_100%)] p-1.5 shadow-[0_18px_34px_-24px_rgba(34,211,238,0.65)]">
+                <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-[18px] border border-white/70 bg-white text-lg font-black text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+                  {normalizedStoreLogo ? (
+                    <span
+                      className="h-full w-full bg-cover bg-center"
+                      style={{ backgroundImage: `url(${encodeURI(normalizedStoreLogo)})` }}
+                      aria-label={`${brandTitle} logo`}
+                    />
+                  ) : (
+                    brandInitial
+                  )}
+                </div>
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-200/90">Center Console</p>
+                <h2 className="mt-2 truncate text-[1.75rem] font-black tracking-tight text-white">
+                  {brandTitle}
+                </h2>
+                <p className="mt-1 text-xs text-slate-300">센터 전용 운영 패널</p>
+                <div className="mt-3 inline-flex max-w-full items-center rounded-full border border-cyan-200/20 bg-white/8 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-100/90">
+                  <span className="truncate">{center}</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="mt-4 rounded-2xl border border-cyan-300/12 bg-cyan-400/5 px-4 py-3">

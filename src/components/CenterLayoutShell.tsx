@@ -9,6 +9,7 @@ type CenterLayoutShellProps = {
   center: string;
   children: ReactNode;
   storeName?: string;
+  storeLogo?: string;
   memberNickname?: string;
   walletAddress?: string;
   roleLabel?: string;
@@ -19,6 +20,7 @@ export default function CenterLayoutShell({
   center,
   children,
   storeName,
+  storeLogo,
   memberNickname,
   walletAddress,
   roleLabel,
@@ -69,6 +71,7 @@ export default function CenterLayoutShell({
         onOpenChange={setIsSidebarOpen}
         isMobileViewport={isMobileViewport}
         storeName={storeName}
+        storeLogo={storeLogo}
         memberNickname={memberNickname}
         walletAddress={walletAddress}
         roleLabel={roleLabel}
