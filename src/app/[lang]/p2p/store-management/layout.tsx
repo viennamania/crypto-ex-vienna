@@ -242,9 +242,12 @@ export default function P2PStoreManagementLayout({ children }: { children: React
   const lastAlertSoundAtRef = useRef(0);
   const previousPendingCountRef = useRef(0);
   const pendingCardTimerIdsRef = useRef<number[]>([]);
+  const storeBrandTitle = storeName || storecode || 'Store Management';
+  const storeBrandSubtitle = storecode ? `storecode: ${storecode}` : '운영 대시보드 패널';
+  const storeBrandInitial = (storeName || storecode || 'S').slice(0, 1).toUpperCase();
 
   useEffect(() => {
-    if (!normalizedConnectedWalletAddress || !storecode) {
+    if (!storecode) {
       setStoreAccessError(null);
       setStoreAdminWalletAddress('');
       setStorePaymentWalletAddress('');
@@ -295,7 +298,7 @@ export default function P2PStoreManagementLayout({ children }: { children: React
         setStorePaymentWalletBalanceError(null);
         setStorePaymentWalletBalanceLastCheckedAt('');
         setStoreAccessError(
-          error instanceof Error ? error.message : '가맹점 관리자 권한을 확인하지 못했습니다.',
+          error instanceof Error ? error.message : '가맹점 정보를 불러오지 못했습니다.',
         );
       } finally {
         if (!abortController.signal.aborted) {
@@ -307,7 +310,7 @@ export default function P2PStoreManagementLayout({ children }: { children: React
     return () => {
       abortController.abort();
     };
-  }, [normalizedConnectedWalletAddress, storecode]);
+  }, [storecode]);
 
   const normalizedStoreAdminWalletAddress = normalizeAddress(storeAdminWalletAddress);
   const canAccessStorePages = useMemo(() => {
@@ -906,14 +909,33 @@ export default function P2PStoreManagementLayout({ children }: { children: React
 
         <div className="flex h-full flex-col pt-[calc(env(safe-area-inset-top)+0.2rem)] pb-[calc(env(safe-area-inset-bottom)+0.35rem)] lg:pt-0 lg:pb-0">
           <div className="relative border-b border-white/10 px-3 py-4">
-            <div className="rounded-2xl border border-white/12 bg-white/5 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200/90">Payment Control</p>
-              {!collapsed && (
-                <>
-                  <p className="mt-1 text-base font-semibold text-white/95">Store Management</p>
-                  <p className="mt-1 text-[11px] text-slate-300">운영 대시보드 패널</p>
-                </>
-              )}
+            <div className="relative overflow-hidden rounded-[24px] border border-white/12 bg-[linear-gradient(160deg,rgba(255,255,255,0.09)_0%,rgba(255,255,255,0.04)_42%,rgba(15,23,42,0.24)_100%)] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur">
+              <div className="absolute -right-5 top-0 h-16 w-16 rounded-full bg-cyan-300/12 blur-2xl" />
+              <div className="absolute -left-4 bottom-0 h-14 w-14 rounded-full bg-sky-200/10 blur-2xl" />
+
+              <div className={`relative flex ${collapsed ? 'justify-center' : 'items-center gap-3'}`}>
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[16px] border border-white/14 bg-white/10 p-1.5 shadow-[0_14px_28px_-18px_rgba(8,145,178,0.55)]">
+                  {storeLogo ? (
+                    <div
+                      className="h-full w-full rounded-[12px] border border-white/70 bg-white bg-cover bg-center"
+                      style={{ backgroundImage: `url("${encodeURI(storeLogo)}")` }}
+                      aria-label={storeBrandTitle}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center rounded-[12px] bg-white/10 text-base font-black text-white">
+                      {storeBrandInitial}
+                    </div>
+                  )}
+                </div>
+
+                {!collapsed && (
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200/90">Store Management</p>
+                    <p className="mt-1 truncate text-lg font-semibold text-white/95">{storeBrandTitle}</p>
+                    <p className="mt-1 truncate text-[11px] text-slate-300">{storeBrandSubtitle}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
