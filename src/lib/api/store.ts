@@ -192,6 +192,7 @@ export async function getStoreByStorecode(
 
         payactionKey: 1,
         backgroundColor: 1,
+        paymentCompletedCallbackUrl: 1,
         
 
         totalBuyerCount: 1,
@@ -418,6 +419,38 @@ export async function updateStoreBranding(
   const result = await collection.updateOne(
     { storecode: normalizedStorecode },
     { $set: updatePayload },
+  );
+
+  return result.matchedCount > 0;
+}
+
+export async function updateStorePaymentCompletedCallbackUrl(
+  {
+    storecode,
+    paymentCompletedCallbackUrl,
+  }: {
+    storecode: string;
+    paymentCompletedCallbackUrl: string;
+  }
+): Promise<boolean> {
+  const normalizedStorecode = String(storecode || '').trim();
+  if (!normalizedStorecode) {
+    return false;
+  }
+
+  const normalizedCallbackUrl = String(paymentCompletedCallbackUrl || '').trim();
+
+  const client = await clientPromise;
+  const collection = client.db(dbName).collection('stores');
+
+  const result = await collection.updateOne(
+    { storecode: normalizedStorecode },
+    {
+      $set: {
+        paymentCompletedCallbackUrl: normalizedCallbackUrl,
+        updatedAt: new Date().toISOString(),
+      },
+    },
   );
 
   return result.matchedCount > 0;

@@ -13,6 +13,150 @@ const toDateBoundary = (value: unknown, isStart: boolean): Date | null => {
   const parsed = new Date(`${normalized}${suffix}`);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
+const normalizeHttpUrl = (value: unknown) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return '';
+    }
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+};
+const PAYMENT_COMPLETED_CALLBACK_EVENT = 'payment.completed';
+const PAYMENT_COMPLETED_CALLBACK_VERSION = 1;
+const PAYMENT_COMPLETED_CALLBACK_TIMEOUT_MS = 5_000;
+
+type PaymentCompletedCallbackDelivery = {
+  attempted: boolean;
+  targetUrl: string;
+  success: boolean;
+  status: number | null;
+  error: string;
+  respondedAt: string;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const resolvePaymentMemberDepositName = (member: unknown) => {
+  const memberRecord = isRecord(member) ? member : null;
+  if (!memberRecord) return '';
+
+  const buyerRecord = isRecord(memberRecord.buyer) ? memberRecord.buyer : null;
+  const bankInfoRecord = buyerRecord && isRecord(buyerRecord.bankInfo) ? buyerRecord.bankInfo : null;
+
+  return String(
+    bankInfoRecord?.accountHolder
+      || bankInfoRecord?.depositName
+      || buyerRecord?.depositName
+      || memberRecord.depositName
+      || '',
+  ).trim();
+};
+
+const dispatchPaymentCompletedCallback = async ({
+  callbackUrl,
+  payment,
+}: {
+  callbackUrl: string;
+  payment: Record<string, unknown>;
+}): Promise<PaymentCompletedCallbackDelivery> => {
+  const targetUrl = normalizeHttpUrl(callbackUrl);
+  if (!targetUrl) {
+    return {
+      attempted: false,
+      targetUrl: '',
+      success: false,
+      status: null,
+      error: '',
+      respondedAt: '',
+    };
+  }
+
+  const memberRecord = isRecord(payment.member) ? payment.member : null;
+  const updatedByRecord = isRecord(payment.order_processing_updated_by)
+    ? payment.order_processing_updated_by
+    : null;
+  const occurredAt = String(payment.order_processing_updated_at || new Date().toISOString());
+
+  const payload = {
+    event: PAYMENT_COMPLETED_CALLBACK_EVENT,
+    version: PAYMENT_COMPLETED_CALLBACK_VERSION,
+    occurredAt,
+    store: {
+      storecode: String(payment.storecode || '').trim(),
+      storeName: String(payment.storeName || '').trim(),
+    },
+    payment: {
+      id: String(payment._id || '').trim(),
+      paymentId: String(payment.paymentId || '').trim(),
+      status: String(payment.order_processing || 'COMPLETED').trim().toUpperCase(),
+      usdtAmount: Number(payment.usdtAmount || 0),
+      krwAmount: Number(payment.krwAmount || 0),
+      exchangeRate: Number(payment.exchangeRate || 0),
+      transactionHash: String(payment.transactionHash || '').trim(),
+      fromWalletAddress: String(payment.fromWalletAddress || '').trim(),
+      toWalletAddress: String(payment.toWalletAddress || '').trim(),
+      createdAt: String(payment.createdAt || '').trim(),
+      confirmedAt: String(payment.confirmedAt || '').trim(),
+      orderProcessingUpdatedAt: occurredAt,
+      orderProcessingMemo: String(payment.order_processing_memo || '').trim(),
+    },
+    member: {
+      nickname: String(memberRecord?.nickname || '').trim(),
+      depositName: resolvePaymentMemberDepositName(memberRecord),
+    },
+    actor: {
+      walletAddress: String(updatedByRecord?.walletAddress || '').trim(),
+      nickname: String(updatedByRecord?.nickname || '').trim(),
+      role: String(updatedByRecord?.role || '').trim(),
+      ipAddress: String(payment.order_processing_updated_by_ip || '').trim(),
+    },
+  };
+
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => {
+    abortController.abort();
+  }, PAYMENT_COMPLETED_CALLBACK_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(targetUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-gobyte-event': PAYMENT_COMPLETED_CALLBACK_EVENT,
+        'x-gobyte-storecode': String(payment.storecode || '').trim(),
+      },
+      body: JSON.stringify(payload),
+      signal: abortController.signal,
+    });
+
+    return {
+      attempted: true,
+      targetUrl,
+      success: response.ok,
+      status: response.status,
+      error: response.ok ? '' : `Callback responded with HTTP ${response.status}`,
+      respondedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    return {
+      attempted: true,
+      targetUrl,
+      success: false,
+      status: null,
+      error: error instanceof Error ? error.message : 'Unknown callback error',
+      respondedAt: new Date().toISOString(),
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 // payments collection
 /*
@@ -761,6 +905,7 @@ export async function updateWalletUsdtPaymentOrderProcessing({
   } | null;
   orderProcessingUpdatedByIp: string;
   orderProcessingUpdatedByUserAgent: string;
+  callbackDelivery: PaymentCompletedCallbackDelivery;
 }> {
   const normalizedPaymentId = String(paymentId || '').trim();
   if (!ObjectId.isValid(normalizedPaymentId)) {
@@ -794,6 +939,15 @@ export async function updateWalletUsdtPaymentOrderProcessing({
 
   const _id = new ObjectId(normalizedPaymentId);
   const now = new Date().toISOString();
+  const currentPayment = await collection.findOne(
+    { _id },
+    {
+      projection: {
+        order_processing: 1,
+        storecode: 1,
+      },
+    },
+  );
 
   const updateResult = await collection.updateOne(
     { _id },
@@ -823,6 +977,18 @@ export async function updateWalletUsdtPaymentOrderProcessing({
         order_processing_updated_by: 1,
         order_processing_updated_by_ip: 1,
         order_processing_updated_by_user_agent: 1,
+        paymentId: 1,
+        storecode: 1,
+        storeName: 1,
+        usdtAmount: 1,
+        krwAmount: 1,
+        exchangeRate: 1,
+        transactionHash: 1,
+        fromWalletAddress: 1,
+        toWalletAddress: 1,
+        createdAt: 1,
+        confirmedAt: 1,
+        member: 1,
       },
     },
   );
@@ -830,10 +996,45 @@ export async function updateWalletUsdtPaymentOrderProcessing({
     updated?.order_processing_updated_by && typeof updated.order_processing_updated_by === 'object'
       ? updated.order_processing_updated_by as Record<string, unknown>
       : null;
+  const previousOrderProcessing = String(currentPayment?.order_processing || '').trim().toUpperCase();
+  const nextOrderProcessing = String(updated?.order_processing || normalizedOrderProcessing).trim().toUpperCase();
+  let callbackDelivery: PaymentCompletedCallbackDelivery = {
+    attempted: false,
+    targetUrl: '',
+    success: false,
+    status: null,
+    error: '',
+    respondedAt: '',
+  };
+
+  if (
+    nextOrderProcessing === 'COMPLETED'
+    && previousOrderProcessing !== 'COMPLETED'
+    && updated
+  ) {
+    const storecodeForCallback = String(updated.storecode || currentPayment?.storecode || '').trim();
+    if (storecodeForCallback) {
+      const storeCollection = client.db(dbName).collection('stores');
+      const store = await storeCollection.findOne(
+        { storecode: storecodeForCallback },
+        { projection: { paymentCompletedCallbackUrl: 1 } },
+      );
+      const callbackUrl = normalizeHttpUrl((store as Record<string, unknown> | null)?.paymentCompletedCallbackUrl);
+      if (callbackUrl) {
+        callbackDelivery = await dispatchPaymentCompletedCallback({
+          callbackUrl,
+          payment: {
+            ...updated,
+            _id: normalizedPaymentId,
+          },
+        });
+      }
+    }
+  }
 
   return {
     id: normalizedPaymentId,
-    orderProcessing: String(updated?.order_processing || normalizedOrderProcessing),
+    orderProcessing: nextOrderProcessing || normalizedOrderProcessing,
     orderProcessingUpdatedAt: String(updated?.order_processing_updated_at || now),
     orderProcessingMemo: String(updated?.order_processing_memo || normalizedOrderProcessingMemo),
     orderProcessingUpdatedBy: updatedBySource
@@ -849,6 +1050,7 @@ export async function updateWalletUsdtPaymentOrderProcessing({
     orderProcessingUpdatedByUserAgent: String(
       updated?.order_processing_updated_by_user_agent || normalizedOrderProcessingUpdatedByUserAgent,
     ),
+    callbackDelivery,
   };
 }
 

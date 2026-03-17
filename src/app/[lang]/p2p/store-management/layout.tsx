@@ -150,6 +150,20 @@ const MenuIcon = ({ itemKey, active }: { itemKey: string; active: boolean }) => 
       </svg>
     );
   }
+  if (itemKey === 'notification') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={`h-[18px] w-[18px] ${iconClass}`} aria-hidden="true">
+        <path
+          d="M6.8 16.7c0-1.6.3-2.8.6-4 .5-1.8 1.9-3.2 3.8-3.6V8.6a1.8 1.8 0 1 1 3.6 0v.5c1.8.4 3.2 1.8 3.7 3.6.3 1.2.5 2.4.5 4l1.1 1.3H5.7l1.1-1.3Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path d="M10.3 19.6a2 2 0 0 0 3.4 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
   if (itemKey === 'wallet') {
     return (
       <svg viewBox="0 0 24 24" fill="none" className={`h-[18px] w-[18px] ${iconClass}`} aria-hidden="true">
@@ -211,6 +225,7 @@ export default function P2PStoreManagementLayout({ children }: { children: React
   const paymentManagementHref = `/${lang}/p2p/store-management/payment-management${storeQuery}`;
   const memberRegistrationBasePath = `/${lang}/p2p/store-management/member-registration`;
   const memberRegistrationHref = storecode ? `${memberRegistrationBasePath}${storeQuery}` : `/${lang}/p2p`;
+  const paymentCompletedNotificationBasePath = `/${lang}/p2p/store-management/payment-complete-notification`;
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -862,6 +877,13 @@ export default function P2PStoreManagementLayout({ children }: { children: React
         basePath: `/${lang}/p2p/store-management/payment-management`,
       },
       {
+        key: 'notification',
+        label: '결제완료 통보',
+        compactLabel: '통보',
+        description: '완료 URL 등록',
+        basePath: paymentCompletedNotificationBasePath,
+      },
+      {
         key: 'stats',
         label: '결제통계',
         compactLabel: '통계',
@@ -869,7 +891,7 @@ export default function P2PStoreManagementLayout({ children }: { children: React
         basePath: `/${lang}/p2p/store-management/stats-management`,
       },
     ],
-    [lang, memberRegistrationBasePath],
+    [lang, memberRegistrationBasePath, paymentCompletedNotificationBasePath],
   );
 
   const desktopSidebarClass = collapsed ? 'lg:w-[98px]' : 'lg:w-[292px]';
