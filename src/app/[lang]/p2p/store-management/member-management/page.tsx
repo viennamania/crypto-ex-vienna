@@ -312,6 +312,13 @@ export default function P2PStoreMemberManagementPage() {
     return Array.from({ length: end - start + 1 }, (_, index) => start + index);
   }, [memberPage, memberTotalPages]);
 
+  const memberVisibleStart = filteredMembers.length === 0
+    ? 0
+    : (memberPage - 1) * MEMBER_PAGE_SIZE + 1;
+  const memberVisibleEnd = filteredMembers.length === 0
+    ? 0
+    : Math.min(filteredMembers.length, memberPage * MEMBER_PAGE_SIZE);
+
   useEffect(() => {
     setMemberPage(1);
   }, [keyword, storecode]);
@@ -871,81 +878,125 @@ export default function P2PStoreMemberManagementPage() {
               <p className="mt-4 text-sm text-slate-500">조건에 맞는 회원이 없습니다.</p>
             ) : (
               <>
-                <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
-                  <div className="store-member-table-scroll max-h-[560px] overflow-y-auto">
-                    <table className="store-member-table w-full table-fixed">
-                      <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
-                        <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
-                          <th className="w-[16%] px-3 py-2">회원 아이디</th>
-                          <th className="w-[16%] px-3 py-2">입금자명</th>
-                          <th className="w-[34%] px-3 py-2">지갑주소</th>
-                          <th className="w-[14%] px-3 py-2">등록일</th>
-                          <th className="w-[20%] px-3 py-2 text-right">관리</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
-                        {paginatedMembers.map((member) => {
-                          const hasWalletAddress = Boolean(String(member.walletAddress || '').trim());
-
-                          return (
-                            <tr key={`${member.id}-${member.walletAddress}`} className="transition hover:bg-slate-50/70">
-                              <td className="px-3 py-2.5 font-semibold text-slate-900">{member.nickname}</td>
-                              <td className="px-3 py-2.5 text-xs text-slate-700">{member.depositName || '-'}</td>
-                              <td className="px-3 py-2.5 text-xs text-slate-500">
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="break-all">{shortAddress(member.walletAddress)}</span>
-                                  {hasWalletAddress && (
-                                    <span className="inline-flex h-5 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 text-[10px] font-semibold text-emerald-700">
-                                      연동완료
-                                    </span>
-                                  )}
-                                  {hasWalletAddress && (
-                                    <button
-                                      type="button"
-                                      onClick={() => openUnlinkModal(member)}
-                                      className="inline-flex h-5 items-center rounded-full border border-rose-200 bg-rose-50 px-2 text-[10px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
-                                    >
-                                      연동해제하기
-                                    </button>
-                                  )}
-                                  {!hasWalletAddress && (
-                                    <span className="inline-flex h-5 items-center rounded-full border border-amber-200 bg-amber-50 px-2 text-[10px] font-semibold text-amber-700">
-                                      지갑 연동안됨
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-3 py-2.5 text-xs text-slate-500">{toDateTime(member.createdAt)}</td>
-                              <td className="px-3 py-2.5 text-right">
-                                <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => openPasswordModal(member)}
-                                    className="inline-flex h-7 items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 text-[11px] font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100"
-                                  >
-                                    비밀번호
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => openDeleteModal(member)}
-                                    className="inline-flex h-7 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
-                                  >
-                                    삭제
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-700">
+                      총 {filteredMembers.length.toLocaleString()}명 중 {memberVisibleStart.toLocaleString()}-{memberVisibleEnd.toLocaleString()}명 표시
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      페이지 {memberPage} / {memberTotalPages} · 페이지당 {MEMBER_PAGE_SIZE}명
+                    </p>
                   </div>
+
+                  {memberTotalPages > 1 && (
+                    <div className="inline-flex flex-wrap items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setMemberPage((prev) => Math.max(1, prev - 1))}
+                        disabled={memberPage <= 1}
+                        className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        이전
+                      </button>
+                      {visibleMemberPageNumbers.map((pageNumber) => (
+                        <button
+                          key={`member-page-top-${pageNumber}`}
+                          type="button"
+                          onClick={() => setMemberPage(pageNumber)}
+                          className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-xs font-semibold transition ${
+                            pageNumber === memberPage
+                              ? 'border-cyan-500 bg-cyan-50 text-cyan-700'
+                              : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'
+                          }`}
+                        >
+                          {pageNumber}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setMemberPage((prev) => Math.min(memberTotalPages, prev + 1))}
+                        disabled={memberPage >= memberTotalPages}
+                        className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        다음
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+                  <table className="store-member-table w-full table-fixed">
+                    <thead className="bg-slate-100">
+                      <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
+                        <th className="w-[16%] px-3 py-2">회원 아이디</th>
+                        <th className="w-[16%] px-3 py-2">입금자명</th>
+                        <th className="w-[34%] px-3 py-2">지갑주소</th>
+                        <th className="w-[14%] px-3 py-2">등록일</th>
+                        <th className="w-[20%] px-3 py-2 text-right">관리</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
+                      {paginatedMembers.map((member) => {
+                        const hasWalletAddress = Boolean(String(member.walletAddress || '').trim());
+
+                        return (
+                          <tr key={`${member.id}-${member.walletAddress}`} className="transition hover:bg-slate-50/70">
+                            <td className="px-3 py-2.5 font-semibold text-slate-900">{member.nickname}</td>
+                            <td className="px-3 py-2.5 text-xs text-slate-700">{member.depositName || '-'}</td>
+                            <td className="px-3 py-2.5 text-xs text-slate-500">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="break-all">{shortAddress(member.walletAddress)}</span>
+                                {hasWalletAddress && (
+                                  <span className="inline-flex h-5 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 text-[10px] font-semibold text-emerald-700">
+                                    연동완료
+                                  </span>
+                                )}
+                                {hasWalletAddress && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openUnlinkModal(member)}
+                                    className="inline-flex h-5 items-center rounded-full border border-rose-200 bg-rose-50 px-2 text-[10px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                                  >
+                                    연동해제하기
+                                  </button>
+                                )}
+                                {!hasWalletAddress && (
+                                  <span className="inline-flex h-5 items-center rounded-full border border-amber-200 bg-amber-50 px-2 text-[10px] font-semibold text-amber-700">
+                                    지갑 연동안됨
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5 text-xs text-slate-500">{toDateTime(member.createdAt)}</td>
+                            <td className="px-3 py-2.5 text-right">
+                              <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => openPasswordModal(member)}
+                                  className="inline-flex h-7 items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 text-[11px] font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100"
+                                >
+                                  비밀번호
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openDeleteModal(member)}
+                                  className="inline-flex h-7 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                                >
+                                  삭제
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
 
                 {memberTotalPages > 1 && (
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-slate-500">
-                      총 {filteredMembers.length.toLocaleString()}명 · {memberPage}/{memberTotalPages} 페이지
+                      총 {filteredMembers.length.toLocaleString()}명 · {memberVisibleStart.toLocaleString()}-{memberVisibleEnd.toLocaleString()}명 표시 · {memberPage}/{memberTotalPages} 페이지
                     </p>
                     <div className="inline-flex items-center gap-1">
                       <button
