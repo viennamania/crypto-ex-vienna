@@ -2121,16 +2121,13 @@ export default function Index({ params }: any) {
           'USDT 전송 처리 중 오류가 발생했습니다.',
         )
       );
+    } finally {
+      isProcessingSendTransaction.current = false;
+
+      setSendingTransaction(
+        sendingTransaction.map((item, idx) => idx === index ? false : item)
+      );
     }
-
-
-
-   isProcessingSendTransaction.current = false;
-
-
-    setSendingTransaction(
-      sendingTransaction.map((item, idx) => idx === index ? false : item)
-    );
 
   
 
@@ -3167,6 +3164,7 @@ const fetchBuyOrders = async () => {
             storecode: params.center,
             limit: 100,
             page: 1,
+            walletAddresses: storeSellerWalletAddresses.length > 0 ? storeSellerWalletAddresses : undefined,
           }
         )
       });
@@ -3254,7 +3252,7 @@ const fetchBuyOrders = async () => {
       fetchSellersBalance();
     }, SELLER_BALANCE_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [address, params.center]);
+  }, [address, params.center, storeSellerWalletAddresses]);
 
 
 
