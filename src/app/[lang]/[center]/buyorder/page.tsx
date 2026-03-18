@@ -80,7 +80,6 @@ import {
 
 import {
   version,
-  versionMinor,
 } from "../../../config/version";
 
 
@@ -5748,9 +5747,6 @@ const fetchBuyOrders = async () => {
                                 )}
                               </span>
 
-
-                              {versionMinor !== 'globaltether' && (
-                              <>
                               {item.seller
                               && isCurrentWalletAddress(item.seller.walletAddress)
                               
@@ -5814,9 +5810,6 @@ const fetchBuyOrders = async () => {
 
                                 </div>
 
-
-                              )}
-                              </>
                               )}
 
 
@@ -5960,8 +5953,6 @@ const fetchBuyOrders = async () => {
                               flex flex-col xl:flex-row gap-2 items-start justify-start
                               `}>
 
-
-                              {versionMinor !== 'globaltether' && (
                               <div className="
                                 w-full
                                 flex flex-col gap-2 items-start justify-start">
@@ -6057,7 +6048,6 @@ const fetchBuyOrders = async () => {
                                 */}
 
                               </div>
-                              )}
                               
 
                               <div className="
@@ -6109,11 +6099,6 @@ const fetchBuyOrders = async () => {
                                 
 
 
-
-
-
-                                {versionMinor !== 'globaltether' && (
-                                <>
 
                                 {
                                   item.seller && isCurrentWalletAddress(item.seller.walletAddress) &&
@@ -6239,15 +6224,10 @@ const fetchBuyOrders = async () => {
                                         </div>
 
                                       </div>
-
                                     )}
-          
+
                                   </div>
                                 )}
-                                </>
-                                )}
-
-
                                 {/*
                                 {item.seller
                                 && isCurrentWalletAddress(item.seller.walletAddress)
@@ -6357,10 +6337,6 @@ const fetchBuyOrders = async () => {
 
                                     {/* 자동입금처리일경우 */}
                                     {/* 수동으로 결제완료처리 버튼 */}
-
-                                    {versionMinor !== 'globaltether' && (
-                                      <>
-                                  
                                     { !item?.settlement &&
 
                                     ///item?.autoConfirmPayment &&
@@ -6496,10 +6472,6 @@ const fetchBuyOrders = async () => {
 
 
 
-
-                                    )}
-
-                                    </>
                                     )}
 
                                   </div>
