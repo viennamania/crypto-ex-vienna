@@ -2501,6 +2501,9 @@ const fetchBuyOrders = async () => {
       normalizedStoreAdminWalletAddress &&
       normalizedAddressCandidateSet.has(normalizedStoreAdminWalletAddress)
     );
+    const canManageCenterOrder = (sellerWalletAddress?: string) => Boolean(
+      isAdmin || isStoreAdminWallet || isCurrentWalletAddress(sellerWalletAddress)
+    );
   
     useEffect(() => {
   
@@ -5798,7 +5801,7 @@ const fetchBuyOrders = async () => {
                               </span>
 
                               {item.seller
-                              && isCurrentWalletAddress(item.seller.walletAddress)
+                              && canManageCenterOrder(item.seller.walletAddress)
                               
                               ///////////////&& item?.autoConfirmPayment
 
@@ -5878,7 +5881,7 @@ const fetchBuyOrders = async () => {
                           <div className="
                             w-64 flex flex-col gap-2 items-center justify-center">
                           {
-                            user?.seller &&
+                            canManageCenterOrder() &&
                             item.status === 'ordered'  && (
 
 
@@ -5939,7 +5942,7 @@ const fetchBuyOrders = async () => {
 
                                 <div className="flex flex-row gap-2 items-center justify-center">
                                   <Image
-                                    src={user?.avatar || "/icon-seller.png"}
+                                    src={user?.avatar || store?.storeLogo || "/icon-seller.png"}
                                     alt="User"
                                     width={20}
                                     height={20}
@@ -5947,7 +5950,7 @@ const fetchBuyOrders = async () => {
                                   />
                                   {/* seller nickname */}
                                   <div className="text-lg text-zinc-500 font-semibold">
-                                    {user?.nickname}
+                                    {user?.nickname || store?.storeName || "가맹점 관리자"}
                                   </div>
                                 </div>
 
@@ -5960,7 +5963,7 @@ const fetchBuyOrders = async () => {
 
 
 
-                          {item?.seller?.walletAddress !== address ? (
+                          {!canManageCenterOrder(item?.seller?.walletAddress) ? (
 
                             <div className="flex flex-col gap-2 items-center justify-center">
 
@@ -6010,7 +6013,7 @@ const fetchBuyOrders = async () => {
 
                                 {
                                 (item.status === 'accepted' || item.status === 'paymentRequested')
-                                && item.seller && isCurrentWalletAddress(item.seller.walletAddress) && (
+                                && item.seller && canManageCenterOrder(item.seller.walletAddress) && (
                                   
                                   <div className="flex flex-col items-center gap-2">
                                   
@@ -6151,7 +6154,7 @@ const fetchBuyOrders = async () => {
 
 
                                 {
-                                  item.seller && isCurrentWalletAddress(item.seller.walletAddress) &&
+                                  item.seller && canManageCenterOrder(item.seller.walletAddress) &&
                                   item.status === 'accepted' && (
 
 
@@ -7221,7 +7224,7 @@ const fetchBuyOrders = async () => {
                       <article
                           //key={index}
                           className={` w-96 xl:w-full h-full relative
-                            ${item.walletAddress === address ? 'border-green-500' : 'border-gray-200'}
+                            ${isCurrentWalletAddress(item.walletAddress) ? 'border-green-500' : 'border-gray-200'}
 
                             ${item.status === 'accepted' || item.status === 'paymentRequested' ? 'border-red-600' : 'border-gray-200'}
 
@@ -7589,7 +7592,7 @@ const fetchBuyOrders = async () => {
                             </p>
 
 
-                            {address && item.walletAddress !== address && item?.buyer && item?.buyer?.walletAddress === address && (
+                            {address && !isCurrentWalletAddress(item.walletAddress) && item?.buyer && isCurrentWalletAddress(item?.buyer?.walletAddress) && (
                               <button
                                 className="bg-green-500 text-white px-4 py-2 rounded-lg"
                                 onClick={() => {
@@ -7721,7 +7724,7 @@ const fetchBuyOrders = async () => {
 
 
 
-                              {item.buyer?.walletAddress === address && (
+                              {isCurrentWalletAddress(item.buyer?.walletAddress) && (
 
                                 <div className="mt-4 flex flex-col items-center justify-center gap-2">
 
@@ -7814,7 +7817,7 @@ const fetchBuyOrders = async () => {
                           )}
 
                           {
-                          item.seller && isCurrentWalletAddress(item.seller.walletAddress) &&
+                          item.seller && canManageCenterOrder(item.seller.walletAddress) &&
                           item.status === 'accepted' && (
                             <div className="flex flex-row gap-1">
 
@@ -7920,8 +7923,35 @@ const fetchBuyOrders = async () => {
                                     currency: 'KRW',
                                   })} to seller...</div>
                                 
-
                                 </div>
+
+                                {item.seller && canManageCenterOrder(item.seller.walletAddress) && (
+                                  <button
+                                    disabled={confirmingPayment[index]}
+                                    className={`flex flex-row gap-1 text-sm text-white px-2 py-1 rounded-md ${
+                                      confirmingPayment[index] ? 'bg-gray-500' : 'bg-yellow-500 hover:bg-yellow-600'
+                                    }`}
+                                    onClick={() => {
+                                      confirmPayment(
+                                        index,
+                                        item._id,
+                                        item.krwAmount,
+                                        item.usdtAmount,
+                                        item.walletAddress,
+                                        item.paymentMethod,
+                                      );
+                                    }}
+                                  >
+                                    <Image
+                                      src="/icon-loading.png"
+                                      alt="loading"
+                                      width={16}
+                                      height={16}
+                                      className={confirmingPayment[index] ? 'animate-spin' : 'hidden'}
+                                    />
+                                    <span>입금완료하기</span>
+                                  </button>
+                                )}
 
 
                               </div>
@@ -7955,7 +7985,7 @@ const fetchBuyOrders = async () => {
                             ) : (
                               <>
                                 
-                                {item.walletAddress === address ? (
+                                {isCurrentWalletAddress(item.walletAddress) ? (
                                   <div className="flex flex-col space-y-4">
                                     {My_Order}
                                   </div>
@@ -7983,7 +8013,7 @@ const fetchBuyOrders = async () => {
                                     ) : (
                                       <>
 
-                                        {user?.seller && user?.seller?.bankInfo && (
+                                        {canManageCenterOrder() && (
 
             
 
