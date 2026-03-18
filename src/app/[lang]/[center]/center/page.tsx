@@ -32,7 +32,6 @@ import {
 
 import {
   useActiveAccount,
-  useActiveWallet,
   useWalletBalance,
 
   useSetActiveWallet,
@@ -178,9 +177,6 @@ export default function Index({ params }: any) {
   const page = searchParams.get('page') || 1;
 
 
-
-  const activeWallet = useActiveWallet();
-    
 
   const contract = getContract({
     // the client you have created via `createThirdwebClient()`
@@ -1069,6 +1065,15 @@ export default function Index({ params }: any) {
 
   const [fetchingStore, setFetchingStore] = useState(false);
   const [store, setStore] = useState(null) as any;
+  const normalizedAddress = String(address || "").trim().toLowerCase();
+  const normalizedStoreAdminWalletAddress = String(
+    storeAdminWalletAddress || store?.adminWalletAddress || ""
+  ).trim().toLowerCase();
+  const isStoreAdminWallet = Boolean(
+    normalizedAddress &&
+    normalizedStoreAdminWalletAddress &&
+    normalizedAddress === normalizedStoreAdminWalletAddress
+  );
 
 
 
@@ -1698,7 +1703,7 @@ export default function Index({ params }: any) {
 
               {/* 가맹점 설정 */}
               {version === 'bangbang' &&
-              address === store?.adminWalletAddress && (
+              isStoreAdminWallet && (
                 <div className="flex flex-row items-center gap-2">
                   <button
                     onClick={() => {
@@ -1787,39 +1792,6 @@ export default function Index({ params }: any) {
                           )}
                         </div>
                       </button>
-
-                      {/* logout button */}
-                      {/*
-                      <button
-                          onClick={() => {
-                              confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
-                              .then(() => {
-
-                                  toast.success('로그아웃 되었습니다');
-
-                                  //router.push(
-                                  //    "/administration/" + params.center
-                                  //);
-                              });
-                          } }
-
-                          className="
-                            w-32
-                            flex items-center justify-center gap-2
-                            bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
-                      >
-                        <Image
-                          src="/icon-logout.webp"
-                          alt="Logout"
-                          width={20}
-                          height={20}
-                          className="rounded-lg w-5 h-5"
-                        />
-                        <span className="text-sm">
-                          로그아웃
-                        </span>
-                      </button>
-                      */}
 
                   </div>
                 )}

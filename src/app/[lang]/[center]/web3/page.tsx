@@ -1142,18 +1142,6 @@ export default function SettingsPage({ params }: any) {
                         {/* balance */}
                         {address && (
                             <div className='w-full flex flex-col gap-2 items-start justify-start'>
-                                {/*
-                                <button
-                                    onClick={() => {
-                                        //confirm('지갑연결을 해제하시겠습니까?') && activeAccount?.disconnect();
-                                    }}
-                                    className="p-2 bg-red-500 text-zinc-100 rounded"
-                                >
-                                    지갑연결 해제
-                                </button>
-                                */}
-
-
                                 <div className='w-full flex flex-row gap-2 items-center justify-between border border-gray-300 p-4 rounded-lg'>
                                     <Image
                                         src="/logo-tether.svg"

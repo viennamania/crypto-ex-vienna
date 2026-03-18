@@ -878,6 +878,7 @@ export default function Index({ params }: any) {
 
   const [fetchingStore, setFetchingStore] = useState(false);
   const [store, setStore] = useState(null) as any;
+  const normalizedAddress = String(address || "").trim().toLowerCase();
 
   useEffect(() => {
 
@@ -905,7 +906,10 @@ export default function Index({ params }: any) {
 
           setStoreAdminWalletAddress(data.result?.adminWalletAddress);
 
-          if (data.result?.adminWalletAddress === address) {
+          if (
+            normalizedAddress &&
+            String(data.result?.adminWalletAddress || "").trim().toLowerCase() === normalizedAddress
+          ) {
             setIsAdmin(true);
           }
 
@@ -920,7 +924,7 @@ export default function Index({ params }: any) {
 
     fetchData();
 
-  } , [params.center, address]);
+  } , [params.center, normalizedAddress]);
 
   
 
@@ -1513,6 +1517,4 @@ const TradeDetail = (
       </div>
     );
   };
-
-
 

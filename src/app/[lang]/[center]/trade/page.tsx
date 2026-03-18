@@ -1981,6 +1981,15 @@ export default function Index({ params }: any) {
 
     const [fetchingStore, setFetchingStore] = useState(false);
     const [store, setStore] = useState(null) as any;
+    const normalizedAddress = String(address || "").trim().toLowerCase();
+    const normalizedStoreAdminWalletAddress = String(
+      storeAdminWalletAddress || store?.adminWalletAddress || ""
+    ).trim().toLowerCase();
+    const isStoreAdminWallet = Boolean(
+      normalizedAddress &&
+      normalizedStoreAdminWalletAddress &&
+      normalizedAddress === normalizedStoreAdminWalletAddress
+    );
   
     useEffect(() => {
   
@@ -2039,7 +2048,7 @@ export default function Index({ params }: any) {
                       store && store?.storeName + " (" + store?.storecode + ")"
                     }
                   </span>
-                  {address === storeAdminWalletAddress && (
+                  {isStoreAdminWallet && (
                     <div className="flex flex-row gap-2 items-center">
                       <Image
                         src="/icon-manager.png"
@@ -4208,5 +4217,4 @@ const TradeDetail = (
       </div>
     );
   };
-
 

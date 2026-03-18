@@ -227,7 +227,15 @@ export default function CenterLayoutShell({
           display: none !important;
         }
 
+        .center-shell-legacy-content > main > div > div:first-child > div[class*='justify-between'][class*='rounded-lg'][class*='mb-4'] {
+          display: none !important;
+        }
+
         .center-shell-legacy-content > main > div > div[class*='grid-cols-2'][class*='mb-4'] {
+          display: none !important;
+        }
+
+        .center-shell-legacy-content > main > div > div:first-child > div[class*='grid-cols-2'][class*='mb-4'] {
           display: none !important;
         }
 

@@ -37,7 +37,6 @@ import {
 
 import {
   useActiveAccount,
-  useActiveWallet,
   useWalletBalance,
 
   useSetActiveWallet,
@@ -175,11 +174,6 @@ export default function Index({ params }: any) {
 
 
  
-  const activeWallet = useActiveWallet();
-
-
-
-
   const [data, setData] = useState({
     title: "",
     description: "",
@@ -607,7 +601,7 @@ export default function Index({ params }: any) {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            storecode: "admin",
+            storecode: params.center,
             walletAddress: address,
         }),
     })
@@ -632,7 +626,7 @@ export default function Index({ params }: any) {
     setLoadingUser(false);
 
 
-  } , [address]);
+  } , [address, params.center]);
 
 
 
@@ -944,6 +938,7 @@ export default function Index({ params }: any) {
 
   const [fetchingStore, setFetchingStore] = useState(false);
   const [store, setStore] = useState(null) as any;
+  const normalizedAddress = String(address || "").trim().toLowerCase();
 
   useEffect(() => {
 
@@ -971,7 +966,10 @@ export default function Index({ params }: any) {
 
           setStoreAdminWalletAddress(data.result?.adminWalletAddress);
 
-          if (data.result?.adminWalletAddress === address) {
+          if (
+            normalizedAddress &&
+            String(data.result?.adminWalletAddress || "").trim().toLowerCase() === normalizedAddress
+          ) {
             setIsAdmin(true);
           }
 
@@ -986,7 +984,7 @@ export default function Index({ params }: any) {
 
     fetchData();
 
-  } , [params.center, address]);
+  } , [params.center, normalizedAddress]);
 
   
 
@@ -1167,39 +1165,6 @@ export default function Index({ params }: any) {
                           )}
                         </div>
                       </button>
-
-                      {/* logout button */}
-                      {/*
-                      <button
-                          onClick={() => {
-                              confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
-                              .then(() => {
-
-                                  toast.success('로그아웃 되었습니다');
-
-                                  //router.push(
-                                  //    "/administration/" + params.center
-                                  //);
-                              });
-                          } }
-
-                          className="
-                            w-32
-                            flex items-center justify-center gap-2
-                            bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
-                      >
-                        <Image
-                          src="/icon-logout.webp"
-                          alt="Logout"
-                          width={20}
-                          height={20}
-                          className="rounded-lg w-5 h-5"
-                        />
-                        <span className="text-sm">
-                          로그아웃
-                        </span>
-                      </button>
-                      */}
 
                   </div>
                 )}
@@ -1964,5 +1929,3 @@ const TradeDetail = (
       </div>
     );
   };
-
-

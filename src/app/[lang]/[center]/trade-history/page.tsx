@@ -2267,6 +2267,15 @@ const fetchBuyOrders = async () => {
 
   const [fetchingStore, setFetchingStore] = useState(false);
   const [store, setStore] = useState(null) as any;
+  const normalizedAddress = String(address || "").trim().toLowerCase();
+  const normalizedStoreAdminWalletAddress = String(
+    storeAdminWalletAddress || store?.adminWalletAddress || ""
+  ).trim().toLowerCase();
+  const isStoreAdminWallet = Boolean(
+    normalizedAddress &&
+    normalizedStoreAdminWalletAddress &&
+    normalizedAddress === normalizedStoreAdminWalletAddress
+  );
 
   useEffect(() => {
 
@@ -2295,7 +2304,10 @@ const fetchBuyOrders = async () => {
 
           setStoreAdminWalletAddress(data.result?.adminWalletAddress);
 
-          if (data.result?.adminWalletAddress === address) {
+          if (
+            normalizedAddress &&
+            String(data.result?.adminWalletAddress || "").trim().toLowerCase() === normalizedAddress
+          ) {
             setIsAdmin(true);
           }
 
@@ -2332,7 +2344,7 @@ const fetchBuyOrders = async () => {
     , 5000);
     return () => clearInterval(interval);
 
-  } , [params.center]);
+  } , [params.center, normalizedAddress]);
 
 
 
@@ -2558,12 +2570,12 @@ const fetchBuyOrders = async () => {
                   height={35}
                   className="rounded-lg w-6 h-6"
                 />
-                {address && address === storeAdminWalletAddress && (
+                {address && isStoreAdminWallet && (
                   <div className="text-sm text-[#3167b4] font-bold">
                     {store?.storeName + " (" + store?.storecode + ") 가맹점 관리자"}
                   </div>
                 )}
-                {address && address !== storeAdminWalletAddress && (
+                {address && !isStoreAdminWallet && (
                   <div className="text-sm text-[#3167b4] font-bold">
                     {store?.storeName + " (" + store?.storecode + ")"}
                   </div>
@@ -2721,7 +2733,7 @@ const fetchBuyOrders = async () => {
   if (
     (address
     && store
-    &&  address !== store.adminWalletAddress
+    &&  !isStoreAdminWallet
     && user?.role !== "admin")
     
 
@@ -5875,4 +5887,3 @@ const TradeDetail = (
       </div>
     );
   };
-

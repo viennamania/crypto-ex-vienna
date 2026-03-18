@@ -26,7 +26,6 @@ import {
 
 import {
     useActiveAccount,
-    useActiveWallet,
 } from "thirdweb/react";
 import { inAppWallet } from "thirdweb/wallets";
 import { ConnectButton } from '@/components/WalletConnectButton';
@@ -310,8 +309,6 @@ export default function Index({ params }: any) {
       Go_Buy_USDT: "",
       Go_Sell_USDT: "",
 
-      Disconnect_Wallet: "",
-
       My_Order: "",
 
       Payment: "",
@@ -456,8 +453,6 @@ export default function Index({ params }: any) {
       Go_Buy_USDT,
       Go_Sell_USDT,
 
-      Disconnect_Wallet,
-
       My_Order,
 
       Payment,
@@ -583,12 +578,6 @@ export default function Index({ params }: any) {
 
 
  
-
-    // get the active wallet
-    const activeWallet = useActiveWallet();
-
-
-
 
   const smartAccount = useActiveAccount();
 
@@ -2093,31 +2082,6 @@ export default function Index({ params }: any) {
 
               )}
 
-              
-
-
-              {/* disconnect button */}
-              {/*
-              
-              <button
-                onClick={() => {
-
-                  activeWallet?.disconnect();
-
-                    
-                    
-                  //window.location.reload();
-
-                  router.push('/' + params.lang + '/' + params.center + '/pay-usdt/0');
-
-
-
-                }}
-                className="text-lg bg-red-500 text-white px-4 py-2 rounded-md"
-              >
-                {Disconnect_Wallet}
-              </button>
-              */}
               
             </div>
 
@@ -4155,4 +4119,3 @@ const TradeDetail = (
       </div>
     );
   };
-

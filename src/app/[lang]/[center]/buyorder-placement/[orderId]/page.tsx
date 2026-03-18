@@ -25,8 +25,7 @@ import {
 } from "thirdweb/chains";
 
 import {
-    useActiveAccount,
-    useActiveWallet} from 'thirdweb/react';
+    useActiveAccount} from 'thirdweb/react';
 
 import {
   inAppWallet,
@@ -226,8 +225,6 @@ export default function Index({ params }: any) {
       Go_Buy_USDT: "",
       Go_Sell_USDT: "",
 
-      Disconnect_Wallet: "",
-
       My_Order: "",
 
       Payment: "",
@@ -325,8 +322,6 @@ export default function Index({ params }: any) {
       Go_Buy_USDT,
       Go_Sell_USDT,
 
-      Disconnect_Wallet,
-
       My_Order,
 
       Payment,
@@ -404,12 +399,6 @@ export default function Index({ params }: any) {
   
   console.log('orderId', orderId);
 
-
-
-
-
-    // get the active wallet
-    const activeWallet = useActiveWallet();
 
 
 
@@ -1320,28 +1309,7 @@ export default function Index({ params }: any) {
               */}
           </div>
 
-          {address ? (
-            <div className="flex flex-col items-center space-y-4 mb-4">
-              {/* disconnect button */}
-              
-              <button
-                onClick={() => {
-
-                  activeWallet?.disconnect();
-
-                    
-                    
-                  window.location.reload();
-
-                }}
-                className="text-lg bg-red-500 text-white px-4 py-2 rounded-md"
-              >
-                {Disconnect_Wallet}
-              </button>
-              
-            </div>
-
-          ) : (
+          {!address && (
             <div className="flex flex-col items-center space-y-4 mb-4">
 
 
@@ -2866,5 +2834,4 @@ const TradeDetail = (
       </div>
     );
   };
-
 

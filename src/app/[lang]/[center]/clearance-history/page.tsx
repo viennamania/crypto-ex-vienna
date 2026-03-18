@@ -2337,6 +2337,15 @@ export default function Index({ params }: any) {
 
   const [fetchingStore, setFetchingStore] = useState(false);
   const [store, setStore] = useState(null) as any;
+  const normalizedAddress = String(address || "").trim().toLowerCase();
+  const normalizedStoreAdminWalletAddress = String(
+    storeAdminWalletAddress || store?.adminWalletAddress || ""
+  ).trim().toLowerCase();
+  const isStoreAdminWallet = Boolean(
+    normalizedAddress &&
+    normalizedStoreAdminWalletAddress &&
+    normalizedAddress === normalizedStoreAdminWalletAddress
+  );
 
   useEffect(() => {
 
@@ -2362,7 +2371,10 @@ export default function Index({ params }: any) {
 
           setStoreAdminWalletAddress(data.result?.adminWalletAddress);
 
-          if (data.result?.adminWalletAddress === address) {
+          if (
+            normalizedAddress &&
+            String(data.result?.adminWalletAddress || "").trim().toLowerCase() === normalizedAddress
+          ) {
             setIsAdmin(true);
           }
 
@@ -2401,7 +2413,7 @@ export default function Index({ params }: any) {
     , 5000);
     return () => clearInterval(interval);
 
-  } , [params.center]);
+  } , [params.center, normalizedAddress]);
 
 
 
@@ -2693,12 +2705,12 @@ const [tradeSummary, setTradeSummary] = useState({
               height={35}
               className="rounded-lg w-6 h-6"
             />
-            {address && address === storeAdminWalletAddress && (
+            {address && isStoreAdminWallet && (
               <div className="text-sm text-[#3167b4] font-bold">
                 {store?.storeName + " (" + store?.storecode + ") 가맹점 관리자"}
               </div>
             )}
-            {address && address !== storeAdminWalletAddress && (
+            {address && !isStoreAdminWallet && (
               <div className="text-sm text-[#3167b4] font-bold">
                 {store?.storeName + " (" + store?.storecode + ")"}
               </div>
@@ -2719,39 +2731,6 @@ const [tradeSummary, setTradeSummary] = useState({
               >
                 {user?.nickname || "프로필"}
               </button>
-
-
-              {/* logout button */}
-              {/*
-              <button
-                  onClick={() => {
-                      confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
-                      .then(() => {
-
-                          toast.success('로그아웃 되었습니다');
-
-                          //router.push(
-                          //    "/administration/" + params.center
-                          //);
-                      });
-                  } }
-
-                  className="flex items-center justify-center gap-2
-                    bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
-              >
-                <Image
-                  src="/icon-logout.webp"
-                  alt="Logout"
-                  width={20}
-                  height={20}
-                  className="rounded-lg w-5 h-5"
-                />
-                <span className="text-sm">
-                  로그아웃
-                </span>
-              </button>
-              */}
-
             </div>
 
 
@@ -2887,7 +2866,7 @@ const [tradeSummary, setTradeSummary] = useState({
   if (
     (address
     && store
-    &&  address !== store.adminWalletAddress
+    &&  !isStoreAdminWallet
     && user?.role !== "admin")
     
 
@@ -3057,39 +3036,6 @@ const [tradeSummary, setTradeSummary] = useState({
                         )}
                       </div>
                     </button>
-
-                    {/* logout button */}
-                    {/*
-                    <button
-                        onClick={() => {
-                            confirm("로그아웃 하시겠습니까?") && activeWallet?.disconnect()
-                            .then(() => {
-
-                                toast.success('로그아웃 되었습니다');
-
-                                //router.push(
-                                //    "/administration/" + params.center
-                                //);
-                            });
-                        } }
-
-                        className="
-                          w-32
-                          flex items-center justify-center gap-2
-                          bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
-                    >
-                      <Image
-                        src="/icon-logout.webp"
-                        alt="Logout"
-                        width={20}
-                        height={20}
-                        className="rounded-lg w-5 h-5"
-                      />
-                      <span className="text-sm">
-                        로그아웃
-                      </span>
-                    </button>
-                    */}
 
                 </div>
               )}
@@ -5864,4 +5810,3 @@ const TradeDetail = (
       </div>
     );
   };
-

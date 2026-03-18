@@ -15,10 +15,8 @@ import {
 
 import {
     useActiveAccount,
-    useActiveWallet,
     useSetActiveWallet,
     useConnectedWallets,
-    useDisconnect,
     useConnectModal} from 'thirdweb/react';
 import { inAppWallet } from "thirdweb/wallets";
 
@@ -119,7 +117,6 @@ export default function SettingsPage({ params }: any) {
 
         Copy: "",
 
-        Disconnect_Wallet: "",
     
 
     
@@ -167,14 +164,7 @@ export default function SettingsPage({ params }: any) {
 
         Copy,
 
-        Disconnect_Wallet,
-
     } = data;
-    
-    
-    
-
-    const {disconnect} = useDisconnect();
 
 
 
@@ -192,13 +182,6 @@ export default function SettingsPage({ params }: any) {
 
 
     const router = useRouter();
-
-    // get the active wallet
-    const activeWallet = useActiveWallet();
-
-
-
-
 
     const activeAccount = useActiveAccount();
 
@@ -579,50 +562,6 @@ export default function SettingsPage({ params }: any) {
                             </button>
                         
                         </div>
-
-                        {/* Disconnect Wallet */}
-
-                        {activeWallet && (
-                            <div className='flex flex-col items-center justify-center gap-2'>
-                                <button
-                                    disabled={!activeWallet}
-                                    onClick={() => {
-
-                                        //activeWallet?.disconnect();
-                                        //window.location.reload();
-
-                                        disconnect(activeWallet);
-
-
-                                    }}
-                                    className="p-2 bg-red-500 text-zinc-100 rounded"
-                                >
-                                    {Disconnect_Wallet}
-                                </button>
-
-
-                                {/*
-                                <iframe
-                                    src='https://withpaper.com/sdk/2022-08-12/embedded-wallet/export?clientId=fbef5750f91259d17fc33469695bd744'
-
-
-                                    width='100%'
-                                    height='600px'
-                                />
-                                */}
-
-
-
-                            </div>
-                        )}
-
-
-
-
-
-
-
-
 
                     </div>
 
