@@ -44,6 +44,10 @@ export default function CenterLayoutShell({
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const useTopManagerNav = routeAccessLevel === 'center_admin';
+  const profileSettingsPath = `/${lang}/${center}/profile-settings`;
+  const registrationPath = `/${lang}/${center}/profiles`;
+  const hideSidebarNavigation =
+    !useTopManagerNav && (pathname === profileSettingsPath || pathname === registrationPath);
   const managerWalletManagementPath = `/${lang}/${center}/manager-wallet-management`;
   const menuItems = buildCenterShellMenuItems(lang, center);
   const walletManagementHref =
@@ -94,7 +98,7 @@ export default function CenterLayoutShell({
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#eef6ff_0%,#e5efff_45%,#f8fbff_100%)] text-slate-900">
-      {!useTopManagerNav && (
+      {!useTopManagerNav && !hideSidebarNavigation && (
         <>
           <button
             type="button"
@@ -190,7 +194,7 @@ export default function CenterLayoutShell({
         </header>
       )}
 
-      <div className={`min-h-screen ${useTopManagerNav ? '' : 'lg:pl-[304px]'}`}>
+      <div className={`min-h-screen ${useTopManagerNav || hideSidebarNavigation ? '' : 'lg:pl-[304px]'}`}>
         <div className={`center-shell-legacy-content px-3 pb-12 ${useTopManagerNav ? 'pt-4 sm:px-4 lg:px-8' : 'pt-16 sm:px-4 lg:px-8 lg:pt-8'}`}>
           <div className="mx-auto w-full max-w-[1680px]">{children}</div>
         </div>

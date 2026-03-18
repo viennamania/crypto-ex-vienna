@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { AutoConnect, useActiveAccount, useActiveWallet, useConnectedWallets } from 'thirdweb/react';
+import { AutoConnect, useActiveAccount } from 'thirdweb/react';
 
 import { client } from '@/app/client';
 import CenterLayoutShell from '@/components/CenterLayoutShell';
@@ -54,17 +54,7 @@ export default function CenterSubpageAccessGate({
     forceSmartAccount: true,
   });
   const activeAccount = useActiveAccount();
-  const activeWallet = useActiveWallet();
-  const connectedWallets = useConnectedWallets();
-  const walletAddress = useMemo(() => {
-    const candidates = [
-      String(activeAccount?.address || '').trim(),
-      String(activeWallet?.getAccount?.()?.address || '').trim(),
-      ...connectedWallets.map((item) => String(item?.getAccount?.()?.address || '').trim()),
-    ];
-
-    return candidates.find(Boolean) || '';
-  }, [activeAccount?.address, activeWallet, connectedWallets]);
+  const walletAddress = useMemo(() => String(activeAccount?.address || '').trim(), [activeAccount?.address]);
 
   const [loadingMember, setLoadingMember] = useState(false);
   const [checkedMember, setCheckedMember] = useState(false);
