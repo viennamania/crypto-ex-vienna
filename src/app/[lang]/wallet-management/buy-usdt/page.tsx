@@ -424,6 +424,8 @@ const SENDBIRD_APP_ID =
   process.env.NEXT_PUBLIC_SENDBIRD_APP_ID ||
   process.env.NEXT_PUBLIC_NEXT_PUBLIC_SENDBIRD_APP_ID ||
   '';
+const SENDBIRD_MOBILE_BREAKPOINT = '768px';
+const SENDBIRD_MOBILE_BALLOON_WIDTH = 'calc(100vw - 140px)';
 
 const createInitialCancelTradeProgressSteps = (): CancelTradeProgressStepItem[] =>
   CANCEL_TRADE_PROGRESS_STEP_DEFINITIONS.map((item) => ({
@@ -1016,6 +1018,13 @@ export default function BuyUsdtPage({
   const buyerProfileLoadingRequestIdRef = useRef(0);
   const paymentRequestedWatchRef = useRef<{ orderId: string; tradeId: string; usdtAmount: number } | null>(null);
   const jackpotShownOrderKeysRef = useRef<Set<string>>(new Set());
+  const sendbirdChatPanelStyle = useMemo(
+    () =>
+      ({
+        '--sendbird-message-balloon-width': `min(${SENDBIRD_MOBILE_BALLOON_WIDTH}, 404px)`,
+      }) as React.CSSProperties & Record<'--sendbird-message-balloon-width', string>,
+    [],
+  );
 
   const openSellerPicker = useCallback(() => {
     setSellerKeyword('');
@@ -4102,7 +4111,8 @@ export default function BuyUsdtPage({
                       {activeAccount?.address && !isSelectedSellerBuyer && SENDBIRD_APP_ID && (
                         <div
                           ref={chatPanelRef}
-                          className={`mt-3 h-[380px] overflow-hidden rounded-2xl border bg-white ${
+                          style={sendbirdChatPanelStyle}
+                          className={`wallet-management-buy-usdt-chat mt-3 h-[380px] w-full min-w-0 overflow-hidden rounded-2xl border bg-white ${
                             shouldPromptBuyerConsent
                               ? 'border-amber-300 ring-2 ring-amber-200 shadow-[0_22px_42px_-34px_rgba(245,158,11,0.85)]'
                               : 'border-slate-200'
@@ -4145,9 +4155,12 @@ export default function BuyUsdtPage({
                               appId={SENDBIRD_APP_ID}
                               userId={chatUserId}
                               accessToken={chatSessionToken}
+                              breakpoint={SENDBIRD_MOBILE_BREAKPOINT}
                               theme="light"
                             >
-                              <GroupChannel channelUrl={chatChannelUrl} />
+                              <div className="h-full w-full min-w-0">
+                                <GroupChannel channelUrl={chatChannelUrl} />
+                              </div>
                             </SendbirdProvider>
                           )}
                         </div>
@@ -5129,6 +5142,33 @@ export default function BuyUsdtPage({
           }
           100% {
             width: 100%;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .wallet-management-buy-usdt-chat .sendbird-channel,
+          .wallet-management-buy-usdt-chat .sendbird-conversation,
+          .wallet-management-buy-usdt-chat .sendbird-conversation__messages,
+          .wallet-management-buy-usdt-chat .sendbird-message-content,
+          .wallet-management-buy-usdt-chat .sendbird-message-content__middle,
+          .wallet-management-buy-usdt-chat .sendbird-message-content__middle__body-container {
+            min-width: 0;
+            max-width: 100%;
+          }
+
+          .wallet-management-buy-usdt-chat .sendbird-message-content .sendbird-message-content__middle,
+          .wallet-management-buy-usdt-chat .sendbird-emoji-reactions {
+            max-width: ${SENDBIRD_MOBILE_BALLOON_WIDTH};
+          }
+
+          .wallet-management-buy-usdt-chat .sendbird-og-message-item-body {
+            width: min(100%, 320px);
+            min-width: 160px;
+          }
+
+          .wallet-management-buy-usdt-chat .sendbird-thumbnail-message-item-body {
+            min-width: 160px;
+            max-width: min(100%, 400px);
           }
         }
       `}</style>
