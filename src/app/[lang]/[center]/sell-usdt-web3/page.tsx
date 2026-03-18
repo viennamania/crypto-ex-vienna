@@ -1601,7 +1601,7 @@ export default function Index({ params }: any) {
                             {address && !user && (
                               <button
                                 onClick={() => {
-                                  router.push('/' + params.lang + '/' + params.center + '/profiles?wallet=' + wallet);
+                                  router.push('/' + params.lang + '/' + params.center + '/profile-settings?wallet=' + wallet);
                                 }}
                                 className="text-sm text-zinc-400 underline"
                               >
@@ -3606,4 +3606,3 @@ const TradeDetail = (
       </div>
     );
   };
-

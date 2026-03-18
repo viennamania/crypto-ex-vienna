@@ -45,9 +45,9 @@ export default function CenterLayoutShell({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const useTopManagerNav = routeAccessLevel === 'center_admin';
   const profileSettingsPath = `/${lang}/${center}/profile-settings`;
-  const registrationPath = `/${lang}/${center}/profiles`;
+  const legacyRegistrationPath = `/${lang}/${center}/profiles`;
   const hideSidebarNavigation =
-    !useTopManagerNav && (pathname === profileSettingsPath || pathname === registrationPath);
+    !useTopManagerNav && (pathname === profileSettingsPath || pathname === legacyRegistrationPath);
   const managerWalletManagementPath = `/${lang}/${center}/manager-wallet-management`;
   const menuItems = buildCenterShellMenuItems(lang, center);
   const walletManagementHref =

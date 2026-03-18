@@ -1,6 +1,6 @@
-import { redirect } from 'next/navigation';
+import CenterProfilesRegistrationPage from '../profiles/page';
 
-export default function CenterProfileSettingsRedirect({
+export default function CenterProfileSettingsPage({
   params,
 }: {
   params: {
@@ -8,5 +8,5 @@ export default function CenterProfileSettingsRedirect({
     center: string;
   };
 }) {
-  redirect(`/${params.lang}/${params.center}/profiles`);
+  return <CenterProfilesRegistrationPage params={params} />;
 }

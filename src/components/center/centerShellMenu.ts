@@ -78,7 +78,7 @@ export const buildCenterShellMenuItems = (lang: string, center: string): CenterS
   ];
 };
 
-export const getCenterRegistrationHref = (lang: string, center: string) => `/${lang}/${center}/profiles`;
+export const getCenterRegistrationHref = (lang: string, center: string) => `/${lang}/${center}/profile-settings`;
 
 export const resolveCenterRouteAccess = (
   pathname: string,
