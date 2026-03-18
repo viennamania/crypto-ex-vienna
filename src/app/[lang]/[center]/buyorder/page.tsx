@@ -2447,6 +2447,10 @@ const fetchBuyOrders = async () => {
     const [fetchingStore, setFetchingStore] = useState(false);
     const [store, setStore] = useState(null) as any;
     const normalizedAddress = String(address || "").trim().toLowerCase();
+    const isCurrentWalletAddress = (walletAddress?: string) => Boolean(
+      normalizedAddress &&
+      String(walletAddress || "").trim().toLowerCase() === normalizedAddress
+    );
     const normalizedStoreAdminWalletAddress = String(
       storeAdminWalletAddress || store?.adminWalletAddress || ""
     ).trim().toLowerCase();
@@ -5748,7 +5752,7 @@ const fetchBuyOrders = async () => {
                               {versionMinor !== 'globaltether' && (
                               <>
                               {item.seller
-                              && item.seller.walletAddress === address
+                              && isCurrentWalletAddress(item.seller.walletAddress)
                               
                               ///////////////&& item?.autoConfirmPayment
 
@@ -5965,7 +5969,7 @@ const fetchBuyOrders = async () => {
 
                                 {
                                 (item.status === 'accepted' || item.status === 'paymentRequested')
-                                && item.seller && item.seller.walletAddress === address && (
+                                && item.seller && isCurrentWalletAddress(item.seller.walletAddress) && (
                                   
                                   <div className="flex flex-col items-center gap-2">
                                   
@@ -6061,7 +6065,7 @@ const fetchBuyOrders = async () => {
                               flex flex-col gap-2 items-start justify-start">
 
                                 {/*
-                                {item.status === 'accepted' && item.seller && item.seller.walletAddress === address && (
+                                {item.status === 'accepted' && item.seller && isCurrentWalletAddress(item.seller.walletAddress) && (
                                   
                                   <div className="flex flex-row items-center gap-2">
                                     <input
@@ -6112,7 +6116,7 @@ const fetchBuyOrders = async () => {
                                 <>
 
                                 {
-                                  item.seller && item.seller.walletAddress === address &&
+                                  item.seller && isCurrentWalletAddress(item.seller.walletAddress) &&
                                   item.status === 'accepted' && (
 
 
@@ -6246,7 +6250,7 @@ const fetchBuyOrders = async () => {
 
                                 {/*
                                 {item.seller
-                                && item.seller.walletAddress === address
+                                && isCurrentWalletAddress(item.seller.walletAddress)
                                 && item.status === 'paymentRequested'
                                 
                                 ///////////////&& item?.autoConfirmPayment
@@ -7788,7 +7792,7 @@ const fetchBuyOrders = async () => {
                           )}
 
                           {
-                          item.seller && item.seller.walletAddress === address &&
+                          item.seller && isCurrentWalletAddress(item.seller.walletAddress) &&
                           item.status === 'accepted' && (
                             <div className="flex flex-row gap-1">
 
