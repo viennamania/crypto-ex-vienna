@@ -2549,7 +2549,7 @@ const fetchBuyOrders = async () => {
 
                       <button
                         onClick={() => {
-                          router.push('/' + params.lang + '/administration/profile-settings');
+                          router.push('/' + params.lang + '/' + params.center + '/profile-settings');
                         }}
                         className="
                         w-32 h-10 items-center justify-center
@@ -6391,6 +6391,5 @@ const TradeDetail = (
       </div>
     );
   };
-
 
 

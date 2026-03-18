@@ -2284,7 +2284,7 @@ export default function Index({ params }: any) {
                               {address && !user?.seller && (
                                 <button
                                   onClick={() => {
-                                    router.push('/' + params.lang + '/administration/profile-settings');
+                                    router.push('/' + params.lang + '/' + params.center + '/profile-settings');
                                   }}
                                   className="text-sm text-zinc-500 underline"
                                 >
@@ -2308,7 +2308,7 @@ export default function Index({ params }: any) {
           
                             <button
                               onClick={() => {
-                                router.push('/' + params.lang + '/administration/profile-settings');
+                                router.push('/' + params.lang + '/' + params.center + '/profile-settings');
                               }}
                               className="text-sm text-zinc-500 underline"
                             >
@@ -4208,6 +4208,5 @@ const TradeDetail = (
       </div>
     );
   };
-
 
 

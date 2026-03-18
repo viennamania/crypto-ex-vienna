@@ -13,8 +13,6 @@ import { createThirdwebClient } from "thirdweb";
 
 import {
   //ThirdwebProvider,
-  ConnectButton,
-
   useConnect,
 
   useReadContract,
@@ -33,6 +31,7 @@ import {
   useConnectModal,
   
 } from "thirdweb/react";
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 import {
   inAppWallet,

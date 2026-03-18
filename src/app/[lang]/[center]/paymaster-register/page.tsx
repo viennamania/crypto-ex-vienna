@@ -27,11 +27,11 @@ import {
 } from "thirdweb/chains";
 
 import {
-    ConnectButton,
     useActiveAccount,
     useActiveWallet,
 } from "thirdweb/react";
 import { inAppWallet } from "thirdweb/wallets";
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 
 import { getUserPhoneNumber } from "thirdweb/wallets/in-app";
@@ -3920,7 +3920,6 @@ export default function Index({ params }: any) {
 
 
 };
-
 
 
 

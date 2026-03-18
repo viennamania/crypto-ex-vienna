@@ -31,7 +31,6 @@ import {
 
 
 import {
-  //ConnectButton,
   useActiveAccount,
   useActiveWallet,
   useWalletBalance,
@@ -44,6 +43,7 @@ import {
 
 
 } from "thirdweb/react";
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 import {
   inAppWallet,
@@ -106,8 +106,6 @@ import {
   bscContractAddressMKRW,
 } from "@/app/config/contractAddresses";
 
-
-import { ConnectButton } from '@/components/WalletConnectButton';
 
 interface BuyOrder {
   _id: string;
@@ -2880,5 +2878,3 @@ export default function Index({ params }: any) {
 
 
 };
-
-

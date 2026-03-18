@@ -14,13 +14,13 @@ import {
 } from "thirdweb";
 
 import {
-    ConnectButton,
     useActiveAccount,
     useActiveWallet,
 
     useConnectedWallets,
     useSetActiveWallet,
 } from "thirdweb/react";
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 
 import {
@@ -1102,7 +1102,7 @@ export default function SettingsPage({ params }: any) {
 
                         <button
                             onClick={() => {
-                                router.push('/' + params.lang + '/administration/profile-settings');
+                                router.push('/' + params.lang + '/' + params.center + '/profile-settings');
                             }}
                             className="bg-blue-500 text-zinc-100 px-4 py-2 rounded"
                         >

@@ -19,7 +19,6 @@ import {
 
 
 import {
-    ConnectButton,
     useActiveAccount,
     useActiveWallet,
 
@@ -28,6 +27,7 @@ import {
 
 
 } from "thirdweb/react";
+import { ConnectButton } from '@/components/WalletConnectButton';
 
 import { shortenAddress } from "thirdweb/utils";
 ////import { Button } from "@headlessui/react";
