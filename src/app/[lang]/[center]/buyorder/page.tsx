@@ -2469,31 +2469,46 @@ const fetchBuyOrders = async () => {
 
     const [fetchingStore, setFetchingStore] = useState(false);
     const [store, setStore] = useState(null) as any;
-    const normalizedAddressCandidates = addressCandidates
-      .map((value) => String(value || "").trim().toLowerCase())
-      .filter(Boolean);
+    const hasLoadedStoreRef = useRef(false);
+    const normalizedAddressCandidates = useMemo(
+      () => addressCandidates
+        .map((value) => String(value || "").trim().toLowerCase())
+        .filter(Boolean),
+      [addressCandidates],
+    );
+    const normalizedAddressCandidatesKey = normalizedAddressCandidates.join("|");
+    const normalizedAddressCandidateSet = useMemo(
+      () => new Set(
+        normalizedAddressCandidatesKey
+          ? normalizedAddressCandidatesKey.split("|").filter(Boolean)
+          : []
+      ),
+      [normalizedAddressCandidatesKey],
+    );
     const normalizedAddress = normalizedAddressCandidates[0] || "";
     const isCurrentWalletAddress = (walletAddress?: string) => {
       const normalizedWalletAddress = String(walletAddress || "").trim().toLowerCase();
       return Boolean(
         normalizedWalletAddress &&
-        normalizedAddressCandidates.includes(normalizedWalletAddress)
+        normalizedAddressCandidateSet.has(normalizedWalletAddress)
       );
     };
     const normalizedStoreAdminWalletAddress = String(
       storeAdminWalletAddress || store?.adminWalletAddress || ""
     ).trim().toLowerCase();
     const isStoreAdminWallet = Boolean(
-      normalizedAddressCandidates.length > 0 &&
+      normalizedAddressCandidateSet.size > 0 &&
       normalizedStoreAdminWalletAddress &&
-      normalizedAddressCandidates.includes(normalizedStoreAdminWalletAddress)
+      normalizedAddressCandidateSet.has(normalizedStoreAdminWalletAddress)
     );
   
     useEffect(() => {
   
-      setFetchingStore(true);
-  
       const fetchData = async () => {
+          if (!hasLoadedStoreRef.current) {
+            setFetchingStore(true);
+          }
+
           const response = await fetch("/api/store/getOneStore", {
               method: "POST",
               headers: {
@@ -2517,8 +2532,8 @@ const fetchBuyOrders = async () => {
             setStoreAdminWalletAddress(data.result?.adminWalletAddress);
 
             if (
-              normalizedAddressCandidates.length > 0 &&
-              normalizedAddressCandidates.includes(
+              normalizedAddressCandidateSet.size > 0 &&
+              normalizedAddressCandidateSet.has(
                 String(data.result?.adminWalletAddress || "").trim().toLowerCase()
               )
             ) {
@@ -2543,12 +2558,15 @@ const fetchBuyOrders = async () => {
           setStoreAdminWalletAddress("");
         }
   
+          hasLoadedStoreRef.current = true;
           setFetchingStore(false);
       };
 
       if (!params.center) {
         return;
       }
+
+      hasLoadedStoreRef.current = false;
   
       fetchData();
 
@@ -2559,7 +2577,7 @@ const fetchBuyOrders = async () => {
       , 5000);
       return () => clearInterval(interval);
   
-    } , [params.center, normalizedAddressCandidates]);
+    } , [params.center, normalizedAddressCandidateSet, normalizedAddressCandidatesKey]);
 
 
 
