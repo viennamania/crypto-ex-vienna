@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, act, useRef } from "react";
+import { useState, useEffect, use, act, useMemo, useRef } from "react";
 
 import Image from "next/image";
 
@@ -33,6 +33,7 @@ import {
 
 import {
   useActiveAccount,
+  useActiveWallet,
   useWalletBalance,
 
   useSetActiveWallet,
@@ -488,10 +489,33 @@ export default function Index({ params }: any) {
 
 
   const activeAccount = useActiveAccount();
+  const activeWallet = useActiveWallet();
+  const connectWallets = useConnectedWallets();
 
-  
-  
-  const address = activeAccount?.address;
+  const addressCandidates = useMemo(() => {
+    const candidateValues: Array<unknown> = [
+      activeWallet?.getAdminAccount?.(),
+      activeWallet?.getAccount?.(),
+      activeAccount,
+    ];
+
+    for (const walletItem of connectWallets) {
+      candidateValues.push(walletItem?.getAdminAccount?.());
+      candidateValues.push(walletItem?.getAccount?.());
+    }
+
+    const nextAddresses: string[] = [];
+    for (const candidate of candidateValues) {
+      const candidateAddress = String((candidate as { address?: string } | null | undefined)?.address || '').trim();
+      if (candidateAddress && !nextAddresses.includes(candidateAddress)) {
+        nextAddresses.push(candidateAddress);
+      }
+    }
+
+    return nextAddresses;
+  }, [activeAccount, activeWallet, connectWallets]);
+
+  const address = addressCandidates[0] || '';
 
 
 
@@ -2445,18 +2469,24 @@ const fetchBuyOrders = async () => {
 
     const [fetchingStore, setFetchingStore] = useState(false);
     const [store, setStore] = useState(null) as any;
-    const normalizedAddress = String(address || "").trim().toLowerCase();
-    const isCurrentWalletAddress = (walletAddress?: string) => Boolean(
-      normalizedAddress &&
-      String(walletAddress || "").trim().toLowerCase() === normalizedAddress
-    );
+    const normalizedAddressCandidates = addressCandidates
+      .map((value) => String(value || "").trim().toLowerCase())
+      .filter(Boolean);
+    const normalizedAddress = normalizedAddressCandidates[0] || "";
+    const isCurrentWalletAddress = (walletAddress?: string) => {
+      const normalizedWalletAddress = String(walletAddress || "").trim().toLowerCase();
+      return Boolean(
+        normalizedWalletAddress &&
+        normalizedAddressCandidates.includes(normalizedWalletAddress)
+      );
+    };
     const normalizedStoreAdminWalletAddress = String(
       storeAdminWalletAddress || store?.adminWalletAddress || ""
     ).trim().toLowerCase();
     const isStoreAdminWallet = Boolean(
-      normalizedAddress &&
+      normalizedAddressCandidates.length > 0 &&
       normalizedStoreAdminWalletAddress &&
-      normalizedAddress === normalizedStoreAdminWalletAddress
+      normalizedAddressCandidates.includes(normalizedStoreAdminWalletAddress)
     );
   
     useEffect(() => {
@@ -2487,8 +2517,10 @@ const fetchBuyOrders = async () => {
             setStoreAdminWalletAddress(data.result?.adminWalletAddress);
 
             if (
-              normalizedAddress &&
-              String(data.result?.adminWalletAddress || "").trim().toLowerCase() === normalizedAddress
+              normalizedAddressCandidates.length > 0 &&
+              normalizedAddressCandidates.includes(
+                String(data.result?.adminWalletAddress || "").trim().toLowerCase()
+              )
             ) {
               setIsAdmin(true);
             }
@@ -2527,7 +2559,7 @@ const fetchBuyOrders = async () => {
       , 5000);
       return () => clearInterval(interval);
   
-    } , [params.center, normalizedAddress]);
+    } , [params.center, normalizedAddressCandidates]);
 
 
 
