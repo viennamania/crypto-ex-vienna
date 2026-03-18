@@ -214,7 +214,14 @@ export default function CenterManagementWalletManagementPage() {
   });
   const { Canvas } = useQRCode();
 
-  const account = activeWallet?.getAccount?.() ?? activeAccount;
+  const account = useMemo(() => {
+    try {
+      return activeWallet?.getAccount?.() ?? activeAccount;
+    } catch (error) {
+      console.warn('failed to resolve center wallet account', error);
+      return activeAccount;
+    }
+  }, [activeAccount, activeWallet]);
   const walletAddress = String(account?.address || '').trim();
   const shortWalletAddress = walletAddress ? shortenAddress(walletAddress) : '연결 대기중';
 
