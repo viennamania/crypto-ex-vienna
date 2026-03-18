@@ -492,8 +492,8 @@ export default function Index({ params }: any) {
   const activeWallet = useActiveWallet();
   const connectWallets = useConnectedWallets();
 
-  const addressCandidates = useMemo(() => {
-    const candidateValues: Array<unknown> = [
+  const accountCandidates = useMemo(() => {
+    const candidateValues: Array<any> = [
       activeWallet?.getAdminAccount?.(),
       activeWallet?.getAccount?.(),
       activeAccount,
@@ -504,16 +504,26 @@ export default function Index({ params }: any) {
       candidateValues.push(walletItem?.getAccount?.());
     }
 
-    const nextAddresses: string[] = [];
+    const nextAccounts: any[] = [];
+    const seenAddresses = new Set<string>();
     for (const candidate of candidateValues) {
-      const candidateAddress = String((candidate as { address?: string } | null | undefined)?.address || '').trim();
-      if (candidateAddress && !nextAddresses.includes(candidateAddress)) {
-        nextAddresses.push(candidateAddress);
+      const candidateAddress = String(candidate?.address || '').trim();
+      const normalizedCandidateAddress = candidateAddress.toLowerCase();
+      if (candidateAddress && !seenAddresses.has(normalizedCandidateAddress)) {
+        seenAddresses.add(normalizedCandidateAddress);
+        nextAccounts.push(candidate);
       }
     }
 
-    return nextAddresses;
+    return nextAccounts;
   }, [activeAccount, activeWallet, connectWallets]);
+
+  const addressCandidates = useMemo(
+    () => accountCandidates
+      .map((candidate) => String(candidate?.address || '').trim())
+      .filter(Boolean),
+    [accountCandidates],
+  );
 
   const address = addressCandidates[0] || '';
 
@@ -884,7 +894,10 @@ export default function Index({ params }: any) {
                 lang: params.lang,
                 storecode: params.center,
                 orderId: orderId,
-                sellerWalletAddress: address,
+                sellerWalletAddress: resolveManagedWalletAddress(
+                  storeAdminWalletAddress,
+                  store?.adminWalletAddress,
+                ),
                 sellerstorecode: params.center,
 
                 /*
@@ -1060,7 +1073,11 @@ export default function Index({ params }: any) {
       body: JSON.stringify({
         orderId: orderId,
         storecode: params.center,
-        walletAddress: address,
+        walletAddress: resolveManagedWalletAddress(
+          buyOrders[index]?.seller?.walletAddress,
+          storeAdminWalletAddress,
+          store?.adminWalletAddress,
+        ),
         cancelTradeReason: cancelTradeReason[index],
       })
     });
@@ -1204,17 +1221,22 @@ export default function Index({ params }: any) {
 
 
    
-    let balance = 0;
-    const result = await balanceOf({
-      contract,
-      address: address || "",
-    });
-
-      if (chain === 'bsc') {
-      balance = Number(result) / 10 ** 18;
-    } else {
-      balance = Number(result) / 10 ** 6;
-    }
+    const managedWalletCandidates = getManagedWalletCandidates(
+      storeAdminWalletAddress,
+      store?.adminWalletAddress,
+    );
+    const balances = await Promise.all(
+      managedWalletCandidates.map(async (walletAddress) => {
+        const rawBalance = await balanceOf({
+          contract,
+          address: walletAddress,
+        });
+        return chain === 'bsc'
+          ? Number(rawBalance) / 10 ** 18
+          : Number(rawBalance) / 10 ** 6;
+      })
+    );
+    const balance = balances.length > 0 ? Math.max(...balances) : 0;
 
 
 
@@ -1945,18 +1967,39 @@ export default function Index({ params }: any) {
     }
 
   
-    let balance = 0;
-    const result = await balanceOf({
-      contract,
-      address: address,
-    });
-
-
-    if (chain === 'bsc') {
-      balance = Number(result) / 10 ** 18;
-    } else {
-      balance = Number(result) / 10 ** 6;
+    const managedAccounts = getManagedAccounts(
+      storeAdminWalletAddress,
+      store?.adminWalletAddress,
+    );
+    if (managedAccounts.length === 0) {
+      toast.error('Please connect your wallet');
+      isProcessingSendTransaction.current = false;
+      setSendingTransaction(
+        sendingTransaction.map((item, idx) => idx === index ? false : item)
+      );
+      return;
     }
+
+    const managedAccountBalances = await Promise.all(
+      managedAccounts.map(async (accountCandidate) => {
+        const rawBalance = await balanceOf({
+          contract,
+          address: String(accountCandidate?.address || ''),
+        });
+        const normalizedBalance = chain === 'bsc'
+          ? Number(rawBalance) / 10 ** 18
+          : Number(rawBalance) / 10 ** 6;
+        return {
+          account: accountCandidate,
+          balance: normalizedBalance,
+        };
+      })
+    );
+    const managedSender = managedAccountBalances.reduce(
+      (selected, current) => current.balance > selected.balance ? current : selected,
+      managedAccountBalances[0],
+    );
+    const balance = managedSender?.balance || 0;
 
     // check balance
     // if balance is less than paymentAmount, then return
@@ -1987,7 +2030,7 @@ export default function Index({ params }: any) {
         //const { transactionHash } = await sendAndConfirmTransaction({
         const { transactionHash } = await sendTransaction({
           transaction: transaction,
-          account: activeAccount as any,
+          account: managedSender.account as any,
         });
 
         ///console.log("transactionHash===", transactionHash);
@@ -2486,12 +2529,73 @@ const fetchBuyOrders = async () => {
       [normalizedAddressCandidatesKey],
     );
     const normalizedAddress = normalizedAddressCandidates[0] || "";
+    const normalizeAddressValue = (value?: string) => String(value || "").trim().toLowerCase();
+    const resolveManagedWalletAddress = (...walletCandidates: Array<string | undefined>) => {
+      for (const walletCandidate of walletCandidates) {
+        const normalizedWalletCandidate = normalizeAddressValue(walletCandidate);
+        if (normalizedWalletCandidate && normalizedAddressCandidateSet.has(normalizedWalletCandidate)) {
+          return String(walletCandidate || "").trim();
+        }
+      }
+
+      for (const walletCandidate of addressCandidates) {
+        const normalizedWalletCandidate = normalizeAddressValue(walletCandidate);
+        if (normalizedWalletCandidate && normalizedAddressCandidateSet.has(normalizedWalletCandidate)) {
+          return String(walletCandidate || "").trim();
+        }
+      }
+
+      return String(addressCandidates[0] || "").trim();
+    };
+    const getManagedWalletCandidates = (...walletCandidates: Array<string | undefined>) => {
+      const uniqueWallets = new Map<string, string>();
+      for (const walletCandidate of [...walletCandidates, ...addressCandidates]) {
+        const trimmedWalletCandidate = String(walletCandidate || "").trim();
+        const normalizedWalletCandidate = normalizeAddressValue(trimmedWalletCandidate);
+        if (
+          trimmedWalletCandidate &&
+          normalizedWalletCandidate &&
+          normalizedAddressCandidateSet.has(normalizedWalletCandidate) &&
+          !uniqueWallets.has(normalizedWalletCandidate)
+        ) {
+          uniqueWallets.set(normalizedWalletCandidate, trimmedWalletCandidate);
+        }
+      }
+      return Array.from(uniqueWallets.values());
+    };
+    const getManagedAccounts = (...walletCandidates: Array<string | undefined>) => {
+      const managedWalletSet = new Set(
+        getManagedWalletCandidates(...walletCandidates)
+          .map((walletCandidate) => normalizeAddressValue(walletCandidate))
+          .filter(Boolean)
+      );
+      return accountCandidates.filter((accountCandidate) =>
+        managedWalletSet.has(normalizeAddressValue(accountCandidate?.address))
+      );
+    };
     const isCurrentWalletAddress = (walletAddress?: string) => {
       const normalizedWalletAddress = String(walletAddress || "").trim().toLowerCase();
       return Boolean(
         normalizedWalletAddress &&
         normalizedAddressCandidateSet.has(normalizedWalletAddress)
       );
+    };
+    const hasValidBankInfo = (bankInfo?: any) => Boolean(
+      String(bankInfo?.bankName || "").trim() &&
+      String(bankInfo?.accountNumber || "").trim() &&
+      String(bankInfo?.accountHolder || "").trim()
+    );
+    const canRequestPaymentForOrder = (item?: any) => {
+      if (!item?.seller || !canManageCenterOrder(item.seller.walletAddress)) {
+        return false;
+      }
+      if (item?.status !== 'accepted') {
+        return false;
+      }
+      if (item?.paymentMethod === 'bank') {
+        return hasValidBankInfo(item?.seller?.bankInfo);
+      }
+      return true;
     };
     const normalizedStoreAdminWalletAddress = String(
       storeAdminWalletAddress || store?.adminWalletAddress || ""
@@ -6154,15 +6258,14 @@ const fetchBuyOrders = async () => {
 
 
                                 {
-                                  item.seller && canManageCenterOrder(item.seller.walletAddress) &&
-                                  item.status === 'accepted' && (
+                                  canRequestPaymentForOrder(item) && (
 
 
                                   <div className="
                                     w-full
                                     flex flex-col gap-2 items-center justify-center">
 
-                                    {item.seller?.bankInfo ? (
+                                    {item?.paymentMethod !== 'bank' || hasValidBankInfo(item.seller?.bankInfo) ? (
 
                                       <div className="flex flex-row items-center gap-2">
 
@@ -7817,8 +7920,7 @@ const fetchBuyOrders = async () => {
                           )}
 
                           {
-                          item.seller && canManageCenterOrder(item.seller.walletAddress) &&
-                          item.status === 'accepted' && (
+                          canRequestPaymentForOrder(item) && (
                             <div className="flex flex-row gap-1">
 
                               {/* check box for agreement */}
@@ -7868,6 +7970,16 @@ const fetchBuyOrders = async () => {
                               
                               </button>
 
+                            </div>
+                          )}
+
+                          {item.status === 'accepted'
+                          && item?.paymentMethod === 'bank'
+                          && item.seller
+                          && canManageCenterOrder(item.seller.walletAddress)
+                          && !hasValidBankInfo(item.seller?.bankInfo) && (
+                            <div className="flex flex-row gap-1">
+                              <span className="text-xs text-red-500">결제은행정보 없음</span>
                             </div>
                           )}
 
