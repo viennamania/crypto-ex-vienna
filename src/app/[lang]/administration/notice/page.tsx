@@ -45,7 +45,7 @@ const formatDate = (value?: string) => {
 export default function NoticeAdminPage() {
   const params = useParams();
   const langParam = Array.isArray(params?.lang) ? params.lang[0] : params?.lang;
-  const adminHomeHref = `/${langParam ?? 'ko'}/administration`;
+  const adminHomeHref = `/${langParam ?? 'ko'}/administration/orangx`;
   const [form, setForm] = useState<NoticeForm>({ ...EMPTY_FORM });
   const [notices, setNotices] = useState<NoticeItem[]>([]);
   const [loading, setLoading] = useState(false);

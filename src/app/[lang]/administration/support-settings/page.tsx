@@ -284,7 +284,7 @@ export default function SupportSettingsPage() {
           <p className="text-sm text-slate-500">상담원 설정은 관리자만 변경할 수 있습니다.</p>
           <button
             type="button"
-            onClick={() => router.push(`/${params.lang}/administration`)}
+            onClick={() => router.push(`/${params.lang}/administration/orangx`)}
             className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
           >
             관리자 홈으로

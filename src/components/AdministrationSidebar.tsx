@@ -22,9 +22,10 @@ type MenuItem = {
 
 const buildMenuItems = (lang: string): MenuItem[] => {
   const root = `/${lang}/administration`;
+  const adminHomeHref = `${root}/orangx`;
   return [
-    { label: '관리자 홈', hint: 'Dashboard', href: root },
-    { label: '센터 관리', hint: 'Center Ops', href: `${root}/center-management` },
+    { label: '관리자 홈', hint: 'Dashboard', href: adminHomeHref },
+    { label: '센터 관리', hint: 'Center Ops', href: root },
     { label: '내 지갑 관리', hint: 'Wallet', href: `${root}/wallet-management` },
     {
       label: '구매주문 관리',
@@ -86,6 +87,9 @@ const isActiveRoute = (pathname: string, href: string) => {
 
 const shouldUseCenterManagementMenu = (pathname: string, lang: string) => {
   const root = `/${lang}/administration`;
+  if (pathname === root) {
+    return true;
+  }
   const centerManagementSections = [
     'center-management',
     'store',
@@ -106,8 +110,8 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
   const isCenterManagementRoute = shouldUseCenterManagementMenu(normalizedPathname, lang);
   const menuItems: MenuItem[] = isCenterManagementRoute ? buildCenterManagementMenuItems(lang) : buildMenuItems(lang);
   const homeHref = isCenterManagementRoute
-    ? `/${lang}/administration/center-management`
-    : `/${lang}/administration`;
+    ? `/${lang}/administration`
+    : `/${lang}/administration/orangx`;
   const buyOrderManagementHref = isCenterManagementRoute
     ? `/${lang}/administration/buyorder`
     : `/${lang}/administration/buyorder-management`;

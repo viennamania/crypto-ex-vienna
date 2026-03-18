@@ -235,10 +235,10 @@ export default function CenterManagementWalletManagementPage() {
     ? '연결된 관리자 지갑의 USDT 잔고를 공통으로 확인하고, 받기·보내기·내역 탭에서 바로 작업할 수 있습니다.'
     : '연결된 센터 지갑에서 입금 주소 확인, USDT 출금, 최신 전송내역 조회를 한 화면에서 처리할 수 있습니다.';
   const homeHref = isAdministrationCenterWalletRoute
-    ? `/${lang}/administration/center-management`
+    ? `/${lang}/administration`
     : isCenterManagerWalletRoute
       ? normalizedReturnTo || defaultManagerHomeHref
-    : `/${lang}/${center}`;
+      : `/${lang}/${center}`;
   const homeLabel = isAdministrationCenterWalletRoute
     ? '센터 관리 홈으로'
     : isCenterManagerWalletRoute

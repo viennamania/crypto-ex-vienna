@@ -185,7 +185,7 @@ function PolicyWysiwygEditor({ value, placeholder, onChange, disabled }: PolicyW
 export default function PolicyAdminPage() {
   const params = useParams();
   const langParam = Array.isArray(params?.lang) ? params.lang[0] : params?.lang;
-  const adminHomeHref = `/${langParam ?? 'ko'}/administration`;
+  const adminHomeHref = `/${langParam ?? 'ko'}/administration/orangx`;
   const [forms, setForms] = useState<Record<string, PolicyForm>>(createEmptyForms);
   const [loading, setLoading] = useState(false);
   const [savingSlug, setSavingSlug] = useState<string | null>(null);

@@ -33,7 +33,7 @@ const KNOWN_LANG_ROOT_SEGMENTS = new Set([
 ]);
 
 const ADMIN_SMART_ACCOUNT_PATH_PATTERN =
-  /\/[^/]+\/administration\/(?:center-management|store|agent|member|buyorder|trade-history)(?:\/|$)/;
+  /\/[^/]+\/administration(?:\/(?:center-management|store|agent|member|buyorder|trade-history)(?:\/|$)|$)/;
 
 export function ConnectButton(props: ConnectButtonProps) {
   const {

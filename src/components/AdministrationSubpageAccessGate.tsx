@@ -55,7 +55,7 @@ const isWalletOnlyAdministrationRoute = (pathname: string) =>
   /\/administration\/(store|agent|member|buyorder|trade-history)(\/|$)/.test(pathname);
 
 const isAdministrationSmartAccountRoute = (pathname: string) =>
-  /\/administration\/(center-management|store|agent|member|buyorder|trade-history)(\/|$)/.test(pathname);
+  /\/administration(?:\/(center-management|store|agent|member|buyorder|trade-history)(\/|$)|$)/.test(pathname);
 
 export default function AdministrationSubpageAccessGate({
   lang,
@@ -63,7 +63,8 @@ export default function AdministrationSubpageAccessGate({
 }: AdministrationSubpageAccessGateProps) {
   const pathname = usePathname() || '';
   const normalizedPathname = pathname.replace(/\/+$/, '');
-  const isCenterManagementRoute = /\/administration\/center-management(?:\/|$)/.test(normalizedPathname);
+  const isCenterManagementRoute =
+    /\/administration(?:\/center-management(?:\/|$)|$)/.test(normalizedPathname);
   const isWalletOnlyRoute = isWalletOnlyAdministrationRoute(normalizedPathname);
   const forceSmartAccount = isAdministrationSmartAccountRoute(normalizedPathname);
   const { wallet, wallets, chain } = useClientWallets({
