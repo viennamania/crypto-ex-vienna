@@ -236,6 +236,7 @@ export default function CenterSubpageAccessGate({
       memberNickname={memberInfo?.nickname || ''}
       walletAddress={walletAddress}
       roleLabel={roleLabel}
+      routeAccessLevel={routeAccess.accessLevel}
     >
       <AutoConnect client={client} wallets={[wallet]} />
 
