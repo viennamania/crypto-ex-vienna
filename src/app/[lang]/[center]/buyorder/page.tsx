@@ -2585,6 +2585,19 @@ const fetchBuyOrders = async () => {
       String(bankInfo?.accountNumber || "").trim() &&
       String(bankInfo?.accountHolder || "").trim()
     );
+    const getResolvedPaymentBankInfo = (item?: any) => {
+      const bankInfoCandidates = [
+        item?.seller?.bankInfo,
+        item?.store?.bankInfo,
+        store?.bankInfo,
+      ];
+      for (const bankInfoCandidate of bankInfoCandidates) {
+        if (hasValidBankInfo(bankInfoCandidate)) {
+          return bankInfoCandidate;
+        }
+      }
+      return item?.seller?.bankInfo || item?.store?.bankInfo || store?.bankInfo || {};
+    };
     const canRequestPaymentForOrder = (item?: any) => {
       if (!item?.seller || !canManageCenterOrder(item.seller.walletAddress)) {
         return false;
@@ -2593,7 +2606,7 @@ const fetchBuyOrders = async () => {
         return false;
       }
       if (item?.paymentMethod === 'bank') {
-        return hasValidBankInfo(item?.seller?.bankInfo);
+        return hasValidBankInfo(getResolvedPaymentBankInfo(item));
       }
       return true;
     };
@@ -5790,10 +5803,10 @@ const fetchBuyOrders = async () => {
                               {/* seller bank info */}
                               <div className="flex flex-row gap-2 items-center justify-center">
                                 <span className="text-lg text-gray-800 font-bold">
-                                  {item.seller?.bankInfo?.accountHolder}
+                                  {getResolvedPaymentBankInfo(item)?.accountHolder}
                                 </span>
                                 <span className="text-sm text-zinc-500">
-                                  {item.seller?.bankInfo?.bankName}
+                                  {getResolvedPaymentBankInfo(item)?.bankName}
                                 </span>
 
                               </div>
@@ -5863,10 +5876,10 @@ const fetchBuyOrders = async () => {
                               <div className="flex flex-col gap-2 items-center justify-center">
                                 <div className="flex flex-row items-center gap-2">
                                   <div className="text-lg text-gray-800 font-bold">
-                                    {item.seller?.bankInfo?.accountHolder}
+                                    {getResolvedPaymentBankInfo(item)?.accountHolder}
                                   </div>
                                   <div className="text-sm text-zinc-500">
-                                    {item.seller?.bankInfo?.bankName}
+                                    {getResolvedPaymentBankInfo(item)?.bankName}
                                   </div>
                                 </div>
                                 
@@ -6265,7 +6278,7 @@ const fetchBuyOrders = async () => {
                                     w-full
                                     flex flex-col gap-2 items-center justify-center">
 
-                                    {item?.paymentMethod !== 'bank' || hasValidBankInfo(item.seller?.bankInfo) ? (
+                                    {item?.paymentMethod !== 'bank' || hasValidBankInfo(getResolvedPaymentBankInfo(item)) ? (
 
                                       <div className="flex flex-row items-center gap-2">
 
@@ -6310,7 +6323,7 @@ const fetchBuyOrders = async () => {
                                               item.usdtAmount,
                                               item.storecode,
 
-                                              item.seller?.bankInfo,
+                                              getResolvedPaymentBankInfo(item),
                                             );
                                           }}
                                         >
@@ -6358,18 +6371,18 @@ const fetchBuyOrders = async () => {
                                       <div className="flex flex-col gap-2 items-center justify-center">
                                         <div className="flex flex-row gap-2 items-center justify-center">
                                           <span className="text-sm text-zinc-500">
-                                            {item.seller?.bankInfo?.accountHolder}
+                                            {getResolvedPaymentBankInfo(item)?.accountHolder}
                                           </span>
                                           <span className="text-sm text-zinc-500">
-                                            {item.seller?.bankInfo?.bankName}
+                                            {getResolvedPaymentBankInfo(item)?.bankName}
                                           </span>
                                         </div>
                                         {/*
                                         <span className="text-sm text-zinc-500">
                                           {
-                                            item.seller?.bankInfo?.accountNumber &&
-                                            item.seller?.bankInfo?.accountNumber.length > 5 &&
-                                            item.seller?.bankInfo?.accountNumber.substring(0, 5) + '...'
+                                            getResolvedPaymentBankInfo(item)?.accountNumber &&
+                                            getResolvedPaymentBankInfo(item)?.accountNumber.length > 5 &&
+                                            getResolvedPaymentBankInfo(item)?.accountNumber.substring(0, 5) + '...'
                                           }
                                         </span>
                                         */}
@@ -7643,7 +7656,7 @@ const fetchBuyOrders = async () => {
                   
 
                           <div className="mb-4 flex flex-col items-start text-sm ">
-                            {Payment}: {Bank_Transfer} ({item.seller?.bankInfo?.bankName})
+                            {Payment}: {Bank_Transfer} ({getResolvedPaymentBankInfo(item)?.bankName})
                           </div>
 
 
@@ -7955,7 +7968,7 @@ const fetchBuyOrders = async () => {
                                     item.usdtAmount,
                                     item.storecode,
 
-                                    item.seller?.bankInfo,
+                                    getResolvedPaymentBankInfo(item),
                                   );
                                 }}
                               >
@@ -7977,7 +7990,7 @@ const fetchBuyOrders = async () => {
                           && item?.paymentMethod === 'bank'
                           && item.seller
                           && canManageCenterOrder(item.seller.walletAddress)
-                          && !hasValidBankInfo(item.seller?.bankInfo) && (
+                          && !hasValidBankInfo(getResolvedPaymentBankInfo(item)) && (
                             <div className="flex flex-row gap-1">
                               <span className="text-xs text-red-500">결제은행정보 없음</span>
                             </div>
