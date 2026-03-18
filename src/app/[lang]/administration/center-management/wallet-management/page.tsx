@@ -247,7 +247,7 @@ export default function CenterManagementWalletManagementPage() {
   const homeLabel = isAdministrationCenterWalletRoute
     ? '센터 관리 홈으로'
     : normalizedReturnTo || isCenterManagerWalletRoute || isCenterWalletRoute
-      ? '가맹점관리로 돌아가기'
+      ? '돌아가기'
       : '센터 홈으로';
 
   const contract = useMemo(() => (

@@ -50,7 +50,12 @@ export default function CenterLayoutShell({
   const managerWalletManagementPath = `/${lang}/${center}/manager-wallet-management`;
   const defaultManagerHomePath = `/${lang}/${center}/member`;
   const hideSidebarNavigation =
-    !useTopManagerNav && (pathname === profileSettingsPath || pathname === legacyRegistrationPath);
+    !useTopManagerNav
+    && (
+      pathname === profileSettingsPath
+      || pathname === legacyRegistrationPath
+      || pathname === standardWalletManagementPath
+    );
   const menuItems = buildCenterShellMenuItems(lang, center);
   const walletManagementHref =
     useTopManagerNav
