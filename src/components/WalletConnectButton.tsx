@@ -37,6 +37,7 @@ const ADMIN_SMART_ACCOUNT_PATH_PATTERN =
 
 export function ConnectButton(props: ConnectButtonProps) {
   const {
+    accountAbstraction,
     connectButton,
     connectModal,
     locale,
@@ -47,13 +48,15 @@ export function ConnectButton(props: ConnectButtonProps) {
   const pathSegments = pathname.replace(/\/+$/, '').split('/').filter(Boolean);
   const isCenterRoute = pathSegments.length >= 2 && !KNOWN_LANG_ROOT_SEGMENTS.has(pathSegments[1] || '');
   const isAdminSmartAccountRoute = ADMIN_SMART_ACCOUNT_PATH_PATTERN.test(pathname);
-  const forceSmartAccount = isCenterRoute || isAdminSmartAccountRoute;
+  const forceEOA = isCenterRoute;
+  const forceSmartAccount = !forceEOA && isAdminSmartAccountRoute;
   const { wallets: centerWallets } = useClientWallets({
     authOptions: ['google', 'email'],
     sponsorGas: true,
     forceSmartAccount,
+    forceEOA,
   });
-  const wallets = forceSmartAccount ? centerWallets : rest.wallets;
+  const wallets = forceEOA || forceSmartAccount ? centerWallets : rest.wallets;
 
   const mergedConnectButton = {
     label: connectButton?.label ?? 'Connect Wallet',
@@ -72,6 +75,7 @@ export function ConnectButton(props: ConnectButtonProps) {
       <ThirdwebConnectButton
         {...rest}
         wallets={wallets}
+        accountAbstraction={forceEOA ? undefined : accountAbstraction}
         locale={locale ?? 'en_US'}
         theme={theme ?? 'light'}
         connectButton={mergedConnectButton}

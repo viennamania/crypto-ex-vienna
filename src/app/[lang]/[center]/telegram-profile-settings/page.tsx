@@ -90,7 +90,7 @@ function ProfilePage() {
     const { wallet } = useClientWallets({
         authOptions: ['google', 'email'],
         sponsorGas: true,
-        forceSmartAccount: true,
+        forceEOA: true,
     });
 
     const searchParams = useSearchParams();

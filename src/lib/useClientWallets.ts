@@ -38,6 +38,7 @@ type UseClientWalletsOptions = {
   authOptions?: string[];
   sponsorGas?: boolean;
   forceSmartAccount?: boolean;
+  forceEOA?: boolean;
   defaultSmsCountryCode?: SupportedSmsCountry;
   allowedSmsCountryCodes?: SupportedSmsCountry[];
 };
@@ -82,11 +83,12 @@ export function useClientWallets(options: UseClientWalletsOptions = {}) {
     authOptions = [],
     sponsorGas = true,
     forceSmartAccount = false,
+    forceEOA = false,
     defaultSmsCountryCode,
     allowedSmsCountryCodes,
   } = options;
   const { chain, smartAccountEnabled } = useClientSettings();
-  const shouldUseSmartAccount = forceSmartAccount || smartAccountEnabled;
+  const shouldUseSmartAccount = forceEOA ? false : (forceSmartAccount || smartAccountEnabled);
   const activeChain = resolveChain(chain);
   const normalizedAuthOptions = useMemo(
     () => authOptions.filter(isInAppAuthOption),
