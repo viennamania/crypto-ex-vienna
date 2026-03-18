@@ -226,6 +226,9 @@ export default function CenterManagementWalletManagementPage() {
   const networkConfig = NETWORK_CONFIGS[networkKey];
   const isCenterManagerWalletRoute = pathname.includes('/manager-wallet-management');
   const isAdministrationCenterWalletRoute = pathname.includes('/administration/center-management');
+  const isCenterWalletRoute = pathname.includes('/wallet-management')
+    && !isCenterManagerWalletRoute
+    && !isAdministrationCenterWalletRoute;
   const returnTo = String(searchParams.get('returnTo') || '').trim();
   const defaultManagerHomeHref = `/${lang}/${center}/member`;
   const normalizedReturnTo = returnTo.startsWith(`/${lang}/${center}/`) ? returnTo : '';
@@ -236,12 +239,14 @@ export default function CenterManagementWalletManagementPage() {
     : '연결된 센터 지갑에서 입금 주소 확인, USDT 출금, 최신 전송내역 조회를 한 화면에서 처리할 수 있습니다.';
   const homeHref = isAdministrationCenterWalletRoute
     ? `/${lang}/administration`
-    : isCenterManagerWalletRoute
-      ? normalizedReturnTo || defaultManagerHomeHref
+    : normalizedReturnTo
+      ? normalizedReturnTo
+      : isCenterManagerWalletRoute
+        ? defaultManagerHomeHref
       : `/${lang}/${center}`;
   const homeLabel = isAdministrationCenterWalletRoute
     ? '센터 관리 홈으로'
-    : isCenterManagerWalletRoute
+    : normalizedReturnTo || isCenterManagerWalletRoute || isCenterWalletRoute
       ? '가맹점관리로 돌아가기'
       : '센터 홈으로';
 

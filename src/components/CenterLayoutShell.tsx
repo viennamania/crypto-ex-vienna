@@ -46,14 +46,16 @@ export default function CenterLayoutShell({
   const useTopManagerNav = routeAccessLevel === 'center_admin';
   const profileSettingsPath = `/${lang}/${center}/profile-settings`;
   const legacyRegistrationPath = `/${lang}/${center}/profiles`;
+  const standardWalletManagementPath = `/${lang}/${center}/wallet-management`;
+  const managerWalletManagementPath = `/${lang}/${center}/manager-wallet-management`;
+  const defaultManagerHomePath = `/${lang}/${center}/member`;
   const hideSidebarNavigation =
     !useTopManagerNav && (pathname === profileSettingsPath || pathname === legacyRegistrationPath);
-  const managerWalletManagementPath = `/${lang}/${center}/manager-wallet-management`;
   const menuItems = buildCenterShellMenuItems(lang, center);
   const walletManagementHref =
     useTopManagerNav
-      ? `${managerWalletManagementPath}?returnTo=${encodeURIComponent(pathname || `/${lang}/${center}/member`)}`
-      : menuItems.find((item) => item.key === 'wallet-management')?.href || `/${lang}/${center}/wallet-management`;
+      ? `${standardWalletManagementPath}?returnTo=${encodeURIComponent(pathname || defaultManagerHomePath)}`
+      : menuItems.find((item) => item.key === 'wallet-management')?.href || standardWalletManagementPath;
   const managerTopNavItems: CenterShellMenuItem[] = [
     { key: 'member', label: '회원관리', hint: 'Members', href: `/${lang}/${center}/member`, accessLevel: 'center_admin' },
     { key: 'buyorder', label: 'P2P구매관리', hint: 'Buyorder', href: `/${lang}/${center}/buyorder`, accessLevel: 'center_admin' },
@@ -63,7 +65,9 @@ export default function CenterLayoutShell({
   const brandTitle = (storeName || center || 'Center').trim();
   const brandInitial = brandTitle.slice(0, 1).toUpperCase() || 'C';
   const normalizedStoreLogo = String(storeLogo || '').trim();
-  const isManagerWalletPage = isActiveRoute(pathname, managerWalletManagementPath);
+  const isManagerWalletPage =
+    isActiveRoute(pathname, standardWalletManagementPath)
+    || isActiveRoute(pathname, managerWalletManagementPath);
 
   useEffect(() => {
     const updateViewport = () => {
