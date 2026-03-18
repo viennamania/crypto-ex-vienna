@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, usePathname } from 'next/navigation';
+import { useParams, usePathname, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { useQRCode } from 'next-qrcode';
 import { getContract, sendAndConfirmTransaction } from 'thirdweb';
@@ -204,6 +204,7 @@ const shortenValue = (value?: string, leading = 6, trailing = 4) => {
 export default function CenterManagementWalletManagementPage() {
   const params = useParams<{ lang?: string; center?: string }>();
   const pathname = usePathname() || '';
+  const searchParams = useSearchParams();
   const activeAccount = useActiveAccount();
   const activeWallet = useActiveWallet();
   const { chain } = useClientWallets({
@@ -223,16 +224,26 @@ export default function CenterManagementWalletManagementPage() {
   const center = Array.isArray(centerParam) ? centerParam[0] : centerParam || '';
   const networkKey: NetworkKey = isNetworkKey(String(chain || '')) ? String(chain) as NetworkKey : 'polygon';
   const networkConfig = NETWORK_CONFIGS[networkKey];
+  const isCenterManagerWalletRoute = pathname.includes('/manager-wallet-management');
   const isAdministrationCenterWalletRoute = pathname.includes('/administration/center-management');
-  const badgeText = isAdministrationCenterWalletRoute ? 'Center Wallet Management' : 'Wallet Management';
-  const title = isAdministrationCenterWalletRoute ? '센터 관리자 지갑 관리' : '센터 지갑 관리';
-  const description = isAdministrationCenterWalletRoute
+  const returnTo = String(searchParams.get('returnTo') || '').trim();
+  const defaultManagerHomeHref = `/${lang}/${center}/member`;
+  const normalizedReturnTo = returnTo.startsWith(`/${lang}/${center}/`) ? returnTo : '';
+  const badgeText = (isAdministrationCenterWalletRoute || isCenterManagerWalletRoute) ? 'Center Wallet Management' : 'Wallet Management';
+  const title = (isAdministrationCenterWalletRoute || isCenterManagerWalletRoute) ? '센터 관리자 지갑 관리' : '센터 지갑 관리';
+  const description = (isAdministrationCenterWalletRoute || isCenterManagerWalletRoute)
     ? '연결된 관리자 지갑의 USDT 잔고를 공통으로 확인하고, 받기·보내기·내역 탭에서 바로 작업할 수 있습니다.'
     : '연결된 센터 지갑에서 입금 주소 확인, USDT 출금, 최신 전송내역 조회를 한 화면에서 처리할 수 있습니다.';
   const homeHref = isAdministrationCenterWalletRoute
     ? `/${lang}/administration/center-management`
+    : isCenterManagerWalletRoute
+      ? normalizedReturnTo || defaultManagerHomeHref
     : `/${lang}/${center}`;
-  const homeLabel = isAdministrationCenterWalletRoute ? '센터 관리 홈으로' : '센터 홈으로';
+  const homeLabel = isAdministrationCenterWalletRoute
+    ? '센터 관리 홈으로'
+    : isCenterManagerWalletRoute
+      ? '가맹점관리로 돌아가기'
+      : '센터 홈으로';
 
   const contract = useMemo(() => (
     getContract({

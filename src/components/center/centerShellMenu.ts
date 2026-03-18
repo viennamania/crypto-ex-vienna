@@ -28,6 +28,7 @@ const CENTER_ADMIN_SECTIONS = new Set([
   'clearance-request',
   'daily-close',
   'escrow-history',
+  'manager-wallet-management',
   'settings',
   'settings-bangbang',
   'admin',

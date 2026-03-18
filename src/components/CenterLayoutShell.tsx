@@ -44,9 +44,12 @@ export default function CenterLayoutShell({
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const useTopManagerNav = routeAccessLevel === 'center_admin';
+  const managerWalletManagementPath = `/${lang}/${center}/manager-wallet-management`;
   const menuItems = buildCenterShellMenuItems(lang, center);
   const walletManagementHref =
-    menuItems.find((item) => item.key === 'wallet-management')?.href || `/${lang}/${center}/wallet-management`;
+    useTopManagerNav
+      ? `${managerWalletManagementPath}?returnTo=${encodeURIComponent(pathname || `/${lang}/${center}/member`)}`
+      : menuItems.find((item) => item.key === 'wallet-management')?.href || `/${lang}/${center}/wallet-management`;
   const managerTopNavItems: CenterShellMenuItem[] = [
     { key: 'member', label: '회원관리', hint: 'Members', href: `/${lang}/${center}/member`, accessLevel: 'center_admin' },
     { key: 'buyorder', label: 'P2P구매관리', hint: 'Buyorder', href: `/${lang}/${center}/buyorder`, accessLevel: 'center_admin' },
@@ -56,6 +59,7 @@ export default function CenterLayoutShell({
   const brandTitle = (storeName || center || 'Center').trim();
   const brandInitial = brandTitle.slice(0, 1).toUpperCase() || 'C';
   const normalizedStoreLogo = String(storeLogo || '').trim();
+  const isManagerWalletPage = isActiveRoute(pathname, managerWalletManagementPath);
 
   useEffect(() => {
     const updateViewport = () => {
@@ -143,10 +147,18 @@ export default function CenterLayoutShell({
 
                 <Link
                   href={walletManagementHref}
-                  className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-2xl border border-cyan-200/20 bg-white/10 px-4 text-sm font-semibold text-cyan-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-cyan-200/30 hover:bg-white/14"
+                  className={`inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-2xl border px-4 text-sm font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition ${
+                    isManagerWalletPage
+                      ? 'border-[#f6bf18]/60 bg-[#f6bf18] text-[#113d86] shadow-[0_18px_34px_-24px_rgba(246,191,24,0.88)]'
+                      : 'border-cyan-200/20 bg-white/10 text-cyan-50 hover:border-cyan-200/30 hover:bg-white/14'
+                  }`}
                 >
                   <span>내 지갑 관리</span>
-                  <span className="rounded-full bg-white/10 px-2 py-1 font-mono text-[11px] text-cyan-100/90">
+                  <span
+                    className={`rounded-full px-2 py-1 font-mono text-[11px] ${
+                      isManagerWalletPage ? 'bg-[#113d86]/10 text-[#113d86]' : 'bg-white/10 text-cyan-100/90'
+                    }`}
+                  >
                     {shortWalletAddress(walletAddress || '')}
                   </span>
                 </Link>
