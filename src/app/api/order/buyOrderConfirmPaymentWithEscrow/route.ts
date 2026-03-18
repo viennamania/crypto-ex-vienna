@@ -76,6 +76,19 @@ import {
 
 export const maxDuration = 60; // This function can run for a maximum of 60 seconds
 
+const failureResponse = (
+  message: string,
+  status = 400,
+  error = "BUY_ORDER_CONFIRM_PAYMENT_WITH_ESCROW_FAILED",
+) => NextResponse.json(
+  {
+    result: null,
+    message,
+    error,
+  },
+  { status },
+);
+
 
 export async function POST(request: NextRequest) {
 
@@ -121,9 +134,11 @@ export async function POST(request: NextRequest) {
       console.log("order not found");
       console.log("orderId", orderId);
       
-      return NextResponse.json({
-        result: null,
-      });
+      return failureResponse(
+        "주문을 찾지 못했습니다.",
+        404,
+        "BUY_ORDER_NOT_FOUND",
+      );
     }
     
 
@@ -141,9 +156,11 @@ export async function POST(request: NextRequest) {
     const sellerWalletAddress = seller.walletAddress;
 
     if (!sellerWalletAddress) {
-      return NextResponse.json({
-        result: null,
-      });
+      return failureResponse(
+        "판매자 지갑 주소를 찾지 못했습니다.",
+        400,
+        "SELLER_WALLET_ADDRESS_NOT_FOUND",
+      );
     }
 
     const user = await getOneByWalletAddress(
@@ -154,9 +171,11 @@ export async function POST(request: NextRequest) {
     ///console.log("user", user);
 
     if (!user) {
-      return NextResponse.json({
-        result: null,
-      });
+      return failureResponse(
+        "가맹점 관리자 회원정보를 찾지 못했습니다.",
+        404,
+        "SELLER_USER_NOT_FOUND",
+      );
     }
 
 
@@ -168,9 +187,11 @@ export async function POST(request: NextRequest) {
     const escrowWalletPrivateKey = order.escrowWallet.privateKey;
 
     if (!escrowWalletPrivateKey) {
-      return NextResponse.json({
-        result: null,
-      });
+      return failureResponse(
+        "에스크로 지갑 개인키를 찾지 못했습니다.",
+        400,
+        "ESCROW_PRIVATE_KEY_NOT_FOUND",
+      );
     }
 
 
@@ -179,9 +200,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (!client) {
-      return NextResponse.json({
-        result: null,
-      });
+      return failureResponse(
+        "지갑 클라이언트를 초기화하지 못했습니다.",
+        500,
+        "THIRDWEB_CLIENT_INIT_FAILED",
+      );
     }
 
 
@@ -191,9 +214,11 @@ export async function POST(request: NextRequest) {
     });
   
     if (!personalAccount) {
-      return NextResponse.json({
-        result: null,
-      });
+      return failureResponse(
+        "에스크로 개인지갑 계정을 만들지 못했습니다.",
+        500,
+        "ESCROW_PERSONAL_ACCOUNT_FAILED",
+      );
     }
 
 
@@ -209,9 +234,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (!account) {
-      return NextResponse.json({
-        result: null,
-      });
+      return failureResponse(
+        "에스크로 스마트지갑 연결에 실패했습니다.",
+        500,
+        "ESCROW_SMART_ACCOUNT_CONNECT_FAILED",
+      );
     }
 
 
@@ -258,6 +285,14 @@ export async function POST(request: NextRequest) {
       escrowTransactionHash: escrowTransactionHash,
 
     });
+
+    if (!result) {
+      return failureResponse(
+        "주문 결제확인 상태 저장에 실패했습니다.",
+        500,
+        "BUY_ORDER_CONFIRM_PAYMENT_UPDATE_FAILED",
+      );
+    }
   
   
     //console.log("result", JSON.stringify(result));
@@ -414,9 +449,7 @@ export async function POST(request: NextRequest) {
   
     
     return NextResponse.json({
-  
       result,
-      
     });
 
 
@@ -439,10 +472,10 @@ export async function POST(request: NextRequest) {
 
 
  
-  return NextResponse.json({
-
-    result: null,
-    
-  });
+  return failureResponse(
+    "결제확인 처리 중 서버 오류가 발생했습니다.",
+    500,
+    "BUY_ORDER_CONFIRM_PAYMENT_WITH_ESCROW_SERVER_ERROR",
+  );
   
 }

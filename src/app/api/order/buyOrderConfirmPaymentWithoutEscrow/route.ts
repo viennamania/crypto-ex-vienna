@@ -23,6 +23,19 @@ import { create } from "domain";
 
 
 
+const failureResponse = (
+  message: string,
+  status = 400,
+  error = "BUY_ORDER_CONFIRM_PAYMENT_WITHOUT_ESCROW_FAILED",
+) => NextResponse.json(
+  {
+    result: null,
+    message,
+    error,
+  },
+  { status },
+);
+
 export async function POST(request: NextRequest) {
 
   console.log("buyOrderConfirmPaymentWithoutEscrow");
@@ -67,9 +80,11 @@ export async function POST(request: NextRequest) {
       console.log("order not found");
       console.log("orderId", orderId);
       
-      return NextResponse.json({
-        result: null,
-      });
+      return failureResponse(
+        "주문을 찾지 못했습니다.",
+        404,
+        "BUY_ORDER_NOT_FOUND",
+      );
     }
     
 
@@ -132,6 +147,14 @@ export async function POST(request: NextRequest) {
       transactionHash: transactionHash,
 
     });
+
+    if (!result) {
+      return failureResponse(
+        "주문 결제확인 상태 저장에 실패했습니다.",
+        500,
+        "BUY_ORDER_CONFIRM_PAYMENT_UPDATE_FAILED",
+      );
+    }
   
   
     //console.log("result", JSON.stringify(result));
@@ -288,9 +311,7 @@ export async function POST(request: NextRequest) {
   
     
     return NextResponse.json({
-  
       result,
-      
     });
 
 
@@ -313,10 +334,10 @@ export async function POST(request: NextRequest) {
 
 
  
-  return NextResponse.json({
-
-    result: null,
-    
-  });
+  return failureResponse(
+    "결제확인 처리 중 서버 오류가 발생했습니다.",
+    500,
+    "BUY_ORDER_CONFIRM_PAYMENT_WITHOUT_ESCROW_SERVER_ERROR",
+  );
   
 }

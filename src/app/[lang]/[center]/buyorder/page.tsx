@@ -1780,7 +1780,10 @@ export default function Index({ params }: any) {
               })
             });
 
-            const data = await response.json();
+            await parseActionResponse(
+              response,
+              '입금완료 상태 저장에 실패했습니다.',
+            );
 
 
 
@@ -1802,9 +1805,10 @@ export default function Index({ params }: any) {
               })
             });
 
-            const data = await response.json();
-
-            //console.log('data', data);
+            await parseActionResponse(
+              response,
+              '입금완료 상태 저장에 실패했습니다.',
+            );
 
           }
 
@@ -1883,14 +1887,20 @@ export default function Index({ params }: any) {
 
         } else {
           //toast.error('결제확인이 실패했습니다.');
-          alert('결제확인이 실패했습니다.');
+          alert('입금완료 처리에 실패했습니다.\n사유: 트랜잭션 해시를 받지 못했습니다.');
 
         }
 
     } catch (error) {
       console.error('Error:', error);
       //toast.error('결제확인이 실패했습니다.');
-      alert('결제확인이 실패했습니다.');
+      alert(
+        getActionFailureAlertMessage(
+          '입금완료 처리에 실패했습니다.',
+          error,
+          '입금완료 처리 중 오류가 발생했습니다.',
+        )
+      );
     }
 
 
@@ -2018,31 +2028,38 @@ export default function Index({ params }: any) {
 
     try {
 
-
         const transaction = transfer({
           contract,
           to: buyerWalletAddress,
           amount: usdtAmount,
         });
 
+        let transactionHash = '';
 
+        try {
+          const transactionResult = await sendTransaction({
+            transaction: transaction,
+            account: managedSender.account as any,
+          });
+          transactionHash = String(transactionResult?.transactionHash || '').trim();
+        } catch (error) {
+          console.error('Error:', error);
+          alert(
+            getActionFailureAlertMessage(
+              'USDT 전송에 실패했습니다.',
+              error,
+              '지갑 전송 중 오류가 발생했습니다.',
+            )
+          );
+          return;
+        }
 
-        //const { transactionHash } = await sendAndConfirmTransaction({
-        const { transactionHash } = await sendTransaction({
-          transaction: transaction,
-          account: managedSender.account as any,
-        });
+        if (!transactionHash) {
+          alert('USDT 전송에 실패했습니다.\n사유: 트랜잭션 해시를 받지 못했습니다.');
+          return;
+        }
 
-        ///console.log("transactionHash===", transactionHash);
-
-
-
-        if (transactionHash) {
-
-
-          //alert('USDT 전송이 완료되었습니다.');
-
-
+        try {
           const response = await fetch('/api/order/buyOrderConfirmPaymentWithoutEscrow', {
             method: 'POST',
             headers: {
@@ -2059,9 +2076,10 @@ export default function Index({ params }: any) {
             })
           });
 
-          const data = await response.json();
-
-
+          await parseActionResponse(
+            response,
+            'USDT 전송 후 주문 상태 업데이트에 실패했습니다.',
+          );
 
           setBuyOrders(
             buyOrders.map((item, idx) => {
@@ -2076,23 +2094,30 @@ export default function Index({ params }: any) {
             })
           );
 
-
-
           toast.success(Payment_has_been_confirmed);
           //alert(Payment_has_been_confirmed);
           //playSong();
-
-
-        } else {
-          //toast.error('결제확인이 실패했습니다.');
-          alert('결제확인이 실패했습니다.');
-
+        } catch (error) {
+          console.error('Error:', error);
+          alert(
+            getActionFailureAlertMessage(
+              'USDT 전송 후 주문 상태 업데이트에 실패했습니다.',
+              error,
+              '주문 상태 업데이트 중 오류가 발생했습니다.',
+            )
+          );
+          return;
         }
 
     } catch (error) {
       console.error('Error:', error);
-      //toast.error('결제확인이 실패했습니다.');
-      alert('결제확인이 실패했습니다.');
+      alert(
+        getActionFailureAlertMessage(
+          'USDT 전송에 실패했습니다.',
+          error,
+          'USDT 전송 처리 중 오류가 발생했습니다.',
+        )
+      );
     }
 
 
@@ -2621,6 +2646,90 @@ const fetchBuyOrders = async () => {
     const canManageCenterOrder = (sellerWalletAddress?: string) => Boolean(
       isAdmin || isStoreAdminWallet || isCurrentWalletAddress(sellerWalletAddress)
     );
+    const getActionErrorMessage = (payload: any, fallbackMessage: string) => {
+      const message = String(payload?.message || "").trim();
+      if (message) {
+        return message;
+      }
+      return fallbackMessage;
+    };
+    const parseActionResponse = async (response: Response, fallbackMessage: string) => {
+      let payload: any = null;
+
+      try {
+        payload = await response.json();
+      } catch (error) {
+        console.error("Failed to parse action response:", error);
+        throw new Error(fallbackMessage);
+      }
+
+      if (!response.ok || !payload?.result) {
+        throw new Error(getActionErrorMessage(payload, fallbackMessage));
+      }
+
+      return payload;
+    };
+    const normalizeActionErrorReason = (reason: string, fallbackReason: string) => {
+      const trimmedReason = String(reason || "").trim();
+      if (!trimmedReason) {
+        return fallbackReason;
+      }
+
+      const normalizedReason = trimmedReason.toLowerCase();
+      if (
+        normalizedReason.includes("user rejected") ||
+        normalizedReason.includes("user denied") ||
+        normalizedReason.includes("rejected the request") ||
+        normalizedReason.includes("denied transaction signature") ||
+        normalizedReason.includes("cancelled")
+      ) {
+        return "지갑에서 사용자가 요청을 취소했습니다.";
+      }
+
+      if (normalizedReason.includes("insufficient funds")) {
+        return "가스비 또는 잔액이 부족합니다.";
+      }
+
+      if (
+        normalizedReason.includes("failed to fetch") ||
+        normalizedReason.includes("network error") ||
+        normalizedReason.includes("network request failed")
+      ) {
+        return "네트워크 요청에 실패했습니다.";
+      }
+
+      return trimmedReason;
+    };
+    const getRuntimeErrorReason = (error: unknown, fallbackReason: string) => {
+      const reasonCandidates = [
+        (error as any)?.message,
+        (error as any)?.shortMessage,
+        (error as any)?.reason,
+        (error as any)?.details,
+        (error as any)?.cause?.message,
+        (error as any)?.cause?.shortMessage,
+        (error as any)?.cause?.reason,
+      ];
+
+      for (const reasonCandidate of reasonCandidates) {
+        const normalizedReason = normalizeActionErrorReason(
+          String(reasonCandidate || ""),
+          "",
+        );
+        if (normalizedReason) {
+          return normalizedReason;
+        }
+      }
+      return fallbackReason;
+    };
+    const getActionFailureAlertMessage = (
+      title: string,
+      error: unknown,
+      fallbackReason: string,
+    ) => {
+      const reason = getRuntimeErrorReason(error, fallbackReason);
+      return `${title}\n사유: ${reason}`;
+    };
   
     useEffect(() => {
   
