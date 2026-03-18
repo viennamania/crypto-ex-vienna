@@ -51,7 +51,7 @@ export default function CenterSubpageAccessGate({
   const { wallet } = useClientWallets({
     authOptions: WALLET_AUTH_OPTIONS,
     sponsorGas: true,
-    forceEOA: true,
+    forceSmartAccount: true,
   });
   const activeAccount = useActiveAccount();
   const walletAddress = useMemo(() => String(activeAccount?.address || '').trim(), [activeAccount?.address]);

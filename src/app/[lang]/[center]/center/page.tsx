@@ -160,7 +160,7 @@ export default function Index({ params }: any) {
   const { wallet, wallets } = useClientWallets({
     authOptions: walletAuthOptions,
     sponsorGas: true,
-    forceEOA: true,
+    forceSmartAccount: true,
   });
 
 

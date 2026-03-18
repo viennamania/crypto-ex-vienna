@@ -15,6 +15,7 @@ type CenterAccessDescriptor = {
 
 const REGISTRATION_SECTIONS = new Set([
   'profiles',
+  'profile-settings',
   'profiles-new',
   'profiles-snt',
 ]);
@@ -63,11 +64,12 @@ export const normalizeAddress = (value: string) => String(value || '').trim().to
 
 export const buildCenterShellMenuItems = (lang: string, center: string): CenterShellMenuItem[] => {
   const root = `/${lang}/${center}`;
+  const registrationHref = getCenterRegistrationHref(lang, center);
 
   return [
     { key: 'wallet-management', label: '지갑 관리', hint: 'Wallet', href: `${root}/wallet-management`, accessLevel: 'member' },
     { key: 'center', label: '센터 대시보드', hint: 'Ops', href: `${root}/center`, accessLevel: 'center_admin' },
-    { key: 'profile-settings', label: '회원 정보', hint: 'Account', href: `${root}/profile-settings`, accessLevel: 'member' },
+    { key: 'profile-settings', label: '회원 등록', hint: 'Register', href: registrationHref, accessLevel: 'registration' },
     { key: 'member', label: '회원 관리', hint: 'Member', href: `${root}/member`, accessLevel: 'center_admin' },
     { key: 'buyorder', label: '구매주문 관리', hint: 'Orders', href: `${root}/buyorder`, accessLevel: 'center_admin' },
     { key: 'trade-history', label: '거래내역', hint: 'History', href: `${root}/trade-history`, accessLevel: 'center_admin' },
