@@ -179,6 +179,9 @@ const wallets = [
   }),
 ];
 
+const SELLER_BALANCE_POLL_INTERVAL_MS = 5000;
+const SELLER_BALANCE_ANIMATION_DURATION_MS = 900;
+
 
 
 
@@ -2730,6 +2733,10 @@ const fetchBuyOrders = async () => {
       const reason = getRuntimeErrorReason(error, fallbackReason);
       return `${title}\n사유: ${reason}`;
     };
+    const formatUsdtBalanceValue = (value?: number) =>
+      Number(value || 0).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const getSellerBalanceKey = (seller: any) =>
+      String(seller?.walletAddress || seller?.nickname || '').trim().toLowerCase();
   
     useEffect(() => {
   
@@ -3095,40 +3102,159 @@ const fetchBuyOrders = async () => {
 
   // /api/user/getAllSellersForBalance
   const [sellersBalance, setSellersBalance] = useState([] as any[]);
-  const fetchSellersBalance = async () => {
-    const response = await fetch('/api/user/getAllSellersForBalance', {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(
-        {
-          storecode: params.center,
-          limit: 100,
-          page: 1,
-        }
-      )
-    });
+  const [fetchingSellersBalance, setFetchingSellersBalance] = useState(false);
+  const [sellerBalanceUpdatedAt, setSellerBalanceUpdatedAt] = useState('');
+  const [animatedSellerBalances, setAnimatedSellerBalances] = useState<Record<string, number>>({});
+  const animatedSellerBalancesRef = useRef<Record<string, number>>({});
+  const sellerBalanceAnimationFrameRef = useRef<number | null>(null);
+  const storeSellerWalletAddresses = useMemo(() => {
+    const uniqueWallets = new Map<string, string>();
+    const pushWallet = (walletCandidate?: string) => {
+      const trimmedWalletCandidate = String(walletCandidate || '').trim();
+      const normalizedWalletCandidate = normalizeAddressValue(trimmedWalletCandidate);
+      if (!trimmedWalletCandidate || !normalizedWalletCandidate || uniqueWallets.has(normalizedWalletCandidate)) {
+        return;
+      }
+      uniqueWallets.set(normalizedWalletCandidate, trimmedWalletCandidate);
+    };
 
-    const data = await response.json();
-    if (data.result) {
-      setSellersBalance(data.result.users);
-    } else {
-      console.error('Error fetching sellers balance');
+    pushWallet(store?.sellerWalletAddress);
+    if (Array.isArray(store?.sellerWalletAddresses)) {
+      store.sellerWalletAddresses.forEach((walletCandidate: string) => pushWallet(walletCandidate));
+    }
+
+    return Array.from(uniqueWallets.values());
+  }, [store?.sellerWalletAddress, store?.sellerWalletAddresses]);
+  const liveSellerBalances = useMemo(() => {
+    if (sellersBalance.length === 0) {
+      return storeSellerWalletAddresses.map((walletAddress) => ({
+        nickname: '판매자 지갑',
+        walletAddress,
+        seller: {},
+        currentUsdtBalance: 0,
+      }));
+    }
+
+    if (storeSellerWalletAddresses.length === 0) {
+      return sellersBalance;
+    }
+
+    const matchedSellers = sellersBalance.filter((seller) =>
+      storeSellerWalletAddresses.some(
+        (walletAddress) => normalizeAddressValue(walletAddress) === normalizeAddressValue(seller?.walletAddress)
+      )
+    );
+
+    return matchedSellers.length > 0 ? matchedSellers : sellersBalance;
+  }, [sellersBalance, storeSellerWalletAddresses]);
+  const getAnimatedSellerBalance = (seller: any) => {
+    const sellerKey = getSellerBalanceKey(seller);
+    if (sellerKey && Object.prototype.hasOwnProperty.call(animatedSellerBalances, sellerKey)) {
+      return animatedSellerBalances[sellerKey];
+    }
+    return Number(seller?.currentUsdtBalance || 0);
+  };
+  const fetchSellersBalance = async () => {
+    try {
+      setFetchingSellersBalance(true);
+      const response = await fetch('/api/user/getAllSellersForBalance', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(
+          {
+            storecode: params.center,
+            limit: 100,
+            page: 1,
+          }
+        )
+      });
+
+      const data = await response.json();
+      if (data.result) {
+        setSellersBalance(data.result.users);
+        setSellerBalanceUpdatedAt(new Date().toISOString());
+      } else {
+        console.error('Error fetching sellers balance');
+      }
+    } catch (error) {
+      console.error('Error fetching sellers balance:', error);
+    } finally {
+      setFetchingSellersBalance(false);
     }
   };
   useEffect(() => {
+    animatedSellerBalancesRef.current = animatedSellerBalances;
+  }, [animatedSellerBalances]);
+  useEffect(() => {
+    if (sellerBalanceAnimationFrameRef.current !== null) {
+      cancelAnimationFrame(sellerBalanceAnimationFrameRef.current);
+      sellerBalanceAnimationFrameRef.current = null;
+    }
+
+    if (liveSellerBalances.length === 0) {
+      animatedSellerBalancesRef.current = {};
+      setAnimatedSellerBalances({});
+      return;
+    }
+
+    const nextTargetBalances = liveSellerBalances.reduce((acc, seller) => {
+      acc[getSellerBalanceKey(seller)] = Number(seller?.currentUsdtBalance || 0);
+      return acc;
+    }, {} as Record<string, number>);
+
+    const startBalances = Object.keys(nextTargetBalances).reduce((acc, sellerKey) => {
+      acc[sellerKey] = animatedSellerBalancesRef.current[sellerKey] ?? 0;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const startedAt = performance.now();
+
+    const animateBalances = (timestamp: number) => {
+      const progress = Math.min(
+        (timestamp - startedAt) / SELLER_BALANCE_ANIMATION_DURATION_MS,
+        1,
+      );
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+      const nextAnimatedBalances = Object.keys(nextTargetBalances).reduce((acc, sellerKey) => {
+        const startValue = startBalances[sellerKey] ?? 0;
+        const targetValue = nextTargetBalances[sellerKey] ?? 0;
+        acc[sellerKey] = startValue + (targetValue - startValue) * easedProgress;
+        return acc;
+      }, {} as Record<string, number>);
+
+      animatedSellerBalancesRef.current = nextAnimatedBalances;
+      setAnimatedSellerBalances(nextAnimatedBalances);
+
+      if (progress < 1) {
+        sellerBalanceAnimationFrameRef.current = requestAnimationFrame(animateBalances);
+      } else {
+        sellerBalanceAnimationFrameRef.current = null;
+      }
+    };
+
+    sellerBalanceAnimationFrameRef.current = requestAnimationFrame(animateBalances);
+
+    return () => {
+      if (sellerBalanceAnimationFrameRef.current !== null) {
+        cancelAnimationFrame(sellerBalanceAnimationFrameRef.current);
+        sellerBalanceAnimationFrameRef.current = null;
+      }
+    };
+  }, [liveSellerBalances]);
+  useEffect(() => {
     if (!address) {
       setSellersBalance([]);
+      setSellerBalanceUpdatedAt('');
       return;
     }
     fetchSellersBalance();
-    // interval to fetch every 10 seconds
     const interval = setInterval(() => {
       fetchSellersBalance();
-    }, 10000);
+    }, SELLER_BALANCE_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [address]);
+  }, [address, params.center]);
 
 
 
@@ -4052,95 +4178,115 @@ const fetchBuyOrders = async () => {
             </div>
 
 
-            <div className="w-full flex flex-col items-start justify-center gap-2
-            border-b border-zinc-300 pb-2">
+            <div className="w-full flex flex-col items-start justify-center gap-3
+            border-b border-zinc-300 pb-3">
               {/* title */}
-              <div className="flex flex-row gap-2 items-center">
-                <Image
-                  src="/icon-seller.png"
-                  alt="Sellers"
-                  width={35}
-                  height={35}
-                  className="w-6 h-6"
-                />
-                <span className="text-xl font-semibold text-zinc-500">
-                  판매자
-                </span>
+              <div className="w-full flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="flex flex-row gap-2 items-center">
+                  <Image
+                    src="/icon-seller.png"
+                    alt="Sellers"
+                    width={35}
+                    height={35}
+                    className="w-6 h-6"
+                  />
+                  <span className="text-xl font-semibold text-zinc-500">
+                    판매자
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
+                    <span className={`h-2 w-2 rounded-full ${fetchingSellersBalance ? 'animate-pulse bg-emerald-500' : 'bg-emerald-400'}`} />
+                    실시간 판매자 지갑 모니터링
+                  </div>
+                  {sellerBalanceUpdatedAt && (
+                    <span className="rounded-full bg-zinc-100 px-3 py-1 font-medium text-zinc-600">
+                      최근 갱신 {new Date(sellerBalanceUpdatedAt).toLocaleTimeString('ko-KR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                      })}
+                    </span>
+                  )}
+                </div>
               </div>
-              {sellersBalance.length > 0 && (
-                <div className="w-full
-                grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mb-2">
+              {liveSellerBalances.length > 0 && (
+                <div className="w-full grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {liveSellerBalances.map((seller, index) => (
+                    <div
+                      key={getSellerBalanceKey(seller) || index}
+                      className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-white via-emerald-50/60 to-cyan-50/70 p-4 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex min-w-0 flex-row items-center gap-4">
+                          <Image
+                            src="/icon-seller.png"
+                            alt="Seller"
+                            width={40}
+                            height={40}
+                            className="h-10 w-10"
+                          />
+                          <div className="flex min-w-0 flex-col">
+                            <div className="flex flex-row gap-2 items-center">
+                              <span className="truncate text-sm font-semibold text-zinc-800">
+                                {seller.nickname || '판매자 지갑'}
+                              </span>
+                            </div>
 
-                  {sellersBalance.map((seller, index) => (
-                    <div key={index}
-                      className="flex flex-row items-center justify-between gap-4
-                      bg-white/80
-                      p-4 rounded-lg shadow-md
-                      backdrop-blur-md
-                      ">
-                      <div className="flex flex-row items-center gap-4">
-                        <Image
-                          src="/icon-seller.png"
-                          alt="Seller"
-                          width={40}
-                          height={40}
-                          className="w-10 h-10"
-                        />
-                        <div className="flex flex-col">
-                          <div className="flex flex-row gap-2 items-center">
-                            <span className="text-sm font-semibold">
-                              {seller.nickname}
-                            </span>
-                          </div>
-
-                          <div className="flex flex-row gap-2 items-center">
-                            <button
-                              className="text-sm text-zinc-600 underline"
-                              onClick={() => {
-                                navigator.clipboard.writeText(seller.walletAddress);
-                                toast.success(Copied_Wallet_Address);
-                              } }
-                            >
-                              {seller.walletAddress.substring(0, 6)}...{seller.walletAddress.substring(seller.walletAddress.length - 4)}
-                            </button>
-                            {seller.seller?.escrowWalletAddress && (
+                            <div className="mt-1 flex flex-wrap gap-2">
                               <button
-                                className="text-sm text-zinc-600 underline"
+                                className="rounded-full bg-white/80 px-2 py-1 text-xs text-zinc-600 underline shadow-sm"
                                 onClick={() => {
-                                  navigator.clipboard.writeText(seller.seller.escrowWalletAddress || '');
+                                  navigator.clipboard.writeText(seller.walletAddress);
                                   toast.success(Copied_Wallet_Address);
                                 } }
                               >
-                                {seller.seller.escrowWalletAddress?.substring(0, 6)}...{seller.seller.escrowWalletAddress?.substring(seller.seller.escrowWalletAddress?.length - 4)}
+                                {seller.walletAddress.substring(0, 6)}...{seller.walletAddress.substring(seller.walletAddress.length - 4)}
                               </button>
+                              {seller.seller?.escrowWalletAddress && (
+                                <button
+                                  className="rounded-full bg-white/80 px-2 py-1 text-xs text-zinc-600 underline shadow-sm"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(seller.seller.escrowWalletAddress || '');
+                                    toast.success(Copied_Wallet_Address);
+                                  } }
+                                >
+                                  {seller.seller.escrowWalletAddress?.substring(0, 6)}...{seller.seller.escrowWalletAddress?.substring(seller.seller.escrowWalletAddress?.length - 4)}
+                                </button>
+                              )}
+                            </div>
+
+                            {/* seller bank info */}
+                            {seller.seller?.bankInfo && (
+                              <div className="mt-2 flex flex-col items-start justify-center">
+                                <span className="text-sm text-zinc-600">
+                                  {seller.seller.bankInfo.bankName}{" "}{seller.seller.bankInfo.accountHolder}
+                                </span>
+                                <span className="text-sm text-zinc-600">
+                                  {seller.seller.bankInfo.accountNumber}
+                                </span>
+                              </div>
                             )}
                           </div>
-
-                          {/* seller bank info */}
-                          {seller.seller?.bankInfo && (
-                            <div className="flex flex-col items-start justify-center mt-1">
-                              <span className="text-sm text-zinc-600">
-                                {seller.seller.bankInfo.bankName}{" "}{seller.seller.bankInfo.accountHolder}
-                              </span>
-                              <span className="text-sm text-zinc-600">
-                                {seller.seller.bankInfo.accountNumber}
-                              </span>
-                            </div>
-                          )}
                         </div>
-                      </div>
-                      <div className="flex flex-row items-center gap-2">
-                        <Image
-                          src="/icon-tether.png"
-                          alt="USDT"
-                          width={30}
-                          height={30}
-                          className="w-7 h-7"
-                        />
-                        <span className="text-2xl font-semibold text-[#409192]"
-                          style={{ fontFamily: 'monospace' }}>
-                          {Number(seller.currentUsdtBalance).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        </span>
+                        <div className="flex shrink-0 flex-col items-end rounded-2xl bg-slate-950 px-4 py-3 text-right shadow-[0_20px_40px_-28px_rgba(15,23,42,0.85)]">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-emerald-200/80">
+                            Live USDT
+                          </span>
+                          <div className="mt-2 flex flex-row items-center gap-2">
+                            <Image
+                              src="/icon-tether.png"
+                              alt="USDT"
+                              width={30}
+                              height={30}
+                              className="w-7 h-7"
+                            />
+                            <span className="text-2xl font-semibold text-[#6ee7b7]"
+                              style={{ fontFamily: 'monospace' }}>
+                              {formatUsdtBalanceValue(getAnimatedSellerBalance(seller))}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
                       {/* if seller nickname is 'seller', then show withdraw button */}
