@@ -2464,26 +2464,9 @@ const fetchBuyOrders = async () => {
 
       <div className="py-0 w-full">
 
-        <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-3 rounded-2xl border border-slate-200/70 bg-white/90 p-3 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.25)] backdrop-blur mb-4">
-            
-          <div className="w-full flex flex-row items-center justify-start gap-2">
-            <button
-              onClick={() => router.push('/' + params.lang + '/administration')}
-              className="flex items-center justify-center gap-2 rounded-full border border-slate-200/70 bg-white/90 p-2 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
-
-            >
-              <Image
-                src="/api/client/logo"
-                alt="logo"
-                width={100}
-                height={100}
-                className="h-10 w-10 rounded-full"
-              />
-            </button>
-          </div>
-
-
-          {showHeaderWalletPanel && address && !loadingUser && (
+        {showHeaderWalletPanel && (
+        <div className="mb-4 flex w-full justify-end">
+          {address && !loadingUser && (
 
 
             <div className="w-full flex flex-row items-center justify-end gap-2">
@@ -2524,7 +2507,7 @@ const fetchBuyOrders = async () => {
           )}
 
 
-          {showHeaderWalletPanel && !address && (
+          {!address && (
             <ConnectButton
               client={client}
               wallets={wallets}
@@ -2564,11 +2547,8 @@ const fetchBuyOrders = async () => {
             />
 
           )}
-
-
-
-
         </div>
+        )}
 
 
 
