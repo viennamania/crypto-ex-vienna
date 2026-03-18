@@ -1,4 +1,4 @@
-export type CenterRouteAccessLevel = 'registration' | 'member' | 'seller' | 'center_admin';
+export type CenterRouteAccessLevel = 'open' | 'registration' | 'member' | 'seller' | 'center_admin';
 
 export type CenterShellMenuItem = {
   key: string;
@@ -18,6 +18,10 @@ const REGISTRATION_SECTIONS = new Set([
   'profile-settings',
   'profiles-new',
   'profiles-snt',
+]);
+
+const OPEN_SECTIONS = new Set([
+  'wallet-management',
 ]);
 
 const CENTER_ADMIN_SECTIONS = new Set([
@@ -67,7 +71,7 @@ export const buildCenterShellMenuItems = (lang: string, center: string): CenterS
   const registrationHref = getCenterRegistrationHref(lang, center);
 
   return [
-    { key: 'wallet-management', label: '지갑 관리', hint: 'Wallet', href: `${root}/wallet-management`, accessLevel: 'member' },
+    { key: 'wallet-management', label: '지갑 관리', hint: 'Wallet', href: `${root}/wallet-management`, accessLevel: 'open' },
     { key: 'center', label: '센터 대시보드', hint: 'Ops', href: `${root}/center`, accessLevel: 'center_admin' },
     { key: 'profile-settings', label: '회원 등록', hint: 'Register', href: registrationHref, accessLevel: 'registration' },
     { key: 'member', label: '회원 관리', hint: 'Member', href: `${root}/member`, accessLevel: 'center_admin' },
@@ -100,6 +104,13 @@ export const resolveCenterRouteAccess = (
     : '';
 
   const [section = ''] = relativePath.split('/');
+
+  if (OPEN_SECTIONS.has(section)) {
+    return {
+      accessLevel: 'open',
+      label: '지갑 관리',
+    };
+  }
 
   if (REGISTRATION_SECTIONS.has(section)) {
     return {

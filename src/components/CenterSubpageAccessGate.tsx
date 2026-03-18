@@ -198,7 +198,9 @@ export default function CenterSubpageAccessGate({
   const isPlatformAdmin = memberInfo?.role === 'admin';
   const hasSellerPermission = Boolean(memberInfo?.seller);
   const hasAccess =
-    routeAccess.accessLevel === 'registration'
+    routeAccess.accessLevel === 'open'
+      ? true
+      : routeAccess.accessLevel === 'registration'
       ? Boolean(walletAddress)
       : routeAccess.accessLevel === 'member'
         ? Boolean(memberInfo)
@@ -212,6 +214,7 @@ export default function CenterSubpageAccessGate({
       ? '회원 정보 확인 중'
       : '지갑 연결 필요';
   const isMemberCheckPending = Boolean(walletAddress)
+    && routeAccess.accessLevel !== 'open'
     && routeAccess.accessLevel !== 'registration'
     && (!checkedMember || loadingMember);
   const isStoreCheckPending = routeAccess.accessLevel === 'center_admin'
@@ -230,7 +233,7 @@ export default function CenterSubpageAccessGate({
     >
       <AutoConnect client={client} wallets={[wallet]} />
 
-      {!walletAddress ? (
+      {!walletAddress && routeAccess.accessLevel !== 'open' ? (
         <section className="rounded-[28px] border border-rose-200 bg-[linear-gradient(160deg,#fff7f7_0%,#fff1f2_100%)] px-6 py-7 shadow-[0_28px_64px_-42px_rgba(225,29,72,0.35)]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-rose-700">Access Blocked</p>
           <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
@@ -249,7 +252,7 @@ export default function CenterSubpageAccessGate({
             연결된 지갑: <span className="font-mono text-slate-900">{shortWalletAddress(walletAddress)}</span>
           </p>
         </section>
-      ) : routeAccess.accessLevel !== 'registration' && checkedMember && !memberInfo ? (
+      ) : routeAccess.accessLevel !== 'open' && routeAccess.accessLevel !== 'registration' && checkedMember && !memberInfo ? (
         <section className="rounded-[30px] border border-amber-200 bg-[linear-gradient(160deg,#fffef4_0%,#fffbeb_100%)] px-6 py-7 shadow-[0_26px_56px_-38px_rgba(217,119,6,0.36)]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-700">Member Required</p>
           <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
