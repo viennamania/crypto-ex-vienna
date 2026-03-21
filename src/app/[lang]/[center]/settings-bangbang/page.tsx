@@ -1636,7 +1636,7 @@ export default function SettingsPage({ params }: any) {
 
     return (
 
-        <main className="w-full max-w-[420px] p-4 min-h-[100vh] flex items-start justify-center mx-auto">
+        <main className="w-full max-w-[840px] p-4 min-h-[100vh] flex items-start justify-center mx-auto">
 
             <div className="py-0 w-full
                 mb-36
