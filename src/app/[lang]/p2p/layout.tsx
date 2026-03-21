@@ -21,7 +21,6 @@ export default function P2PLayout({ children }: { children: ReactNode }) {
           isolation: isolate;
         }
 
-        .p2p-mobile-shell main,
         .p2p-mobile-shell section,
         .p2p-mobile-shell article,
         .p2p-mobile-shell aside {
