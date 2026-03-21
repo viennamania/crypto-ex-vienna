@@ -676,6 +676,8 @@ export default function Index({ params }: any) {
     if (!address) {
 
       setUser(null);
+      setIsAdmin(false);
+      setLoadingUser(false);
       return;
     }
 
@@ -705,9 +707,10 @@ export default function Index({ params }: any) {
         console.error('Error:', error);
         setUser(null);
         setIsAdmin(false);
+    })
+    .finally(() => {
+        setLoadingUser(false);
     });
-
-    setLoadingUser(false);
 
 
   } , [address, params.center]);
@@ -3524,63 +3527,6 @@ const fetchBuyOrders = async () => {
 
 
 
-
-
-  // if store.adminWalletAddress is same as address, return "가맹점 관리자" else return "가맹점"
-  // if user?.role is not "admin", return "가맹점"
-
-
-  if (
-    (address
-    && store
-    &&  !isStoreAdminWallet
-    && user?.role !== "admin"
-  )
-    
-
-  ) {
-    return (
-
-
-      <div className={`w-full flex flex-row items-center justify-start gap-2
-        p-2 rounded-lg mb-4
-        ${store?.backgroundColor ?
-          "bg-" + store.backgroundColor + " " :
-          "bg-black/10"
-        }`}>
-
-        <div className="flex flex-row items-center justify-center gap-2">
-          <Image
-            src={store?.storeLogo || "/logo.png"}
-            alt="logo"
-            width={35}
-            height={35}
-            className="rounded-lg w-6 h-6 object-cover"
-          />
-          <div className="text-sm text-[#3167b4] font-bold">
-            {store?.storeName + " (" + store?.storecode + ") 가맹점 관리자가 아닙니다."}
-          </div>
-        </div>
-
-        {/* 회원가입한후 가맹점 관리자 등록신청을 하세요 */}
-        {/* 회원가입하러 가기 */}
-        <div className="flex flex-row items-center justify-center gap-2">
-          <button
-            onClick={() => {
-              router.push('/' + params.lang + '/' + params.center + '/profile-settings');
-            }}
-            className="flex bg-[#0047ab] text-sm text-[#f3f4f6] px-4 py-2 rounded-lg hover:bg-[#0047ab]/80"
-          >
-            회원가입하러 가기
-          </button>
-        </div>
-
-
-
-      </div>
-    );
-
-  }
 
 
 
