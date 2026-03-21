@@ -195,7 +195,6 @@ export default function P2PAgentManagementLayout({ children }: { children: React
   const searchParams = useSearchParams();
   const agentcode = String(searchParams?.get('agentcode') || '').trim();
   const agentQuery = agentcode ? `?agentcode=${encodeURIComponent(agentcode)}` : '';
-  const p2pHomeHref = `/${lang}/p2p${agentQuery}`;
   const paymentManagementHref = `/${lang}/p2p/agent-management/payment-management${agentQuery}`;
   const connectedWalletAddress = String(
     activeWallet?.getAccount?.()?.address || activeAccount?.address || '',
@@ -1543,22 +1542,6 @@ export default function P2PAgentManagementLayout({ children }: { children: React
             })}
           </nav>
 
-          <div className="relative px-2 pb-3">
-            <Link
-              href={p2pHomeHref}
-              onClick={() => setMobileOpen(false)}
-              title={collapsed ? 'P2P 홈으로' : undefined}
-              className={`group flex min-h-10 items-center rounded-xl border border-cyan-200/35 bg-white/10 text-xs font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-white/15 hover:text-white ${
-                collapsed ? 'justify-center px-2' : 'gap-2.5 px-3'
-              }`}
-            >
-              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 shrink-0" aria-hidden="true">
-                <path d="M14.5 6 8.5 12l6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {!collapsed && <span className="truncate">P2P 홈으로 돌아가기</span>}
-            </Link>
-          </div>
-
           <div className="relative border-t border-white/10 px-3 py-3">
             {collapsed ? (
               <div className="flex items-center justify-center">
@@ -1935,12 +1918,6 @@ export default function P2PAgentManagementLayout({ children }: { children: React
                       'inline-flex h-10 items-center justify-center rounded-xl border border-rose-300 bg-white px-4 text-sm font-semibold text-rose-700 transition hover:border-rose-400 hover:text-rose-800',
                   }}
                 />
-                <Link
-                  href={p2pHomeHref}
-                  className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                >
-                  P2P 홈으로
-                </Link>
               </div>
             </section>
           )}

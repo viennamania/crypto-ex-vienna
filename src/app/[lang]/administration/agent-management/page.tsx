@@ -206,6 +206,7 @@ export default function AgentManagementPage() {
             limit: 300,
             page: 1,
             includeUnverified: true,
+            requireProfile: false,
           }),
         });
         if (!res.ok) {
