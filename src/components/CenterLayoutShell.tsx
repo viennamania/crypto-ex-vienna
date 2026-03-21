@@ -49,6 +49,7 @@ export default function CenterLayoutShell({
   const standardWalletManagementPath = `/${lang}/${center}/wallet-management`;
   const managerWalletManagementPath = `/${lang}/${center}/manager-wallet-management`;
   const defaultManagerHomePath = `/${lang}/${center}/member`;
+  const settingsBangbangPath = `/${lang}/${center}/settings-bangbang`;
   const hideSidebarNavigation =
     !useTopManagerNav
     && (
@@ -73,6 +74,7 @@ export default function CenterLayoutShell({
   const isManagerWalletPage =
     isActiveRoute(pathname, standardWalletManagementPath)
     || isActiveRoute(pathname, managerWalletManagementPath);
+  const isSettingsBangbangPage = isActiveRoute(pathname, settingsBangbangPath);
 
   useEffect(() => {
     const updateViewport = () => {
@@ -155,6 +157,18 @@ export default function CenterLayoutShell({
                     <p className="truncate text-[11px] text-slate-300">
                       {memberNickname || '회원 정보 확인 중'} · {roleLabel || '권한 확인 중'}
                     </p>
+                    <div className="mt-2">
+                      <Link
+                        href={settingsBangbangPath}
+                        className={`inline-flex h-8 items-center justify-center rounded-full border px-3 text-xs font-semibold transition ${
+                          isSettingsBangbangPage
+                            ? 'border-[#f6bf18]/60 bg-[#f6bf18] text-[#113d86]'
+                            : 'border-cyan-200/20 bg-white/10 text-cyan-50 hover:border-cyan-200/30 hover:bg-white/14'
+                        }`}
+                      >
+                        가맹점 설정
+                      </Link>
+                    </div>
                   </div>
                 </div>
 

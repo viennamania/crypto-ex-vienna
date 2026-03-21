@@ -22,10 +22,7 @@ import {
 
 import {
     useActiveAccount,
-    useActiveWallet,
-
-    useConnectedWallets,
-    useSetActiveWallet} from 'thirdweb/react';
+} from 'thirdweb/react';
 
 
 import {
@@ -266,22 +263,6 @@ export default function SettingsPage({ params }: any) {
 
 
   // get the active wallet
-  const activeWallet = useActiveWallet();
-
-  const setActiveAccount = useSetActiveWallet();
- 
-  const connectWallets = useConnectedWallets();
-
-  //console.log('connectWallets', connectWallets);
-
-  const smartConnectWallet = connectWallets?.[0];
-  const inAppConnectWallet = connectWallets?.[1];
-
-
-
-
-
-
     const smartAccount = useActiveAccount();
 
     const address = smartAccount?.address;
@@ -315,51 +296,18 @@ export default function SettingsPage({ params }: any) {
 
 
 
-    const [editUsdtPrice, setEditUsdtPrice] = useState(0);
-    const [usdtPriceEdit, setUsdtPriceEdit] = useState(false);
-    const [editingUsdtPrice, setEditingUsdtPrice] = useState(false);
-
-
-
-    // get usdt price
-    // api /api/order/getPrice
-
-    const [usdtPrice, setUsdtPrice] = useState(0);
-    useEffect(() => {
-
-        if (!address) {
-            return;
-        }
-
-        const fetchData = async () => {
-
-            setEditingUsdtPrice(true);
-
-            const response = await fetch("/api/order/getPrice", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    walletAddress: address,
-                }),
-            });
-
-            const data = await response.json();
-
-            ///console.log("getPrice data", data);
-
-            if (data.result) {
-                setUsdtPrice(data.result.usdtPrice);
-            }
-
-            setEditingUsdtPrice(false);
-        };
-
-        fetchData();
-    }
-
-    , [address]);
+    const [clientRateInput, setClientRateInput] = useState("");
+    const [clientRateEdit, setClientRateEdit] = useState(false);
+    const [savingClientRate, setSavingClientRate] = useState(false);
+    const [fetchingClientRate, setFetchingClientRate] = useState(false);
+    const [clientRate, setClientRate] = useState(0);
+    const [clientExchangeRateUSDT, setClientExchangeRateUSDT] = useState({
+        USD: 0,
+        KRW: 0,
+        JPY: 0,
+        CNY: 0,
+        EUR: 0,
+    });
 
 
     
@@ -757,6 +705,112 @@ export default function SettingsPage({ params }: any) {
         }
         fetchStore();
     } , [params.center])
+
+    useEffect(() => {
+        const fetchClientRate = async () => {
+            setFetchingClientRate(true);
+
+            try {
+                const response = await fetch('/api/client/getClientInfo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(String(data?.error || '클라이언트 환율을 불러오지 못했습니다.'));
+                }
+
+                const exchangeRate = data?.result?.clientInfo?.exchangeRateUSDT || {};
+                const normalizedExchangeRate = {
+                    USD: Number(exchangeRate?.USD || 0),
+                    KRW: Number(exchangeRate?.KRW || 0),
+                    JPY: Number(exchangeRate?.JPY || 0),
+                    CNY: Number(exchangeRate?.CNY || 0),
+                    EUR: Number(exchangeRate?.EUR || 0),
+                };
+                const nextClientRate = Number(normalizedExchangeRate.KRW || 0);
+
+                setClientExchangeRateUSDT(normalizedExchangeRate);
+                setClientRate(nextClientRate);
+                if (!clientRateEdit) {
+                    setClientRateInput(nextClientRate > 0 ? String(nextClientRate) : '');
+                }
+            } catch (error) {
+                console.error('Failed to fetch client rate', error);
+                setClientRate(0);
+                if (!clientRateEdit) {
+                    setClientRateInput('');
+                }
+            } finally {
+                setFetchingClientRate(false);
+            }
+        };
+
+        fetchClientRate();
+    }, [clientRateEdit, params.center]);
+
+    const updateClientRate = async () => {
+        if (!address) {
+            toast.error(Please_connect_your_wallet_first);
+            return;
+        }
+
+        const nextClientRate = Number(String(clientRateInput || '').replace(/,/g, '').trim());
+        if (!Number.isFinite(nextClientRate) || nextClientRate <= 0) {
+            toast.error('환율을 올바르게 입력하세요');
+            return;
+        }
+
+        if (savingClientRate) {
+            return;
+        }
+
+        setSavingClientRate(true);
+
+        try {
+            const response = await fetch('/api/client/setClientExchangeRateUSDT', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    exchangeRateUSDT: {
+                        ...clientExchangeRateUSDT,
+                        KRW: Number(nextClientRate.toFixed(6)),
+                    },
+                }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(String(data?.error || '환율 변경에 실패했습니다.'));
+            }
+
+            const updatedExchangeRate = data?.exchangeRateUSDT || {};
+            const normalizedExchangeRate = {
+                USD: Number(updatedExchangeRate?.USD || clientExchangeRateUSDT.USD || 0),
+                KRW: Number(updatedExchangeRate?.KRW || nextClientRate),
+                JPY: Number(updatedExchangeRate?.JPY || clientExchangeRateUSDT.JPY || 0),
+                CNY: Number(updatedExchangeRate?.CNY || clientExchangeRateUSDT.CNY || 0),
+                EUR: Number(updatedExchangeRate?.EUR || clientExchangeRateUSDT.EUR || 0),
+            };
+            const resolvedClientRate = Number(Number(normalizedExchangeRate.KRW || nextClientRate).toFixed(6));
+
+            setClientExchangeRateUSDT(normalizedExchangeRate);
+            setClientRate(resolvedClientRate);
+            setClientRateInput(String(resolvedClientRate));
+            setClientRateEdit(false);
+            toast.success('구매주문 환율이 변경되었습니다.');
+        } catch (error) {
+            console.error('Failed to update client rate', error);
+            toast.error(error instanceof Error ? error.message : '환율 변경에 실패했습니다.');
+        } finally {
+            setSavingClientRate(false);
+        }
+    };
 
 
 
@@ -1582,7 +1636,7 @@ export default function SettingsPage({ params }: any) {
 
     return (
 
-        <main className="p-4 min-h-[100vh] flex items-start justify-center container max-w-screen-sm mx-auto">
+        <main className="w-full max-w-[420px] p-4 min-h-[100vh] flex items-start justify-center mx-auto">
 
             <div className="py-0 w-full
                 mb-36
@@ -1749,6 +1803,82 @@ export default function SettingsPage({ params }: any) {
 
 
 
+                        </div>
+
+
+                        <div className='w-full flex flex-col gap-4 border border-gray-400 rounded-lg p-4'>
+                            <div className='w-full flex flex-col md:flex-row md:items-start md:justify-between gap-3 border-b border-gray-300 pb-3'>
+                                <div className='flex items-start gap-3'>
+                                    <div className='mt-2 h-2.5 w-2.5 rounded-full bg-green-500'></div>
+                                    <div className='flex flex-col gap-1'>
+                                        <span className='text-lg text-zinc-600'>구매주문 적용 환율</span>
+                                        <span className='text-sm text-zinc-500'>
+                                            /api/agent/getAgentUsdtKRWRate와 같은 클라이언트 공통 환율을 확인하고 수정할 수 있습니다.
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <button
+                                    disabled={!address || fetchingClientRate || savingClientRate}
+                                    className={`self-start rounded-lg px-3 py-2 text-sm font-semibold text-white ${
+                                        !address || fetchingClientRate || savingClientRate
+                                            ? "bg-gray-300 text-gray-500"
+                                            : "bg-[#0047ab] hover:bg-[#0047ab]/80"
+                                    }`}
+                                    onClick={() => {
+                                        if (clientRateEdit) {
+                                            setClientRateInput(clientRate > 0 ? String(clientRate) : "");
+                                        }
+                                        setClientRateEdit(!clientRateEdit);
+                                    }}
+                                >
+                                    {clientRateEdit ? "취소" : "수정"}
+                                </button>
+                            </div>
+
+                            <div className='flex flex-col gap-4 md:flex-row md:items-end md:justify-between'>
+                                <div className='flex flex-col gap-1'>
+                                    <span className='text-sm text-zinc-500'>현재 환율</span>
+                                    <div className='flex items-end gap-2'>
+                                        <span className='text-3xl font-semibold text-[#0047ab]'>
+                                            {fetchingClientRate ? "불러오는 중..." : clientRate > 0 ? `${Number(clientRate).toLocaleString()} KRW` : "-"}
+                                        </span>
+                                        {!fetchingClientRate && clientRate > 0 && (
+                                            <span className='pb-1 text-sm text-zinc-500'>/ 1 USDT</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {clientRateEdit && (
+                                    <div className='flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center'>
+                                        <input
+                                            disabled={savingClientRate}
+                                            className='w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-right text-lg font-semibold text-zinc-700 md:w-48'
+                                            placeholder='환율 입력'
+                                            type='number'
+                                            min='0'
+                                            step='0.000001'
+                                            value={clientRateInput}
+                                            onChange={(e) => {
+                                                setClientRateInput(e.target.value);
+                                            }}
+                                        />
+                                        <button
+                                            disabled={savingClientRate || !clientRateInput}
+                                            className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${
+                                                savingClientRate || !clientRateInput
+                                                    ? "bg-gray-300 text-gray-500"
+                                                    : "bg-green-600 hover:bg-green-500"
+                                            }`}
+                                            onClick={() => {
+                                                updateClientRate();
+                                            }}
+                                        >
+                                            {savingClientRate ? "저장 중..." : "저장"}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
 

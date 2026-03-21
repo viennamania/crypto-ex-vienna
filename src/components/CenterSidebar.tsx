@@ -79,6 +79,8 @@ export default function CenterSidebar({
   const brandTitle = (storeName || center || 'Center').trim();
   const brandInitial = brandTitle.slice(0, 1).toUpperCase() || 'C';
   const normalizedStoreLogo = String(storeLogo || '').trim();
+  const settingsBangbangPath = `/${lang}/${center}/settings-bangbang`;
+  const isSettingsBangbangPage = isActiveRoute(pathname, settingsBangbangPath);
 
   return (
     <>
@@ -127,6 +129,19 @@ export default function CenterSidebar({
                 <p className="mt-1 text-xs text-slate-300">센터 전용 운영 패널</p>
                 <div className="mt-3 inline-flex max-w-full items-center rounded-full border border-cyan-200/20 bg-white/8 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-100/90">
                   <span className="truncate">{center}</span>
+                </div>
+                <div className="mt-3">
+                  <Link
+                    href={settingsBangbangPath}
+                    onClick={() => isMobileViewport && onOpenChange(false)}
+                    className={`inline-flex h-8 items-center justify-center rounded-full border px-3 text-[11px] font-semibold transition ${
+                      isSettingsBangbangPage
+                        ? 'border-cyan-200/40 bg-cyan-300 text-slate-950'
+                        : 'border-cyan-200/20 bg-white/10 text-cyan-50 hover:border-cyan-200/30 hover:bg-white/14'
+                    }`}
+                  >
+                    가맹점 설정
+                  </Link>
                 </div>
               </div>
             </div>
