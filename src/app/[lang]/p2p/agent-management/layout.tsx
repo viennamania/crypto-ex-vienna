@@ -16,6 +16,7 @@ import ClientBrandTitleSync from '@/components/ClientBrandTitleSync';
 import { ConnectButton } from '@/components/WalletConnectButton';
 import { useClientWallets, type SupportedSmsCountry } from '@/lib/useClientWallets';
 import { clearWalletConnectionState } from '@/lib/clearWalletConnectionState';
+import { createWalletSignatureAuthPayload } from '@/lib/security/walletSignature';
 
 type MenuItem = {
   key: string;
@@ -71,9 +72,29 @@ type AgentBrandingSummary = {
   agentLogo: string;
 };
 
+type AdminMemberProfile = {
+  nickname: string;
+  avatar: string;
+  email: string;
+  mobile: string;
+  walletAddress: string;
+  createdAt: string;
+};
+
+type SignMessageAccount = {
+  address?: string;
+  signMessage?: (options: {
+    message: string;
+    originalMessage?: string;
+    chainId?: number;
+  }) => Promise<string>;
+};
+
 const WALLET_AUTH_OPTIONS = ['email', 'google', 'phone'];
 const WALLET_DEFAULT_SMS_COUNTRY_CODE: SupportedSmsCountry = 'KR';
 const WALLET_ALLOWED_SMS_COUNTRY_CODES: SupportedSmsCountry[] = ['KR'];
+const ADMIN_MEMBER_STORECODE = 'admin';
+const MEMBER_ID_PATTERN = /^[a-z0-9]+$/;
 const BUYORDER_BADGE_POLLING_MS = 15000;
 const ORDER_PROCESSING_ALERT_POLLING_MS = 15000;
 const AGENT_ESCROW_BALANCE_POLLING_MS = 10000;
@@ -184,6 +205,13 @@ export default function P2PAgentManagementLayout({ children }: { children: React
     agentName: '',
     agentLogo: '',
   });
+  const [adminMemberProfile, setAdminMemberProfile] = useState<AdminMemberProfile | null>(null);
+  const [loadingAdminMemberProfile, setLoadingAdminMemberProfile] = useState(false);
+  const [adminMemberProfileError, setAdminMemberProfileError] = useState('');
+  const [registrationNickname, setRegistrationNickname] = useState('');
+  const [registeringAdminMember, setRegisteringAdminMember] = useState(false);
+  const [adminMemberRegistrationError, setAdminMemberRegistrationError] = useState('');
+  const [adminMemberRegistrationSuccess, setAdminMemberRegistrationSuccess] = useState('');
   const [checkingAgentAccess, setCheckingAgentAccess] = useState(false);
   const [agentAccessError, setAgentAccessError] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -216,6 +244,27 @@ export default function P2PAgentManagementLayout({ children }: { children: React
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const hasConnectedWallet = Boolean(connectedWalletAddress);
+  const signatureAccount = useMemo<SignMessageAccount | null>(() => {
+    const candidates: Array<unknown> = [
+      activeAccount,
+      activeWallet?.getAccount?.(),
+      activeWallet?.getAdminAccount?.(),
+    ];
+
+    for (const walletItem of connectedWallets) {
+      candidates.push(walletItem?.getAccount?.());
+      candidates.push(walletItem?.getAdminAccount?.());
+    }
+
+    for (const candidate of candidates) {
+      const account = candidate as SignMessageAccount | null | undefined;
+      if (account?.address && typeof account.signMessage === 'function') {
+        return account;
+      }
+    }
+
+    return null;
+  }, [activeAccount, activeWallet, connectedWallets]);
 
   const menuItems = useMemo<MenuItem[]>(
     () => [
@@ -347,6 +396,11 @@ export default function P2PAgentManagementLayout({ children }: { children: React
     .replace(/\s+/g, '')
     .slice(0, 2)
     .toUpperCase();
+  const resolvedAdminMemberAvatar = String(adminMemberProfile?.avatar || '').trim();
+  const memberProfileMonogram = (String(adminMemberProfile?.nickname || connectedWalletAddress || 'ME').trim() || 'ME')
+    .replace(/\s+/g, '')
+    .slice(0, 2)
+    .toUpperCase();
 
   const agentEscrowBalanceCards = useMemo(
     () =>
@@ -365,6 +419,115 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       }),
     [agentEscrowBalancesByWallet, agentEscrowSellers],
   );
+
+  const buildSignedAdminMemberRequestBody = useCallback(
+    async ({
+      path,
+      payload,
+    }: {
+      path: string;
+      payload: Record<string, unknown>;
+    }) => {
+      if (!signatureAccount?.address || typeof signatureAccount.signMessage !== 'function') {
+        throw new Error('서명 가능한 지갑 계정을 찾을 수 없습니다.');
+      }
+
+      const auth = await createWalletSignatureAuthPayload({
+        account: signatureAccount,
+        storecode: ADMIN_MEMBER_STORECODE,
+        path,
+        method: 'POST',
+      });
+
+      return {
+        ...payload,
+        auth,
+      };
+    },
+    [signatureAccount],
+  );
+
+  const handleRegisterAdminMember = useCallback(async () => {
+    const nextNickname = String(registrationNickname || '').trim().toLowerCase();
+
+    if (!agentcode) {
+      setAdminMemberRegistrationError('agentcode 파라미터가 필요합니다.');
+      return;
+    }
+
+    if (!connectedWalletAddress || registeringAdminMember) {
+      return;
+    }
+
+    if (!nextNickname) {
+      setAdminMemberRegistrationError('회원 아이디를 입력해 주세요.');
+      return;
+    }
+
+    if (nextNickname.length < 5 || nextNickname.length > 10) {
+      setAdminMemberRegistrationError('회원 아이디는 5자 이상 10자 이하로 입력해 주세요.');
+      return;
+    }
+
+    if (!MEMBER_ID_PATTERN.test(nextNickname)) {
+      setAdminMemberRegistrationError('회원 아이디는 영문 소문자와 숫자만 사용할 수 있습니다.');
+      return;
+    }
+
+    setRegisteringAdminMember(true);
+    setAdminMemberRegistrationError('');
+    setAdminMemberRegistrationSuccess('');
+
+    try {
+      const requestBody = await buildSignedAdminMemberRequestBody({
+        path: '/api/user/setUserVerified',
+        payload: {
+          storecode: ADMIN_MEMBER_STORECODE,
+          walletAddress: connectedWalletAddress,
+          nickname: nextNickname,
+        },
+      });
+
+      const response = await fetch('/api/user/setUserVerified', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+      const payload = await response.json().catch(() => ({}));
+      const result =
+        payload && typeof payload === 'object' && payload !== null && typeof payload.result === 'object' && payload.result !== null
+          ? (payload.result as Record<string, unknown>)
+          : null;
+
+      if (!response.ok || !result) {
+        throw new Error(String((payload as Record<string, unknown>)?.error || '회원 등록에 실패했습니다.'));
+      }
+
+      setAdminMemberProfile({
+        nickname: String(result.nickname || nextNickname).trim(),
+        avatar: String(result.avatar || '').trim(),
+        email: String(result.email || '').trim(),
+        mobile: String(result.mobile || '').trim(),
+        walletAddress: String(result.walletAddress || connectedWalletAddress).trim(),
+        createdAt: String(result.createdAt || '').trim(),
+      });
+      setRegistrationNickname(String(result.nickname || nextNickname).trim());
+      setAdminMemberProfileError('');
+      setAdminMemberRegistrationSuccess('회원 등록이 완료되었습니다. 관리자 권한은 별도로 지정되어야 합니다.');
+    } catch (error) {
+      setAdminMemberRegistrationError(
+        error instanceof Error ? error.message : '회원 등록 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setRegisteringAdminMember(false);
+    }
+  }, [
+    agentcode,
+    buildSignedAdminMemberRequestBody,
+    connectedWalletAddress,
+    registeringAdminMember,
+    registrationNickname,
+  ]);
 
   useEffect(() => {
     const updateViewport = () => {
@@ -937,6 +1100,80 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       pendingCardTimerIdsRef.current = [];
     };
   }, []);
+
+  useEffect(() => {
+    if (!agentcode || !connectedWalletAddress) {
+      setAdminMemberProfile(null);
+      setLoadingAdminMemberProfile(false);
+      setAdminMemberProfileError('');
+      setRegistrationNickname('');
+      setAdminMemberRegistrationError('');
+      setAdminMemberRegistrationSuccess('');
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingAdminMemberProfile(true);
+    setAdminMemberProfileError('');
+    setAdminMemberRegistrationError('');
+    setAdminMemberRegistrationSuccess('');
+
+    (async () => {
+      try {
+        const response = await fetch('/api/user/getUser', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storecode: ADMIN_MEMBER_STORECODE,
+            walletAddress: connectedWalletAddress,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(String((payload as Record<string, unknown>)?.error || '회원 정보를 불러오지 못했습니다.'));
+        }
+
+        if (cancelled) return;
+
+        const result =
+          payload && typeof payload === 'object' && payload !== null && typeof payload.result === 'object' && payload.result !== null
+            ? (payload.result as Record<string, unknown>)
+            : null;
+
+        if (result) {
+          const nextNickname = String(result.nickname || '').trim();
+          setAdminMemberProfile({
+            nickname: nextNickname,
+            avatar: String(result.avatar || '').trim(),
+            email: String(result.email || '').trim(),
+            mobile: String(result.mobile || '').trim(),
+            walletAddress: String(result.walletAddress || connectedWalletAddress).trim(),
+            createdAt: String(result.createdAt || '').trim(),
+          });
+          setRegistrationNickname(nextNickname);
+        } else {
+          setAdminMemberProfile(null);
+          setRegistrationNickname('');
+        }
+      } catch (error) {
+        if (cancelled) return;
+        setAdminMemberProfile(null);
+        setRegistrationNickname('');
+        setAdminMemberProfileError(
+          error instanceof Error ? error.message : '회원 정보를 불러오지 못했습니다.',
+        );
+      } finally {
+        if (!cancelled) {
+          setLoadingAdminMemberProfile(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [agentcode, connectedWalletAddress]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1556,10 +1793,137 @@ export default function P2PAgentManagementLayout({ children }: { children: React
             <section className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 shadow-[0_16px_32px_-24px_rgba(225,29,72,0.45)]">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-700">Access Denied</p>
               <p className="mt-1 text-sm font-semibold text-slate-900">이 페이지는 해당 에이전트 관리자 지갑만 접근할 수 있습니다.</p>
+              <p className="mt-1 text-xs text-slate-600">
+                관리자 권한과 별개로 현재 지갑의 admin 회원 정보는 아래에서 확인하거나 새로 등록할 수 있습니다.
+              </p>
               <div className="mt-2 space-y-1 text-xs text-slate-700">
                 <p>현재 연결 지갑: {connectedWalletAddress || '-'}</p>
                 <p>허용 지갑: {agentAdminWalletAddress || '-'}</p>
                 {agentAccessError && <p className="text-rose-700">오류: {agentAccessError}</p>}
+              </div>
+              <div className="mt-4 rounded-2xl border border-rose-200 bg-white px-4 py-4 shadow-[0_14px_28px_-20px_rgba(190,24,93,0.34)]">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-rose-700">
+                      Admin Member Profile
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {loadingAdminMemberProfile
+                        ? '현재 지갑의 회원 정보를 확인하고 있습니다.'
+                        : adminMemberProfile
+                          ? '현재 지갑은 admin 회원 풀에 등록되어 있습니다.'
+                          : '아직 등록된 admin 회원 정보가 없습니다.'}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-600">
+                      admin 회원 등록은 관리자 지갑 변경 후보군에 포함되기 위한 프로필 준비 단계이며, 이 작업만으로 에이전트 관리자 권한이 부여되지는 않습니다.
+                    </p>
+                  </div>
+                  <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                    adminMemberProfile ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {loadingAdminMemberProfile ? 'Checking' : adminMemberProfile ? 'Registered' : 'Registration Needed'}
+                  </span>
+                </div>
+
+                {loadingAdminMemberProfile ? (
+                  <div className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <div className="h-12 w-12 animate-pulse rounded-2xl bg-slate-200" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="h-3 w-28 animate-pulse rounded bg-slate-200" />
+                      <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
+                      <div className="h-3 w-56 animate-pulse rounded bg-slate-200" />
+                    </div>
+                  </div>
+                ) : adminMemberProfile ? (
+                  <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-emerald-200 bg-white text-sm font-extrabold tracking-[0.18em] text-emerald-700">
+                        {resolvedAdminMemberAvatar ? (
+                          <div
+                            className="h-full w-full bg-cover bg-center"
+                            style={{ backgroundImage: `url(${encodeURI(resolvedAdminMemberAvatar)})` }}
+                            aria-label={adminMemberProfile.nickname || 'member avatar'}
+                          />
+                        ) : (
+                          memberProfileMonogram
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700">Member ID</p>
+                        <p className="mt-1 truncate text-lg font-extrabold text-slate-900">
+                          {adminMemberProfile.nickname || '-'}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-600">
+                          Wallet {shortAddress(adminMemberProfile.walletAddress || connectedWalletAddress)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Email</p>
+                        <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+                          {adminMemberProfile.email || '-'}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Mobile</p>
+                        <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+                          {adminMemberProfile.mobile || '-'}
+                        </p>
+                      </div>
+                    </div>
+                    {adminMemberRegistrationSuccess && (
+                      <p className="mt-3 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs text-emerald-700">
+                        {adminMemberRegistrationSuccess}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-4">
+                    <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                      <label className="block">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700">Member ID</span>
+                        <input
+                          value={registrationNickname}
+                          onChange={(event) => {
+                            setRegistrationNickname(event.target.value.toLowerCase());
+                            setAdminMemberRegistrationError('');
+                            setAdminMemberRegistrationSuccess('');
+                          }}
+                          placeholder="5-10 lowercase letters or numbers"
+                          maxLength={10}
+                          className="mt-2 h-12 w-full rounded-2xl border border-amber-300 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition focus:border-amber-500"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleRegisterAdminMember}
+                        disabled={registeringAdminMember}
+                        className="inline-flex h-12 items-center justify-center rounded-2xl bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {registeringAdminMember ? '등록 중...' : '회원 등록하기'}
+                      </button>
+                    </div>
+                    <p className="mt-2 text-xs text-amber-800">
+                      회원 아이디는 5자 이상 10자 이하의 영문 소문자/숫자만 사용할 수 있습니다.
+                    </p>
+                    {adminMemberProfileError && (
+                      <p className="mt-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                        기존 회원 조회 오류: {adminMemberProfileError}
+                      </p>
+                    )}
+                    {adminMemberRegistrationError && (
+                      <p className="mt-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                        {adminMemberRegistrationError}
+                      </p>
+                    )}
+                    {adminMemberRegistrationSuccess && (
+                      <p className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                        {adminMemberRegistrationSuccess}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <ConnectButton
