@@ -66,6 +66,11 @@ type AgentSellerEscrowBalanceItem = {
   error: string | null;
 };
 
+type AgentBrandingSummary = {
+  agentName: string;
+  agentLogo: string;
+};
+
 const WALLET_AUTH_OPTIONS = ['email', 'google', 'phone'];
 const WALLET_DEFAULT_SMS_COUNTRY_CODE: SupportedSmsCountry = 'KR';
 const WALLET_ALLOWED_SMS_COUNTRY_CODES: SupportedSmsCountry[] = ['KR'];
@@ -175,6 +180,10 @@ export default function P2PAgentManagementLayout({ children }: { children: React
     activeWallet?.getAccount?.()?.address || activeAccount?.address || '',
   ).trim();
   const [agentAdminWalletAddress, setAgentAdminWalletAddress] = useState('');
+  const [agentBranding, setAgentBranding] = useState<AgentBrandingSummary>({
+    agentName: '',
+    agentLogo: '',
+  });
   const [checkingAgentAccess, setCheckingAgentAccess] = useState(false);
   const [agentAccessError, setAgentAccessError] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -332,6 +341,12 @@ export default function P2PAgentManagementLayout({ children }: { children: React
   const desktopPinnedContentPaddingPx = !isMobileViewport && hasPinnedTopSection
     ? Math.max(32, pinnedTopHeightPx + 28)
     : null;
+  const resolvedAgentBrandName = String(agentBranding.agentName || '').trim() || 'Agent Management';
+  const resolvedAgentBrandLogo = String(agentBranding.agentLogo || '').trim();
+  const brandingMonogram = (String(agentBranding.agentName || '').trim() || agentcode || 'AG')
+    .replace(/\s+/g, '')
+    .slice(0, 2)
+    .toUpperCase();
 
   const agentEscrowBalanceCards = useMemo(
     () =>
@@ -926,6 +941,56 @@ export default function P2PAgentManagementLayout({ children }: { children: React
   useEffect(() => {
     let isMounted = true;
 
+    const loadAgentBranding = async () => {
+      if (!agentcode) {
+        if (!isMounted) return;
+        setAgentBranding({
+          agentName: '',
+          agentLogo: '',
+        });
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/agent/getOneAgent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agentcode }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(String((payload as Record<string, unknown>)?.error || '에이전트 정보를 불러오지 못했습니다.'));
+        }
+
+        const result = isRecord((payload as Record<string, unknown>)?.result)
+          ? ((payload as Record<string, unknown>).result as Record<string, unknown>)
+          : {};
+
+        if (!isMounted) return;
+        setAgentBranding({
+          agentName: String(result.agentName || '').trim(),
+          agentLogo: String(result.agentLogo || '').trim(),
+        });
+      } catch (error) {
+        if (!isMounted) return;
+        console.error('failed to load agent branding', error);
+        setAgentBranding({
+          agentName: '',
+          agentLogo: '',
+        });
+      }
+    };
+
+    loadAgentBranding();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [agentcode]);
+
+  useEffect(() => {
+    let isMounted = true;
+
     const loadAgentAccess = async () => {
       if (!agentcode) {
         if (!isMounted) return;
@@ -1108,13 +1173,30 @@ export default function P2PAgentManagementLayout({ children }: { children: React
         <div className="flex h-full flex-col pt-[calc(env(safe-area-inset-top)+0.2rem)] pb-[calc(env(safe-area-inset-bottom)+0.35rem)] lg:pt-0 lg:pb-0">
           <div className="relative border-b border-white/10 px-3 py-4">
             <div className="rounded-2xl border border-white/12 bg-white/5 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200/90">Payment Control</p>
-              {!collapsed && (
-                <>
-                  <p className="mt-1 text-base font-semibold text-white/95">Agent Management</p>
-                  <p className="mt-1 text-[11px] text-slate-300">운영 대시보드 패널</p>
-                </>
-              )}
+              <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
+                <div className={`relative shrink-0 overflow-hidden rounded-2xl border border-cyan-200/35 bg-white/10 shadow-[0_12px_28px_-18px_rgba(56,189,248,0.7)] ${collapsed ? 'h-11 w-11' : 'h-12 w-12'}`}>
+                  {resolvedAgentBrandLogo ? (
+                    <div
+                      className="h-full w-full bg-cover bg-center"
+                      style={{ backgroundImage: `url(${encodeURI(resolvedAgentBrandLogo)})` }}
+                      aria-label={resolvedAgentBrandName}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(103,232,249,0.28),rgba(56,189,248,0.2),rgba(14,165,233,0.18))] text-sm font-extrabold tracking-[0.18em] text-cyan-100">
+                      {brandingMonogram}
+                    </div>
+                  )}
+                </div>
+                {!collapsed && (
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200/90">Payment Control</p>
+                    <p className="mt-1 truncate text-base font-semibold text-white/95">{resolvedAgentBrandName}</p>
+                    <p className="mt-1 truncate text-[11px] text-slate-300">
+                      {agentcode ? `${agentcode} 운영 대시보드 패널` : '운영 대시보드 패널'}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
