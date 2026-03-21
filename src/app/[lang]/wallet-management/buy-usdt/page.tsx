@@ -1169,11 +1169,12 @@ export default function BuyUsdtPage({
     [storeMemberProfile?.buyer],
   );
   const storeMemberAccountHolder = toTrimmedString(storeMemberBankSnapshot.accountHolder);
-  const needsStoreMemberLinkForPurchase = isStoreScopedPurchase && !hasStoreMemberProfile;
   const shouldShowBuyerProfileNextStep = !loadingBuyerProfile && (
-    buyerProfileModalForceNextStep
-    || !hasBuyerProfileForPurchase
-    || needsStoreMemberLinkForPurchase
+    !isStoreScopedPurchase
+    && (
+      buyerProfileModalForceNextStep
+      || !hasBuyerProfileForPurchase
+    )
   );
   const canBuyByStoreMemberRule = !isStoreScopedPurchase || hasStoreMemberProfile;
   const buyerDisplayName = useMemo(() => {
@@ -2592,7 +2593,9 @@ export default function BuyUsdtPage({
       if (!linkedDepositName) {
         await Promise.all([loadStoreMemberProfile(), loadBuyerProfile()]);
         setStoreMemberLinkPasswordInput('');
-        setStoreMemberProfileError('회원 연동은 완료되었습니다. 입금자명을 입력한 뒤 저장하기를 눌러주세요.');
+        setStoreMemberProfileError(
+          '회원 연동은 완료되었지만 입금자명이 등록되지 않았습니다. 가맹점 회원 정보에서 입금자명을 먼저 등록해 주세요.',
+        );
         return;
       }
 
@@ -4773,10 +4776,16 @@ export default function BuyUsdtPage({
               구매자 정보 입력
             </p>
             <h3 className="mt-3 text-xl font-semibold text-slate-900">
-              {shouldShowBuyerProfileNextStep ? '입금자명을 입력해 주세요' : '구매자 정보를 확인해 주세요'}
+              {isStoreScopedPurchase
+                ? '구매자 정보를 확인해 주세요'
+                : shouldShowBuyerProfileNextStep
+                  ? '입금자명을 입력해 주세요'
+                  : '구매자 정보를 확인해 주세요'}
             </h3>
             <p className="mt-2 text-sm text-slate-600">
-              1단계에서 현재 구매자 정보를 먼저 조회하고, 정보가 없을 경우에만 다음 단계로 진행됩니다.
+              {isStoreScopedPurchase
+                ? '현재 구매자 정보와 가맹점 회원 연동 상태를 확인합니다.'
+                : '1단계에서 현재 구매자 정보를 먼저 조회하고, 정보가 없을 경우에만 다음 단계로 진행됩니다.'}
             </p>
 
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
@@ -4809,114 +4818,128 @@ export default function BuyUsdtPage({
                 </div>
               ) : (
                 <p className="mt-2 text-sm font-semibold text-amber-700">
-                  등록된 구매자 정보가 없습니다. 2단계로 이동하여 정보를 입력해 주세요.
+                  {isStoreScopedPurchase
+                    ? '등록된 구매자 정보가 없습니다. 아래 가맹점 회원 연동 상태를 확인해 주세요.'
+                    : '등록된 구매자 정보가 없습니다. 2단계로 이동하여 정보를 입력해 주세요.'}
                 </p>
               )}
             </div>
 
+            {isStoreScopedPurchase && (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/60 px-3 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700">지정 가맹점</p>
+
+                <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full border border-amber-200 bg-white px-2.5 py-1.5">
+                  <div className="h-6 w-6 shrink-0 overflow-hidden rounded-md bg-slate-100 ring-1 ring-amber-200">
+                    {selectedStoreInfo?.storeLogo ? (
+                      <Image
+                        src={selectedStoreInfo.storeLogo}
+                        alt={selectedStoreInfo.storeName || 'Store'}
+                        width={24}
+                        height={24}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[9px] font-bold text-amber-700">
+                        SHOP
+                      </div>
+                    )}
+                  </div>
+                  <span className="truncate text-xs font-semibold text-amber-900">
+                    {selectedStoreInfo?.storeName || storecode}
+                  </span>
+                </div>
+
+                <div
+                  className={`mt-3 rounded-xl border px-3 py-3 ${
+                    hasStoreMemberProfile
+                      ? 'border-emerald-200 bg-emerald-50'
+                      : 'border-amber-200 bg-white'
+                  }`}
+                >
+                  {loadingStoreMemberProfile ? (
+                    <p className="text-xs font-semibold text-slate-600">내 지갑 기준 가맹점 회원정보를 확인 중입니다...</p>
+                  ) : hasStoreMemberProfile ? (
+                    <>
+                      <p className="text-xs font-semibold text-emerald-700">내 지갑이 가맹점 회원으로 연동되어 있습니다.</p>
+                      <p className="mt-1 break-all text-base font-extrabold text-emerald-900">
+                        {storeMemberProfile?.nickname || '-'}
+                      </p>
+                      {storeMemberAccountHolder ? (
+                        <p className="mt-1 text-xs font-semibold text-emerald-700">
+                          입금자명 {storeMemberAccountHolder}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs font-semibold text-rose-600">
+                          연동된 가맹점 회원에 입금자명이 등록되지 않았습니다. 가맹점 회원 정보에서 입금자명을 먼저 등록해 주세요.
+                        </p>
+                      )}
+                      {storeMemberProfileError && (
+                        <p className="mt-1 text-xs font-semibold text-rose-600">{storeMemberProfileError}</p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs font-semibold text-amber-800">
+                        구매를 위해 가맹점 회원 아이디/비밀번호를 입력해 먼저 나의 지갑과 가맹점 회원을 연동해야합니다.
+                      </p>
+                      {storeMemberProfileError && (
+                        <p className="mt-1 text-xs font-semibold text-rose-600">{storeMemberProfileError}</p>
+                      )}
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={storeMemberLinkNicknameInput}
+                          onChange={(event) => setStoreMemberLinkNicknameInput(event.target.value)}
+                          placeholder="가맹점 회원아이디"
+                          maxLength={24}
+                          disabled={linkingStoreMember || savingBuyerProfile}
+                          className="h-11 w-full rounded-xl border border-amber-300 bg-white px-3 text-base font-semibold text-slate-800 outline-none transition focus:border-amber-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                        />
+                        <input
+                          type="password"
+                          value={storeMemberLinkPasswordInput}
+                          onChange={(event) => setStoreMemberLinkPasswordInput(event.target.value)}
+                          placeholder="가맹점 비밀번호"
+                          autoComplete="current-password"
+                          maxLength={64}
+                          disabled={linkingStoreMember || savingBuyerProfile}
+                          className="h-11 w-full rounded-xl border border-amber-300 bg-white px-3 text-base font-semibold text-slate-800 outline-none transition focus:border-amber-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                        />
+                      </div>
+                      {linkingStoreMember ? (
+                        <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <span className="relative inline-flex h-5 w-5 items-center justify-center">
+                              <span className="absolute h-5 w-5 rounded-full border-2 border-cyan-300/80" />
+                              <span className="h-2.5 w-2.5 rounded-full bg-cyan-600 animate-ping" />
+                            </span>
+                            <p className="text-xs font-semibold text-cyan-700">
+                              가맹점 회원정보를 연동 중입니다. 완료될 때까지 잠시 기다려 주세요.
+                            </p>
+                          </div>
+                          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-cyan-100">
+                            <div className="h-full rounded-full bg-cyan-500 animate-[modalLinkProgress_5s_linear_forwards]" />
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={linkStoreMemberForPurchase}
+                          disabled={savingBuyerProfile}
+                          className="mt-2 inline-flex h-10 items-center justify-center rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          회원연동하기
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             {shouldShowBuyerProfileNextStep && (
               <>
-                {isStoreScopedPurchase && (
-                  <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/60 px-3 py-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700">지정 가맹점</p>
-
-                    <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full border border-amber-200 bg-white px-2.5 py-1.5">
-                      <div className="h-6 w-6 shrink-0 overflow-hidden rounded-md bg-slate-100 ring-1 ring-amber-200">
-                        {selectedStoreInfo?.storeLogo ? (
-                          <Image
-                            src={selectedStoreInfo.storeLogo}
-                            alt={selectedStoreInfo.storeName || 'Store'}
-                            width={24}
-                            height={24}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[9px] font-bold text-amber-700">
-                            SHOP
-                          </div>
-                        )}
-                      </div>
-                      <span className="truncate text-xs font-semibold text-amber-900">
-                        {selectedStoreInfo?.storeName || storecode}
-                      </span>
-                    </div>
-
-                    <div
-                      className={`mt-3 rounded-xl border px-3 py-3 ${
-                        hasStoreMemberProfile
-                          ? 'border-emerald-200 bg-emerald-50'
-                          : 'border-amber-200 bg-white'
-                      }`}
-                    >
-                      {loadingStoreMemberProfile ? (
-                        <p className="text-xs font-semibold text-slate-600">내 지갑 기준 가맹점 회원정보를 확인 중입니다...</p>
-                      ) : hasStoreMemberProfile ? (
-                        <>
-                          <p className="text-xs font-semibold text-emerald-700">내 지갑이 가맹점 회원으로 연동되어 있습니다.</p>
-                          <p className="mt-1 break-all text-base font-extrabold text-emerald-900">
-                            {storeMemberProfile?.nickname || '-'}
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-xs font-semibold text-amber-800">
-                            구매를 위해 가맹점 회원 아이디/비밀번호를 입력해 먼저 나의 지갑과 가맹점 회원을 연동해야합니다.
-                          </p>
-                          {storeMemberProfileError && (
-                            <p className="mt-1 text-xs font-semibold text-rose-600">{storeMemberProfileError}</p>
-                          )}
-                          <div className="mt-2 grid grid-cols-2 gap-2">
-                            <input
-                              type="text"
-                              value={storeMemberLinkNicknameInput}
-                              onChange={(event) => setStoreMemberLinkNicknameInput(event.target.value)}
-                              placeholder="가맹점 회원아이디"
-                              maxLength={24}
-                              disabled={linkingStoreMember || savingBuyerProfile}
-                              className="h-11 w-full rounded-xl border border-amber-300 bg-white px-3 text-base font-semibold text-slate-800 outline-none transition focus:border-amber-500 disabled:cursor-not-allowed disabled:bg-slate-100"
-                            />
-                            <input
-                              type="password"
-                              value={storeMemberLinkPasswordInput}
-                              onChange={(event) => setStoreMemberLinkPasswordInput(event.target.value)}
-                              placeholder="가맹점 비밀번호"
-                              autoComplete="current-password"
-                              maxLength={64}
-                              disabled={linkingStoreMember || savingBuyerProfile}
-                              className="h-11 w-full rounded-xl border border-amber-300 bg-white px-3 text-base font-semibold text-slate-800 outline-none transition focus:border-amber-500 disabled:cursor-not-allowed disabled:bg-slate-100"
-                            />
-                          </div>
-                          {linkingStoreMember ? (
-                            <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <span className="relative inline-flex h-5 w-5 items-center justify-center">
-                                  <span className="absolute h-5 w-5 rounded-full border-2 border-cyan-300/80" />
-                                  <span className="h-2.5 w-2.5 rounded-full bg-cyan-600 animate-ping" />
-                                </span>
-                                <p className="text-xs font-semibold text-cyan-700">
-                                  가맹점 회원정보를 연동 중입니다. 완료될 때까지 잠시 기다려 주세요.
-                                </p>
-                              </div>
-                              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-cyan-100">
-                                <div className="h-full rounded-full bg-cyan-500 animate-[modalLinkProgress_5s_linear_forwards]" />
-                              </div>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={linkStoreMemberForPurchase}
-                              disabled={savingBuyerProfile}
-                              className="mt-2 inline-flex h-10 items-center justify-center rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              회원연동하기
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 <div className="mt-4 space-y-3">
                   <label className="block">
                     <span className="text-xs font-semibold text-slate-500">2단계 · 입금자명 입력</span>
@@ -4944,7 +4967,7 @@ export default function BuyUsdtPage({
               </>
             )}
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className={`mt-6 grid ${isStoreScopedPurchase ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}>
               <button
                 type="button"
                 onClick={() => setBuyerProfileModalOpen(false)}
@@ -4953,25 +4976,27 @@ export default function BuyUsdtPage({
               >
                 닫기
               </button>
-              {shouldShowBuyerProfileNextStep ? (
-                <button
-                  type="button"
-                  onClick={submitBuyerProfile}
-                  disabled={savingBuyerProfile || linkingStoreMember || (isStoreScopedPurchase && !hasStoreMemberProfile)}
-                  className="h-11 rounded-2xl bg-cyan-700 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:bg-slate-400"
-                >
-                  {savingBuyerProfile ? '저장 중...' : '저장하기'}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setBuyerProfileModalForceNextStep(true)}
-                  disabled={savingBuyerProfile || linkingStoreMember}
-                  className="h-11 rounded-2xl bg-slate-900 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                >
-                  다음 단계
-                </button>
-              )}
+              {!isStoreScopedPurchase ? (
+                shouldShowBuyerProfileNextStep ? (
+                  <button
+                    type="button"
+                    onClick={submitBuyerProfile}
+                    disabled={savingBuyerProfile || linkingStoreMember || (isStoreScopedPurchase && !hasStoreMemberProfile)}
+                    className="h-11 rounded-2xl bg-cyan-700 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:bg-slate-400"
+                  >
+                    {savingBuyerProfile ? '저장 중...' : '저장하기'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setBuyerProfileModalForceNextStep(true)}
+                    disabled={savingBuyerProfile || linkingStoreMember}
+                    className="h-11 rounded-2xl bg-slate-900 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                  >
+                    다음 단계
+                  </button>
+                )
+              ) : null}
             </div>
           </div>
         </div>
