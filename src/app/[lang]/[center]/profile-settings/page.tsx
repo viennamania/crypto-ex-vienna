@@ -17,7 +17,7 @@ export default function CenterProfileSettingsPage({
   const backLabel = params.lang === 'ko' ? '돌아가기' : 'Back';
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-[840px] space-y-4">
       <button
         type="button"
         onClick={() => {
