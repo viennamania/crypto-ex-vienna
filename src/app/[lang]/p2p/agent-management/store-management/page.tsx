@@ -116,6 +116,7 @@ export default function P2PAgentStoreManagementPage() {
   const [agent, setAgent] = useState<AgentSummary | null>(null);
   const [stores, setStores] = useState<AgentStoreItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [siteOrigin, setSiteOrigin] = useState('');
   const [storeNotice, setStoreNotice] = useState<string | null>(null);
   const [rateNotice, setRateNotice] = useState<string | null>(null);
   const [rateModalStore, setRateModalStore] = useState<AgentStoreItem | null>(null);
@@ -187,6 +188,10 @@ export default function P2PAgentStoreManagementPage() {
   }, [loadData]);
 
   useEffect(() => {
+    setSiteOrigin(window.location.origin);
+  }, []);
+
+  useEffect(() => {
     if (storeWalletBalanceCooldownUntilMs <= Date.now()) {
       return;
     }
@@ -227,6 +232,13 @@ export default function P2PAgentStoreManagementPage() {
       );
     });
   }, [stores, keyword]);
+
+  const getStoreMemberHomepageUrl = useCallback((storecode: string) => {
+    const normalizedStorecode = String(storecode || '').trim();
+    if (!normalizedStorecode) return '';
+    const path = `/${lang}/wallet-management?storecode=${encodeURIComponent(normalizedStorecode)}`;
+    return siteOrigin ? `${siteOrigin}${path}` : path;
+  }, [lang, siteOrigin]);
 
   const filteredAdminWalletMembers = useMemo(() => {
     const normalizedKeyword = adminWalletSearchTerm.trim().toLowerCase();
@@ -1104,6 +1116,16 @@ export default function P2PAgentStoreManagementPage() {
                             <div className="min-w-0">
                               <p className="truncate font-semibold text-slate-900">{store.storeName || '-'}</p>
                               <p className="truncate text-xs text-slate-500">코드 {store.storecode || '-'}</p>
+                              {store.storecode && (
+                                <Link
+                                  href={getStoreMemberHomepageUrl(store.storecode)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="mt-1 inline-flex h-7 items-center justify-center rounded-md border border-violet-300 bg-violet-50 px-2 text-[11px] font-semibold text-violet-800 transition hover:border-violet-400 hover:text-violet-900"
+                                >
+                                  회원 홈페이지
+                                </Link>
+                              )}
                             </div>
                           </div>
                         </td>

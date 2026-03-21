@@ -1381,7 +1381,7 @@ export default function P2PAgentManagementLayout({ children }: { children: React
       <button
         type="button"
         onClick={() => setMobileOpen((prev) => !prev)}
-        className="fixed left-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-[70] inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white/95 px-3 text-xs font-semibold text-slate-700 shadow-[0_16px_28px_-18px_rgba(15,23,42,0.55)] backdrop-blur transition hover:border-cyan-300 hover:text-slate-900 lg:hidden"
+        className="fixed left-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-[127] inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white/95 px-3 text-xs font-semibold text-slate-700 shadow-[0_16px_28px_-18px_rgba(15,23,42,0.55)] backdrop-blur transition hover:border-cyan-300 hover:text-slate-900 lg:hidden"
       >
         {mobileOpen ? '메뉴 닫기' : '메뉴 열기'}
       </button>
@@ -1390,13 +1390,13 @@ export default function P2PAgentManagementLayout({ children }: { children: React
         <button
           type="button"
           onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 z-[58] bg-slate-950/55 backdrop-blur-[1px] lg:hidden"
+          className="fixed inset-0 z-[123] bg-slate-950/55 backdrop-blur-[1px] lg:hidden"
           aria-label="메뉴 닫기"
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-[60] w-[min(84vw,300px)] overflow-hidden border-r border-cyan-200/20 bg-[linear-gradient(170deg,#0b1224_0%,#0f1d3b_42%,#111a2f_100%)] shadow-[0_32px_90px_-36px_rgba(2,6,23,0.95)] transition-all duration-300 ${desktopSidebarClass} ${
+        className={`fixed inset-y-0 left-0 z-[125] w-[min(84vw,300px)] overflow-hidden border-r border-cyan-200/20 bg-[linear-gradient(170deg,#0b1224_0%,#0f1d3b_42%,#111a2f_100%)] shadow-[0_32px_90px_-36px_rgba(2,6,23,0.95)] transition-all duration-300 ${desktopSidebarClass} ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
