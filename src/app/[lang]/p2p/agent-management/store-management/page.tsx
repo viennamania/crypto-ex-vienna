@@ -39,6 +39,23 @@ type StoreUsdtToKrwRateHistoryItem = {
   changedAt: string;
 };
 
+type StoreAdminWalletMemberItem = {
+  id: string;
+  nickname: string;
+  role: string;
+  walletAddress: string;
+  createdAt: string;
+};
+
+type StoreAdminWalletRoleHistoryItem = {
+  id: string;
+  prevAdminWalletAddress: string;
+  nextAdminWalletAddress: string;
+  changedByWalletAddress: string;
+  changedByName: string;
+  changedAt: string;
+};
+
 type StoreCreateForm = {
   storeName: string;
   storeDescription: string;
@@ -53,7 +70,36 @@ const createInitialStoreForm = (): StoreCreateForm => ({
   storeBanner: '',
 });
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 const toText = (value: unknown) => (typeof value === 'string' ? value : '');
+const isWalletAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(String(value || '').trim());
+const toRoleLabel = (value: unknown) => {
+  const normalizedRole = toText(value).trim().toLowerCase();
+  if (!normalizedRole) return 'member';
+  if (normalizedRole === 'admin') return 'admin';
+  if (normalizedRole === 'seller') return 'seller';
+  if (normalizedRole === 'buyer') return 'buyer';
+  return normalizedRole;
+};
+const normalizeAdminWalletMember = (value: unknown): StoreAdminWalletMemberItem | null => {
+  const source = isRecord(value) ? value : {};
+  const walletAddress = toText(source.walletAddress).trim();
+  if (!isWalletAddress(walletAddress)) {
+    return null;
+  }
+
+  return {
+    id: toText(source._id).trim() || toText(source.id).trim() || walletAddress,
+    nickname: toText(source.nickname).trim() || '이름없음',
+    role: toRoleLabel(
+      source.role
+      ?? (source.seller ? 'seller' : source.buyer ? 'buyer' : 'member'),
+    ),
+    walletAddress,
+    createdAt: toText(source.createdAt).trim(),
+  };
+};
 const STORE_WALLET_BALANCE_BATCH_SIZE = 500;
 const STORE_WALLET_BALANCE_COOLDOWN_MS = 10_000;
 
@@ -79,6 +125,15 @@ export default function P2PAgentStoreManagementPage() {
   const [rateHistory, setRateHistory] = useState<StoreUsdtToKrwRateHistoryItem[]>([]);
   const [loadingRateHistory, setLoadingRateHistory] = useState(false);
   const [rateHistoryError, setRateHistoryError] = useState<string | null>(null);
+  const [adminWalletModalStore, setAdminWalletModalStore] = useState<AgentStoreItem | null>(null);
+  const [adminWalletMembers, setAdminWalletMembers] = useState<StoreAdminWalletMemberItem[]>([]);
+  const [selectedAdminWalletAddress, setSelectedAdminWalletAddress] = useState('');
+  const [adminWalletSearchTerm, setAdminWalletSearchTerm] = useState('');
+  const [adminWalletHistory, setAdminWalletHistory] = useState<StoreAdminWalletRoleHistoryItem[]>([]);
+  const [loadingAdminWalletMembers, setLoadingAdminWalletMembers] = useState(false);
+  const [loadingAdminWalletHistory, setLoadingAdminWalletHistory] = useState(false);
+  const [adminWalletError, setAdminWalletError] = useState<string | null>(null);
+  const [updatingAdminWallet, setUpdatingAdminWallet] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createForm, setCreateForm] = useState<StoreCreateForm>(() => createInitialStoreForm());
   const [createModalError, setCreateModalError] = useState<string | null>(null);
@@ -172,6 +227,19 @@ export default function P2PAgentStoreManagementPage() {
       );
     });
   }, [stores, keyword]);
+
+  const filteredAdminWalletMembers = useMemo(() => {
+    const normalizedKeyword = adminWalletSearchTerm.trim().toLowerCase();
+    if (!normalizedKeyword) {
+      return adminWalletMembers;
+    }
+
+    return adminWalletMembers.filter((member) => (
+      member.nickname.toLowerCase().includes(normalizedKeyword)
+      || member.walletAddress.toLowerCase().includes(normalizedKeyword)
+      || member.role.toLowerCase().includes(normalizedKeyword)
+    ));
+  }, [adminWalletMembers, adminWalletSearchTerm]);
 
   const formatUsdtFixed6 = useCallback((value: number) => {
     const numeric = Number(value || 0);
@@ -318,6 +386,166 @@ export default function P2PAgentStoreManagementPage() {
       setLoadingRateHistory(false);
     }
   }, []);
+
+  const loadAdminWalletMembers = useCallback(async (store: AgentStoreItem) => {
+    const normalizedStorecode = String(store.storecode || '').trim();
+    if (!normalizedStorecode) {
+      setAdminWalletMembers([]);
+      return;
+    }
+
+    setLoadingAdminWalletMembers(true);
+    setAdminWalletError(null);
+    try {
+      const adminStorecode = 'admin';
+      const response = await fetch('/api/user/getAllUsersByStorecode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: adminStorecode,
+          limit: 300,
+          page: 1,
+          includeUnverified: true,
+          requireProfile: false,
+          userType: 'all',
+          searchTerm: '',
+          sortField: 'nickname',
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String(payload?.error || '회원 목록 조회에 실패했습니다.'));
+      }
+
+      const users = Array.isArray(payload?.result?.users) ? payload.result.users : [];
+      const nextMembersMap = new Map<string, StoreAdminWalletMemberItem>();
+
+      users
+        .map((user: unknown) => normalizeAdminWalletMember(user))
+        .filter((member: StoreAdminWalletMemberItem | null): member is StoreAdminWalletMemberItem => member !== null)
+        .forEach((member: StoreAdminWalletMemberItem) => {
+          const key = member.walletAddress.toLowerCase();
+          if (!nextMembersMap.has(key)) {
+            nextMembersMap.set(key, member);
+          }
+        });
+
+      const currentAdminWalletAddress = String(store.adminWalletAddress || '').trim();
+      if (isWalletAddress(currentAdminWalletAddress)) {
+        const normalizedCurrentAdminWalletAddress = currentAdminWalletAddress.toLowerCase();
+        if (!nextMembersMap.has(normalizedCurrentAdminWalletAddress)) {
+          nextMembersMap.set(normalizedCurrentAdminWalletAddress, {
+            id: `current-admin-${normalizedStorecode}`,
+            nickname: '현재 관리자',
+            role: 'admin',
+            walletAddress: currentAdminWalletAddress,
+            createdAt: '',
+          });
+        }
+      }
+
+      const nextMembers = Array.from(nextMembersMap.values()).sort((left, right) => {
+        if (left.role === 'admin' && right.role !== 'admin') return -1;
+        if (left.role !== 'admin' && right.role === 'admin') return 1;
+        return left.nickname.localeCompare(right.nickname, 'ko');
+      });
+
+      setAdminWalletMembers(nextMembers);
+    } catch (loadError) {
+      setAdminWalletMembers([]);
+      setAdminWalletError(
+        loadError instanceof Error ? loadError.message : '회원 목록 조회 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setLoadingAdminWalletMembers(false);
+    }
+  }, []);
+
+  const loadAdminWalletHistory = useCallback(async (storecode: string) => {
+    const normalizedStorecode = String(storecode || '').trim();
+    if (!normalizedStorecode) {
+      setAdminWalletHistory([]);
+      return;
+    }
+
+    setLoadingAdminWalletHistory(true);
+    try {
+      const response = await fetch('/api/store/getStoreAdminWalletRoleHistory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: normalizedStorecode,
+          limit: 20,
+          page: 1,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String(payload?.error || '관리자 변경이력을 불러오지 못했습니다.'));
+      }
+
+      const items = Array.isArray(payload?.result?.items) ? payload.result.items : [];
+      const nextHistory = items.map((item: any, index: number) => {
+        const idRaw = item?._id;
+        const id = typeof idRaw?.toString === 'function'
+          ? String(idRaw.toString())
+          : `${normalizedStorecode}-admin-${index}-${String(item?.changedAt || '')}`;
+
+        return {
+          id,
+          prevAdminWalletAddress: String(item?.prevAdminWalletAddress || ''),
+          nextAdminWalletAddress: String(item?.nextAdminWalletAddress || ''),
+          changedByWalletAddress: String(item?.changedByWalletAddress || ''),
+          changedByName: String(item?.changedByName || ''),
+          changedAt: String(item?.changedAt || ''),
+        };
+      });
+
+      setAdminWalletHistory(nextHistory);
+    } catch (loadError) {
+      setAdminWalletHistory([]);
+      setAdminWalletError((previous) => (
+        previous || (loadError instanceof Error ? loadError.message : '관리자 변경이력을 불러오지 못했습니다.')
+      ));
+    } finally {
+      setLoadingAdminWalletHistory(false);
+    }
+  }, []);
+
+  const openAdminWalletModal = useCallback((store: AgentStoreItem) => {
+    const normalizedStorecode = String(store.storecode || '').trim();
+    if (!normalizedStorecode) {
+      toast.error('가맹점 코드가 없습니다.');
+      return;
+    }
+
+    setAdminWalletModalStore(store);
+    setSelectedAdminWalletAddress(String(store.adminWalletAddress || '').trim());
+    setAdminWalletSearchTerm('');
+    setAdminWalletMembers([]);
+    setAdminWalletHistory([]);
+    setAdminWalletError(null);
+
+    void Promise.all([
+      loadAdminWalletMembers(store),
+      loadAdminWalletHistory(normalizedStorecode),
+    ]);
+  }, [loadAdminWalletHistory, loadAdminWalletMembers]);
+
+  const closeAdminWalletModal = useCallback(() => {
+    if (updatingAdminWallet) {
+      return;
+    }
+
+    setAdminWalletModalStore(null);
+    setSelectedAdminWalletAddress('');
+    setAdminWalletSearchTerm('');
+    setAdminWalletMembers([]);
+    setAdminWalletHistory([]);
+    setAdminWalletError(null);
+  }, [updatingAdminWallet]);
 
   const openRateModal = useCallback((store: AgentStoreItem) => {
     setRateModalStore(store);
@@ -528,6 +756,23 @@ export default function P2PAgentStoreManagementPage() {
     };
   }, [closeCreateModal, isCreateModalOpen]);
 
+  useEffect(() => {
+    if (!adminWalletModalStore) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeAdminWalletModal();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [adminWalletModalStore, closeAdminWalletModal]);
+
   const submitStoreRate = useCallback(async () => {
     if (!rateModalStore || rateSubmitting) {
       return;
@@ -604,6 +849,82 @@ export default function P2PAgentStoreManagementPage() {
     loadStoreRateHistory,
     rateModalStore,
     rateSubmitting,
+  ]);
+
+  const updateStoreAdminWallet = useCallback(async () => {
+    if (!adminWalletModalStore || updatingAdminWallet) {
+      return;
+    }
+
+    const nextAdminWalletAddress = String(selectedAdminWalletAddress || '').trim();
+    if (!isWalletAddress(nextAdminWalletAddress)) {
+      setAdminWalletError('유효한 지갑주소를 선택해 주세요.');
+      return;
+    }
+
+    const currentAdminWalletAddress = String(adminWalletModalStore.adminWalletAddress || '').trim().toLowerCase();
+    if (currentAdminWalletAddress === nextAdminWalletAddress.toLowerCase()) {
+      setAdminWalletError('현재 관리자 지갑과 동일합니다.');
+      return;
+    }
+
+    setUpdatingAdminWallet(true);
+    setAdminWalletError(null);
+    try {
+      const response = await fetch('/api/store/updateStoreAdminWalletAddress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode: adminWalletModalStore.storecode,
+          adminWalletAddress: nextAdminWalletAddress,
+          changedByWalletAddress: String(activeAccount?.address || agent?.adminWalletAddress || '').trim(),
+          changedByName: 'store-management-dashboard',
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String(payload?.error || '관리자 지갑 변경에 실패했습니다.'));
+      }
+
+      const isChanged = Boolean(payload?.changed);
+
+      setStores((previous) => previous.map((store) => (
+        store.storecode === adminWalletModalStore.storecode
+          ? { ...store, adminWalletAddress: nextAdminWalletAddress }
+          : store
+      )));
+      setAdminWalletModalStore((previous) => (
+        previous
+          ? { ...previous, adminWalletAddress: nextAdminWalletAddress }
+          : previous
+      ));
+
+      await Promise.all([
+        loadData(),
+        loadAdminWalletHistory(adminWalletModalStore.storecode),
+      ]);
+
+      if (isChanged) {
+        toast.success('가맹점 관리자 지갑이 변경되었습니다.');
+      } else {
+        toast.success('변경할 내용이 없어 기존 관리자 지갑을 유지했습니다.');
+      }
+    } catch (updateError) {
+      const message = updateError instanceof Error ? updateError.message : '관리자 지갑 변경 중 오류가 발생했습니다.';
+      setAdminWalletError(message);
+      toast.error(message);
+    } finally {
+      setUpdatingAdminWallet(false);
+    }
+  }, [
+    activeAccount?.address,
+    adminWalletModalStore,
+    agent?.adminWalletAddress,
+    loadAdminWalletHistory,
+    loadData,
+    selectedAdminWalletAddress,
+    updatingAdminWallet,
   ]);
 
   return (
@@ -749,7 +1070,7 @@ export default function P2PAgentStoreManagementPage() {
                 <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                   <tr>
                     <th className="px-4 py-3">가맹점</th>
-                    <th className="px-4 py-3">관리 지갑</th>
+                    <th className="px-4 py-3">관리자 지갑</th>
                     <th className="px-4 py-3">결제 지갑</th>
                     <th className="px-4 py-3 text-right">결제확정</th>
                     <th className="px-4 py-3 text-right">거래금액</th>
@@ -786,7 +1107,16 @@ export default function P2PAgentStoreManagementPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-600">{shortAddress(store.adminWalletAddress)}</td>
+                        <td className="px-4 py-3 text-xs text-slate-600">
+                          <p>{shortAddress(store.adminWalletAddress)}</p>
+                          <button
+                            type="button"
+                            onClick={() => openAdminWalletModal(store)}
+                            className="mt-1 inline-flex h-7 items-center justify-center rounded-md border border-sky-300 bg-sky-50 px-2 text-[11px] font-semibold text-sky-800 transition hover:border-sky-400 hover:text-sky-900"
+                          >
+                            관리자 설정
+                          </button>
+                        </td>
                         <td className="px-4 py-3 text-xs text-slate-600">
                           <p>{shortAddress(store.paymentWalletAddress)}</p>
                           {store.storecode && (
@@ -836,6 +1166,204 @@ export default function P2PAgentStoreManagementPage() {
             </div>
           )}
         </>
+      )}
+
+      {adminWalletModalStore && (
+        <div
+          className="fixed inset-0 z-[133] flex items-end justify-center bg-slate-950/45 p-4 backdrop-blur-[1px] sm:items-center"
+          role="presentation"
+          onClick={closeAdminWalletModal}
+        >
+          <div
+            className="w-full max-w-5xl rounded-3xl border border-white/80 bg-white p-5 shadow-[0_34px_70px_-40px_rgba(15,23,42,0.8)]"
+            role="dialog"
+            aria-modal="true"
+            aria-label="가맹점 관리자 설정"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">Store Admin</p>
+                <h3 className="mt-1 text-xl font-semibold tracking-tight text-slate-900">가맹점 관리자 설정</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  {adminWalletModalStore.storeName || '-'} ({adminWalletModalStore.storecode || '-'})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeAdminWalletModal}
+                disabled={updatingAdminWallet}
+                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-12">
+              <section className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 lg:col-span-7">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">회원 지갑 목록</p>
+                    <p className="mt-1 text-xs text-slate-500">회원 중에서 관리자 지갑으로 사용할 주소를 선택하세요.</p>
+                  </div>
+                  <span className="inline-flex rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">
+                    현재 {shortAddress(adminWalletModalStore.adminWalletAddress)}
+                  </span>
+                </div>
+
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    value={adminWalletSearchTerm}
+                    onChange={(event) => setAdminWalletSearchTerm(event.target.value)}
+                    placeholder="닉네임/지갑주소/role 검색"
+                    className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-500"
+                  />
+                </div>
+
+                <div className="mt-3 max-h-[380px] overflow-y-auto rounded-xl border border-slate-200 bg-white">
+                  {loadingAdminWalletMembers ? (
+                    <div className="space-y-2 p-3">
+                      {Array.from({ length: 6 }).map((_, index) => (
+                        <div key={`admin-wallet-member-loading-${index}`} className="h-12 animate-pulse rounded-lg bg-slate-100" />
+                      ))}
+                    </div>
+                  ) : filteredAdminWalletMembers.length === 0 ? (
+                    <div className="px-3 py-8 text-center text-sm text-slate-500">표시할 회원 지갑이 없습니다.</div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {filteredAdminWalletMembers.map((member) => {
+                        const isSelected = member.walletAddress.toLowerCase() === selectedAdminWalletAddress.trim().toLowerCase();
+                        return (
+                          <button
+                            type="button"
+                            key={`${member.id}-${member.walletAddress}`}
+                            onClick={() => {
+                              setSelectedAdminWalletAddress(member.walletAddress);
+                              if (adminWalletError) {
+                                setAdminWalletError(null);
+                              }
+                            }}
+                            className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition ${
+                              isSelected ? 'bg-sky-50' : 'hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-900">{member.nickname}</p>
+                              <p className="truncate text-xs text-slate-500">
+                                {shortAddress(member.walletAddress)} · role {member.role}
+                                {member.createdAt ? ` · ${toDateTime(member.createdAt)}` : ''}
+                              </p>
+                            </div>
+                            <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full border ${
+                              isSelected
+                                ? 'border-sky-600 bg-sky-600 text-white'
+                                : 'border-slate-300 bg-white text-transparent'
+                            }`}>
+                              ✓
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white px-3 py-3 lg:col-span-5">
+                <p className="text-sm font-semibold text-slate-900">변경 요약</p>
+
+                <div className="mt-2 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                  <div className="flex items-center justify-between gap-2">
+                    <span>현재 관리자</span>
+                    <span className="font-semibold text-slate-800">{shortAddress(adminWalletModalStore.adminWalletAddress)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span>선택 지갑</span>
+                    <span className="font-semibold text-slate-800">
+                      {selectedAdminWalletAddress ? shortAddress(selectedAdminWalletAddress) : '-'}
+                    </span>
+                  </div>
+                </div>
+
+                {adminWalletError && (
+                  <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+                    {adminWalletError}
+                  </p>
+                )}
+
+                <div className="mt-3 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={closeAdminWalletModal}
+                    disabled={updatingAdminWallet}
+                    className="inline-flex h-10 items-center rounded-full border border-slate-300 bg-white px-3.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    닫기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={updateStoreAdminWallet}
+                    disabled={
+                      updatingAdminWallet
+                      || !isWalletAddress(selectedAdminWalletAddress)
+                      || selectedAdminWalletAddress.trim().toLowerCase() === adminWalletModalStore.adminWalletAddress.trim().toLowerCase()
+                    }
+                    className="inline-flex h-10 items-center rounded-full bg-sky-700 px-3.5 text-xs font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {updatingAdminWallet ? '변경 중...' : '관리자 저장'}
+                  </button>
+                </div>
+
+                <div className="mt-4 border-t border-slate-200 pt-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">관리자 변경이력</p>
+                      <p className="mt-1 text-xs text-slate-500">최근 변경 순으로 표시됩니다.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void loadAdminWalletHistory(adminWalletModalStore.storecode);
+                      }}
+                      disabled={loadingAdminWalletHistory}
+                      className="inline-flex h-7 items-center justify-center rounded-md border border-slate-300 bg-white px-2 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {loadingAdminWalletHistory ? '조회 중...' : '새로고침'}
+                    </button>
+                  </div>
+
+                  <div className="mt-2 max-h-[230px] overflow-y-auto rounded-xl border border-slate-200 bg-slate-50">
+                    {loadingAdminWalletHistory ? (
+                      <div className="space-y-2 p-3">
+                        {Array.from({ length: 4 }).map((_, index) => (
+                          <div key={`admin-wallet-history-loading-${index}`} className="h-12 animate-pulse rounded-lg bg-slate-100" />
+                        ))}
+                      </div>
+                    ) : adminWalletHistory.length === 0 ? (
+                      <div className="px-3 py-6 text-center text-xs text-slate-500">변경이력이 없습니다.</div>
+                    ) : (
+                      <div className="divide-y divide-slate-200">
+                        {adminWalletHistory.map((item) => (
+                          <div key={item.id} className="px-3 py-2.5 text-xs text-slate-600">
+                            <p className="font-semibold text-slate-800">
+                              {shortAddress(item.prevAdminWalletAddress)} → {shortAddress(item.nextAdminWalletAddress)}
+                            </p>
+                            <p className="mt-0.5">
+                              {item.changedByName || 'agent'}
+                              {item.changedByWalletAddress ? ` (${shortAddress(item.changedByWalletAddress)})` : ''}
+                            </p>
+                            <p className="mt-0.5 text-slate-500">{toDateTime(item.changedAt)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
       )}
 
       {isCreateModalOpen && (
