@@ -240,6 +240,13 @@ export default function P2PAgentStoreManagementPage() {
     return siteOrigin ? `${siteOrigin}${path}` : path;
   }, [lang, siteOrigin]);
 
+  const getStoreManagerHomepageUrl = useCallback((storecode: string) => {
+    const normalizedStorecode = String(storecode || '').trim();
+    if (!normalizedStorecode) return '';
+    const path = `/${lang}/p2p/store-management/member-management?storecode=${encodeURIComponent(normalizedStorecode)}`;
+    return siteOrigin ? `${siteOrigin}${path}` : path;
+  }, [lang, siteOrigin]);
+
   const filteredAdminWalletMembers = useMemo(() => {
     const normalizedKeyword = adminWalletSearchTerm.trim().toLowerCase();
     if (!normalizedKeyword) {
@@ -1117,14 +1124,24 @@ export default function P2PAgentStoreManagementPage() {
                               <p className="truncate font-semibold text-slate-900">{store.storeName || '-'}</p>
                               <p className="truncate text-xs text-slate-500">코드 {store.storecode || '-'}</p>
                               {store.storecode && (
-                                <Link
-                                  href={getStoreMemberHomepageUrl(store.storecode)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="mt-1 inline-flex h-7 items-center justify-center rounded-md border border-violet-300 bg-violet-50 px-2 text-[11px] font-semibold text-violet-800 transition hover:border-violet-400 hover:text-violet-900"
-                                >
-                                  회원 홈페이지
-                                </Link>
+                                <div className="mt-1 flex flex-wrap gap-1.5">
+                                  <Link
+                                    href={getStoreMemberHomepageUrl(store.storecode)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex h-7 items-center justify-center rounded-md border border-violet-300 bg-violet-50 px-2 text-[11px] font-semibold text-violet-800 transition hover:border-violet-400 hover:text-violet-900"
+                                  >
+                                    회원 홈페이지
+                                  </Link>
+                                  <Link
+                                    href={getStoreManagerHomepageUrl(store.storecode)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex h-7 items-center justify-center rounded-md border border-fuchsia-300 bg-fuchsia-50 px-2 text-[11px] font-semibold text-fuchsia-800 transition hover:border-fuchsia-400 hover:text-fuchsia-900"
+                                  >
+                                    관리자 홈페이지
+                                  </Link>
+                                </div>
                               )}
                             </div>
                           </div>
