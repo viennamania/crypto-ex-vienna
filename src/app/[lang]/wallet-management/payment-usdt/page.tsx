@@ -198,6 +198,8 @@ const formatUsdtInputFromBalance = (value: number) => {
 };
 
 const formatKrw = (value: number) => `${value.toLocaleString()}원`;
+const formatKrwNumber = (value: number) =>
+  new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(Number(value) || 0);
 const formatUsdt = (value: number) => `${value.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT`;
 const formatRate = (value: number) => `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })} KRW`;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -789,53 +791,6 @@ export default function PaymentUsdtPage({
           : !isPaymentReady
             ? 'amount'
             : 'ready';
-  const readinessSteps = [
-    {
-      key: 'wallet',
-      title: '지갑',
-      value: activeAccount?.address ? '연결 완료' : '연결 필요',
-      tone: activeAccount?.address ? 'done' : currentReadinessStep === 'wallet' ? 'active' : 'pending',
-    },
-    {
-      key: 'merchant',
-      title: '상점',
-      value: selectedMerchant ? '선택 완료' : hasStorecodeParam ? '확인 필요' : '선택 필요',
-      tone: selectedMerchant ? 'done' : currentReadinessStep === 'merchant' ? 'active' : 'pending',
-    },
-    {
-      key: 'member',
-      title: '회원',
-      value: !selectedMerchant ? '대기 중' : loadingMemberProfile ? '조회 중' : hasMemberProfile ? '확인 완료' : '연동 필요',
-      tone:
-        selectedMerchant && !loadingMemberProfile && hasMemberProfile
-          ? 'done'
-          : currentReadinessStep === 'member'
-            ? 'active'
-            : 'pending',
-    },
-    {
-      key: 'amount',
-      title: '금액',
-      value:
-        !selectedMerchant || loadingMemberProfile || !hasMemberProfile
-          ? '대기 중'
-          : usdtAmount <= 0
-            ? '입력 필요'
-            : !hasEnoughBalance
-              ? '잔액 부족'
-              : exchangeRate <= 0
-                ? '환율 확인 중'
-                : krwAmount <= 0
-                  ? '조정 필요'
-                  : '준비 완료',
-      tone:
-        usdtAmount > 0 && exchangeRate > 0 && krwAmount > 0 && hasEnoughBalance
-          ? 'done'
-          : currentReadinessStep === 'amount'
-            ? 'active'
-            : 'pending',
-    },
-  ] as const;
   const spotlightEyebrow =
     currentReadinessStep === 'ready'
       ? 'READY TO PAY'
@@ -1678,8 +1633,8 @@ export default function PaymentUsdtPage({
                 >
                   <div className="relative">
                     <div className="flex flex-col gap-3">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
+                      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                        <div className="min-w-0 sm:pr-2">
                           <p
                             className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
                               isPaymentReady ? 'bg-cyan-700 text-white' : 'bg-slate-900 text-white'
@@ -1687,58 +1642,67 @@ export default function PaymentUsdtPage({
                           >
                             {spotlightEyebrow}
                           </p>
-                          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
-                            {primaryActionLabel}
-                          </h2>
+                          {isPaymentReady ? (
+                            <div className="mt-3">
+                              <p className="break-keep text-[1.95rem] font-black leading-[1.02] tracking-tight text-slate-900 sm:text-[2.15rem]">
+                                {formatUsdt(usdtAmount)}
+                              </p>
+                              <h2 className="mt-1 break-keep text-[1.9rem] font-black leading-[1.02] tracking-tight text-slate-900 sm:text-[2.05rem]">
+                                결제하기
+                              </h2>
+                            </div>
+                          ) : (
+                            <h2 className="mt-3 break-keep text-2xl font-semibold leading-[1.15] tracking-tight text-slate-900">
+                              {primaryActionLabel}
+                            </h2>
+                          )}
                           <p className="mt-2 text-sm leading-6 text-slate-600">{primaryActionGuide}</p>
                         </div>
-                        <div className="rounded-2xl border border-white/80 bg-white/85 px-3.5 py-3 shadow-[0_14px_34px_-24px_rgba(15,23,42,0.38)]">
+                        <div className="self-start rounded-[24px] border border-white/80 bg-white/90 px-4 py-3.5 shadow-[0_14px_34px_-24px_rgba(15,23,42,0.38)] sm:min-w-[152px] sm:shrink-0">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                             예상 결제액
                           </p>
-                          <p className="mt-1 text-2xl font-extrabold leading-none text-slate-900 tabular-nums">
-                            {krwAmount > 0 ? formatKrw(krwAmount) : '0원'}
+                          <p className="mt-1 whitespace-nowrap text-right font-extrabold leading-none text-slate-900 tabular-nums">
+                            <span className="text-[2rem] sm:text-[2.15rem]">
+                              {krwAmount > 0 ? formatKrwNumber(krwAmount) : '0'}
+                            </span>
+                            <span className="ml-1 text-[1.4rem] align-baseline">원</span>
                           </p>
-                          <p className="mt-1 text-[11px] font-semibold text-slate-500">
+                          <p className="mt-1 text-right text-[11px] font-semibold text-slate-500">
                             {usdtAmount > 0 ? formatUsdt(usdtAmount) : 'USDT 수량 입력 필요'}
                           </p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {readinessSteps.map((step) => (
-                          <div
-                            key={step.key}
-                            className={`rounded-2xl border px-3 py-2.5 ${
-                              step.tone === 'done'
-                                ? 'border-emerald-200 bg-emerald-50/85'
-                                : step.tone === 'active'
-                                  ? 'border-cyan-200 bg-cyan-50/90'
-                                  : 'border-slate-200 bg-white/80'
-                            }`}
-                          >
-                            <p
-                              className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                                step.tone === 'done'
-                                  ? 'text-emerald-700'
-                                  : step.tone === 'active'
-                                    ? 'text-cyan-700'
-                                    : 'text-slate-500'
-                              }`}
-                            >
-                              {step.title}
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-900">{step.value}</p>
-                          </div>
-                        ))}
-                      </div>
                       {productIdFromQuery && (
-                        <div className="rounded-2xl border border-cyan-200 bg-white/90 px-3.5 py-3 shadow-[0_14px_34px_-24px_rgba(15,23,42,0.28)]">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-700">
-                            결제할 상품번호
-                          </p>
-                          <p className="mt-1 break-all text-base font-extrabold leading-tight text-slate-900">
-                            {productIdFromQuery}
-                          </p>
+                        <div className="relative overflow-hidden rounded-[28px] border-2 border-amber-300 bg-[linear-gradient(135deg,rgba(251,191,36,0.22),rgba(255,255,255,0.98),rgba(253,224,71,0.36))] px-4 py-4 shadow-[0_24px_60px_-28px_rgba(217,119,6,0.55)]">
+                          <div className="absolute -right-6 -top-8 h-24 w-24 rounded-full bg-amber-300/30 blur-2xl" />
+                          <div className="absolute -left-4 bottom-0 h-20 w-20 rounded-full bg-orange-300/20 blur-2xl" />
+                          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0">
+                              <span className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white/80 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-amber-700">
+                                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white">
+                                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
+                                </span>
+                                Order Product
+                              </span>
+                              <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
+                                결제할 상품번호
+                              </p>
+                              <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">
+                                이 상품번호 기준으로 결제가 진행됩니다.
+                              </p>
+                            </div>
+                            <div className="min-w-0 rounded-[24px] border border-amber-200 bg-slate-950 px-4 py-4 shadow-[0_20px_42px_-26px_rgba(15,23,42,0.7)]">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-200/80">
+                                Product ID
+                              </p>
+                              <p className="mt-2 break-all font-mono text-2xl font-black leading-tight tracking-[0.08em] text-white tabular-nums sm:text-[2rem]">
+                                {productIdFromQuery}
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
