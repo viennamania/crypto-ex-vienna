@@ -200,6 +200,8 @@ const formatUsdtInputFromBalance = (value: number) => {
 const formatKrw = (value: number) => `${value.toLocaleString()}원`;
 const formatKrwNumber = (value: number) =>
   new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(Number(value) || 0);
+const formatUsdtNumber = (value: number) =>
+  new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 }).format(Number(value) || 0);
 const formatUsdt = (value: number) => `${value.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT`;
 const formatRate = (value: number) => `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })} KRW`;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -1674,33 +1676,26 @@ export default function PaymentUsdtPage({
                         </div>
                       </div>
                       {productIdFromQuery && (
-                        <div className="relative overflow-hidden rounded-[28px] border-2 border-amber-300 bg-[linear-gradient(135deg,rgba(251,191,36,0.22),rgba(255,255,255,0.98),rgba(253,224,71,0.36))] px-4 py-4 shadow-[0_24px_60px_-28px_rgba(217,119,6,0.55)]">
-                          <div className="absolute -right-6 -top-8 h-24 w-24 rounded-full bg-amber-300/30 blur-2xl" />
-                          <div className="absolute -left-4 bottom-0 h-20 w-20 rounded-full bg-orange-300/20 blur-2xl" />
-                          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="rounded-[24px] border border-slate-200/90 bg-white/88 px-4 py-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.2)]">
+                          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                             <div className="min-w-0">
-                              <span className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white/80 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-amber-700">
-                                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white">
-                                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-                                  </svg>
-                                </span>
-                                Order Product
-                              </span>
-                              <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
-                                결제할 상품번호
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                                Payment Product
                               </p>
-                              <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">
+                              <p className="mt-1 text-sm font-semibold text-slate-900">결제할 상품번호</p>
+                              <p className="mt-1 text-sm leading-6 text-slate-600">
                                 이 상품번호 기준으로 결제가 진행됩니다.
                               </p>
                             </div>
-                            <div className="min-w-0 rounded-[24px] border border-amber-200 bg-slate-950 px-4 py-4 shadow-[0_20px_42px_-26px_rgba(15,23,42,0.7)]">
-                              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-200/80">
-                                Product ID
+                            <div className="min-w-0 rounded-[18px] border border-slate-200 bg-slate-950 px-4 py-3 shadow-[0_16px_36px_-28px_rgba(15,23,42,0.55)] sm:min-w-[220px]">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                                상품번호
                               </p>
-                              <p className="mt-2 break-all font-mono text-2xl font-black leading-tight tracking-[0.08em] text-white tabular-nums sm:text-[2rem]">
-                                {productIdFromQuery}
-                              </p>
+                              <div className="mt-2 overflow-x-auto">
+                                <p className="whitespace-nowrap font-mono text-xl font-bold leading-none tracking-[0.06em] text-white tabular-nums sm:text-2xl">
+                                  {productIdFromQuery}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1872,8 +1867,8 @@ export default function PaymentUsdtPage({
                 )}
 
                 <div className="rounded-[28px] border border-slate-200 bg-white/90 p-4 shadow-[0_24px_70px_-46px_rgba(15,23,42,0.45)]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                    <div className="min-w-0 pr-1">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                         Payment Input
                       </p>
@@ -1882,9 +1877,16 @@ export default function PaymentUsdtPage({
                         빠른 선택 또는 직접 입력으로 결제 금액을 바로 맞출 수 있습니다.
                       </p>
                     </div>
-                    <div className="rounded-2xl bg-slate-900 px-3 py-2 text-right text-white shadow-[0_16px_32px_-24px_rgba(15,23,42,0.7)]">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">보유 잔액</p>
-                      <p className="mt-1 text-sm font-bold">{formatUsdt(balance)}</p>
+                    <div className="self-start rounded-[22px] bg-slate-900 px-4 py-3 text-right text-white shadow-[0_16px_32px_-24px_rgba(15,23,42,0.7)] sm:min-w-[148px]">
+                      <p className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">
+                        보유 잔액
+                      </p>
+                      <p className="mt-1 whitespace-nowrap text-lg font-black leading-none text-white tabular-nums sm:text-xl">
+                        {formatUsdtNumber(balance)}
+                      </p>
+                      <p className="mt-1 whitespace-nowrap text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-300">
+                        USDT
+                      </p>
                     </div>
                   </div>
 
