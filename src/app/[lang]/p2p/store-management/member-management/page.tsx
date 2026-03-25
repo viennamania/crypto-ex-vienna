@@ -9,6 +9,7 @@ type StoreMember = {
   nickname: string;
   depositName: string;
   walletAddress: string;
+  mobile: string;
   password: string;
   verified: boolean;
   createdAt: string;
@@ -37,6 +38,19 @@ const toDateTime = (value: string) => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return '-';
   return parsed.toLocaleString('ko-KR');
+};
+
+const resolveMemberMobile = (member: Record<string, unknown>, buyer: Record<string, unknown>) => {
+  const buyerBankInfo = isRecord(buyer.bankInfo) ? buyer.bankInfo : {};
+  return String(
+    member.mobile ||
+      member.phone ||
+      buyer.mobile ||
+      buyer.phone ||
+      buyerBankInfo.phoneNum ||
+      buyerBankInfo.phone ||
+      '',
+  ).trim();
 };
 
 const MEMBER_PAGE_SIZE = 20;
@@ -164,6 +178,7 @@ export default function P2PStoreMemberManagementPage() {
               buyer.depositName || buyerBankInfo.depositName || buyerBankInfo.accountHolder || '',
             ).trim(),
             walletAddress: String(member.walletAddress || ''),
+            mobile: resolveMemberMobile(member, buyer),
             password: String(member.password ?? '').trim(),
             verified: member.verified === true,
             createdAt: String(member.createdAt || ''),
@@ -287,7 +302,8 @@ export default function P2PStoreMemberManagementPage() {
       if (!normalizedKeyword) return true;
       return (
         member.nickname.toLowerCase().includes(normalizedKeyword) ||
-        member.walletAddress.toLowerCase().includes(normalizedKeyword)
+        member.walletAddress.toLowerCase().includes(normalizedKeyword) ||
+        member.mobile.toLowerCase().includes(normalizedKeyword)
       );
     });
   }, [members, keyword]);
@@ -944,26 +960,33 @@ export default function P2PStoreMemberManagementPage() {
                             <td className="px-3 py-2.5 font-semibold text-slate-900">{member.nickname}</td>
                             <td className="px-3 py-2.5 text-xs text-slate-700">{member.depositName || '-'}</td>
                             <td className="px-3 py-2.5 text-xs text-slate-500">
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="break-all">{shortAddress(member.walletAddress)}</span>
-                                {hasWalletAddress && (
-                                  <span className="inline-flex h-5 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 text-[10px] font-semibold text-emerald-700">
-                                    연동완료
-                                  </span>
-                                )}
-                                {hasWalletAddress && (
-                                  <button
-                                    type="button"
-                                    onClick={() => openUnlinkModal(member)}
-                                    className="inline-flex h-5 items-center rounded-full border border-rose-200 bg-rose-50 px-2 text-[10px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
-                                  >
-                                    연동해제하기
-                                  </button>
-                                )}
-                                {!hasWalletAddress && (
-                                  <span className="inline-flex h-5 items-center rounded-full border border-amber-200 bg-amber-50 px-2 text-[10px] font-semibold text-amber-700">
-                                    지갑 연동안됨
-                                  </span>
+                              <div className="space-y-1.5">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="break-all">{shortAddress(member.walletAddress)}</span>
+                                  {hasWalletAddress && (
+                                    <span className="inline-flex h-5 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 text-[10px] font-semibold text-emerald-700">
+                                      연동완료
+                                    </span>
+                                  )}
+                                  {hasWalletAddress && (
+                                    <button
+                                      type="button"
+                                      onClick={() => openUnlinkModal(member)}
+                                      className="inline-flex h-5 items-center rounded-full border border-rose-200 bg-rose-50 px-2 text-[10px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                                    >
+                                      연동해제하기
+                                    </button>
+                                  )}
+                                  {!hasWalletAddress && (
+                                    <span className="inline-flex h-5 items-center rounded-full border border-amber-200 bg-amber-50 px-2 text-[10px] font-semibold text-amber-700">
+                                      지갑 연동안됨
+                                    </span>
+                                  )}
+                                </div>
+                                {hasWalletAddress && member.mobile && (
+                                  <p className="break-all text-[11px] font-medium text-slate-600">
+                                    휴대폰: {member.mobile}
+                                  </p>
                                 )}
                               </div>
                             </td>
