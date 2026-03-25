@@ -131,6 +131,8 @@ export default function StorePaymentCompleteNotificationPage() {
       payment: {
         id: '67d1b8b1281f4f0012345678',
         paymentId: '48219374',
+        productId: 'P-240317-001',
+        product_id: 'P-240317-001',
         status: 'COMPLETED',
         usdtAmount: 125.5,
         krwAmount: 185000,
@@ -181,7 +183,7 @@ export default function StorePaymentCompleteNotificationPage() {
   const callbackGuideSteps = useMemo(
     () => [
       '외부 서버에서 POST JSON endpoint를 하나 만들고 공개 HTTPS URL을 준비합니다.',
-      '요청 body의 `payment.id` 또는 `payment.paymentId`를 기준으로 중복 수신을 방지하도록 처리합니다.',
+      '요청 body의 `payment.id` 또는 `payment.paymentId`를 기준으로 중복 수신을 방지하고, `payment.product_id`로 내부 상품과 매핑하면 됩니다.',
       '정상 처리 후에는 HTTP 200~299 응답을 반환합니다. 2xx가 아니면 실패로 기록됩니다.',
       'callback 실패가 있어도 내부 결제완료 처리는 유지되므로, 실패 로그를 별도로 모니터링하는 것이 좋습니다.',
     ],
@@ -288,7 +290,8 @@ export default function StorePaymentCompleteNotificationPage() {
                     {storecode ? `storecode=${storecode}` : 'storecode 파라미터가 필요합니다.'}
                   </p>
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-100/88">
-                    결제관리에서 `결제처리완료`로 상태가 바뀌는 순간, 이 페이지에 등록한 URL로 POST callback을 보냅니다.
+                    결제관리에서 `결제처리완료`로 상태가 바뀌는 순간, 이 페이지에 등록한 URL로 POST callback을 보내며
+                    결제정보에는 `product_id`도 함께 포함됩니다.
                   </p>
                 </div>
               </div>
@@ -415,7 +418,8 @@ export default function StorePaymentCompleteNotificationPage() {
               Callback Payload
             </p>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              아래 JSON이 결제처리완료 시점에 body로 전달됩니다. 헤더에는 `x-gobyte-event: payment.completed`와 `x-gobyte-storecode`가 추가됩니다.
+              아래 JSON이 결제처리완료 시점에 body로 전달됩니다. 헤더에는 `x-gobyte-event: payment.completed`와
+              `x-gobyte-storecode`가 추가되며, `payment.productId`와 `payment.product_id`로 상품번호도 함께 전달됩니다.
             </p>
             <pre className="mt-4 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-950 px-4 py-4 text-[11px] leading-6 text-slate-100">
               {JSON.stringify(samplePayload, null, 2)}

@@ -974,8 +974,7 @@ export default function P2PStorePaymentManagementPage() {
                         <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                           <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                             <th className="w-[96px] px-2 py-2">일시</th>
-                            <th className="w-[130px] px-2 py-2">결제번호(PID)</th>
-                            <th className="w-[130px] px-2 py-2">상품번호</th>
+                            <th className="w-[180px] px-2 py-2">결제번호 / 상품번호</th>
                             <th className="px-3 py-2">회원 / 송신 지갑</th>
                             <th className="w-[140px] px-2 py-2 text-right">USDT / KRW</th>
                             <th className="px-3 py-2">환율</th>
@@ -1005,26 +1004,38 @@ export default function P2PStorePaymentManagementPage() {
                                 <p className="font-semibold text-slate-700">{confirmedDateTime.date}</p>
                                 <p className="mt-0.5">{confirmedDateTime.time}</p>
                               </td>
-                              <td className="px-2 py-2.5 text-xs font-semibold text-slate-900">
-                                {payment.paymentId ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      void copyPaymentId(payment.paymentId);
-                                    }}
-                                    className="inline-flex max-w-full flex-wrap items-center gap-1 break-all text-left underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
-                                  >
-                                    {payment.paymentId}
-                                    {copiedPaymentId === payment.paymentId && (
-                                      <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                              <td className="px-2 py-2.5 text-xs">
+                                <div className="flex flex-col gap-2">
+                                  <div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                      결제번호
+                                    </p>
+                                    {payment.paymentId ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          void copyPaymentId(payment.paymentId);
+                                        }}
+                                        className="mt-1 inline-flex max-w-full flex-wrap items-center gap-1 break-all text-left font-semibold text-slate-900 underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                                      >
+                                        {payment.paymentId}
+                                        {copiedPaymentId === payment.paymentId && (
+                                          <span className="text-[10px] font-semibold text-cyan-700">복사됨</span>
+                                        )}
+                                      </button>
+                                    ) : (
+                                      <p className="mt-1 font-semibold text-slate-900">-</p>
                                     )}
-                                  </button>
-                                ) : (
-                                  '-'
-                                )}
-                              </td>
-                              <td className="px-2 py-2.5 text-xs font-semibold text-slate-700">
-                                <p className="break-all">{payment.productId || '-'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                      상품번호
+                                    </p>
+                                    <p className="mt-1 break-all font-semibold text-slate-700">
+                                      {payment.productId || '-'}
+                                    </p>
+                                  </div>
+                                </div>
                               </td>
                               <td className="px-3 py-2.5">
                                 <p className="break-all text-sm font-semibold leading-tight text-slate-900">
@@ -1069,43 +1080,44 @@ export default function P2PStorePaymentManagementPage() {
                                 </p>
                               </td>
                               <td className="px-3 py-2.5 text-xs">
-                                <p
-                                  className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-                                    completed
-                                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                      : 'border-amber-200 bg-amber-50 text-amber-700'
-                                  }`}
-                                >
-                                  {resolveOrderProcessingLabel(payment.orderProcessing)}
-                                </p>
-                                {completed && (
-                                  <>
-                                    <p className="mt-1 text-[11px] text-slate-500">
-                                      완료시각 {toDateTime(payment.orderProcessingUpdatedAt || '')}
-                                    </p>
-                                    <p className="mt-0.5 text-[11px] text-slate-500">
-                                      처리자 {String(payment.orderProcessingUpdatedBy?.nickname || '').trim() || '-'}
-                                      {payment.orderProcessingUpdatedBy?.walletAddress
-                                        ? ` (${shortAddress(payment.orderProcessingUpdatedBy.walletAddress)})`
-                                        : ''}
-                                    </p>
-                                    <p className="mt-0.5 text-[11px] text-slate-500">
-                                      역할 {resolveActorRoleLabel(payment.orderProcessingUpdatedBy?.role)} · 접속IP {payment.orderProcessingUpdatedByIp || '-'}
-                                    </p>
-                                  </>
-                                )}
-                                {!completed && (
-                                  <button
-                                    type="button"
-                                    onClick={() => openOrderProcessingModal(payment)}
-                                    className="mt-2 inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                                <div className="flex flex-col items-start gap-2">
+                                  <p
+                                    className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                                      completed
+                                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                        : 'border-amber-200 bg-amber-50 text-amber-700'
+                                    }`}
                                   >
-                                    결제처리완료
-                                  </button>
-                                )}
-                                {isChanged && (
-                                  <p className="mt-1 text-[10px] font-semibold text-cyan-700">상태 변경됨</p>
-                                )}
+                                    {resolveOrderProcessingLabel(payment.orderProcessing)}
+                                  </p>
+                                  {completed ? (
+                                    <div className="space-y-0.5">
+                                      <p className="text-[11px] text-slate-500">
+                                        완료시각 {toDateTime(payment.orderProcessingUpdatedAt || '')}
+                                      </p>
+                                      <p className="text-[11px] text-slate-500">
+                                        처리자 {String(payment.orderProcessingUpdatedBy?.nickname || '').trim() || '-'}
+                                        {payment.orderProcessingUpdatedBy?.walletAddress
+                                          ? ` (${shortAddress(payment.orderProcessingUpdatedBy.walletAddress)})`
+                                          : ''}
+                                      </p>
+                                      <p className="text-[11px] text-slate-500">
+                                        역할 {resolveActorRoleLabel(payment.orderProcessingUpdatedBy?.role)} · 접속IP {payment.orderProcessingUpdatedByIp || '-'}
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => openOrderProcessingModal(payment)}
+                                      className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                                    >
+                                      결제처리완료
+                                    </button>
+                                  )}
+                                  {isChanged && (
+                                    <p className="text-[10px] font-semibold text-cyan-700">상태 변경됨</p>
+                                  )}
+                                </div>
                               </td>
                               </tr>
                             );
