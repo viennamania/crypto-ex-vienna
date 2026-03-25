@@ -32,6 +32,7 @@ import { useClientWallets } from '@/lib/useClientWallets';
 import { useClientSettings } from '@/components/ClientSettingsProvider';
 import { createWalletSignatureAuthPayload } from '@/lib/security/walletSignature';
 import WalletManagementBottomNav from '@/components/wallet-management/WalletManagementBottomNav';
+import StoreMemberLinkCard from '@/components/wallet-management/StoreMemberLinkCard';
 import WalletConnectPrompt from '@/components/wallet-management/WalletConnectPrompt';
 import StoreMemberSummaryCard from '@/components/wallet-management/StoreMemberSummaryCard';
 import WalletSummaryCard from '@/components/wallet-management/WalletSummaryCard';
@@ -1607,6 +1608,21 @@ export default function PaymentUsdtPage({
               smartAccountEnabled={smartAccountEnabled}
               disconnectRedirectPath={disconnectRedirectPath}
             />
+            {selectedMerchant && (!hasMemberProfile || loadingMemberProfile) && (
+              <StoreMemberLinkCard
+                ref={memberStatusCardRef}
+                storeLabel={selectedMerchant.storeName || selectedStorecode}
+                loading={loadingMemberProfile}
+                memberIdValue={signupNickname}
+                memberPasswordValue={signupPassword}
+                onMemberIdChange={setSignupNickname}
+                onMemberPasswordChange={setSignupPassword}
+                onSubmit={registerMemberForSelectedStore}
+                submitting={signingUpMember}
+                error={memberProfileError}
+                description={`${selectedMerchant.storeName || '이 상점'} 결제 전에 가맹점 회원 아이디와 비밀번호를 입력해 먼저 회원정보를 연동해 주세요.`}
+              />
+            )}
             {selectedMerchant && hasMemberProfile && !loadingMemberProfile && (
               <StoreMemberSummaryCard
                 memberId={myMemberProfile?.nickname || ''}
@@ -1888,97 +1904,6 @@ export default function PaymentUsdtPage({
                     <p className="mt-1 text-xs text-rose-600">
                       잘못된 `storecode`이거나 결제지갑이 설정되지 않은 가맹점일 수 있습니다.
                     </p>
-                  </div>
-                )}
-
-                {activeAccount?.address && selectedMerchant && (!hasMemberProfile || loadingMemberProfile) && (
-                  <div
-                    ref={memberStatusCardRef}
-                    className={`mb-4 rounded-[26px] border px-4 py-3 text-sm ${
-                      hasMemberProfile
-                        ? 'border-emerald-200 bg-emerald-50'
-                        : 'border-amber-200 bg-amber-50'
-                    } ${
-                      hasMemberProfile
-                        ? 'min-h-[130px]'
-                        : loadingMemberProfile
-                          ? 'min-h-[160px]'
-                          : 'min-h-[220px]'
-                    }`}
-                  >
-                    {loadingMemberProfile ? (
-                      <>
-                        <p className="font-semibold text-slate-700">
-                          {`${selectedMerchant.storeName || '선택 상점'} 회원 정보를 확인 중입니다...`}
-                        </p>
-                        <p className="mt-2 text-[11px] font-semibold text-slate-500">회원 아이디</p>
-                        <div className="mt-1 h-10 w-40 animate-pulse rounded-lg bg-slate-200/80" />
-                        <div className="mt-2 flex items-center gap-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce [animation-delay:120ms]" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce [animation-delay:240ms]" />
-                          <span className="text-[11px] font-semibold text-cyan-700">검색 중...</span>
-                        </div>
-                      </>
-                    ) : hasMemberProfile ? (
-                      <>
-                        <p className="font-semibold text-emerald-800">결제 가능한 회원입니다.</p>
-                        <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          <div className="rounded-2xl border border-emerald-200 bg-white/80 px-3 py-3">
-                            <p className="text-[11px] font-semibold text-emerald-700">회원 아이디</p>
-                            <p className="mt-1 break-all text-2xl font-extrabold leading-tight text-emerald-900">
-                              {myMemberProfile?.nickname || '-'}
-                            </p>
-                          </div>
-                          <div className="rounded-2xl border border-emerald-200 bg-white/80 px-3 py-3">
-                            <p className="text-[11px] font-semibold text-emerald-700">이름</p>
-                            <p className="mt-1 break-all text-lg font-bold leading-tight text-emerald-900">
-                              {memberBankInfoSnapshot?.accountHolder || memberBankInfoSnapshot?.depositName || '-'}
-                            </p>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <p className="font-semibold text-amber-800">
-                          {`${selectedMerchant.storeName || '이 상점'} 가맹점 회원정보를 먼저 연동해야 결제할 수 있습니다.`}
-                        </p>
-                        <p className="mt-1 text-xs font-semibold text-amber-800">
-                          회원 아이디와 비밀번호를 모를경우 가맹점에 문의하세요.
-                        </p>
-                        {memberProfileError && (
-                          <p className="mt-1 text-xs text-rose-600">{memberProfileError}</p>
-                        )}
-                        <div className="mt-3 space-y-2.5">
-                          <div className="grid grid-cols-2 gap-2.5">
-                            <input
-                              value={signupNickname}
-                              onChange={(event) => setSignupNickname(event.target.value)}
-                              placeholder="회원 아이디"
-                              className="h-12 w-full rounded-2xl border-2 border-amber-300 bg-white px-4 text-base font-semibold text-slate-800 outline-none transition focus:border-amber-500 placeholder:text-slate-400"
-                              maxLength={24}
-                            />
-                            <input
-                              type="password"
-                              value={signupPassword}
-                              onChange={(event) => setSignupPassword(event.target.value)}
-                              placeholder="비밀번호"
-                              autoComplete="current-password"
-                              className="h-12 w-full rounded-2xl border-2 border-amber-300 bg-white px-4 text-base font-semibold text-slate-800 outline-none transition focus:border-amber-500 placeholder:text-slate-400"
-                              maxLength={64}
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={registerMemberForSelectedStore}
-                            disabled={signingUpMember}
-                            className="inline-flex h-10 items-center justify-center rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {signingUpMember ? '인증 처리 중...' : '회원정보 연동 후 결제하기'}
-                          </button>
-                        </div>
-                      </>
-                    )}
                   </div>
                 )}
 

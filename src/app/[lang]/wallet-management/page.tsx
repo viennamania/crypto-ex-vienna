@@ -7,13 +7,16 @@ import { Manrope, Playfair_Display } from 'next/font/google';
 import { toast } from 'react-hot-toast';
 import { getContract } from 'thirdweb';
 import { balanceOf } from 'thirdweb/extensions/erc20';
-import { AutoConnect, useActiveAccount } from 'thirdweb/react';
+import { AutoConnect, useActiveAccount, useActiveWallet, useConnectedWallets } from 'thirdweb/react';
 import { ethereum, polygon, arbitrum, bsc, type Chain } from 'thirdweb/chains';
+import { getUserPhoneNumber } from 'thirdweb/wallets/in-app';
 
 import { client } from '@/app/client';
 import { useClientWallets } from '@/lib/useClientWallets';
 import { useClientSettings } from '@/components/ClientSettingsProvider';
+import { createWalletSignatureAuthPayload } from '@/lib/security/walletSignature';
 import { rgbaFromHex, resolveStoreBrandColor } from '@/lib/storeBranding';
+import StoreMemberLinkCard from '@/components/wallet-management/StoreMemberLinkCard';
 import WalletConnectPrompt from '@/components/wallet-management/WalletConnectPrompt';
 import StoreMemberSummaryCard from '@/components/wallet-management/StoreMemberSummaryCard';
 import WalletSummaryCard from '@/components/wallet-management/WalletSummaryCard';
@@ -227,12 +230,43 @@ export default function WalletManagementHomePage() {
   }, [baseQueryString, lang]);
 
   const { chain, loading: clientSettingsLoading } = useClientSettings();
-  const activeAccount = useActiveAccount();
+  const rawActiveAccount = useActiveAccount();
+  const activeWallet = useActiveWallet();
+  const connectedWallets = useConnectedWallets();
+  const activeAccount = activeWallet?.getAccount?.() ?? rawActiveAccount;
   const { wallet, wallets, smartAccountEnabled } = useClientWallets({
     authOptions: WALLET_AUTH_OPTIONS,
     sponsorGas: true,
     defaultSmsCountryCode: 'KR',
   });
+  const signatureAccount = useMemo(() => {
+    const candidates: Array<unknown> = [
+      activeWallet?.getAccount?.(),
+      activeAccount,
+      activeWallet?.getAdminAccount?.(),
+    ];
+    for (const walletItem of connectedWallets) {
+      candidates.push(walletItem?.getAccount?.());
+      candidates.push(walletItem?.getAdminAccount?.());
+    }
+
+    for (const candidate of candidates) {
+      const account = candidate as {
+        address?: string;
+        signMessage?: (options: {
+          message: string;
+          originalMessage?: string;
+          chainId?: number;
+        }) => Promise<string>;
+      } | null | undefined;
+
+      if (account?.address && typeof account.signMessage === 'function') {
+        return account;
+      }
+    }
+
+    return null;
+  }, [activeAccount, activeWallet, connectedWallets]);
 
   const activeNetwork = useMemo(
     () => NETWORK_BY_KEY[chain] ?? NETWORK_BY_KEY.polygon,
@@ -269,6 +303,11 @@ export default function WalletManagementHomePage() {
   const [loadingNotices, setLoadingNotices] = useState(true);
   const [noticesError, setNoticesError] = useState<string | null>(null);
   const [linkedStoreMemberProfile, setLinkedStoreMemberProfile] = useState<LinkedStoreMemberProfile | null>(null);
+  const [loadingLinkedStoreMemberProfile, setLoadingLinkedStoreMemberProfile] = useState(false);
+  const [linkedStoreMemberProfileError, setLinkedStoreMemberProfileError] = useState<string | null>(null);
+  const [storeMemberLinkNicknameInput, setStoreMemberLinkNicknameInput] = useState('');
+  const [storeMemberLinkPasswordInput, setStoreMemberLinkPasswordInput] = useState('');
+  const [linkingStoreMember, setLinkingStoreMember] = useState(false);
 
   const storeBrandColor = useMemo(
     () => resolveStoreBrandColor(storecode, paymentStoreInfo?.backgroundColor),
@@ -304,6 +343,34 @@ export default function WalletManagementHomePage() {
   const linkedStoreMemberName = useMemo(
     () => resolveLinkedStoreMemberName(linkedStoreMemberProfile?.buyer),
     [linkedStoreMemberProfile?.buyer],
+  );
+  const buildSignedRequestBody = useCallback(
+    async ({
+      path,
+      payload,
+      requestStorecode,
+    }: {
+      path: string;
+      payload: Record<string, unknown>;
+      requestStorecode?: string;
+    }) => {
+      if (!signatureAccount?.address || typeof signatureAccount?.signMessage !== 'function') {
+        throw new Error('서명 가능한 스마트 지갑을 먼저 연결해 주세요.');
+      }
+
+      const auth = await createWalletSignatureAuthPayload({
+        account: signatureAccount,
+        storecode: requestStorecode || storecode || 'admin',
+        path,
+        method: 'POST',
+      });
+
+      return {
+        ...payload,
+        auth,
+      };
+    },
+    [signatureAccount, storecode],
   );
 
   const hideHomeShortcutBanner = useCallback((days: number = HOME_SHORTCUT_BANNER_HIDE_DAYS) => {
@@ -441,12 +508,16 @@ export default function WalletManagementHomePage() {
 
     if (!activeAccount?.address || !storecode) {
       setLinkedStoreMemberProfile(null);
+      setLoadingLinkedStoreMemberProfile(false);
+      setLinkedStoreMemberProfileError(null);
       return () => {
         cancelled = true;
       };
     }
 
     const loadLinkedStoreMemberProfile = async () => {
+      setLoadingLinkedStoreMemberProfile(true);
+      setLinkedStoreMemberProfileError(null);
       try {
         const response = await fetch('/api/user/getUser', {
           method: 'POST',
@@ -479,6 +550,13 @@ export default function WalletManagementHomePage() {
         console.error('Failed to load linked store member profile for wallet home', error);
         if (!cancelled) {
           setLinkedStoreMemberProfile(null);
+          setLinkedStoreMemberProfileError(
+            error instanceof Error ? error.message : '회원 정보를 불러오지 못했습니다.',
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingLinkedStoreMemberProfile(false);
         }
       }
     };
@@ -489,6 +567,108 @@ export default function WalletManagementHomePage() {
       cancelled = true;
     };
   }, [activeAccount?.address, storecode]);
+
+  useEffect(() => {
+    setStoreMemberLinkNicknameInput(memberIdFromQuery);
+    setStoreMemberLinkPasswordInput('');
+  }, [memberIdFromQuery, storecode]);
+
+  const registerMemberForHomeStore = useCallback(async () => {
+    if (!activeAccount?.address) {
+      toast.error('지갑을 먼저 연결해 주세요.');
+      return;
+    }
+    if (!storecode) {
+      toast.error('가맹점 코드를 확인해 주세요.');
+      return;
+    }
+    if (linkingStoreMember) {
+      return;
+    }
+
+    const nickname = String(storeMemberLinkNicknameInput || '').trim();
+    const password = String(storeMemberLinkPasswordInput || '').trim();
+    if (nickname.length < 2) {
+      toast.error('회원 아이디를 2자 이상 입력해 주세요.');
+      return;
+    }
+    if (!password) {
+      toast.error('비밀번호를 입력해 주세요.');
+      return;
+    }
+
+    setLinkingStoreMember(true);
+    setLinkedStoreMemberProfileError(null);
+    try {
+      let thirdwebMobile = '';
+      try {
+        thirdwebMobile = String(await getUserPhoneNumber({ client }) || '').trim();
+      } catch (phoneError) {
+        console.warn('Failed to read thirdweb phone number for wallet home member link', phoneError);
+      }
+
+      const linkMemberRequestBody = await buildSignedRequestBody({
+        path: '/api/user/linkWalletByStorecodeNicknamePassword',
+        requestStorecode: storecode,
+        payload: {
+          storecode,
+          walletAddress: activeAccount.address,
+          mobile: thirdwebMobile,
+          nickname,
+          password,
+        },
+      });
+      const response = await fetch('/api/user/linkWalletByStorecodeNicknamePassword', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(linkMemberRequestBody),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.error) {
+        throw new Error(data?.error || '회원 인증에 실패했습니다.');
+      }
+
+      setStoreMemberLinkPasswordInput('');
+      toast.success('회원 인증이 완료되어 내 지갑으로 연결되었습니다.');
+
+      const refreshResponse = await fetch('/api/user/getUser', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storecode,
+          walletAddress: activeAccount.address,
+        }),
+      });
+      const refreshData = await refreshResponse.json().catch(() => ({}));
+      if (!refreshResponse.ok) {
+        throw new Error(String(refreshData?.error || '회원 정보를 불러오지 못했습니다.'));
+      }
+      const user = refreshData?.result;
+      if (user && typeof user === 'object') {
+        setLinkedStoreMemberProfile({
+          nickname: String(user?.nickname || '').trim(),
+          buyer: isRecord(user?.buyer) ? (user.buyer as Record<string, unknown>) : null,
+        });
+      } else {
+        setLinkedStoreMemberProfile(null);
+      }
+    } catch (error) {
+      console.error('Failed to verify and link member on wallet home', error);
+      const message = error instanceof Error ? error.message : '회원 인증 중 오류가 발생했습니다.';
+      setLinkedStoreMemberProfileError(message);
+      toast.error(message);
+    } finally {
+      setLinkingStoreMember(false);
+      setLoadingLinkedStoreMemberProfile(false);
+    }
+  }, [
+    activeAccount?.address,
+    buildSignedRequestBody,
+    linkingStoreMember,
+    storeMemberLinkNicknameInput,
+    storeMemberLinkPasswordInput,
+    storecode,
+  ]);
 
   const loadSellers = useCallback(async () => {
     setLoadingSellers(true);
@@ -808,6 +988,21 @@ export default function WalletManagementHomePage() {
               modeLabel="홈"
               smartAccountEnabled={smartAccountEnabled}
             />
+
+            {storecode && (loadingLinkedStoreMemberProfile || !linkedStoreMemberProfile?.nickname) && (
+              <StoreMemberLinkCard
+                storeLabel={paymentStoreInfo?.storeName || storecode}
+                loading={loadingLinkedStoreMemberProfile}
+                memberIdValue={storeMemberLinkNicknameInput}
+                memberPasswordValue={storeMemberLinkPasswordInput}
+                onMemberIdChange={setStoreMemberLinkNicknameInput}
+                onMemberPasswordChange={setStoreMemberLinkPasswordInput}
+                onSubmit={registerMemberForHomeStore}
+                submitting={linkingStoreMember}
+                error={linkedStoreMemberProfileError}
+                description="구매 또는 결제 전에 가맹점 회원 아이디와 비밀번호를 입력해 먼저 내 지갑과 회원정보를 연동해 주세요."
+              />
+            )}
 
             {storecode && linkedStoreMemberProfile?.nickname && (
               <StoreMemberSummaryCard

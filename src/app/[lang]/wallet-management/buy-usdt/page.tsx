@@ -17,6 +17,7 @@ import { client } from '@/app/client';
 import { useClientWallets } from '@/lib/useClientWallets';
 import { useClientSettings } from '@/components/ClientSettingsProvider';
 import { createWalletSignatureAuthPayload } from '@/lib/security/walletSignature';
+import StoreMemberLinkCard from '@/components/wallet-management/StoreMemberLinkCard';
 import WalletConnectPrompt from '@/components/wallet-management/WalletConnectPrompt';
 import StoreMemberSummaryCard from '@/components/wallet-management/StoreMemberSummaryCard';
 import WalletSummaryCard from '@/components/wallet-management/WalletSummaryCard';
@@ -983,6 +984,7 @@ export default function BuyUsdtPage({
   const [storeMemberLinkPasswordInput, setStoreMemberLinkPasswordInput] = useState('');
   const [linkingStoreMember, setLinkingStoreMember] = useState(false);
   const storeMemberProfileRequestIdRef = useRef(0);
+  const storeMemberLinkCardRef = useRef<HTMLDivElement | null>(null);
 
   const [amountInput, setAmountInput] = useState('');
   const [krwInput, setKrwInput] = useState('');
@@ -1183,6 +1185,15 @@ export default function BuyUsdtPage({
     [storecode],
   );
   const hasStoreMemberProfile = Boolean(storeMemberProfile);
+  const shouldShowStoreMemberLinkCard = Boolean(
+    activeAccount?.address &&
+      isStoreScopedPurchase &&
+      (loadingStoreMemberProfile || !hasStoreMemberProfile),
+  );
+  const shouldShowBuyerProfileStatusCard = Boolean(
+    (!isStoreScopedPurchase || hasStoreMemberProfile) &&
+      (loadingBuyerProfile || !hasBuyerProfileForPurchase),
+  );
   const storeMemberBankSnapshot = useMemo(
     () => resolveBuyerBankSnapshot(storeMemberProfile?.buyer),
     [storeMemberProfile?.buyer],
@@ -2515,6 +2526,11 @@ export default function BuyUsdtPage({
       toast.error('지갑을 먼저 연결해 주세요.');
       return;
     }
+    if (isStoreScopedPurchase && !loadingStoreMemberProfile && !hasStoreMemberProfile) {
+      storeMemberLinkCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      toast.error('상단에서 가맹점 회원정보 연동을 먼저 완료해 주세요.');
+      return;
+    }
 
     setBuyerProfileModalForceNextStep(false);
     setBuyerNicknameInput(buyerProfileNickname || fallbackBuyerNickname);
@@ -2697,7 +2713,7 @@ export default function BuyUsdtPage({
       return;
     }
     if (isStoreScopedPurchase && !hasStoreMemberProfile) {
-      openBuyerProfileModal();
+      storeMemberLinkCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       toast.error('가맹점 회원정보를 먼저 연동해야 구매할 수 있습니다.');
       return;
     }
@@ -3599,6 +3615,21 @@ export default function BuyUsdtPage({
               smartAccountEnabled={smartAccountEnabled}
               disconnectRedirectPath={disconnectRedirectPath}
             />
+            {shouldShowStoreMemberLinkCard && (
+              <StoreMemberLinkCard
+                ref={storeMemberLinkCardRef}
+                storeLabel={selectedStoreInfo?.storeName || storecode}
+                loading={loadingStoreMemberProfile}
+                memberIdValue={storeMemberLinkNicknameInput}
+                memberPasswordValue={storeMemberLinkPasswordInput}
+                onMemberIdChange={setStoreMemberLinkNicknameInput}
+                onMemberPasswordChange={setStoreMemberLinkPasswordInput}
+                onSubmit={linkStoreMemberForPurchase}
+                submitting={linkingStoreMember || savingBuyerProfile}
+                error={storeMemberProfileError}
+                description="구매 전에 가맹점 회원 아이디와 비밀번호를 입력해 먼저 내 지갑과 회원정보를 연동해 주세요."
+              />
+            )}
             {isStoreScopedPurchase && hasStoreMemberProfile && !loadingStoreMemberProfile && (
               <StoreMemberSummaryCard
                 memberId={storeMemberProfile?.nickname || ''}
@@ -3659,7 +3690,7 @@ export default function BuyUsdtPage({
               )}
             </div>
 
-            {(loadingBuyerProfile || !hasBuyerProfileForPurchase) && (
+            {shouldShowBuyerProfileStatusCard && (
               <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">구매자 정보</p>
 
@@ -3692,11 +3723,6 @@ export default function BuyUsdtPage({
                       <p className="text-xs font-semibold text-amber-800">
                         구매 신청 전에 구매자 정보(입금자명)를 먼저 입력해 주세요.
                       </p>
-                      {isStoreScopedPurchase && !hasStoreMemberProfile && (
-                        <p className="mt-1 text-xs font-semibold text-amber-800">
-                          가맹점 회원정보 연동이 먼저 완료되어야 구매를 진행할 수 있습니다.
-                        </p>
-                      )}
                       <button
                         type="button"
                         onClick={openBuyerProfileModal}
