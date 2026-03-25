@@ -86,6 +86,7 @@ export default function WalletManagementNoticePage() {
   const langParam = params?.lang;
   const lang = Array.isArray(langParam) ? langParam[0] : langParam || 'ko';
   const storecode = String(searchParams?.get('storecode') || '').trim();
+  const memberIdFromQuery = String(searchParams?.get('mb_id') || '').trim().slice(0, 24);
   const noticeIdFromQuery = String(searchParams?.get('noticeId') || '').trim();
 
   const [notices, setNotices] = useState<NoticeItem[]>([]);
@@ -111,9 +112,12 @@ export default function WalletManagementNoticePage() {
     if (storecode) {
       query.set('storecode', storecode);
     }
+    if (memberIdFromQuery) {
+      query.set('mb_id', memberIdFromQuery);
+    }
     const queryString = query.toString();
     return `/${lang}/wallet-management${queryString ? `?${queryString}` : ''}`;
-  }, [lang, storecode]);
+  }, [lang, memberIdFromQuery, storecode]);
 
   const selectedNotice = useMemo(
     () => notices.find((item) => item.id === selectedNoticeId) || null,

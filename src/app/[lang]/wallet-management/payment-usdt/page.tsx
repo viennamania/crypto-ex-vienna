@@ -458,15 +458,19 @@ export default function PaymentUsdtPage({
   const lang = params?.lang || 'ko';
   const searchParams = useSearchParams();
   const storecodeFromQuery = String(searchParams?.get('storecode') || '').trim();
+  const memberIdFromQuery = String(searchParams?.get('mb_id') || '').trim().slice(0, 24);
   const hasStorecodeParam = Boolean(storecodeFromQuery);
   const disconnectRedirectPath = useMemo(() => {
     const query = new URLSearchParams();
     if (storecodeFromQuery) {
       query.set('storecode', storecodeFromQuery);
     }
+    if (memberIdFromQuery) {
+      query.set('mb_id', memberIdFromQuery);
+    }
     const queryString = query.toString();
     return `/${lang}/wallet-management${queryString ? `?${queryString}` : ''}`;
-  }, [lang, storecodeFromQuery]);
+  }, [lang, memberIdFromQuery, storecodeFromQuery]);
   const { chain } = useClientSettings();
   const rawActiveAccount = useActiveAccount();
   const activeWallet = useActiveWallet();
@@ -1219,10 +1223,10 @@ export default function PaymentUsdtPage({
   }, [loadMemberProfile]);
 
   useEffect(() => {
-    setSignupNickname('');
+    setSignupNickname(memberIdFromQuery);
     setSignupPassword('');
     setJustPaidRecordId('');
-  }, [selectedStorecode]);
+  }, [memberIdFromQuery, selectedStorecode]);
 
   const registerMemberForSelectedStore = async () => {
     if (!activeAccount?.address) {

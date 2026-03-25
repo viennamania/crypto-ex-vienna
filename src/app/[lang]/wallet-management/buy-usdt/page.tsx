@@ -855,14 +855,18 @@ export default function BuyUsdtPage({
   const searchParams = useSearchParams();
   const storecode = String(searchParams?.get('storecode') || '').trim();
   const sellerFromQuery = String(searchParams?.get('seller') || '').trim();
+  const memberIdFromQuery = String(searchParams?.get('mb_id') || '').trim().slice(0, 24);
   const disconnectRedirectPath = useMemo(() => {
     const query = new URLSearchParams();
     if (storecode) {
       query.set('storecode', storecode);
     }
+    if (memberIdFromQuery) {
+      query.set('mb_id', memberIdFromQuery);
+    }
     const queryString = query.toString();
     return `/${lang}/wallet-management${queryString ? `?${queryString}` : ''}`;
-  }, [lang, storecode]);
+  }, [lang, memberIdFromQuery, storecode]);
 
   const { chain } = useClientSettings();
   const rawActiveAccount = useActiveAccount();
@@ -2273,6 +2277,11 @@ export default function BuyUsdtPage({
   useEffect(() => {
     loadStoreMemberProfile();
   }, [loadStoreMemberProfile]);
+
+  useEffect(() => {
+    setStoreMemberLinkNicknameInput(memberIdFromQuery);
+    setStoreMemberLinkPasswordInput('');
+  }, [memberIdFromQuery, storecode]);
 
   useEffect(() => {
     if (sellerFromQuery) {
