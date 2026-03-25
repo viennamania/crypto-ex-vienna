@@ -260,6 +260,7 @@ export default function SendUsdt({ params }: any) {
   const searchParams = useSearchParams();
   const storecodeFromQuery = String(searchParams?.get('storecode') || '').trim();
   const memberIdFromQuery = String(searchParams?.get('mb_id') || '').trim().slice(0, 24);
+  const amountKrwFromQuery = String(searchParams?.get('amount_krw') || '').trim().replace(/,/g, '').replace(/[^\d]/g, '');
   const tabFromQuery = String(searchParams?.get('tab') || '').trim().toLowerCase();
   const disconnectRedirectPath = useMemo(() => {
     const query = new URLSearchParams();
@@ -269,9 +270,12 @@ export default function SendUsdt({ params }: any) {
     if (memberIdFromQuery) {
       query.set('mb_id', memberIdFromQuery);
     }
+    if (amountKrwFromQuery) {
+      query.set('amount_krw', amountKrwFromQuery);
+    }
     const queryString = query.toString();
     return `/${lang}/wallet-management${queryString ? `?${queryString}` : ''}`;
-  }, [lang, memberIdFromQuery, storecodeFromQuery]);
+  }, [amountKrwFromQuery, lang, memberIdFromQuery, storecodeFromQuery]);
  
   ///const wallet = searchParams.get('wallet');
   

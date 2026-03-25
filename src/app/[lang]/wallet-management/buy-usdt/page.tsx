@@ -856,6 +856,7 @@ export default function BuyUsdtPage({
   const storecode = String(searchParams?.get('storecode') || '').trim();
   const sellerFromQuery = String(searchParams?.get('seller') || '').trim();
   const memberIdFromQuery = String(searchParams?.get('mb_id') || '').trim().slice(0, 24);
+  const amountKrwFromQuery = normalizeKrwInput(String(searchParams?.get('amount_krw') || '')).slice(0, 12);
   const disconnectRedirectPath = useMemo(() => {
     const query = new URLSearchParams();
     if (storecode) {
@@ -864,9 +865,12 @@ export default function BuyUsdtPage({
     if (memberIdFromQuery) {
       query.set('mb_id', memberIdFromQuery);
     }
+    if (amountKrwFromQuery) {
+      query.set('amount_krw', amountKrwFromQuery);
+    }
     const queryString = query.toString();
     return `/${lang}/wallet-management${queryString ? `?${queryString}` : ''}`;
-  }, [lang, memberIdFromQuery, storecode]);
+  }, [amountKrwFromQuery, lang, memberIdFromQuery, storecode]);
 
   const { chain } = useClientSettings();
   const rawActiveAccount = useActiveAccount();
@@ -1138,6 +1142,12 @@ export default function BuyUsdtPage({
     if (!Number.isFinite(parsed)) return 0;
     return parsed > 0 ? parsed : 0;
   }, [amountInput]);
+  const fixedKrwAmount = useMemo(() => {
+    const parsed = Number(amountKrwFromQuery);
+    if (!Number.isFinite(parsed)) return 0;
+    return parsed > 0 ? Math.floor(parsed) : 0;
+  }, [amountKrwFromQuery]);
+  const isFixedKrwPurchaseMode = fixedKrwAmount > 0;
   const krwAmount = useMemo(() => {
     const parsed = Number(krwInput);
     if (!Number.isFinite(parsed)) return 0;
@@ -2405,7 +2415,40 @@ export default function BuyUsdtPage({
   }, [activePrivateTradeOrder?.orderId, loadPrivateTradeStatus]);
 
   useEffect(() => {
+    if (!isFixedKrwPurchaseMode) {
+      return;
+    }
+
+    const nextKrwInput = fixedKrwAmount > 0 ? String(fixedKrwAmount) : '';
+    const nextUsdtInput = selectedSeller && selectedSeller.rate > 0
+      ? formatUsdtInputFromNumber(fixedKrwAmount / selectedSeller.rate)
+      : '';
+
+    if (krwInput !== nextKrwInput) {
+      setKrwInput(nextKrwInput);
+    }
+    if (amountInput !== nextUsdtInput) {
+      setAmountInput(nextUsdtInput);
+    }
+    if (lastEditedAmountType !== 'krw') {
+      setLastEditedAmountType('krw');
+    }
+    if (selectedQuickAmount !== null) {
+      setSelectedQuickAmount(null);
+    }
+  }, [
+    amountInput,
+    fixedKrwAmount,
+    isFixedKrwPurchaseMode,
+    krwInput,
+    lastEditedAmountType,
+    selectedQuickAmount,
+    selectedSeller,
+  ]);
+
+  useEffect(() => {
     if (!selectedSeller || selectedSeller.rate <= 0) return;
+    if (isFixedKrwPurchaseMode) return;
 
     if (lastEditedAmountType === 'usdt') {
       const nextKrwInput = usdtAmount > 0 ? String(Math.floor(usdtAmount * selectedSeller.rate)) : '';
@@ -2423,6 +2466,7 @@ export default function BuyUsdtPage({
   }, [
     selectedSeller,
     lastEditedAmountType,
+    isFixedKrwPurchaseMode,
     usdtAmount,
     krwAmount,
     krwInput,
@@ -4222,7 +4266,7 @@ export default function BuyUsdtPage({
                   <div className="mt-5 rounded-2xl border border-slate-200 bg-white px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">구매 수량 (USDT)</p>
-                    {selectedSeller && (
+                    {selectedSeller && !isFixedKrwPurchaseMode && (
                       <button
                         type="button"
                         onClick={() => {
@@ -4241,14 +4285,21 @@ export default function BuyUsdtPage({
                   <div className="mt-2 flex items-end justify-between gap-3">
                     <input
                       ref={amountInputRef}
-                      disabled={!selectedSeller || submittingBuy || isSelectedSellerBuyer}
+                      disabled={(!selectedSeller && !isFixedKrwPurchaseMode) || submittingBuy || isSelectedSellerBuyer}
+                      readOnly={isFixedKrwPurchaseMode}
                       value={amountInput}
                       onChange={(event) => {
+                        if (isFixedKrwPurchaseMode) {
+                          return;
+                        }
                         setAmountInput(normalizeUsdtInput(event.target.value));
                         setLastEditedAmountType('usdt');
                         setSelectedQuickAmount(null);
                       }}
                       onBlur={() => {
+                        if (isFixedKrwPurchaseMode) {
+                          return;
+                        }
                         const normalized = Number(normalizeUsdtInput(amountInput));
                         if (!Number.isFinite(normalized) || normalized <= 0) {
                           setAmountInput('');
@@ -4270,9 +4321,13 @@ export default function BuyUsdtPage({
                   </div>
                   <div className="mt-2 flex items-end justify-between gap-3">
                     <input
-                      disabled={!selectedSeller || submittingBuy || isSelectedSellerBuyer}
+                      disabled={(!selectedSeller && !isFixedKrwPurchaseMode) || submittingBuy || isSelectedSellerBuyer}
+                      readOnly={isFixedKrwPurchaseMode}
                       value={krwDisplayInput}
                       onChange={(event) => {
+                        if (isFixedKrwPurchaseMode) {
+                          return;
+                        }
                         setKrwInput(normalizeKrwInput(event.target.value));
                         setLastEditedAmountType('krw');
                         setSelectedQuickAmount(null);
@@ -4285,23 +4340,32 @@ export default function BuyUsdtPage({
                   </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  {QUICK_BUY_AMOUNTS.map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      disabled={!selectedSeller || submittingBuy || isSelectedSellerBuyer}
-                      onClick={() => onSelectQuickAmount(value)}
-                      className={`h-10 rounded-xl border text-sm font-semibold transition ${
-                        selectedQuickAmount === value
-                          ? 'border-slate-900 bg-slate-900 text-white'
-                          : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
-                      } disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400`}
-                    >
-                      {value.toLocaleString(undefined, { maximumFractionDigits: 0 })} USDT
-                    </button>
-                  ))}
-                </div>
+                {isFixedKrwPurchaseMode ? (
+                  <div className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-900">
+                    <p className="font-semibold">구매 금액이 외부 파라미터로 고정되어 있습니다.</p>
+                    <p className="mt-1 text-xs text-cyan-800">
+                      {fixedKrwAmount.toLocaleString()} KRW 기준으로 구매 수량을 자동 계산합니다.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    {QUICK_BUY_AMOUNTS.map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        disabled={!selectedSeller || submittingBuy || isSelectedSellerBuyer}
+                        onClick={() => onSelectQuickAmount(value)}
+                        className={`h-10 rounded-xl border text-sm font-semibold transition ${
+                          selectedQuickAmount === value
+                            ? 'border-slate-900 bg-slate-900 text-white'
+                            : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+                        } disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400`}
+                      >
+                        {value.toLocaleString(undefined, { maximumFractionDigits: 0 })} USDT
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
                   <div className="flex items-center justify-between">

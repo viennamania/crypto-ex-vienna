@@ -69,6 +69,7 @@ export default function WalletManagementBottomNav({
   const storecode = String(searchParams?.get('storecode') || '').trim();
   const seller = String(searchParams?.get('seller') || '').trim();
   const memberIdFromQuery = String(searchParams?.get('mb_id') || '').trim().slice(0, 24);
+  const amountKrwFromQuery = String(searchParams?.get('amount_krw') || '').trim().replace(/,/g, '').replace(/[^\d]/g, '');
   const [hasValidStoreInfo, setHasValidStoreInfo] = useState(false);
 
   useEffect(() => {
@@ -130,6 +131,9 @@ export default function WalletManagementBottomNav({
     }
     if (memberIdFromQuery) {
       query.set('mb_id', memberIdFromQuery);
+    }
+    if (amountKrwFromQuery) {
+      query.set('amount_krw', amountKrwFromQuery);
     }
     if (navKey === 'buy' && seller) {
       query.set('seller', seller);
