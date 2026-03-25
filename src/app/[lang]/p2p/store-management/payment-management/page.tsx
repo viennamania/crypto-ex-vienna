@@ -102,6 +102,8 @@ const formatUsdt = (value: number) =>
 
 const formatRate = (value: number) =>
   `${new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0)} KRW`;
+const formatRateNumber = (value: number) =>
+  new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
 const resolvePolygonTxScanUrl = (transactionHash: string) => {
   const normalized = String(transactionHash || '').trim();
   if (!/^0x[a-fA-F0-9]{64}$/.test(normalized)) {
@@ -977,9 +979,8 @@ export default function P2PStorePaymentManagementPage() {
                             <th className="w-[180px] px-2 py-2">결제번호 / 상품번호</th>
                             <th className="px-3 py-2">회원 / 송신 지갑</th>
                             <th className="w-[140px] px-2 py-2 text-right">USDT / KRW</th>
-                            <th className="px-3 py-2">환율</th>
+                            <th className="px-3 py-2 text-right">환율</th>
                             <th className="px-3 py-2">TX</th>
-                            <th className="px-3 py-2">메모</th>
                             <th className="w-[240px] px-3 py-2">결제처리</th>
                           </tr>
                         </thead>
@@ -1049,15 +1050,17 @@ export default function P2PStorePaymentManagementPage() {
                                 </p>
                               </td>
                               <td className="px-2 py-2.5 text-right">
-                                <p className="font-semibold text-slate-900">
-                                  {formatUsdt(payment.usdtAmount)}
-                                </p>
-                                <p className="mt-0.5 font-semibold text-slate-700">
-                                  {formatKrw(payment.krwAmount)}
-                                </p>
+                                <div className="flex flex-col items-end gap-0.5">
+                                  <p className="font-semibold leading-tight text-slate-900">
+                                    {formatUsdt(payment.usdtAmount)}
+                                  </p>
+                                  <p className="font-semibold leading-tight text-slate-700">
+                                    {formatKrw(payment.krwAmount)}
+                                  </p>
+                                </div>
                               </td>
-                              <td className="px-3 py-2.5 text-xs text-slate-600">
-                                1 USDT = {formatRate(payment.exchangeRate)}
+                              <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600">
+                                {formatRateNumber(payment.exchangeRate)}
                               </td>
                               <td className="px-3 py-2.5 text-xs text-slate-500">
                                 {txScanUrl ? (
@@ -1073,11 +1076,6 @@ export default function P2PStorePaymentManagementPage() {
                                 ) : (
                                   '-'
                                 )}
-                              </td>
-                              <td className="px-3 py-2.5">
-                                <p className="max-w-[280px] whitespace-pre-wrap break-words text-xs leading-relaxed text-slate-600">
-                                  {String(payment.orderProcessingMemo || '').trim() || '-'}
-                                </p>
                               </td>
                               <td className="px-3 py-2.5 text-xs">
                                 <div className="flex flex-col items-start gap-2">
