@@ -18,6 +18,7 @@ import { useClientWallets } from '@/lib/useClientWallets';
 import { useClientSettings } from '@/components/ClientSettingsProvider';
 import { createWalletSignatureAuthPayload } from '@/lib/security/walletSignature';
 import WalletConnectPrompt from '@/components/wallet-management/WalletConnectPrompt';
+import StoreMemberSummaryCard from '@/components/wallet-management/StoreMemberSummaryCard';
 import WalletSummaryCard from '@/components/wallet-management/WalletSummaryCard';
 import WalletManagementBottomNav from '@/components/wallet-management/WalletManagementBottomNav';
 import {
@@ -3584,15 +3585,24 @@ export default function BuyUsdtPage({
         </div>
 
         {activeAccount?.address ? (
-          <WalletSummaryCard
-            walletAddress={activeAccount.address}
-            usdtBalanceDisplay={
-              `${formatUsdtDisplay(balance)} USDT`
-            }
-            modeLabel={buyTabLabel}
-            smartAccountEnabled={smartAccountEnabled}
-            disconnectRedirectPath={disconnectRedirectPath}
-          />
+          <>
+            <WalletSummaryCard
+              walletAddress={activeAccount.address}
+              usdtBalanceDisplay={
+                `${formatUsdtDisplay(balance)} USDT`
+              }
+              modeLabel={buyTabLabel}
+              smartAccountEnabled={smartAccountEnabled}
+              disconnectRedirectPath={disconnectRedirectPath}
+            />
+            {isStoreScopedPurchase && hasStoreMemberProfile && !loadingStoreMemberProfile && (
+              <StoreMemberSummaryCard
+                memberId={storeMemberProfile?.nickname || ''}
+                memberName={storeMemberAccountHolder}
+                storeLabel={selectedStoreInfo?.storeName || storecode}
+              />
+            )}
+          </>
         ) : (
           <div className="mb-6 rounded-2xl border border-white/70 bg-white/70 p-4 shadow-[0_20px_50px_-30px_rgba(15,23,42,0.5)] backdrop-blur">
             <WalletConnectPrompt

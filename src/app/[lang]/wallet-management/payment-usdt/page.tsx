@@ -33,6 +33,7 @@ import { useClientSettings } from '@/components/ClientSettingsProvider';
 import { createWalletSignatureAuthPayload } from '@/lib/security/walletSignature';
 import WalletManagementBottomNav from '@/components/wallet-management/WalletManagementBottomNav';
 import WalletConnectPrompt from '@/components/wallet-management/WalletConnectPrompt';
+import StoreMemberSummaryCard from '@/components/wallet-management/StoreMemberSummaryCard';
 import WalletSummaryCard from '@/components/wallet-management/WalletSummaryCard';
 import {
   ethereumContractAddressUSDT,
@@ -1582,13 +1583,22 @@ export default function PaymentUsdtPage({
         </div>
 
         {activeAccount?.address ? (
-          <WalletSummaryCard
-            walletAddress={activeAccount.address}
-            usdtBalanceDisplay={`${balance.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })} USDT`}
-            modeLabel={paymentTabLabel}
-            smartAccountEnabled={smartAccountEnabled}
-            disconnectRedirectPath={disconnectRedirectPath}
-          />
+          <>
+            <WalletSummaryCard
+              walletAddress={activeAccount.address}
+              usdtBalanceDisplay={`${balance.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })} USDT`}
+              modeLabel={paymentTabLabel}
+              smartAccountEnabled={smartAccountEnabled}
+              disconnectRedirectPath={disconnectRedirectPath}
+            />
+            {selectedMerchant && hasMemberProfile && !loadingMemberProfile && (
+              <StoreMemberSummaryCard
+                memberId={myMemberProfile?.nickname || ''}
+                memberName={memberBankInfoSnapshot?.accountHolder || memberBankInfoSnapshot?.depositName || ''}
+                storeLabel={selectedMerchant.storeName || selectedStorecode}
+              />
+            )}
+          </>
         ) : (
           <div className="mb-6 rounded-2xl border border-white/70 bg-white/70 p-4 shadow-[0_20px_50px_-30px_rgba(15,23,42,0.5)] backdrop-blur">
             <WalletConnectPrompt
@@ -1855,7 +1865,7 @@ export default function PaymentUsdtPage({
                   </div>
                 )}
 
-                {activeAccount?.address && selectedMerchant && (
+                {activeAccount?.address && selectedMerchant && (!hasMemberProfile || loadingMemberProfile) && (
                   <div
                     ref={memberStatusCardRef}
                     className={`mb-4 rounded-[26px] border px-4 py-3 text-sm ${

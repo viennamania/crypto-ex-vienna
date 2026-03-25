@@ -15,6 +15,7 @@ import { useClientWallets } from '@/lib/useClientWallets';
 import { useClientSettings } from '@/components/ClientSettingsProvider';
 import { rgbaFromHex, resolveStoreBrandColor } from '@/lib/storeBranding';
 import WalletConnectPrompt from '@/components/wallet-management/WalletConnectPrompt';
+import StoreMemberSummaryCard from '@/components/wallet-management/StoreMemberSummaryCard';
 import WalletSummaryCard from '@/components/wallet-management/WalletSummaryCard';
 import WalletManagementBottomNav from '@/components/wallet-management/WalletManagementBottomNav';
 import {
@@ -65,6 +66,11 @@ type NoticePreviewItem = {
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+};
+
+type LinkedStoreMemberProfile = {
+  nickname: string;
+  buyer: Record<string, unknown> | null;
 };
 
 const displayFont = Playfair_Display({
@@ -164,6 +170,18 @@ const resolveNoticeDateLabel = (notice: NoticePreviewItem): string => {
   return parsedDate.toISOString().slice(0, 10);
 };
 
+const resolveLinkedStoreMemberName = (buyer: unknown) => {
+  if (!isRecord(buyer)) return '';
+
+  const bankInfo = isRecord(buyer.bankInfo) ? buyer.bankInfo : null;
+  return String(
+    bankInfo?.accountHolder ||
+      bankInfo?.depositName ||
+      buyer.depositName ||
+      '',
+  ).trim();
+};
+
 const BALANCE_SYNC_WARNING_THRESHOLD = 3;
 const HOME_SHORTCUT_BANNER_HIDE_KEY = 'wallet-home-shortcut-banner-hide-until';
 const HOME_SHORTCUT_BANNER_HIDE_DAYS = 7;
@@ -246,6 +264,7 @@ export default function WalletManagementHomePage() {
   const [notices, setNotices] = useState<NoticePreviewItem[]>([]);
   const [loadingNotices, setLoadingNotices] = useState(true);
   const [noticesError, setNoticesError] = useState<string | null>(null);
+  const [linkedStoreMemberProfile, setLinkedStoreMemberProfile] = useState<LinkedStoreMemberProfile | null>(null);
 
   const storeBrandColor = useMemo(
     () => resolveStoreBrandColor(storecode, paymentStoreInfo?.backgroundColor),
@@ -278,6 +297,10 @@ export default function WalletManagementHomePage() {
   const balanceSyncStatusLabel = isBalanceSyncWarning
     ? '잔액 갱신 지연'
     : '실시간 동기화 중';
+  const linkedStoreMemberName = useMemo(
+    () => resolveLinkedStoreMemberName(linkedStoreMemberProfile?.buyer),
+    [linkedStoreMemberProfile?.buyer],
+  );
 
   const hideHomeShortcutBanner = useCallback((days: number = HOME_SHORTCUT_BANNER_HIDE_DAYS) => {
     const hideUntil = Date.now() + days * 24 * 60 * 60 * 1000;
@@ -408,6 +431,60 @@ export default function WalletManagementHomePage() {
 
     return () => clearInterval(interval);
   }, [activeAccount?.address, loadBalance]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!activeAccount?.address || !storecode) {
+      setLinkedStoreMemberProfile(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const loadLinkedStoreMemberProfile = async () => {
+      try {
+        const response = await fetch('/api/user/getUser', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storecode,
+            walletAddress: activeAccount.address,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(String(data?.error || '회원 정보를 불러오지 못했습니다.'));
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        const user = data?.result;
+        if (user && typeof user === 'object') {
+          setLinkedStoreMemberProfile({
+            nickname: String(user?.nickname || '').trim(),
+            buyer: isRecord(user?.buyer) ? (user.buyer as Record<string, unknown>) : null,
+          });
+          return;
+        }
+
+        setLinkedStoreMemberProfile(null);
+      } catch (error) {
+        console.error('Failed to load linked store member profile for wallet home', error);
+        if (!cancelled) {
+          setLinkedStoreMemberProfile(null);
+        }
+      }
+    };
+
+    void loadLinkedStoreMemberProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeAccount?.address, storecode]);
 
   const loadSellers = useCallback(async () => {
     setLoadingSellers(true);
@@ -727,6 +804,14 @@ export default function WalletManagementHomePage() {
               modeLabel="홈"
               smartAccountEnabled={smartAccountEnabled}
             />
+
+            {storecode && linkedStoreMemberProfile?.nickname && (
+              <StoreMemberSummaryCard
+                memberId={linkedStoreMemberProfile.nickname}
+                memberName={linkedStoreMemberName}
+                storeLabel={paymentStoreInfo?.storeName || storecode}
+              />
+            )}
 
             {storecode && paymentStoreInfo && (
               <section
