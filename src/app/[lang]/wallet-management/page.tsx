@@ -195,6 +195,7 @@ export default function WalletManagementHomePage() {
   const sellerWalletFromQuery = String(searchParams?.get('seller') || '').trim();
   const memberIdFromQuery = String(searchParams?.get('mb_id') || '').trim().slice(0, 24);
   const amountKrwFromQuery = String(searchParams?.get('amount_krw') || '').trim().replace(/,/g, '').replace(/[^\d]/g, '');
+  const productIdFromQuery = String(searchParams?.get('product_id') || '').trim().slice(0, 120);
   const baseQueryString = useMemo(() => {
     const query = new URLSearchParams();
     if (storecode) {
@@ -206,8 +207,11 @@ export default function WalletManagementHomePage() {
     if (amountKrwFromQuery) {
       query.set('amount_krw', amountKrwFromQuery);
     }
+    if (productIdFromQuery) {
+      query.set('product_id', productIdFromQuery);
+    }
     return query.toString();
-  }, [amountKrwFromQuery, memberIdFromQuery, storecode]);
+  }, [amountKrwFromQuery, memberIdFromQuery, productIdFromQuery, storecode]);
   const walletPath = `/${lang}/wallet-management/wallet-usdt${baseQueryString ? `?${baseQueryString}` : ''}`;
   const paymentPath = `/${lang}/wallet-management/payment-usdt${baseQueryString ? `?${baseQueryString}` : ''}`;
   const noticePath = `/${lang}/wallet-management/notice${baseQueryString ? `?${baseQueryString}` : ''}`;

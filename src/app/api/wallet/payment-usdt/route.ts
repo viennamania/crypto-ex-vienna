@@ -34,6 +34,8 @@ type PaymentMemberSnapshot = {
 type WalletPaymentDocument = {
   _id?: ObjectId;
   paymentId?: string;
+  productId?: string;
+  product_id?: string;
   prepareRequestKey?: string;
   agentcode?: string;
   storecode: string;
@@ -350,6 +352,8 @@ const serializePayment = (doc: WalletPaymentDocument & { _id?: ObjectId }) => {
   return {
     id: doc._id?.toString() || "",
     paymentId: String(doc.paymentId || ""),
+    productId: String(doc.productId ?? doc.product_id ?? ""),
+    product_id: String(doc.productId ?? doc.product_id ?? ""),
     agentcode: doc.agentcode || "",
     storecode: doc.storecode,
     storeName: doc.storeName,
@@ -388,6 +392,8 @@ const serializePayment = (doc: WalletPaymentDocument & { _id?: ObjectId }) => {
 const serializePreparedPaymentRequest = (doc: WalletPaymentDocument & { _id?: ObjectId }) => ({
   paymentRequestId: doc._id?.toString() || "",
   paymentId: String(doc.paymentId || ""),
+  productId: String(doc.productId ?? doc.product_id ?? ""),
+  product_id: String(doc.productId ?? doc.product_id ?? ""),
   agentcode: doc.agentcode || "",
   storecode: doc.storecode,
   storeName: doc.storeName,
@@ -885,6 +891,7 @@ export async function POST(request: NextRequest) {
     let fromWalletAddress = normalizeAddress(body?.fromWalletAddress);
     const usdtAmount = normalizeAmount(body?.usdtAmount);
     const chain = normalizeChain(body?.chain);
+    const productId = String(body?.productId ?? body?.product_id ?? "").trim().slice(0, 120);
     const prepareRequestKey = String(
       body?.prepareRequestKey
       ?? body?.prepare_request_key
@@ -1036,7 +1043,7 @@ export async function POST(request: NextRequest) {
     const recentPreparedThresholdIso = new Date(
       Date.now() - PREPARE_IDEMPOTENCY_WINDOW_MS,
     ).toISOString();
-    const existingRecentPrepared = await collection.findOne(
+    const recentPreparedConditions: any[] = [
       {
         status: "prepared",
         storecode: { $regex: `^${escapeRegex(storecode)}$`, $options: "i" },
@@ -1046,6 +1053,36 @@ export async function POST(request: NextRequest) {
         usdtAmount,
         createdAt: { $gte: recentPreparedThresholdIso },
       },
+    ];
+    if (productId) {
+      recentPreparedConditions.push({
+        $or: [
+          { productId: { $regex: `^${escapeRegex(productId)}$`, $options: "i" } },
+          { product_id: { $regex: `^${escapeRegex(productId)}$`, $options: "i" } },
+        ],
+      });
+    } else {
+      recentPreparedConditions.push({
+        $and: [
+          {
+            $or: [
+              { productId: { $exists: false } },
+              { productId: "" },
+            ],
+          },
+          {
+            $or: [
+              { product_id: { $exists: false } },
+              { product_id: "" },
+            ],
+          },
+        ],
+      });
+    }
+    const existingRecentPrepared = await collection.findOne(
+      recentPreparedConditions.length === 1
+        ? recentPreparedConditions[0]
+        : { $and: recentPreparedConditions },
       { sort: { createdAt: -1 } },
     );
     if (existingRecentPrepared) {
@@ -1076,6 +1113,7 @@ export async function POST(request: NextRequest) {
           }
         : {}),
       ...(prepareRequestKey ? { prepareRequestKey } : {}),
+      ...(productId ? { productId, product_id: productId } : {}),
       status: "prepared",
       createdAt: new Date().toISOString(),
       ...(memberSnapshot ? { member: memberSnapshot } : {}),
@@ -1096,6 +1134,7 @@ export async function POST(request: NextRequest) {
     let fromWalletAddress = normalizeAddress(body?.fromWalletAddress);
     const transactionHash = normalizeHash(body?.transactionHash);
     const storecode = String(body?.storecode || "").trim();
+    const productId = String(body?.productId ?? body?.product_id ?? "").trim().slice(0, 120);
 
     const signatureAuth = await verifyWalletAuthFromBody({
       body,
@@ -1186,6 +1225,10 @@ export async function POST(request: NextRequest) {
       transactionHash,
       confirmedAt: new Date().toISOString(),
     };
+    if (productId) {
+      updatePayload.productId = productId;
+      updatePayload.product_id = productId;
+    }
     if (resolvedAgentcode && resolvedAgentcode !== currentAgentcode) {
       updatePayload.agentcode = resolvedAgentcode;
     }

@@ -88,6 +88,7 @@ export default function WalletManagementNoticePage() {
   const storecode = String(searchParams?.get('storecode') || '').trim();
   const memberIdFromQuery = String(searchParams?.get('mb_id') || '').trim().slice(0, 24);
   const amountKrwFromQuery = String(searchParams?.get('amount_krw') || '').trim().replace(/,/g, '').replace(/[^\d]/g, '');
+  const productIdFromQuery = String(searchParams?.get('product_id') || '').trim().slice(0, 120);
   const noticeIdFromQuery = String(searchParams?.get('noticeId') || '').trim();
 
   const [notices, setNotices] = useState<NoticeItem[]>([]);
@@ -119,9 +120,12 @@ export default function WalletManagementNoticePage() {
     if (amountKrwFromQuery) {
       query.set('amount_krw', amountKrwFromQuery);
     }
+    if (productIdFromQuery) {
+      query.set('product_id', productIdFromQuery);
+    }
     const queryString = query.toString();
     return `/${lang}/wallet-management${queryString ? `?${queryString}` : ''}`;
-  }, [amountKrwFromQuery, lang, memberIdFromQuery, storecode]);
+  }, [amountKrwFromQuery, lang, memberIdFromQuery, productIdFromQuery, storecode]);
 
   const selectedNotice = useMemo(
     () => notices.find((item) => item.id === selectedNoticeId) || null,

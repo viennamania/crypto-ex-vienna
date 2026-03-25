@@ -37,6 +37,7 @@ type DashboardDaily = {
 type DashboardPayment = {
   id: string;
   paymentId: string;
+  productId: string;
   usdtAmount: number;
   krwAmount: number;
   exchangeRate: number;
@@ -351,6 +352,7 @@ export default function P2PStorePaymentManagementPage() {
         return {
           id: String(payment.id || ''),
           paymentId: String(payment.paymentId || ''),
+          productId: String(payment.productId || payment.product_id || ''),
           usdtAmount: Number(payment.usdtAmount || 0),
           krwAmount: Number(payment.krwAmount || 0),
           exchangeRate: Number(payment.exchangeRate || 0),
@@ -973,6 +975,7 @@ export default function P2PStorePaymentManagementPage() {
                           <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
                             <th className="w-[96px] px-2 py-2">일시</th>
                             <th className="w-[130px] px-2 py-2">결제번호(PID)</th>
+                            <th className="w-[130px] px-2 py-2">상품번호</th>
                             <th className="px-3 py-2">회원 / 송신 지갑</th>
                             <th className="w-[140px] px-2 py-2 text-right">USDT / KRW</th>
                             <th className="px-3 py-2">환율</th>
@@ -1019,6 +1022,9 @@ export default function P2PStorePaymentManagementPage() {
                                 ) : (
                                   '-'
                                 )}
+                              </td>
+                              <td className="px-2 py-2.5 text-xs font-semibold text-slate-700">
+                                <p className="break-all">{payment.productId || '-'}</p>
                               </td>
                               <td className="px-3 py-2.5">
                                 <p className="break-all text-sm font-semibold leading-tight text-slate-900">
@@ -1179,6 +1185,8 @@ export default function P2PStorePaymentManagementPage() {
               <div className="grid grid-cols-[108px_1fr] gap-x-3 gap-y-2 text-sm">
                 <p className="text-xs font-semibold text-slate-500">결제번호</p>
                 <p className="break-all font-semibold text-slate-900">{selectedPayment.paymentId || '-'}</p>
+                <p className="text-xs font-semibold text-slate-500">상품번호</p>
+                <p className="break-all font-semibold text-slate-900">{selectedPayment.productId || '-'}</p>
                 <p className="text-xs font-semibold text-slate-500">트랜잭션</p>
                 <p className="break-all font-semibold text-slate-900">{selectedPayment.transactionHash || selectedPayment.id || '-'}</p>
                 <p className="text-xs font-semibold text-slate-500">회원</p>
@@ -1263,7 +1271,7 @@ export default function P2PStorePaymentManagementPage() {
 
           .p2p-mobile-shell .store-payment-table {
             width: max-content !important;
-            min-width: 1080px !important;
+            min-width: 1200px !important;
             table-layout: auto !important;
           }
         }

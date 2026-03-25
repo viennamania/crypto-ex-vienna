@@ -95,6 +95,8 @@ const dispatchPaymentCompletedCallback = async ({
     payment: {
       id: String(payment._id || '').trim(),
       paymentId: String(payment.paymentId || '').trim(),
+      productId: String(payment.productId || payment.product_id || '').trim(),
+      product_id: String(payment.productId || payment.product_id || '').trim(),
       status: String(payment.order_processing || 'COMPLETED').trim().toUpperCase(),
       usdtAmount: Number(payment.usdtAmount || 0),
       krwAmount: Number(payment.krwAmount || 0),
@@ -989,6 +991,8 @@ export async function updateWalletUsdtPaymentOrderProcessing({
         createdAt: 1,
         confirmedAt: 1,
         member: 1,
+        productId: 1,
+        product_id: 1,
       },
     },
   );

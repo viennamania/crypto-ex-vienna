@@ -65,6 +65,7 @@ type Merchant = {
 type PaymentRecord = {
   id: string;
   paymentId: string;
+  productId: string;
   storecode: string;
   storeName: string;
   chain: NetworkKey;
@@ -221,6 +222,7 @@ type PendingPaymentConfirm = {
   chain: NetworkKey;
   usdtAmount: number;
   createdAt: string;
+  productId?: string;
   transactionHash?: string;
   lastError?: string;
   lastTriedAt?: string;
@@ -262,6 +264,7 @@ const readPendingPaymentConfirms = (): PendingPaymentConfirm[] => {
         }
 
         const transactionHash = String(item.transactionHash || '').trim();
+        const productId = String(item.productId || item.product_id || '').trim();
         const lastError = String(item.lastError || '').trim();
         const lastTriedAt = String(item.lastTriedAt || '').trim();
         const usdtAmount = toSafeNumber(item.usdtAmount);
@@ -272,6 +275,7 @@ const readPendingPaymentConfirms = (): PendingPaymentConfirm[] => {
           chain: chainCandidate,
           usdtAmount,
           createdAt,
+          ...(productId ? { productId } : {}),
           ...(transactionHash ? { transactionHash } : {}),
           ...(lastError ? { lastError } : {}),
           ...(lastTriedAt ? { lastTriedAt } : {}),
@@ -363,6 +367,7 @@ const normalizePaymentRecord = (value: unknown): PaymentRecord | null => {
   return {
     id: String(value.id || value._id || '').trim(),
     paymentId: String(value.paymentId || '').trim(),
+    productId: String(value.productId || value.product_id || '').trim(),
     storecode: String(value.storecode || '').trim(),
     storeName: String(value.storeName || value.storecode || '').trim(),
     chain,
@@ -461,6 +466,7 @@ export default function PaymentUsdtPage({
   const storecodeFromQuery = String(searchParams?.get('storecode') || '').trim();
   const memberIdFromQuery = String(searchParams?.get('mb_id') || '').trim().slice(0, 24);
   const amountKrwFromQuery = String(searchParams?.get('amount_krw') || '').trim().replace(/,/g, '').replace(/[^\d]/g, '');
+  const productIdFromQuery = String(searchParams?.get('product_id') || '').trim().slice(0, 120);
   const hasStorecodeParam = Boolean(storecodeFromQuery);
   const disconnectRedirectPath = useMemo(() => {
     const query = new URLSearchParams();
@@ -473,9 +479,12 @@ export default function PaymentUsdtPage({
     if (amountKrwFromQuery) {
       query.set('amount_krw', amountKrwFromQuery);
     }
+    if (productIdFromQuery) {
+      query.set('product_id', productIdFromQuery);
+    }
     const queryString = query.toString();
     return `/${lang}/wallet-management${queryString ? `?${queryString}` : ''}`;
-  }, [amountKrwFromQuery, lang, memberIdFromQuery, storecodeFromQuery]);
+  }, [amountKrwFromQuery, lang, memberIdFromQuery, productIdFromQuery, storecodeFromQuery]);
   const { chain } = useClientSettings();
   const rawActiveAccount = useActiveAccount();
   const activeWallet = useActiveWallet();
@@ -998,12 +1007,14 @@ export default function PaymentUsdtPage({
     fromWalletAddress,
     transactionHash,
     requestStorecode,
+    productId,
     retryDelaysMs = PENDING_PAYMENT_CONFIRM_RETRY_DELAYS_MS,
   }: {
     paymentRequestId: string;
     fromWalletAddress: string;
     transactionHash: string;
     requestStorecode?: string;
+    productId?: string;
     retryDelaysMs?: readonly number[];
   }) => {
     let latestError: Error | null = null;
@@ -1027,6 +1038,7 @@ export default function PaymentUsdtPage({
             fromWalletAddress,
             transactionHash,
             ...(requestStorecode ? { storecode: requestStorecode } : {}),
+            ...(productId ? { productId } : {}),
           },
         });
         const response = await fetch('/api/wallet/payment-usdt', {
@@ -1085,6 +1097,7 @@ export default function PaymentUsdtPage({
             fromWalletAddress: item.fromWalletAddress,
             transactionHash: item.transactionHash,
             requestStorecode: item.storecode,
+            productId: item.productId,
             retryDelaysMs: [0, 1000],
           });
           recoveredCount += 1;
@@ -1428,6 +1441,7 @@ export default function PaymentUsdtPage({
           krwAmount,
           exchangeRate,
           usdtAmount,
+          ...(productIdFromQuery ? { productId: productIdFromQuery } : {}),
           prepareRequestKey,
           memberNickname: myMemberProfile?.nickname || '',
           memberStorecode: myMemberProfile?.storecode || '',
@@ -1459,6 +1473,7 @@ export default function PaymentUsdtPage({
         chain: activeNetwork.id,
         usdtAmount,
         createdAt: new Date().toISOString(),
+        ...(productIdFromQuery ? { productId: productIdFromQuery } : {}),
       };
       upsertPendingPaymentConfirm(pendingConfirm);
 
@@ -1489,6 +1504,7 @@ export default function PaymentUsdtPage({
         fromWalletAddress: payerWalletAddress,
         transactionHash,
         requestStorecode: selectedStoreCode,
+        productId: productIdFromQuery,
       });
 
       removePendingPaymentConfirm(paymentRequestId);
@@ -1699,6 +1715,16 @@ export default function PaymentUsdtPage({
                           </div>
                         ))}
                       </div>
+                      {productIdFromQuery && (
+                        <div className="rounded-2xl border border-cyan-200 bg-white/90 px-3.5 py-3 shadow-[0_14px_34px_-24px_rgba(15,23,42,0.28)]">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-700">
+                            결제할 상품번호
+                          </p>
+                          <p className="mt-1 break-all text-base font-extrabold leading-tight text-slate-900">
+                            {productIdFromQuery}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2363,6 +2389,12 @@ export default function PaymentUsdtPage({
                 <span className="text-slate-500">상점</span>
                 <span className="font-semibold text-slate-800">{selectedMerchant.storeName}</span>
               </div>
+              {productIdFromQuery && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-slate-500">상품번호</span>
+                  <span className="break-all text-right font-semibold text-slate-800">{productIdFromQuery}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">입력 수량 (USDT)</span>
                 <span className="font-semibold text-slate-800">{formatUsdt(usdtAmount)}</span>

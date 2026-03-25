@@ -858,6 +858,7 @@ export default function BuyUsdtPage({
   const sellerFromQuery = String(searchParams?.get('seller') || '').trim();
   const memberIdFromQuery = String(searchParams?.get('mb_id') || '').trim().slice(0, 24);
   const amountKrwFromQuery = normalizeKrwInput(String(searchParams?.get('amount_krw') || '')).slice(0, 12);
+  const productIdFromQuery = String(searchParams?.get('product_id') || '').trim().slice(0, 120);
   const disconnectRedirectPath = useMemo(() => {
     const query = new URLSearchParams();
     if (storecode) {
@@ -869,9 +870,12 @@ export default function BuyUsdtPage({
     if (amountKrwFromQuery) {
       query.set('amount_krw', amountKrwFromQuery);
     }
+    if (productIdFromQuery) {
+      query.set('product_id', productIdFromQuery);
+    }
     const queryString = query.toString();
     return `/${lang}/wallet-management${queryString ? `?${queryString}` : ''}`;
-  }, [amountKrwFromQuery, lang, memberIdFromQuery, storecode]);
+  }, [amountKrwFromQuery, lang, memberIdFromQuery, productIdFromQuery, storecode]);
 
   const { chain } = useClientSettings();
   const rawActiveAccount = useActiveAccount();
@@ -3639,68 +3643,72 @@ export default function BuyUsdtPage({
 
             {buyTab === 'buy' ? (
               <>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">STEP 1</p>
-              <h2 className="mt-1 text-lg font-semibold text-slate-900">판매자 선택 및 구매 신청</h2>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">구매자 정보</p>
-
-              {loadingBuyerProfile ? (
-                <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <span className="relative inline-flex h-5 w-5 items-center justify-center">
-                      <span className="absolute h-5 w-5 rounded-full border-2 border-cyan-300/80" />
-                      <span className="h-2.5 w-2.5 rounded-full bg-cyan-600 animate-ping" />
-                    </span>
-                    <p className="text-sm font-semibold text-cyan-800">나의 지갑과 연동된 구매자 정보를 조회중입니다...</p>
-                  </div>
-                  <div className="mt-2 flex items-center gap-1.5 pl-7">
-                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce [animation-delay:120ms]" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce [animation-delay:240ms]" />
-                    <span className="text-[11px] font-semibold text-cyan-700">검색 중...</span>
-                  </div>
-                </div>
-              ) : hasBuyerProfileForPurchase ? (
-                <div className="mt-2 grid grid-cols-1 gap-2 text-xs">
-                  <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                    <p className="text-slate-500">입금자명</p>
-                    <p className="mt-1 text-center text-2xl font-extrabold leading-tight tracking-tight text-slate-900">
-                      {buyerDepositName || '-'}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                    <span className="text-xs font-semibold text-rose-700">
-                      조회 결과: 등록된 구매자 정보가 없습니다.
-                    </span>
-                  </div>
-
-                  <div className="mt-3 rounded-2xl border border-amber-200 bg-[linear-gradient(135deg,#fff7ed_0%,#fffbeb_100%)] px-3 py-3">
-                    <p className="text-xs font-semibold text-amber-800">
-                      구매 신청 전에 구매자 정보(입금자명)를 먼저 입력해 주세요.
-                    </p>
-                    {isStoreScopedPurchase && !hasStoreMemberProfile && (
-                      <p className="mt-1 text-xs font-semibold text-amber-800">
-                        가맹점 회원정보 연동이 먼저 완료되어야 구매를 진행할 수 있습니다.
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      onClick={openBuyerProfileModal}
-                      className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl border border-amber-300 bg-white text-sm font-semibold text-amber-800 transition hover:border-amber-400 hover:bg-amber-50"
-                    >
-                      구매자 정보 입력하기
-                    </button>
-                  </div>
-                </>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">STEP 1</p>
+                <h2 className="mt-1 text-lg font-semibold text-slate-900">판매자 선택 및 구매 신청</h2>
+              </div>
+              {activeAccount?.address && !loadingBuyerProfile && hasBuyerProfileForPurchase && (
+                <button
+                  type="button"
+                  onClick={openBuyerProfileModal}
+                  className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                >
+                  {isStoreScopedPurchase ? '구매자 정보 확인' : '구매자 정보 수정'}
+                </button>
               )}
             </div>
+
+            {(loadingBuyerProfile || !hasBuyerProfileForPurchase) && (
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">구매자 정보</p>
+
+                {loadingBuyerProfile ? (
+                  <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="relative inline-flex h-5 w-5 items-center justify-center">
+                        <span className="absolute h-5 w-5 rounded-full border-2 border-cyan-300/80" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-cyan-600 animate-ping" />
+                      </span>
+                      <p className="text-sm font-semibold text-cyan-800">나의 지갑과 연동된 구매자 정보를 조회중입니다...</p>
+                    </div>
+                    <div className="mt-2 flex items-center gap-1.5 pl-7">
+                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce [animation-delay:120ms]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-bounce [animation-delay:240ms]" />
+                      <span className="text-[11px] font-semibold text-cyan-700">검색 중...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                      <span className="text-xs font-semibold text-rose-700">
+                        조회 결과: 등록된 구매자 정보가 없습니다.
+                      </span>
+                    </div>
+
+                    <div className="mt-3 rounded-2xl border border-amber-200 bg-[linear-gradient(135deg,#fff7ed_0%,#fffbeb_100%)] px-3 py-3">
+                      <p className="text-xs font-semibold text-amber-800">
+                        구매 신청 전에 구매자 정보(입금자명)를 먼저 입력해 주세요.
+                      </p>
+                      {isStoreScopedPurchase && !hasStoreMemberProfile && (
+                        <p className="mt-1 text-xs font-semibold text-amber-800">
+                          가맹점 회원정보 연동이 먼저 완료되어야 구매를 진행할 수 있습니다.
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={openBuyerProfileModal}
+                        className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl border border-amber-300 bg-white text-sm font-semibold text-amber-800 transition hover:border-amber-400 hover:bg-amber-50"
+                      >
+                        구매자 정보 입력하기
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             <div className="mt-2 rounded-lg border border-slate-200 bg-white/90 px-2.5 py-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">최근 구매 1건</p>
