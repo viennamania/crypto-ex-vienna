@@ -987,6 +987,7 @@ export default function WalletManagementHomePage() {
               balanceUpdatedAtWarning={isBalanceSyncWarning}
               modeLabel="홈"
               smartAccountEnabled={smartAccountEnabled}
+              showWalletAddressSection
             />
 
             {storecode && (loadingLinkedStoreMemberProfile || !linkedStoreMemberProfile?.nickname) && (

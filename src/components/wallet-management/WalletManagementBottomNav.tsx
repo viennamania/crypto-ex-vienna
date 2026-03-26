@@ -124,6 +124,17 @@ export default function WalletManagementBottomNav({
     () => NAV_ITEMS.filter((item) => !(item.key === 'wallet' && hasValidStoreInfo)),
     [hasValidStoreInfo],
   );
+  const orderedNavItems = useMemo(() => {
+    const priority: Record<WalletManagementBottomNavProps['active'], number> = {
+      home: 0,
+      payment: 1,
+      buy: 2,
+      wallet: 3,
+    };
+
+    return [...visibleNavItems].sort((a, b) => priority[a.key] - priority[b.key]);
+  }, [visibleNavItems]);
+  const navGridColsClass = orderedNavItems.length >= 4 ? 'grid-cols-5' : 'grid-cols-4';
 
   const withQuery = (href: string, navKey: 'home' | 'wallet' | 'payment' | 'buy') => {
     const query = new URLSearchParams();
@@ -148,25 +159,62 @@ export default function WalletManagementBottomNav({
   };
 
   return (
-    <nav className="fixed bottom-0 left-1/2 z-40 w-full max-w-[430px] -translate-x-1/2 border-t border-slate-200 bg-white/95 px-3 py-3 backdrop-blur">
-      <div className="mx-auto flex w-full items-center gap-2">
-        {visibleNavItems.map((item) => {
+    <nav className="pointer-events-none fixed bottom-0 left-1/2 z-40 w-full max-w-[430px] -translate-x-1/2 px-3 pb-[calc(env(safe-area-inset-bottom)+0.8rem)] pt-3">
+      <div className="pointer-events-auto mx-auto rounded-[30px] border border-slate-200/80 bg-white/88 p-2 shadow-[0_26px_60px_-34px_rgba(15,23,42,0.38)] backdrop-blur-xl">
+        <div className={`grid w-full items-end gap-2 ${navGridColsClass}`}>
+        {orderedNavItems.map((item) => {
           const isActive = item.key === active;
+          const isPayment = item.key === 'payment';
           return (
             <Link
               key={item.key}
               href={withQuery(item.href(lang), item.key)}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                isActive
-                  ? 'border-slate-900 bg-slate-900 text-white shadow-md'
-                  : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'
+              className={`group relative flex min-w-0 flex-col items-center justify-center overflow-hidden transition ${
+                isPayment
+                  ? `col-span-2 min-h-[74px] rounded-[24px] px-4 py-3 text-white shadow-[0_22px_44px_-24px_rgba(8,47,73,0.9)] ${
+                      isActive
+                        ? '-translate-y-3 bg-[linear-gradient(135deg,#0f766e_0%,#155e75_42%,#0f172a_100%)]'
+                        : '-translate-y-2 bg-[linear-gradient(135deg,#0891b2_0%,#0f766e_42%,#0f172a_100%)]'
+                    }`
+                  : `min-h-[60px] rounded-[20px] border px-2.5 py-2.5 ${
+                      isActive
+                        ? 'border-slate-900 bg-slate-900 text-white shadow-[0_16px_30px_-22px_rgba(15,23,42,0.9)]'
+                        : 'border-slate-200 bg-slate-50/90 text-slate-600'
+                    }`
               }`}
             >
-              {item.icon}
-              <span>{item.label}</span>
+              {isPayment && (
+                <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/30" />
+              )}
+              <span
+                className={`flex items-center justify-center ${
+                  isPayment
+                    ? 'h-9 w-9 rounded-full bg-white/14 text-white ring-1 ring-white/20'
+                    : isActive
+                      ? 'text-white'
+                      : 'text-slate-500 transition group-hover:text-slate-700'
+                }`}
+              >
+                {item.icon}
+              </span>
+              <span
+                className={`mt-1.5 text-center font-semibold leading-none ${
+                  isPayment
+                    ? 'text-base tracking-tight'
+                    : 'text-[11px] tracking-[-0.01em]'
+                }`}
+              >
+                {item.label}
+              </span>
+              {isPayment && (
+                <span className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-cyan-50/85">
+                  Quick Pay
+                </span>
+              )}
             </Link>
           );
         })}
+        </div>
       </div>
     </nav>
   );

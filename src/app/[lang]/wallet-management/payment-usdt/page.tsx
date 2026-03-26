@@ -782,27 +782,44 @@ export default function PaymentUsdtPage({
     krwAmount,
     hasEnoughBalance,
   ]);
-  const merchantStepLabel = hasStorecodeParam ? '상점 확인' : '상점 선택';
-  const currentReadinessStep =
-    !activeAccount?.address
-      ? 'wallet'
-      : !selectedMerchant
-        ? 'merchant'
-        : loadingMemberProfile || !hasMemberProfile
-          ? 'member'
-          : !isPaymentReady
-            ? 'amount'
-            : 'ready';
-  const spotlightEyebrow =
-    currentReadinessStep === 'ready'
-      ? 'READY TO PAY'
-      : currentReadinessStep === 'wallet'
-        ? 'NEXT ACTION · 지갑 연결'
-        : currentReadinessStep === 'merchant'
-          ? `NEXT ACTION · ${merchantStepLabel}`
-          : currentReadinessStep === 'member'
-            ? 'NEXT ACTION · 회원 확인'
-            : 'NEXT ACTION · 결제 금액 입력';
+  const paymentAmountDescription =
+    usdtAmount > 0
+      ? `${formatUsdt(usdtAmount)}${exchangeRate > 0 ? ` · 환율 ${formatRate(exchangeRate)}` : loadingRate ? ' · 환율 확인 중' : ''}`
+      : shouldForceFullBalanceAmount
+        ? balance > 0
+          ? '잔고 기준으로 결제 수량이 자동 적용됩니다.'
+          : '결제에 사용할 USDT 잔액이 없습니다.'
+        : '결제 수량을 입력하면 예상 결제 금액이 표시됩니다.';
+  const merchantStatusSummary = selectedMerchant
+    ? `${selectedMerchant.storeName}${selectedMerchant.storecode ? ` · ${selectedMerchant.storecode}` : ''}`
+    : hasStorecodeParam
+      ? '상점 정보 확인 필요'
+      : '상점 선택 필요';
+  const memberStatusSummary = !selectedMerchant
+    ? '상점 선택 후 확인'
+    : loadingMemberProfile
+      ? '확인 중...'
+      : hasMemberProfile
+        ? `${myMemberProfile?.nickname || '연동 완료'}${
+            memberBankInfoSnapshot?.accountHolder || memberBankInfoSnapshot?.depositName
+              ? ` · ${memberBankInfoSnapshot?.accountHolder || memberBankInfoSnapshot?.depositName}`
+              : ''
+          }`
+        : '연동 필요';
+  const balanceStatusSummary = !activeAccount?.address
+    ? '지갑 연결 필요'
+    : usdtAmount <= 0
+      ? shouldForceFullBalanceAmount
+        ? balance > 0
+          ? '자동 설정 준비'
+          : '잔액 없음'
+        : '수량 입력 필요'
+      : hasEnoughBalance
+        ? '결제 가능'
+        : '잔액 부족';
+  const paymentActionHint = isPaymentReady
+    ? '결제 버튼을 누르면 최종 확인 후 전송됩니다.'
+    : primaryActionGuide;
 
   const loadMerchants = useCallback(async () => {
     setLoadingMerchants(true);
@@ -1521,7 +1538,7 @@ export default function PaymentUsdtPage({
       <div className="relative mx-auto w-full max-w-[430px] px-4 pb-28 pt-8">
         <div className="mb-8">
           <p className="mb-2 inline-flex rounded-full border border-slate-300/80 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600">
-            Wallet Management
+            {selectedMerchant ? `${selectedMerchant.storeName} PAY` : 'Secure Payment'}
           </p>
           <h1
             className="text-3xl font-semibold tracking-tight text-slate-900"
@@ -1542,17 +1559,16 @@ export default function PaymentUsdtPage({
                     </span>
                   )}
                 </span>
-                <span className="min-w-0 truncate">{selectedMerchant.storeName}</span>
-                <span className="shrink-0 text-slate-700">USDT 결제</span>
+                <span className="min-w-0 truncate">결제</span>
               </span>
             ) : (
-              'USDT 결제'
+              '결제'
             )}
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            {hasStorecodeParam
-              ? '지정된 가맹점에 USDT 결제 수량을 입력하면, 실시간 환율 기준 KRW 환산 금액을 확인하며 안전하게 결제할 수 있습니다.'
-              : '가맹점을 선택하고 USDT 결제 수량을 입력하면, 실시간 환율 기준 KRW 환산 금액을 확인하며 안전하게 결제할 수 있습니다.'}
+            {productIdFromQuery
+              ? '상품번호와 결제 금액을 확인한 뒤 USDT로 결제하세요.'
+              : '결제 금액을 확인한 뒤 USDT로 결제하세요.'}
           </p>
         </div>
 
@@ -1564,6 +1580,7 @@ export default function PaymentUsdtPage({
               modeLabel={paymentTabLabel}
               smartAccountEnabled={smartAccountEnabled}
               disconnectRedirectPath={disconnectRedirectPath}
+              showWalletAddressSection
             />
             {selectedMerchant && (!hasMemberProfile || loadingMemberProfile) && (
               <StoreMemberLinkCard
@@ -1627,176 +1644,119 @@ export default function PaymentUsdtPage({
             {paymentTab === 'pay' ? (
               <>
                 <div
-                  className={`mb-4 overflow-hidden rounded-[28px] border px-4 py-4 shadow-[0_28px_70px_-42px_rgba(15,23,42,0.45)] ${
-                    isPaymentReady
-                      ? 'border-cyan-300 bg-[linear-gradient(135deg,rgba(236,254,255,0.98),rgba(255,255,255,0.98),rgba(224,242,254,0.96))]'
-                      : 'border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.98),rgba(255,255,255,0.98),rgba(241,245,249,0.96))]'
-                  }`}
+                  className="mb-4 overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_28px_80px_-44px_rgba(15,23,42,0.32)]"
                 >
-                  <div className="relative">
-                    <div className="flex flex-col gap-3">
-                      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-                        <div className="min-w-0 sm:pr-2">
-                          <p
-                            className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
-                              isPaymentReady ? 'bg-cyan-700 text-white' : 'bg-slate-900 text-white'
-                            }`}
-                          >
-                            {spotlightEyebrow}
-                          </p>
-                          {isPaymentReady ? (
-                            <div className="mt-3">
-                              <p className="break-keep text-[1.95rem] font-black leading-[1.02] tracking-tight text-slate-900 sm:text-[2.15rem]">
-                                {formatUsdt(usdtAmount)}
-                              </p>
-                              <h2 className="mt-1 break-keep text-[1.9rem] font-black leading-[1.02] tracking-tight text-slate-900 sm:text-[2.05rem]">
-                                결제하기
-                              </h2>
-                            </div>
-                          ) : (
-                            <h2 className="mt-3 break-keep text-2xl font-semibold leading-[1.15] tracking-tight text-slate-900">
-                              {primaryActionLabel}
-                            </h2>
-                          )}
-                          <p className="mt-2 text-sm leading-6 text-slate-600">{primaryActionGuide}</p>
-                        </div>
-                        <div className="self-start rounded-[24px] border border-white/80 bg-white/90 px-4 py-3.5 shadow-[0_14px_34px_-24px_rgba(15,23,42,0.38)] sm:min-w-[152px] sm:shrink-0">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                            예상 결제액
-                          </p>
-                          <p className="mt-1 whitespace-nowrap text-right font-extrabold leading-none text-slate-900 tabular-nums">
-                            <span className="text-[2rem] sm:text-[2.15rem]">
-                              {krwAmount > 0 ? formatKrwNumber(krwAmount) : '0'}
-                            </span>
-                            <span className="ml-1 text-[1.4rem] align-baseline">원</span>
-                          </p>
-                          <p className="mt-1 text-right text-[11px] font-semibold text-slate-500">
-                            {usdtAmount > 0 ? formatUsdt(usdtAmount) : 'USDT 수량 입력 필요'}
-                          </p>
-                        </div>
+                  <div className="bg-[linear-gradient(135deg,#082f49_0%,#0f172a_58%,#1e293b_100%)] px-5 py-5 text-white">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="inline-flex h-8 items-center rounded-full border border-white/15 bg-white/10 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-100">
+                        Secure Pay
+                      </span>
+                      <span className="inline-flex h-8 items-center rounded-full border border-white/15 bg-white/10 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-200">
+                        {activeNetwork.label}
+                      </span>
+                    </div>
+
+                    <div className="mt-6">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">
+                        Payment Amount
+                      </p>
+                      <div className="mt-2 flex items-end gap-2">
+                        <p className="text-[2.8rem] font-black leading-none tracking-tight text-white tabular-nums sm:text-[3rem]">
+                          {krwAmount > 0 ? formatKrwNumber(krwAmount) : '0'}
+                        </p>
+                        <span className="pb-1 text-xl font-bold text-slate-200">원</span>
                       </div>
-                      {productIdFromQuery && (
-                        <div className="rounded-[24px] border border-slate-200/90 bg-white/88 px-4 py-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.2)]">
-                          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                            <div className="min-w-0">
-                              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-700">
-                                Payment Product
-                              </p>
-                              <p className="mt-1 text-sm font-semibold text-slate-900">결제할 상품번호</p>
-                              <p className="mt-1 text-sm leading-6 text-slate-600">
-                                이 상품번호 기준으로 결제가 진행됩니다.
-                              </p>
-                            </div>
-                            <div className="min-w-0 rounded-[18px] border border-slate-200 bg-slate-950 px-4 py-3 shadow-[0_16px_36px_-28px_rgba(15,23,42,0.55)] sm:min-w-[220px]">
-                              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                                상품번호
-                              </p>
-                              <div className="mt-2 overflow-x-auto">
-                                <p className="whitespace-nowrap font-mono text-xl font-bold leading-none tracking-[0.06em] text-white tabular-nums sm:text-2xl">
-                                  {productIdFromQuery}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                      <p className="mt-2 text-sm font-medium text-slate-200">
+                        {paymentAmountDescription}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2 px-5 py-4">
+                    <div className="flex items-start justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                          Merchant
+                        </p>
+                        <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+                          {selectedMerchant?.storeName || (hasStorecodeParam ? '상점 정보 확인 필요' : '결제할 가맹점 선택')}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {selectedMerchant?.storecode || storecodeFromQuery || '상점 선택 전'}
+                        </p>
+                      </div>
+                      {selectedMerchant && (
+                        <span className="h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200">
+                          {selectedMerchant.storeLogo ? (
+                            <span
+                              className="block h-full w-full bg-cover bg-center"
+                              style={{ backgroundImage: `url(${encodeURI(selectedMerchant.storeLogo)})` }}
+                              aria-label={selectedMerchant.storeName}
+                            />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-cyan-700">
+                              SHOP
+                            </span>
+                          )}
+                        </span>
                       )}
                     </div>
+
+                    {productIdFromQuery && (
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                          Product ID
+                        </p>
+                        <p className="mt-1 overflow-x-auto whitespace-nowrap font-mono text-sm font-semibold text-slate-900">
+                          {productIdFromQuery}
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedMerchant && (
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                              Pay To
+                            </p>
+                            <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+                              {shortAddress(selectedMerchant.paymentWalletAddress)}
+                            </p>
+                          </div>
+                          <span className="inline-flex h-7 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 text-[10px] font-semibold text-emerald-700">
+                            수신지갑 확인됨
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {latestPaymentRecord && (
-                  <div
-                    className={`mb-4 rounded-2xl border px-3.5 py-3 text-sm ${
-                      justPaidRecordId &&
-                      (justPaidRecordId === latestPaymentRecord.id ||
-                        justPaidRecordId === latestPaymentRecord.transactionHash)
-                        ? 'border-emerald-300 bg-emerald-50'
-                        : 'border-cyan-200 bg-cyan-50/65'
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-700">
-                        최근 결제 완료 정보
-                      </p>
-                      {justPaidRecordId &&
-                        (justPaidRecordId === latestPaymentRecord.id ||
-                          justPaidRecordId === latestPaymentRecord.transactionHash) && (
-                          <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-semibold text-white">
-                            방금 결제됨
-                          </span>
-                        )}
-                    </div>
-
-                    <div className="mt-1.5 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900">
-                          {latestPaymentRecord.storeName || '-'} ({latestPaymentRecord.storecode || '-'})
-                        </p>
-                        <div className="mt-0.5 flex flex-wrap items-end gap-x-2 gap-y-0.5">
-                          <p className="text-lg font-extrabold leading-none tabular-nums text-slate-900">
-                            {formatUsdt(latestPaymentRecord.usdtAmount)}
-                          </p>
-                          <p className="text-xs font-semibold tabular-nums text-slate-600">
-                            {formatKrw(latestPaymentRecord.krwAmount)}
-                          </p>
-                          <p className="text-[11px] font-semibold text-slate-700">
-                            환율 {latestPaymentRecord.exchangeRate > 0 ? formatRate(latestPaymentRecord.exchangeRate) : '-'}
-                          </p>
-                        </div>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-600">
-                          <p title={formatDateTime(latestPaymentRecord.confirmedAt || latestPaymentRecord.createdAt)}>
-                            결제완료 {formatTimeAgo(latestPaymentRecord.confirmedAt || latestPaymentRecord.createdAt)}
-                          </p>
-                          <p className="text-slate-500">
-                            TX {shortAddress(latestPaymentRecord.transactionHash || '-')}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-                        <button
-                          type="button"
-                          onClick={() => setPaymentTab('history')}
-                          className="inline-flex h-8 items-center justify-center rounded-xl border border-slate-300 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                        >
-                          결제내역 상세
-                        </button>
-                        {latestPaymentTxUrl && (
-                          <a
-                            href={latestPaymentTxUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex h-8 items-center justify-center rounded-xl border border-cyan-300 bg-cyan-50 px-2.5 text-[11px] font-semibold text-cyan-800 transition hover:border-cyan-400 hover:text-cyan-900"
-                          >
-                            TX 확인
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {!hasStorecodeParam && (
                   <div
-                    className={`mb-4 rounded-[26px] border p-4 ${
-                      needsMerchantSelectionFirst
-                        ? 'border-cyan-300 bg-gradient-to-br from-cyan-50 via-white to-sky-50 shadow-[0_18px_45px_-25px_rgba(6,182,212,0.55)]'
-                        : 'border-cyan-200 bg-cyan-50/70'
+                    className={`mb-4 rounded-[28px] border px-4 py-4 ${
+                      selectedMerchant
+                        ? 'border-slate-200 bg-white/90'
+                        : 'border-cyan-300 bg-gradient-to-br from-cyan-50 via-white to-sky-50 shadow-[0_18px_45px_-25px_rgba(6,182,212,0.55)]'
                     }`}
                   >
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">STEP 1 · 결제 가맹점 선택</p>
-                    <h3 className="mt-1 text-base font-semibold text-slate-900">
-                      {selectedMerchant ? '결제할 가맹점이 선택되었습니다.' : '먼저 결제할 가맹점을 선택해 주세요.'}
-                    </h3>
-                    <p className="mt-1 text-xs text-slate-600">
-                      {selectedMerchant
-                        ? '상점 선택이 완료되었습니다. 이제 USDT 결제 수량을 입력해 진행할 수 있습니다.'
-                        : '가맹점을 먼저 선택해야 회원 확인과 USDT 수량 입력이 활성화됩니다.'}
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                      Merchant
                     </p>
-
-                    {selectedMerchant && (
-                      <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full border border-cyan-200 bg-white px-2.5 py-1.5">
-                        <div className="h-6 w-6 shrink-0 overflow-hidden rounded-md bg-slate-100 ring-1 ring-cyan-200">
+                    <div className="mt-2 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="text-base font-semibold text-slate-900">
+                          {selectedMerchant ? selectedMerchant.storeName : '결제할 가맹점을 선택해 주세요.'}
+                        </h3>
+                        <p className="mt-1 text-xs text-slate-600">
+                          {selectedMerchant
+                            ? `${selectedMerchant.storecode} · 결제 준비가 완료되었습니다.`
+                            : '상점을 먼저 선택하면 회원 확인과 결제 입력이 이어집니다.'}
+                        </p>
+                      </div>
+                      {selectedMerchant && (
+                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200">
                           {selectedMerchant.storeLogo ? (
                             <div
                               className="h-full w-full bg-cover bg-center"
@@ -1809,12 +1769,8 @@ export default function PaymentUsdtPage({
                             </div>
                           )}
                         </div>
-                        <span className="truncate text-xs font-semibold text-cyan-900">
-                          {selectedMerchant.storeName}
-                        </span>
-                      </div>
-                    )}
-
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
@@ -1822,38 +1778,14 @@ export default function PaymentUsdtPage({
                         setIsStorePickerOpen(true);
                       }}
                       disabled={loadingMerchants || merchants.length === 0}
-                      className={`mt-3 inline-flex h-11 w-full items-center justify-center rounded-2xl text-sm font-semibold transition ${
-                        needsMerchantSelectionFirst
-                          ? 'bg-cyan-700 text-white shadow-[0_14px_34px_-16px_rgba(14,116,144,0.8)] hover:bg-cyan-600'
-                          : 'border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'
+                      className={`mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl text-sm font-semibold transition ${
+                        selectedMerchant
+                          ? 'border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'
+                          : 'bg-cyan-700 text-white shadow-[0_14px_34px_-16px_rgba(14,116,144,0.8)] hover:bg-cyan-600'
                       } disabled:cursor-not-allowed disabled:opacity-50`}
                     >
-                      {selectedMerchant ? '결제 가맹점 다시 선택' : '결제할 가맹점 선택하기'}
+                      {selectedMerchant ? '가맹점 변경' : '가맹점 선택'}
                     </button>
-                  </div>
-                )}
-
-                {!hasStorecodeParam && selectedMerchant && (
-                  <div className="mb-4 rounded-2xl border border-cyan-200 bg-cyan-50/70 p-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-700">지정 가맹점</p>
-                    <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full border border-cyan-200 bg-white px-2.5 py-1.5">
-                      <div className="h-5 w-5 shrink-0 overflow-hidden rounded-md bg-slate-100 ring-1 ring-cyan-200">
-                        {selectedMerchant.storeLogo ? (
-                          <div
-                            className="h-full w-full bg-cover bg-center"
-                            style={{ backgroundImage: `url(${encodeURI(selectedMerchant.storeLogo)})` }}
-                            aria-label={selectedMerchant.storeName}
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[8px] font-bold text-cyan-700">
-                            SHOP
-                          </div>
-                        )}
-                      </div>
-                      <span className="truncate text-xs font-semibold text-cyan-900">
-                        {selectedMerchant.storeName}
-                      </span>
-                    </div>
                   </div>
                 )}
 
@@ -1902,7 +1834,7 @@ export default function PaymentUsdtPage({
                   )}
                   {shouldForceFullBalanceAmount && (
                     <div className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-800">
-                      지정 가맹점 결제는 USDT 잔고 전체만 전송할 수 있습니다. 결제 수량은 자동으로 잔고 전체가 적용됩니다.
+                      현재 설정에서는 결제 수량이 자동으로 적용됩니다.
                     </div>
                   )}
 
@@ -1993,51 +1925,71 @@ export default function PaymentUsdtPage({
                   </div>
                 </div>
 
-                <div
-                  className={`mt-4 overflow-hidden rounded-[28px] border p-4 shadow-[0_28px_70px_-42px_rgba(15,23,42,0.45)] ${
-                    isPaymentReady
-                      ? 'border-cyan-300 bg-[linear-gradient(135deg,rgba(224,242,254,0.96),rgba(255,255,255,0.98),rgba(236,254,255,0.98))]'
-                      : 'border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.98),rgba(255,255,255,0.98),rgba(241,245,249,0.96))]'
-                  }`}
-                >
+                <div className="mt-4 overflow-hidden rounded-[28px] border border-slate-200 bg-white/95 p-4 shadow-[0_28px_70px_-42px_rgba(15,23,42,0.28)]">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                        {isPaymentReady ? 'Checkout Ready' : 'Next Step'}
+                        Payment Status
                       </p>
                       <h3 className="mt-1 text-xl font-semibold text-slate-900">
-                        {isPaymentReady ? '결제 전 최종 확인' : '지금 필요한 작업'}
+                        {isPaymentReady ? '결제 준비가 완료되었습니다.' : '결제 전 확인이 필요합니다.'}
                       </h3>
-                      <p className="mt-1 text-sm text-slate-600">{primaryActionGuide}</p>
+                      <p className="mt-1 text-sm text-slate-600">{paymentActionHint}</p>
                     </div>
                     <span
                       className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                        isPaymentReady ? 'bg-cyan-700 text-white' : 'bg-slate-900 text-white'
+                        isPaymentReady ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-white'
                       }`}
                     >
-                      {isPaymentReady ? 'Ready' : 'Pending'}
+                      {isPaymentReady ? 'Ready' : 'Check'}
                     </span>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-white/80 bg-white/85 px-3 py-3">
-                      <p className="text-[11px] font-semibold text-slate-500">입력 수량 (USDT)</p>
-                      <p className="mt-1 text-lg font-bold text-slate-900">
-                        {usdtAmount > 0 ? formatUsdt(usdtAmount) : '0 USDT'}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-white/80 bg-white/85 px-3 py-3">
-                      <p className="text-[11px] font-semibold text-slate-500">적용 환율</p>
-                      <p className="mt-1 text-lg font-extrabold leading-none text-slate-900 tabular-nums">
-                        {exchangeRate > 0 ? formatRate(exchangeRate) : '조회 중'}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-white/80 bg-white/85 px-3 py-3">
-                      <p className="text-[11px] font-semibold text-slate-500">환산 금액 (KRW)</p>
-                      <p className="mt-1 text-lg font-bold text-slate-900">
-                        {krwAmount > 0 ? formatKrw(krwAmount) : '0원'}
-                      </p>
-                    </div>
+                  <div className="mt-4 space-y-2.5">
+                    {[
+                      {
+                        label: '상점',
+                        value: merchantStatusSummary,
+                        ready: Boolean(selectedMerchant),
+                      },
+                      {
+                        label: '회원',
+                        value: memberStatusSummary,
+                        ready: Boolean(selectedMerchant && !loadingMemberProfile && hasMemberProfile),
+                      },
+                      {
+                        label: '잔액 / 수량',
+                        value: `${balanceStatusSummary}${activeAccount?.address ? ` · 보유 ${formatUsdt(balance)}` : ''}`,
+                        ready: Boolean(activeAccount?.address && usdtAmount > 0 && hasEnoughBalance),
+                      },
+                      {
+                        label: '결제 금액',
+                        value:
+                          krwAmount > 0
+                            ? `${formatKrw(krwAmount)}${exchangeRate > 0 ? ` · ${formatUsdt(usdtAmount)}` : ''}`
+                            : '금액 계산 전',
+                        ready: Boolean(krwAmount > 0),
+                      },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-3.5 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold text-slate-500">{item.label}</p>
+                          <p className="mt-0.5 break-all text-sm font-semibold text-slate-900">{item.value}</p>
+                        </div>
+                        <span
+                          className={`inline-flex h-7 shrink-0 items-center rounded-full px-2.5 text-[10px] font-semibold ${
+                            item.ready
+                              ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                              : 'bg-slate-900 text-white'
+                          }`}
+                        >
+                          {item.ready ? '완료' : '확인'}
+                        </span>
+                      </div>
+                    ))}
                   </div>
 
                   {!hasEnoughBalance && usdtAmount > 0 && (
@@ -2059,11 +2011,18 @@ export default function PaymentUsdtPage({
                     {primaryActionLabel}
                   </button>
 
-                  <p className="mt-3 text-xs text-slate-500">
-                    {isPaymentReady
-                      ? '확인 모달에서 결제 세부정보를 검토한 후 최종 전송을 진행합니다.'
-                      : '버튼을 누르면 현재 단계에서 필요한 다음 행동으로 바로 이동합니다.'}
-                  </p>
+                  <div className="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
+                    <p className="min-w-0">{paymentActionHint}</p>
+                    {latestPaymentRecord && (
+                      <button
+                        type="button"
+                        onClick={() => setPaymentTab('history')}
+                        className="shrink-0 font-semibold text-cyan-700 underline decoration-cyan-300 underline-offset-2"
+                      >
+                        결제내역 보기
+                      </button>
+                    )}
+                  </div>
                 </div>
               </>
             ) : (

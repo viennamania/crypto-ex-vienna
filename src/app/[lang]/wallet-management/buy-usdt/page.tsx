@@ -3614,6 +3614,7 @@ export default function BuyUsdtPage({
               modeLabel={buyTabLabel}
               smartAccountEnabled={smartAccountEnabled}
               disconnectRedirectPath={disconnectRedirectPath}
+              showWalletAddressSection
             />
             {shouldShowStoreMemberLinkCard && (
               <StoreMemberLinkCard
