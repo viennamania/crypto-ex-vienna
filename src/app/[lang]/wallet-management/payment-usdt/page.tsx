@@ -197,6 +197,13 @@ const formatUsdtInputFromBalance = (value: number) => {
   return floored.toFixed(6);
 };
 
+const formatUsdtInputFromNumber = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) return '';
+  const floored = Math.floor(value * 1_000_000) / 1_000_000;
+  if (floored <= 0) return '';
+  return floored.toFixed(6);
+};
+
 const formatKrw = (value: number) => `${value.toLocaleString()}원`;
 const formatKrwNumber = (value: number) =>
   new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(Number(value) || 0);
@@ -473,6 +480,7 @@ export default function PaymentUsdtPage({
   const amountKrwFromQuery = String(searchParams?.get('amount_krw') || '').trim().replace(/,/g, '').replace(/[^\d]/g, '');
   const productIdFromQuery = String(searchParams?.get('product_id') || '').trim().slice(0, 120);
   const hasStorecodeParam = Boolean(storecodeFromQuery);
+  const shouldHideWalletSummaryForFixedPay = Boolean(amountKrwFromQuery);
   const disconnectRedirectPath = useMemo(() => {
     const query = new URLSearchParams();
     if (storecodeFromQuery) {
@@ -644,22 +652,43 @@ export default function PaymentUsdtPage({
     () => formatUsdtInputFromBalance(balance),
     [balance],
   );
-  const shouldForceFullBalanceAmount = Boolean(hasStorecodeParam && selectedMerchant);
+  const fixedKrwAmount = useMemo(() => {
+    const parsed = Number(amountKrwFromQuery);
+    if (!Number.isFinite(parsed)) return 0;
+    return parsed > 0 ? Math.floor(parsed) : 0;
+  }, [amountKrwFromQuery]);
+  const isFixedKrwPaymentMode = fixedKrwAmount > 0;
+  const fixedKrwUsdtAmountInput = useMemo(() => {
+    if (!isFixedKrwPaymentMode || exchangeRate <= 0) {
+      return '';
+    }
+    return formatUsdtInputFromNumber(fixedKrwAmount / exchangeRate);
+  }, [exchangeRate, fixedKrwAmount, isFixedKrwPaymentMode]);
+  const shouldForceFullBalanceAmount = Boolean(!isFixedKrwPaymentMode && hasStorecodeParam && selectedMerchant);
+  const shouldAutoSetAmount = isFixedKrwPaymentMode || shouldForceFullBalanceAmount;
   const usdtAmount = useMemo(() => {
+    if (isFixedKrwPaymentMode) {
+      return toSafeUsdtAmount(fixedKrwUsdtAmountInput);
+    }
     if (shouldForceFullBalanceAmount) {
       return toSafeUsdtAmount(fullBalanceAmountInput);
     }
     return toSafeUsdtAmount(amountInput);
-  }, [amountInput, fullBalanceAmountInput, shouldForceFullBalanceAmount]);
-  const amountInputDisplay = shouldForceFullBalanceAmount
-    ? fullBalanceAmountInput
-    : amountInput;
+  }, [amountInput, fixedKrwUsdtAmountInput, fullBalanceAmountInput, isFixedKrwPaymentMode, shouldForceFullBalanceAmount]);
+  const amountInputDisplay = isFixedKrwPaymentMode
+    ? fixedKrwUsdtAmountInput
+    : shouldForceFullBalanceAmount
+      ? fullBalanceAmountInput
+      : amountInput;
   const krwAmount = useMemo(() => {
+    if (isFixedKrwPaymentMode) {
+      return fixedKrwAmount;
+    }
     if (exchangeRate <= 0 || usdtAmount <= 0) {
       return 0;
     }
     return Math.round(usdtAmount * exchangeRate);
-  }, [exchangeRate, usdtAmount]);
+  }, [exchangeRate, fixedKrwAmount, isFixedKrwPaymentMode, usdtAmount]);
   const hasEnoughBalance = usdtAmount > 0 && usdtAmount <= balance;
   const paymentTabLabel = useMemo(
     () => (paymentTab === 'pay' ? '결제하기' : '결제내역'),
@@ -679,7 +708,7 @@ export default function PaymentUsdtPage({
   );
   const shouldLockAmountInputs =
     !selectedMerchant || loadingMemberProfile || needsMemberSignupFirst;
-  const shouldDisableAmountEditing = shouldLockAmountInputs || shouldForceFullBalanceAmount;
+  const shouldDisableAmountEditing = shouldLockAmountInputs || shouldAutoSetAmount;
   const isPaymentReady = Boolean(
     activeAccount?.address &&
       selectedMerchant &&
@@ -710,7 +739,13 @@ export default function PaymentUsdtPage({
     if (!hasMemberProfile) {
       return '회원정보 연동하기';
     }
+    if (isFixedKrwPaymentMode && exchangeRate <= 0) {
+      return '환율 로딩 중...';
+    }
     if (usdtAmount <= 0) {
+      if (isFixedKrwPaymentMode) {
+        return '결제 수량 계산 중...';
+      }
       if (shouldForceFullBalanceAmount) {
         return 'USDT 잔액이 필요합니다';
       }
@@ -733,6 +768,7 @@ export default function PaymentUsdtPage({
     hasStorecodeParam,
     loadingMemberProfile,
     hasMemberProfile,
+    isFixedKrwPaymentMode,
     shouldForceFullBalanceAmount,
     usdtAmount,
     exchangeRate,
@@ -754,7 +790,13 @@ export default function PaymentUsdtPage({
     if (!hasMemberProfile) {
       return '가맹점 회원 아이디와 비밀번호를 입력해 회원정보 연동을 완료해야 결제를 진행할 수 있습니다.';
     }
+    if (isFixedKrwPaymentMode && exchangeRate <= 0) {
+      return '지정된 결제 금액에 맞는 USDT 수량을 계산하고 있습니다.';
+    }
     if (usdtAmount <= 0) {
+      if (isFixedKrwPaymentMode) {
+        return '지정된 결제 금액 기준으로 결제 수량을 계산하고 있습니다.';
+      }
       if (shouldForceFullBalanceAmount) {
         return '현재 모드에서는 잔고 전체만 전송할 수 있습니다. 먼저 USDT 잔고를 충전해 주세요.';
       }
@@ -776,6 +818,7 @@ export default function PaymentUsdtPage({
     hasStorecodeParam,
     loadingMemberProfile,
     hasMemberProfile,
+    isFixedKrwPaymentMode,
     shouldForceFullBalanceAmount,
     usdtAmount,
     exchangeRate,
@@ -783,7 +826,11 @@ export default function PaymentUsdtPage({
     hasEnoughBalance,
   ]);
   const paymentAmountDescription =
-    usdtAmount > 0
+    isFixedKrwPaymentMode
+      ? exchangeRate > 0 && usdtAmount > 0
+        ? `${formatUsdt(usdtAmount)} · 환율 ${formatRate(exchangeRate)}`
+        : '지정된 결제 금액 기준으로 USDT 수량을 계산하고 있습니다.'
+      : usdtAmount > 0
       ? `${formatUsdt(usdtAmount)}${exchangeRate > 0 ? ` · 환율 ${formatRate(exchangeRate)}` : loadingRate ? ' · 환율 확인 중' : ''}`
       : shouldForceFullBalanceAmount
         ? balance > 0
@@ -809,7 +856,11 @@ export default function PaymentUsdtPage({
   const balanceStatusSummary = !activeAccount?.address
     ? '지갑 연결 필요'
     : usdtAmount <= 0
-      ? shouldForceFullBalanceAmount
+      ? isFixedKrwPaymentMode
+        ? exchangeRate > 0
+          ? '결제 수량 계산 중'
+          : '환율 확인 중'
+        : shouldForceFullBalanceAmount
         ? balance > 0
           ? '자동 설정 준비'
           : '잔액 없음'
@@ -1307,7 +1358,9 @@ export default function PaymentUsdtPage({
     }
     if (usdtAmount <= 0) {
       toast.error(
-        shouldForceFullBalanceAmount
+        isFixedKrwPaymentMode
+          ? '지정된 결제 금액 기준으로 USDT 수량을 계산 중입니다.'
+          : shouldForceFullBalanceAmount
           ? 'USDT 잔고가 없어 결제를 진행할 수 없습니다.'
           : '결제 수량(USDT)을 입력해 주세요.',
       );
@@ -1356,11 +1409,13 @@ export default function PaymentUsdtPage({
       return;
     }
     if (usdtAmount <= 0) {
-      if (!shouldForceFullBalanceAmount) {
+      if (!shouldAutoSetAmount) {
         amountInputRef.current?.focus();
       }
       toast.error(
-        shouldForceFullBalanceAmount
+        isFixedKrwPaymentMode
+          ? '지정된 결제 금액 기준으로 USDT 수량을 계산 중입니다.'
+          : shouldForceFullBalanceAmount
           ? 'USDT 잔고가 없어 결제를 진행할 수 없습니다.'
           : '결제 수량(USDT)을 입력해 주세요.',
       );
@@ -1574,14 +1629,16 @@ export default function PaymentUsdtPage({
 
         {activeAccount?.address ? (
           <>
-            <WalletSummaryCard
-              walletAddress={activeAccount.address}
-              usdtBalanceDisplay={`${balance.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })} USDT`}
-              modeLabel={paymentTabLabel}
-              smartAccountEnabled={smartAccountEnabled}
-              disconnectRedirectPath={disconnectRedirectPath}
-              showWalletAddressSection
-            />
+            {!shouldHideWalletSummaryForFixedPay && (
+              <WalletSummaryCard
+                walletAddress={activeAccount.address}
+                usdtBalanceDisplay={`${balance.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })} USDT`}
+                modeLabel={paymentTabLabel}
+                smartAccountEnabled={smartAccountEnabled}
+                disconnectRedirectPath={disconnectRedirectPath}
+                showWalletAddressSection
+              />
+            )}
             {selectedMerchant && (!hasMemberProfile || loadingMemberProfile) && (
               <StoreMemberLinkCard
                 ref={memberStatusCardRef}
@@ -1832,13 +1889,15 @@ export default function PaymentUsdtPage({
                       회원정보 연동 완료 후 USDT 수량을 입력할 수 있습니다.
                     </p>
                   )}
-                  {shouldForceFullBalanceAmount && (
+                  {shouldAutoSetAmount && (
                     <div className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-800">
-                      현재 설정에서는 결제 수량이 자동으로 적용됩니다.
+                      {isFixedKrwPaymentMode
+                        ? `결제 금액 ${formatKrw(fixedKrwAmount)} 기준으로 USDT 수량이 자동 계산됩니다.`
+                        : '현재 설정에서는 결제 수량이 자동으로 적용됩니다.'}
                     </div>
                   )}
 
-                  {!shouldForceFullBalanceAmount && (
+                  {!shouldAutoSetAmount && (
                     <div className="mt-4 grid grid-cols-3 gap-2">
                       {QUICK_USDT_AMOUNTS.map((value) => (
                         <button
@@ -1872,9 +1931,13 @@ export default function PaymentUsdtPage({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                        {shouldForceFullBalanceAmount ? '자동 설정 (잔고 전체 전송)' : '직접 입력 (USDT)'}
+                        {isFixedKrwPaymentMode
+                          ? '자동 계산 (지정 결제 금액 기준)'
+                          : shouldForceFullBalanceAmount
+                            ? '자동 설정 (잔고 전체 전송)'
+                            : '직접 입력 (USDT)'}
                       </p>
-                      {!shouldForceFullBalanceAmount && (
+                      {!shouldAutoSetAmount && (
                         <div className="flex items-center gap-3">
                           <button
                             type="button"
@@ -1907,12 +1970,12 @@ export default function PaymentUsdtPage({
                         disabled={shouldDisableAmountEditing}
                         value={amountInputDisplay}
                         onChange={(event) => {
-                          if (shouldForceFullBalanceAmount) return;
+                          if (shouldAutoSetAmount) return;
                           setAmountInput(clampUsdtInputToBalance(event.target.value));
                           setSelectedPreset(null);
                         }}
                         onBlur={() => {
-                          if (shouldForceFullBalanceAmount) return;
+                          if (shouldAutoSetAmount) return;
                           const normalized = toSafeUsdtAmount(clampUsdtInputToBalance(amountInput));
                           setAmountInput(normalized > 0 ? normalized.toFixed(6) : '');
                         }}
