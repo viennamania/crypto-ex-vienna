@@ -3154,6 +3154,41 @@ const fetchBuyOrders = async () => {
     }
     return Number(seller?.currentUsdtBalance || 0);
   };
+  const fetchDirectSellerBalances = async (walletAddresses: string[]) => {
+    if (walletAddresses.length === 0) {
+      return [];
+    }
+
+    const response = await fetch('/api/user/getUSDTBalancesByWalletAddresses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chain,
+        walletAddresses,
+      }),
+    });
+
+    const data = await response.json();
+    const balances = Array.isArray(data?.result?.balances) ? data.result.balances : [];
+
+    return balances
+      .map((item: any) => {
+        const walletAddress = String(item?.walletAddress || '').trim();
+        if (!walletAddress) {
+          return null;
+        }
+
+        return {
+          nickname: '판매자 지갑',
+          walletAddress,
+          seller: {},
+          currentUsdtBalance: Number(item?.displayValue ?? item?.balance ?? 0) || 0,
+        };
+      })
+      .filter(Boolean);
+  };
   const fetchSellersBalance = async () => {
     try {
       setFetchingSellersBalance(true);
@@ -3174,7 +3209,19 @@ const fetchBuyOrders = async () => {
 
       const data = await response.json();
       if (data.result) {
-        setSellersBalance(data.result.users);
+        const fetchedUsers = Array.isArray(data.result.users) ? data.result.users : [];
+        const matchedWalletAddressSet = new Set(
+          fetchedUsers.map((seller: any) => normalizeAddressValue(seller?.walletAddress))
+        );
+        const unmatchedWalletAddresses = storeSellerWalletAddresses.filter(
+          (walletAddress) => !matchedWalletAddressSet.has(normalizeAddressValue(walletAddress))
+        );
+        const fallbackUsers = await fetchDirectSellerBalances(unmatchedWalletAddresses);
+
+        setSellersBalance([
+          ...fetchedUsers,
+          ...fallbackUsers,
+        ]);
         setSellerBalanceUpdatedAt(new Date().toISOString());
       } else {
         console.error('Error fetching sellers balance');
