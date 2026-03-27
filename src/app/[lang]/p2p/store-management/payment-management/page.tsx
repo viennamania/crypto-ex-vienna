@@ -972,16 +972,16 @@ export default function P2PStorePaymentManagementPage() {
                 ) : (
                   <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200">
                     <div className="store-payment-table-scroll overflow-x-auto">
-                    <table className="store-payment-table w-full table-fixed [&_th]:whitespace-normal [&_th]:break-words [&_td]:whitespace-normal [&_td]:break-words [&_td]:align-top">
+                      <table className="store-payment-table min-w-[1120px] w-full table-fixed [&_th]:whitespace-normal [&_th]:break-words [&_td]:whitespace-normal [&_td]:break-words [&_td]:align-top">
                         <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
                           <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600">
-                            <th className="w-[96px] px-2 py-2">일시</th>
-                            <th className="w-[180px] px-2 py-2">결제번호 / 상품번호</th>
+                            <th className="w-[118px] px-3 py-2">일시</th>
+                            <th className="w-[200px] px-3 py-2">결제번호 / 상품번호</th>
                             <th className="w-[220px] px-3 py-2">회원 / 지갑주소</th>
-                            <th className="w-[140px] px-2 py-2 text-right">USDT / KRW</th>
-                            <th className="px-3 py-2 text-right">환율</th>
-                            <th className="px-3 py-2">TX</th>
-                            <th className="w-[240px] px-3 py-2">결제처리</th>
+                            <th className="w-[146px] px-3 py-2 text-right">USDT / KRW</th>
+                            <th className="w-[82px] px-3 py-2 text-right">환율</th>
+                            <th className="w-[108px] px-3 py-2">TX</th>
+                            <th className="w-[246px] px-3 py-2">결제처리</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
@@ -1001,11 +1001,11 @@ export default function P2PStorePaymentManagementPage() {
                                 key={payment.id}
                                 className={`transition ${rowClass}`}
                               >
-                              <td className="px-2 py-2.5 text-[11px] leading-tight text-slate-500">
+                              <td className="px-3 py-2.5 text-[11px] leading-tight text-slate-500">
                                 <p className="font-semibold text-slate-700">{confirmedDateTime.date}</p>
-                                <p className="mt-0.5">{confirmedDateTime.time}</p>
+                                <p className="mt-0.5 whitespace-nowrap">{confirmedDateTime.time}</p>
                               </td>
-                              <td className="px-2 py-2.5 text-xs">
+                              <td className="px-3 py-2.5 text-xs">
                                 <div className="flex flex-col gap-2">
                                   <div>
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
@@ -1049,18 +1049,18 @@ export default function P2PStorePaymentManagementPage() {
                                   {shortAddress(payment.fromWalletAddress)}
                                 </p>
                               </td>
-                              <td className="px-2 py-2.5 text-right">
+                              <td className="px-3 py-2.5 text-right">
                                 <div className="flex flex-col items-end gap-0.5">
-                                  <p className="font-semibold leading-tight text-slate-900">
+                                  <p className="whitespace-nowrap font-semibold leading-tight text-slate-900">
                                     {formatUsdt(payment.usdtAmount)}
                                   </p>
-                                  <p className="font-semibold leading-tight text-slate-700">
+                                  <p className="whitespace-nowrap font-semibold leading-tight text-slate-700">
                                     {formatKrw(payment.krwAmount)}
                                   </p>
                                 </div>
                               </td>
-                              <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600">
-                                {formatRateNumber(payment.exchangeRate)}
+                              <td className="px-3 py-2.5 text-right text-xs font-semibold tabular-nums text-slate-600">
+                                <span className="whitespace-nowrap">{formatRateNumber(payment.exchangeRate)}</span>
                               </td>
                               <td className="px-3 py-2.5 text-xs text-slate-500">
                                 {txScanUrl ? (
@@ -1068,7 +1068,7 @@ export default function P2PStorePaymentManagementPage() {
                                     href={txScanUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex break-all underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
+                                    className="inline-flex whitespace-nowrap font-mono text-[11px] underline decoration-slate-300 underline-offset-2 transition hover:text-cyan-700 hover:decoration-cyan-300"
                                     title={payment.transactionHash}
                                   >
                                     {shortAddress(payment.transactionHash)}
@@ -1121,7 +1121,7 @@ export default function P2PStorePaymentManagementPage() {
                             );
                           })}
                         </tbody>
-                    </table>
+                      </table>
                     </div>
                   </div>
                 )}
