@@ -13,6 +13,7 @@ const resolveNetwork = (value?: string | null): NetworkKey | null => {
 
 const defaultSmartAccountEnabled = process.env.NEXT_PUBLIC_SMART_ACCOUNT === 'yes';
 const defaultChain = resolveNetwork(process.env.NEXT_PUBLIC_CHAIN) ?? 'polygon';
+const envAllowsSmartAccount = defaultSmartAccountEnabled;
 
 const STORAGE_KEYS = {
   chain: 'client-chain',
@@ -36,6 +37,7 @@ export function ClientSettingsProvider({ children }: { children: React.ReactNode
 
   const [smartAccountEnabled, setSmartAccountEnabled] = useState<boolean>(() => {
     if (typeof window === 'undefined') return defaultSmartAccountEnabled;
+    if (!envAllowsSmartAccount) return false;
     const stored = localStorage.getItem(STORAGE_KEYS.smart);
     if (stored === 'true') return true;
     if (stored === 'false') return false;
@@ -70,7 +72,14 @@ export function ClientSettingsProvider({ children }: { children: React.ReactNode
             console.warn('Failed to persist chain', err);
           }
         }
-        if (data?.result?.clientInfo?.smartAccountEnabled !== undefined) {
+        if (!envAllowsSmartAccount) {
+          setSmartAccountEnabled(false);
+          try {
+            localStorage.setItem(STORAGE_KEYS.smart, 'false');
+          } catch (err) {
+            console.warn('Failed to persist smart account flag', err);
+          }
+        } else if (data?.result?.clientInfo?.smartAccountEnabled !== undefined) {
           setSmartAccountEnabled(nextSmartAccountEnabled);
           try {
             localStorage.setItem(

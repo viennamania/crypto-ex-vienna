@@ -77,6 +77,8 @@ const resolveChain = (value: NetworkKey) => {
   }
 };
 
+const envAllowsSmartAccount = process.env.NEXT_PUBLIC_SMART_ACCOUNT === 'yes';
+
 export function useClientWallets(options: UseClientWalletsOptions = {}) {
   const {
     authOptions = [],
@@ -86,7 +88,8 @@ export function useClientWallets(options: UseClientWalletsOptions = {}) {
     allowedSmsCountryCodes,
   } = options;
   const { chain, smartAccountEnabled } = useClientSettings();
-  const shouldUseSmartAccount = forceSmartAccount || smartAccountEnabled;
+  const shouldUseSmartAccount =
+    envAllowsSmartAccount && (forceSmartAccount || smartAccountEnabled);
   const activeChain = resolveChain(chain);
   const normalizedAuthOptions = useMemo(
     () => authOptions.filter(isInAppAuthOption),
