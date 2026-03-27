@@ -67,7 +67,7 @@ export default function SettingsPage({ params }: any) {
     const { wallets: centerWallets } = useClientWallets({
         authOptions: ['google', 'email'],
         sponsorGas: true,
-        forceEOA: true,
+        forceSmartAccount: true,
     });
     
     
