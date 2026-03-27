@@ -200,7 +200,7 @@ export default function Index({ params }: any) {
   const { wallet, wallets } = useClientWallets({
     authOptions: walletAuthOptions,
     sponsorGas: true,
-    forceSmartAccount: true,
+    forceEOA: true,
   });
  
   ////////const wallet = searchParams.get('wallet');
