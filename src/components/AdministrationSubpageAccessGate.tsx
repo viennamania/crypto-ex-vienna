@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import {
@@ -144,14 +145,6 @@ export default function AdministrationSubpageAccessGate({
     let cancelled = false;
 
     const checkRole = async () => {
-      if (isWalletOnlyRoute) {
-        setIsCheckingRole(false);
-        setHasCheckedRole(true);
-        setIsAdmin(true);
-        setMemberInfo(null);
-        return;
-      }
-
       if (!walletAddress) {
         setIsCheckingRole(false);
         setHasCheckedRole(false);
@@ -192,7 +185,7 @@ export default function AdministrationSubpageAccessGate({
         const data = await response.json().catch(() => ({}));
         if (!cancelled) {
           const result = data?.result;
-          setIsAdmin(result?.role === 'admin');
+          setIsAdmin(isWalletOnlyRoute ? true : result?.role === 'admin');
           setMemberInfo(
             result
               ? {
@@ -208,7 +201,7 @@ export default function AdministrationSubpageAccessGate({
       } catch (error) {
         console.error('failed to verify admin role', error);
         if (!cancelled) {
-          setIsAdmin(false);
+          setIsAdmin(isWalletOnlyRoute);
           setMemberInfo(null);
           setHasCheckedRole(true);
         }
@@ -225,6 +218,15 @@ export default function AdministrationSubpageAccessGate({
       cancelled = true;
     };
   }, [buildSignedRequestBody, isWalletOnlyRoute, signatureAccount, walletAddress]);
+
+  const roleLabel = memberInfo?.role === 'admin'
+    ? '플랫폼 관리자'
+    : memberInfo?.role
+      ? String(memberInfo.role)
+      : walletAddress
+        ? '지갑 연결됨'
+        : '';
+  const registrationHref = `/${lang}/administration/profile-settings`;
 
   useEffect(() => {
     if (!signatureAccount?.address || typeof signatureAccount.signMessage !== 'function') {
@@ -464,7 +466,14 @@ export default function AdministrationSubpageAccessGate({
     return (
       <>
         <AutoConnect client={client} wallets={[wallet]} />
-        <AdministrationLayoutShell lang={lang}>{children}</AdministrationLayoutShell>
+        <AdministrationLayoutShell
+          lang={lang}
+          memberNickname={memberInfo?.nickname || ''}
+          walletAddress={walletAddress}
+          roleLabel={roleLabel}
+        >
+          {children}
+        </AdministrationLayoutShell>
       </>
     );
   }
@@ -482,6 +491,7 @@ export default function AdministrationSubpageAccessGate({
     const memberLabel = memberInfo?.nickname || '미등록 회원';
     const roleLabel = memberInfo?.role || '일반';
     const contactLabel = memberInfo?.email || memberInfo?.mobile || '-';
+    const shouldSuggestRegistration = !memberInfo;
 
     return (
       <div className="min-h-[60vh] w-full flex items-center justify-center p-6">
@@ -503,6 +513,20 @@ export default function AdministrationSubpageAccessGate({
               </p>
             </div>
           </div>
+          {shouldSuggestRegistration && (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-left">
+              <p className="text-sm font-semibold text-amber-800">관리자 영역 접근을 위해 회원등록이 필요합니다.</p>
+              <p className="mt-1 text-sm text-slate-700">
+                현재 연결된 지갑으로 관리자 회원등록을 완료한 뒤 다시 접근하세요.
+              </p>
+              <Link
+                href={registrationHref}
+                className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                회원등록 페이지로 이동
+              </Link>
+            </div>
+          )}
           {hasConnectedWallet && (
             <button
               type="button"
@@ -521,7 +545,14 @@ export default function AdministrationSubpageAccessGate({
   return (
     <>
       <AutoConnect client={client} wallets={[wallet]} />
-      <AdministrationLayoutShell lang={lang}>{children}</AdministrationLayoutShell>
+      <AdministrationLayoutShell
+        lang={lang}
+        memberNickname={memberInfo?.nickname || ''}
+        walletAddress={walletAddress}
+        roleLabel={roleLabel}
+      >
+        {children}
+      </AdministrationLayoutShell>
     </>
   );
 }

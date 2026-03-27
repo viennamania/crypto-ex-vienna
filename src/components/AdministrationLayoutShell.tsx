@@ -7,6 +7,9 @@ import AdministrationSidebar from '@/components/AdministrationSidebar';
 type AdministrationLayoutShellProps = {
   lang: string;
   children: ReactNode;
+  memberNickname?: string;
+  walletAddress?: string;
+  roleLabel?: string;
 };
 
 type PendingOrderProcessingItem = {
@@ -87,7 +90,13 @@ const toTimeAgoLabel = (value: string) => {
 const resolvePendingCardKey = (payment: PendingOrderProcessingItem) =>
   String(payment.id || payment.tradeId || `${payment.storecode}-${payment.memberNickname}-${payment.createdAt || payment.confirmedAt}`);
 
-export default function AdministrationLayoutShell({ lang, children }: AdministrationLayoutShellProps) {
+export default function AdministrationLayoutShell({
+  lang,
+  children,
+  memberNickname,
+  walletAddress,
+  roleLabel,
+}: AdministrationLayoutShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [brandTitle, setBrandTitle] = useState(DEFAULT_ADMIN_BRAND_TITLE);
@@ -500,6 +509,9 @@ export default function AdministrationLayoutShell({ lang, children }: Administra
         lang={lang}
         isOpen={isSidebarOpen}
         onOpenChange={setIsSidebarOpen}
+        memberNickname={memberNickname}
+        walletAddress={walletAddress}
+        roleLabel={roleLabel}
       />
       {showPinnedPendingAlert && (
         <div className={pendingAlertContainerClass}>

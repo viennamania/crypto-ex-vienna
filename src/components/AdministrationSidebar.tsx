@@ -11,6 +11,9 @@ type AdministrationSidebarProps = {
   lang: string;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  memberNickname?: string;
+  walletAddress?: string;
+  roleLabel?: string;
 };
 
 type MenuItem = {
@@ -77,6 +80,12 @@ const buildMenuItems = (lang: string): MenuItem[] => {
 const ACTIVE_BUY_ORDER_POLLING_MS = 15000;
 const DEFAULT_BRAND_NAME = 'Administration';
 const DEFAULT_BRAND_LOGO = '/logo.png';
+const shortWalletAddress = (value: string) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '-';
+  if (normalized.length <= 14) return normalized;
+  return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
+};
 
 const isActiveRoute = (pathname: string, href: string) => {
   if (href.endsWith('/administration')) {
@@ -104,7 +113,14 @@ const shouldUseCenterManagementMenu = (pathname: string, lang: string) => {
   );
 };
 
-export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: AdministrationSidebarProps) {
+export default function AdministrationSidebar({
+  lang,
+  isOpen,
+  onOpenChange,
+  memberNickname,
+  walletAddress,
+  roleLabel,
+}: AdministrationSidebarProps) {
   const pathname = usePathname() || '';
   const normalizedPathname = pathname.replace(/\/+$/, '');
   const isCenterManagementRoute = shouldUseCenterManagementMenu(normalizedPathname, lang);
@@ -297,6 +313,28 @@ export default function AdministrationSidebar({ lang, isOpen, onOpenChange }: Ad
           </span>
         </div>
       </Link>
+
+      {(memberNickname || walletAddress) && (
+        <div className="mt-4 rounded-2xl border border-slate-200/70 bg-[linear-gradient(145deg,#0f172a_0%,#1e293b_100%)] px-4 py-3 text-white shadow-[0_18px_34px_-26px_rgba(15,23,42,0.7)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">Connected Admin</p>
+          <p className="mt-2 truncate text-sm font-semibold text-white">
+            {memberNickname || '닉네임 확인 중'}
+          </p>
+          <p className="mt-1 text-[11px] text-slate-300">
+            {roleLabel || '권한 확인 중'}
+          </p>
+          {walletAddress && (
+            <>
+              <p className="mt-2 font-mono text-[11px] text-cyan-100/90">
+                {shortWalletAddress(walletAddress)}
+              </p>
+              <p className="mt-1 break-all font-mono text-[10px] text-slate-300">
+                {walletAddress}
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       <nav className="mt-5 flex-1 space-y-1 overflow-y-auto pr-1">
         {menuItems.map((item) => {
