@@ -249,9 +249,10 @@ export default function WalletTokenStudio({ lang }: { lang: string }) {
     async (
       path: string,
       payload: Record<string, unknown>,
-      options?: { requireSignature?: boolean },
+      options?: { requireSignature?: boolean; storecode?: string },
     ) => {
       const requireSignature = options?.requireSignature === true;
+      const resolvedStorecode = String(options?.storecode || 'admin').trim() || 'admin';
       if (!signatureAccount) {
         if (requireSignature) {
           throw new Error('서명 가능한 지갑을 찾지 못했습니다. 다시 연결해 주세요.');
@@ -261,12 +262,15 @@ export default function WalletTokenStudio({ lang }: { lang: string }) {
 
       const auth = await createWalletSignatureAuthPayload({
         account: signatureAccount,
+        storecode: resolvedStorecode,
         path,
         method: 'POST',
+        chainId: bsc.id,
       });
 
       return {
         ...payload,
+        storecode: resolvedStorecode,
         auth,
       };
     },
