@@ -218,6 +218,7 @@ export default function WalletManagementHomePage() {
   const walletPath = `/${lang}/wallet-management/wallet-usdt${baseQueryString ? `?${baseQueryString}` : ''}`;
   const paymentPath = `/${lang}/wallet-management/payment-usdt${baseQueryString ? `?${baseQueryString}` : ''}`;
   const noticePath = `/${lang}/wallet-management/notice${baseQueryString ? `?${baseQueryString}` : ''}`;
+  const tokenStudioPath = `/${lang}/wallet-management/token-studio${baseQueryString ? `?${baseQueryString}` : ''}`;
   const buildBuyPath = useCallback((sellerWalletAddress?: string) => {
     const query = new URLSearchParams(baseQueryString);
     const sellerWallet = String(sellerWalletAddress || '').trim();
@@ -1107,7 +1108,7 @@ export default function WalletManagementHomePage() {
                 </div>
               </div>
 
-              <div className={`mt-4 grid gap-2 ${shouldHideWalletNavigation ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              <div className={`mt-4 grid gap-2 ${shouldHideWalletNavigation ? 'grid-cols-3' : 'grid-cols-4'}`}>
                 {!shouldHideWalletNavigation && (
                   <Link
                     href={walletPath}
@@ -1116,6 +1117,12 @@ export default function WalletManagementHomePage() {
                     지갑 관리
                   </Link>
                 )}
+                <Link
+                  href={tokenStudioPath}
+                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-emerald-700 px-2 text-xs font-semibold text-white transition hover:-translate-y-0.5 hover:bg-emerald-600"
+                >
+                  토큰 발행
+                </Link>
                 <Link
                   href={paymentPath}
                   className="inline-flex h-11 items-center justify-center rounded-2xl bg-cyan-600 px-2 text-xs font-semibold text-white transition hover:-translate-y-0.5 hover:opacity-95"

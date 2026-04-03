@@ -6,11 +6,11 @@ import { useEffect, useMemo, useState } from 'react';
 
 type WalletManagementBottomNavProps = {
   lang: string;
-  active: 'home' | 'wallet' | 'payment' | 'buy';
+  active: 'home' | 'wallet' | 'payment' | 'buy' | 'token';
 };
 
 const NAV_ITEMS: Array<{
-  key: 'home' | 'wallet' | 'payment' | 'buy';
+  key: 'home' | 'wallet' | 'payment' | 'buy' | 'token';
   label: string;
   href: (lang: string) => string;
   icon: JSX.Element;
@@ -22,6 +22,17 @@ const NAV_ITEMS: Array<{
     icon: (
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    key: 'token',
+    label: '토큰',
+    href: (lang) => `/${lang}/wallet-management/token-studio`,
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <circle cx="12" cy="12" r="7.5" />
+        <path d="M12 7v10M8.75 9.5c.4-1.1 1.6-1.9 3.25-1.9 1.9 0 3.25 1.03 3.25 2.45 0 1.28-1.05 1.95-2.62 2.27l-1.26.26c-1.26.25-2.12.75-2.12 1.83 0 1.35 1.2 2.29 3 2.29 1.63 0 2.86-.7 3.37-1.9" strokeLinecap="round" />
       </svg>
     ),
   },
@@ -127,16 +138,18 @@ export default function WalletManagementBottomNav({
   const orderedNavItems = useMemo(() => {
     const priority: Record<WalletManagementBottomNavProps['active'], number> = {
       home: 0,
-      payment: 1,
-      buy: 2,
-      wallet: 3,
+      token: 1,
+      payment: 2,
+      buy: 3,
+      wallet: 4,
     };
 
     return [...visibleNavItems].sort((a, b) => priority[a.key] - priority[b.key]);
   }, [visibleNavItems]);
-  const navGridColsClass = orderedNavItems.length >= 4 ? 'grid-cols-5' : 'grid-cols-4';
+  const navGridColsClass =
+    orderedNavItems.length >= 5 ? 'grid-cols-6' : orderedNavItems.length >= 4 ? 'grid-cols-5' : 'grid-cols-4';
 
-  const withQuery = (href: string, navKey: 'home' | 'wallet' | 'payment' | 'buy') => {
+  const withQuery = (href: string, navKey: 'home' | 'wallet' | 'payment' | 'buy' | 'token') => {
     const query = new URLSearchParams();
     if (storecode) {
       query.set('storecode', storecode);
