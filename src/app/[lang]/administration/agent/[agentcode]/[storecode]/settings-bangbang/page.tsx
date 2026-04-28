@@ -913,7 +913,7 @@ export default function SettingsPage({ params }: any) {
             body: JSON.stringify(
                 {
                     storecode: params.storecode,
-                    limit: 10,
+                    limit: 100,
                     page: 1,
                     role: "",
                 }
